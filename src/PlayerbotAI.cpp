@@ -1434,9 +1434,9 @@ void PlayerbotAI::DoNextAction(bool min)
                 botAI->ChangeStrategy("+follow", BOT_STATE_NON_COMBAT);
 
                 if (botAI->GetMaster() == botAI->GetGroupMaster())
-                    botAI->TellMaster("Hello, I follow you!");
+                    botAI->TellMaster("你好, 下面我就跟着你了!");
                 else
-                    botAI->TellMaster(!urand(0, 2) ? "Hello!" : "Hi!");
+                    botAI->TellMaster(!urand(0, 2) ? "你好!" : "嗨!");
             }
             else
             {

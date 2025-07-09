@@ -322,7 +322,7 @@ bool SpiritHealerAction::Execute(Event event)
                 bot->SpawnCorpseBones();
                 context->GetValue<Unit*>("current target")->Set(nullptr);
                 bot->SetTarget();
-                botAI->TellMaster("Hello");
+                botAI->TellMaster("你好");
 
                 if (dCount > 20)
                     context->GetValue<uint32>("death count")->Set(0);

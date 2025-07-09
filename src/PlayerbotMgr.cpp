@@ -539,7 +539,7 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
     // set delay on login
     botAI->SetNextCheckDelay(urand(2000, 4000));
 
-    botAI->TellMaster("Hello!", PLAYERBOT_SECURITY_TALK);
+    botAI->TellMaster("你好!", PLAYERBOT_SECURITY_TALK);
 
     if (master && master->GetGroup() && !group)
     {
@@ -1554,7 +1554,7 @@ void PlayerbotMgr::OnBotLoginInternal(Player* const bot)
     botAI->SetMaster(master);
     botAI->ResetStrategies();
 
-    LOG_INFO("playerbots", "Bot {} logged in", bot->GetName().c_str());
+    LOG_INFO("playerbots", "机器人 {} 上线", bot->GetName().c_str());
 }
 
 void PlayerbotMgr::OnPlayerLogin(Player* player)
