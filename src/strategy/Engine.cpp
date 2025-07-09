@@ -11,6 +11,7 @@
 #include "Playerbots.h"
 #include "Queue.h"
 #include "Strategy.h"
+#include "StrategyNameMapper.h"
 
 Engine::Engine(PlayerbotAI* botAI, AiObjectContext* factory) : PlayerbotAIAware(botAI), aiObjectContext(factory)
 {
@@ -72,14 +73,6 @@ ActionExecutionListeners::~ActionExecutionListeners()
 Engine::~Engine(void)
 {
     Reset();
-
-    // for (std::map<std::string, Strategy*>::iterator i = strategies.begin(); i != strategies.end(); i++)
-    // {
-    //     Strategy* strategy = i->second;
-    //     if (strategy) {
-    //         delete strategy;
-    //     }
-    // }
 
     strategies.clear();
 }
@@ -498,21 +491,42 @@ void Engine::PushDefaultActions()
     }
 }
 
+std::string GetStrategyChsDisplayName(std::string const& internalName)
+{
+    return StrategyNameMapper::GetDisplayName(internalName);
+}
+
 std::string const Engine::ListStrategies()
 {
-    std::string s = "Strategies: ";
+    std::string s = "策略: ";
 
     if (strategies.empty())
         return s;
 
-    for (std::map<std::string, Strategy*>::iterator i = strategies.begin(); i != strategies.end(); i++)
+    for (auto const& pair : strategies)
     {
-        s.append(i->first);
+        s.append(GetStrategyChsDisplayName(pair.first));
         s.append(", ");
     }
 
     return s.substr(0, s.length() - 2);
 }
+
+//std::string const Engine::ListStrategies()
+//{
+//    std::string s = "Strategies: ";
+//
+//    if (strategies.empty())
+//        return s;
+//
+//    for (std::map<std::string, Strategy*>::iterator i = strategies.begin(); i != strategies.end(); i++)
+//    {
+//        s.append(i->first);
+//        s.append(", ");
+//    }
+//
+//    return s.substr(0, s.length() - 2);
+//}
 
 std::vector<std::string> Engine::GetStrategies()
 {

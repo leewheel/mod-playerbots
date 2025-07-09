@@ -57,6 +57,7 @@
 #include "Unit.h"
 #include "UpdateTime.h"
 #include "Vehicle.h"
+#include "ChatCommandAliasLoader.h"
 
 const int SPELL_TITAN_GRIP = 49152;
 
@@ -517,7 +518,8 @@ void PlayerbotAI::HandleCommands()
 std::map<std::string, ChatMsg> chatMap;
 void PlayerbotAI::HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang)
 {
-    std::string filtered = text;
+    /*std::string filtered = text;*/
+    std::string filtered = CommandAliasTranslator::Translate(text);
 
     if (!IsAllowedCommand(filtered) && !GetSecurity()->CheckLevelFor(PlayerbotSecurityLevel::PLAYERBOT_SECURITY_INVITE,
                                                                      type != CHAT_MSG_WHISPER, &fromPlayer))
@@ -835,7 +837,8 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         return;
     }
 
-    std::string filtered = text;
+    /*std::string filtered = text;*/
+    std::string filtered = CommandAliasTranslator::Translate(text);
     if (!sPlayerbotAIConfig->commandPrefix.empty())
     {
         if (filtered.find(sPlayerbotAIConfig->commandPrefix) != 0)
