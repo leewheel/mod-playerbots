@@ -4373,17 +4373,40 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
 
 bool PlayerbotAI::AllowActivity(ActivityType activityType, bool checkNow)
 {
-    if (!allowActiveCheckTimer[activityType])
+    if (activityType >= MAX_ACTIVITY_TYPE || activityType < 0)
+    {
+        LOG_ERROR("playerbots", "AllowActivity: Invalid activity type: {}", activityType);
+        return false;
+    }
+    // 检查时间是否为0，如果是则初始化
+    if (allowActiveCheckTimer[activityType] == 0)
+    {
         allowActiveCheckTimer[activityType] = time(nullptr);
-
-    if (!checkNow && time(nullptr) < (allowActiveCheckTimer[activityType] + 5))
+    }
+    else if (!checkNow && time(nullptr) < (allowActiveCheckTimer[activityType] + 5))
+    {
         return allowActive[activityType];
+    }
 
     bool allowed = AllowActive(activityType);
     allowActive[activityType] = allowed;
     allowActiveCheckTimer[activityType] = time(nullptr);
     return allowed;
 }
+
+//bool PlayerbotAI::AllowActivity(ActivityType activityType, bool checkNow)
+//{
+//    if (!allowActiveCheckTimer[activityType])
+//        allowActiveCheckTimer[activityType] = time(nullptr);
+//
+//    if (!checkNow && time(nullptr) < (allowActiveCheckTimer[activityType] + 5))
+//        return allowActive[activityType];
+//
+//    bool allowed = AllowActive(activityType);
+//    allowActive[activityType] = allowed;
+//    allowActiveCheckTimer[activityType] = time(nullptr);
+//    return allowed;
+//}
 
 uint32 PlayerbotAI::AutoScaleActivity(uint32 mod)
 {

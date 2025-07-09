@@ -27,7 +27,7 @@ public:
             strategyMap[internal] = display.get<std::string>();
         }
 
-        LOG_INFO("playerbot", "加载策略名称映射表成功，共 {} 项", strategyMap.size());
+        LOG_INFO("server", "加载策略名称映射表成功，共 {} 项", strategyMap.size());
     }
 
     static std::string GetDisplayName(const std::string& internalName)
