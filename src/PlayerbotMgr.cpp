@@ -859,8 +859,15 @@ bool PlayerbotMgr::HandlePlayerbotMgrCommand(ChatHandler* handler, char const* a
         return false;
     }
 
+
+    if (!player || player->GetSession() && player->GetSession()->IsBot())
+    {
+        handler->PSendSysMessage("机器人不能执行 .playerbot 命令");
+        return false;
+    }
+
         // ✅ 在这里进行中文命令转换
-    std::string translated = CommandAliasTranslator::Translate(args);
+    std::string translated = CommandAliasTranslator::TranslateForConsole(args);
     //LOG_INFO("server", "[PB中文命令] 实际执行命令: '{}'", translated);
 
     /*std::vector<std::string> messages = mgr->HandlePlayerbotCommand(translated.c_str(), player);*/

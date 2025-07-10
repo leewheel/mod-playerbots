@@ -519,7 +519,11 @@ std::map<std::string, ChatMsg> chatMap;
 void PlayerbotAI::HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang)
 {
     /*std::string filtered = text;*/
-    std::string filtered = CommandAliasTranslator::Translate(text);
+
+    if (fromPlayer.GetSession()->IsBot())
+        return;
+
+    std::string filtered = CommandAliasTranslator::Translate(text,type);
 
     if (!IsAllowedCommand(filtered) && !GetSecurity()->CheckLevelFor(PlayerbotSecurityLevel::PLAYERBOT_SECURITY_INVITE,
                                                                      type != CHAT_MSG_WHISPER, &fromPlayer))
@@ -579,7 +583,7 @@ void PlayerbotAI::HandleCommand(uint32 type, const std::string& text, Player& fr
         return;
 
 // ✅ 新增：支持中文 -> GM 命令映射（扩展 /s /p /r 均可）
-    if (type == CHAT_MSG_SAY || type == CHAT_MSG_PARTY || type == CHAT_MSG_RAID)
+    if (type == CHAT_MSG_SAY)
     {
         if (filtered.rfind("playerbot bot", 0) == 0)
         {
@@ -855,8 +859,11 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         return;
     }
 
+    if (fromPlayer->GetSession()->IsBot())
+        return;
+
     /*std::string filtered = text;*/
-    std::string filtered = CommandAliasTranslator::Translate(text);
+    std::string filtered = CommandAliasTranslator::Translate(text,type);
     if (!sPlayerbotAIConfig->commandPrefix.empty())
     {
         if (filtered.find(sPlayerbotAIConfig->commandPrefix) != 0)
