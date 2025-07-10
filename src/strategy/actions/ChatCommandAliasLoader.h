@@ -77,7 +77,7 @@ public:
         std::ifstream file(path);
         if (!file.is_open())
         {
-            LOG_ERROR("server", "[PB中文命令] 打开命令表: {} 失败", path);
+            LOG_ERROR("server", "[PB中文命令] 打开命令表失败: {}", path);
             return;
         }
 
@@ -93,32 +93,33 @@ public:
             }
         }
 
-        LOG_INFO("server", "[PB中文命令] 加载 {} 个中文命令成功", _aliasMap.size());
+        LOG_INFO("server", "[PB中文命令] ✅ 加载 {} 个中文命令成功", _aliasMap.size());
     }
 
     static std::string Translate(const std::string& input)
     {
         std::string cmd = Normalize(input);
+        LOG_INFO("server", "[PB翻译] 原始='{}', Normalize='{}'", input, cmd);
 
-        // ✅ 1. 先做精确匹配
+        // 精确匹配
         auto it = _aliasMap.find(cmd);
         if (it != _aliasMap.end())
         {
-            LOG_INFO("server", "[PB中文命令] 精确匹配 '{}' → '{}'", cmd, it->second);
+            LOG_INFO("server", "[PB中文命令] ✅ 精确匹配 '{}' → '{}'", cmd, it->second);
             return it->second;
         }
 
-        // ✅ 2. 模糊匹配（alias 包含在 cmd 中）
+        // 模糊匹配（双向包含）
         for (const auto& [alias, eng] : _aliasMap)
         {
-            if (cmd.find(alias) != std::string::npos)
+            if (alias.find(cmd) != std::string::npos || cmd.find(alias) != std::string::npos)
             {
-                LOG_INFO("server", "[PB中文命令] 模糊匹配 '{}' 包含 '{}' → '{}'", cmd, alias, eng);
+                LOG_INFO("server", "[PB中文命令] ✅ 模糊匹配 '{}' <-> '{}' → '{}'", cmd, alias, eng);
                 return eng;
             }
         }
 
-        // ❌ 未匹配
+        LOG_INFO("server", "[PB中文命令] ❌ 未匹配命令: '{}'", cmd);
         return cmd;
     }
 

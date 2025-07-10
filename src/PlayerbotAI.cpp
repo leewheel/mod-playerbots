@@ -578,6 +578,24 @@ void PlayerbotAI::HandleCommand(uint32 type, const std::string& text, Player& fr
     if (filtered.empty())
         return;
 
+// ✅ 新增：支持中文 -> GM 命令映射（扩展 /s /p /r 均可）
+    if (type == CHAT_MSG_SAY || type == CHAT_MSG_PARTY || type == CHAT_MSG_RAID)
+    {
+        if (filtered.rfind("playerbot bot", 0) == 0)
+        {
+            std::string command = "." + filtered;
+            LOG_INFO("server", "[PB中文命令] ✅ {}频道触发 GM 命令: {}",
+                     type == CHAT_MSG_SAY     ? "说话"
+                     : type == CHAT_MSG_PARTY ? "队伍"
+                                              : "团队",
+                     command);
+
+            ChatHandler ch(fromPlayer.GetSession());
+            ch.ParseCommands(command.c_str());
+            return;
+        }
+    }
+
     if (filtered.substr(0, 6) == "debug ")
     {
         std::string response = HandleRemoteCommand(filtered.substr(6));

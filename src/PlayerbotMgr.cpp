@@ -840,14 +840,14 @@ bool PlayerbotMgr::HandlePlayerbotMgrCommand(ChatHandler* handler, char const* a
 {
     if (!sPlayerbotAIConfig->enabled)
     {
-        handler->PSendSysMessage("|cffff0000Playerbot system is currently disabled!");
+        handler->PSendSysMessage("|cffff0000玩家机器人系统当前禁用!");
         return false;
     }
 
     WorldSession* m_session = handler->GetSession();
     if (!m_session)
     {
-        handler->PSendSysMessage("You may only add bots from an active session");
+        handler->PSendSysMessage("您只能在活跃会话中添加机器人");
         return false;
     }
 
@@ -855,7 +855,7 @@ bool PlayerbotMgr::HandlePlayerbotMgrCommand(ChatHandler* handler, char const* a
     PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(player);
     if (!mgr)
     {
-        handler->PSendSysMessage("You cannot control bots yet");
+        handler->PSendSysMessage("你还不能控制这个机器人");
         return false;
     }
 
@@ -863,8 +863,8 @@ bool PlayerbotMgr::HandlePlayerbotMgrCommand(ChatHandler* handler, char const* a
     std::string translated = CommandAliasTranslator::Translate(args);
     //LOG_INFO("server", "[PB中文命令] 实际执行命令: '{}'", translated);
 
-    std::vector<std::string> messages = mgr->HandlePlayerbotCommand(translated.c_str(), player);
-    /*std::vector<std::string> messages = mgr->HandlePlayerbotCommand(args, player);*/
+    /*std::vector<std::string> messages = mgr->HandlePlayerbotCommand(translated.c_str(), player);*/
+    std::vector<std::string> messages = mgr->HandlePlayerbotCommand(args, player);
     if (messages.empty())
         return true;
 
