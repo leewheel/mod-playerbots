@@ -2626,7 +2626,7 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
 {
     if (_isBotLogging)
     {
-        LOG_INFO("playerbots", "{}/{} Bot {} logged in", playerBots.size(), sRandomPlayerbotMgr->GetMaxAllowedBotCount(),
+        LOG_INFO("playerbots", "{}/{} 机器人 {} 上线", playerBots.size(), sRandomPlayerbotMgr->GetMaxAllowedBotCount(),
                 bot->GetName().c_str());
 
         if (playerBots.size() == sRandomPlayerbotMgr->GetMaxAllowedBotCount())
@@ -2752,7 +2752,7 @@ Player* RandomPlayerbotMgr::GetRandomPlayer()
 void RandomPlayerbotMgr::PrintStats()
 {
     printStatsTimer = time(nullptr);
-    LOG_INFO("playerbots", "Random Bots Stats: {} online", playerBots.size());
+    LOG_INFO("playerbots", "随机机器人状态: {} 在线", playerBots.size());
 
     std::map<uint8, uint32> alliance, horde;
     for (uint32 i = 0; i < 10; ++i)

@@ -32,10 +32,9 @@
 #include "RandomPlayerbotMgr.h"
 #include "SharedDefines.h"
 #include "WorldSession.h"
-#include "ChannelMgr.h"
 #include "BroadcastHelper.h"
-#include "PlayerbotDbStore.h"
 #include "WorldSessionMgr.h"
+#include "ChatCommandAliasLoader.h"
 
 class BotInitGuard
 {
@@ -389,7 +388,7 @@ void PlayerbotHolder::LogoutPlayerBot(ObjectGuid guid)
         }  // if instant logout possible, do it
         else if (bot && (logout || !botWorldSessionPtr->isLogingOut()))
         {
-            botAI->TellMaster("Goodbye!");
+            botAI->TellMaster("再见!");
             RemoveFromPlayerbotsMap(guid);                  // deletes bot player ptr inside this WorldSession PlayerBotMap
             botWorldSessionPtr->LogoutPlayer(true);  // this will delete the bot Player object and PlayerbotAI object
             delete botWorldSessionPtr;               // finally delete the bot's WorldSession
@@ -406,7 +405,7 @@ void PlayerbotHolder::DisablePlayerBot(ObjectGuid guid)
         {
             return;
         }
-        botAI->TellMaster("Goodbye!");
+        botAI->TellMaster("再见!");
         bot->StopMoving();
         bot->GetMotionMaster()->Clear();
 
@@ -860,7 +859,12 @@ bool PlayerbotMgr::HandlePlayerbotMgrCommand(ChatHandler* handler, char const* a
         return false;
     }
 
-    std::vector<std::string> messages = mgr->HandlePlayerbotCommand(args, player);
+        // ✅ 在这里进行中文命令转换
+    std::string translated = CommandAliasTranslator::Translate(args);
+    //LOG_INFO("server", "[PB中文命令] 实际执行命令: '{}'", translated);
+
+    std::vector<std::string> messages = mgr->HandlePlayerbotCommand(translated.c_str(), player);
+    /*std::vector<std::string> messages = mgr->HandlePlayerbotCommand(args, player);*/
     if (messages.empty())
         return true;
 

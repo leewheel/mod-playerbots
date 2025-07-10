@@ -421,14 +421,14 @@ bool LfgAction::Execute(Event event)
             return false;
 
         std::map<std::string, std::string> placeholders;
-        placeholders["%role"] = (role & BOT_ROLE_TANK ? "tank" : (role & BOT_ROLE_HEALER ? "healer" : "dps"));
+        placeholders["%role"] = (role & BOT_ROLE_TANK ? "坦克" : (role & BOT_ROLE_HEALER ? "治疗" : "伤害输出"));
         placeholders["%spotsleft"] = std::to_string(allowedRoles[role] - 1);
 
         std::ostringstream out;
         if (allowedRoles[role] > 1)
         {
-            out << "Joining as " << placeholders["%role"] << ", " << placeholders["%spotsleft"] << " "
-                << placeholders["%role"] << " spots left.";
+            out << "我作为 " << placeholders["%role"] << "加入小队,还需要 " << placeholders["%spotsleft"] << "个 "
+                << placeholders["%role"] << " 职业。";
             botAI->TellMasterNoFacing(out.str());
 
             //botAI->DoSpecificAction("autogear");
@@ -436,7 +436,7 @@ bool LfgAction::Execute(Event event)
         }
         else
         {
-            out << "Joining as " << placeholders["%role"] << ".";
+            out << "我作为 " << placeholders["%role"] << "加入小队。";
             botAI->TellMasterNoFacing(out.str());
 
             //botAI->DoSpecificAction("autogear");
