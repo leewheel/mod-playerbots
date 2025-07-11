@@ -186,12 +186,12 @@ public:
         std::string cmd = Normalize(input);
 
         // 🎯 类型 1：/s 控制台命令，仅支持精确匹配
-        if (chatType == CHAT_MSG_SAY)
+        if (chatType != CHAT_MSG_SAY)
         {
             auto it = _aliasMap.find(cmd);
             if (it != _aliasMap.end())
             {
-                LOG_INFO("server", "[PB中文命令] 控制台精确匹配 '.{}' → '{}'", cmd, it->second);
+                LOG_INFO("server", "[PB中文命令] 聊天精确匹配 '.{}' → '{}'", cmd, it->second);
                 return it->second;
             }
             return input;  // ⛔ 不翻译
@@ -224,10 +224,11 @@ public:
         return input;
     }
 
-static std::string TranslateForConsole(const std::string& input)
+
+    static std::string TranslateForConsole(const std::string& input)
     {
         std::string cmd = Normalize(input);
-
+        
         for (const auto& [alias, eng] : _aliasMap)
         {
             if (cmd == alias)  // 只允许精确匹配
@@ -246,6 +247,13 @@ static std::string TranslateForConsole(const std::string& input)
             }
         }
 
+        //std::string fallback = Translate(input, CHAT_MSG_PARTY);
+
+        //if (fallback != input)
+        //{
+        //    LOG_INFO("server", "[PB中文命令] TranslateForConsole 回退模糊匹配 '{}' → '{}'", input, fallback);
+        //    return fallback;
+        //}
         return input;
     }
 
