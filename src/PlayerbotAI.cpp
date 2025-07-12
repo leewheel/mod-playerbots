@@ -863,7 +863,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         return;
 
     /*std::string filtered = text;*/
-    std::string filtered = CommandAliasTranslator::Translate(text,type);
+    std::string filtered = CommandAliasTranslator::Translate(text, type);
     if (!sPlayerbotAIConfig->commandPrefix.empty())
     {
         if (filtered.find(sPlayerbotAIConfig->commandPrefix) != 0)
