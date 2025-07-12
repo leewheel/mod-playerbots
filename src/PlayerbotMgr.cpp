@@ -1310,16 +1310,27 @@ std::string const PlayerbotHolder::ListBots(Player* master)
     std::map<uint8, std::string> classNames;
 
     //classNames[CLASS_DEATH_KNIGHT] = "Death Knight";
-    classNames[CLASS_DRUID] = "德鲁伊";
-    classNames[CLASS_HUNTER] = "猎人";
-    classNames[CLASS_MAGE] = "法师";
-    classNames[CLASS_PALADIN] = "圣骑士";
-    classNames[CLASS_PRIEST] = "牧师";
-    classNames[CLASS_ROGUE] = "盗贼";
-    classNames[CLASS_SHAMAN] = "萨满祭司";
-    classNames[CLASS_WARLOCK] = "术士";
-    classNames[CLASS_WARRIOR] = "战士";
-    classNames[CLASS_DEATH_KNIGHT] = "死骑";
+    //classNames[CLASS_DRUID] = "德鲁伊";
+    //classNames[CLASS_HUNTER] = "猎人";
+    //classNames[CLASS_MAGE] = "法师";
+    //classNames[CLASS_PALADIN] = "圣骑士";
+    //classNames[CLASS_PRIEST] = "牧师";
+    //classNames[CLASS_ROGUE] = "盗贼";
+    //classNames[CLASS_SHAMAN] = "萨满祭司";
+    //classNames[CLASS_WARLOCK] = "术士";
+    //classNames[CLASS_WARRIOR] = "战士";
+    //classNames[CLASS_DEATH_KNIGHT] = "死骑";
+    classNames[CLASS_DEATH_KNIGHT] = "Death Knight";
+    classNames[CLASS_DRUID] = "Druid";
+    classNames[CLASS_HUNTER] = "Hunter";
+    classNames[CLASS_MAGE] = "Mage";
+    classNames[CLASS_PALADIN] = "Paladin";
+    classNames[CLASS_PRIEST] = "Priest";
+    classNames[CLASS_ROGUE] = "Rogue";
+    classNames[CLASS_SHAMAN] = "Shaman";
+    classNames[CLASS_WARLOCK] = "Warlock";
+    classNames[CLASS_WARRIOR] = "Warrior";
+    classNames[CLASS_DEATH_KNIGHT] = "DeathKnight";
 
     std::map<std::string, std::string> online;
     std::vector<std::string> names;
@@ -1396,19 +1407,30 @@ std::string const PlayerbotHolder::ListBots(Player* master)
 std::string const PlayerbotHolder::LookupBots(Player* master)
 {
     std::list<std::string> messages;
-    messages.push_back("可用职业：");
-    messages.push_back("|TInterface\\icons\\INV_Sword_27.png:25:25:0:-1|t 战士");
-    messages.push_back("|TInterface\\icons\\INV_Hammer_01.png:25:25:0:-1|t 圣骑士");
-    messages.push_back("|TInterface\\icons\\INV_Weapon_Bow_07.png:25:25:0:-1|t 猎人");
-    messages.push_back("|TInterface\\icons\\INV_ThrowingKnife_04.png:25:25:0:-1|t 潜行者");
-    messages.push_back("|TInterface\\icons\\INV_Staff_30.png:25:25:0:-1|t 牧师");
-    messages.push_back("|TInterface\\icons\\inv_jewelry_talisman_04.png:25:25:0:-1|t 萨满");
-    messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t 法师");
-    messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t 术士");
-    messages.push_back("|TInterface\\icons\\Ability_Druid_Maul.png:25:25:0:-1|t 德鲁伊");
-    messages.push_back("死亡骑士");
-    messages.push_back("(用法: .bot lookup CLASS)");
-
+    //messages.push_back("可用职业：");
+    //messages.push_back("|TInterface\\icons\\INV_Sword_27.png:25:25:0:-1|t 战士");
+    //messages.push_back("|TInterface\\icons\\INV_Hammer_01.png:25:25:0:-1|t 圣骑士");
+    //messages.push_back("|TInterface\\icons\\INV_Weapon_Bow_07.png:25:25:0:-1|t 猎人");
+    //messages.push_back("|TInterface\\icons\\INV_ThrowingKnife_04.png:25:25:0:-1|t 潜行者");
+    //messages.push_back("|TInterface\\icons\\INV_Staff_30.png:25:25:0:-1|t 牧师");
+    //messages.push_back("|TInterface\\icons\\inv_jewelry_talisman_04.png:25:25:0:-1|t 萨满");
+    //messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t 法师");
+    //messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t 术士");
+    //messages.push_back("|TInterface\\icons\\Ability_Druid_Maul.png:25:25:0:-1|t 德鲁伊");
+    //messages.push_back("死亡骑士");
+    //messages.push_back("(用法: .bot lookup CLASS)");
+    messages.push_back("Classes Available:");
+    messages.push_back("|TInterface\\icons\\INV_Sword_27.png:25:25:0:-1|t Warrior");
+    messages.push_back("|TInterface\\icons\\INV_Hammer_01.png:25:25:0:-1|t Paladin");
+    messages.push_back("|TInterface\\icons\\INV_Weapon_Bow_07.png:25:25:0:-1|t Hunter");
+    messages.push_back("|TInterface\\icons\\INV_ThrowingKnife_04.png:25:25:0:-1|t Rogue");
+    messages.push_back("|TInterface\\icons\\INV_Staff_30.png:25:25:0:-1|t Priest");
+    messages.push_back("|TInterface\\icons\\inv_jewelry_talisman_04.png:25:25:0:-1|t Shaman");
+    messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t Mage");
+    messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t Warlock");
+    messages.push_back("|TInterface\\icons\\Ability_Druid_Maul.png:25:25:0:-1|t Druid");
+    messages.push_back("DK");
+    messages.push_back("(Usage: .bot lookup CLASS)");
     std::string ret_msg;
     for (std::string msg : messages)
     {
