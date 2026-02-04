@@ -2989,7 +2989,7 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
 {
     if (_isBotLogging)
     {
-        LOG_INFO("playerbots", "{}/{} Bot {} logged in", playerBots.size(),
+        LOG_INFO("playerbots", "第{}个/共{}个 机器人 {} 上线了", playerBots.size(),
                  sRandomPlayerbotMgr.GetMaxAllowedBotCount(), bot->GetName().c_str());
 
         if (playerBots.size() == sRandomPlayerbotMgr.GetMaxAllowedBotCount())
@@ -3166,6 +3166,19 @@ void RandomPlayerbotMgr::PrintStats()
     // static NewRpgStatistic rpgStasticTotal;
     std::unordered_map<uint32, int> zoneCount;
     uint8 maxBotLevel = 0;
+
+    //By Leewheel 20260204 - 添加中文种族和职业名称映射
+    static std::unordered_map<uint8, std::string> RaceNameCN = {
+        {RACE_HUMAN, "人类"},         {RACE_ORC, "兽人"},      {RACE_DWARF, "矮人"}, {RACE_NIGHTELF, "暗夜精灵"},
+        {RACE_UNDEAD_PLAYER, "亡灵"}, {RACE_TAUREN, "牛头人"}, {RACE_GNOME, "侏儒"}, {RACE_TROLL, "巨魔"},
+        {RACE_BLOODELF, "血精灵"},    {RACE_DRAENEI, "德莱尼"}};
+
+    static std::unordered_map<uint8, std::string> ClassNameCN = {
+        {CLASS_WARRIOR, "战士"}, {CLASS_PALADIN, "圣骑士"},        {CLASS_HUNTER, "猎人"},     {CLASS_ROGUE, "潜行者"},
+        {CLASS_PRIEST, "牧师"},  {CLASS_DEATH_KNIGHT, "死亡骑士"}, {CLASS_SHAMAN, "萨满祭司"}, {CLASS_MAGE, "法师"},
+        {CLASS_WARLOCK, "术士"}, {CLASS_DRUID, "德鲁伊"}};
+    //End By Leewheel
+
     for (PlayerBotMap::iterator i = playerBots.begin(); i != playerBots.end(); ++i)
     {
         Player* bot = i->second;
@@ -3258,7 +3271,7 @@ void RandomPlayerbotMgr::PrintStats()
         }
     }
 
-    LOG_INFO("playerbots", "Bots level:");
+    LOG_INFO("playerbots", "机器人阵营等级统计:");
     // uint32 maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
     uint32_t currentAlliance = 0, currentHorde = 0;
     uint32_t step = std::max(1, static_cast<int>((maxBotLevel + 4) / 8));
@@ -3272,43 +3285,41 @@ void RandomPlayerbotMgr::PrintStats()
         if (((i + 1) % step == 0) || i == maxBotLevel)
         {
             if (currentAlliance || currentHorde)
-                LOG_INFO("playerbots", "    {}..{}: {} alliance, {} horde", from, i, currentAlliance, currentHorde);
+                LOG_INFO("playerbots", "    {}..{}: {} 个联盟, {} 个部落", from, i, currentAlliance, currentHorde);
             currentAlliance = 0;
             currentHorde = 0;
             from = i + 1;
         }
     }
 
-    LOG_INFO("playerbots", "Bots race:");
+    LOG_INFO("playerbots", "机器人种族统计：");
     for (uint8 race = RACE_HUMAN; race < MAX_RACES; ++race)
     {
         if (perRace[race])
         {
-            uint32 lvl = lvlPerRace[race] * 10 / perRace[race];
-            float flvl = lvl / 10.0f;
-            LOG_INFO("playerbots", "    {}: {}, avg lvl: {}", ChatHelper::FormatRace(race).c_str(), perRace[race],
-                     flvl);
+            float avgLevel = float(lvlPerRace[race]) / float(perRace[race]);
+            std::string raceName = RaceNameCN.count(race) ? RaceNameCN[race] : ChatHelper::FormatRace(race);
+            LOG_INFO("playerbots", "    {}：数量 {}，平均等级 {:.1f}", raceName, perRace[race], avgLevel);
         }
     }
 
-    LOG_INFO("playerbots", "Bots class:");
+    LOG_INFO("playerbots", "机器人职业统计：");
     for (uint8 cls = CLASS_WARRIOR; cls < MAX_CLASSES; ++cls)
     {
         if (perClass[cls])
         {
-            uint32 lvl = lvlPerClass[cls] * 10 / perClass[cls];
-            float flvl = lvl / 10.0f;
-            LOG_INFO("playerbots", "    {}: {}, avg lvl: {}", ChatHelper::FormatClass(cls).c_str(), perClass[cls],
-                     flvl);
+            float avgLevel = float(lvlPerClass[cls]) / float(perClass[cls]);
+            std::string className = ClassNameCN.count(cls) ? ClassNameCN[cls] : ChatHelper::FormatClass(cls);
+            LOG_INFO("playerbots", "    {}：数量 {}，平均等级 {:.1f}", className, perClass[cls], avgLevel);
         }
     }
 
-    LOG_INFO("playerbots", "Bots role:");
-    LOG_INFO("playerbots", "    tank: {}, heal: {}, dps: {}", tank, heal, dps);
+    LOG_INFO("playerbots", "机器人角色统计:");
+    LOG_INFO("playerbots", "    坦克: {}, 治疗: {}, 输出: {}", tank, heal, dps);
 
-    LOG_INFO("playerbots", "Bots status:");
-    LOG_INFO("playerbots", "    Active: {}", active);
-    LOG_INFO("playerbots", "    Moving: {}", moving);
+    LOG_INFO("playerbots", "机器人状态统计:");
+    LOG_INFO("playerbots", "    活跃: {}", active);
+    LOG_INFO("playerbots", "    移动中: {}", moving);
 
     // LOG_INFO("playerbots", "Bots to:");
     // LOG_INFO("playerbots", "    update: {}", update);
@@ -3317,30 +3328,30 @@ void RandomPlayerbotMgr::PrintStats()
     // LOG_INFO("playerbots", "    change_strategy: {}", changeStrategy);
     // LOG_INFO("playerbots", "    revive: {}", revive);
 
-    LOG_INFO("playerbots", "    In flight: {}", inFlight);
-    LOG_INFO("playerbots", "    On mount: {}", mounted);
-    LOG_INFO("playerbots", "    In combat: {}", combat);
-    LOG_INFO("playerbots", "    In BG: {}", inBg);
-    LOG_INFO("playerbots", "    In Rest: {}", rest);
-    LOG_INFO("playerbots", "    Dead: {}", dead);
+    LOG_INFO("playerbots", "    飞行中: {}", inFlight);
+    LOG_INFO("playerbots", "    骑乘中: {}", mounted);
+    LOG_INFO("playerbots", "    战斗中: {}", combat);
+    LOG_INFO("playerbots", "    战场中: {}", inBg);
+    LOG_INFO("playerbots", "    休息中: {}", rest);
+    LOG_INFO("playerbots", "    死亡: {}", dead);
 
     if (sPlayerbotAIConfig.enableNewRpgStrategy)
     {
-        LOG_INFO("playerbots", "Bots rpg status:");
+        LOG_INFO("playerbots", "机器人RPG状态:");
         LOG_INFO("playerbots",
-                 "    Idle: {}, Rest: {}, GoGrind: {}, GoCamp: {}, MoveRandom: {}, MoveNpc: {}, DoQuest: {}, "
-                 "TravelFlight: {}",
+                 "    空闲: {}, 休息: {}, 去练级: {}, 去营地: {}, 随机移动: {}, 移动到NPC: {}, 做任务: {}, "
+                 "飞行旅行: {}",
                  rpgStatusCount[RPG_IDLE], rpgStatusCount[RPG_REST], rpgStatusCount[RPG_GO_GRIND],
                  rpgStatusCount[RPG_GO_CAMP], rpgStatusCount[RPG_WANDER_RANDOM], rpgStatusCount[RPG_WANDER_NPC],
                  rpgStatusCount[RPG_DO_QUEST], rpgStatusCount[RPG_TRAVEL_FLIGHT]);
 
-        LOG_INFO("playerbots", "Bots total quests:");
-        LOG_INFO("playerbots", "    Accepted: {}, Rewarded: {}, Dropped: {}", rpgStasticTotal.questAccepted,
+        LOG_INFO("playerbots", "机器人任务统计:");
+        LOG_INFO("playerbots", "    已接受: {}, 已完成: {}, 已放弃: {}", rpgStasticTotal.questAccepted,
                  rpgStasticTotal.questRewarded, rpgStasticTotal.questDropped);
     }
 
-    LOG_INFO("playerbots", "Bots engine:", dead);
-    LOG_INFO("playerbots", "    Non-combat: {}, Combat: {}, Dead: {}", engine_noncombat, engine_combat, engine_dead);
+    LOG_INFO("playerbots", "机器人引擎状态:", dead);
+    LOG_INFO("playerbots", "    非战斗: {}, 战斗: {}, 死亡: {}", engine_noncombat, engine_combat, engine_dead);
 }
 
 double RandomPlayerbotMgr::GetBuyMultiplier(Player* bot)

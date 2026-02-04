@@ -15,6 +15,8 @@
 #include "RandomPlayerbotFactory.h"
 #include "RandomPlayerbotMgr.h"
 #include "Talentspec.h"
+#include "Ai/Base/Actions/ChatCommandAliasLoader.h"
+#include "Bot/Engine/StrategyNameMapper.h"
 
 template <class T>
 void LoadList(std::string const value, T& list)
@@ -59,6 +61,10 @@ void LoadListString(std::string const value, T& list)
 bool PlayerbotAIConfig::Initialize()
 {
     LOG_INFO("server.loading", "Initializing mod-playerbots, based on AI Playerbots by ike3 and the original Playerbots by blueboy");
+
+    // Load Chinese command aliases and strategy names
+    CommandAliasTranslator::Load("configs/chat_command_aliases_zh.json");
+    StrategyNameMapper::Load("configs/strategy_names_zh.json");
 
     enabled = sConfigMgr->GetOption<bool>("AiPlayerbot.Enabled", true);
     if (!enabled)

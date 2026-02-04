@@ -48,6 +48,7 @@
 #include "SayAction.h"
 #include "ScriptMgr.h"
 #include "ServerFacade.h"
+#include "Ai/Base/Actions/ChatCommandAliasLoader.h"
 #include "SharedDefines.h"
 #include "SocialMgr.h"
 #include "SpellAuraEffects.h"
@@ -565,6 +566,9 @@ void PlayerbotAI::HandleCommand(uint32 type, const std::string& text, Player& fr
 
     std::string filtered = text;
 
+    // Translate Chinese commands to English
+    filtered = CommandAliasTranslator::Translate(text);
+
     if (!IsAllowedCommand(filtered) && !GetSecurity()->CheckLevelFor(PlayerbotSecurityLevel::PLAYERBOT_SECURITY_INVITE,
                                                                      type != CHAT_MSG_WHISPER, &fromPlayer))
         return;
@@ -931,6 +935,10 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
     }
 
     std::string filtered = text;
+    
+    // Translate Chinese commands to English
+    filtered = CommandAliasTranslator::Translate(text);
+    
     if (!sPlayerbotAIConfig.commandPrefix.empty())
     {
         if (filtered.find(sPlayerbotAIConfig.commandPrefix) != 0)
