@@ -3167,7 +3167,7 @@ void RandomPlayerbotMgr::PrintStats()
     std::unordered_map<uint32, int> zoneCount;
     uint8 maxBotLevel = 0;
 
-    //By Leewheel 20260204 - 添加中文种族和职业名称映射
+        //By Leewheel 20260204 - 添加中文种族和职业名称映射
     static std::unordered_map<uint8, std::string> RaceNameCN = {
         {RACE_HUMAN, "人类"},         {RACE_ORC, "兽人"},      {RACE_DWARF, "矮人"}, {RACE_NIGHTELF, "暗夜精灵"},
         {RACE_UNDEAD_PLAYER, "亡灵"}, {RACE_TAUREN, "牛头人"}, {RACE_GNOME, "侏儒"}, {RACE_TROLL, "巨魔"},
@@ -3292,25 +3292,27 @@ void RandomPlayerbotMgr::PrintStats()
         }
     }
 
-    LOG_INFO("playerbots", "机器人种族统计：");
+    LOG_INFO("playerbots", "机器人种族统计:");
     for (uint8 race = RACE_HUMAN; race < MAX_RACES; ++race)
     {
         if (perRace[race])
         {
-            float avgLevel = float(lvlPerRace[race]) / float(perRace[race]);
-            std::string raceName = RaceNameCN.count(race) ? RaceNameCN[race] : ChatHelper::FormatRace(race);
-            LOG_INFO("playerbots", "    {}：数量 {}，平均等级 {:.1f}", raceName, perRace[race], avgLevel);
+            uint32 lvl = lvlPerRace[race] * 10 / perRace[race];
+            float flvl = lvl / 10.0f;
+            LOG_INFO("playerbots", "    {}: {}, 平均等级: {}", ChatHelper::FormatRace(race).c_str(), perRace[race],
+                     flvl);
         }
     }
 
-    LOG_INFO("playerbots", "机器人职业统计：");
+    LOG_INFO("playerbots", "机器人职业统计:");
     for (uint8 cls = CLASS_WARRIOR; cls < MAX_CLASSES; ++cls)
     {
         if (perClass[cls])
         {
-            float avgLevel = float(lvlPerClass[cls]) / float(perClass[cls]);
-            std::string className = ClassNameCN.count(cls) ? ClassNameCN[cls] : ChatHelper::FormatClass(cls);
-            LOG_INFO("playerbots", "    {}：数量 {}，平均等级 {:.1f}", className, perClass[cls], avgLevel);
+            uint32 lvl = lvlPerClass[cls] * 10 / perClass[cls];
+            float flvl = lvl / 10.0f;
+            LOG_INFO("playerbots", "    {}: {}, 平均等级: {}", ChatHelper::FormatClass(cls).c_str(), perClass[cls],
+                     flvl);
         }
     }
 
