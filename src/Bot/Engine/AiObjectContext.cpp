@@ -53,6 +53,8 @@
 #include "Ai/Raid/Onyxia/RaidOnyxiaTriggerContext.h"
 #include "Ai/Raid/Icecrown/RaidIccActionContext.h"
 #include "Ai/Raid/Icecrown/RaidIccTriggerContext.h"
+#include "Ai/Raid/Naxxramas/RaidNaxxActionContext.h"
+#include "Ai/Raid/Naxxramas/RaidNaxxTriggerContext.h"
 
 SharedNamedObjectContextList<Strategy> AiObjectContext::sharedStrategyContexts;
 SharedNamedObjectContextList<Action> AiObjectContext::sharedActionContexts;
@@ -97,11 +99,11 @@ void AiObjectContext::BuildSharedContexts()
 void AiObjectContext::BuildSharedStrategyContexts(SharedNamedObjectContextList<Strategy>& strategyContexts)
 {
     strategyContexts.Add(new StrategyContext());
-    strategyContexts.Add(new MovementStrategyContext());
+    strategyContexts.Add(new RaidStrategyContext());
+    //strategyContexts.Add(new RaidNaxxramasStrategyContext());
     strategyContexts.Add(new AssistStrategyContext());
     strategyContexts.Add(new QuestStrategyContext());
     strategyContexts.Add(new DungeonStrategyContext());
-    strategyContexts.Add(new RaidStrategyContext());
 }
 
 void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Action>& actionContexts)
@@ -121,6 +123,7 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new RaidUlduarActionContext());
     actionContexts.Add(new RaidOnyxiaActionContext());
     actionContexts.Add(new RaidIccActionContext());
+    actionContexts.Add(new RaidNaxxActionContext());
     actionContexts.Add(new WotlkDungeonUKActionContext());
     actionContexts.Add(new WotlkDungeonNexActionContext());
     actionContexts.Add(new WotlkDungeonANActionContext());
@@ -155,6 +158,7 @@ void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Tr
     triggerContexts.Add(new RaidUlduarTriggerContext());
     triggerContexts.Add(new RaidOnyxiaTriggerContext());
     triggerContexts.Add(new RaidIccTriggerContext());
+    triggerContexts.Add(new RaidNaxxTriggerContext());
     triggerContexts.Add(new WotlkDungeonUKTriggerContext());
     triggerContexts.Add(new WotlkDungeonNexTriggerContext());
     triggerContexts.Add(new WotlkDungeonANTriggerContext());

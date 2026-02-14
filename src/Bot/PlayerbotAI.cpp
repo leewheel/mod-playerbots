@@ -48,6 +48,7 @@
 #include "SayAction.h"
 #include "ScriptMgr.h"
 #include "ServerFacade.h"
+#include "Ai/Base/Actions/ChatCommandAliasLoader.h"
 #include "SharedDefines.h"
 #include "SocialMgr.h"
 #include "SpellAuraEffects.h"
@@ -565,6 +566,9 @@ void PlayerbotAI::HandleCommand(uint32 type, const std::string& text, Player& fr
 
     std::string filtered = text;
 
+    // Translate Chinese commands to English
+    filtered = CommandAliasTranslator::Translate(text);
+
     if (!IsAllowedCommand(filtered) && !GetSecurity()->CheckLevelFor(PlayerbotSecurityLevel::PLAYERBOT_SECURITY_INVITE,
                                                                      type != CHAT_MSG_WHISPER, &fromPlayer))
         return;
@@ -931,6 +935,10 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
     }
 
     std::string filtered = text;
+    
+    // Translate Chinese commands to English
+    filtered = CommandAliasTranslator::Translate(text);
+    
     if (!sPlayerbotAIConfig.commandPrefix.empty())
     {
         if (filtered.find(sPlayerbotAIConfig.commandPrefix) != 0)
@@ -4237,16 +4245,17 @@ Player* PlayerbotAI::FindNewMaster()
 {
     // Ideally we want to have the leader as master.
     Group* group = bot->GetGroup();
-    // Only allow real players as masters unless in battleground.
     if (!group)
         return nullptr;
 
     Player* groupLeader = GetGroupLeader();
     PlayerbotAI* leaderBotAI = GET_PLAYERBOT_AI(groupLeader);
+    
+    // 优先选择真实玩家作为master
     if (!leaderBotAI || leaderBotAI->IsRealPlayer())
         return groupLeader;
 
-    // Find the real player in group
+    // 查找队伍中的真实玩家
     for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
     {
         Player* member = gref->GetSource();
@@ -4254,6 +4263,8 @@ Player* PlayerbotAI::FindNewMaster()
             continue;
 
         PlayerbotAI* memberBotAI = GET_PLAYERBOT_AI(member);
+        
+        // 找到真实玩家
         if ((!memberBotAI || memberBotAI->IsRealPlayer()) && !bot->InBattleground())
             return member;
 
@@ -4273,6 +4284,14 @@ Player* PlayerbotAI::FindNewMaster()
             return member;
         }
     }
+    
+    // 修复：如果没有真实玩家，跟随队长（即使队长是机器人）
+    // 这样全机器人队伍也能正常活动
+    if (groupLeader && groupLeader != bot)
+    {
+        return groupLeader;
+    }
+    
     return nullptr;
 }
 
@@ -4573,10 +4592,12 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
         }
     }
 
-    // if grouped up
+    // if grouped up - 修复：只要有队伍就应该激活
     Group* group = bot->GetGroup();
     if (group)
     {
+        bool hasValidGroupMember = false;
+        
         for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
         {
             Player* member = gref->GetSource();
@@ -4588,21 +4609,22 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
                 continue;
             }
 
+            // 只要有其他有效队伍成员，就标记为有效组队
+            hasValidGroupMember = true;
+            
             PlayerbotAI* memberBotAI = GET_PLAYERBOT_AI(member);
+            
+            // 如果队伍中有真实玩家，也激活
+            if (!memberBotAI || memberBotAI->HasRealPlayerMaster())
             {
-                if (!memberBotAI || memberBotAI->HasRealPlayerMaster())
-                {
-                    return true;
-                }
+                return true;
             }
-
-            if (group->IsLeader(member->GetGUID()))
-            {
-                if (!memberBotAI->AllowActivity(PARTY_ACTIVITY))
-                {
-                    return false;
-                }
-            }
+        }
+        
+        // 修复：只要有有效队伍成员（无论是否真实玩家），就激活
+        if (hasValidGroupMember)
+        {
+            return true;
         }
     }
 

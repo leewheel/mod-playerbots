@@ -14,6 +14,8 @@
 #include "RaidUlduarStrategy.h"
 #include "RaidOnyxiaStrategy.h"
 #include "RaidIccStrategy.h"
+#include "Naxxramas/Strategy/RaidNaxxStrategy.h"
+//#include "SunwellPlateau/Strategy/SunwellPlateauStrategy.h"
 
 class RaidStrategyContext : public NamedObjectContext<Strategy>
 {
@@ -32,6 +34,8 @@ public:
         creators["uld"] = &RaidStrategyContext::uld;
         creators["onyxia"] = &RaidStrategyContext::onyxia;
         creators["icc"] = &RaidStrategyContext::icc;
+        creators["naxx"] = &RaidStrategyContext::naxx;
+       /* creators["swp"] = &RaidStrategyContext::swp;*/
     }
 
 private:
@@ -47,6 +51,8 @@ private:
     static Strategy* onyxia(PlayerbotAI* botAI) { return new RaidOnyxiaStrategy(botAI); }
     static Strategy* uld(PlayerbotAI* botAI) { return new RaidUlduarStrategy(botAI); }
     static Strategy* icc(PlayerbotAI* botAI) { return new RaidIccStrategy(botAI); }
+    static Strategy* naxx(PlayerbotAI* botAI) { return new RaidNaxxStrategy(botAI); }
+    /*static Strategy* swp(PlayerbotAI* botAI) { return new RaidSunwellPlateauStrategy(botAI); }*/
 };
 
 #endif
