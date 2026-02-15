@@ -455,7 +455,7 @@ void PlayerbotHolder::DisablePlayerBot(ObjectGuid guid)
             PlayerbotRepository::instance().Save(botAI);
         }
 
-        LOG_DEBUG("playerbots", "机器人 {} 已登出", bot->GetName().c_str());
+        LOG_DEBUG("playerbots", "Bot {} logged out", bot->GetName().c_str());
 
         bot->SaveToDB(false, false);
 
@@ -1634,7 +1634,7 @@ void PlayerbotMgr::OnBotLoginInternal(Player* const bot)
     botAI->SetMaster(master);
     botAI->ResetStrategies();
 
-    LOG_INFO("playerbots", "机器人 {} 已登录", bot->GetName().c_str());
+    LOG_INFO("playerbots", "Bot {} logged in", bot->GetName().c_str());
 }
 
 void PlayerbotMgr::OnPlayerLogin(Player* player)

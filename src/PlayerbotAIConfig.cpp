@@ -15,8 +15,10 @@
 #include "RandomPlayerbotFactory.h"
 #include "RandomPlayerbotMgr.h"
 #include "Talentspec.h"
+//by leewheel 2026-02-14: Chinese localization support
 #include "Ai/Base/Actions/ChatCommandAliasLoader.h"
 #include "Bot/Engine/StrategyNameMapper.h"
+//end by leewheel
 
 template <class T>
 void LoadList(std::string const value, T& list)
@@ -62,9 +64,10 @@ bool PlayerbotAIConfig::Initialize()
 {
     LOG_INFO("server.loading", "Initializing mod-playerbots, based on AI Playerbots by ike3 and the original Playerbots by blueboy");
 
-    // Load Chinese command aliases and strategy names
+    //by leewheel 2026-02-14: Load Chinese command aliases and strategy names
     CommandAliasTranslator::Load("configs/chat_command_aliases_zh.json");
     StrategyNameMapper::Load("configs/strategy_names_zh.json");
+    //end by leewheel
 
     enabled = sConfigMgr->GetOption<bool>("AiPlayerbot.Enabled", true);
     if (!enabled)

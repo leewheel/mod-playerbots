@@ -20,10 +20,6 @@
 #include "PlayerbotMgr.h"
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
-#include "Group.h"
-#include "PlayerbotFactory.h"
-#include "PlayerbotDiagnostics.h"
-#include <Playerbots.h>
 
 using namespace Acore::ChatCommands;
 
@@ -36,11 +32,6 @@ public:
     {
         static ChatCommandTable playerbotsDebugCommandTable = {
             {"bg", HandleDebugBGCommand, SEC_GAMEMASTER, Console::Yes},
-        };
-
-        static ChatCommandTable playerbotsDiagCommandTable = {
-            {"start", HandleDiagStartCommand, SEC_PLAYER, Console::No},
-            {"stop", HandleDiagStopCommand, SEC_PLAYER, Console::No},
         };
 
         static ChatCommandTable playerbotsAccountCommandTable = {
@@ -56,7 +47,6 @@ public:
             {"pmon", HandlePerfMonCommand, SEC_GAMEMASTER, Console::Yes},
             {"rndbot", HandleRandomPlayerbotCommand, SEC_GAMEMASTER, Console::Yes},
             {"debug", playerbotsDebugCommandTable},
-            {"diag", playerbotsDiagCommandTable},
             {"account", playerbotsAccountCommandTable},
         };
 
@@ -65,27 +55,6 @@ public:
         };
 
         return commandTable;
-    }
-
-    static bool HandleDiagStartCommand(ChatHandler* handler, char const* /*args*/)
-    {
-        sDiagnostics.Enable();
-        handler->PSendSysMessage("机器人诊断模式已启用 - 所有机器人操作将输出详细日志");
-        handler->PSendSysMessage("使用 .playerbots diag stop 停止诊断");
-        LOG_INFO("playerbots.diag", "========================================");
-        LOG_INFO("playerbots.diag", "[DIAG] 诊断模式已启用");
-        LOG_INFO("playerbots.diag", "========================================");
-        return true;
-    }
-
-    static bool HandleDiagStopCommand(ChatHandler* handler, char const* /*args*/)
-    {
-        LOG_INFO("playerbots.diag", "========================================");
-        LOG_INFO("playerbots.diag", "[DIAG] 诊断模式已禁用");
-        LOG_INFO("playerbots.diag", "========================================");
-        sDiagnostics.Disable();
-        handler->PSendSysMessage("机器人诊断模式已禁用");
-        return true;
     }
 
     static bool HandlePlayerbotCommand(ChatHandler* handler, char const* args)
@@ -1317,10 +1286,8 @@ public:
     }
 };
 
-
-
 void AddPlayerbotsCommandscripts()
 {
-    new playerbots_commandscript();
-    new playerbots_chscommandscript();
+     new playerbots_commandscript(); 
+     new playerbots_chscommandscript(); 
 }

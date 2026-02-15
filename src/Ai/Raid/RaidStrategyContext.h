@@ -8,7 +8,6 @@
 #include "RaidKarazhanStrategy.h"
 #include "RaidMagtheridonStrategy.h"
 #include "RaidGruulsLairStrategy.h"
-#include "RaidSSCStrategy.h"
 #include "RaidOsStrategy.h"
 #include "RaidEoEStrategy.h"
 #include "RaidVoAStrategy.h"
@@ -16,7 +15,6 @@
 #include "RaidOnyxiaStrategy.h"
 #include "RaidIccStrategy.h"
 #include "Naxxramas/Strategy/RaidNaxxStrategy.h"
-//#include "SunwellPlateau/Strategy/SunwellPlateauStrategy.h"
 
 class RaidStrategyContext : public NamedObjectContext<Strategy>
 {
@@ -29,15 +27,13 @@ public:
         creators["karazhan"] = &RaidStrategyContext::karazhan;
         creators["magtheridon"] = &RaidStrategyContext::magtheridon;
         creators["gruulslair"] = &RaidStrategyContext::gruulslair;
-        creators["ssc"] = &RaidStrategyContext::ssc;
         creators["wotlk-os"] = &RaidStrategyContext::wotlk_os;
         creators["wotlk-eoe"] = &RaidStrategyContext::wotlk_eoe;
         creators["voa"] = &RaidStrategyContext::voa;
-        creators["ulduar"] = &RaidStrategyContext::ulduar;
+        creators["uld"] = &RaidStrategyContext::uld;
         creators["onyxia"] = &RaidStrategyContext::onyxia;
         creators["icc"] = &RaidStrategyContext::icc;
         creators["naxx"] = &RaidStrategyContext::naxx;
-       /* creators["swp"] = &RaidStrategyContext::swp;*/
     }
 
 private:
@@ -47,15 +43,13 @@ private:
     static Strategy* karazhan(PlayerbotAI* botAI) { return new RaidKarazhanStrategy(botAI); }
     static Strategy* magtheridon(PlayerbotAI* botAI) { return new RaidMagtheridonStrategy(botAI); }
     static Strategy* gruulslair(PlayerbotAI* botAI) { return new RaidGruulsLairStrategy(botAI); }
-    static Strategy* ssc(PlayerbotAI* botAI) { return new RaidSSCStrategy(botAI); }
     static Strategy* wotlk_os(PlayerbotAI* botAI) { return new RaidOsStrategy(botAI); }
     static Strategy* wotlk_eoe(PlayerbotAI* botAI) { return new RaidEoEStrategy(botAI); }
     static Strategy* voa(PlayerbotAI* botAI) { return new RaidVoAStrategy(botAI); }
     static Strategy* onyxia(PlayerbotAI* botAI) { return new RaidOnyxiaStrategy(botAI); }
-    static Strategy* ulduar(PlayerbotAI* botAI) { return new RaidUlduarStrategy(botAI); }
+    static Strategy* uld(PlayerbotAI* botAI) { return new RaidUlduarStrategy(botAI); }
     static Strategy* icc(PlayerbotAI* botAI) { return new RaidIccStrategy(botAI); }
     static Strategy* naxx(PlayerbotAI* botAI) { return new RaidNaxxStrategy(botAI); }
-    /*static Strategy* swp(PlayerbotAI* botAI) { return new RaidSunwellPlateauStrategy(botAI); }*/
 };
 
 #endif

@@ -11,6 +11,9 @@
 #include "Playerbots.h"
 #include "Queue.h"
 #include "Strategy.h"
+//by leewheel 2026-02-14
+#include "StrategyNameMapper.h"
+//end by leewheel
 #include "Timer.h"
 
 Engine::Engine(PlayerbotAI* botAI, AiObjectContext* factory) : PlayerbotAIAware(botAI), aiObjectContext(factory)
@@ -507,7 +510,10 @@ std::string const Engine::ListStrategies()
 
     for (std::map<std::string, Strategy*>::iterator i = strategies.begin(); i != strategies.end(); i++)
     {
-        s.append(i->first);
+        //by leewheel 2026-02-14: Use Chinese display name if available
+        std::string displayName = StrategyNameMapper::GetDisplayName(i->first);
+        s.append(displayName);
+        //end by leewheel
         s.append(", ");
     }
 
