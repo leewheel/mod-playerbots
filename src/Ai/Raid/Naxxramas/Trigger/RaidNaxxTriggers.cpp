@@ -190,7 +190,7 @@ bool NaxxAnubRekhanLocustSwarmTrigger::IsActive()
 bool NaxxFaerlinaFrenzyTrigger::IsActive()
 {
     // 查找费尔莉娜Boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "faerlina");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "grand widow faerlina");
     if (!boss || boss->GetEntry() != NPC_FAERLINA)
         return false;
     
@@ -262,7 +262,7 @@ bool NaxxMaexxnaPoisonShockTrigger::IsActive()
 bool NaxxNothTeleportTrigger::IsActive()
 {
     // 查找诺斯Boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "noth");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "noth the plaguebringer");
     if (!boss || boss->GetEntry() != NPC_NOTH)
         return false;
     
@@ -278,7 +278,7 @@ bool NaxxNothTeleportTrigger::IsActive()
 bool NaxxNothReappearTrigger::IsActive()
 {
     // 查找诺斯Boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "noth");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "noth the plaguebringer");
     if (!boss || boss->GetEntry() != NPC_NOTH)
         return false;
     
@@ -387,7 +387,7 @@ bool NaxxGluthZombieChowNearbyTrigger::IsActive()
 bool NaxxHeiganDanceTrigger::IsActive()
 {
     // 查找海根Boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "heigan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "heigan the unclean");
     if (!boss || boss->GetEntry() != NPC_HEIGAN)
         return false;
     
@@ -455,7 +455,7 @@ bool NaxxThaddiusPolarityShiftTrigger::IsActive()
 bool NaxxGothikPhaseOneTrigger::IsActive()
 {
     // 查找戈提克Boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik the harvester");
     if (!boss || boss->GetEntry() != NPC_GOTHIK)
         return false;
     
@@ -471,7 +471,7 @@ bool NaxxGothikPhaseOneTrigger::IsActive()
 bool NaxxGothikPhaseTwoTrigger::IsActive()
 {
     // 查找戈提克Boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik the harvester");
     if (!boss || boss->GetEntry() != NPC_GOTHIK)
         return false;
     
@@ -491,7 +491,7 @@ bool NaxxGothikPhaseTwoTrigger::IsActive()
 bool NaxxRazuviousNeedControlTrigger::IsActive()
 {
     // 查找拉祖维奥斯Boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razuvious");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "instructor razuvious");
     if (!boss || boss->GetEntry() != NPC_RAZUVIOUS)
         return false;
     
@@ -527,7 +527,7 @@ bool NaxxRazuviousNeedControlTrigger::IsActive()
 bool NaxxRazuviousControlExpiringTrigger::IsActive()
 {
     // 查找拉祖维奥斯Boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razuvious");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "instructor razuvious");
     if (!boss || boss->GetEntry() != NPC_RAZUVIOUS)
         return false;
     

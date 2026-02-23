@@ -435,7 +435,7 @@ bool NaxxAnubRekhanAttackCryptGuardAction::Execute(Event event)
 bool NaxxFaerlinaAttackWorshipperAction::Execute(Event event)
 {
     // 查找费尔莉娜
-    Unit* boss = AI_VALUE2(Unit*, "find target", "faerlina");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "grand widow faerlina");
     if (!boss || boss->GetEntry() != NPC_FAERLINA)
         return false;
     
@@ -563,7 +563,7 @@ bool NaxxMaexxnaAttackSpiderlingAction::Execute(Event event)
 bool NaxxNothSwitchToAddsAction::Execute(Event event)
 {
     // 查找诺斯
-    Unit* boss = AI_VALUE2(Unit*, "find target", "noth");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "noth the plaguebringer");
     if (!boss || boss->GetEntry() != NPC_NOTH)
         return false;
     
@@ -607,7 +607,7 @@ bool NaxxNothSwitchToAddsAction::Execute(Event event)
 bool NaxxNothSwitchToBossAction::Execute(Event event)
 {
     // 查找诺斯
-    Unit* boss = AI_VALUE2(Unit*, "find target", "noth");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "noth the plaguebringer");
     if (!boss || boss->GetEntry() != NPC_NOTH)
         return false;
     
@@ -831,7 +831,7 @@ bool NaxxGluthKillZombiesAction::Execute(Event event)
 bool NaxxHeiganDanceAction::Execute(Event event)
 {
     // 查找海根
-    Unit* boss = AI_VALUE2(Unit*, "find target", "heigan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "heigan the unclean");
     if (!boss || boss->GetEntry() != NPC_HEIGAN)
         return false;
     
@@ -986,7 +986,7 @@ bool NaxxThaddiusMoveToPolarityAction::Execute(Event event)
 bool NaxxGothikAttackLivingSideAction::Execute(Event event)
 {
     // 查找戈提克
-    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik the harvester");
     if (!boss || boss->GetEntry() != NPC_GOTHIK)
         return false;
     
@@ -1030,7 +1030,7 @@ bool NaxxGothikAttackLivingSideAction::Execute(Event event)
 bool NaxxGothikAttackDeadSideAction::Execute(Event event)
 {
     // 查找戈提克
-    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik the harvester");
     if (!boss || boss->GetEntry() != NPC_GOTHIK)
         return false;
     
@@ -1061,7 +1061,7 @@ bool NaxxGothikAttackDeadSideAction::Execute(Event event)
 bool NaxxGothikAttackBossAction::Execute(Event event)
 {
     // 查找戈提克
-    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "gothik the harvester");
     if (!boss || boss->GetEntry() != NPC_GOTHIK)
         return false;
     
@@ -1085,7 +1085,7 @@ bool NaxxRazuviousMindControlAction::Execute(Event event)
         return false;
     
     // 查找拉祖维奥斯
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razuvious");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "instructor razuvious");
     if (!boss || boss->GetEntry() != NPC_RAZUVIOUS)
         return false;
     
@@ -1136,7 +1136,7 @@ bool NaxxRazuviousSwitchControlAction::Execute(Event event)
         return false;
     
     // 查找拉祖维奥斯
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razuvious");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "instructor razuvious");
     if (!boss || boss->GetEntry() != NPC_RAZUVIOUS)
         return false;
     
