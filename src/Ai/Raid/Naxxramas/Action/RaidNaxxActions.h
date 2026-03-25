@@ -1,362 +1,326 @@
-/*
- * 版权所有 (C) 2026 Leewheel
- * 
- * 文件功能：纳克萨玛斯团队副本动作头文件
- * 定义纳克萨玛斯副本各Boss战斗的动作类
- * 
- * By Leewheel 2026-02-14
- */
-
-// RaidNaxxActions.h
-#ifndef _PLAYERBOT_RAIDNAXXACTIONS_H_
-#define _PLAYERBOT_RAIDNAXXACTIONS_H_
+#ifndef _PLAYERBOT_RAIDNAXXACTIONS_H
+#define _PLAYERBOT_RAIDNAXXACTIONS_H
 
 #include "Action.h"
 #include "AttackAction.h"
-#include "GenericSpellActions.h"
+#include "GenericActions.h"
 #include "MovementActions.h"
+#include "PlayerbotAI.h"
+#include "Playerbots.h"
+#include "RaidNaxxBossHelper.h"
 
-class PlayerbotAI;
-
-// ==========================================
-// 帕奇维克动作
-// ==========================================
-
-// 将副坦克定位在帕奇维克侧面以应对憎恨打击
-class NaxxPatchwerkOffTankPositionAction : public MovementAction
+class GrobbulusGoBehindAction : public MovementAction
 {
 public:
-    NaxxPatchwerkOffTankPositionAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx patchwerk offtank position") {}
+    GrobbulusGoBehindAction(PlayerbotAI* ai, float distance = 24.0f, float delta_angle = M_PI / 8)
+        : MovementAction(ai, "grobbulus go behind")
+    {
+        this->distance = distance;
+        this->delta_angle = delta_angle;
+    }
+    virtual bool Execute(Event event);
+
+protected:
+    float distance, delta_angle;
+};
+
+class GrobbulusRotateAction : public RotateAroundTheCenterPointAction
+{
+public:
+    GrobbulusRotateAction(PlayerbotAI* botAI)
+        : RotateAroundTheCenterPointAction(botAI, "rotate grobbulus", 3281.23f, -3310.38f, 35.0f, 8, true, M_PI) {}
+    virtual bool isUseful() override
+    {
+        return RotateAroundTheCenterPointAction::isUseful() && botAI->IsMainTank(bot) &&
+               AI_VALUE2(bool, "has aggro", "boss target");
+    }
+    uint32 GetCurrWaypoint() override;
+};
+
+class GrobbulusMoveCenterAction : public MoveInsideAction
+{
+public:
+    GrobbulusMoveCenterAction(PlayerbotAI* ai) : MoveInsideAction(ai, 3281.23f, -3310.38f, 5.0f) {}
+};
+
+class GrobbulusMoveAwayAction : public MovementAction
+{
+public:
+    GrobbulusMoveAwayAction(PlayerbotAI* ai, float distance = 18.0f)
+        : MovementAction(ai, "grobbulus move away"), distance(distance)
+    {
+    }
+    bool Execute(Event event) override;
+
+private:
+    float distance;
+};
+
+//class HeiganDanceAction : public MovementAction
+//{
+//public:
+//    HeiganDanceAction(PlayerbotAI* ai) : MovementAction(ai, "heigan dance")
+//    {
+//        this->last_eruption_ms = 0;
+//        this->platform_phase = false;
+//        ResetSafe();
+//        waypoints.push_back(std::make_pair(2794.88f, -3668.12f));
+//        waypoints.push_back(std::make_pair(2775.49f, -3674.43f));
+//        waypoints.push_back(std::make_pair(2762.30f, -3684.59f));
+//        waypoints.push_back(std::make_pair(2755.99f, -3703.96f));
+//        platform = std::make_pair(2794.26f, -3706.67f);
+//    }
+//
+//protected:
+//    bool CalculateSafe();
+//    void ResetSafe()
+//    {
+//        curr_safe = 0;
+//        curr_dir = 1;
+//    }
+//    void NextSafe()
+//    {
+//        curr_safe += curr_dir;
+//        if (curr_safe == 3 || curr_safe == 0)
+//        {
+//            curr_dir = -curr_dir;
+//        }
+//    }
+//    uint32 last_eruption_ms;
+//    bool platform_phase;
+//    uint32 curr_safe, curr_dir;
+//    std::vector<std::pair<float, float>> waypoints;
+//    std::pair<float, float> platform;
+//};
+//
+//class HeiganDanceMeleeAction : public HeiganDanceAction
+//{
+//public:
+//    HeiganDanceMeleeAction(PlayerbotAI* ai) : HeiganDanceAction(ai) {}
+//    virtual bool Execute(Event event);
+//};
+//
+//class HeiganDanceRangedAction : public HeiganDanceAction
+//{
+//public:
+//    HeiganDanceRangedAction(PlayerbotAI* ai) : HeiganDanceAction(ai) {}
+//    virtual bool Execute(Event event);
+//};
+
+class ThaddiusAttackNearestPetAction : public AttackAction
+{
+public:
+    ThaddiusAttackNearestPetAction(PlayerbotAI* ai) : AttackAction(ai, "thaddius attack nearest pet"), helper(ai) {}
+    virtual bool Execute(Event event);
+    virtual bool isUseful();
+
+private:
+    ThaddiusBossHelper helper;
+};
+
+// class ThaddiusMeleeToPlaceAction : public MovementAction
+// {
+// public:
+//     ThaddiusMeleeToPlaceAction(PlayerbotAI* ai) : MovementAction(ai, "thaddius melee to place") {}
+//     virtual bool Execute(Event event);
+//     virtual bool isUseful();
+// };
+
+// class ThaddiusRangedToPlaceAction : public MovementAction
+// {
+// public:
+//     ThaddiusRangedToPlaceAction(PlayerbotAI* ai) : MovementAction(ai, "thaddius ranged to place") {}
+//     virtual bool Execute(Event event);
+//     virtual bool isUseful();
+// };
+
+class ThaddiusMoveToPlatformAction : public MovementAction
+{
+public:
+    ThaddiusMoveToPlatformAction(PlayerbotAI* ai) : MovementAction(ai, "thaddius move to platform") {}
+    virtual bool Execute(Event event);
+    virtual bool isUseful();
+};
+
+class ThaddiusMovePolarityAction : public MovementAction
+{
+public:
+    ThaddiusMovePolarityAction(PlayerbotAI* ai) : MovementAction(ai, "thaddius move polarity") {}
+    virtual bool Execute(Event event);
+    virtual bool isUseful();
+};
+
+class RazuviousUseObedienceCrystalAction : public MovementAction
+{
+public:
+    RazuviousUseObedienceCrystalAction(PlayerbotAI* ai)
+        : MovementAction(ai, "razuvious use obedience crystal"), helper(ai)
+    {
+    }
+    bool Execute(Event event) override;
+
+private:
+    RazuviousBossHelper helper;
+};
+
+class RazuviousTargetAction : public AttackAction
+{
+public:
+    RazuviousTargetAction(PlayerbotAI* ai) : AttackAction(ai, "razuvious target"), helper(ai) {}
+    bool Execute(Event event) override;
+
+private:
+    RazuviousBossHelper helper;
+};
+
+class FourHorsemenAttractAlternativelyAction : public AttackAction
+{
+public:
+    FourHorsemenAttractAlternativelyAction(PlayerbotAI* ai) : AttackAction(ai, "four horsemen attract alternatively"), helper(ai)
+    {
+    }
+    bool Execute(Event event) override;
+
+protected:
+    FourHorsemenBossHelper helper;
+};
+
+class FourHorsemenAttackInOrderAction : public AttackAction
+{
+public:
+    FourHorsemenAttackInOrderAction(PlayerbotAI* ai) : AttackAction(ai, "four horsemen attack in order"), helper(ai) {}
+    bool Execute(Event event) override;
+
+protected:
+    FourHorsemenBossHelper helper;
+};
+
+// class SapphironGroundMainTankPositionAction : public MovementAction
+// {
+// public:
+//     SapphironGroundMainTankPositionAction(PlayerbotAI* ai) : MovementAction(ai, "sapphiron ground main tank
+//     position") {} virtual bool Execute(Event event);
+// };
+
+class SapphironGroundPositionAction : public MovementAction
+{
+public:
+    SapphironGroundPositionAction(PlayerbotAI* ai) : MovementAction(ai, "sapphiron ground position"), helper(ai) {}
+    bool Execute(Event event) override;
+
+protected:
+    SapphironBossHelper helper;
+};
+
+class SapphironFlightPositionAction : public MovementAction
+{
+public:
+    SapphironFlightPositionAction(PlayerbotAI* ai) : MovementAction(ai, "sapphiron flight position"), helper(ai) {}
+    bool Execute(Event event) override;
+
+protected:
+    SapphironBossHelper helper;
+    bool MoveToNearestIcebolt();
+};
+
+// class SapphironAvoidChillAction : public MovementAction
+// {
+// public:
+//     SapphironAvoidChillAction(PlayerbotAI* ai) : MovementAction(ai, "sapphiron avoid chill") {}
+//     virtual bool Execute(Event event);
+// };
+
+class KelthuzadChooseTargetAction : public AttackAction
+{
+public:
+    KelthuzadChooseTargetAction(PlayerbotAI* ai) : AttackAction(ai, "kel'thuzad choose target"), helper(ai) {}
+    virtual bool Execute(Event event);
+
+private:
+    KelthuzadBossHelper helper;
+};
+
+class KelthuzadPositionAction : public MovementAction
+{
+public:
+    KelthuzadPositionAction(PlayerbotAI* ai) : MovementAction(ai, "kel'thuzad position"), helper(ai) {}
+    virtual bool Execute(Event event);
+
+private:
+    KelthuzadBossHelper helper;
+};
+
+class AnubrekhanChooseTargetAction : public AttackAction
+{
+public:
+    AnubrekhanChooseTargetAction(PlayerbotAI* ai) : AttackAction(ai, "anub'rekhan choose target") {}
     bool Execute(Event event) override;
 };
 
-// 在狂乱或狂暴期间触发燃烧阶段（使用所有冷却技能）
-class NaxxPatchwerkBurnPhaseAction : public AttackAction
+class AnubrekhanPositionAction : public RotateAroundTheCenterPointAction
 {
 public:
-    NaxxPatchwerkBurnPhaseAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx patchwerk burn") {}
+    AnubrekhanPositionAction(PlayerbotAI* ai)
+        : RotateAroundTheCenterPointAction(ai, "anub'rekhan position", 3272.49f, -3476.27f, 45.0f, 16) {}
     bool Execute(Event event) override;
 };
 
-// ==========================================
-// 格罗布鲁斯动作
-// ==========================================
-
-// 当变异注射即将爆炸时将机器人移动到房间边缘
-class NaxxGrobbulusMoveToEdgeAction : public MovementAction
+class GluthChooseTargetAction : public AttackAction
 {
 public:
-    NaxxGrobbulusMoveToEdgeAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx grobbulus move to edge") {}
+    GluthChooseTargetAction(PlayerbotAI* ai) : AttackAction(ai, "gluth choose target"), helper(ai) {}
     bool Execute(Event event) override;
+
+private:
+    GluthBossHelper helper;
 };
 
-// 将机器人移离毒云区域
-class NaxxGrobbulusAvoidPoisonCloudAction : public MovementAction
+class GluthPositionAction : public RotateAroundTheCenterPointAction
 {
 public:
-    NaxxGrobbulusAvoidPoisonCloudAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx grobbulus avoid poison cloud") {}
+    GluthPositionAction(PlayerbotAI* ai)
+        : RotateAroundTheCenterPointAction(ai, "gluth position", 3293.61f, -3149.01f, 12.0f, 12), helper(ai) {}
     bool Execute(Event event) override;
+
+private:
+    GluthBossHelper helper;
 };
 
-// ==========================================
-// 阿努布雷坎动作
-// ==========================================
-
-// 在蝗虫群期间分散站位，与其他团队成员保持距离
-class NaxxAnubRekhanSpreadOutAction : public MovementAction
+class GluthSlowdownAction : public Action
 {
 public:
-    NaxxAnubRekhanSpreadOutAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx anubrekhan spread out") {}
+    GluthSlowdownAction(PlayerbotAI* ai) : Action(ai, "gluth slowdown"), helper(ai) {}
     bool Execute(Event event) override;
+
+private:
+    GluthBossHelper helper;
 };
 
-// 优先攻击地穴守卫小怪
-class NaxxAnubRekhanAttackCryptGuardAction : public AttackAction
+class LoathebPositionAction : public MovementAction
 {
 public:
-    NaxxAnubRekhanAttackCryptGuardAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx anubrekhan attack crypt guard") {}
-    bool Execute(Event event) override;
+    LoathebPositionAction(PlayerbotAI* ai) : MovementAction(ai, "loatheb position"), helper(ai) {}
+    virtual bool Execute(Event event);
+
+private:
+    LoathebBossHelper helper;
 };
 
-// ==========================================
-// 费尔莉娜动作
-// ==========================================
-
-// 优先攻击纳克萨玛斯崇拜者以移除狂乱
-class NaxxFaerlinaAttackWorshipperAction : public AttackAction
+class LoathebChooseTargetAction : public AttackAction
 {
 public:
-    NaxxFaerlinaAttackWorshipperAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx faerlina attack worshipper") {}
-    bool Execute(Event event) override;
+    LoathebChooseTargetAction(PlayerbotAI* ai) : AttackAction(ai, "loatheb choose target"), helper(ai) {}
+    virtual bool Execute(Event event);
+
+private:
+    LoathebBossHelper helper;
 };
 
-// ==========================================
-// 迈克斯纳动作
-// ==========================================
-
-// 在被蛛网缠绕时等待救援
-class NaxxMaexxnaWaitForRescueAction : public Action
-{
-public:
-    NaxxMaexxnaWaitForRescueAction(PlayerbotAI* botAI) 
-        : Action(botAI, "naxx maexxna wait for rescue") {}
-    bool Execute(Event event) override;
-};
-
-// 在毒性冲击时停止施法
-class NaxxMaexxnaStopCastingAction : public Action
-{
-public:
-    NaxxMaexxnaStopCastingAction(PlayerbotAI* botAI) 
-        : Action(botAI, "naxx maexxna stop casting") {}
-    bool Execute(Event event) override;
-};
-
-// 攻击小蜘蛛
-class NaxxMaexxnaAttackSpiderlingAction : public AttackAction
-{
-public:
-    NaxxMaexxnaAttackSpiderlingAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx maexxna attack spiderling") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 诺斯动作
-// ==========================================
-
-// 诺斯传送时切换到小怪
-class NaxxNothSwitchToAddsAction : public AttackAction
-{
-public:
-    NaxxNothSwitchToAddsAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx noth switch to adds") {}
-    bool Execute(Event event) override;
-};
-
-// 诺斯重新出现时切换回Boss
-class NaxxNothSwitchToBossAction : public AttackAction
-{
-public:
-    NaxxNothSwitchToBossAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx noth switch to boss") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 洛欧塞布动作
-// ==========================================
-
-// 死灵光环激活时停止治疗
-class NaxxLoathebStopHealingAction : public Action
-{
-public:
-    NaxxLoathebStopHealingAction(PlayerbotAI* botAI) 
-        : Action(botAI, "naxx loatheb stop healing") {}
-    bool Execute(Event event) override;
-};
-
-// 死灵光环消失时爆发治疗
-class NaxxLoathebBurstHealingAction : public Action
-{
-public:
-    NaxxLoathebBurstHealingAction(PlayerbotAI* botAI) 
-        : Action(botAI, "naxx loatheb burst healing") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 格拉斯动作
-// ==========================================
-
-// 风筝僵尸食尸鬼远离Boss
-class NaxxGluthKiteZombiesAction : public MovementAction
-{
-public:
-    NaxxGluthKiteZombiesAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx gluth kite zombies") {}
-    bool Execute(Event event) override;
-};
-
-// 击杀僵尸食尸鬼
-class NaxxGluthKillZombiesAction : public AttackAction
-{
-public:
-    NaxxGluthKillZombiesAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx gluth kill zombies") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 海根动作
-// ==========================================
-
-// 执行海根跳舞机制（移动到安全区域）
-class NaxxHeiganDanceAction : public MovementAction
-{
-public:
-    NaxxHeiganDanceAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx heigan dance") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 四骑士动作
-// ==========================================
-
-// 切换到标记层数最少的骑士
-class NaxxFourHorsemenSwitchAction : public AttackAction
-{
-public:
-    NaxxFourHorsemenSwitchAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx four horsemen switch") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 塔迪乌斯动作
-// ==========================================
-
-// 移动到对应的极性区域
-class NaxxThaddiusMoveToPolarityAction : public MovementAction
-{
-public:
-    NaxxThaddiusMoveToPolarityAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx thaddius move to polarity") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 戈提克动作
-// ==========================================
-
-// 第一阶段攻击生者侧小怪
-class NaxxGothikAttackLivingSideAction : public AttackAction
-{
-public:
-    NaxxGothikAttackLivingSideAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx gothik attack living side") {}
-    bool Execute(Event event) override;
-};
-
-// 第一阶段攻击亡者侧小怪
-class NaxxGothikAttackDeadSideAction : public AttackAction
-{
-public:
-    NaxxGothikAttackDeadSideAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx gothik attack dead side") {}
-    bool Execute(Event event) override;
-};
-
-// 第二阶段攻击戈提克
-class NaxxGothikAttackBossAction : public AttackAction
-{
-public:
-    NaxxGothikAttackBossAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx gothik attack boss") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 拉祖维奥斯动作
-// ==========================================
-
-// 精神控制死亡骑士学徒
-class NaxxRazuviousMindControlAction : public Action
-{
-public:
-    NaxxRazuviousMindControlAction(PlayerbotAI* botAI) 
-        : Action(botAI, "naxx razuvious mind control") {}
-    bool Execute(Event event) override;
-};
-
-// 使用学徒嘲讽Boss
-class NaxxRazuviousTauntAction : public Action
-{
-public:
-    NaxxRazuviousTauntAction(PlayerbotAI* botAI) 
-        : Action(botAI, "naxx razuvious taunt") {}
-    bool Execute(Event event) override;
-};
-
-// 切换控制到另一个学徒
-class NaxxRazuviousSwitchControlAction : public Action
-{
-public:
-    NaxxRazuviousSwitchControlAction(PlayerbotAI* botAI) 
-        : Action(botAI, "naxx razuvious switch control") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 萨菲隆动作
-// ==========================================
-
-// 躲在冰块后面
-class NaxxSapphironHideBehindIceBlockAction : public MovementAction
-{
-public:
-    NaxxSapphironHideBehindIceBlockAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx sapphiron hide behind ice block") {}
-    bool Execute(Event event) override;
-};
-
-// ==========================================
-// 克尔苏加德动作
-// ==========================================
-
-// 第一阶段攻击小怪
-class NaxxKelThuzadAttackAddsAction : public AttackAction
-{
-public:
-    NaxxKelThuzadAttackAddsAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx kelthuzad attack adds") {}
-    bool Execute(Event event) override;
-};
-
-// 第二阶段攻击Boss
-class NaxxKelThuzadAttackBossAction : public AttackAction
-{
-public:
-    NaxxKelThuzadAttackBossAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx kelthuzad attack boss") {}
-    bool Execute(Event event) override;
-};
-
-// 第三阶段攻击守护者
-class NaxxKelThuzadAttackGuardianAction : public AttackAction
-{
-public:
-    NaxxKelThuzadAttackGuardianAction(PlayerbotAI* botAI) 
-        : AttackAction(botAI, "naxx kelthuzad attack guardian") {}
-    bool Execute(Event event) override;
-};
-
-// 被冰霜冲击冻结时等待解冻
-class NaxxKelThuzadWaitForUnfreezeAction : public Action
-{
-public:
-    NaxxKelThuzadWaitForUnfreezeAction(PlayerbotAI* botAI) 
-        : Action(botAI, "naxx kelthuzad wait for unfreeze") {}
-    bool Execute(Event event) override;
-};
-
-// 远离暗影裂隙
-class NaxxKelThuzadMoveFissureAction : public MovementAction
-{
-public:
-    NaxxKelThuzadMoveFissureAction(PlayerbotAI* botAI) 
-        : MovementAction(botAI, "naxx kelthuzad move fissure") {}
-    bool Execute(Event event) override;
-};
+//class PatchwerkRangedPositionAction : public MovementAction
+//{
+//public:
+//    PatchwerkRangedPositionAction(PlayerbotAI* ai) : MovementAction(ai, "patchwerk ranged position") {}
+//    bool Execute(Event event) override;
+//};
 
 #endif
-
-// By Leewheel 2026-02-14

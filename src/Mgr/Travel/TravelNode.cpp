@@ -11,6 +11,7 @@
 #include "BudgetValues.h"
 #include "PathGenerator.h"
 #include "Playerbots.h"
+#include "RaceMgr.h"
 #include "ServerFacade.h"
 #include "TransportMgr.h"
 
@@ -81,7 +82,7 @@ void TravelNodePath::calculateCost(bool distanceOnly)
             }
         }
 
-        if (lastPoint && point.getMapId() == lastPoint.getMapId())
+        if (lastPoint && point.GetMapId() == lastPoint.GetMapId())
         {
             if (!distanceOnly && (point.isInWater() || lastPoint.isInWater()))
                 swimDistance += point.distance(lastPoint);
@@ -364,7 +365,7 @@ std::vector<TravelNode*> TravelNode::getNodeMap(bool importantOnly, std::vector<
         }
     }
 
-    return std::move(closeList);
+    return closeList;
 }
 
 bool TravelNode::isUselessLink(TravelNode* farNode)
@@ -687,7 +688,7 @@ bool TravelPath::makeShortCut(WorldPosition startPos, float maxDist)
         // if (p.point.getMapId() != startPos.getMapId())
         //    continue;
 
-        if (p.point.getMapId() == startPos.getMapId())
+        if (p.point.GetMapId() == startPos.GetMapId())
         {
             float curDist = p.point.sqDistance(startPos);
 
@@ -722,7 +723,7 @@ bool TravelPath::makeShortCut(WorldPosition startPos, float maxDist)
         newPath.push_back(p);
     }
 
-    if (newPath.empty() || minDist > maxDistSq || newPath.front().point.getMapId() != startPos.getMapId())
+    if (newPath.empty() || minDist > maxDistSq || newPath.front().point.GetMapId() != startPos.GetMapId())
     {
         clear();
         return false;
@@ -800,7 +801,7 @@ bool TravelPath::shouldMoveToNextPoint(WorldPosition startPos, std::vector<PathN
 
     float nextMove = p->point.distance(nextP->point);
 
-    if (p->point.getMapId() != startPos.getMapId() ||
+    if (p->point.GetMapId() != startPos.GetMapId() ||
         ((moveDist + nextMove > maxDist || startPos.distance(nextP->point) > maxDist) && moveDist > 0))
     {
         return false;
@@ -827,7 +828,7 @@ WorldPosition TravelPath::getNextPoint(WorldPosition startPos, float maxDist, Tr
     // Get the closest point on the path to start from.
     for (auto p = startP; p != ed; p++)
     {
-        if (p->point.getMapId() != startPos.getMapId())
+        if (p->point.GetMapId() != startPos.GetMapId())
             continue;
 
         float curDist = p->point.distance(startPos);
@@ -1126,7 +1127,7 @@ std::vector<TravelNode*> TravelNodeMap::getNodes(WorldPosition pos, float range)
 
     for (auto& node : m_nodes)
     {
-        if (node->getMapId() == pos.getMapId())
+        if (node->getMapId() == pos.GetMapId())
             if (range == -1 || node->getDistance(pos) <= range)
                 retVec.push_back(node);
     }
@@ -1135,7 +1136,7 @@ std::vector<TravelNode*> TravelNodeMap::getNodes(WorldPosition pos, float range)
               [pos](TravelNode* i, TravelNode* j)
               { return i->getPosition()->distance(pos) < j->getPosition()->distance(pos); });
 
-    return std::move(retVec);
+    return retVec;
 }
 
 TravelNode* TravelNodeMap::getNode(WorldPosition pos, [[maybe_unused]] std::vector<WorldPosition>& ppath, Unit* bot,
@@ -1660,7 +1661,7 @@ void TravelNodeMap::generateStartNodes()
     startNames[RACE_GNOME] = "Dwarf and Gnome";
     startNames[RACE_TROLL] = "Orc and Troll";
 
-    for (uint32 i = 0; i < MAX_RACES; i++)
+    for (uint32 i = 0; i < sRaceMgr->GetMaxRaces(); i++)
     {
         for (uint32 j = 0; j < MAX_CLASSES; j++)
         {
@@ -1752,188 +1753,75 @@ void TravelNodeMap::generateTransportNodes()
     for (auto const& itr : *sObjectMgr->GetGameObjectTemplates())
     {
         GameObjectTemplate const* data = &itr.second;
-        if (data && (data->type == GAMEOBJECT_TYPE_TRANSPORT || data->type == GAMEOBJECT_TYPE_MO_TRANSPORT))
+        if (!data || (data->type != GAMEOBJECT_TYPE_TRANSPORT && data->type != GAMEOBJECT_TYPE_MO_TRANSPORT))
+            continue;
+
+        uint32 pathId = data->moTransport.taxiPathId;
+        float moveSpeed = data->moTransport.moveSpeed;
+        if (pathId >= sTaxiPathNodesByPath.size())
+            continue;
+
+        TaxiPathNodeList const& path = sTaxiPathNodesByPath[pathId];
+
+        // Keep only transports with taxi paths (boats/zeppelins).
+        if (path.empty())
+            continue;
+
+        std::vector<WorldPosition> ppath;
+        TravelNode* prevNode = nullptr;
+
+        // Loop over the path and connect stop locations.
+        for (auto& p : path)
         {
-            TransportAnimation const* animation = sTransportMgr->GetTransportAnimInfo(itr.first);
+            WorldPosition pos = WorldPosition(p->mapid, p->x, p->y, p->z, 0);
 
-            uint32 pathId = data->moTransport.taxiPathId;
-            float moveSpeed = data->moTransport.moveSpeed;
-            if (pathId >= sTaxiPathNodesByPath.size())
-                continue;
+            if (prevNode)
+                ppath.push_back(pos);
 
-            TaxiPathNodeList const& path = sTaxiPathNodesByPath[pathId];
-
-            std::vector<WorldPosition> ppath;
-            TravelNode* prevNode = nullptr;
-
-            // Elevators/Trams
-            if (path.empty())
+            if (p->delay > 0)
             {
-                if (animation)
+                TravelNode* node = TravelNodeMap::instance().addNode(pos, data->name, true, true, true, itr.first);
+
+                if (!prevNode)
                 {
-                    TransportPathContainer aPath = animation->Path;
-                    float timeStart;
-
-                    for (auto& transport : WorldPosition().getGameObjectsNear(0, itr.first))
-                    {
-                        prevNode = nullptr;
-                        WorldPosition basePos(transport->mapid, transport->posX, transport->posY, transport->posZ,
-                                              transport->orientation);
-                        WorldPosition lPos = WorldPosition();
-
-                        for (auto& p : aPath)
-                        {
-                            float dx = -1 * p.second->X;
-                            float dy = -1 * p.second->Y;
-
-                            WorldPosition pos =
-                                WorldPosition(basePos.getMapId(), basePos.getX() + dx, basePos.getY() + dy,
-                                              basePos.getZ() + p.second->Z, basePos.getO());
-
-                            if (prevNode)
-                            {
-                                ppath.push_back(pos);
-                            }
-
-                            if (pos.distance(&lPos) == 0)
-                            {
-                                TravelNode* node =
-                                    TravelNodeMap::instance().addNode(pos, data->name, true, true, true, itr.first);
-
-                                if (!prevNode)
-                                {
-                                    ppath.push_back(pos);
-                                    timeStart = p.second->TimeSeg;
-                                }
-                                else
-                                {
-                                    float totalTime = (p.second->TimeSeg - timeStart) / 1000.0f;
-
-                                    TravelNodePath travelPath(0.1f, totalTime, (uint8)TravelNodePathType::transport,
-                                                              itr.first, true);
-                                    node->setPathTo(prevNode, travelPath);
-                                    ppath.clear();
-                                    ppath.push_back(pos);
-                                    timeStart = p.second->TimeSeg;
-                                }
-
-                                prevNode = node;
-                            }
-
-                            lPos = pos;
-                        }
-
-                        if (prevNode)
-                        {
-                            for (auto& p : aPath)
-                            {
-                                float dx = -1 * p.second->X;
-                                float dy = -1 * p.second->Y;
-                                WorldPosition pos =
-                                    WorldPosition(basePos.getMapId(), basePos.getX() + dx, basePos.getY() + dy,
-                                                  basePos.getZ() + p.second->Z, basePos.getO());
-
-                                ppath.push_back(pos);
-
-                                if (pos.distance(&lPos) == 0)
-                                {
-                                    TravelNode* node =
-                                        TravelNodeMap::instance().addNode(pos, data->name, true, true, true, itr.first);
-                                    if (node != prevNode)
-                                    {
-                                        if (p.second->TimeSeg < timeStart)
-                                            timeStart = 0;
-
-                                        float totalTime = (p.second->TimeSeg - timeStart) / 1000.0f;
-
-                                        TravelNodePath travelPath(0.1f, totalTime, (uint8)TravelNodePathType::transport,
-                                                                  itr.first, true);
-                                        travelPath.setPath(ppath);
-                                        node->setPathTo(prevNode, travelPath);
-                                        ppath.clear();
-                                        ppath.push_back(pos);
-                                        timeStart = p.second->TimeSeg;
-                                    }
-                                }
-
-                                lPos = pos;
-                            }
-                        }
-
-                        ppath.clear();
-                    }
+                    ppath.push_back(pos);
                 }
-            }
-            else  // Boats/Zepelins
-            {
-                // Loop over the path and connect stop locations.
-                for (auto& p : path)
+                else
                 {
-                    WorldPosition pos = WorldPosition(p->mapid, p->x, p->y, p->z, 0);
-
-                    // if (data->displayId == 3015)
-                    //     pos.setZ(pos.getZ() + 6.0f);
-                    // else if (data->displayId == 3031)
-                    //     pos.setZ(pos.getZ() - 17.0f);
-
-                    if (prevNode)
-                    {
-                        ppath.push_back(pos);
-                    }
-
-                    if (p->delay > 0)
-                    {
-                        TravelNode* node = TravelNodeMap::instance().addNode(pos, data->name, true, true, true, itr.first);
-
-                        if (!prevNode)
-                        {
-                            ppath.push_back(pos);
-                        }
-                        else
-                        {
-                            TravelNodePath travelPath(0.1f, 0.0, (uint8)TravelNodePathType::transport, itr.first, true);
-                            travelPath.setPathAndCost(ppath, moveSpeed);
-                            node->setPathTo(prevNode, travelPath);
-                            ppath.clear();
-                            ppath.push_back(pos);
-                        }
-
-                        prevNode = node;
-                    }
+                    TravelNodePath travelPath(0.1f, 0.0, (uint8)TravelNodePathType::transport, itr.first, true);
+                    travelPath.setPathAndCost(ppath, moveSpeed);
+                    node->setPathTo(prevNode, travelPath);
+                    ppath.clear();
+                    ppath.push_back(pos);
                 }
 
-                if (prevNode)
-                {
-                    // Continue from start until first stop and connect to end.
-                    for (auto& p : path)
-                    {
-                        WorldPosition pos = WorldPosition(p->mapid, p->x, p->y, p->z, 0);
-
-                        // if (data->displayId == 3015)
-                        //     pos.setZ(pos.getZ() + 6.0f);
-                        // else if (data->displayId == 3031)
-                        //     pos.setZ(pos.getZ() - 17.0f);
-
-                        ppath.push_back(pos);
-
-                        if (p->delay > 0)
-                        {
-                            TravelNode* node = TravelNodeMap::instance().getNode(pos, nullptr, 5.0f);
-
-                            if (node != prevNode)
-                            {
-                                TravelNodePath travelPath(0.1f, 0.0, (uint8)TravelNodePathType::transport, itr.first,
-                                                          true);
-                                travelPath.setPathAndCost(ppath, moveSpeed);
-
-                                node->setPathTo(prevNode, travelPath);
-                            }
-                        }
-                    }
-                }
-                ppath.clear();
+                prevNode = node;
             }
         }
+
+        if (!prevNode)
+            continue;
+
+        // Continue from start until first stop and connect to end.
+        for (auto& p : path)
+        {
+            WorldPosition pos = WorldPosition(p->mapid, p->x, p->y, p->z, 0);
+            ppath.push_back(pos);
+
+            if (p->delay > 0)
+            {
+                TravelNode* node = TravelNodeMap::instance().getNode(pos, nullptr, 5.0f);
+
+                if (node != prevNode)
+                {
+                    TravelNodePath travelPath(0.1f, 0.0, (uint8)TravelNodePathType::transport, itr.first, true);
+                    travelPath.setPathAndCost(ppath, moveSpeed);
+
+                    node->setPathTo(prevNode, travelPath);
+                }
+            }
+        }
+        ppath.clear();
     }
 }
 
@@ -2356,10 +2244,10 @@ void TravelNodeMap::saveNodeStore()
                     stmt->SetData(0, i);
                     stmt->SetData(1, saveNodes.find(link.first)->second);
                     stmt->SetData(2, j);
-                    stmt->SetData(3, point.getMapId());
-                    stmt->SetData(4, point.getX());
-                    stmt->SetData(5, point.getY());
-                    stmt->SetData(6, point.getZ());
+                    stmt->SetData(3, point.GetMapId());
+                    stmt->SetData(4, point.GetPositionX());
+                    stmt->SetData(5, point.GetPositionY());
+                    stmt->SetData(6, point.GetPositionZ());
                     trans->Append(stmt);
 
                     points++;
@@ -2516,10 +2404,10 @@ void TravelNodeMap::calcMapOffset()
             }
             else
             {
-                min.back().setX(std::min(min.back().getX(), node->getX()));
-                min.back().setY(std::min(min.back().getY(), node->getY()));
-                max.back().setX(std::max(max.back().getX(), node->getX()));
-                max.back().setY(std::max(max.back().getY(), node->getY()));
+                min.back().setX(std::min(min.back().GetPositionX(), node->getX()));
+                min.back().setY(std::min(min.back().GetPositionY(), node->getY()));
+                max.back().setX(std::max(max.back().GetPositionX(), node->getX()));
+                max.back().setY(std::max(max.back().GetPositionY(), node->getY()));
             }
         }
     }
@@ -2533,14 +2421,15 @@ void TravelNodeMap::calcMapOffset()
     for (auto& mapId : mapIds)
     {
         mapOffsets.push_back(std::make_pair(
-            mapId, WorldPosition(mapId, curPos.getX() - min[i].getX(), curPos.getY() - max[i].getY(), 0, 0)));
+            mapId, WorldPosition(mapId, curPos.GetPositionX() - min[i].GetPositionX(),
+                                 curPos.GetPositionY() - max[i].GetPositionY(), 0, 0)));
 
-        maxY = std::max(maxY, (max[i].getY() - min[i].getY() + 500));
-        curPos.setX(curPos.getX() + (max[i].getX() - min[i].getX() + 500));
+        maxY = std::max(maxY, (max[i].GetPositionY() - min[i].GetPositionY() + 500));
+        curPos.setX(curPos.GetPositionX() + (max[i].GetPositionX() - min[i].GetPositionX() + 500));
 
-        if (curPos.getX() > endPos.getX())
+        if (curPos.GetPositionX() > endPos.GetPositionX())
         {
-            curPos.setY(curPos.getY() - maxY);
+            curPos.setY(curPos.GetPositionY() - maxY);
             curPos.setX(-13000);
         }
 

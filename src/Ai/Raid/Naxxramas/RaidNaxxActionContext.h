@@ -1,149 +1,92 @@
-/*
- * 版权所有 (C) 2026 Leewheel
- * 
- * 文件功能：纳克萨玛斯团队副本动作上下文头文件
- * 定义纳克萨玛斯副本动作的注册和创建器
- * 
- * By Leewheel 2026-02-14
- */
+// /*
+//  * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
+//  and/or modify it under version 3 of the License, or (at your option), any later version.
+//  */
 
-#ifndef _PLAYERBOT_RAIDNAXXACTIONS_CONTEXT_H
-#define _PLAYERBOT_RAIDNAXXACTIONS_CONTEXT_H
+#ifndef _PLAYERBOT_RAIDNAXXACTIONCONTEXT_H
+#define _PLAYERBOT_RAIDNAXXACTIONCONTEXT_H
 
 #include "Action.h"
 #include "NamedObjectContext.h"
-#include "Action/RaidNaxxActions.h"
+#include "RaidNaxxActions.h"
 
 class RaidNaxxActionContext : public NamedObjectContext<Action>
 {
 public:
     RaidNaxxActionContext()
     {
-        // 帕奇维克
-        creators["naxx patchwerk offtank position"] = &RaidNaxxActionContext::naxx_patchwerk_offtank_position;
-        creators["naxx patchwerk burn"] = &RaidNaxxActionContext::naxx_patchwerk_burn;
-        
-        // 格罗布鲁斯
-        creators["naxx grobbulus move to edge"] = &RaidNaxxActionContext::naxx_grobbulus_move_to_edge;
-        creators["naxx grobbulus avoid poison cloud"] = &RaidNaxxActionContext::naxx_grobbulus_avoid_poison_cloud;
-        
-        // 阿努布雷坎
-        creators["naxx anubrekhan spread out"] = &RaidNaxxActionContext::naxx_anubrekhan_spread_out;
-        creators["naxx anubrekhan attack crypt guard"] = &RaidNaxxActionContext::naxx_anubrekhan_attack_crypt_guard;
-        
-        // 费尔莉娜
-        creators["naxx faerlina attack worshipper"] = &RaidNaxxActionContext::naxx_faerlina_attack_worshipper;
-        
-        // 迈克斯纳
-        creators["naxx maexxna wait for rescue"] = &RaidNaxxActionContext::naxx_maexxna_wait_for_rescue;
-        creators["naxx maexxna stop casting"] = &RaidNaxxActionContext::naxx_maexxna_stop_casting;
-        creators["naxx maexxna attack spiderling"] = &RaidNaxxActionContext::naxx_maexxna_attack_spiderling;
-        
-        // 诺斯
-        creators["naxx noth switch to adds"] = &RaidNaxxActionContext::naxx_noth_switch_to_adds;
-        creators["naxx noth switch to boss"] = &RaidNaxxActionContext::naxx_noth_switch_to_boss;
-        
-        // 洛欧塞布
-        creators["naxx loatheb stop healing"] = &RaidNaxxActionContext::naxx_loatheb_stop_healing;
-        creators["naxx loatheb burst healing"] = &RaidNaxxActionContext::naxx_loatheb_burst_healing;
-        
-        // 格拉斯
-        creators["naxx gluth kite zombies"] = &RaidNaxxActionContext::naxx_gluth_kite_zombies;
-        creators["naxx gluth kill zombies"] = &RaidNaxxActionContext::naxx_gluth_kill_zombies;
-        
-        // 海根
-        creators["naxx heigan dance"] = &RaidNaxxActionContext::naxx_heigan_dance;
-        
-        // 四骑士
-        creators["naxx four horsemen switch"] = &RaidNaxxActionContext::naxx_four_horsemen_switch;
-        
-        // 塔迪乌斯
-        creators["naxx thaddius move to polarity"] = &RaidNaxxActionContext::naxx_thaddius_move_to_polarity;
-        
-        // 戈提克
-        creators["naxx gothik attack living side"] = &RaidNaxxActionContext::naxx_gothik_attack_living_side;
-        creators["naxx gothik attack dead side"] = &RaidNaxxActionContext::naxx_gothik_attack_dead_side;
-        creators["naxx gothik attack boss"] = &RaidNaxxActionContext::naxx_gothik_attack_boss;
-        
-        // 拉祖维奥斯
-        creators["naxx razuvious mind control"] = &RaidNaxxActionContext::naxx_razuvious_mind_control;
-        creators["naxx razuvious taunt"] = &RaidNaxxActionContext::naxx_razuvious_taunt;
-        creators["naxx razuvious switch control"] = &RaidNaxxActionContext::naxx_razuvious_switch_control;
-        
-        // 萨菲隆
-        creators["naxx sapphiron hide behind ice block"] = &RaidNaxxActionContext::naxx_sapphiron_hide_behind_ice_block;
-        
-        // 克尔苏加德
-        creators["naxx kelthuzad attack adds"] = &RaidNaxxActionContext::naxx_kelthuzad_attack_adds;
-        creators["naxx kelthuzad attack boss"] = &RaidNaxxActionContext::naxx_kelthuzad_attack_boss;
-        creators["naxx kelthuzad attack guardian"] = &RaidNaxxActionContext::naxx_kelthuzad_attack_guardian;
-        creators["naxx kelthuzad wait for unfreeze"] = &RaidNaxxActionContext::naxx_kelthuzad_wait_for_unfreeze;
-        creators["naxx kelthuzad move fissure"] = &RaidNaxxActionContext::naxx_kelthuzad_move_fissure;
+        creators["grobbulus go behind the boss"] = &RaidNaxxActionContext::go_behind_the_boss;
+        creators["rotate grobbulus"] = &RaidNaxxActionContext::rotate_grobbulus;
+        creators["grobbulus move center"] = &RaidNaxxActionContext::grobbulus_move_center;
+        creators["grobbulus move away"] = &RaidNaxxActionContext::grobbulus_move_away;
+
+        //creators["heigan dance melee"] = &RaidNaxxActionContext::heigan_dance_melee;
+        //creators["heigan dance ranged"] = &RaidNaxxActionContext::heigan_dance_ranged;
+        creators["thaddius attack nearest pet"] = &RaidNaxxActionContext::thaddius_attack_nearest_pet;
+        // creators["thaddius melee to place"] = &RaidNaxxActionContext::thaddius_tank_to_place;
+        // creators["thaddius ranged to place"] = &RaidNaxxActionContext::thaddius_ranged_to_place;
+        creators["thaddius move to platform"] = &RaidNaxxActionContext::thaddius_move_to_platform;
+        creators["thaddius move polarity"] = &RaidNaxxActionContext::thaddius_move_polarity;
+
+        creators["razuvious use obedience crystal"] = &RaidNaxxActionContext::razuvious_use_obedience_crystal;
+        creators["razuvious target"] = &RaidNaxxActionContext::razuvious_target;
+
+        creators["four horsemen attract alternatively"] = &RaidNaxxActionContext::four_horsemen_attract_alternatively;
+        creators["four horsemen attack in order"] = &RaidNaxxActionContext::four_horsemen_attack_in_order;
+
+        creators["sapphiron ground position"] = &RaidNaxxActionContext::sapphiron_ground_position;
+        creators["sapphiron flight position"] = &RaidNaxxActionContext::sapphiron_flight_position;
+
+        creators["kel'thuzad choose target"] = &RaidNaxxActionContext::kelthuzad_choose_target;
+        creators["kel'thuzad position"] = &RaidNaxxActionContext::kelthuzad_position;
+
+        creators["anub'rekhan choose target"] = &RaidNaxxActionContext::anubrekhan_choose_target;
+        creators["anub'rekhan position"] = &RaidNaxxActionContext::anubrekhan_position;
+
+        creators["gluth choose target"] = &RaidNaxxActionContext::gluth_choose_target;
+        creators["gluth position"] = &RaidNaxxActionContext::gluth_position;
+        creators["gluth slowdown"] = &RaidNaxxActionContext::gluth_slowdown;
+
+        //creators["patchwerk ranged position"] = &RaidNaxxActionContext::patchwerk_ranged_position;
+
+        creators["loatheb position"] = &RaidNaxxActionContext::loatheb_position;
+        creators["loatheb choose target"] = &RaidNaxxActionContext::loatheb_choose_target;
     }
 
 private:
-    // 帕奇维克
-    static Action* naxx_patchwerk_offtank_position(PlayerbotAI* ai) { return new NaxxPatchwerkOffTankPositionAction(ai); }
-    static Action* naxx_patchwerk_burn(PlayerbotAI* ai) { return new NaxxPatchwerkBurnPhaseAction(ai); }
-    
-    // 格罗布鲁斯
-    static Action* naxx_grobbulus_move_to_edge(PlayerbotAI* ai) { return new NaxxGrobbulusMoveToEdgeAction(ai); }
-    static Action* naxx_grobbulus_avoid_poison_cloud(PlayerbotAI* ai) { return new NaxxGrobbulusAvoidPoisonCloudAction(ai); }
-    
-    // 阿努布雷坎
-    static Action* naxx_anubrekhan_spread_out(PlayerbotAI* ai) { return new NaxxAnubRekhanSpreadOutAction(ai); }
-    static Action* naxx_anubrekhan_attack_crypt_guard(PlayerbotAI* ai) { return new NaxxAnubRekhanAttackCryptGuardAction(ai); }
-    
-    // 费尔莉娜
-    static Action* naxx_faerlina_attack_worshipper(PlayerbotAI* ai) { return new NaxxFaerlinaAttackWorshipperAction(ai); }
-    
-    // 迈克斯纳
-    static Action* naxx_maexxna_wait_for_rescue(PlayerbotAI* ai) { return new NaxxMaexxnaWaitForRescueAction(ai); }
-    static Action* naxx_maexxna_stop_casting(PlayerbotAI* ai) { return new NaxxMaexxnaStopCastingAction(ai); }
-    static Action* naxx_maexxna_attack_spiderling(PlayerbotAI* ai) { return new NaxxMaexxnaAttackSpiderlingAction(ai); }
-    
-    // 诺斯
-    static Action* naxx_noth_switch_to_adds(PlayerbotAI* ai) { return new NaxxNothSwitchToAddsAction(ai); }
-    static Action* naxx_noth_switch_to_boss(PlayerbotAI* ai) { return new NaxxNothSwitchToBossAction(ai); }
-    
-    // 洛欧塞布
-    static Action* naxx_loatheb_stop_healing(PlayerbotAI* ai) { return new NaxxLoathebStopHealingAction(ai); }
-    static Action* naxx_loatheb_burst_healing(PlayerbotAI* ai) { return new NaxxLoathebBurstHealingAction(ai); }
-    
-    // 格拉斯
-    static Action* naxx_gluth_kite_zombies(PlayerbotAI* ai) { return new NaxxGluthKiteZombiesAction(ai); }
-    static Action* naxx_gluth_kill_zombies(PlayerbotAI* ai) { return new NaxxGluthKillZombiesAction(ai); }
-    
-    // 海根
-    static Action* naxx_heigan_dance(PlayerbotAI* ai) { return new NaxxHeiganDanceAction(ai); }
-    
-    // 四骑士
-    static Action* naxx_four_horsemen_switch(PlayerbotAI* ai) { return new NaxxFourHorsemenSwitchAction(ai); }
-    
-    // 塔迪乌斯
-    static Action* naxx_thaddius_move_to_polarity(PlayerbotAI* ai) { return new NaxxThaddiusMoveToPolarityAction(ai); }
-    
-    // 戈提克
-    static Action* naxx_gothik_attack_living_side(PlayerbotAI* ai) { return new NaxxGothikAttackLivingSideAction(ai); }
-    static Action* naxx_gothik_attack_dead_side(PlayerbotAI* ai) { return new NaxxGothikAttackDeadSideAction(ai); }
-    static Action* naxx_gothik_attack_boss(PlayerbotAI* ai) { return new NaxxGothikAttackBossAction(ai); }
-    
-    // 拉祖维奥斯
-    static Action* naxx_razuvious_mind_control(PlayerbotAI* ai) { return new NaxxRazuviousMindControlAction(ai); }
-    static Action* naxx_razuvious_taunt(PlayerbotAI* ai) { return new NaxxRazuviousTauntAction(ai); }
-    static Action* naxx_razuvious_switch_control(PlayerbotAI* ai) { return new NaxxRazuviousSwitchControlAction(ai); }
-    
-    // 萨菲隆
-    static Action* naxx_sapphiron_hide_behind_ice_block(PlayerbotAI* ai) { return new NaxxSapphironHideBehindIceBlockAction(ai); }
-    
-    // 克尔苏加德
-    static Action* naxx_kelthuzad_attack_adds(PlayerbotAI* ai) { return new NaxxKelThuzadAttackAddsAction(ai); }
-    static Action* naxx_kelthuzad_attack_boss(PlayerbotAI* ai) { return new NaxxKelThuzadAttackBossAction(ai); }
-    static Action* naxx_kelthuzad_attack_guardian(PlayerbotAI* ai) { return new NaxxKelThuzadAttackGuardianAction(ai); }
-    static Action* naxx_kelthuzad_wait_for_unfreeze(PlayerbotAI* ai) { return new NaxxKelThuzadWaitForUnfreezeAction(ai); }
-    static Action* naxx_kelthuzad_move_fissure(PlayerbotAI* ai) { return new NaxxKelThuzadMoveFissureAction(ai); }
+    static Action* go_behind_the_boss(PlayerbotAI* ai) { return new GrobbulusGoBehindAction(ai); }
+    static Action* rotate_grobbulus(PlayerbotAI* ai) { return new GrobbulusRotateAction(ai); }
+    static Action* grobbulus_move_center(PlayerbotAI* ai) { return new GrobbulusMoveCenterAction(ai); }
+    static Action* grobbulus_move_away(PlayerbotAI* ai) { return new GrobbulusMoveAwayAction(ai); }
+    //static Action* heigan_dance_melee(PlayerbotAI* ai) { return new HeiganDanceMeleeAction(ai); }
+    //static Action* heigan_dance_ranged(PlayerbotAI* ai) { return new HeiganDanceRangedAction(ai); }
+    static Action* thaddius_attack_nearest_pet(PlayerbotAI* ai) { return new ThaddiusAttackNearestPetAction(ai); }
+    // static Action* thaddius_tank_to_place(PlayerbotAI* ai) { return new ThaddiusMeleeToPlaceAction(ai); }
+    // static Action* thaddius_ranged_to_place(PlayerbotAI* ai) { return new ThaddiusRangedToPlaceAction(ai); }
+    static Action* thaddius_move_to_platform(PlayerbotAI* ai) { return new ThaddiusMoveToPlatformAction(ai); }
+    static Action* thaddius_move_polarity(PlayerbotAI* ai) { return new ThaddiusMovePolarityAction(ai); }
+    static Action* razuvious_target(PlayerbotAI* ai) { return new RazuviousTargetAction(ai); }
+    static Action* razuvious_use_obedience_crystal(PlayerbotAI* ai)
+    {
+        return new RazuviousUseObedienceCrystalAction(ai);
+    }
+    static Action* four_horsemen_attract_alternatively(PlayerbotAI* ai) { return new FourHorsemenAttractAlternativelyAction(ai); }
+    static Action* four_horsemen_attack_in_order(PlayerbotAI* ai) { return new FourHorsemenAttackInOrderAction(ai); }
+    // static Action* sapphiron_ground_main_tank_position(PlayerbotAI* ai) { return new
+    // SapphironGroundMainTankPositionAction(ai); }
+    static Action* sapphiron_ground_position(PlayerbotAI* ai) { return new SapphironGroundPositionAction(ai); }
+    static Action* sapphiron_flight_position(PlayerbotAI* ai) { return new SapphironFlightPositionAction(ai); }
+    // static Action* sapphiron_avoid_chill(PlayerbotAI* ai) { return new SapphironAvoidChillAction(ai); }
+    static Action* kelthuzad_choose_target(PlayerbotAI* ai) { return new KelthuzadChooseTargetAction(ai); }
+    static Action* kelthuzad_position(PlayerbotAI* ai) { return new KelthuzadPositionAction(ai); }
+    static Action* anubrekhan_choose_target(PlayerbotAI* ai) { return new AnubrekhanChooseTargetAction(ai); }
+    static Action* anubrekhan_position(PlayerbotAI* ai) { return new AnubrekhanPositionAction(ai); }
+    static Action* gluth_choose_target(PlayerbotAI* ai) { return new GluthChooseTargetAction(ai); }
+    static Action* gluth_position(PlayerbotAI* ai) { return new GluthPositionAction(ai); }
+    static Action* gluth_slowdown(PlayerbotAI* ai) { return new GluthSlowdownAction(ai); }
+    //static Action* patchwerk_ranged_position(PlayerbotAI* ai) { return new PatchwerkRangedPositionAction(ai); }
+    static Action* loatheb_position(PlayerbotAI* ai) { return new LoathebPositionAction(ai); }
+    static Action* loatheb_choose_target(PlayerbotAI* ai) { return new LoathebChooseTargetAction(ai); }
 };
 
 #endif
-
-// By Leewheel 2026-02-14

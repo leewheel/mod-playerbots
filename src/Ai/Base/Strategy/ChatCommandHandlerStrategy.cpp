@@ -5,8 +5,6 @@
 
 #include "ChatCommandHandlerStrategy.h"
 
-#include "Playerbots.h"
-
 class ChatCommandActionNodeFactoryInternal : public NamedObjectFactory<ActionNode>
 {
 public:
@@ -85,6 +83,8 @@ void ChatCommandHandlerStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
         new TriggerNode("target", { NextAction("tell target", relevance) }));
     triggers.push_back(
         new TriggerNode("ready", { NextAction("ready check", relevance) }));
+    triggers.push_back(
+        new TriggerNode("naxx", {NextAction("naxx chat shortcut", relevance)}));
     triggers.push_back(
         new TriggerNode("bwl", { NextAction("bwl chat shortcut", relevance) }));
     triggers.push_back(

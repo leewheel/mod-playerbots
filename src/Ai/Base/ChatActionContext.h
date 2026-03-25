@@ -120,7 +120,6 @@ public:
         creators["use"] = &ChatActionContext::use;
         creators["item count"] = &ChatActionContext::item_count;
         creators["equip"] = &ChatActionContext::equip;
-        creators["equip upgrades"] = &ChatActionContext::equip_upgrade;
         creators["unequip"] = &ChatActionContext::unequip;
         creators["sell"] = &ChatActionContext::sell;
         creators["buy"] = &ChatActionContext::buy;
@@ -188,6 +187,7 @@ public:
         creators["guild leave"] = &ChatActionContext::guild_leave;
         creators["rtsc"] = &ChatActionContext::rtsc;
         creators["bwl chat shortcut"] = &ChatActionContext::bwl_chat_shortcut;
+        creators["naxx chat shortcut"] = &ChatActionContext::naxx_chat_shortcut;
         creators["tell estimated dps"] = &ChatActionContext::tell_estimated_dps;
         creators["join"] = &ChatActionContext::join;
         creators["lfg"] = &ChatActionContext::lfg;
@@ -299,6 +299,7 @@ private:
     static Action* guild_remove(PlayerbotAI* botAI) { return new GuildRemoveAction(botAI); }
     static Action* guild_leave(PlayerbotAI* botAI) { return new GuildLeaveAction(botAI); }
     static Action* rtsc(PlayerbotAI* botAI) { return new RTSCAction(botAI); }
+    static Action* naxx_chat_shortcut(PlayerbotAI* ai) { return new NaxxChatShortcutAction(ai); }
     static Action* bwl_chat_shortcut(PlayerbotAI* ai) { return new BwlChatShortcutAction(ai); }
     static Action* tell_estimated_dps(PlayerbotAI* ai) { return new TellEstimatedDpsAction(ai); }
     static Action* join(PlayerbotAI* ai) { return new JoinGroupAction(ai); }
