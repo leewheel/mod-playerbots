@@ -92,21 +92,16 @@ void AttackersValue::AddAttackersOf(Player* player, std::unordered_set<Unit*>& t
     if (!player || !player->IsInWorld() || player->IsBeingTeleported())
         return;
 
-    HostileRefMgr& refManager = player->getHostileRefMgr();
-    HostileReference* ref = refManager.getFirst();
-    if (!ref)
-        return;
-
-    while (ref)
+    auto threatList = player->GetThreatMgr().GetThreatenedByMeList();
+    for (auto const& pair : threatList)
     {
-        ThreatMgr* threatMgr = ref->GetSource();
-        Unit* attacker = threatMgr->GetOwner();
+        Unit* attacker = pair.second->GetOwner();
+        if (!attacker)
+            continue;
 
         if (player->IsValidAttackTarget(attacker) &&
             player->GetDistance2d(attacker) < sPlayerbotAIConfig.sightDistance)
             targets.insert(attacker);
-
-        ref = ref->next();
     }
 }
 
@@ -130,8 +125,8 @@ bool AttackersValue::hasRealThreat(Unit* attacker)
 {
     return attacker && attacker->IsInWorld() && attacker->IsAlive() && !attacker->IsPolymorphed() &&
            // !attacker->isInRoots() &&
-           !attacker->IsFriendlyTo(bot);
-    (attacker->GetThreatMgr().getCurrentVictim() || dynamic_cast<Player*>(attacker));
+           !attacker->IsFriendlyTo(bot) &&
+           (attacker->GetThreatMgr().GetCurrentVictim() || dynamic_cast<Player*>(attacker));
 }
 
 bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range*/)
@@ -261,7 +256,7 @@ bool PossibleAddsValue::Calculate()
             if (!add->IsInWorld() || add->IsDuringRemoveFromWorld())
                 continue;
 
-            if (!add->GetTarget() && !add->GetThreatMgr().getCurrentVictim() && add->IsHostileTo(bot))
+            if (!add->GetTarget() && !add->GetThreatMgr().GetCurrentVictim() && add->IsHostileTo(bot))
             {
                 for (ObjectGuid const attackerGUID : attackers)
                 {

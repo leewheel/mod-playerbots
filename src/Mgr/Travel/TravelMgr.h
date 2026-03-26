@@ -408,7 +408,7 @@ class GuidPosition : public ObjectGuid, public WorldPosition
 public:
     GuidPosition() : ObjectGuid(), WorldPosition(), loadedFromDB(false) { }
     GuidPosition(WorldObject* wo);
-    GuidPosition(CreatureData const& creData);
+    GuidPosition(ObjectGuid::LowType spawnId, CreatureData const& creData);
     GuidPosition(GameObjectData const& goData);
     CreatureTemplate const* GetCreatureTemplate();
     GameObjectTemplate const* GetGameObjectTemplate();

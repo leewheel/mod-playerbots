@@ -10,7 +10,6 @@
 
 #include "Talentspec.h"
 #include "ChatHelper.h"
-#include "MMapFactory.h"
 #include "MapMgr.h"
 #include "PathGenerator.h"
 #include "Playerbots.h"
@@ -621,10 +620,11 @@ std::vector<WorldPosition> WorldPosition::frommGridCoord(mGridCoord GridCoord)
 void WorldPosition::loadMapAndVMap(uint32 mapId, uint8 x, uint8 y)
 {
     std::string const fileName = "load_map_grid.csv";
+    Map* map = sMapMgr->CreateBaseMap(mapId);
 
     if (isOverworld() && false || false)
     {
-        if (!MMAP::MMapFactory::createOrGetMMapMgr()->loadMap(mapId, x, y))
+        if (!map || map->GetMapCollisionData().LoadMMapTile(x, y) == MMAP::MMAP_LOAD_RESULT_ERROR)
             if (sPlayerbotAIConfig.hasLog(fileName))
             {
                 std::ostringstream out;
@@ -646,8 +646,7 @@ void WorldPosition::loadMapAndVMap(uint32 mapId, uint8 x, uint8 y)
                 const MapEntry* i_mapEntry = sMapStore.LookupEntry(mapId);
                 //const char* mapName = i_mapEntry ? i_mapEntry->name[sWorld->GetDefaultDbcLocale()] : "UNNAMEDMAP\x0"; //not used, (usage are commented out below), line marked for removal.
 
-                int vmapLoadResult = VMAP::VMapFactory::createOrGetVMapMgr()->loadMap(
-                    (sWorld->GetDataPath() + "vmaps").c_str(), mapId, x, y);
+                int vmapLoadResult = map ? map->GetMapCollisionData().LoadVMapTile(x, y) : VMAP::VMAP_LOAD_RESULT_ERROR;
                 switch (vmapLoadResult)
                 {
                     case VMAP::VMAP_LOAD_RESULT_OK:
@@ -680,7 +679,7 @@ void WorldPosition::loadMapAndVMap(uint32 mapId, uint8 x, uint8 y)
         if (!TravelMgr::instance().isBadMmap(mapId, x, y))
         {
             // load navmesh
-            if (!MMAP::MMapFactory::createOrGetMMapMgr()->loadMap(mapId, x, y))
+            if (!map || map->GetMapCollisionData().LoadMMapTile(x, y) == MMAP::MMAP_LOAD_RESULT_ERROR)
                 TravelMgr::instance().addBadMmap(mapId, x, y);
 
             if (sPlayerbotAIConfig.hasLog(fileName))
@@ -995,8 +994,8 @@ bool GuidPosition::IsCreatureOrGOAccessible()
 
 GuidPosition::GuidPosition(WorldObject* wo) : ObjectGuid(wo->GetGUID()), WorldPosition(wo), loadedFromDB(false) {}
 
-GuidPosition::GuidPosition(CreatureData const& creData)
-    : ObjectGuid(HighGuid::Unit, creData.id1, creData.spawnId),
+GuidPosition::GuidPosition(ObjectGuid::LowType spawnId, CreatureData const& creData)
+    : ObjectGuid(ObjectGuid::Create<HighGuid::Unit>(creData.id1, spawnId)),
       WorldPosition(creData.mapid, creData.posX, creData.posY, creData.posZ, creData.orientation)
 {
     loadedFromDB = true;

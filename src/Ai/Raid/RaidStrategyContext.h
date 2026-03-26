@@ -8,7 +8,6 @@
 #include "RaidKarazhanStrategy.h"
 #include "RaidGruulsLairStrategy.h"
 #include "RaidMagtheridonStrategy.h"
-#include "RaidNaxxStrategy.h"
 #include "RaidSSCStrategy.h"
 #include "RaidTempestKeepStrategy.h"
 #include "RaidOsStrategy.h"
@@ -39,7 +38,6 @@ public:
         creators["uld"] = &RaidStrategyContext::uld;
         creators["onyxia"] = &RaidStrategyContext::onyxia;
         creators["icc"] = &RaidStrategyContext::icc;
-        creators["naxx"] = &RaidStrategyContext::naxx;
     }
 
 private:
@@ -58,7 +56,6 @@ private:
     static Strategy* onyxia(PlayerbotAI* botAI) { return new RaidOnyxiaStrategy(botAI); }
     static Strategy* uld(PlayerbotAI* botAI) { return new RaidUlduarStrategy(botAI); }
     static Strategy* icc(PlayerbotAI* botAI) { return new RaidIccStrategy(botAI); }
-    static Strategy* naxx(PlayerbotAI* botAI) { return new RaidNaxxStrategy(botAI); }
 };
 
 #endif

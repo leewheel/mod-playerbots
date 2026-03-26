@@ -79,25 +79,43 @@ bool MoveToDarkPortalAction::Execute(Event /*event*/)
                 if (bot->GetTeamId() == TEAM_ALLIANCE)
                 {
                     Quest const* quest = sObjectMgr->GetQuestTemplate(10119);
-                    CreatureData const* creatureData = sRandomPlayerbotMgr.GetCreatureDataByEntry(16841);
-                    if (quest && creatureData)
+                    // Find creature spawn ID by entry
+                    ObjectGuid::LowType spawnId = 0;
+                    for (auto const& itr : sObjectMgr->GetAllCreatureData())
                     {
-                        auto creatureBounds =
-                            bot->GetMap()->GetCreatureBySpawnIdStore().equal_range(creatureData->spawnId);
+                        if (itr.second.id1 == 16841)
+                        {
+                            spawnId = itr.first;
+                            break;
+                        }
+                    }
+                    
+                    if (quest && spawnId)
+                    {
+                        auto creatureBounds = bot->GetMap()->GetCreatureBySpawnIdStore().equal_range(spawnId);
                         if (creatureBounds.first != creatureBounds.second)
-                            bot->AddQuest(quest, creatureBounds.first->second);
+                            bot->AddQuestAndCheckCompletion(quest, creatureBounds.first->second);
                     }
                 }
                 else
                 {
                     Quest const* quest = sObjectMgr->GetQuestTemplate(9407);
-                    CreatureData const* creatureData = sRandomPlayerbotMgr.GetCreatureDataByEntry(19254);
-                    if (quest && creatureData)
+                    // Find creature spawn ID by entry
+                    ObjectGuid::LowType spawnId = 0;
+                    for (auto const& itr : sObjectMgr->GetAllCreatureData())
                     {
-                        auto creatureBounds =
-                            bot->GetMap()->GetCreatureBySpawnIdStore().equal_range(creatureData->spawnId);
+                        if (itr.second.id1 == 19254)
+                        {
+                            spawnId = itr.first;
+                            break;
+                        }
+                    }
+                    
+                    if (quest && spawnId)
+                    {
+                        auto creatureBounds = bot->GetMap()->GetCreatureBySpawnIdStore().equal_range(spawnId);
                         if (creatureBounds.first != creatureBounds.second)
-                            bot->AddQuest(quest, creatureBounds.first->second);
+                            bot->AddQuestAndCheckCompletion(quest, creatureBounds.first->second);
                     }
                 }
             }

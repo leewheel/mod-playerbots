@@ -62,7 +62,7 @@ void FindQuestObjectData::GetObjectiveEntries()
 
 // Data worker. Checks for a specific creature what quest they are needed for and puts them in the proper place in the
 // quest map.
-void FindQuestObjectData::operator()(CreatureData const& creData)
+void FindQuestObjectData::operator()(ObjectGuid::LowType spawnId, CreatureData const& creData)
 {
     uint32 entry = creData.id1;
 
@@ -70,7 +70,7 @@ void FindQuestObjectData::operator()(CreatureData const& creData)
     {
         uint32 questId = relation.first;
         uint32 flag = relation.second;
-        data[questId][flag][entry].push_back(GuidPosition(creData));
+        data[questId][flag][entry].push_back(GuidPosition(spawnId, creData));
     }
 }
 
@@ -93,7 +93,7 @@ questGuidpMap QuestGuidpMapValue::Calculate()
 {
     FindQuestObjectData worker;
     for (auto const& itr : sObjectMgr->GetAllCreatureData())
-        worker(itr.second);
+        worker(itr.first, itr.second);
     for (auto const& itr : sObjectMgr->GetAllGOData())
         worker(itr.second);
 

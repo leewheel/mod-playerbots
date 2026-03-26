@@ -54,31 +54,30 @@ Unit* EnemyPlayerValue::Calculate()
     // 1. Check units we are currently in combat with.
     std::vector<Unit*> targets;
     Unit* pVictim = bot->GetVictim();
-    HostileReference* pReference = bot->getHostileRefMgr().getFirst();
-    while (pReference)
+    
+    auto threatList = bot->GetThreatMgr().GetThreatenedByMeList();
+    for (auto const& pair : threatList)
     {
-        ThreatMgr* threatMgr = pReference->GetSource();
-        if (Unit* pTarget = threatMgr->GetOwner())
+        Unit* pTarget = pair.second->GetOwner();
+        if (!pTarget)
+            continue;
+            
+        if (pTarget != pVictim && pTarget->IsPlayer() && pTarget->CanSeeOrDetect(bot) &&
+            bot->IsWithinDist(pTarget, VISIBILITY_DISTANCE_NORMAL))
         {
-            if (pTarget != pVictim && pTarget->IsPlayer() && pTarget->CanSeeOrDetect(bot) &&
-                bot->IsWithinDist(pTarget, VISIBILITY_DISTANCE_NORMAL))
+            if (bot->GetTeamId() == TEAM_HORDE)
             {
-                if (bot->GetTeamId() == TEAM_HORDE)
-                {
-                    if (pTarget->HasAura(23333))
-                        return pTarget;
-                }
-                else
-                {
-                    if (pTarget->HasAura(23335))
-                        return pTarget;
-                }
-
-                targets.push_back(pTarget);
+                if (pTarget->HasAura(23333))
+                    return pTarget;
             }
-        }
+            else
+            {
+                if (pTarget->HasAura(23335))
+                    return pTarget;
+            }
 
-        pReference = pReference->next();
+            targets.push_back(pTarget);
+        }
     }
 
     if (!targets.empty())

@@ -13,7 +13,7 @@ class FindMaxThreatGapTargetStrategy : public FindTargetStrategy
 public:
     FindMaxThreatGapTargetStrategy(PlayerbotAI* botAI) : FindTargetStrategy(botAI), minThreat(0) {}
 
-    void CheckAttacker(Unit* attacker, ThreatMgr* threatMgr) override
+    void CheckAttacker(Unit* attacker, ThreatManager* threatMgr) override
     {
         if (!attacker->IsAlive())
         {
@@ -29,12 +29,14 @@ public:
             foundHighPriority = true;
             return;
         }
-        if (!result || CalcThreatGap(attacker, threatMgr) > CalcThreatGap(result, &result->GetThreatMgr()))
+        if (!result || CalcThreatGap(attacker, &attacker->GetThreatMgr()) > CalcThreatGap(result, &result->GetThreatMgr()))
             result = attacker;
     }
-    float CalcThreatGap(Unit* attacker, ThreatMgr* threatMgr)
+    float CalcThreatGap(Unit* attacker, ThreatManager* threatMgr)
     {
         Unit* victim = attacker->GetVictim();
+        if (!victim)
+            return 0.0f;
         return threatMgr->GetThreat(victim) - threatMgr->GetThreat(attacker);
     }
 
@@ -52,7 +54,7 @@ public:
         result = nullptr;
     }
 
-    void CheckAttacker(Unit* attacker, ThreatMgr* threatMgr) override
+    void CheckAttacker(Unit* attacker, ThreatManager* threatMgr) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
         {
@@ -143,7 +145,7 @@ public:
     {
     }
 
-    void CheckAttacker(Unit* attacker, ThreatMgr*) override
+    void CheckAttacker(Unit* attacker, ThreatManager*) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
         {
@@ -216,7 +218,7 @@ public:
     {
     }
 
-    void CheckAttacker(Unit* attacker, ThreatMgr*) override
+    void CheckAttacker(Unit* attacker, ThreatManager*) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
         {
@@ -319,7 +321,7 @@ class FindMaxHpTargetStrategy : public FindTargetStrategy
 public:
     FindMaxHpTargetStrategy(PlayerbotAI* botAI) : FindTargetStrategy(botAI), maxHealth(0) {}
 
-    void CheckAttacker(Unit* attacker, ThreatMgr*) override
+    void CheckAttacker(Unit* attacker, ThreatManager*) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
         {

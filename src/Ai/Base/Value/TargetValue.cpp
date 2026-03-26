@@ -10,7 +10,7 @@
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
 #include "ScriptedCreature.h"
-#include "ThreatMgr.h"
+#include "ThreatManager.h"
 
 Unit* FindTargetStrategy::GetResult() { return result; }
 
@@ -23,8 +23,8 @@ Unit* TargetValue::FindTarget(FindTargetStrategy* strategy)
         if (!unit)
             continue;
 
-        ThreatMgr& ThreatMgr = unit->GetThreatMgr();
-        strategy->CheckAttacker(unit, &ThreatMgr);
+        ThreatManager& threatMgr = unit->GetThreatMgr();
+        strategy->CheckAttacker(unit, &threatMgr);
     }
 
     return strategy->GetResult();
@@ -144,11 +144,14 @@ Unit* FindTargetValue::Calculate()
     {
         return nullptr;
     }
-    HostileReference* ref = bot->getHostileRefMgr().getFirst();
-    while (ref)
+    
+    auto threatList = bot->GetThreatMgr().GetThreatenedByMeList();
+    for (auto const& pair : threatList)
     {
-        ThreatMgr* threatManager = ref->GetSource();
-        Unit* unit = threatManager->GetOwner();
+        Unit* unit = pair.second->GetOwner();
+        if (!unit)
+            continue;
+            
         std::wstring wnamepart;
         Utf8toWStr(unit->GetName(), wnamepart);
         wstrToLower(wnamepart);
@@ -156,12 +159,11 @@ Unit* FindTargetValue::Calculate()
         {
             return unit;
         }
-        ref = ref->next();
     }
     return nullptr;
 }
 
-void FindBossTargetStrategy::CheckAttacker(Unit* attacker, ThreatMgr* threatManager)
+void FindBossTargetStrategy::CheckAttacker(Unit* attacker, ThreatManager* /*threatManager*/)
 {
     UnitAI* unitAI = attacker->GetAI();
     BossAI* bossAI = dynamic_cast<BossAI*>(unitAI);

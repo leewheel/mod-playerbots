@@ -6,7 +6,7 @@
 #include "TellTargetAction.h"
 
 #include "Event.h"
-#include "ThreatMgr.h"
+#include "ThreatManager.h"
 #include "AiObjectContext.h"
 #include "PlayerbotAI.h"
 
@@ -42,21 +42,18 @@ bool TellAttackersAction::Execute(Event /*event*/)
 
     botAI->TellMaster("--- Threat ---");
 
-    HostileReference* ref = bot->getHostileRefMgr().getFirst();
-    if (!ref)
+    auto threatList = bot->GetThreatMgr().GetSortedThreatList();
+    if (threatList.begin() == threatList.end())
         return true;
 
-    while (ref)
+    for (ThreatReference const* ref : threatList)
     {
-        ThreatMgr* threatMgr = ref->GetSource();
-        Unit* unit = threatMgr->GetOwner();
+        Unit* unit = ref->GetVictim();
         float threat = ref->GetThreat();
 
         std::ostringstream out;
         out << unit->GetName() << " (" << threat << ")";
         botAI->TellMaster(out);
-
-        ref = ref->next();
     }
 
     return true;

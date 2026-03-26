@@ -61,7 +61,7 @@ public:
     FindQuestObjectData() { GetObjectiveEntries(); }
 
     void GetObjectiveEntries();
-    void operator()(CreatureData const& creatureData);
+    void operator()(ObjectGuid::LowType spawnId, CreatureData const& creatureData);
     void operator()(GameObjectData const& gameobjectData);
     questGuidpMap GetResult() const { return data; };
 
