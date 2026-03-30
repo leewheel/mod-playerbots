@@ -92,10 +92,9 @@ void AttackersValue::AddAttackersOf(Player* player, std::unordered_set<Unit*>& t
     if (!player || !player->IsInWorld() || player->IsBeingTeleported())
         return;
 
-    auto threatList = player->GetThreatMgr().GetThreatenedByMeList();
-    for (auto const& pair : threatList)
+    for (auto const& [guid, ref] : player->GetThreatMgr().GetThreatenedByMeList())
     {
-        Unit* attacker = pair.second->GetOwner();
+        Unit* attacker = ref->GetOwner();
         if (!attacker)
             continue;
 
@@ -236,9 +235,6 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
 bool AttackersValue::IsValidTarget(Unit* attacker, Player* bot)
 {
     return IsPossibleTarget(attacker, bot) && bot->IsWithinLOSInMap(attacker);
-    // (attacker->GetThreatMgr().getCurrentVictim() || attacker->GetGuidValue(UNIT_FIELD_TARGET) ||
-    // attacker->GetGUID().IsPlayer() || attacker->GetGUID() ==
-    // GET_PLAYERBOT_AI(bot)->GetAiObjectContext()->GetValue<ObjectGuid>("pull target")->Get());
 }
 
 bool PossibleAddsValue::Calculate()
@@ -250,27 +246,24 @@ bool PossibleAddsValue::Calculate()
     {
         if (find(attackers.begin(), attackers.end(), guid) != attackers.end())
             continue;
+        Unit* add = botAI->GetUnit(guid);
+        if (!add || !add->IsInWorld() || add->IsDuringRemoveFromWorld())
+            continue;
 
-        if (Unit* add = botAI->GetUnit(guid))
+        if (!add->GetTarget() && !add->GetThreatMgr().GetLastVictim() && add->IsHostileTo(bot))
         {
-            if (!add->IsInWorld() || add->IsDuringRemoveFromWorld())
-                continue;
-
-            if (!add->GetTarget() && !add->GetThreatMgr().GetCurrentVictim() && add->IsHostileTo(bot))
+            for (ObjectGuid const attackerGUID : attackers)
             {
-                for (ObjectGuid const attackerGUID : attackers)
-                {
-                    Unit* attacker = botAI->GetUnit(attackerGUID);
-                    if (!attacker)
-                        continue;
+                Unit* attacker = botAI->GetUnit(attackerGUID);
+                if (!attacker)
+                    continue;
 
-                    float dist = ServerFacade::instance().GetDistance2d(attacker, add);
-                    if (ServerFacade::instance().IsDistanceLessOrEqualThan(dist, sPlayerbotAIConfig.aoeRadius * 1.5f))
-                        continue;
+                float dist = ServerFacade::instance().GetDistance2d(attacker, add);
+                if (ServerFacade::instance().IsDistanceLessOrEqualThan(dist, sPlayerbotAIConfig.aoeRadius * 1.5f))
+                    continue;
 
-                    if (ServerFacade::instance().IsDistanceLessOrEqualThan(dist, sPlayerbotAIConfig.aggroDistance))
-                        return true;
-                }
+                if (ServerFacade::instance().IsDistanceLessOrEqualThan(dist, sPlayerbotAIConfig.aggroDistance))
+                    return true;
             }
         }
     }

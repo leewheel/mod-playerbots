@@ -16,13 +16,11 @@ public:
     void CheckAttacker(Unit* attacker, ThreatManager* threatMgr) override
     {
         if (!attacker->IsAlive())
-        {
             return;
-        }
+
         if (foundHighPriority)
-        {
             return;
-        }
+
         if (IsHighPriority(attacker))
         {
             result = attacker;
@@ -63,13 +61,11 @@ public:
                 return;
         }
         if (!attacker->IsAlive())
-        {
             return;
-        }
+
         if (foundHighPriority)
-        {
             return;
-        }
+
         if (IsHighPriority(attacker))
         {
             result = attacker;
@@ -92,24 +88,19 @@ public:
         int new_level = GetIntervalLevel(new_unit);
         int old_level = GetIntervalLevel(old_unit);
         if (new_level != old_level)
-        {
             return new_level > old_level;
-        }
+
         int32_t level = new_level;
         if (level % 10 == 2 || level % 10 == 0)
-        {
             return new_time < old_time;
-        }
         // dont switch targets when all of them with low health
         Unit* currentTarget = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
         if (currentTarget == new_unit)
-        {
             return true;
-        }
+
         if (currentTarget == old_unit)
-        {
             return false;
-        }
+
         return new_time > old_time;
     }
     int32_t GetIntervalLevel(Unit* unit)
@@ -121,13 +112,11 @@ public:
         attackRange += 5.0f;
         int level = dis < attackRange ? 10 : 0;
         if (time >= 5 && time <= 30)
-        {
             return level + 2;
-        }
+
         if (time > 30)
-        {
             return level;
-        }
+
         return level + 1;
     }
 
@@ -154,13 +143,11 @@ public:
                 return;
         }
         if (!attacker->IsAlive())
-        {
             return;
-        }
+
         if (foundHighPriority)
-        {
             return;
-        }
+
         if (IsHighPriority(attacker))
         {
             result = attacker;
@@ -188,9 +175,8 @@ public:
         // attack enemy in range and with lowest health
         int level = new_level;
         if (level == 10)
-        {
             return new_time < old_time;
-        }
+
         // all targets are far away, choose the closest one
         return botAI->GetBot()->GetDistance(new_unit) < botAI->GetBot()->GetDistance(old_unit);
     }
@@ -227,13 +213,11 @@ public:
                 return;
         }
         if (!attacker->IsAlive())
-        {
             return;
-        }
+
         if (foundHighPriority)
-        {
             return;
-        }
+
         if (IsHighPriority(attacker))
         {
             result = attacker;
@@ -256,9 +240,8 @@ public:
         int new_level = GetIntervalLevel(new_unit);
         int old_level = GetIntervalLevel(old_unit);
         if (new_level != old_level)
-        {
             return new_level > old_level;
-        }
+
         // attack enemy in range and with lowest health
         int level = new_level;
         Player* bot = botAI->GetBot();
@@ -266,9 +249,8 @@ public:
         {
             Unit* combo_unit = bot->GetComboTarget();
             if (new_unit == combo_unit)
-            {
                 return true;
-            }
+
             return new_time < old_time;
         }
         // all targets are far away, choose the closest one

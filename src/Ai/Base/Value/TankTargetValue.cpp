@@ -18,9 +18,8 @@ public:
     void CheckAttacker(Unit* creature, ThreatManager* threatMgr) override
     {
         if (!creature || !creature->IsAlive())
-        {
             return;
-        }
+
         Player* bot = botAI->GetBot();
         float threat = threatMgr->GetThreat(bot);
         if (!result)
@@ -29,8 +28,7 @@ public:
             result = creature;
         }
         // neglect if victim is main tank, or no victim (for untauntable target)
-        Unit* victim = threatMgr->GetCurrentVictim();
-        if (victim)
+        if (Unit* victim = threatMgr->GetCurrentVictim())
         {
             if (victim->ToPlayer() && botAI->IsMainTank(victim->ToPlayer()))
             {
@@ -62,13 +60,10 @@ public:
                 return;
         }
         if (!attacker->IsAlive())
-        {
             return;
-        }
+
         if (!result || IsBetter(attacker, result))
-        {
             result = attacker;
-        }
     }
     bool IsBetter(Unit* new_unit, Unit* old_unit)
     {
@@ -79,6 +74,7 @@ public:
         {
             if (old_unit == currentTarget)
                 return false;
+
             if (new_unit == currentTarget)
                 return true;
         }
@@ -88,26 +84,22 @@ public:
         float old_dis = bot->GetDistance(old_unit);
         // hasAggro? -> withinMelee? -> threat
         if (GetIntervalLevel(new_unit) != GetIntervalLevel(old_unit))
-        {
             return GetIntervalLevel(new_unit) > GetIntervalLevel(old_unit);
-        }
+
         int32_t interval = GetIntervalLevel(new_unit);
         if (interval == 2)
-        {
             return new_dis < old_dis;
-        }
+
         return new_threat < old_threat;
     }
     int32_t GetIntervalLevel(Unit* unit)
     {
         if (!botAI->HasAggro(unit))
-        {
             return 2;
-        }
+
         if (botAI->GetBot()->IsWithinMeleeRange(unit))
-        {
             return 1;
-        }
+
         return 0;
     }
 };

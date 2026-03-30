@@ -5,6 +5,7 @@
 
 #include "EnemyPlayerValue.h"
 
+#include "CombatManager.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
 #include "Vehicle.h"
@@ -51,33 +52,21 @@ Unit* EnemyPlayerValue::Calculate()
             controllingVehicle = true;
     }
 
-    // 1. Check units we are currently in combat with.
+    // 1. Check units we are currently in PvP combat with.
     std::vector<Unit*> targets;
     Unit* pVictim = bot->GetVictim();
-    
-    auto threatList = bot->GetThreatMgr().GetThreatenedByMeList();
-    for (auto const& pair : threatList)
+    for (auto const& [guid, combatRef] : bot->GetCombatManager().GetPvPCombatRefs())
     {
-        Unit* pTarget = pair.second->GetOwner();
-        if (!pTarget)
+        Unit* pTarget = combatRef->GetOther(bot);
+        if (!pTarget || pTarget == pVictim || !pTarget->IsPlayer() || !pTarget->CanSeeOrDetect(bot) ||
+            !bot->IsWithinDist(pTarget, VISIBILITY_DISTANCE_NORMAL))
             continue;
-            
-        if (pTarget != pVictim && pTarget->IsPlayer() && pTarget->CanSeeOrDetect(bot) &&
-            bot->IsWithinDist(pTarget, VISIBILITY_DISTANCE_NORMAL))
-        {
-            if (bot->GetTeamId() == TEAM_HORDE)
-            {
-                if (pTarget->HasAura(23333))
-                    return pTarget;
-            }
-            else
-            {
-                if (pTarget->HasAura(23335))
-                    return pTarget;
-            }
 
-            targets.push_back(pTarget);
-        }
+        if ((bot->GetTeamId() == TEAM_HORDE && pTarget->HasAura(23333)) ||
+            (bot->GetTeamId() == TEAM_ALLIANCE && pTarget->HasAura(23335)))
+            return pTarget;
+
+        targets.push_back(pTarget);
     }
 
     if (!targets.empty())

@@ -5,6 +5,7 @@
 
 #include "TargetValue.h"
 
+#include "CombatManager.h"
 #include "LastMovementValue.h"
 #include "ObjectGuid.h"
 #include "Playerbots.h"
@@ -144,26 +145,22 @@ Unit* FindTargetValue::Calculate()
     {
         return nullptr;
     }
-    
-    auto threatList = bot->GetThreatMgr().GetThreatenedByMeList();
-    for (auto const& pair : threatList)
+    for (auto const& [guid, ref] : bot->GetThreatMgr().GetThreatenedByMeList())
     {
-        Unit* unit = pair.second->GetOwner();
+        Unit* unit = ref->GetOwner();
         if (!unit)
             continue;
-            
         std::wstring wnamepart;
         Utf8toWStr(unit->GetName(), wnamepart);
         wstrToLower(wnamepart);
         if (!qualifier.empty() && qualifier.length() == wnamepart.length() && Utf8FitTo(qualifier, wnamepart))
-        {
             return unit;
-        }
     }
+
     return nullptr;
 }
 
-void FindBossTargetStrategy::CheckAttacker(Unit* attacker, ThreatManager* /*threatManager*/)
+void FindBossTargetStrategy::CheckAttacker(Unit* attacker, ThreatManager* threatManager)
 {
     UnitAI* unitAI = attacker->GetAI();
     BossAI* bossAI = dynamic_cast<BossAI*>(unitAI);
