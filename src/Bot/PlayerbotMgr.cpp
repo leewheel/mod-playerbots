@@ -64,7 +64,7 @@ private:
 };
 
 std::unordered_set<ObjectGuid> BotInitGuard::botsBeingInitialized;
-std::unordered_set<ObjectGuid> PlayerbotHolder::botLoading;
+std::unordered_map<ObjectGuid, uint32> PlayerbotHolder::botLoading;
 
 PlayerbotHolder::PlayerbotHolder() : PlayerbotAIBase(false) {}
 class PlayerbotLoginQueryHolder : public LoginQueryHolder
@@ -121,7 +121,13 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
             LOG_DEBUG("playerbots", "PlayerbotMgr not found for master player with GUID: {}", masterPlayer->GetGUID().GetRawValue());
             return;
         }
-        uint32 count = mgr->GetPlayerbotsCount() + botLoading.size();
+        uint32 loadingForMaster = 0;
+        for (auto const& [guid, acctId] : botLoading)
+        {
+            if (acctId == masterAccountId)
+                ++loadingForMaster;
+        }
+        uint32 count = mgr->GetPlayerbotsCount() + loadingForMaster;
         if (count >= PlayerbotAIConfig::instance().maxAddedBots)
         {
             allowed = false;
@@ -144,7 +150,7 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
         return;
     }
 
-    botLoading.insert(playerGuid);
+    botLoading.emplace(playerGuid, masterAccountId);
 
     // Always login in with world session to avoid race condition
     sWorld->AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(holder))
@@ -362,6 +368,9 @@ void PlayerbotHolder::LogoutPlayerBot(ObjectGuid guid)
         if (master)
             masterWorldSessionPtr = master->GetSession();
 
+        // TODO: Review whether or not to implement timed logout.
+        // Unused block. Useful only for timed logout.
+/*
         // check for instant logout
         bool logout = botWorldSessionPtr->ShouldLogOut(time(nullptr));
 
@@ -373,61 +382,22 @@ void PlayerbotHolder::LogoutPlayerBot(ObjectGuid guid)
 
         if (bot->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || bot->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
             botWorldSessionPtr->GetSecurity() >= (AccountTypes)sWorld->getIntConfig(CONFIG_INSTANT_LOGOUT))
-        {
             logout = true;
-        }
 
         if (master &&
             (master->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || master->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
              (masterWorldSessionPtr &&
               masterWorldSessionPtr->GetSecurity() >= (AccountTypes)sWorld->getIntConfig(CONFIG_INSTANT_LOGOUT))))
-        {
             logout = true;
-        }
-
-        TravelTarget* target = nullptr;
-        if (botAI->GetAiObjectContext())  // Maybe some day re-write to delate all pointer values.
+*/
+        // Instant logout (the only option right now)
         {
-            target = botAI->GetAiObjectContext()->GetValue<TravelTarget*>("travel target")->Get();
-        }
-
-        // Peiru: Allow bots to always instant logout to see if this resolves logout crashes
-        logout = true;
-
-        // if no instant logout, request normal logout
-        if (!logout)
-        {
-            if (bot->GetSession()->isLogingOut())
-                return;
-            else if (bot)
-            {
-                botAI->TellMaster("I'm logging out!");
-                WorldPackets::Character::LogoutRequest data = WorldPacket(CMSG_LOGOUT_REQUEST);
-                botWorldSessionPtr->HandleLogoutRequestOpcode(data);
-                if (!bot)
-                {
-                    RemoveFromPlayerbotsMap(guid);
-                    delete botWorldSessionPtr;
-                    if (target)
-                        delete target;
-                }
-                return;
-            }
-            else
-            {
-                RemoveFromPlayerbotsMap(guid);     // deletes bot player ptr inside this WorldSession PlayerBotMap
-                delete botWorldSessionPtr;  // finally delete the bot's WorldSession
-                if (target)
-                    delete target;
-            }
-            return;
-        }  // if instant logout possible, do it
-        else if (bot && (logout || !botWorldSessionPtr->isLogingOut()))
-        {
-            botAI->TellMaster("Goodbye!");
-            RemoveFromPlayerbotsMap(guid);                  // deletes bot player ptr inside this WorldSession PlayerBotMap
-            botWorldSessionPtr->LogoutPlayer(true);  // this will delete the bot Player object and PlayerbotAI object
-            delete botWorldSessionPtr;               // finally delete the bot's WorldSession
+            std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "goodbye", "Goodbye!", {});
+            botAI->TellMaster(message);
+            RemoveFromPlayerbotsMap(guid);              // deletes bot player ptr inside this WorldSession PlayerBotMap
+            botWorldSessionPtr->LogoutPlayer(true);     // this will delete the bot Player object and PlayerbotAI object
+            delete botWorldSessionPtr;                  // finally delete the bot's WorldSession
         }
     }
 }
@@ -1697,7 +1667,7 @@ void PlayerbotMgr::TellError(std::string const botName, std::string const text)
     errors[text] = names;
 }
 
-void PlayerbotMgr::CheckTellErrors(uint32 elapsed)
+void PlayerbotMgr::CheckTellErrors(uint32 /*elapsed*/)
 {
     time_t now = time(nullptr);
     if ((now - lastErrorTell) < sPlayerbotAIConfig.errorDelay / 1000)

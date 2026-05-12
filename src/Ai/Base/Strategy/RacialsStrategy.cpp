@@ -11,7 +11,7 @@ public:
     RacialsStrategyActionNodeFactory() { creators["lifeblood"] = &lifeblood; }
 
 private:
-    static ActionNode* lifeblood(PlayerbotAI* botAI)
+    static ActionNode* lifeblood(PlayerbotAI* /*botAI*/)
     {
         return new ActionNode("lifeblood",
                               /*P*/ {},
@@ -36,6 +36,9 @@ void RacialsStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode(
         "loss of control", { NextAction("every man for himself", ACTION_EMERGENCY + 1) }));
+
+    triggers.push_back(new TriggerNode(
+        "fear charm sleep", { NextAction("will of the forsaken", ACTION_EMERGENCY + 1) }));
 
 }
 

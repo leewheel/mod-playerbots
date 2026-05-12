@@ -9,6 +9,7 @@
 #include "Map.h"
 #include "PathGenerator.h"
 #include "Playerbots.h"
+#include "MapCollisionData.h"
 
 bool MoveStuckTrigger::IsActive()
 {
@@ -89,8 +90,7 @@ bool MoveLongStuckTrigger::IsActive()
         return true;
     }
 
-    if (cell.GridX() > 0 && cell.GridY() > 0 &&
-        bot->GetMap()->GetMapCollisionData().LoadMMapTile(cell.GridX(), cell.GridY()) == MMAP::MMAP_LOAD_RESULT_ERROR)
+    if (bot->GetMap()->IsGridCreated(GridCoord(cell.GridX(), cell.GridY())))
     {
         // LOG_INFO("playerbots", "Bot {} {}:{} <{}> was in unloaded grid {},{} on map {}",
         // bot->GetGUID().ToString().c_str(), bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(),
