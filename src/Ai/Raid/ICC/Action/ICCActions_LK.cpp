@@ -3669,7 +3669,7 @@ bool IccLichKingAddsAction::HandleDefileMechanics(Unit* boss, Difficulty diff)
     uint32& lastYellMs = s_lastYellMs[bot->GetInstanceId()];
     if (botAI->IsMainTank(bot) && info.castTime != lastYellMs)
     {
-        botAI->Yell("Defile on " + target->GetName() + " - move to the edge!");
+        botAI->Yell("亵渎在 " + target->GetName() + " 身上——靠边移动！");
         lastYellMs = info.castTime;
     }
 

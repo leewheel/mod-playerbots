@@ -54,7 +54,7 @@ bool TeleportAction::Execute(Event /*event*/)
     if (closestPortal && bot->IsWithinDistInMap(closestPortal, INTERACTION_DISTANCE))
     {
         std::ostringstream out;
-        out << "Using portal: " << closestPortal->GetName();
+        out << "使用传送门：" << closestPortal->GetName();
         botAI->TellMasterNoFacing(out.str());
 
         WorldPacket data(CMSG_GAMEOBJ_USE);
@@ -82,7 +82,7 @@ bool TeleportAction::Execute(Event /*event*/)
             continue;
 
         std::ostringstream out;
-        out << "Teleporting using " << goInfo->name;
+        out << "正在传送，使用 " << goInfo->name;
         botAI->TellMasterNoFacing(out.str());
 
         botAI->ChangeStrategy("-follow,+stay", BOT_STATE_NON_COMBAT);

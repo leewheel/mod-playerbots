@@ -167,7 +167,7 @@ void TrainerAction::TellFooter(uint32 totalCost)
     if (totalCost)
     {
         std::ostringstream out;
-        out << "Total cost: " << chat->formatMoney(totalCost);
+        out << "总费用：" << chat->formatMoney(totalCost);
         botAI->TellMaster(out);
     }
 }

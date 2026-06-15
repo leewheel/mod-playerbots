@@ -164,7 +164,7 @@ bool DebugAction::Execute(Event event)
     else if (text.find("bquest") != std::string::npos)
     {
         std::ostringstream out;
-        out << "bad quests:";
+        out << "异常任务：";
 
         // uint32 noT = 0, noG = 0, noO = 0; //not used, line marked for removal.
 
@@ -495,7 +495,7 @@ bool DebugAction::Execute(Event event)
                 if (wpCreature)
                 {
                     std::ostringstream out;
-                    out << "effect ";
+                    out << "效果 ";
                     out << effect;
 
                     const std::string& Cname = out.str();

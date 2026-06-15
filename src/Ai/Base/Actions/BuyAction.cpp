@@ -197,7 +197,7 @@ bool BuyAction::Execute(Event event)
                 if (!result)
                 {
                     std::ostringstream out;
-                    out << "Nobody sells " << ChatHelper::FormatItem(proto) << " nearby";
+                    out << "附近无人出售 " << ChatHelper::FormatItem(proto);
                     botAI->TellMaster(out.str());
                     continue;
                 }
@@ -242,7 +242,7 @@ bool BuyAction::BuyItem(VendorItemData const* tItems, ObjectGuid vendorguid, Ite
         if (newCount > oldCount)
         {
             std::ostringstream out;
-            out << "Buying " << ChatHelper::FormatItem(proto);
+            out << "正在购买 " << ChatHelper::FormatItem(proto);
             botAI->TellMaster(out.str());
             return true;
         }

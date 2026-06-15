@@ -25,28 +25,28 @@ std::string TellReputationAction::BuildReputationLine(FactionEntry const* entry)
     switch (rank)
     {
         case REP_HATED:
-            out << "cc2222hated";
+            out << "cc2222憎恨";
             break;
         case REP_HOSTILE:
-            out << "ff0000hostile";
+            out << "ff0000敌对";
             break;
         case REP_UNFRIENDLY:
-            out << "ee6622unfriendly";
+            out << "ee6622冷淡";
             break;
         case REP_NEUTRAL:
-            out << "ffff00neutral";
+            out << "ffff00中立";
             break;
         case REP_FRIENDLY:
-            out << "00ff00friendly";
+            out << "00ff00友善";
             break;
         case REP_HONORED:
-            out << "00ff88honored";
+            out << "00ff88尊敬";
             break;
         case REP_REVERED:
-            out << "00ffccrevered";
+            out << "00ffcc崇敬";
             break;
         case REP_EXALTED:
-            out << "00ffffexalted";
+            out << "00ffff崇拜";
             break;
         default:
             out << "808080未知";

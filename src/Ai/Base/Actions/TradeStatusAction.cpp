@@ -150,7 +150,7 @@ void TradeStatusAction::BeginTrade()
         if (discount)
         {
             std::ostringstream out;
-            out << "Discount up to: " << chat->formatMoney(discount);
+            out << "折扣上限：" << chat->formatMoney(discount);
             botAI->TellMaster(out);
         }
     }

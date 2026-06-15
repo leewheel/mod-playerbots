@@ -313,7 +313,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
             if (botAI->GetMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "new_rpg_quest_accepted",
-                    "Quest accepted %quest",
+                    "已接受任务 %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             BroadcastHelper::BroadcastQuestAccepted(botAI, bot, quest);
             botAI->rpgStatistic.questAccepted++;
@@ -325,7 +325,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
             if (botAI->GetMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "new_rpg_quest_rewarded",
-                    "Quest rewarded %quest",
+                    "已交付任务 %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             BroadcastHelper::BroadcastQuestTurnedIn(botAI, bot, quest);
             botAI->rpgStatistic.questRewarded++;
@@ -608,7 +608,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             if (botAI->GetMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "new_rpg_quest_dropped",
-                    "Quest dropped %quest",
+                    "已放弃任务 %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             botAI->rpgStatistic.questDropped++;
             dropped++;
@@ -638,7 +638,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             if (botAI->GetMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "new_rpg_quest_dropped",
-                    "Quest dropped %quest",
+                    "已放弃任务 %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             botAI->rpgStatistic.questDropped++;
             dropped++;
@@ -663,7 +663,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
         if (botAI->GetMaster())
             botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "new_rpg_quest_dropped",
-                "Quest dropped %quest",
+                "已放弃任务 %quest",
                 {{"%quest", ChatHelper::FormatQuest(quest)}}));
         botAI->rpgStatistic.questDropped++;
     }

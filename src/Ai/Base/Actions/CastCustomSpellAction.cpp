@@ -141,23 +141,23 @@ bool CastCustomSpellAction::Execute(Event event)
     }
 
     std::ostringstream spellName;
-    spellName << ChatHelper::FormatSpell(spellInfo) << " on ";
+    spellName << ChatHelper::FormatSpell(spellInfo) << " 于 ";
 
     bool const hasItemTarget = itemTarget &&
         (spellInfo->Targets & TARGET_FLAG_ITEM || spellInfo->Targets & TARGET_FLAG_GAMEOBJECT_ITEM);
 
     if (bot->GetTrader())
-        spellName << "trade item";
+        spellName << "交易物品";
     else if (hasItemTarget)
         spellName << chat->FormatItem(itemTarget->GetTemplate());
     else if (target != bot)
         spellName << target->GetName();
     else
-        spellName << "self";
+        spellName << "自身";
 
     if (!bot->GetTrader() && !botAI->CanCastSpell(spell, target, true, itemTarget))
     {
-        msg << "Cannot cast " << spellName.str();
+        msg << "无法施放 " << spellName.str();
         botAI->TellError(msg.str());
         return false;
     }
@@ -165,21 +165,21 @@ bool CastCustomSpellAction::Execute(Event event)
     bool result = spell ? botAI->CastSpell(spell, target, itemTarget) : botAI->CastSpell(text, target, itemTarget);
     if (result)
     {
-        msg << "Casting " << spellName.str();
+        msg << "正在施放 " << spellName.str();
 
         if (castCount > 1)
         {
             std::ostringstream cmd;
             cmd << castString(target) << " " << text << " " << (castCount - 1);
             botAI->HandleCommand(CHAT_MSG_WHISPER, cmd.str(), master);
-            msg << "|cffffff00(x" << (castCount - 1) << " left)|r";
+            msg << "|cffffff00（剩余 x" << (castCount - 1) << "）|r";
         }
 
         botAI->TellMasterNoFacing(msg.str());
     }
     else
     {
-        msg << "Cast " << spellName.str() << " is failed";
+        msg << "施放 " << spellName.str() << " 失败";
         botAI->TellError(msg.str());
     }
 

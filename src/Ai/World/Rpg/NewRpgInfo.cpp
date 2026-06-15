@@ -107,72 +107,72 @@ NewRpgStatus NewRpgInfo::GetStatus()
 std::string NewRpgInfo::ToString()
 {
     std::stringstream out;
-    out << "Status: ";
+    out << "状态：";
     std::visit([&out, this](auto&& arg)
     {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, GoGrind>)
         {
-            out << "GO_GRIND";
-            out << "\nGrindPos: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
+            out << "前往刷怪";
+            out << "\n刷怪坐标: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
                 << arg.pos.GetPositionY() << " " << arg.pos.GetPositionZ();
-            out << "\nlastGoGrind: " << startT;
+            out << "\n上次刷怪: " << startT;
         }
         else if constexpr (std::is_same_v<T, GoCamp>)
         {
-            out << "GO_CAMP";
-            out << "\nCampPos: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
+            out << "扎营";
+            out << "\n营地坐标: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
                 << arg.pos.GetPositionY() << " " << arg.pos.GetPositionZ();
-            out << "\nlastGoCamp: " << startT;
+            out << "\n上次扎营: " << startT;
         }
         else if constexpr (std::is_same_v<T, WanderNpc>)
         {
-            out << "WANDER_NPC";
-            out << "\nnpcOrGoEntry: " << arg.npcOrGo.GetCounter();
-            out << "\nlastWanderNpc: " << startT;
-            out << "\nlastReachNpcOrGo: " << arg.lastReach;
+            out << "游荡NPC";
+            out << "\nNPC/对象ID: " << arg.npcOrGo.GetCounter();
+            out << "\n上次游荡: " << startT;
+            out << "\n上次到达: " << arg.lastReach;
         }
         else if constexpr (std::is_same_v<T, WanderRandom>)
         {
-            out << "WANDER_RANDOM";
-            out << "\nlastWanderRandom: " << startT;
+            out << "随机游荡";
+            out << "\n上次随机游荡: " << startT;
         }
         else if constexpr (std::is_same_v<T, Idle>)
         {
-            out << "IDLE";
+            out << "空闲";
         }
         else if constexpr (std::is_same_v<T, Rest>)
         {
-            out << "REST";
-            out << "\nlastRest: " << startT;
+            out << "休息";
+            out << "\n上次休息: " << startT;
         }
         else if constexpr (std::is_same_v<T, DoQuest>)
         {
-            out << "DO_QUEST";
-            out << "\nquestId: " << arg.questId;
-            out << "\nobjectiveIdx: " << arg.objectiveIdx;
-            out << "\npoiPos: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
+            out << "做任务";
+            out << "\n任务ID: " << arg.questId;
+            out << "\n目标索引: " << arg.objectiveIdx;
+            out << "\n坐标: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
                 << arg.pos.GetPositionY() << " " << arg.pos.GetPositionZ();
-            out << "\nlastReachPOI: " << (arg.lastReachPOI ? GetMSTimeDiffToNow(arg.lastReachPOI) : 0);
+            out << "\n上次到达坐标: " << (arg.lastReachPOI ? GetMSTimeDiffToNow(arg.lastReachPOI) : 0);
         }
         else if constexpr (std::is_same_v<T, TravelFlight>)
         {
-            out << "TRAVEL_FLIGHT";
-            out << "\nflightMasterEntry: " << arg.flightMasterEntry;
-            out << "\nfromNode: " << arg.path[0];
-            out << "\ntoNode: " << arg.path[arg.path.size() - 1];
-            out << "\ninFlight: " << arg.inFlight;
+            out << "飞行旅行";
+            out << "\n飞行管理员: " << arg.flightMasterEntry;
+            out << "\n起点: " << arg.path[0];
+            out << "\n终点: " << arg.path[arg.path.size() - 1];
+            out << "\n飞行中: " << arg.inFlight;
         }
         else if constexpr (std::is_same_v<T, OutdoorPvP>)
         {
-            out << "OUTDOOR_PVP";
+            out << "户外PvP";
             if (!arg.capturePointSpawnId)
-                out << "\nNo capture point assigned.";
+                out << "\n未分配占领点。";
             else
-                out << "\ncapturePointSpawnId: " << arg.capturePointSpawnId;
+                out << "\n占领点ID: " << arg.capturePointSpawnId;
         }
         else
-            out << "UNKNOWN";
+            out << "未知";
     }, data);
     return out.str();
 }

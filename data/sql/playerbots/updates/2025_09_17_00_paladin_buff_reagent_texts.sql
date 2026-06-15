@@ -16,17 +16,17 @@ WHERE name IN (
 
 INSERT INTO ai_playerbot_texts (name, text, say_type, reply_type, text_loc1, text_loc2, `text_loc3`, `text_loc4`, `text_loc5`, `text_loc6`, `text_loc7`, `text_loc8`) VALUES
   ('rp_missing_reagent_greater_blessing',
-    'By the Light... I forgot my Symbols of Kings. We’ll make do with %base_spell!', 0, 0,
-    '', 'Par la Lumière... J''ai oublié mes Symboles du roi. On se contentera de %base_spell !', '', '', '', '', '', ''),
+    '圣光啊……忘了带王者印记，先用 %base_spell 凑合吧！', 0, 0,
+    '', 'Par la Lumière... J''ai oublié mes Symboles du roi. On se contentera de %base_spell !', '', '圣光啊……忘了带王者印记，先用 %base_spell 凑合吧！', '', '', '', ''),
   ('rp_missing_reagent_gift_of_the_wild',
-    'Nature is generous, my bags are not... out of herbs for %group_spell. Take %base_spell for now!', 0, 0,
-    '', 'La nature est généreuse, pas mes sacs... plus d''herbes pour %group_spell. Prenez %base_spell pour l''instant !', '', '', '', '', '', ''),
+    '大自然很慷慨，我的包可不行……%group_spell 的草药没了，先给你们 %base_spell！', 0, 0,
+    '', 'La nature est généreuse, pas mes sacs... plus d''herbes pour %group_spell. Prenez %base_spell pour l''instant !', '', '大自然很慷慨，我的包可不行……%group_spell 的草药没了，先给你们 %base_spell！', '', '', '', ''),
   ('rp_missing_reagent_arcane_brilliance',
-    'Out of Arcane Powder... %group_spell will have to wait. Casting %base_spell!', 0, 0,
-    '', 'Plus de poudre des arcanes... %group_spell attendra. Je lance %base_spell !', '', '', '', '', '', ''),
+    '奥术粉尘用完了……%group_spell 得等等，先施放 %base_spell！', 0, 0,
+    '', 'Plus de poudre des arcanes... %group_spell attendra. Je lance %base_spell !', '', '奥术粉尘用完了……%group_spell 得等等，先施放 %base_spell！', '', '', '', ''),
   ('rp_missing_reagent_generic',
-    'Oops, I’m out of components for %group_spell. We’ll go with %base_spell!', 0, 0,
-    '', 'Oups, je n''ai plus de composants pour %group_spell. On fera avec %base_spell !', '', '', '', '', '', '');
+    '哎呀，%group_spell 的材料用完了，改用 %base_spell 吧！', 0, 0,
+    '', 'Oups, je n''ai plus de composants pour %group_spell. On fera avec %base_spell !', '', '哎呀，%group_spell 的材料用完了，改用 %base_spell 吧！', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts_chance (name, probability) VALUES
   ('rp_missing_reagent_greater_blessing', 100),

@@ -15,7 +15,7 @@ bool ChangeChatAction::Execute(Event event)
     if (parsed == CHAT_MSG_SYSTEM)
     {
         std::ostringstream out;
-        out << "Current chat is " << chat->FormatChat(*context->GetValue<ChatMsg>("chat"));
+        out << "当前聊天频道 " << chat->FormatChat(*context->GetValue<ChatMsg>("chat"));
         botAI->TellMaster(out);
     }
     else
@@ -23,7 +23,7 @@ bool ChangeChatAction::Execute(Event event)
         context->GetValue<ChatMsg>("chat")->Set(parsed);
 
         std::ostringstream out;
-        out << "Chat set to " << chat->FormatChat(parsed);
+        out << "聊天频道已设为 " << chat->FormatChat(parsed);
         botAI->TellMaster(out);
     }
 

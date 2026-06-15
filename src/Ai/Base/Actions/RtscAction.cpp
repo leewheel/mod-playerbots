@@ -123,7 +123,7 @@ bool RTSCAction::Execute(Event event)
     if (command.find("show") != std::string::npos)
     {
         std::ostringstream out;
-        out << "saved: ";
+        out << "已保存：";
 
         for (auto value : botAI->GetAiObjectContext()->GetValues())
             if (value.find("RTSC saved location::") != std::string::npos)

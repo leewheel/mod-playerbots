@@ -66,7 +66,7 @@ bool UnlockTradedItemAction::CanUnlockItem(Item* item)
             else
             {
                 std::ostringstream out;
-                out << "Lockpicking skill too low (" << botSkill << "/" << requiredSkill << ") to unlock: "
+                out << "开锁技能不足（" << botSkill << "/" << requiredSkill << "），无法开锁："
                     << item->GetTemplate()->Name1;
                 botAI->TellMaster(out.str());
             }
@@ -88,7 +88,7 @@ void UnlockTradedItemAction::UnlockItem(Item* item)
     if (botAI->CastSpell(PICK_LOCK_SPELL_ID, bot->GetTrader(), item)) // Unit target is trader
     {
         std::ostringstream out;
-        out << "Picking Lock on traded item: " << item->GetTemplate()->Name1;
+        out << "正在开锁交易物品：" << item->GetTemplate()->Name1;
         botAI->TellMaster(out.str());
     }
     else

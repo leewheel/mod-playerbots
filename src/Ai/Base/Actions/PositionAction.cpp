@@ -12,17 +12,17 @@
 void TellPosition(PlayerbotAI* botAI, std::string const name, PositionInfo pos)
 {
     std::ostringstream out;
-    out << "Position " << name;
+    out << "位置 " << name;
 
     if (pos.isSet())
     {
         float x = pos.x;
         float y = pos.y;
         Map2ZoneCoordinates(x, y, botAI->GetBot()->GetZoneId());
-        out << " is set to " << x << "," << y;
+        out << " 已设为 " << x << "," << y;
     }
     else
-        out << " is not set";
+        out << " 未设置";
 
     botAI->TellMaster(out);
 }
@@ -72,7 +72,7 @@ bool PositionAction::Execute(Event event)
         posMap[name] = pos;
 
         std::ostringstream out;
-        out << "Position " << name << " is set";
+        out << "位置 " << name << " 已设置";
         botAI->TellMaster(out);
         return true;
     }
@@ -83,7 +83,7 @@ bool PositionAction::Execute(Event event)
         posMap[name] = pos;
 
         std::ostringstream out;
-        out << "Position " << name << " is set";
+        out << "位置 " << name << " 已设置";
         botAI->TellMaster(out);
         return true;
     }
@@ -94,7 +94,7 @@ bool PositionAction::Execute(Event event)
         posMap[name] = pos;
 
         std::ostringstream out;
-        out << "Position " << name << " is reset";
+        out << "位置 " << name << " 已重置";
         botAI->TellMaster(out);
         return true;
     }
@@ -108,7 +108,7 @@ bool MoveToPositionAction::Execute(Event /*event*/)
     if (!pos.isSet())
     {
         std::ostringstream out;
-        out << "Position " << qualifier << " is not set";
+        out << "位置 " << qualifier << " 未设置";
         botAI->TellMaster(out);
         return false;
     }

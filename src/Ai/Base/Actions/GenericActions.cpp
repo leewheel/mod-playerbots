@@ -190,26 +190,26 @@ bool SetPetStanceAction::Execute(Event /*event*/)
     // Get the default 宠物 stance from the configuration
     int32 stance = sPlayerbotAIConfig.defaultPetStance;
     ReactStates react = REACT_DEFENSIVE;
-    std::string stanceText = "防御 (from config, fallback)";
+    std::string stanceText = "防御（来自配置，回退）";
 
     // Map the config stance integer to a ReactStates value and a message
     switch (stance)
     {
         case 0:
             react = REACT_PASSIVE;
-            stanceText = "被动 (from config)";
+            stanceText = "被动（来自配置）";
             break;
         case 1:
             react = REACT_DEFENSIVE;
-            stanceText = "防御 (from config)";
+            stanceText = "防御（来自配置）";
             break;
         case 2:
             react = REACT_AGGRESSIVE;
-            stanceText = "主动 (from config)";
+            stanceText = "主动（来自配置）";
             break;
         default:
             react = REACT_DEFENSIVE;
-            stanceText = "防御 (from config, fallback)";
+            stanceText = "防御（来自配置，回退）";
             break;
     }
 

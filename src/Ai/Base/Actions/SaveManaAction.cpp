@@ -16,7 +16,7 @@ bool SaveManaAction::Execute(Event event)
     if (text == "?")
     {
         std::ostringstream out;
-        out << "Mana save level: " << Format(value);
+        out << "省蓝等级：" << Format(value);
         botAI->TellMaster(out);
         return true;
     }
@@ -55,7 +55,7 @@ bool SaveManaAction::Execute(Event event)
     botAI->GetAiObjectContext()->GetValue<double>("mana save level")->Set(value);
 
     std::ostringstream out;
-    out << "Mana save level set: " << Format(value);
+    out << "省蓝等级已设为：" << Format(value);
     botAI->TellMaster(out);
 
     return true;

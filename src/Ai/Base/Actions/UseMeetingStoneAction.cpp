@@ -128,7 +128,7 @@ bool SummonAction::SummonUsingNpcs(Player* summoner, Player* player, bool preser
             {
                 botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     player == bot ? "meeting_stone_no_hearthstone_self" : "meeting_stone_no_hearthstone_you",
-                    player == bot ? "I have no hearthstone" : "You have no hearthstone",
+                    player == bot ? "我没有炉石" : "你没有炉石",
                     {}));
                 return false;
             }
@@ -137,7 +137,7 @@ bool SummonAction::SummonUsingNpcs(Player* summoner, Player* player, bool preser
             {
                 botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     player == bot ? "meeting_stone_hearthstone_not_ready_self" : "meeting_stone_hearthstone_not_ready_you",
-                    player == bot ? "My hearthstone is not ready" : "Your hearthstone is not ready",
+                    player == bot ? "我的炉石未就绪" : "你的炉石未就绪",
                     {}));
                 return false;
             }

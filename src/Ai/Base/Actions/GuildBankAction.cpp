@@ -65,7 +65,7 @@ bool GuildBankAction::MoveFromCharToBank(Item* item, GameObject* /*bank*/)
 
     // check source pos rights (item moved to bank)
     if (!guild->MemberHasTabRights(bot->GetGUID(), 0, GUILD_BANK_RIGHT_DEPOSIT_ITEM))
-        out << "I can't put " << chat->FormatItem(item->GetTemplate())
+        out << "我无法放入 " << chat->FormatItem(item->GetTemplate())
             << " to guild bank. I have no rights to put items in the first guild bank tab";
     else
     {

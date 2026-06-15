@@ -75,7 +75,7 @@ void EquipAction::EquipItem(Item* item)
     {
         bot->SetAmmo(itemId);
         std::ostringstream out;
-        out << "equipping " << chat->FormatItem(itemProto);
+        out << "正在装备 " << chat->FormatItem(itemProto);
         botAI->TellMaster(out);
         return;
     }
@@ -112,7 +112,7 @@ void EquipAction::EquipItem(Item* item)
             bot->GetSession()->HandleAutoEquipItemSlotOpcode(nicePacket);
 
             std::ostringstream out;
-            out << "Equipping " << chat->FormatItem(itemProto) << " in ranged slot";
+            out << "正在装备 " << chat->FormatItem(itemProto) << " 到远程栏位";
             botAI->TellMaster(out);
             return;
         }
@@ -229,7 +229,7 @@ void EquipAction::EquipItem(Item* item)
                 }
 
                 std::ostringstream out;
-                out << "Equipping " << chat->FormatItem(itemProto) << " in main hand";
+                out << "正在装备 " << chat->FormatItem(itemProto) << " 到主手";
                 botAI->TellMaster(out);
                 return;
             }
@@ -246,7 +246,7 @@ void EquipAction::EquipItem(Item* item)
                 bot->GetSession()->HandleAutoEquipItemSlotOpcode(nicePacket);
 
                 std::ostringstream out;
-                out << "Equipping " << chat->FormatItem(itemProto) << " in offhand";
+                out << "正在装备 " << chat->FormatItem(itemProto) << " 到副手";
                 botAI->TellMaster(out);
                 return;
             }
@@ -326,7 +326,7 @@ void EquipAction::EquipItem(Item* item)
     }
 
     std::ostringstream out;
-    out << "Equipping " << chat->FormatItem(itemProto);
+    out << "正在装备 " << chat->FormatItem(itemProto);
     botAI->TellMaster(out);
 }
 

@@ -163,7 +163,7 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32& type, uint32& guid1, std:
     if (noReplyMsgs.find(msg) != noReplyMsgs.end())
     {
         /*std::ostringstream out;
-        out << "DEBUG ChatReplyDo decided to ignore exact blocklist match" << msg;
+        out << "调试：聊天回复忽略完全匹配黑名单 " << msg;
         bot->Say(out.str(), LANG_UNIVERSAL);*/
         return;
     }
@@ -173,7 +173,7 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32& type, uint32& guid1, std:
                     [&msg](const std::string& part) { return msg.find(part) != std::string::npos; }))
     {
         /*std::ostringstream out;
-        out << "DEBUG ChatReplyDo decided to ignore partial blocklist match" << msg;
+        out << "调试：聊天回复忽略部分匹配黑名单 " << msg;
         bot->Say(out.str(), LANG_UNIVERSAL);*/
         return;
     }
@@ -185,7 +185,7 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32& type, uint32& guid1, std:
                     }))
     {
         /*std::ostringstream out;
-        out << "DEBUG ChatReplyDo decided to ignore start blocklist match" << msg;
+        out << "调试：聊天回复忽略开头匹配黑名单 " << msg;
         bot->Say(out.str(), LANG_UNIVERSAL);*/
         return;
     }

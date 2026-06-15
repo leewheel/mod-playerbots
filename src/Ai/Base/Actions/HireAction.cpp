@@ -46,8 +46,7 @@ bool HireAction::Execute(Event /*event*/)
     if (discount < moneyReq)
     {
         std::ostringstream out;
-        out << "You cannot hire me - I barely know you. Make sure you have at least " << chat->formatMoney(moneyReq)
-            << " as a trade discount";
+        out << "你还不能雇佣我——我们还不够熟。请确保交易折扣至少达到 " << chat->formatMoney(moneyReq);
         botAI->TellMaster(out.str());
         return false;
     }

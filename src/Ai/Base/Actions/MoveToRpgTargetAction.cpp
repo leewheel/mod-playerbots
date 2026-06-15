@@ -33,7 +33,7 @@ bool MoveToRpgTargetAction::Execute(Event /*event*/)
     if (botAI->HasStrategy("debug rpg", BOT_STATE_NON_COMBAT) && guidP.GetWorldObject())
     {
         std::ostringstream out;
-        out << "Heading to: ";
+        out << "正在前往：";
         out << chat->FormatWorldobject(guidP.GetWorldObject());
         botAI->TellMasterNoFacing(out);
     }

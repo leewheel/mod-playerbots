@@ -250,7 +250,7 @@ void RazorscaleBossHelper::AssignRolesBasedOnHealth()
 
     // Yell a message regardless of whether the new main tank is a bot or a real player
     const std::string playerName = newMainTank->GetName();
-    const std::string text = playerName + " set as main tank!";
+    const std::string text = playerName + " 设为主坦克！";
     bot->Yell(text, LANG_UNIVERSAL);
 
     ObjectGuid botGuid = bot->GetGUID();

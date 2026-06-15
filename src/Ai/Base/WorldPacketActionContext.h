@@ -136,10 +136,10 @@ private:
     static Action* auto_release(PlayerbotAI* botAI) { return new AutoReleaseSpiritAction(botAI); }
     static Action* revive_from_corpse(PlayerbotAI* botAI) { return new ReviveFromCorpseAction(botAI); }
     static Action* accept_invitation(PlayerbotAI* botAI) { return new AcceptInvitationAction(botAI); }
-    static Action* give_leader_in_dungeon(PlayerbotAI* botAI) { return new GiveLeaderAction(botAI, "I don't know this dungeon, lead the way!"); }
+    static Action* give_leader_in_dungeon(PlayerbotAI* botAI) { return new GiveLeaderAction(botAI, "我不熟悉这个副本，你来带路！"); }
     static Action* pass_leadership_to_master(PlayerbotAI* botAI) { return new PassLeadershipToMasterAction(botAI); }
-    static Action* tell_not_enough_money(PlayerbotAI* botAI) { return new TellMasterAction(botAI, "Not enough money"); }
-    static Action* tell_not_enough_reputation(PlayerbotAI* botAI) { return new TellMasterAction(botAI, "Not enough reputation"); }
+    static Action* tell_not_enough_money(PlayerbotAI* botAI) { return new TellMasterAction(botAI, "金币不足"); }
+    static Action* tell_not_enough_reputation(PlayerbotAI* botAI) { return new TellMasterAction(botAI, "声望不足"); }
     static Action* tell_cannot_equip(PlayerbotAI* botAI) { return new InventoryChangeFailureAction(botAI); }
     static Action* self_resurrect(PlayerbotAI* botAI) { return new SelfResurrectAction(botAI); }
     static Action* pet(PlayerbotAI* botAI) { return new PetsAction(botAI); }

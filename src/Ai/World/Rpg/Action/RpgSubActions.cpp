@@ -433,12 +433,12 @@ bool RpgTradeUsefulAction::Execute(Event /*event*/)
             if (bot->GetGroup() && bot->GetGroup()->IsMember(guidP) && botAI->HasRealPlayerMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "rpg_item_better_for_player",
-                    "You can use this %item better than me, %player.",
+                    "这个 %item 你比我更需要，%player。",
                     {{"%item", chat->FormatItem(item->GetTemplate())}, {"%player", guidP.GetPlayer()->GetName()}}));
             else
                 bot->Say(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                              "rpg_item_better_for_player",
-                             "You can use this %item better than me, %player.",
+                             "这个 %item 你比我更需要，%player。",
                              {{"%item", chat->FormatItem(item->GetTemplate())}, {"%player", player->GetName()}}),
                          (bot->GetTeamId() == TEAM_ALLIANCE ? LANG_COMMON : LANG_ORCISH));
 
@@ -455,7 +455,7 @@ bool RpgTradeUsefulAction::Execute(Event /*event*/)
         else
             bot->Say(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                          "rpg_start_trade_with_player",
-                         "Start trade with %player",
+                         "与 %player 开始交易",
                          {{"%player", chat->FormatWorldobject(player)}}),
                      (bot->GetTeamId() == TEAM_ALLIANCE ? LANG_COMMON : LANG_ORCISH));
 

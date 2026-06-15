@@ -54,7 +54,7 @@ bool WhoAction::Execute(Event event)
         if (!out.str().empty())
             out << ", ";
 
-        out << "playing with " << botAI->GetMaster()->GetName();
+        out << "与 " << botAI->GetMaster()->GetName() << " 同玩";
     }
 
     std::string const tell = out.str();
@@ -78,7 +78,7 @@ std::string const WhoAction::QueryTrade(std::string const text)
         if (!sellPrice)
             continue;
 
-        out << "Selling " << chat->FormatItem(sell->GetTemplate(), sell->GetCount()) << " for "
+        out << "出售 " << chat->FormatItem(sell->GetTemplate(), sell->GetCount()) << "，价格 "
             << chat->formatMoney(sellPrice);
         return out.str();
     }

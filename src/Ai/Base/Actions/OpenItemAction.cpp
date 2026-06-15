@@ -36,6 +36,6 @@ void OpenItemAction::OpenItem(Item* item, uint8 bag, uint8 slot)
     botAI->GetAiObjectContext()->GetValue<LootObject>("loot target")->Set(lootObject);
 
     std::ostringstream out;
-    out << "Opened item: " << item->GetTemplate()->Name1;
+    out << "已打开物品：" << item->GetTemplate()->Name1;
     botAI->TellMaster(out.str());
 }

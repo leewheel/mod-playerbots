@@ -43,7 +43,7 @@ bool SkipSpellsListAction::Execute(Event event)
             return true;
         }
 
-        out << "Ignored spell list: ";
+        out << "忽略法术列表：";
 
         bool first = true;
         for (uint32 spellId : skipSpells)

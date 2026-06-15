@@ -27,7 +27,7 @@ void UnlockItemAction::UnlockItem(Item* item)
     if (botAI->CastSpell(PICK_LOCK_SPELL_ID, bot, item))
     {
         std::ostringstream out;
-        out << "Used Pick Lock on: " << item->GetTemplate()->Name1;
+        out << "已对以下物品使用开锁：" << item->GetTemplate()->Name1;
         botAI->TellMaster(out.str());
     }
     else

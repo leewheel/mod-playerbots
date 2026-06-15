@@ -220,7 +220,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
                 targetFlag = TARGET_FLAG_TRADE_ITEM;
                 packet << targetFlag << (uint8)1 << ObjectGuid((uint64)TRADE_SLOT_NONTRADED).WriteAsPacked();
                 targetSelected = true;
-                targetText = "traded item";
+                targetText = "交易物品";
             }
             else
             {
@@ -280,17 +280,17 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
         if (isDrink && isFood)
         {
             p = std::min(hp, mp);
-            TellConsumableUse(item, "Feasting", p);
+            TellConsumableUse(item, "盛宴", p);
         }
         else if (isDrink)
         {
             p = mp;
-            TellConsumableUse(item, "Drinking", p);
+            TellConsumableUse(item, "饮水", p);
         }
         else if (isFood)
         {
             p = std::min(hp, mp);
-            TellConsumableUse(item, "Eating", p);
+            TellConsumableUse(item, "进食", p);
         }
 
         if (!bot->IsInCombat() && !bot->InBattleground())

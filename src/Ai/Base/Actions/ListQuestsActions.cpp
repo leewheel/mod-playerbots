@@ -56,7 +56,7 @@ void ListQuestsAction::ListQuests(QuestListFilter filter, QuestTravelDetail trav
     botAI->TellMaster("--- 摘要 ---");
 
     std::ostringstream out;
-    out << "Total: " << (completeCount + incompleteCount) << " / 25 (incompleted: " << incompleteCount
+    out << "总计：" << (completeCount + incompleteCount) << " / 25（未完成：" << incompleteCount
         << ", completed: " << completeCount << ")";
     botAI->TellMaster(out);
 }

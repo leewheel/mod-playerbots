@@ -1207,9 +1207,9 @@ std::string const QuestRelationTravelDestination::getTitle()
     std::ostringstream out;
 
     if (relation == 0)
-        out << "questgiver";
+        out << "任务发放者";
     else
-        out << "questtaker";
+        out << "任务交付者";
 
     out << " " << ChatHelper::FormatWorldEntry(entry);
     return out.str();
@@ -1272,7 +1272,7 @@ std::string const QuestObjectiveTravelDestination::getTitle()
 {
     std::ostringstream out;
 
-    out << "objective " << objective;
+    out << "目标 " << objective;
 
     if (itemId)
         out << " loot " << ChatHelper::FormatItem(sObjectMgr->GetItemTemplate(itemId), 0, 0) << " from";
@@ -1328,7 +1328,7 @@ std::string const RpgTravelDestination::getTitle()
     std::ostringstream out;
 
     if (entry > 0)
-        out << "rpg npc ";
+        out << "RPG NPC ";
 
     out << " " << ChatHelper::FormatWorldEntry(entry);
 
@@ -1405,7 +1405,7 @@ std::string const GrindTravelDestination::getTitle()
 {
     std::ostringstream out;
 
-    out << "grind mob ";
+    out << "刷怪 ";
 
     out << " " << ChatHelper::FormatWorldEntry(entry);
 
@@ -1473,7 +1473,7 @@ CreatureTemplate const* BossTravelDestination::getCreatureTemplate() { return sO
 std::string const BossTravelDestination::getTitle()
 {
     std::ostringstream out;
-    out << "boss mob ";
+    out << "首领 ";
     out << " " << ChatHelper::FormatWorldEntry(entry);
 
     return out.str();
@@ -3650,7 +3650,7 @@ void TravelMgr::LoadQuestTravelTable()
                         }
                     }
                     else
-                        out << "all";
+                        out << "全部";
 
                     out << "\n";
                 }

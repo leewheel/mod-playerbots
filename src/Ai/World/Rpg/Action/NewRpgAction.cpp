@@ -48,10 +48,10 @@ bool StartRpgDoQuestAction::Execute(Event event)
     if (quest)
     {
         botAI->rpgInfo.ChangeToDoQuest(questId, quest);
-        bot->Whisper("Start to do quest " + std::to_string(questId), LANG_UNIVERSAL, owner);
+        bot->Whisper("开始执行任务 " + std::to_string(questId), LANG_UNIVERSAL, owner);
         return true;
     }
-    bot->Whisper("Invalid quest " + text, LANG_UNIVERSAL, owner);
+    bot->Whisper("无效任务 " + text, LANG_UNIVERSAL, owner);
     return false;
 }
 

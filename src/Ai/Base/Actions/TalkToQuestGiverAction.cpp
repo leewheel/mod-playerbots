@@ -19,7 +19,7 @@ bool TalkToQuestGiverAction::ProcessQuest(Quest const* quest, Object* questGiver
 {
     bool isCompleted = false;
     std::ostringstream out;
-    out << "Quest ";
+    out << "任务 ";
 
     QuestStatus status = bot->GetQuestStatus(quest->GetQuestId());
     Player* master = GetMaster();
@@ -190,11 +190,11 @@ void TalkToQuestGiverAction::RewardMultipleItem(Quest const* quest, Object* ques
             }
             ItemTemplate const* item = sObjectMgr->GetItemTemplate(quest->RewardChoiceItemId[best]);
             bot->RewardQuest(quest, best, questGiver, true);
-            out << "Rewarded " << ChatHelper::FormatItem(item);
+            out << "已领取奖励 " << ChatHelper::FormatItem(item);
         }
         else
         {
-            out << "Unable to find suitable reward. Asking for help....";
+            out << "找不到合适奖励，请求帮助……";
             AskToSelectReward(quest, out, true);
         }
     }
@@ -218,7 +218,7 @@ void TalkToQuestGiverAction::RewardMultipleItem(Quest const* quest, Object* ques
             ItemTemplate const* item = sObjectMgr->GetItemTemplate(quest->RewardChoiceItemId[firstId]);
             bot->RewardQuest(quest, firstId, questGiver, true);
 
-            out << "Rewarded " << ChatHelper::FormatItem(item);
+            out << "已领取奖励 " << ChatHelper::FormatItem(item);
         }
     }
 }
@@ -239,7 +239,7 @@ void TalkToQuestGiverAction::AskToSelectReward(Quest const* quest, std::ostrings
     }
 
     botAI->TellMaster(msg);
-    out << "Reward pending";
+    out << "奖励待领取";
 }
 
 bool TurnInQueryQuestAction::Execute(Event event)
@@ -278,7 +278,7 @@ bool TurnInQueryQuestAction::Execute(Event event)
         }
     }
     std::ostringstream out;
-    out << "Quest ";
+    out << "任务 ";
     switch (status)
     {
     case QUEST_STATUS_COMPLETE:

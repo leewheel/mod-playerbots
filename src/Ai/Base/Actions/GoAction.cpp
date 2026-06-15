@@ -30,7 +30,7 @@ bool GoAction::Execute(Event event)
         Map2ZoneCoordinates(x, y, bot->GetZoneId());
 
         std::ostringstream out;
-        out << "I am at " << x << "," << y;
+        out << "我在 " << x << "," << y;
         botAI->TellMaster(out.str());
         return true;
     }
@@ -137,7 +137,7 @@ bool GoAction::Execute(Event event)
 
             out << x << ";" << y << ";" << z << " =";
 
-            out << "path is: ";
+            out << "路径：";
 
             out << type;
 
@@ -200,7 +200,7 @@ bool GoAction::Execute(Event event)
         Map2ZoneCoordinates(x1, y1, bot->GetZoneId());
 
         std::ostringstream out;
-        out << "Moving to " << x1 << "," << y1;
+        out << "正在前往 " << x1 << "," << y1;
         botAI->TellMasterNoFacing(out.str());
 
         return MoveNear(bot->GetMapId(), x, y, z + 0.5f, sPlayerbotAIConfig.followDistance);
@@ -217,7 +217,7 @@ bool GoAction::Execute(Event event)
         }
 
         std::ostringstream out;
-        out << "Moving to position " << param;
+        out << "正在前往位置 " << param;
         botAI->TellMasterNoFacing(out.str());
         return MoveNear(bot->GetMapId(), pos.x, pos.y, pos.z + 0.5f, sPlayerbotAIConfig.followDistance);
     }

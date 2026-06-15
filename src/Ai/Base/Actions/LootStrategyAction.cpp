@@ -23,14 +23,14 @@ bool LootStrategyAction::Execute(Event event)
     {
         {
             std::ostringstream out;
-            out << "Loot strategy: ";
+            out << "拾取策略：";
             out << lootStrategy->Get()->GetName();
             botAI->TellMaster(out);
         }
 
         {
             std::ostringstream out;
-            out << "Always loot items: ";
+            out << "始终拾取物品：";
 
             for (uint32 itemId : alwaysLootItems)
             {
@@ -53,7 +53,7 @@ bool LootStrategyAction::Execute(Event event)
             lootStrategy->Set(LootStrategyValue::instance(strategy));
 
             std::ostringstream out;
-            out << "Loot strategy set to " << lootStrategy->Get()->GetName();
+            out << "拾取策略已设为 " << lootStrategy->Get()->GetName();
             botAI->TellMaster(out);
             return true;
         }
@@ -67,8 +67,8 @@ bool LootStrategyAction::Execute(Event event)
                 if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemid))
                 {
                     std::ostringstream out;
-                    out << (StoreLootAction::IsLootAllowed(itemid, botAI) ? "|cFF000000Will loot "
-                                                                          : "|c00FF0000Won't loot ")
+                    out << (StoreLootAction::IsLootAllowed(itemid, botAI) ? "|cFF000000将拾取 "
+                                                                          : "|c00FF0000不拾取 ")
                         << ChatHelper::FormatItem(proto);
                     botAI->TellMaster(out.str());
                 }

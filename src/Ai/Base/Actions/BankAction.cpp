@@ -84,7 +84,7 @@ bool BankAction::Withdraw(uint32 itemid)
     bot->StoreItem(dest, pItem, true);
 
     std::ostringstream out;
-    out << "got " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount()) << " from bank";
+    out << "从银行取出 " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount());
     botAI->TellMaster(out.str());
     return true;
 }
@@ -104,7 +104,7 @@ bool BankAction::Deposit(Item* pItem)
     bot->RemoveItem(pItem->GetBagSlot(), pItem->GetSlot(), true);
     bot->BankItem(dest, pItem, true);
 
-    out << "put " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount()) << " to bank";
+    out << "存入银行 " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount());
     botAI->TellMaster(out.str());
     return true;
 }

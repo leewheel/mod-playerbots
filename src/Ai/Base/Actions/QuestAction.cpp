@@ -220,18 +220,18 @@ bool QuestAction::AcceptQuest(Quest const* quest, ObjectGuid questGiver)
     uint32 questId = quest->GetQuestId();
 
     if (bot->GetQuestStatus(questId) == QUEST_STATUS_COMPLETE)
-        out << "Already completed";
+        out << "已完成";
     else if (!bot->CanTakeQuest(quest, false))
     {
         if (!bot->SatisfyQuestStatus(quest, false))
-            out << "Already on";
+            out << "已接取";
         else
-            out << "Can't take";
+            out << "无法接取";
     }
     else if (!bot->SatisfyQuestLog(false))
-        out << "Quest log is full";
+        out << "任务日志已满";
     else if (!bot->CanAddQuest(quest, false))
-        out << "Bags are full";
+        out << "背包已满";
     else
     {
         WorldPacket p(CMSG_QUESTGIVER_ACCEPT_QUEST);
@@ -250,11 +250,11 @@ bool QuestAction::AcceptQuest(Quest const* quest, ObjectGuid questGiver)
         if (bot->GetQuestStatus(questId) != QUEST_STATUS_NONE && bot->GetQuestStatus(questId) != QUEST_STATUS_REWARDED)
         {
             BroadcastHelper::BroadcastQuestAccepted(botAI, bot, quest);
-            out << "Accepted " << chat->FormatQuest(quest);
+            out << "已接受 " << chat->FormatQuest(quest);
             botAI->TellMaster(out);
             return true;
         }
-        out << "Cannot accept";
+        out << "无法接受";
     }
 
     out << " " << chat->FormatQuest(quest);
@@ -451,7 +451,8 @@ bool QuestUpdateFailedTimerAction::Execute(Event event)
     {
         std::map<std::string, std::string> placeholders;
         placeholders["%quest_link"] = botAI->GetChatHelper()->FormatQuest(qInfo);
-        botAI->TellMaster(PlayerbotTextMgr::instance().GetBotText("计时器失败，任务 %quest_link, abandoning", placeholders));
+        botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "quest_timer_failed_abandon", "计时器失败，放弃任务 %quest_link", placeholders));
         BroadcastHelper::BroadcastQuestUpdateFailedTimer(botAI, bot, qInfo);
     }
     else

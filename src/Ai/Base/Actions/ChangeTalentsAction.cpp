@@ -38,7 +38,7 @@ bool ChangeTalentsAction::Execute(Event event)
             if (param.find("switch 1") != std::string::npos)
             {
                 bot->ActivateSpec(0);
-                out << "Active first talent";
+                out << "已激活第一套天赋";
                 botAI->ResetStrategies();
             }
             else if (param.find("switch 2") != std::string::npos)
@@ -49,7 +49,7 @@ bool ChangeTalentsAction::Execute(Event event)
                     bot->CastSpell(bot, 63624, true, nullptr, nullptr, bot->GetGUID());
                 }
                 bot->ActivateSpec(1);
-                out << "Active second talent";
+                out << "已激活第二套天赋";
                 botAI->ResetStrategies();
             }
         }
@@ -57,7 +57,7 @@ bool ChangeTalentsAction::Execute(Event event)
         {
             PlayerbotFactory factory(bot, bot->GetLevel());
             factory.InitTalentsTree(true);
-            out << "Auto pick talents";
+            out << "自动选择天赋";
             botAI->ResetStrategies();
         }
         else if (param.find("spec list") != std::string::npos)
@@ -78,13 +78,13 @@ bool ChangeTalentsAction::Execute(Event event)
         }
         else
         {
-            out << "Unknown command.";
+            out << "未知命令。";
         }
     }
     else
     {
         uint32 tab = AiFactory::GetPlayerSpecTab(bot);
-        out << "My current talent spec is: "
+        out << "我当前的天赋专精："
             << "|h|cffffffff";
         out << chat->FormatClass(bot, tab) << "\n";
         out << TalentsHelp();
@@ -98,8 +98,8 @@ bool ChangeTalentsAction::Execute(Event event)
 std::string ChangeTalentsAction::TalentsHelp()
 {
     std::ostringstream out;
-    out << "Talents usage: talents switch <1/2>, talents autopick, talents spec list, "
-           "talents spec <specName>, talents apply <link>.";
+    out << "天赋用法：talents switch <1/2>、talents autopick、talents spec list、"
+           "talents spec <专精名>、talents apply <链接>。";
     return out.str();
 }
 
@@ -127,7 +127,7 @@ std::string ChangeTalentsAction::SpecList()
         out << tabCount[0] << "-" << tabCount[1] << "-" << tabCount[2] << ")";
         botAI->TellMasterNoFacing(out.str());
     }
-    out << "Total " << specFound << " specs found";
+    out << "共找到 " << specFound << " 套专精";
     return out.str();
 }
 
@@ -149,12 +149,12 @@ std::string ChangeTalentsAction::SpecPick(std::string param)
             factory.InitGlyphs(false);
 
             std::ostringstream out;
-            out << "Picking " << sPlayerbotAIConfig.premadeSpecName[cls][specNo];
+            out << "正在应用专精 " << sPlayerbotAIConfig.premadeSpecName[cls][specNo];
             return out.str();
         }
     }
     std::ostringstream out;
-    out << "Spec " << param << " not found";
+    out << "未找到专精 " << param;
     return out.str();
 }
 
@@ -165,11 +165,11 @@ std::string ChangeTalentsAction::SpecApply(std::string param)
     std::vector<std::vector<uint32>> parsedSpecLink = PlayerbotAIConfig::ParseTempTalentsOrder(cls, param);
     if (parsedSpecLink.size() == 0)
     {
-        out << "Invalid link " << param;
+        out << "无效链接 " << param;
         return out.str();
     }
     PlayerbotFactory::InitTalentsByParsedSpecLink(bot, parsedSpecLink, true);
-    out << "Applying " << param;
+    out << "正在应用 " << param;
     return out.str();
 }
 
