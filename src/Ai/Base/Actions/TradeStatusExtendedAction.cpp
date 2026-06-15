@@ -19,9 +19,9 @@ bool TradeStatusExtendedAction::Execute(Event event)
     p.rpos(0);
 
     uint8 isTraderData;
-    uint32 unknown1, slotCount1, slotCount2, tradeGold, spellCast;
+    uint32 未知1, slotCount1, slotCount2, tradeGold, spellCast;
     p >> isTraderData;
-    p >> unknown1;
+    p >> 未知1;
     p >> slotCount1;
     p >> slotCount2;
     p >> tradeGold;
@@ -76,7 +76,7 @@ bool TradeStatusExtendedAction::Execute(Event event)
             }
             else
             {
-                botAI->TellMaster("I can't unlock this item.");
+                botAI->TellMaster("我无法解锁此物品。");
             }
         }
     }

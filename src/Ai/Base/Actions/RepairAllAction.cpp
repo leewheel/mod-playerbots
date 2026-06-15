@@ -56,6 +56,6 @@ bool RepairAllAction::Execute(Event /*event*/)
         return true;
     }
 
-    botAI->TellError("Cannot find any npc to repair at");
+    botAI->TellError("找不到可修理的 NPC");
     return false;
 }

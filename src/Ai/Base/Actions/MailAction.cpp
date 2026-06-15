@@ -17,7 +17,7 @@ class TellMailProcessor : public MailProcessor
 public:
     bool Before(PlayerbotAI* botAI) override
     {
-        botAI->TellMaster("=== Mailbox ===");
+        botAI->TellMaster("=== 邮箱 ===");
         tells.clear();
         return true;
     }
@@ -56,7 +56,7 @@ public:
             }
         }
 
-        out << ", |cff00ff00" << days << " day(s)";
+        out << ", |cff00ff00" << days << " 天";
         tells.push_front(out.str());
         return true;
     }
@@ -83,7 +83,7 @@ public:
         Player* bot = botAI->GetBot();
         if (!CheckBagSpace(bot))
         {
-            botAI->TellError("Not enough bag space");
+            botAI->TellError("背包空间不足");
             return false;
         }
 
@@ -256,7 +256,7 @@ bool MailAction::Execute(Event event)
 
     if (!MailProcessor::FindMailbox(botAI))
     {
-        botAI->TellError("There is no mailbox nearby");
+        botAI->TellError("附近没有邮箱");
         return false;
     }
 

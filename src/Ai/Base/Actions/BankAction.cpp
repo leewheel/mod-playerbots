@@ -25,7 +25,7 @@ bool BankAction::Execute(Event event)
     }
 
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "bank_no_banker_nearby_error", "Cannot find banker nearby", {}));
+        "bank_no_banker_nearby_error", "附近找不到银行职员", {}));
     return false;
 }
 
@@ -111,7 +111,7 @@ bool BankAction::Deposit(Item* pItem)
 
 void BankAction::ListItems()
 {
-    botAI->TellMaster("=== Bank ===");
+    botAI->TellMaster("=== 银行 ===");
 
     std::map<uint32, uint32> items;
     std::map<uint32, bool> soulbound;

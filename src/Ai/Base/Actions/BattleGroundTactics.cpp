@@ -1278,13 +1278,13 @@ bool BGTactics::HandleConsoleCommand(ChatHandler* handler, char const* args)
 {
     if (!sPlayerbotAIConfig.enabled)
     {
-        handler->PSendSysMessage("|cffff0000Playerbot system is currently disabled!");
+        handler->PSendSysMessage("|cffff0000玩家机器人系统当前已禁用！");
         return true;
     }
     WorldSession* session = handler->GetSession();
     if (!session)
     {
-        handler->PSendSysMessage("Command can only be used from an active session");
+        handler->PSendSysMessage("此命令只能在在线会话中使用");
         return true;
     }
     std::string const commandOutput = HandleConsoleCommandPrivate(session, args);
@@ -1298,12 +1298,12 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
 {
     Player* player = session->GetPlayer();
     if (!player)
-        return "Error - session player not found";
+        return "错误：未找到会话玩家";
     if (!player->CanBeGameMaster())
-        return "Command can only be used by a GM";
+        return "此命令仅 GM 可用";
     Battleground* bg = player->GetBattleground();
     if (!bg)
-        return "Command can only be used within a battleground";
+        return "此命令只能在战场内使用";
     BattlegroundTypeId bgType = bg->GetBgTypeID();
     if (bgType == BATTLEGROUND_RB)
         bgType = bg->GetBgTypeID(true);
@@ -1320,7 +1320,7 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
         else if (!strncmp(cmd, "showpath=", 9))
         {
             if (sscanf(cmd, "showpath=%d", &num) == -1 || num < 0)
-                return "Bad showpath parameter";
+                return "showpath 参数无效";
         }
         std::vector<BattleBotPath*> const* vPaths;
         switch (bgType)
@@ -1345,7 +1345,7 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
                 break;
         }
         if (!vPaths)
-            return "This battleground has no paths and is unsupported";
+            return "该战场没有路径数据，不受支持";
         if (num == -1)
         {
             float closestPoint = FLT_MAX;
@@ -1393,12 +1393,12 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
     {
         uint32 num;
         if (sscanf(cmd, "showcreature=%u", &num) == -1)
-            return "Bad showcreature parameter";
+            return "showcreature 参数无效";
         if (num >= bg->BgCreatures.size())
             return fmt::format("Creature out of range of 0 - {}", bg->BgCreatures.size() - 1);
         Creature* c = bg->GetBGCreature(num);
         if (!c)
-            return "Creature not found";
+            return "未找到生物";
         Creature* wpCreature = player->SummonCreature(15631, c->GetPositionX(), c->GetPositionY(), c->GetPositionZ(), 0,
                                                       TEMPSUMMON_TIMED_DESPAWN, 15000u);
         wpCreature->SetOwnerGUID(player->GetGUID());
@@ -1412,12 +1412,12 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
     {
         uint32 num;
         if (sscanf(cmd, "showobject=%u", &num) == -1)
-            return "Bad showobject parameter";
+            return "showobject 参数无效";
         if (num >= bg->BgObjects.size())
             return fmt::format("Object out of range of 0 - {}", bg->BgObjects.size() - 1);
         GameObject* o = bg->GetBGObject(num);
         if (!o)
-            return "GameObject not found";
+            return "未找到游戏对象";
         Creature* wpCreature = player->SummonCreature(15631, o->GetPositionX(), o->GetPositionY(), o->GetPositionZ(), 0,
                                                       TEMPSUMMON_TIMED_DESPAWN, 15000u);
         wpCreature->SetOwnerGUID(player->GetGUID());
@@ -1427,7 +1427,7 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
             num, o->GetPositionX(), o->GetPositionY(), o->GetPositionZ(), distance, exactDistance);
     }
 
-    return "usage: showpath(=[num]) / showcreature=[num] / showobject=[num]";
+    return "用法: showpath(=[编号]) / showcreature=[编号] / showobject=[编号]";
 }
 
 // Depends on OnBattlegroundStart in playerbots.cpp
@@ -2338,7 +2338,7 @@ bool BGTactics::selectObjective(bool reset)
 
             BgObjective = nullptr;
 
-            // --- PRIORITY 1: Nearby enemy (rare aggressive impulse)
+            // --- PRIORITY 1: Nearby enemy (rare 主动 impulse)
             if (urand(0, 99) < 5)
             {
                 if (Unit* enemy = AI_VALUE(Unit*, "enemy player target"))
@@ -3199,7 +3199,7 @@ bool BGTactics::moveToObjective(bool ignoreDist)
         if (!ignoreDist && ServerFacade::instance().IsDistanceGreaterThan(ServerFacade::instance().GetDistance2d(bot, pos.x, pos.y), 100.0f))
         {
             // std::ostringstream out;
-            // out << "It is too far away! " << pos.x << ", " << pos.y << ", Distance: " <<
+            // out << "太远了! " << pos.x << ", " << pos.y << ", Distance: " <<
             // ServerFacade::instance().GetDistance2d(bot, pos.x, pos.y); bot->Say(out.str(), LANG_UNIVERSAL);
             return false;
         }
@@ -4302,7 +4302,7 @@ bool ArenaTactics::Execute(Event /*event*/)
 
                 float x, y, z;
                 target->GetPosition(x, y, z);
-                botAI->TellMasterNoFacing("Repositioning to exit the LoS target!");
+                botAI->TellMasterNoFacing("正在调整站位以脱离视线遮挡！");
                 return MoveTo(target->GetMapId(), x + frand(-1, +1), y + frand(-1, +1), z, false, true);
             }
         }

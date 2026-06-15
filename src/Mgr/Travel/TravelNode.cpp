@@ -1848,15 +1848,15 @@ void TravelNodeMap::generateZoneMeanNodes()
 
 void TravelNodeMap::generateNodes()
 {
-    LOG_INFO("playerbots", "-Generating Start nodes");
+    LOG_INFO("playerbots", "-正在生成起始节点");
     generateStartNodes();
-    LOG_INFO("playerbots", "-Generating npc nodes");
+    LOG_INFO("playerbots", "-正在生成 NPC 节点");
     generateNpcNodes();
-    LOG_INFO("playerbots", "-Generating area trigger nodes");
+    LOG_INFO("playerbots", "-正在生成区域触发器节点");
     generateAreaTriggerNodes();
-    LOG_INFO("playerbots", "-Generating transport nodes");
+    LOG_INFO("playerbots", "-正在生成传送节点");
     generateTransportNodes();
-    LOG_INFO("playerbots", "-Generating zone mean nodes");
+    LOG_INFO("playerbots", "-正在生成区域均值节点");
     generateZoneMeanNodes();
 }
 
@@ -1897,7 +1897,7 @@ void TravelNodeMap::generateWalkPaths()
         }
     }
 
-    LOG_INFO("playerbots", ">> Generated paths for {} nodes.", TravelNodeMap::instance().getNodes().size());
+    LOG_INFO("playerbots", ">> 已为 {} 个节点生成路径。", TravelNodeMap::instance().getNodes().size());
 }
 
 void TravelNodeMap::generateTaxiPaths()
@@ -2001,7 +2001,7 @@ void TravelNodeMap::removeUselessPaths()
 
         it++;
 
-        LOG_INFO("playerbots", "Iteration {}, removed {}", it, rem);
+        LOG_INFO("playerbots", "迭代 {}, 移除 {}", it, rem);
     }
 }
 
@@ -2023,20 +2023,20 @@ void TravelNodeMap::calculatePathCosts()
         }
     }
 
-    LOG_INFO("playerbots", ">> Calculated pathcost for {} nodes.", TravelNodeMap::instance().getNodes().size());
+    LOG_INFO("playerbots", ">> 已计算 {} 个节点的路径代价。", TravelNodeMap::instance().getNodes().size());
 }
 
 void TravelNodeMap::generatePaths()
 {
-    LOG_INFO("playerbots", "-Calculating walkable paths");
+    LOG_INFO("playerbots", "-正在计算可行走路径");
     generateWalkPaths();
-    LOG_INFO("playerbots", "-Removing useless nodes");
+    LOG_INFO("playerbots", "-正在移除无用节点");
     removeLowNodes();
-    LOG_INFO("playerbots", "-Removing useless paths");
+    LOG_INFO("playerbots", "-正在移除无用路径");
     removeUselessPaths();
-    LOG_INFO("playerbots", "-Calculating path costs");
+    LOG_INFO("playerbots", "-正在计算路径代价");
     calculatePathCosts();
-    LOG_INFO("playerbots", "-Generating taxi paths");
+    LOG_INFO("playerbots", "-正在生成飞行路径");
     generateTaxiPaths();
 }
 
@@ -2045,10 +2045,10 @@ void TravelNodeMap::generateAll()
     if (hasToFullGen)
         generateNodes();
 
-    LOG_INFO("playerbots", "-Calculating mapoffset");
+    LOG_INFO("playerbots", "-正在计算地图偏移");
     calcMapOffset();
 
-    LOG_INFO("playerbots", "-Generating maptransfers");
+    LOG_INFO("playerbots", "-正在生成地图传送");
     TravelMgr::instance().loadMapTransfers();
 
     if (hasToGen || hasToFullGen)
@@ -2205,7 +2205,7 @@ void TravelNodeMap::saveNodeStore()
         saveNodes.insert(std::make_pair(node, i));
     }
 
-    LOG_INFO("playerbots", ">> Saved {} travelNodes.", anodes.size());
+    LOG_INFO("playerbots", ">> 已保存 {} 个 travelNodes。", anodes.size());
 
     {
         uint32 paths = 0, points = 0;
@@ -2256,7 +2256,7 @@ void TravelNodeMap::saveNodeStore()
             }
         }
 
-        LOG_INFO("playerbots", ">> Saved {} travelNode Paths, {} points.", paths, points);
+        LOG_INFO("playerbots", ">> 已保存 {} 条 travelNode 路径，{} 个点。", paths, points);
     }
 
     PlayerbotsDatabase.CommitTransaction(trans);
@@ -2289,12 +2289,12 @@ void TravelNodeMap::loadNodeStore()
 
             } while (result->NextRow());
 
-            LOG_INFO("playerbots", ">> Loaded {} travelNodes.", saveNodes.size());
+            LOG_INFO("playerbots", ">> 已加载 {} 个 travelNodes。", saveNodes.size());
         }
         else
         {
             hasToFullGen = true;
-            LOG_ERROR("playerbots", ">> Error loading travelNodes.");
+            LOG_ERROR("playerbots", ">> 加载 travelNodes 出错。");
         }
     }
 
@@ -2325,11 +2325,11 @@ void TravelNodeMap::loadNodeStore()
 
             } while (result->NextRow());
 
-            LOG_INFO("playerbots", ">> Loaded {} travelNode paths.", result->GetRowCount());
+            LOG_INFO("playerbots", ">> 已加载 {} 条 travelNode 路径。", result->GetRowCount());
         }
         else
         {
-            LOG_ERROR("playerbots", ">> Error loading travelNode links.");
+            LOG_ERROR("playerbots", ">> 加载 travelNode 链接出错。");
         }
     }
 
@@ -2360,11 +2360,11 @@ void TravelNodeMap::loadNodeStore()
 
             } while (result->NextRow());
 
-            LOG_INFO("playerbots", ">> Loaded {} travelNode paths points.", result->GetRowCount());
+            LOG_INFO("playerbots", ">> 已加载 {} 个 travelNode 路径点。", result->GetRowCount());
         }
         else
         {
-            LOG_ERROR("playerbots", ">> Error loading travelNode paths.");
+            LOG_ERROR("playerbots", ">> 加载 travelNode 路径出错。");
         }
     }
 }

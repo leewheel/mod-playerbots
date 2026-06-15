@@ -236,7 +236,7 @@ bool SetStanceAction::Execute(Event event)
     if (stance == "?" || stance.empty())
     {
         std::ostringstream str;
-        str << "Stance: |cff00ff00" << value->Get()->getName();
+        str << "姿态：|cff00ff00" << value->Get()->getName();
         botAI->TellMaster(str);
         return true;
     }
@@ -253,14 +253,14 @@ bool SetStanceAction::Execute(Event event)
     if (!value->Load(stance))
     {
         std::ostringstream str;
-        str << "Invalid stance: |cffff0000" << stance;
+        str << "无效姿态: |cffff0000" << stance;
         botAI->TellMaster(str);
-        botAI->TellMaster("Please set to any of:|cffffffff near (default), tank, turnback, behind");
+        botAI->TellMaster("请设置为以下之一：|cffffffff near（默认）、tank、turnback、behind");
         return false;
     }
 
     std::ostringstream str;
-    str << "Stance set to: " << stance;
+    str << "姿态已设为: " << stance;
     botAI->TellMaster(str);
     return true;
 }

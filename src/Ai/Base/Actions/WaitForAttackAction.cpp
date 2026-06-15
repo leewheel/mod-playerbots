@@ -134,7 +134,7 @@ bool SetWaitForAttackTimeAction::Execute(Event event)
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "wait_for_attack_provide_time",
-            "Please provide a time to set (in seconds)",
+            "请提供要设置的时间（秒）",
             std::map<std::string, std::string>());
         botAI->TellMaster(text);
         return false;
@@ -144,7 +144,7 @@ bool SetWaitForAttackTimeAction::Execute(Event event)
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "wait_for_attack_invalid_time",
-            "Please provide valid time to set (in seconds) between 0 and 99",
+            "请提供 0 到 99 之间的有效时间（秒）",
             std::map<std::string, std::string>());
         botAI->TellMaster(text);
         return false;
@@ -155,7 +155,7 @@ bool SetWaitForAttackTimeAction::Execute(Event event)
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "wait_for_attack_invalid_time",
-            "Please provide valid time to set (in seconds) between 0 and 99",
+            "请提供 0 到 99 之间的有效时间（秒）",
             std::map<std::string, std::string>());
         botAI->TellMaster(text);
         return false;
@@ -167,7 +167,7 @@ bool SetWaitForAttackTimeAction::Execute(Event event)
     placeholders["%new_time"] = std::to_string(newTime);
     std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "wait_for_attack_time_set",
-        "Wait for attack time set to %new_time seconds",
+        "等待攻击时间已设为 %new_time 秒",
         placeholders);
     botAI->TellMaster(text);
     return true;

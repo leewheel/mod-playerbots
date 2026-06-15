@@ -176,11 +176,11 @@ bool MaintenanceAction::Execute(Event /*event*/)
 {
     if (!sPlayerbotAIConfig.maintenanceCommand)
     {
-        botAI->TellError("maintenance command is not allowed, please check the configuration.");
+        botAI->TellError("维护命令不可用，请检查配置。");
         return false;
     }
 
-    botAI->TellMaster("I'm maintaining");
+    botAI->TellMaster("正在维护中");
     PlayerbotFactory factory(bot, bot->GetLevel());
 
     if (!botAI->IsAlt())
@@ -279,13 +279,13 @@ bool BisGearAction::RunAutogearFallback(uint16 effectiveIlvl)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "bis_autogear_unavailable_error",
-            "autogear command is not allowed, please check the configuration.", {}));
+            "自动装备命令不可用，请检查配置。", {}));
         return false;
     }
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "bis_no_rows_fallback",
-        "No BiS for your tier/spec/level, check cfg, running autogear instead", {}));
+        "没有适合你等级/专精/层级的 BiS，请检查配置，改为运行自动装备", {}));
 
     // Wipe all equipped slots so autogear gears from scratch at the requested ilvl
     // (avoids old high-tier items surviving the incremental 1.2x threshold).
@@ -315,7 +315,7 @@ bool BisGearAction::Execute(Event event)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "bis_command_unavailable_error",
-            "bis command is not allowed, please check the configuration.", {}));
+            "bis 命令不可用，请检查配置。", {}));
         return false;
     }
 
@@ -323,21 +323,21 @@ bool BisGearAction::Execute(Event event)
         !sPlayerbotAIConfig.IsInRandomAccountList(bot->GetSession()->GetAccountId()))
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "bis_altbot_refused_error", "You cannot use bis on alt bots.", {}));
+            "bis_altbot_refused_error", "无法在 alt 机器人上使用 bis。", {}));
         return false;
     }
 
     if (sPlayerbotAIConfig.autoGearQualityLimit < 4)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "bis_quality_floor_error", "AutoGearQualityLimit must be 4 for BiS.", {}));
+            "bis_quality_floor_error", "BiS 需要 AutoGearQualityLimit 为 4。", {}));
         return false;
     }
 
     if (sRandomPlayerbotMgr.IsSpecPvp(bot->GetGUID().GetCounter(), bot->getClass()))
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "bis_pvp_refused_error", "bis is PvE only, bot is configured as PvP.", {}));
+            "bis_pvp_refused_error", "bis 仅用于 PvE，机器人配置为 PvP。", {}));
         return false;
     }
 
@@ -367,7 +367,7 @@ bool BisGearAction::Execute(Event event)
             phs["%param"] = param;
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "bis_invalid_arg_error",
-                "Invalid BiS ilvl argument '%param'. Use a positive integer.", phs));
+                "无效的 BiS 物品等级参数 '%param'，请使用正整数。", phs));
             return false;
         }
         if (parsed > static_cast<unsigned long>(sPlayerbotAIConfig.autoGearScoreLimit))
@@ -377,7 +377,7 @@ bool BisGearAction::Execute(Event event)
             phs["%limit"] = std::to_string(sPlayerbotAIConfig.autoGearScoreLimit);
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "bis_arg_above_limit_error",
-                "BiS ilvl %requested exceeds AutoGearScoreLimit %limit, refusing", phs));
+                "BiS 物品等级 %requested 超过 AutoGearScoreLimit %limit，已拒绝", phs));
             return false;
         }
         ilvl = static_cast<uint16>(parsed);
@@ -404,7 +404,7 @@ bool BisGearAction::Execute(Event event)
         phs["%ilvl"] = std::to_string(ilvl);
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "bis_no_rows_autogear_msg",
-            "No BiS at ilvl %ilvl, using Autogear %ilvl instead", phs));
+            "物品等级 %ilvl 无 BiS，改用自动装备 %ilvl", phs));
         return RunAutogearFallback(ilvl);
     }
 
@@ -415,11 +415,11 @@ bool BisGearAction::Execute(Event event)
         phs["%resolved"] = std::to_string(resolvedIlvl);
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "bis_closest_match_msg",
-            "No BiS at ilvl %requested, using closest match at ilvl %resolved", phs));
+            "物品等级 %requested 无 BiS，使用最接近的 %resolved", phs));
     }
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "bis_applying_msg", "Applying BiS gear", {}));
+        "bis_applying_msg", "正在应用 BiS 装备", {}));
 
     // 1. Wipe everything currently equipped so autogear starts from a clean slate.
     //    Old items linger in inventory otherwise and autogear leaves slots empty on bag conflicts.
@@ -545,7 +545,7 @@ bool BisGearAction::Execute(Event event)
     bot->DurabilityRepairAll(false, 1.0f, false);
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "bis_applied_msg", "BiS applied", {}));
+        "bis_applied_msg", "BiS 已应用", {}));
     return true;
 }
 
@@ -563,18 +563,18 @@ bool AutoGearAction::Execute(Event /*event*/)
 {
     if (!sPlayerbotAIConfig.autoGearCommand)
     {
-        botAI->TellError("autogear command is not allowed, please check the configuration.");
+        botAI->TellError("自动装备命令不可用，请检查配置。");
         return false;
     }
 
     if (!sPlayerbotAIConfig.autoGearCommandAltBots &&
         !sPlayerbotAIConfig.IsInRandomAccountList(bot->GetSession()->GetAccountId()))
     {
-        botAI->TellError("You cannot use autogear on alt bots.");
+        botAI->TellError("无法在 alt 机器人上使用自动装备。");
         return false;
     }
 
-    botAI->TellMaster("I'm auto gearing");
+    botAI->TellMaster("正在自动装备");
     uint32 gs = sPlayerbotAIConfig.autoGearScoreLimit == 0
                     ? 0
                     : PlayerbotFactory::CalcMixedGearScore(sPlayerbotAIConfig.autoGearScoreLimit,

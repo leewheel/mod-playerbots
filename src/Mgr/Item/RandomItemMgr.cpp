@@ -181,7 +181,7 @@ bool RandomItemMgr::HandleConsoleCommand(ChatHandler* /*handler*/, char const* a
 {
     if (!args || !*args)
     {
-        LOG_ERROR("playerbots", "Usage: rnditem");
+        LOG_ERROR("playerbots", "用法: rnditem");
         return false;
     }
 
@@ -214,7 +214,7 @@ void RandomItemMgr::BuildRandomItemCache()
     if (PreparedQueryResult result =
             PlayerbotsDatabase.Query(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_RNDITEM_CACHE)))
     {
-        LOG_INFO("server.loading", "Loading random item cache");
+        LOG_INFO("server.loading", "正在加载随机物品缓存");
         uint32 count = 0;
         do
         {
@@ -229,12 +229,12 @@ void RandomItemMgr::BuildRandomItemCache()
 
         } while (result->NextRow());
 
-        LOG_INFO("server.loading", "Equipment cache loaded from {} records", count);
+        LOG_INFO("server.loading", "已从 {} 条记录加载装备缓存", count);
     }
     else
     {
         ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();
-        LOG_INFO("server.loading", "Building random item cache from {} items", itemTemplates->size());
+        LOG_INFO("server.loading", "正在从 {} 个物品构建随机物品缓存", itemTemplates->size());
 
         for (auto const& itr : *itemTemplates)
         {
@@ -282,7 +282,7 @@ void RandomItemMgr::BuildRandomItemCache()
             for (uint32 type = RANDOM_ITEM_GUILD_TASK; type <= RANDOM_ITEM_GUILD_TASK_REWARD_TRADE_RARE; type++)
             {
                 RandomItemList list = randomItemCache[level][(RandomItemType)type];
-                LOG_INFO("playerbots", "    Level {}..{} Type {} - {} random items cached", level * 10, level * 10 + 9,
+                LOG_INFO("playerbots", "    等级 {}..{} 类型 {} - 已缓存 {} 个随机物品", level * 10, level * 10 + 9,
                          type, list.size());
 
                 for (RandomItemList::iterator i = list.begin(); i != list.end(); ++i)
@@ -460,7 +460,7 @@ void RandomItemMgr::LoadEnchantmentPool()
     QueryResult result = WorldDatabase.Query("SELECT entry, ench FROM item_enchantment_template");
     if (!result)
     {
-        LOG_WARN("playerbots", "item_enchantment_template empty; bot autogear cannot evaluate random suffixes");
+        LOG_WARN("playerbots", "item_enchantment_template 为空；机器人自动装备无法评估随机后缀");
         return;
     }
 
@@ -474,7 +474,7 @@ void RandomItemMgr::LoadEnchantmentPool()
         ++count;
     } while (result->NextRow());
 
-    LOG_INFO("playerbots", "Loaded {} item enchantment pool rows for bot autogear", count);
+    LOG_INFO("playerbots", "已为机器人自动装备加载 {} 条物品附魔池记录", count);
 }
 
 std::vector<uint32> const& RandomItemMgr::GetEnchantmentPool(uint32 entry) const
@@ -870,7 +870,7 @@ void RandomItemMgr::BuildItemInfoCache()
     //uint32 maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL); //not used, line marked for removal.
 
     // load weightscales
-    LOG_INFO("playerbots", "Loading weightscales info");
+    LOG_INFO("playerbots", "正在加载权重表信息");
 
     uint32 counter = 1;
     uint32 totalcount = 0;
@@ -902,7 +902,7 @@ void RandomItemMgr::BuildItemInfoCache()
 
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", "Loaded {} weightscale class specs", totalcount);
+        LOG_INFO("playerbots", "已加载 {} 个权重表职业专精", totalcount);
     }
 
     stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_WEIGHTSCALE_DATA);
@@ -931,17 +931,17 @@ void RandomItemMgr::BuildItemInfoCache()
 
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", "Loaded {} weightscale stat weights", statcount);
+        LOG_INFO("playerbots", "已加载 {} 个权重表属性权重", statcount);
     }
 
     if (m_weightScales[1].empty())
     {
-        LOG_ERROR("playerbots", "Error loading item weight scales");
+        LOG_ERROR("playerbots", "加载物品权重表出错");
         return;
     }
 
     // vendor items
-    LOG_INFO("playerbots", "Loading vendor item list...");
+    LOG_INFO("playerbots", "正在加载商人物品列表...");
 
     std::set<uint32> vendorItems;
     vendorItems.clear();
@@ -958,10 +958,10 @@ void RandomItemMgr::BuildItemInfoCache()
         } while (result->NextRow());
     }
 
-    LOG_INFO("playerbots", "Loaded {} vendor items...", vendorItems.size());
+    LOG_INFO("playerbots", "已加载 {} 个商人物品...", vendorItems.size());
 
     // calculate drop source
-    LOG_INFO("playerbots", "Loading loot templates...");
+    LOG_INFO("playerbots", "正在加载掉落模板...");
     DropMap* dropMap = new DropMap;
 
     if (CreatureTemplateContainer const* creatures = sObjectMgr->GetCreatureTemplates())
@@ -988,10 +988,10 @@ void RandomItemMgr::BuildItemInfoCache()
         }
     }
 
-    LOG_INFO("playerbots", "Loaded {} loot templates...", dropMap->size());
+    LOG_INFO("playerbots", "已加载 {} 个掉落模板...", dropMap->size());
 
     ItemTemplateContainer const* itemTemplate = sObjectMgr->GetItemTemplateStore();
-    LOG_INFO("playerbots", "Calculating stat weights for {} items...", itemTemplate->size());
+    LOG_INFO("playerbots", "正在计算 {} 个物品的属性权重...", itemTemplate->size());
 
     PlayerbotsDatabaseTransaction trans = PlayerbotsDatabase.BeginTransaction();
 
@@ -1767,9 +1767,9 @@ uint32 RandomItemMgr::GetUpgrade(Player* player, std::string spec, uint8 slot, u
         oldStatWeight = itemInfoCache[itemId].weights[specId];
 
         if (oldStatWeight)
-            LOG_INFO("playerbots", "Old Item: {}, weight: {}", itemId, oldStatWeight);
+            LOG_INFO("playerbots", "旧物品: {}, 权重: {}", itemId, oldStatWeight);
         else
-            LOG_INFO("playerbots", "Old item has no stat weight");
+            LOG_INFO("playerbots", "旧物品没有属性权重");
     }
 
     for (std::map<uint32, ItemInfoEntry>::iterator i = itemInfoCache.begin(); i != itemInfoCache.end(); ++i)
@@ -1851,7 +1851,7 @@ uint32 RandomItemMgr::GetUpgrade(Player* player, std::string spec, uint8 slot, u
     }
 
     if (closestUpgrade)
-        LOG_INFO("playerbots", "New Item: {}, weight: {}", closestUpgrade, closestUpgradeWeight);
+        LOG_INFO("playerbots", "新物品: {}, 权重: {}", closestUpgrade, closestUpgradeWeight);
 
     return closestUpgrade;
 }
@@ -1888,9 +1888,9 @@ std::vector<uint32> RandomItemMgr::GetUpgradeList(Player* player, std::string sp
         oldStatWeight = itemInfoCache[itemId].weights[specId];
 
         if (oldStatWeight)
-            LOG_INFO("playerbots", "Old Item: {}, weight: {}", itemId, oldStatWeight);
+            LOG_INFO("playerbots", "旧物品: {}, 权重: {}", itemId, oldStatWeight);
         else
-            LOG_INFO("playerbots", "Old item has no stat weight");
+            LOG_INFO("playerbots", "旧物品没有属性权重");
     }
 
     for (std::map<uint32, ItemInfoEntry>::iterator i = itemInfoCache.begin(); i != itemInfoCache.end(); ++i)
@@ -1971,7 +1971,7 @@ std::vector<uint32> RandomItemMgr::GetUpgradeList(Player* player, std::string sp
     }
 
     if (listItems.size())
-        LOG_INFO("playerbots", "New Items: {}, Old item:%d, New items max: {}", listItems.size(), oldStatWeight,
+        LOG_INFO("playerbots", "新物品: {}, 旧物品:%d, 新物品最大: {}", listItems.size(), oldStatWeight,
                  closestUpgradeWeight);
 
     return listItems;
@@ -2152,7 +2152,7 @@ void RandomItemMgr::BuildEquipCache()
             ++count;
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", "Equipment cache loaded from {} records", count);
+        LOG_INFO("playerbots", "已从 {} 条记录加载装备缓存", count);
     }
     else
     {
@@ -2226,13 +2226,13 @@ void RandomItemMgr::BuildEquipCache()
             }
         }
 
-        LOG_INFO("server.loading", "Equipment cache saved to DB");
+        LOG_INFO("server.loading", "装备缓存已保存到数据库");
     }
 }
 
 void RandomItemMgr::BuildEquipCacheNew()
 {
-    LOG_INFO("playerbots", "Loading equipments cache...");
+    LOG_INFO("playerbots", "正在加载装备缓存...");
 
     std::unordered_set<uint32> questItemIds;
     ObjectMgr::QuestMap const& questTemplates = sObjectMgr->GetQuestTemplates();
@@ -2337,7 +2337,7 @@ void RandomItemMgr::BuildAmmoCache()
 {
     uint32 maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
 
-    LOG_INFO("server.loading", "Building ammo cache for {} levels", maxLevel);
+    LOG_INFO("server.loading", "正在为 {} 个等级构建弹药缓存", maxLevel);
 
     uint32 counter = 0;
     for (uint32 level = 1; level <= maxLevel; level += 1)
@@ -2361,7 +2361,7 @@ void RandomItemMgr::BuildAmmoCache()
         }
     }
 
-    LOG_INFO("server.loading", "Cached {} ammo", counter);  // TEST
+    LOG_INFO("server.loading", "已缓存 {} 种弹药", counter);  // TEST
 }
 
 std::vector<uint32> RandomItemMgr::GetAmmo(uint32 level, uint32 subClass) { return ammoCache[level][subClass]; }
@@ -2370,7 +2370,7 @@ void RandomItemMgr::BuildPotionCache()
 {
     uint32 maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
 
-    LOG_INFO("playerbots", "Building potion cache for {} levels", maxLevel);
+    LOG_INFO("playerbots", "正在为 {} 个等级构建药水缓存", maxLevel);
 
     ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();
 
@@ -2442,7 +2442,7 @@ void RandomItemMgr::BuildPotionCache()
         }
     }
 
-    LOG_INFO("playerbots", "Cached {} potions", counter);
+    LOG_INFO("playerbots", "已缓存 {} 种药水", counter);
 }
 
 void RandomItemMgr::BuildFoodCache()
@@ -2451,7 +2451,7 @@ void RandomItemMgr::BuildFoodCache()
     if (maxLevel > sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
         maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
 
-    LOG_INFO("server.loading", "Building food cache for {} levels", maxLevel);
+    LOG_INFO("server.loading", "正在为 {} 个等级构建食物缓存", maxLevel);
 
     ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();
 
@@ -2499,11 +2499,11 @@ void RandomItemMgr::BuildFoodCache()
             uint32 category = categories[i];
             uint32 size = foodCache[level / 10][category].size();
             ++counter;
-            LOG_DEBUG("server.loading", "Food cache for level={}, category={}: {} items", level, category, size);
+            LOG_DEBUG("server.loading", "等级={}, 类别={} 的食物缓存: {} 个物品", level, category, size);
         }
     }
 
-    LOG_INFO("server.loading", "Cached {} types of food", counter);
+    LOG_INFO("server.loading", "已缓存 {} 种食物", counter);
 }
 
 uint32 RandomItemMgr::GetRandomPotion(uint32 level, uint32 effect)
@@ -2584,7 +2584,7 @@ void RandomItemMgr::BuildTradeCache()
     if (maxLevel > sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
         maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
 
-    LOG_INFO("server.loading", "Building trade cache for {} levels", maxLevel);
+    LOG_INFO("server.loading", "正在为 {} 个等级构建商品缓存", maxLevel);
 
     ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();
 
@@ -2616,11 +2616,11 @@ void RandomItemMgr::BuildTradeCache()
     for (uint32 level = 1; level <= maxLevel + 1; level += 10)
     {
         uint32 size = tradeCache[level / 10].size();
-        LOG_DEBUG("server.loading", "Trade cache for level={}: {} items", level, size);
+        LOG_DEBUG("server.loading", "等级={} 的商品缓存: {} 个物品", level, size);
         ++counter;
     }
 
-    LOG_INFO("server.loading", "Cached {} trade items", counter);  // TEST
+    LOG_INFO("server.loading", "已缓存 {} 个商品", counter);  // TEST
 }
 
 uint32 RandomItemMgr::GetRandomTrade(uint32 level)
@@ -2637,7 +2637,7 @@ void RandomItemMgr::BuildRarityCache()
     if (PreparedQueryResult result =
             PlayerbotsDatabase.Query(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_RARITY_CACHE)))
     {
-        LOG_INFO("playerbots", "Loading item rarity cache");
+        LOG_INFO("playerbots", "正在加载物品稀有度缓存");
 
         uint32 count = 0;
         do
@@ -2651,12 +2651,12 @@ void RandomItemMgr::BuildRarityCache()
 
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", "Item rarity cache loaded from {} records", count);
+        LOG_INFO("playerbots", "已从 {} 条记录加载物品稀有度缓存", count);
     }
     else
     {
         ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();
-        LOG_INFO("playerbots", "Building item rarity cache from {} items", itemTemplates->size());
+        LOG_INFO("playerbots", "正在从 {} 个物品构建物品稀有度缓存", itemTemplates->size());
 
         for (auto const& itr : *itemTemplates)
         {
@@ -2784,7 +2784,7 @@ void RandomItemMgr::BuildRarityCache()
             }
         }
 
-        LOG_INFO("playerbots", "Item rarity cache built from {} items", itemTemplates->size());
+        LOG_INFO("playerbots", "已从 {} 个物品构建物品稀有度缓存", itemTemplates->size());
     }
 }
 

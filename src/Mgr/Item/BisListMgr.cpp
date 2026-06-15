@@ -18,7 +18,7 @@ void BisListMgr::LoadAll()
         "SELECT class, tab, slot, faction, auto_gear_score_limit, item_id FROM playerbots_bis_gear");
     if (!result)
     {
-        LOG_INFO("server.loading", "playerbots_bis_gear table missing or empty");
+        LOG_INFO("server.loading", "playerbots_bis_gear 表缺失或为空");
         return;
     }
 
@@ -37,7 +37,7 @@ void BisListMgr::LoadAll()
         ++count;
     } while (result->NextRow());
 
-    LOG_INFO("server.loading", "Loaded {} BiS entries across {} item levels",
+    LOG_INFO("server.loading", "已加载 {} 条 BiS 记录，涵盖 {} 个物品等级",
              count, static_cast<uint32>(_bis.size()));
 }
 

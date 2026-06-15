@@ -117,7 +117,7 @@ bool CastCustomSpellAction::Execute(Event event)
     std::ostringstream msg;
     if (!spell)
     {
-        msg << "Unknown spell " << text;
+        msg << "未知法术 " << text;
         botAI->TellError(msg.str());
         return false;
     }
@@ -125,7 +125,7 @@ bool CastCustomSpellAction::Execute(Event event)
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spell);
     if (!spellInfo)
     {
-        msg << "Unknown spell " << text;
+        msg << "未知法术 " << text;
         botAI->TellError(msg.str());
         return false;
     }

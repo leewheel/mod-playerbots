@@ -79,7 +79,7 @@ bool DebugAction::Execute(Event event)
             TravelNodeRoute route = TravelNodeMap::instance().getRoute(botPos, *points.front(), beginPath, bot);
 
             std::ostringstream out;
-            out << "Traveling to " << dest->getTitle() << ": ";
+            out << "正在前往 " << dest->getTitle() << ": ";
 
             for (auto node : route.getNodes())
             {
@@ -92,7 +92,7 @@ bool DebugAction::Execute(Event event)
         }
         else
         {
-            botAI->TellMasterNoFacing("Destination " + destination + " not found.");
+            botAI->TellMasterNoFacing("未找到目的地 " + destination);
             return true;
         }
     }
@@ -104,7 +104,7 @@ bool DebugAction::Execute(Event event)
 
         if (!quest)
         {
-            botAI->TellMasterNoFacing("Quest " + text.substr(6) + " not found.");
+            botAI->TellMasterNoFacing("未找到任务 " + text.substr(6));
             return false;
         }
 
@@ -205,7 +205,7 @@ bool DebugAction::Execute(Event event)
             endNode->setLinked(false);
         }
 
-        botAI->TellMasterNoFacing("Node " + name + " created.");
+        botAI->TellMasterNoFacing("节点 " + name + " 已创建。");
 
         TravelNodeMap::instance().setHasToGen();
 
@@ -222,12 +222,12 @@ bool DebugAction::Execute(Event event)
 
         if (startNode->isImportant())
         {
-            botAI->TellMasterNoFacing("Node can not be removed.");
+            botAI->TellMasterNoFacing("节点无法移除。");
         }
 
         TravelNodeMap::instance().m_nMapMtx.lock();
         TravelNodeMap::instance().removeNode(startNode);
-        botAI->TellMasterNoFacing("Node removed.");
+        botAI->TellMasterNoFacing("节点已移除。");
         TravelNodeMap::instance().m_nMapMtx.unlock();
 
         TravelNodeMap::instance().setHasToGen();

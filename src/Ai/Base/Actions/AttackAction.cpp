@@ -40,7 +40,7 @@ bool AttackMyTargetAction::Execute(Event /*event*/)
     {
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pull_no_target_error", "You have no target", {}));
+                "pull_no_target_error", "你没有目标", {}));
 
         return false;
     }
@@ -59,7 +59,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     {
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_no_target_error", "I have no target", {}));
+                "attack_no_target_error", "我没有目标", {}));
 
         return false;
     }
@@ -69,7 +69,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_target_not_in_world_error",
-                "%target is no longer in the world.",
+                "%target 已不在世界中。",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -80,7 +80,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     {
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_in_flight_error", "I cannot attack in flight", {}));
+                "attack_in_flight_error", "飞行中无法攻击", {}));
 
         return false;
     }
@@ -94,7 +94,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_pvp_prohibited_error",
-                "I cannot attack other players in PvP prohibited areas.",
+                "在禁止 PvP 的区域无法攻击其他玩家。",
                 {}));
 
         return false;
@@ -105,7 +105,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_target_friendly_error",
-                "%target is friendly to me.",
+                "%target 是我的友方。",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -116,7 +116,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_target_dead_error",
-                "%target is dead.",
+                "%target 已死亡。",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -127,7 +127,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_target_not_in_sight_error",
-                "%target is not in my sight.",
+                "%target 不在我的视线内。",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -150,7 +150,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_already_attacking_error",
-                "I am already attacking %target.",
+                "我已在攻击 %target。",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -160,7 +160,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     {
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_invalid_target_error", "I cannot attack an invalid target.", {}));
+                "attack_invalid_target_error", "我无法攻击无效目标。", {}));
 
         return false;
     }
@@ -194,7 +194,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
 
     if (!WaitForAttackStrategy::ShouldWait(botAI))
         bot->Attack(target, shouldMelee);
-    /* prevent pet dead immediately in group */
+    /* prevent 宠物 dead immediately in group */
     // if (bot->GetMap()->IsDungeon() && bot->GetGroup() && !target->IsInCombat())
     // {
     //     with_pet = false;

@@ -52,7 +52,7 @@ bool PositionAction::Execute(Event event)
     std::vector<std::string> params = split(param, ' ');
     if (params.size() != 2)
     {
-        botAI->TellMaster("Whisper position <name> ?/set/reset");
+        botAI->TellMaster("密语 position <名称> ?/set/reset");
         return false;
     }
 
@@ -169,7 +169,7 @@ bool ReturnToStayPositionAction::isPossible()
         const float distance = bot->GetDistance(stayPosition.x, stayPosition.y, stayPosition.z);
         if (distance > sPlayerbotAIConfig.reactDistance)
         {
-            botAI->TellMaster("The stay position is too far to return. I am going to stay where I am now");
+            botAI->TellMaster("停留位置太远无法返回，我将留在当前位置");
 
             // Set the stay position to current position
             stayPosition.Set(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId());

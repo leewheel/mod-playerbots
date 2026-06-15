@@ -79,12 +79,12 @@ bool LootStrategyAction::Execute(Event event)
                 if (j != alwaysLootItems.end())
                     alwaysLootItems.erase(j);
 
-                botAI->TellMaster("Item(s) removed from always loot list");
+                botAI->TellMaster("已从始终拾取列表中移除物品");
             }
             else
             {
                 alwaysLootItems.insert(itemid);
-                botAI->TellMaster("Item(s) added to always loot list");
+                botAI->TellMaster("已添加物品到始终拾取列表");
             }
         }
     }

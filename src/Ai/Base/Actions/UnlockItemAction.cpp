@@ -31,5 +31,5 @@ void UnlockItemAction::UnlockItem(Item* item)
         botAI->TellMaster(out.str());
     }
     else
-        botAI->TellError("Failed to cast Pick Lock.");
+        botAI->TellError("施放开锁失败。");
 }

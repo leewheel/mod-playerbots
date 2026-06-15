@@ -453,10 +453,10 @@ void PlayerbotAI::UpdateAIGroupMaster()
 
                 if (botAI->GetMaster() == botAI->GetGroupLeader())
                     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "hello_follow", "Hello, I follow you!", {}));
+                        "hello_follow", "你好，我跟随你！", {}));
                 else
                     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "hello", "Hello!", {}));
+                        "hello", "你好！", {}));
             }
             else
             {
@@ -751,13 +751,13 @@ void PlayerbotAI::HandleCommand(uint32 type, const std::string& text, Player& fr
         uint32 delay = atof(remaining.c_str()) * IN_MILLISECONDS;
         if (delay > 20000)
         {
-            bot->TellMaster(&fromPlayer, "Max wait time is 20 seconds!");
+            bot->TellMaster(&fromPlayer, "最长等待时间为 20 秒！");
             return;
         }
 
         IncreaseAIInternalUpdateDelay(delay);
         isWaiting = true;
-        TellPlayer(&fromPlayer, "Waiting for " + remaining + " seconds!");
+        TellPlayer(&fromPlayer, "等待 " + remaining + " 秒！");
         return;
     }*/
 
@@ -861,7 +861,7 @@ void PlayerbotAI::Reset(bool full)
         WorldPackets::Character::LogoutCancel data = WorldPacket(CMSG_LOGOUT_CANCEL);
         bot->GetSession()->HandleLogoutCancelOpcode(data);
         TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "logout_cancel", "Logout cancelled!", {}));
+            "logout_cancel", "已取消登出！", {}));
     }
 
     currentEngine = engines[BOT_STATE_NON_COMBAT];
@@ -1062,7 +1062,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
             if (type == CHAT_MSG_WHISPER)
             {
                 std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "bot_not_your_master", "You are not my master!", {});
+                    "bot_not_your_master", "你不是我的主控！", {});
                 bot->Whisper(message, LANG_UNIVERSAL, fromPlayer);
             }
             return;
@@ -1078,7 +1078,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
             if (type == CHAT_MSG_WHISPER)
             {
                 std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "logout_start", "I'm logging out!", {});
+                    "logout_start", "我正在登出！", {});
                 TellMaster(message);
             }
 
@@ -1087,7 +1087,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         else if (type == CHAT_MSG_WHISPER)
         {
             std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "bot_rndbot_no_logout", "You can't command me to logout!", {});
+                "bot_rndbot_no_logout", "你不能命令我登出！", {});
             TellMaster(message);
         }
     }
@@ -1099,7 +1099,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         if (type == CHAT_MSG_WHISPER)
         {
             std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "logout_cancel", "Logout cancelled!", {});
+                "logout_cancel", "已取消登出！", {});
             TellMaster(message);
         }
 
@@ -1759,7 +1759,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     if (tellMaster && !strategyName.empty())
     {
         std::ostringstream out;
-        out << "Added " << strategyName << " instance strategy";
+        out << "已添加副本策略 " << strategyName;
         TellMasterNoFacing(out.str());
     }
 }
@@ -1782,7 +1782,7 @@ bool PlayerbotAI::DoSpecificAction(std::string const name, Event event, bool sil
                 }
                 return true;
             case ACTION_RESULT_IMPOSSIBLE:
-                out << name << ": impossible";
+                out << name << "：不可能";
                 if (!silent)
                 {
                     TellError(out.str());
@@ -1790,7 +1790,7 @@ bool PlayerbotAI::DoSpecificAction(std::string const name, Event event, bool sil
                 }
                 return false;
             case ACTION_RESULT_USELESS:
-                out << name << ": useless";
+                out << name << "：无用";
                 if (!silent)
                 {
                     TellError(out.str());
@@ -1800,7 +1800,7 @@ bool PlayerbotAI::DoSpecificAction(std::string const name, Event event, bool sil
             case ACTION_RESULT_FAILED:
                 if (!silent)
                 {
-                    out << name << ": failed";
+                    out << name << "：失败";
                     TellError(out.str());
                 }
                 return false;
@@ -1809,7 +1809,7 @@ bool PlayerbotAI::DoSpecificAction(std::string const name, Event event, bool sil
 
     if (!silent)
     {
-        out << name << ": unknown action";
+        out << name << ": 未知动作";
         TellError(out.str());
     }
 
@@ -3585,7 +3585,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
 
                 pet->ToggleAutocast(spellInfo, !autocast);
                 std::ostringstream out;
-                out << (autocast ? "|cffff0000|Disabling" : "|cFF00ff00|Enabling") << " pet auto-cast for ";
+                out << (autocast ? "|cffff0000|关闭" : "|cFF00ff00|开启") << " 宠物自动施法: ";
                 out << chatHelper.FormatSpell(spellInfo);
                 TellMaster(out);
                 return true;
@@ -3733,51 +3733,51 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
         if (HasStrategy("debug spell", BOT_STATE_NON_COMBAT))
         {
             std::ostringstream out;
-            out << "Spell cast failed - ";
-            out << "Spell ID: " << spellId << " (" << ChatHelper::FormatSpell(spellInfo) << "), ";
-            out << "Error Code: " << static_cast<int>(result) << " (0x" << std::hex << static_cast<int>(result)
+            out << "施法失败 - ";
+            out << "法术 ID: " << spellId << " (" << ChatHelper::FormatSpell(spellInfo) << "), ";
+            out << "错误码: " << static_cast<int>(result) << " (0x" << std::hex << static_cast<int>(result)
                 << std::dec << "), ";
-            out << "Bot: " << bot->GetName() << ", ";
+            out << "机器人: " << bot->GetName() << ", ";
 
             // Check spell target type
             if (targets.GetUnitTarget())
             {
-                out << "Target: Unit (" << targets.GetUnitTarget()->GetName()
+                out << "目标: 单位 (" << targets.GetUnitTarget()->GetName()
                     << ", Low GUID: " << targets.GetUnitTarget()->GetGUID().GetCounter()
                     << ", High GUID: " << static_cast<uint32>(targets.GetUnitTarget()->GetGUID().GetHigh()) << "), ";
             }
 
             if (targets.GetGOTarget())
             {
-                out << "Target: GameObject (Low GUID: " << targets.GetGOTarget()->GetGUID().GetCounter()
+                out << "目标: 游戏对象 (Low GUID: " << targets.GetGOTarget()->GetGUID().GetCounter()
                     << ", High GUID: " << static_cast<uint32>(targets.GetGOTarget()->GetGUID().GetHigh()) << "), ";
             }
 
             if (targets.GetItemTarget())
             {
-                out << "Target: Item (Low GUID: " << targets.GetItemTarget()->GetGUID().GetCounter()
+                out << "目标: 物品 (Low GUID: " << targets.GetItemTarget()->GetGUID().GetCounter()
                     << ", High GUID: " << static_cast<uint32>(targets.GetItemTarget()->GetGUID().GetHigh()) << "), ";
             }
 
             // Check if bot is in trade mode
             if (bot->GetTradeData())
             {
-                out << "Trade Mode: Active, ";
+                out << "交易模式: 激活, ";
                 Item* tradeItem = bot->GetTradeData()->GetTraderData()->GetItem(TRADE_SLOT_NONTRADED);
                 if (tradeItem)
                 {
-                    out << "Trade Item: " << tradeItem->GetEntry()
+                    out << "交易物品: " << tradeItem->GetEntry()
                         << " (Low GUID: " << tradeItem->GetGUID().GetCounter()
                         << ", High GUID: " << static_cast<uint32>(tradeItem->GetGUID().GetHigh()) << "), ";
                 }
                 else
                 {
-                    out << "Trade Item: None, ";
+                    out << "交易物品: 无, ";
                 }
             }
             else
             {
-                out << "Trade Mode: Inactive, ";
+                out << "交易模式: 未激活, ";
             }
 
             TellMasterNoFacing(out);
@@ -3814,7 +3814,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
     if (HasStrategy("debug spell", BOT_STATE_NON_COMBAT))
     {
         std::ostringstream out;
-        out << "Casting " << ChatHelper::FormatSpell(spellInfo);
+        out << "正在施放 " << ChatHelper::FormatSpell(spellInfo);
         TellMasterNoFacing(out);
     }
 
@@ -3842,7 +3842,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
 
         pet->ToggleAutocast(spellInfo, !autocast);
         std::ostringstream out;
-        out << (autocast ? "|cffff0000|Disabling" : "|cFF00ff00|Enabling") << " pet auto-cast for ";
+        out << (autocast ? "|cffff0000|关闭" : "|cFF00ff00|开启") << " 宠物自动施法: ";
         out << chatHelper.FormatSpell(spellInfo);
         TellMaster(out);
         return true;
@@ -3943,7 +3943,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
     if (HasStrategy("debug spell", BOT_STATE_NON_COMBAT))
     {
         std::ostringstream out;
-        out << "Casting " << ChatHelper::FormatSpell(spellInfo);
+        out << "正在施放 " << ChatHelper::FormatSpell(spellInfo);
         TellMasterNoFacing(out);
     }
 
@@ -4162,7 +4162,7 @@ bool PlayerbotAI::CastVehicleSpell(uint32 spellId, Unit* target)
     if (HasStrategy("debug spell", BOT_STATE_NON_COMBAT))
     {
         std::ostringstream out;
-        out << "Casting Vehicle Spell" << ChatHelper::FormatSpell(spellInfo);
+        out << "正在施放载具法术 " << ChatHelper::FormatSpell(spellInfo);
         TellMasterNoFacing(out);
     }
 
@@ -5187,7 +5187,7 @@ std::string const PlayerbotAI::HandleRemoteCommand(std::string const command)
             case BOT_STATE_NON_COMBAT:
                 return "non-combat";
             default:
-                return "unknown";
+                return "未知";
         }
     }
     else if (command == "position")
@@ -5268,7 +5268,7 @@ std::string const PlayerbotAI::HandleRemoteCommand(std::string const command)
         TravelTarget* target = GetAiObjectContext()->GetValue<TravelTarget*>("travel target")->Get();
         if (target->getDestination())
         {
-            out << "Destination = " << target->getDestination()->getName();
+            out << "目的地 = " << target->getDestination()->getName();
 
             out << ": " << target->getDestination()->getTitle();
 
@@ -5277,30 +5277,30 @@ std::string const PlayerbotAI::HandleRemoteCommand(std::string const command)
             if (!(*target->getPosition() == WorldPosition()))
             {
                 out << "(" << target->getPosition()->getAreaName() << ")";
-                out << " distance: " << target->getPosition()->distance(bot) << "y";
+                out << " 距离: " << target->getPosition()->distance(bot) << "码";
                 out << " v: " << target->getPosition()->getVisitors();
             }
         }
 
-        out << " Status = ";
+        out << " 状态 = ";
 
         if (target->getStatus() == TRAVEL_STATUS_NONE)
-            out << " none";
+            out << " 无";
         else if (target->getStatus() == TRAVEL_STATUS_PREPARE)
-            out << " prepare";
+            out << " 准备";
         else if (target->getStatus() == TRAVEL_STATUS_TRAVEL)
-            out << " travel";
+            out << " 旅行";
         else if (target->getStatus() == TRAVEL_STATUS_WORK)
-            out << " work";
+            out << " 工作";
         else if (target->getStatus() == TRAVEL_STATUS_COOLDOWN)
-            out << " cooldown";
+            out << " 冷却";
         else if (target->getStatus() == TRAVEL_STATUS_EXPIRED)
-            out << " expired";
+            out << " 已过期";
 
         if (target->getStatus() != TRAVEL_STATUS_EXPIRED)
-            out << " Expire in " << (target->getTimeLeft() / 1000) << "s";
+            out << " 剩余 " << (target->getTimeLeft() / 1000) << " 秒";
 
-        out << " Retry " << target->getRetryCount(true) << "/" << target->getRetryCount(false);
+        out << " 重试 " << target->getRetryCount(true) << "/" << target->getRetryCount(false);
 
         return out.str();
     }
@@ -5310,9 +5310,9 @@ std::string const PlayerbotAI::HandleRemoteCommand(std::string const command)
 
         AiObjectContext* context = GetAiObjectContext();
 
-        out << "Current money: " << ChatHelper::formatMoney(bot->GetMoney()) << " free to use:"
+        out << "当前金币: " << ChatHelper::formatMoney(bot->GetMoney()) << " 可用:"
             << ChatHelper::formatMoney(AI_VALUE2(uint32, "free money for", (uint32)NeedMoneyFor::anything)) << "\n";
-        out << "Purpose | Available / Needed \n";
+        out << "用途 | 可用 / 需要 \n";
 
         for (uint32 i = 1; i < (uint32)NeedMoneyFor::anything; i++)
         {
@@ -5321,28 +5321,28 @@ std::string const PlayerbotAI::HandleRemoteCommand(std::string const command)
             switch (needMoneyFor)
             {
                 case NeedMoneyFor::none:
-                    out << "nothing";
+                    out << "无";
                     break;
                 case NeedMoneyFor::repair:
-                    out << "repair";
+                    out << "修理";
                     break;
                 case NeedMoneyFor::ammo:
-                    out << "ammo";
+                    out << "弹药";
                     break;
                 case NeedMoneyFor::spells:
-                    out << "spells";
+                    out << "法术";
                     break;
                 case NeedMoneyFor::travel:
-                    out << "travel";
+                    out << "旅行";
                     break;
                 case NeedMoneyFor::consumables:
-                    out << "consumables";
+                    out << "消耗品";
                     break;
                 case NeedMoneyFor::gear:
-                    out << "gear";
+                    out << "装备";
                     break;
                 case NeedMoneyFor::guild:
-                    out << "guild";
+                    out << "公会";
                     break;
                 default:
                     break;
@@ -5356,7 +5356,7 @@ std::string const PlayerbotAI::HandleRemoteCommand(std::string const command)
     }
 
     std::ostringstream out;
-    out << "invalid command: " << command;
+    out << "无效命令: " << command;
     return out.str();
 }
 

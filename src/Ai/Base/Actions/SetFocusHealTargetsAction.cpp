@@ -49,7 +49,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
     {
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "focus_heal_not_healer",
-            "I'm not a healer or offhealer (please change my strats to heal or offheal)",
+            "我不是治疗或副治疗（请将我的策略改为 heal 或 offheal）",
             {});
         botAI->TellMasterNoFacing(text);
         return false;
@@ -60,7 +60,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
     {
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "focus_heal_provide_names",
-            "Please provide one or more player names",
+            "请提供一个或多个玩家名称",
             {});
         botAI->TellMasterNoFacing(text);
         return false;
@@ -76,7 +76,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "focus_heal_no_targets",
-                "I don't have any focus heal targets",
+                "我没有焦点治疗目标",
                 {});
             botAI->TellMasterNoFacing(text);
         }
@@ -98,7 +98,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
             placeholders["%targets"] = targetNames.str();
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "focus_heal_current_targets",
-                "My focus heal targets are %targets",
+                "我的焦点治疗目标是 %targets",
                 placeholders);
             botAI->TellMasterNoFacing(text);
         }
@@ -114,7 +114,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
         botAI->ChangeStrategy("-focus heal targets", BOT_STATE_COMBAT);
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "focus_heal_cleared",
-            "Removed focus heal targets",
+            "已移除焦点治疗目标",
             {});
         botAI->TellMasterNoFacing(text);
         return true;
@@ -136,7 +136,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
     {
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "focus_heal_provide_names",
-            "Please provide one or more player names",
+            "请提供一个或多个玩家名称",
             {});
         botAI->TellMasterNoFacing(text);
         return false;
@@ -146,7 +146,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
     {
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "focus_heal_not_in_group",
-            "I'm not in a group",
+            "我不在队伍中",
             {});
         botAI->TellMasterNoFacing(text);
         return false;
@@ -160,7 +160,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "focus_heal_add_remove_syntax",
-                "Please specify a + for add or - to remove a target",
+                "请用 + 添加或 - 移除目标",
                 {});
             botAI->TellMasterNoFacing(text);
             continue;
@@ -174,7 +174,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
             placeholders["%player_name"] = playerName;
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "focus_heal_not_in_group_with",
-                "I'm not in a group with %player_name",
+                "我与 %player_name 不在同一队伍中",
                 placeholders);
             botAI->TellMasterNoFacing(text);
             continue;
@@ -191,7 +191,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
             placeholders["%player_name"] = playerName;
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "focus_heal_added",
-                "Added %player_name to focus heal targets",
+                "已将 %player_name 添加到焦点治疗目标",
                 placeholders);
             botAI->TellMasterNoFacing(text);
         }
@@ -202,7 +202,7 @@ bool SetFocusHealTargetsAction::Execute(Event event)
             placeholders["%player_name"] = playerName;
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "focus_heal_removed",
-                "Removed %player_name from focus heal targets",
+                "已从焦点治疗目标移除 %player_name",
                 placeholders);
             botAI->TellMasterNoFacing(text);
         }

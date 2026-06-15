@@ -30,19 +30,19 @@ bool GuildAcceptAction::Execute(Event event)
     if (!guildId)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "guild_accept_inviter_not_in_guild", "You are not in a guild!", {}));
+            "guild_accept_inviter_not_in_guild", "你不在公会中！", {}));
         accept = false;
     }
     else if (bot->GetGuildId())
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "guild_accept_already_in_guild", "Sorry, I am in a guild already", {}));
+            "guild_accept_already_in_guild", "抱歉，我已经在公会中了", {}));
         accept = false;
     }
     else if (!botAI->GetSecurity()->CheckLevelFor(PLAYERBOT_SECURITY_INVITE, false, inviter, true))
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "guild_accept_declined", "Sorry, I don't want to join your guild :(", {}));
+            "guild_accept_declined", "抱歉，我不想加入你的公会 :(", {}));
         accept = false;
     }
 

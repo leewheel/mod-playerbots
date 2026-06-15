@@ -88,7 +88,7 @@ bool LeaveGroupAction::Leave()
     Player* master = botAI -> GetMaster();
     if (master)
         botAI->TellMaster(
-            PlayerbotTextMgr::instance().GetBotTextOrDefault("goodbye", "Goodbye!", {}),
+            PlayerbotTextMgr::instance().GetBotTextOrDefault("goodbye", "再见！", {}),
             PLAYERBOT_SECURITY_TALK);
 
     botAI->LeaveOrDisbandGroup();

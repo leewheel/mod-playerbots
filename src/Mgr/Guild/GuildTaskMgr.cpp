@@ -51,12 +51,12 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
     if (secLevel == PLAYERBOT_SECURITY_DENY_ALL ||
         (secLevel == PLAYERBOT_SECURITY_TALK && reason != PLAYERBOT_DENY_FAR))
     {
-        LOG_DEBUG("playerbots", "{} / {}: skipping guild task update - not enough security level, reason = {}",
+        LOG_DEBUG("playerbots", "{} / {}: 跳过公会任务更新 - 安全等级不足，原因 = {}",
                   guild->GetName().c_str(), player->GetName().c_str(), reason);
         return;
     }
 
-    LOG_DEBUG("playerbots", "{}: guild task update for player {}", guild->GetName().c_str(), player->GetName().c_str());
+    LOG_DEBUG("playerbots", "{}: 为玩家 {} 更新公会任务", guild->GetName().c_str(), player->GetName().c_str());
 
     ObjectGuid::LowType owner = player->GetGUID().GetCounter();
 
@@ -76,7 +76,7 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
 
         if (task == GUILD_TASK_TYPE_NONE)
         {
-            LOG_ERROR("playerbots", "{} / {}: error creating guild task", guild->GetName().c_str(),
+            LOG_ERROR("playerbots", "{} / {}: 创建公会任务出错", guild->GetName().c_str(),
                       player->GetName().c_str());
         }
 
@@ -86,7 +86,7 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
                      urand(sPlayerbotAIConfig.minGuildTaskAdvertisementTime,
                            sPlayerbotAIConfig.maxGuildTaskAdvertisementTime));
 
-        LOG_DEBUG("playerbots", "{} / {}: guild task {} is set for {} secs", guild->GetName().c_str(),
+        LOG_DEBUG("playerbots", "{} / {}: 公会任务 {} 已设置，持续 {} 秒", guild->GetName().c_str(),
                   player->GetName().c_str(), task, time);
         return;
     }
@@ -96,7 +96,7 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
     uint32 advertisement = GetTaskValue(owner, guildId, "advertisement");
     if (!advertisement)
     {
-        LOG_DEBUG("playerbots", "{} / {}: sending advertisement", guild->GetName().c_str(), player->GetName().c_str());
+        LOG_DEBUG("playerbots", "{} / {}: 正在发送广告", guild->GetName().c_str(), player->GetName().c_str());
 
         if (SendAdvertisement(trans, owner, guildId))
         {
@@ -106,7 +106,7 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
         }
         else
         {
-            LOG_DEBUG("playerbots", "{} / {}: error sending advertisement", guild->GetName().c_str(),
+            LOG_DEBUG("playerbots", "{} / {}: 发送广告出错", guild->GetName().c_str(),
                       player->GetName().c_str());
         }
     }
@@ -114,7 +114,7 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
     uint32 thanks = GetTaskValue(owner, guildId, "thanks");
     if (!thanks)
     {
-        LOG_DEBUG("playerbots", "{} / {}: sending thanks", guild->GetName().c_str(), player->GetName().c_str());
+        LOG_DEBUG("playerbots", "{} / {}: 正在发送感谢", guild->GetName().c_str(), player->GetName().c_str());
 
         if (SendThanks(trans, owner, guildId, GetTaskValue(owner, guildId, "payment")))
         {
@@ -123,7 +123,7 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
         }
         else
         {
-            LOG_DEBUG("playerbots", "{} / {}: error sending thanks", guild->GetName().c_str(),
+            LOG_DEBUG("playerbots", "{} / {}: 发送感谢出错", guild->GetName().c_str(),
                       player->GetName().c_str());
         }
     }
@@ -131,7 +131,7 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
     uint32 reward = GetTaskValue(owner, guildId, "reward");
     if (!reward)
     {
-        LOG_DEBUG("playerbots", "{} / {}: sending reward", guild->GetName().c_str(), player->GetName().c_str());
+        LOG_DEBUG("playerbots", "{} / {}: 正在发送奖励", guild->GetName().c_str(), player->GetName().c_str());
 
         if (Reward(trans, owner, guildId))
         {
@@ -140,7 +140,7 @@ void GuildTaskMgr::Update(Player* player, Player* guildMaster)
         }
         else
         {
-            LOG_DEBUG("playerbots", "{} / {}: error sending reward", guild->GetName().c_str(),
+            LOG_DEBUG("playerbots", "{} / {}: 发送奖励出错", guild->GetName().c_str(),
                       player->GetName().c_str());
         }
     }
@@ -193,14 +193,14 @@ bool GuildTaskMgr::CreateItemTask(Player* player, uint32 guildId)
     uint32 itemId = sRandomItemMgr.GetRandomItem(player->GetLevel() - 5, RANDOM_ITEM_GUILD_TASK, &predicate);
     if (!itemId)
     {
-        LOG_ERROR("playerbots", "{} / {}: no items avaible for item task",
+        LOG_ERROR("playerbots", "{} / {}: 物品任务没有可用物品",
                   sGuildMgr->GetGuildById(guildId)->GetName().c_str(), player->GetName().c_str());
         return false;
     }
 
     uint32 count = GetMaxItemTaskCount(itemId);
 
-    LOG_DEBUG("playerbots", "{} / {}: item task {} (x{})", sGuildMgr->GetGuildById(guildId)->GetName().c_str(),
+    LOG_DEBUG("playerbots", "{} / {}: 物品任务 {} (x{})", sGuildMgr->GetGuildById(guildId)->GetName().c_str(),
               player->GetName().c_str(), itemId, count);
 
     SetTaskValue(player->GetGUID().GetCounter(), guildId, "itemCount", count,
@@ -250,7 +250,7 @@ bool GuildTaskMgr::CreateKillTask(Player* player, uint32 guildId)
 
     if (ids.empty())
     {
-        LOG_ERROR("playerbots", "{} / {}: no rare creatures available for kill task",
+        LOG_ERROR("playerbots", "{} / {}: 击杀任务没有可用的稀有生物",
                   sGuildMgr->GetGuildById(guildId)->GetName().c_str(), player->GetName().c_str());
         return false;
     }
@@ -258,7 +258,7 @@ bool GuildTaskMgr::CreateKillTask(Player* player, uint32 guildId)
     uint32 index = urand(0, ids.size() - 1);
     uint32 creatureId = ids[index];
 
-    LOG_DEBUG("playerbots", "{} / {}: kill task {}", sGuildMgr->GetGuildById(guildId)->GetName().c_str(),
+    LOG_DEBUG("playerbots", "{} / {}: 击杀任务 {}", sGuildMgr->GetGuildById(guildId)->GetName().c_str(),
               player->GetName().c_str(), creatureId);
 
     SetTaskValue(player->GetGUID().GetCounter(), guildId, "killTask", creatureId,
@@ -296,19 +296,19 @@ std::string const formatTime(uint32 secs)
     std::ostringstream out;
     if (secs < 3600)
     {
-        out << secs / 60 << " min";
+        out << secs / 60 << " 分钟";
     }
     else if (secs < 7200)
     {
-        out << "1 hr " << (secs - 3600) / 60 << " min";
+        out << "1 小时 " << (secs - 3600) / 60 << " 分钟";
     }
     else if (secs < 3600 * 24)
     {
-        out << secs / 3600 << " hr";
+        out << secs / 3600 << " 小时";
     }
     else
     {
-        out << secs / 3600 / 24 << " days";
+        out << secs / 3600 / 24 << " 天";
     }
 
     return out.str();
@@ -320,7 +320,7 @@ std::string const formatDateTime(uint32 secs)
     tm* timeinfo = localtime(&rawtime);
 
     char buffer[256];
-    strftime(buffer, sizeof(buffer), "%b %d, %H:%M", timeinfo);
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", timeinfo);
     return std::string(buffer);
 }
 
@@ -329,7 +329,7 @@ std::string const GetHelloText(uint32 owner)
     ObjectGuid ownerGUID = ObjectGuid::Create<HighGuid::Player>(owner);
 
     std::ostringstream body;
-    body << "Hello";
+    body << "您好";
 
     std::string playerName;
     sCharacterCache->GetCharacterNameByGuid(ownerGUID, playerName);
@@ -353,21 +353,21 @@ bool GuildTaskMgr::SendItemAdvertisement(CharacterDatabaseTransaction& trans, ui
 
     std::ostringstream body;
     body << GetHelloText(owner);
-    body << "We are in a great need of " << proto->Name1 << ". If you could sell us ";
+    body << "我们急需 " << proto->Name1 << "。若你能卖给我们 ";
     uint32 count = GetTaskValue(owner, guildId, "itemCount");
     if (count > 1)
-        body << "at least " << count << " of them ";
+        body << "至少 " << count << " 个 ";
     else
-        body << "some ";
-    body << "we'd really appreciate that and pay a high price.\n\n";
-    body << "The task will expire at " << formatDateTime(validIn) << "\n";
+        body << "一些 ";
+    body << "我们将不胜感激，并支付高价。\n\n";
+    body << "任务将于 " << formatDateTime(validIn) << " 到期\n";
     body << "\n";
-    body << "Best Regards,\n";
+    body << "此致敬礼，\n";
     body << guild->GetName() << "\n";
     body << leader->GetName() << "\n";
 
     std::ostringstream subject;
-    subject << "Guild Task: " << proto->Name1;
+    subject << "公会任务： " << proto->Name1;
     if (count > 1)
         subject << " (x" << count << ")";
 
@@ -413,22 +413,22 @@ bool GuildTaskMgr::SendKillAdvertisement(CharacterDatabaseTransaction& trans, ui
 
     std::ostringstream body;
     body << GetHelloText(owner);
-    body << "As you probably know " << proto->Name
-         << " is wanted dead for the crimes it did against our guild. If you should kill it ";
-    body << "we'd really appreciate that.\n\n";
+    body << "想必你也知道，" << proto->Name
+         << " 对我们公会犯下了罪行，我们悬赏取其性命。若你能将其击杀 ";
+    body << "我们将不胜感激。\n\n";
     if (!location.empty())
-        body << proto->Name << "'s the last known location was " << location << ".\n";
-    body << "The task will expire at " << formatDateTime(validIn) << "\n";
+        body << proto->Name << " 最后已知位置在 " << location << "。\n";
+    body << "任务将于 " << formatDateTime(validIn) << " 到期\n";
     body << "\n";
-    body << "Best Regards,\n";
+    body << "此致敬礼，\n";
     body << guild->GetName() << "\n";
     body << leader->GetName() << "\n";
 
     std::ostringstream subject;
-    subject << "Guild Task: ";
+    subject << "公会任务： ";
     if (proto->rank == CREATURE_ELITE_ELITE || proto->rank == CREATURE_ELITE_RAREELITE ||
         proto->rank == CREATURE_ELITE_WORLDBOSS)
-        subject << "(Elite) ";
+        subject << "(精英) ";
     subject << proto->Name;
     if (!location.empty())
         subject << ", " << location;
@@ -457,19 +457,19 @@ bool GuildTaskMgr::SendThanks(CharacterDatabaseTransaction& trans, uint32 owner,
 
         std::ostringstream body;
         body << GetHelloText(owner);
-        body << "One of our guild members wishes to thank you for the " << proto->Name1 << "!";
+        body << "公会成员想感谢你提供的 " << proto->Name1 << "！";
         uint32 count = GetTaskValue(owner, guildId, "itemCount");
         if (count)
         {
-            body << " If we have another ";
-            body << count << " of them that would help us tremendously.\n";
+            body << "若再有 ";
+            body << count << " 个，对我们帮助会非常大。\n";
         }
         body << "\n";
-        body << "Thanks again,\n";
+        body << "再次感谢，\n";
         body << guild->GetName() << "\n";
         body << leader->GetName() << "\n";
 
-        MailDraft("Thank You", body.str()).AddMoney(payment).SendMailTo(trans, MailReceiver(owner), MailSender(leader));
+        MailDraft("致谢", body.str()).AddMoney(payment).SendMailTo(trans, MailReceiver(owner), MailSender(leader));
 
         Player* player = ObjectAccessor::FindPlayer(ObjectGuid::Create<HighGuid::Player>(owner));
         if (player)
@@ -641,13 +641,13 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* /* handler */, char const* 
 {
     if (!sPlayerbotAIConfig.guildTaskEnabled)
     {
-        LOG_ERROR("playerbots", "Guild task system is currently disabled!");
+        LOG_ERROR("playerbots", "公会任务系统当前已禁用！");
         return false;
     }
 
     if (!args || !*args)
     {
-        LOG_ERROR("playerbots", "Usage: gtask stats/reset");
+        LOG_ERROR("playerbots", "用法: gtask stats/reset");
         return false;
     }
 
@@ -656,13 +656,13 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* /* handler */, char const* 
     if (cmd == "reset")
     {
         PlayerbotsDatabase.Execute("DELETE FROM playerbots_guild_tasks");
-        LOG_INFO("playerbots", "Guild tasks were reset for all players");
+        LOG_INFO("playerbots", "所有玩家的公会任务已重置");
         return true;
     }
 
     if (cmd == "stats")
     {
-        LOG_INFO("playerbots", "Usage: gtask stats <player name>");
+        LOG_INFO("playerbots", "用法: gtask stats <玩家名>");
         return true;
     }
 
@@ -672,7 +672,7 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* /* handler */, char const* 
         ObjectGuid guid = sCharacterCache->GetCharacterGuidByName(charName);
         if (!guid)
         {
-            LOG_ERROR("playerbots", "Player {} not found", charName.c_str());
+            LOG_ERROR("playerbots", "未找到玩家 {}", charName.c_str());
             return false;
         }
 
@@ -795,13 +795,13 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* /* handler */, char const* 
 
     if (cmd == "reward")
     {
-        LOG_INFO("playerbots", "Usage: gtask reward <player name>");
+        LOG_INFO("playerbots", "用法: gtask reward <玩家名>");
         return true;
     }
 
     if (cmd == "advert")
     {
-        LOG_INFO("playerbots", "Usage: gtask advert <player name>");
+        LOG_INFO("playerbots", "用法: gtask advert <玩家名>");
         return true;
     }
 
@@ -819,7 +819,7 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* /* handler */, char const* 
         ObjectGuid guid = sCharacterCache->GetCharacterGuidByName(charName);
         if (!guid)
         {
-            LOG_ERROR("playerbots", "Player {} not found", charName.c_str());
+            LOG_ERROR("playerbots", "未找到玩家 {}", charName.c_str());
             return false;
         }
 
@@ -953,10 +953,10 @@ bool GuildTaskMgr::Reward(CharacterDatabaseTransaction& trans, uint32 owner, uin
         if (!proto)
             return false;
 
-        body << "We wish to thank you for the " << proto->Name1
-             << " you provided so kindly. We really appreciate this and may this small gift bring you our thanks!\n";
+        body << "感谢你慷慨提供的 " << proto->Name1
+             << "。我们深表谢意，愿这份小礼物传达我们的感谢！\n";
         body << "\n";
-        body << "Many thanks,\n";
+        body << "万分感谢，\n";
         body << guild->GetName() << "\n";
         body << leader->GetName() << "\n";
         rewardType = proto->Quality > ITEM_QUALITY_NORMAL ? RANDOM_ITEM_GUILD_TASK_REWARD_EQUIP_BLUE
@@ -969,10 +969,10 @@ bool GuildTaskMgr::Reward(CharacterDatabaseTransaction& trans, uint32 owner, uin
         if (!proto)
             return false;
 
-        body << "We wish to thank you for the " << proto->Name
-             << " you've killed recently. We really appreciate this and may this small gift bring you our thanks!\n";
+        body << "感谢你最近击杀的 " << proto->Name
+             << "。我们深表谢意，愿这份小礼物传达我们的感谢！\n";
         body << "\n";
-        body << "Many thanks,\n";
+        body << "万分感谢，\n";
         body << guild->GetName() << "\n";
         body << leader->GetName() << "\n";
         rewardType = proto->rank == CREATURE_ELITE_RARE ? RANDOM_ITEM_GUILD_TASK_REWARD_TRADE
@@ -996,7 +996,7 @@ bool GuildTaskMgr::Reward(CharacterDatabaseTransaction& trans, uint32 owner, uin
     if (payment)
         SendThanks(trans, owner, guildId, payment);
 
-    MailDraft draft("Thank You", body.str());
+    MailDraft draft("致谢", body.str());
 
     if (itemId)
     {
@@ -1040,8 +1040,24 @@ void GuildTaskMgr::CheckKillTask(Player* player, Unit* victim)
 
 void GuildTaskMgr::SendCompletionMessage(Player* player, std::string const verb)
 {
+    std::string action;
+    if (verb == "completed")
+        action = "已完成公会任务";
+    else if (verb == "made a progress with")
+        action = "在推进公会任务中取得了进展";
+    else if (verb == "payed for")
+        action = "已获得公会任务报酬";
+    else if (verb == "made a mistake with")
+        action = "在公会任务物品上犯了错误";
+    else if (verb == "rewarded for")
+        action = "已获得公会任务奖励";
+    else if (verb == "transfered")
+        action = "已转移公会任务";
+    else
+        action = verb;
+
     std::ostringstream out;
-    out << player->GetName() << " has " << verb << " a guild task";
+    out << player->GetName() << " " << action;
 
     if (Group* group = player->GetGroup())
     {
@@ -1060,7 +1076,7 @@ void GuildTaskMgr::SendCompletionMessage(Player* player, std::string const verb)
     }
 
     std::ostringstream self;
-    self << "You have " << verb << " a guild task";
+    self << "你" << action;
     ChatHandler(player->GetSession()).PSendSysMessage(self.str().c_str());
 }
 
@@ -1096,7 +1112,8 @@ void GuildTaskMgr::CleanupAdverts()
 {
     uint32 deliverTime = time(nullptr) - sPlayerbotAIConfig.minGuildTaskChangeTime;
     QueryResult result = CharacterDatabase.Query(
-        "SELECT id, receiver FROM mail WHERE subject LIKE 'Guild Task%%' AND deliver_time <= {}", deliverTime);
+        "SELECT id, receiver FROM mail WHERE (subject LIKE 'Guild Task%%' OR subject LIKE '公会任务%%') AND deliver_time <= {}",
+        deliverTime);
     if (!result)
         return;
 
@@ -1114,8 +1131,9 @@ void GuildTaskMgr::CleanupAdverts()
 
     if (count > 0)
     {
-        CharacterDatabase.Execute("DELETE FROM mail WHERE subject LIKE 'Guild Task%%' AND deliver_time <= {}",
-                                  deliverTime);
+        CharacterDatabase.Execute(
+            "DELETE FROM mail WHERE (subject LIKE 'Guild Task%%' OR subject LIKE '公会任务%%') AND deliver_time <= {}",
+            deliverTime);
         LOG_INFO("playerbots", "{} old gtask adverts removed", count);
     }
 }
@@ -1124,8 +1142,8 @@ void GuildTaskMgr::RemoveDuplicatedAdverts()
 {
     uint32 deliverTime = time(nullptr);
     QueryResult result = CharacterDatabase.Query(
-        "SELECT m.id, m.receiver FROM (SELECT MAX(id) AS id, subject, receiver FROM mail WHERE subject LIKE 'Guild "
-        "Task%%' "
+        "SELECT m.id, m.receiver FROM (SELECT MAX(id) AS id, subject, receiver FROM mail WHERE (subject LIKE 'Guild "
+        "Task%%' OR subject LIKE '公会任务%%') "
         "AND deliver_time <= {} GROUP BY subject, receiver) q JOIN mail m ON m.subject = q.subject WHERE m.id <> q.id "
         "AND m.deliver_time <= {}",
         deliverTime, deliverTime);

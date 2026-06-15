@@ -39,6 +39,36 @@
 #include "WorldSessionMgr.h"
 #include "DatabaseEnv.h"
 
+namespace PlayerbotCmd
+{
+std::string NormalizeBotSubCommand(std::string const& cmd)
+{
+    if (cmd == "列表")
+        return "list";
+    if (cmd == "重载" || cmd == "刷新")
+        return "reload";
+    if (cmd == "微调")
+        return "tweak";
+    if (cmd == "自己")
+        return "self";
+    if (cmd == "查询")
+        return "lookup";
+    if (cmd == "添加职业" || cmd == "创建职业")
+        return "addclass";
+    if (cmd == "初始化自己")
+        return "initself";
+    if (cmd == "添加")
+        return "add";
+    if (cmd == "添加账号")
+        return "addaccount";
+    if (cmd == "初始化")
+        return "init";
+    if (cmd == "移除" || cmd == "删除")
+        return "remove";
+    return cmd;
+}
+}  // namespace PlayerbotCmd
+
 class BotInitGuard
 {
 public:
@@ -113,14 +143,14 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
     if (!isRndbot && !sameAccount && !sameGuild && !addClassBot && !linkedAccount)
     {
         allowed = false;
-        out << "Failure: You are not allowed to control bot " << botName.c_str();
+        out << "失败：你无权控制机器人 " << botName.c_str();
     }
     if (masterAccountId && masterPlayer)
     {
         PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(masterPlayer);
         if (!mgr)
         {
-            LOG_DEBUG("playerbots", "PlayerbotMgr not found for master player with GUID: {}", masterPlayer->GetGUID().GetRawValue());
+            LOG_DEBUG("playerbots", "未找到 GUID 为 {} 的主控玩家的 PlayerbotMgr", masterPlayer->GetGUID().GetRawValue());
             return;
         }
         uint32 loadingForMaster = 0;
@@ -133,7 +163,7 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
         if (count >= PlayerbotAIConfig::instance().maxAddedBots)
         {
             allowed = false;
-            out << "Failure: You have added too many bots (more than " << sPlayerbotAIConfig.maxAddedBots << ")";
+            out << "失败：你添加的机器人过多（超过 " << sPlayerbotAIConfig.maxAddedBots << " 个）";
         }
     }
     if (!allowed)
@@ -211,7 +241,7 @@ void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder con
     if (!bot)
     {
         // Debug log
-        LOG_DEBUG("mod-playerbots", "Bot player could not be loaded for account ID: {}", botAccountId);
+        LOG_DEBUG("mod-playerbots", "无法加载账号 ID {} 的机器人玩家", botAccountId);
         botSession->LogoutPlayer(true);
         delete botSession;
         PlayerbotHolder::botLoading.erase(holder.GetGuid());
@@ -226,8 +256,7 @@ void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder con
     Player* masterPlayer = masterSession ? masterSession->GetPlayer() : nullptr;
     if (masterSession && !masterPlayer)
     {
-        LOG_DEBUG("mod-playerbots", "Master session found but no player is associated for master account ID: {}",
-                  masterAccountId);
+        LOG_DEBUG("mod-playerbots", "找到主控会话但账号 ID {} 没有关联玩家", masterAccountId);
     }
 
     sRandomPlayerbotMgr.OnPlayerLogin(bot);
@@ -266,7 +295,7 @@ void PlayerbotHolder::HandleBotPackets(WorldSession* session)
         ClientOpcodeHandler const* opHandle = opcodeTable[opcode];
         if (!opHandle)
         {
-            LOG_ERROR("playerbots", "Unhandled opcode {} queued for bot session {}. Packet dropped.", static_cast<uint32>(opcode), session->GetAccountId());
+            LOG_ERROR("playerbots", "机器人会话 {} 队列中存在未处理的 opcode {}，数据包已丢弃。", session->GetAccountId(), static_cast<uint32>(opcode));
             delete packet;
             continue;
         }
@@ -323,7 +352,7 @@ void PlayerbotMgr::CancelLogout()
             WorldPackets::Character::LogoutCancel data = WorldPacket(CMSG_LOGOUT_CANCEL);
             bot->GetSession()->HandleLogoutCancelOpcode(data);
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "logout_cancel", "Logout cancelled!", {}));
+                "logout_cancel", "已取消登出！", {}));
         }
     }
 
@@ -358,7 +387,7 @@ void PlayerbotHolder::LogoutPlayerBot(ObjectGuid guid)
         auto cleanupOp = std::make_unique<BotLogoutGroupCleanupOperation>(guid);
         PlayerbotWorldThreadProcessor::instance().QueueOperation(std::move(cleanupOp));
 
-        LOG_DEBUG("playerbots", "Bot {} logging out", bot->GetName().c_str());
+        LOG_DEBUG("playerbots", "机器人 {} 正在登出", bot->GetName().c_str());
         bot->SaveToDB(false, false);
 
         WorldSession* botWorldSessionPtr = bot->GetSession();
@@ -396,7 +425,7 @@ void PlayerbotHolder::LogoutPlayerBot(ObjectGuid guid)
         // Instant logout (the only option right now)
         {
             std::string message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "goodbye", "Goodbye!", {});
+                "goodbye", "再见！", {});
             botAI->TellMaster(message);
             RemoveFromPlayerbotsMap(guid);              // deletes bot player ptr inside this WorldSession PlayerBotMap
             botWorldSessionPtr->LogoutPlayer(true);     // this will delete the bot Player object and PlayerbotAI object
@@ -415,7 +444,7 @@ void PlayerbotHolder::DisablePlayerBot(ObjectGuid guid)
             return;
         }
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "goodbye", "Goodbye!", {}));
+            "goodbye", "再见！", {}));
         bot->StopMoving();
         bot->GetMotionMaster()->Clear();
 
@@ -425,7 +454,7 @@ void PlayerbotHolder::DisablePlayerBot(ObjectGuid guid)
             PlayerbotRepository::instance().Save(botAI);
         }
 
-        LOG_DEBUG("playerbots", "Bot {} logged out", bot->GetName().c_str());
+        LOG_DEBUG("playerbots", "机器人 {} 已登出", bot->GetName().c_str());
 
         bot->SaveToDB(false, false);
 
@@ -477,7 +506,7 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
     if (!botAI)
     {
         // Log a warning here to indicate that the botAI is null
-        LOG_DEBUG("mod-playerbots", "PlayerbotAI is null for bot with GUID: {}", bot->GetGUID().GetRawValue());
+        LOG_DEBUG("mod-playerbots", "GUID 为 {} 的机器人 PlayerbotAI 为空", bot->GetGUID().GetRawValue());
         return;
     }
 
@@ -543,7 +572,7 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
     botAI->SetNextCheckDelay(urand(2000, 4000));
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "hello", "Hello!", {}), PLAYERBOT_SECURITY_TALK);
+        "hello", "你好！", {}), PLAYERBOT_SECURITY_TALK);
 
     // Queue group operations for world thread
     if (master && master->GetGroup() && !group)
@@ -678,46 +707,44 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
                                                      bool admin, uint32 masterAccountId, uint32)
 {
     if (!sPlayerbotAIConfig.enabled || guid.IsEmpty())
-        return "bot system is disabled";
+        return "机器人系统已禁用";
 
-    //bool isRandomBot = sRandomPlayerbotMgr.IsRandomBot(guid.GetCounter()); //not used, line marked for removal.
-    //bool isRandomAccount = sPlayerbotAIConfig.IsInRandomAccountList(botAccount); //not used, shadowed, line marked for removal.
-    //bool isMasterAccount = (masterAccountId == botAccount); //not used, line marked for removal.
+    std::string const normalizedCmd = PlayerbotCmd::NormalizeBotSubCommand(cmd);
 
-    if (cmd == "add" || cmd == "addaccount" || cmd == "login")
+    if (normalizedCmd == "add" || normalizedCmd == "addaccount" || normalizedCmd == "login")
     {
         if (ObjectAccessor::FindPlayer(guid))
-            return "player already logged in";
+            return "该角色已在线";
 
         // For addaccount command, verify it's an account name
-        if (cmd == "addaccount")
+        if (normalizedCmd == "addaccount")
         {
             uint32 accountId = sCharacterCache->GetCharacterAccountIdByGuid(guid);
             if (!accountId)
             {
-                return "character not found";
+                return "未找到该角色";
             }
 
             if (!sPlayerbotAIConfig.allowAccountBots && accountId != masterAccountId &&
                 !(sPlayerbotAIConfig.allowTrustedAccountBots && IsAccountLinked(accountId, masterAccountId)))
             {
-                return "you can only add bots from your own account or linked accounts";
+                return "你只能添加自己账号或已关联账号的机器人";
             }
         }
 
         AddPlayerBot(guid, masterAccountId);
-        return "ok";
+        return "好的";
     }
-    else if (cmd == "remove" || cmd == "logout" || cmd == "rm")
+    else if (normalizedCmd == "remove" || normalizedCmd == "logout" || normalizedCmd == "rm")
     {
         if (!ObjectAccessor::FindPlayer(guid))
-            return "player is offline";
+            return "该玩家已离线";
 
         if (!GetPlayerBot(guid))
-            return "not your bot";
+            return "这不是你的机器人";
 
         LogoutPlayerBot(guid);
-        return "ok";
+        return "好的";
     }
 
     // if (admin)
@@ -727,14 +754,14 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
         bot = sRandomPlayerbotMgr.GetPlayerBot(guid);
 
     if (!bot)
-        return "bot not found";
+        return "未找到该机器人";
 
     bool addClassBot = sRandomPlayerbotMgr.IsAddclassBot(guid.GetCounter());
 
     if (!addClassBot)
     {
-        if (!(cmd == "refresh=raid" && sPlayerbotAIConfig.resetInstanceIdForAltBots))
-            return "ERROR: You can only use this command on addclass bots.";
+        if (!(normalizedCmd == "refresh=raid" && sPlayerbotAIConfig.resetInstanceIdForAltBots))
+            return "错误：此命令只能用于 addclass 机器人。";
     }
 
     if (!admin)
@@ -742,7 +769,7 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
         Player* master = ObjectAccessor::FindConnectedPlayer(masterguid);
         if (master && (master->IsInCombat() || bot->IsInCombat()))
         {
-            return "ERROR: You can not use this command during combat.";
+            return "错误：战斗中无法使用此命令。";
         }
     }
 
@@ -751,50 +778,50 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
         if (Player* master = GET_PLAYERBOT_AI(bot)->GetMaster())
         {
             if (master->GetSession()->GetSecurity() <= SEC_PLAYER && sPlayerbotAIConfig.autoInitOnly &&
-                cmd != "init=auto")
+                normalizedCmd != "init=auto")
             {
-                return "The command is not allowed, use init=auto instead.";
+                return "不允许使用此命令，请改用 init=auto。";
             }
 
             //  Use boot guard
             BotInitGuard guard(bot->GetGUID());
             if (guard.IsLocked())
             {
-                return "Initialization already in progress, please wait.";
+                return "初始化正在进行中，请稍候。";
             }
 
             int gs;
-            if (cmd == "init=white" || cmd == "init=common")
+            if (normalizedCmd == "init=white" || normalizedCmd == "init=common")
             {
                 PlayerbotFactory factory(bot, master->GetLevel(), ITEM_QUALITY_NORMAL);
                 factory.Randomize(false);
-                return "ok";
+                return "好的";
             }
-            else if (cmd == "init=green" || cmd == "init=uncommon")
+            else if (normalizedCmd == "init=green" || normalizedCmd == "init=uncommon")
             {
                 PlayerbotFactory factory(bot, master->GetLevel(), ITEM_QUALITY_UNCOMMON);
                 factory.Randomize(false);
-                return "ok";
+                return "好的";
             }
-            else if (cmd == "init=blue" || cmd == "init=rare")
+            else if (normalizedCmd == "init=blue" || normalizedCmd == "init=rare")
             {
                 PlayerbotFactory factory(bot, master->GetLevel(), ITEM_QUALITY_RARE);
                 factory.Randomize(false);
-                return "ok";
+                return "好的";
             }
-            else if (cmd == "init=epic" || cmd == "init=purple")
+            else if (normalizedCmd == "init=epic" || normalizedCmd == "init=purple")
             {
                 PlayerbotFactory factory(bot, master->GetLevel(), ITEM_QUALITY_EPIC);
                 factory.Randomize(false);
-                return "ok";
+                return "好的";
             }
-            else if (cmd == "init=legendary" || cmd == "init=yellow")
+            else if (normalizedCmd == "init=legendary" || normalizedCmd == "init=yellow")
             {
                 PlayerbotFactory factory(bot, master->GetLevel(), ITEM_QUALITY_LEGENDARY);
                 factory.Randomize(false);
-                return "ok";
+                return "好的";
             }
-            else if (cmd == "init=auto")
+            else if (normalizedCmd == "init=auto")
             {
                 uint32 mixedGearScore = PlayerbotAI::GetMixedGearScore(master, true, false, 12) *
                                         sPlayerbotAIConfig.autoInitEquipLevelLimitRatio;
@@ -803,52 +830,52 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
                     mixedGearScore = 1;
                 PlayerbotFactory factory(bot, master->GetLevel(), ITEM_QUALITY_LEGENDARY, mixedGearScore);
                 factory.Randomize(false);
-                return "ok, gear score limit: " + std::to_string(mixedGearScore / PlayerbotAI::GetItemScoreMultiplier(ItemQualities(ITEM_QUALITY_EPIC))) +
-                       "(for epic)";
+                return "好的，装备评分上限：" + std::to_string(mixedGearScore / PlayerbotAI::GetItemScoreMultiplier(ItemQualities(ITEM_QUALITY_EPIC))) +
+                       "（史诗品质）";
             }
-            else if (cmd.starts_with("init=") && sscanf(cmd.c_str(), "init=%d", &gs) != -1)
+            else if (normalizedCmd.starts_with("init=") && sscanf(normalizedCmd.c_str(), "init=%d", &gs) != -1)
             {
                 PlayerbotFactory factory(bot, master->GetLevel(), ITEM_QUALITY_LEGENDARY, gs);
                 factory.Randomize(false);
-                return "ok, gear score limit: " + std::to_string(gs / PlayerbotAI::GetItemScoreMultiplier(ItemQualities(ITEM_QUALITY_EPIC))) + "(for epic)";
+                return "好的，装备评分上限：" + std::to_string(gs / PlayerbotAI::GetItemScoreMultiplier(ItemQualities(ITEM_QUALITY_EPIC))) + "（史诗品质）";
             }
         }
 
-        if (cmd == "refresh=raid")
+        if (normalizedCmd == "refresh=raid")
         {  // TODO: This function is not perfect yet. If you are already in a raid,
             // after the command is executed, the AI ​​needs to go back online or exit the raid and re-enter.
             PlayerbotFactory factory(bot, bot->GetLevel());
             factory.UnbindInstance();
-            return "ok";
+            return "好的";
         }
     }
 
-    if (cmd == "levelup" || cmd == "level")
+    if (normalizedCmd == "levelup" || normalizedCmd == "level")
     {
         PlayerbotFactory factory(bot, bot->GetLevel());
         factory.Randomize(true);
-        return "ok";
+        return "好的";
     }
-    else if (cmd == "refresh")
+    else if (normalizedCmd == "refresh")
     {
         PlayerbotFactory factory(bot, bot->GetLevel());
         factory.Refresh();
-        return "ok";
+        return "好的";
     }
-    else if (cmd == "random")
+    else if (normalizedCmd == "random")
     {
         sRandomPlayerbotMgr.Randomize(bot);
-        return "ok";
+        return "好的";
     }
-    else if (cmd == "quests")
+    else if (normalizedCmd == "quests")
     {
         PlayerbotFactory factory(bot, bot->GetLevel());
         factory.InitInstanceQuests();
-        return "Initialization quests";
+        return "初始化任务";
     }
     // }
 
-    return "unknown command";
+    return "未知命令";
 }
 
 // Added for gender choice : Returns the gender of an offline character: 0 = male, 1 = female.
@@ -867,14 +894,14 @@ bool PlayerbotMgr::HandlePlayerbotMgrCommand(ChatHandler* handler, char const* a
 {
     if (!sPlayerbotAIConfig.enabled)
     {
-        handler->PSendSysMessage("|cffff0000Playerbot system is currently disabled!");
+        handler->PSendSysMessage("|cffff0000玩家机器人系统当前已禁用！");
         return false;
     }
 
     WorldSession* m_session = handler->GetSession();
     if (!m_session)
     {
-        handler->PSendSysMessage("You may only add bots from an active session");
+        handler->PSendSysMessage("只能在在线会话中使用此命令");
         return false;
     }
 
@@ -882,7 +909,7 @@ bool PlayerbotMgr::HandlePlayerbotMgrCommand(ChatHandler* handler, char const* a
     PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(player);
     if (!mgr)
     {
-        handler->PSendSysMessage("You cannot control bots yet");
+        handler->PSendSysMessage("你还无法控制机器人");
         return false;
     }
 
@@ -904,8 +931,8 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
 
     if (!*args)
     {
-        messages.push_back("usage: list/reload/tweak/self or add/addaccount/init/remove PLAYERNAME\n");
-        messages.push_back("usage: addclass CLASSNAME [male|female|0|1]");
+        messages.push_back("用法: list/列表/reload/重载/tweak/微调/self/自己 或 add/添加/addaccount/添加账号/init/初始化/remove/移除 玩家名\n");
+        messages.push_back("用法: addclass/添加职业 职业名 [male|female|男|女|0|1]");
         return messages;
     }
 
@@ -915,23 +942,25 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
 
     if (!cmd)
     {
-        messages.push_back("usage: list/reload/tweak/self or add/init/remove PLAYERNAME or addclass CLASSNAME [male|female]");
+        messages.push_back("用法: list/列表/reload/重载/tweak/微调/self/自己 或 add/添加/init/初始化/remove/移除 玩家名 或 addclass/添加职业 职业名 [male|female|男|女]");
         return messages;
     }
 
-    if (!strcmp(cmd, "initself"))
+    std::string botCmd = PlayerbotCmd::NormalizeBotSubCommand(cmd);
+
+    if (botCmd == "initself")
     {
         if (master->CanBeGameMaster())
         {
             // OnBotLogin(master);
             PlayerbotFactory factory(master, master->GetLevel(), ITEM_QUALITY_EPIC);
             factory.Randomize(false);
-            messages.push_back("initself ok");
+            messages.push_back("初始化自己完成");
             return messages;
         }
         else
         {
-            messages.push_back("ERROR: Only GM can use this command.");
+            messages.push_back("错误：只有GM可以使用此命令。");
             return messages;
         }
     }
@@ -945,12 +974,12 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
                 // OnBotLogin(master);
                 PlayerbotFactory factory(master, master->GetLevel(), ITEM_QUALITY_UNCOMMON);
                 factory.Randomize(false);
-                messages.push_back("initself ok");
+                messages.push_back("initself 完成");
                 return messages;
             }
             else
             {
-                messages.push_back("ERROR: Only GM can use this command.");
+                messages.push_back("错误：只有GM可以使用此命令。");
                 return messages;
             }
         }
@@ -961,12 +990,12 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
                 // OnBotLogin(master);
                 PlayerbotFactory factory(master, master->GetLevel(), ITEM_QUALITY_RARE);
                 factory.Randomize(false);
-                messages.push_back("initself ok");
+                messages.push_back("initself 完成");
                 return messages;
             }
             else
             {
-                messages.push_back("ERROR: Only GM can use this command.");
+                messages.push_back("错误：只有GM可以使用此命令。");
                 return messages;
             }
         }
@@ -977,12 +1006,12 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
                 // OnBotLogin(master);
                 PlayerbotFactory factory(master, master->GetLevel(), ITEM_QUALITY_EPIC);
                 factory.Randomize(false);
-                messages.push_back("initself ok");
+                messages.push_back("initself 完成");
                 return messages;
             }
             else
             {
-                messages.push_back("ERROR: Only GM can use this command.");
+                messages.push_back("错误：只有GM可以使用此命令。");
                 return messages;
             }
         }
@@ -993,12 +1022,12 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
                 // OnBotLogin(master);
                 PlayerbotFactory factory(master, master->GetLevel(), ITEM_QUALITY_LEGENDARY);
                 factory.Randomize(false);
-                messages.push_back("initself ok");
+                messages.push_back("initself 完成");
                 return messages;
             }
             else
             {
-                messages.push_back("ERROR: Only GM can use this command.");
+                messages.push_back("错误：只有GM可以使用此命令。");
                 return messages;
             }
         }
@@ -1010,62 +1039,62 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
                 // OnBotLogin(master);
                 PlayerbotFactory factory(master, master->GetLevel(), ITEM_QUALITY_LEGENDARY, gs);
                 factory.Randomize(false);
-                messages.push_back("initself ok, gs = " + std::to_string(gs));
+                messages.push_back("initself 完成，gs = " + std::to_string(gs));
                 return messages;
             }
             else
             {
-                messages.push_back("ERROR: Only GM can use this command.");
+                messages.push_back("错误：只有GM可以使用此命令。");
                 return messages;
             }
         }
     }
 
-    if (!strcmp(cmd, "list"))
+    if (botCmd == "list")
     {
         messages.push_back(ListBots(master));
         return messages;
     }
 
-    if (!strcmp(cmd, "reload"))
+    if (botCmd == "reload")
     {
         if (master->CanBeGameMaster())
         {
             sPlayerbotAIConfig.Initialize();
-            messages.push_back("Config reloaded.");
+            messages.push_back("配置已重载。");
             return messages;
         }
         else
         {
-            messages.push_back("ERROR: Only GM can use this command.");
+            messages.push_back("错误：只有GM可以使用此命令。");
             return messages;
         }
     }
 
-    if (!strcmp(cmd, "tweak"))
+    if (botCmd == "tweak")
     {
         sPlayerbotAIConfig.tweakValue = sPlayerbotAIConfig.tweakValue++;
         if (sPlayerbotAIConfig.tweakValue > 2)
             sPlayerbotAIConfig.tweakValue = 0;
 
-        messages.push_back("Set tweakvalue to " + std::to_string(sPlayerbotAIConfig.tweakValue));
+        messages.push_back("微调值已设为 " + std::to_string(sPlayerbotAIConfig.tweakValue));
         return messages;
     }
 
-    if (!strcmp(cmd, "self"))
+    if (botCmd == "self")
     {
         if (GET_PLAYERBOT_AI(master))
         {
-            messages.push_back("Disable player botAI");
+            messages.push_back("已禁用玩家机器人AI");
             delete GET_PLAYERBOT_AI(master);
         }
         else if (sPlayerbotAIConfig.selfBotLevel == 0)
-            messages.push_back("Self-bot is disabled");
+            messages.push_back("自我机器人功能已禁用");
         else if (sPlayerbotAIConfig.selfBotLevel == 1 && !master->CanBeGameMaster())
-            messages.push_back("You do not have permission to enable player botAI");
+            messages.push_back("你没有权限启用玩家机器人AI");
         else
         {
-            messages.push_back("Enable player botAI");
+            messages.push_back("已启用玩家机器人AI");
             PlayerbotsMgr::instance().AddPlayerbotData(master, true);
             GET_PLAYERBOT_AI(master)->SetMaster(master);
         }
@@ -1073,69 +1102,69 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         return messages;
     }
 
-    if (!strcmp(cmd, "lookup"))
+    if (botCmd == "lookup")
     {
         messages.push_back(LookupBots(master));
         return messages;
     }
 
-    if (!strcmp(cmd, "addclass"))
+    if (botCmd == "addclass")
     {
         if (sPlayerbotAIConfig.addClassCommand == 0 && !master->CanBeGameMaster())
         {
-            messages.push_back("You do not have permission to create bot by addclass command");
+            messages.push_back("你没有权限使用 addclass 命令创建机器人");
             return messages;
         }
         if (!charname)
         {
             messages.push_back(
-                "addclass: invalid CLASSNAME(warrior/paladin/hunter/rogue/priest/shaman/mage/warlock/druid/dk)");
+                "addclass: 无效的职业名（战士/圣骑士/猎人/盗贼/牧师/萨满/法师/术士/德鲁伊/死骑 或 warrior/paladin/hunter/rogue/priest/shaman/mage/warlock/druid/dk）");
             return messages;
         }
         uint8 claz;
-        if (!strcmp(charname, "warrior"))
+        if (!strcmp(charname, "warrior") || !strcmp(charname, "战士"))
         {
             claz = 1;
         }
-        else if (!strcmp(charname, "paladin"))
+        else if (!strcmp(charname, "paladin") || !strcmp(charname, "圣骑士"))
         {
             claz = 2;
         }
-        else if (!strcmp(charname, "hunter"))
+        else if (!strcmp(charname, "hunter") || !strcmp(charname, "猎人"))
         {
             claz = 3;
         }
-        else if (!strcmp(charname, "rogue"))
+        else if (!strcmp(charname, "rogue") || !strcmp(charname, "盗贼"))
         {
             claz = 4;
         }
-        else if (!strcmp(charname, "priest"))
+        else if (!strcmp(charname, "priest") || !strcmp(charname, "牧师"))
         {
             claz = 5;
         }
-        else if (!strcmp(charname, "shaman"))
+        else if (!strcmp(charname, "shaman") || !strcmp(charname, "萨满"))
         {
             claz = 7;
         }
-        else if (!strcmp(charname, "mage"))
+        else if (!strcmp(charname, "mage") || !strcmp(charname, "法师"))
         {
             claz = 8;
         }
-        else if (!strcmp(charname, "warlock"))
+        else if (!strcmp(charname, "warlock") || !strcmp(charname, "术士"))
         {
             claz = 9;
         }
-        else if (!strcmp(charname, "druid"))
+        else if (!strcmp(charname, "druid") || !strcmp(charname, "德鲁伊"))
         {
             claz = 11;
         }
-        else if (!strcmp(charname, "dk"))
+        else if (!strcmp(charname, "dk") || !strcmp(charname, "死骑") || !strcmp(charname, "死亡骑士"))
         {
             claz = 6;
         }
         else
         {
-            messages.push_back("Error: Invalid Class. Try again.");
+            messages.push_back("错误：无效的职业，请重试。");
             return messages;
         }
         //  Added for gender choice : Parsing gender
@@ -1145,20 +1174,20 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
             std::string g = genderArg;
             std::transform(g.begin(), g.end(), g.begin(), ::tolower);
 
-            if (g == "male" || g == "0")
+            if (g == "male" || g == "0" || g == "男")
                 gender = GENDER_MALE; // 0
-            else if (g == "female" || g == "1")
+            else if (g == "female" || g == "1" || g == "女")
                 gender = GENDER_FEMALE; // 1
             else
             {
-                messages.push_back("Unknown gender : " + g + " (male/female/0/1)");
+                messages.push_back("未知性别：" + g + "（male/female/男/女/0/1）");
                 return messages;
             }
         } //end
 
         if (claz == 6 && master->GetLevel() < sWorld->getIntConfig(CONFIG_START_HEROIC_PLAYER_LEVEL))
         {
-            messages.push_back("Your level is too low to summon Deathknight");
+            messages.push_back("你的等级太低，无法召唤死亡骑士");
             return messages;
         }
         uint8 teamId = master->GetTeamId(true);
@@ -1176,10 +1205,10 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
             if (guildId && PlayerbotGuildMgr::instance().IsRealGuild(guildId))
                 continue;
             AddPlayerBot(guid, master->GetSession()->GetAccountId());
-            messages.push_back("Add class " + std::string(charname));
+            messages.push_back("已添加职业 " + std::string(charname));
             return messages;
         }
-        messages.push_back("Add class failed, no available characters!");
+        messages.push_back("添加职业失败，没有可用角色！");
         return messages;
     }
 
@@ -1196,7 +1225,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         }
         else
         {
-            messages.push_back("usage: list/reload/tweak/self or add/init/remove PLAYERNAME");
+            messages.push_back("用法: list/reload/tweak/self 或 add/init/remove 玩家名");
             return messages;
         }
     }
@@ -1205,7 +1234,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         charnameStr = charname;
     }
 
-    std::string const cmdStr = cmd;
+    std::string const cmdStr = botCmd;
 
     std::unordered_set<std::string> bots;
     if (charnameStr == "*" && master)
@@ -1213,7 +1242,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         Group* group = master->GetGroup();
         if (!group)
         {
-            messages.push_back("you must be in group");
+            messages.push_back("你必须在队伍中");
             return messages;
         }
 
@@ -1246,7 +1275,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
     {
         std::string s = *i;
 
-        if (!strcmp(cmd, "addaccount"))
+        if (botCmd == "addaccount")
         {
             // When using addaccount, first try to get account ID directly
             uint32 accountId = GetAccountId(s);
@@ -1256,19 +1285,19 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
                 std::string charName = s;
                 if (!normalizePlayerName(charName))
                 {
-                    messages.push_back("Neither account nor character '" + s + "' found");
+                    messages.push_back("未找到账号或角色 '" + s + "'");
                     continue;
                 }
                 ObjectGuid charGuid = sCharacterCache->GetCharacterGuidByName(charName);
                 if (!charGuid)
                 {
-                    messages.push_back("Neither account nor character '" + s + "' found");
+                    messages.push_back("未找到账号或角色 '" + s + "'");
                     continue;
                 }
                 accountId = sCharacterCache->GetCharacterAccountIdByGuid(charGuid);
                 if (!accountId)
                 {
-                    messages.push_back("Could not find account for character '" + s + "'");
+                    messages.push_back("找不到角色 '" + s + "' 所属的账号");
                     continue;
                 }
             }
@@ -1289,13 +1318,13 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
             // For regular add command, only add the specific character
             if (!normalizePlayerName(s))
             {
-                messages.push_back("Character '" + *i + "' not found");
+                messages.push_back("未找到角色 '" + *i + "'");
                 continue;
             }
             ObjectGuid charGuid = sCharacterCache->GetCharacterGuidByName(s);
             if (!charGuid)
             {
-                messages.push_back("Character '" + s + "' not found");
+                messages.push_back("未找到角色 '" + s + "'");
                 continue;
             }
             bots.insert(s);
@@ -1312,7 +1341,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         ObjectGuid member = sCharacterCache->GetCharacterGuidByName(bot);
         if (!member)
         {
-            out << "character not found";
+            out << "未找到该角色";
         }
         else if (master && member != master->GetGUID())
         {
@@ -1358,17 +1387,17 @@ std::string const PlayerbotHolder::ListBots(Player* master)
     std::set<std::string> bots;
     std::map<uint8, std::string> classNames;
 
-    classNames[CLASS_DEATH_KNIGHT] = "Death Knight";
-    classNames[CLASS_DRUID] = "Druid";
-    classNames[CLASS_HUNTER] = "Hunter";
-    classNames[CLASS_MAGE] = "Mage";
-    classNames[CLASS_PALADIN] = "Paladin";
-    classNames[CLASS_PRIEST] = "Priest";
-    classNames[CLASS_ROGUE] = "Rogue";
-    classNames[CLASS_SHAMAN] = "Shaman";
-    classNames[CLASS_WARLOCK] = "Warlock";
-    classNames[CLASS_WARRIOR] = "Warrior";
-    classNames[CLASS_DEATH_KNIGHT] = "DeathKnight";
+    classNames[CLASS_DEATH_KNIGHT] = "死亡骑士";
+    classNames[CLASS_DRUID] = "德鲁伊";
+    classNames[CLASS_HUNTER] = "猎人";
+    classNames[CLASS_MAGE] = "法师";
+    classNames[CLASS_PALADIN] = "圣骑士";
+    classNames[CLASS_PRIEST] = "牧师";
+    classNames[CLASS_ROGUE] = "盗贼";
+    classNames[CLASS_SHAMAN] = "萨满";
+    classNames[CLASS_WARLOCK] = "术士";
+    classNames[CLASS_WARRIOR] = "战士";
+    classNames[CLASS_DEATH_KNIGHT] = "死亡骑士";
 
     std::map<std::string, std::string> online;
     std::vector<std::string> names;
@@ -1427,7 +1456,7 @@ std::string const PlayerbotHolder::ListBots(Player* master)
 
     std::ostringstream out;
     bool first = true;
-    out << "Bot roster: ";
+    out << "机器人列表：";
     for (std::vector<std::string>::iterator i = names.begin(); i != names.end(); ++i)
     {
         if (first)
@@ -1445,18 +1474,18 @@ std::string const PlayerbotHolder::ListBots(Player* master)
 std::string const PlayerbotHolder::LookupBots(Player*)
 {
     std::list<std::string> messages;
-    messages.push_back("Classes Available:");
-    messages.push_back("|TInterface\\icons\\INV_Sword_27.png:25:25:0:-1|t Warrior");
-    messages.push_back("|TInterface\\icons\\INV_Hammer_01.png:25:25:0:-1|t Paladin");
-    messages.push_back("|TInterface\\icons\\INV_Weapon_Bow_07.png:25:25:0:-1|t Hunter");
-    messages.push_back("|TInterface\\icons\\INV_ThrowingKnife_04.png:25:25:0:-1|t Rogue");
-    messages.push_back("|TInterface\\icons\\INV_Staff_30.png:25:25:0:-1|t Priest");
-    messages.push_back("|TInterface\\icons\\inv_jewelry_talisman_04.png:25:25:0:-1|t Shaman");
-    messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t Mage");
-    messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t Warlock");
-    messages.push_back("|TInterface\\icons\\Ability_Druid_Maul.png:25:25:0:-1|t Druid");
-    messages.push_back("DK");
-    messages.push_back("(Usage: .bot lookup CLASS)");
+    messages.push_back("可用职业：");
+    messages.push_back("|TInterface\\icons\\INV_Sword_27.png:25:25:0:-1|t 战士");
+    messages.push_back("|TInterface\\icons\\INV_Hammer_01.png:25:25:0:-1|t 圣骑士");
+    messages.push_back("|TInterface\\icons\\INV_Weapon_Bow_07.png:25:25:0:-1|t 猎人");
+    messages.push_back("|TInterface\\icons\\INV_ThrowingKnife_04.png:25:25:0:-1|t 盗贼");
+    messages.push_back("|TInterface\\icons\\INV_Staff_30.png:25:25:0:-1|t 牧师");
+    messages.push_back("|TInterface\\icons\\inv_jewelry_talisman_04.png:25:25:0:-1|t 萨满");
+    messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t 法师");
+    messages.push_back("|TInterface\\icons\\INV_staff_30.png:25:25:0:-1|t 术士");
+    messages.push_back("|TInterface\\icons\\Ability_Druid_Maul.png:25:25:0:-1|t 德鲁伊");
+    messages.push_back("死亡骑士");
+    messages.push_back("（用法: .bot lookup 职业）");
     std::string ret_msg;
     for (std::string msg : messages)
     {
@@ -1632,7 +1661,7 @@ void PlayerbotMgr::OnBotLoginInternal(Player* const bot)
     botAI->SetMaster(master);
     botAI->ResetStrategies();
 
-    LOG_INFO("playerbots", "Bot {} logged in", bot->GetName().c_str());
+    LOG_INFO("playerbots", "机器人 {} 已登录", bot->GetName().c_str());
 }
 
 void PlayerbotMgr::OnPlayerLogin(Player* player)
@@ -1643,7 +1672,7 @@ void PlayerbotMgr::OnPlayerLogin(Player* player)
     WorldSession* session = player->GetSession();
     if (!session)
     {
-        LOG_WARN("playerbots", "Unable to register locale priority for player {} because the session is missing", player->GetName());
+        LOG_WARN("playerbots", "无法为玩家 {} 注册语言优先级，因为会话不存在", player->GetName());
         return;
     }
 
@@ -1837,7 +1866,7 @@ void PlayerbotMgr::HandleSetSecurityKeyCommand(Player* player, const std::string
         "REPLACE INTO playerbots_account_keys (account_id, security_key) VALUES ({}, '{}')",
         accountId, hashedKey.str());
 
-    ChatHandler(player->GetSession()).PSendSysMessage("Security key set successfully.");
+    ChatHandler(player->GetSession()).PSendSysMessage("安全密钥设置成功。");
 }
 
 void PlayerbotMgr::HandleLinkAccountCommand(Player* player, const std::string& accountName, const std::string& key)
@@ -1845,7 +1874,7 @@ void PlayerbotMgr::HandleLinkAccountCommand(Player* player, const std::string& a
     QueryResult result = LoginDatabase.Query("SELECT id FROM account WHERE username = '{}'", accountName);
     if (!result)
     {
-        ChatHandler(player->GetSession()).PSendSysMessage("Account not found.");
+        ChatHandler(player->GetSession()).PSendSysMessage("未找到该账号。");
         return;
     }
 
@@ -1855,7 +1884,7 @@ void PlayerbotMgr::HandleLinkAccountCommand(Player* player, const std::string& a
     result = PlayerbotsDatabase.Query("SELECT security_key FROM playerbots_account_keys WHERE account_id = {}", linkedAccountId);
     if (!result)
     {
-        ChatHandler(player->GetSession()).PSendSysMessage("Invalid security key.");
+        ChatHandler(player->GetSession()).PSendSysMessage("无效的安全密钥。");
         return;
     }
 
@@ -1872,7 +1901,7 @@ void PlayerbotMgr::HandleLinkAccountCommand(Player* player, const std::string& a
     std::string storedKey = result->Fetch()->Get<std::string>();
     if (hashedKey.str() != storedKey)
     {
-        ChatHandler(player->GetSession()).PSendSysMessage("Invalid security key.");
+        ChatHandler(player->GetSession()).PSendSysMessage("无效的安全密钥。");
         return;
     }
 
@@ -1884,7 +1913,7 @@ void PlayerbotMgr::HandleLinkAccountCommand(Player* player, const std::string& a
         "INSERT IGNORE INTO playerbots_account_links (account_id, linked_account_id) VALUES ({}, {})",
         linkedAccountId, accountId);
 
-    ChatHandler(player->GetSession()).PSendSysMessage("Account linked successfully.");
+    ChatHandler(player->GetSession()).PSendSysMessage("账号关联成功。");
 }
 
 void PlayerbotMgr::HandleViewLinkedAccountsCommand(Player* player)
@@ -1894,11 +1923,11 @@ void PlayerbotMgr::HandleViewLinkedAccountsCommand(Player* player)
 
     if (!result)
     {
-        ChatHandler(player->GetSession()).PSendSysMessage("No linked accounts.");
+        ChatHandler(player->GetSession()).PSendSysMessage("没有已关联的账号。");
         return;
     }
 
-    ChatHandler(player->GetSession()).PSendSysMessage("Linked accounts:");
+    ChatHandler(player->GetSession()).PSendSysMessage("已关联的账号：");
     do
     {
         Field* fields = result->Fetch();
@@ -1913,7 +1942,7 @@ void PlayerbotMgr::HandleViewLinkedAccountsCommand(Player* player)
         }
         else
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("- Unknown account");
+            ChatHandler(player->GetSession()).PSendSysMessage("- 未知账号");
         }
     } while (result->NextRow());
 }
@@ -1923,7 +1952,7 @@ void PlayerbotMgr::HandleUnlinkAccountCommand(Player* player, const std::string&
     QueryResult result = LoginDatabase.Query("SELECT id FROM account WHERE username = '{}'", accountName);
     if (!result)
     {
-        ChatHandler(player->GetSession()).PSendSysMessage("Account not found.");
+        ChatHandler(player->GetSession()).PSendSysMessage("未找到该账号。");
         return;
     }
 
@@ -1934,5 +1963,5 @@ void PlayerbotMgr::HandleUnlinkAccountCommand(Player* player, const std::string&
     PlayerbotsDatabase.Execute("DELETE FROM playerbots_account_links WHERE (account_id = {} AND linked_account_id = {}) OR (account_id = {} AND linked_account_id = {})",
                                 accountId, linkedAccountId, linkedAccountId, accountId);
 
-    ChatHandler(player->GetSession()).PSendSysMessage("Account unlinked successfully.");
+    ChatHandler(player->GetSession()).PSendSysMessage("账号已取消关联。");
 }

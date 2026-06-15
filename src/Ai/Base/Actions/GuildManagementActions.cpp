@@ -298,7 +298,7 @@ bool GuildLeaveAction::Execute(Event event)
     Player* owner = event.getOwner();
     if (owner && !botAI->GetSecurity()->CheckLevelFor(PLAYERBOT_SECURITY_INVITE, false, owner, true))
     {
-        botAI->TellError("Sorry, I am happy in my guild :)");
+        botAI->TellError("抱歉，我对现在的公会很满意 :)");
         return false;
     }
 

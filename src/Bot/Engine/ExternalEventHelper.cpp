@@ -60,7 +60,8 @@ void ExternalEventHelper::HandlePacket(std::map<uint16, std::string>& handlers, 
 
 bool ExternalEventHelper::HandleCommand(std::string const name, std::string const param, Player* owner)
 {
-    Trigger* trigger = aiObjectContext->GetTrigger(name);
+    std::string const resolvedName = ChatHelper::ResolveChatCommandAlias(name);
+    Trigger* trigger = aiObjectContext->GetTrigger(resolvedName);
     if (!trigger)
         return false;
 

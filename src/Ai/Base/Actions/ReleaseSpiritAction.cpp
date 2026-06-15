@@ -24,7 +24,7 @@ bool ReleaseSpiritAction::Execute(Event event)
         if (!bot->InBattleground())
         {
             botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "release_spirit_not_dead_wait", "I am not dead, will wait here", {}));
+                "release_spirit_not_dead_wait", "我还未死亡，将在此等待", {}));
             // -follow in bg is overwriten each tick with +follow
             // +stay in bg causes stuttering effect as bot is cycled between +stay and +follow each tick
             botAI->ChangeStrategy("-follow,+stay", BOT_STATE_NON_COMBAT);
@@ -36,14 +36,14 @@ bool ReleaseSpiritAction::Execute(Event event)
     if (bot->GetCorpse() && bot->HasPlayerFlag(PLAYER_FLAGS_GHOST))
     {
         botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "release_spirit_already_spirit", "I am already a spirit", {}));
+            "release_spirit_already_spirit", "我已是灵魂状态", {}));
         return false;
     }
 
     const WorldPacket& packet = event.getPacket();
     const std::string message = !packet.empty() && packet.GetOpcode() == CMSG_REPOP_REQUEST
-        ? PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_releasing", "Releasing...", {})
-        : PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_meet_graveyard", "Meet me at the graveyard", {});
+        ? PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_releasing", "正在释放灵魂...", {})
+        : PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_meet_graveyard", "在墓地等我", {});
     botAI->TellMasterNoFacing(message);
 
     IncrementDeathCount();

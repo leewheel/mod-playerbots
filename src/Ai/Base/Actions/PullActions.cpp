@@ -43,7 +43,7 @@ bool PullRequestAction::Execute(Event event)
     if (!target || !target->IsInWorld())
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pull_no_target_error", "You have no target", {});
+            "pull_no_target_error", "你没有目标", {});
         botAI->TellError(text);
         return false;
     }
@@ -52,7 +52,7 @@ bool PullRequestAction::Execute(Event event)
     if (target->GetMapId() != bot->GetMapId() || bot->GetDistance(target) > maxPullDistance)
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pull_target_too_far_error", "The target is too far away", {});
+            "pull_target_too_far_error", "目标太远了", {});
         botAI->TellError(text);
         return false;
     }
@@ -60,7 +60,7 @@ bool PullRequestAction::Execute(Event event)
     if (!AttackersValue::IsPossibleTarget(target, bot))
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pull_invalid_target_error", "The target can't be pulled", {});
+            "pull_invalid_target_error", "无法拉怪", {});
         botAI->TellError(text);
         return false;
     }
@@ -70,7 +70,7 @@ bool PullRequestAction::Execute(Event event)
         std::string const actionName = strategy->GetPullActionName();
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "pull_action_unavailable_error",
-            "Can't perform pull action '%action_name'",
+            "无法执行拉怪动作 '%action_name'",
             {{"%action_name", actionName}});
         botAI->TellError(text);
         return false;

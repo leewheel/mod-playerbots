@@ -38,7 +38,7 @@ bool UseMeetingStoneAction::Execute(Event event)
     if (bot->IsInCombat())
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "meeting_stone_in_combat", "I am in combat", {}));
+            "meeting_stone_in_combat", "我正在战斗中", {}));
         return false;
     }
 
@@ -76,14 +76,14 @@ bool SummonAction::Execute(Event /*event*/)
     if (SummonUsingGos(master, bot, true) || SummonUsingNpcs(master, bot, true))
     {
         botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "hello", "Hello!", {}));
+            "hello", "你好！", {}));
         return true;
     }
 
     if (SummonUsingGos(bot, master, true) || SummonUsingNpcs(bot, master, true))
     {
         botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "meeting_stone_welcome", "Welcome!", {}));
+            "meeting_stone_welcome", "欢迎！", {}));
         return true;
     }
 
@@ -170,7 +170,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
     if (player->GetVehicle())
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "meeting_stone_cannot_summon_vehicle", "You cannot summon me while I'm on a vehicle", {}));
+            "meeting_stone_cannot_summon_vehicle", "我在载具上时无法召唤我", {}));
         return false;
     }
 
@@ -193,7 +193,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                 {
                     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                         "meeting_stone_cannot_summon_master_in_combat",
-                        "You cannot summon me while you're in combat",
+                        "你在战斗中无法召唤我",
                         {}));
                     return false;
                 }
@@ -202,7 +202,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                 {
                     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                         "meeting_stone_cannot_summon_master_dead",
-                        "You cannot summon me while you're dead",
+                        "你死亡时无法召唤我",
                         {}));
                     return false;
                 }
@@ -212,7 +212,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                 {
                     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                         "meeting_stone_cannot_summon_bot_dead",
-                        "You cannot summon me while I'm dead, you need to release my spirit first",
+                        "我死亡时无法召唤我，你需要先释放我的灵魂",
                         {}));
                     return false;
                 }
@@ -226,7 +226,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                     bot->ResurrectPlayer(1.0f, false);
                     bot->SpawnCorpseBones();
                     botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "meeting_stone_revived", "I live, again!", {}));
+                        "meeting_stone_revived", "我复活了！", {}));
                     botAI->GetAiObjectContext()->GetValue<GuidVector>("prioritized targets")->Reset();
                 }
 
@@ -257,6 +257,6 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
 
     if (summoner != player)
          botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-             "meeting_stone_not_enough_space", "Not enough place to summon", {}));
+             "meeting_stone_not_enough_space", "召唤空间不足", {}));
     return false;
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license.
  */
 
 #include "HelpAction.h"
@@ -23,16 +22,16 @@ bool HelpAction::Execute(Event /*event*/)
 void HelpAction::TellChatCommands()
 {
     std::ostringstream out;
-    out << "Whisper any of: ";
+    out << "可密语以下命令（支持中文别名）: ";
     out << CombineSupported(chatContext->supports());
-    out << ", [item], [quest] or [object] link";
+    out << "，或发送 [物品]、[任务]、[物体] 链接";
     botAI->TellError(out.str());
 }
 
 void HelpAction::TellStrategies()
 {
     std::ostringstream out;
-    out << "Possible strategies (co/nc/dead commands): ";
+    out << "可用策略（co/战斗/nc/非战斗/de/死亡 命令）: ";
     out << CombineSupported(botAI->GetAiObjectContext()->GetSupportedStrategies());
     botAI->TellError(out.str());
 }

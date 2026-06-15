@@ -37,7 +37,7 @@ bool UseItemAction::Execute(Event event)
     }
 
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "use_item_none_available", "No items (or game objects) available", {}));
+        "use_item_none_available", "没有可用的物品（或游戏对象）", {}));
     return false;
 }
 
@@ -52,7 +52,7 @@ bool UseItemAction::UseGameObject(ObjectGuid guid)
     std::ostringstream out;
     botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "use_gameobject",
-        "Using %gameobject",
+        "正在使用 %gameobject",
         {{"%gameobject", chat->FormatGameobject(go)}}));
     return true;
 }
@@ -129,7 +129,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
             bool fit = SocketItem(itemTarget, item) || SocketItem(itemTarget, item, true);
             if (!fit)
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "socket_does_not_fit", "Socket does not fit", {}));
+                    "socket_does_not_fit", "插槽不匹配", {}));
 
             return fit;
         }
@@ -178,7 +178,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
             packet << uint32(0);
             bot->GetSession()->HandleQuestgiverAcceptQuestOpcode(packet);
 
-            botAI->TellMasterNoFacing("Got quest " + chat->FormatQuest(qInfo));
+            botAI->TellMasterNoFacing("获得任务 " + chat->FormatQuest(qInfo));
             return true;
         }
     }
@@ -312,9 +312,9 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
     // botAI->SetNextCheckDelay(sPlayerbotAIConfig.globalCoolDown);
     std::string useText = targetSelected
         ? PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "use_item_on_target", "Using %item on %target", {{"%item", itemText}, {"%target", targetText}})
+            "use_item_on_target", "正在对 %target 使用 %item", {{"%item", itemText}, {"%target", targetText}})
         : PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "use_item", "Using %item", {{"%item", itemText}});
+            "use_item", "正在使用 %item", {{"%item", itemText}});
     botAI->TellMasterNoFacing(useText);
     bot->GetSession()->HandleUseItemOpcode(packet);
     return true;
@@ -382,7 +382,7 @@ bool UseItemAction::SocketItem(Item* item, Item* gem, bool replace)
     {
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "socketing_item_with_gem",
-            "Socketing %item with %gem",
+            "正在用 %gem 镶嵌 %item",
             {{"%item", chat->FormatItem(item->GetTemplate())}, {"%gem", chat->FormatItem(gem->GetTemplate())}}));
 
         WorldPackets::Item::SocketGems nicePacket(std::move(packet));

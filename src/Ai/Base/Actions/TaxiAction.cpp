@@ -26,7 +26,7 @@ bool TaxiAction::Execute(Event event)
         movement.taxiNodes.clear();
         movement.Set(nullptr);
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "taxi_ready_next_flight", "I am ready for the next flight", {}));
+            "taxi_ready_next_flight", "我已准备好搭乘下一班飞行", {}));
         return true;
     }
 
@@ -86,7 +86,7 @@ bool TaxiAction::Execute(Event event)
 
         if (param == "?")
         {
-            botAI->TellMasterNoFacing("=== Taxi ===");
+            botAI->TellMasterNoFacing("=== 飞行路线 ===");
 
             uint32 index = 1;
             for (uint32 node : nodes)
@@ -123,7 +123,7 @@ bool TaxiAction::Execute(Event event)
             movement.taxiNodes.clear();
             movement.Set(nullptr);
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "taxi_cant_fly_with_you", "I can't fly with you", {}));
+                "taxi_cant_fly_with_you", "我无法与你一起飞行", {}));
             return false;
         }
 
@@ -131,6 +131,6 @@ bool TaxiAction::Execute(Event event)
     }
 
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "taxi_no_flightmaster_nearby", "Cannot find any flightmaster to talk", {}));
+        "taxi_no_flightmaster_nearby", "找不到可对话的飞行管理员", {}));
     return false;
 }

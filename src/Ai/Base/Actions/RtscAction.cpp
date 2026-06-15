@@ -20,15 +20,15 @@ bool RTSCAction::Execute(Event event)
     if (command != "reset" && !master->HasSpell(RTSC_MOVE_SPELL))
     {
         master->learnSpell(RTSC_MOVE_SPELL, false);
-        botAI->TellMasterNoFacing("RTS control enabled.");
-        botAI->TellMasterNoFacing("Aedm (Awesome energetic do move) spell trained.");
+        botAI->TellMasterNoFacing("RTS 控制已启用。");
+        botAI->TellMasterNoFacing("已学会 Aedm（移动控制）法术。");
     }
     else if (command == "reset")
     {
         if (master->HasSpell(RTSC_MOVE_SPELL))
         {
             master->removeSpell(RTSC_MOVE_SPELL, SPEC_MASK_ALL, false);
-            botAI->TellMasterNoFacing("RTS control spell removed.");
+            botAI->TellMasterNoFacing("RTS 控制法术已移除。");
         }
 
         RESET_AI_VALUE(bool, "RTSC selected");

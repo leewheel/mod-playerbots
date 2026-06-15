@@ -106,7 +106,7 @@ bool EquipGlyphsAction::Execute(Event event)
     std::vector<GlyphInfo const*> glyphs;
     if (!CollectGlyphs(itemIds, glyphs))
     {
-        botAI->TellMaster("Usage: glyph equip <6 glyph item IDs> (3 major, 3 minor).");
+        botAI->TellMaster("用法: glyph equip <6个雕文物品ID>（3主3副）。");
         return false;
     }
 
@@ -144,12 +144,12 @@ bool EquipGlyphsAction::Execute(Event event)
 
         if (!placed)
         {
-            botAI->TellMaster("Not enought empty sockets for all glyphs.");
+            botAI->TellMaster("没有足够的空插槽来镶嵌所有雕文。");
             return false;
         }
     }
 
-    botAI->TellMaster("Glyphs updated.");
+    botAI->TellMaster("雕文已更新。");
 
     // Flag for custom glyphs
     botAI->GetAiObjectContext()->GetValue<bool>("custom_glyphs")->Set(true);

@@ -1124,7 +1124,7 @@ void PlayerbotFactory::InitPetTalents()
     Pet* pet = bot->GetPet();
     if (!pet)
     {
-        // LOG_INFO("playerbots", "{} init pet talents failed with no pet", bot->GetName().c_str());
+        // LOG_INFO("playerbots", "{} init pet talents failed with no 宠物", bot->GetName().c_str());
         return;
     }
     CreatureTemplate const* ci = pet->GetCreatureTemplate();
@@ -1303,7 +1303,7 @@ void PlayerbotFactory::InitPet()
             if (onlyWolf && itr->second.family != CREATURE_FAMILY_WOLF)
                 continue;
 
-            // Exclude configured pet families
+            // Exclude configured 宠物 families
             if (std::find(sPlayerbotAIConfig.excludedHunterPetFamilies.begin(),
                           sPlayerbotAIConfig.excludedHunterPetFamilies.end(),
                           itr->second.family) != sPlayerbotAIConfig.excludedHunterPetFamilies.end())
@@ -1356,7 +1356,7 @@ void PlayerbotFactory::InitPet()
             // visual effect for levelup
             pet->SetUInt32Value(UNIT_FIELD_LEVEL, bot->GetLevel());
 
-            // caster have pet now
+            // caster have 宠物 now
             bot->SetMinion(pet, true);
 
             pet->InitTalentForLevel();

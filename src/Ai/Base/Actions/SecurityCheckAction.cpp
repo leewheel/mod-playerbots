@@ -27,7 +27,7 @@ bool SecurityCheckAction::Execute(Event /*event*/)
             if ((botAI->GetGroupLeader()->GetSession()->GetSecurity() == SEC_PLAYER) &&
                 (!bot->GetGuildId() || bot->GetGuildId() != botAI->GetGroupLeader()->GetGuildId()))
             {
-                botAI->TellError("I will play with this loot type only if I'm in your guild :/");
+                botAI->TellError("只有加入你的公会，我才会使用这种拾取方式 :/");
                 botAI->ChangeStrategy("+passive,+stay", BOT_STATE_NON_COMBAT);
                 botAI->ChangeStrategy("+passive,+stay", BOT_STATE_COMBAT);
             }

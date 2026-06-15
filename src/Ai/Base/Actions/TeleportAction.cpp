@@ -109,6 +109,6 @@ bool TeleportAction::Execute(Event /*event*/)
     }
 
     // If no teleport option is found
-    botAI->TellError("Cannot find any portal to teleport");
+    botAI->TellError("找不到可传送的传送门");
     return false;
 }

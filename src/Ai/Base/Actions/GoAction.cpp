@@ -53,14 +53,14 @@ bool GoAction::Execute(Event event)
             target->setForced(true);
 
             std::ostringstream out;
-            out << "Traveling to " << dest->getTitle();
+            out << "正在前往 " << dest->getTitle();
             botAI->TellMasterNoFacing(out.str());
 
             return true;
         }
         else
         {
-            botAI->TellMasterNoFacing("Clearing travel target");
+            botAI->TellMasterNoFacing("清除旅行目标");
             target->setTarget(TravelMgr::instance().nullTravelDestination, TravelMgr::instance().nullWorldPosition);
             target->setForced(false);
             return true;
@@ -78,12 +78,12 @@ bool GoAction::Execute(Event event)
                     if (ServerFacade::instance().IsDistanceGreaterThan(ServerFacade::instance().GetDistance2d(bot, go),
                                                              sPlayerbotAIConfig.reactDistance))
                     {
-                        botAI->TellError("It is too far away");
+                        botAI->TellError("太远了");
                         return false;
                     }
 
                     std::ostringstream out;
-                    out << "Moving to " << ChatHelper::FormatGameobject(go);
+                    out << "正在移动到 " << ChatHelper::FormatGameobject(go);
                     botAI->TellMasterNoFacing(out.str());
                     return MoveNear(bot->GetMapId(), go->GetPositionX(), go->GetPositionY(), go->GetPositionZ() + 0.5f,
                                     sPlayerbotAIConfig.followDistance);
@@ -103,7 +103,7 @@ bool GoAction::Execute(Event event)
             if (strstri(unit->GetName().c_str(), param.c_str()))
             {
                 std::ostringstream out;
-                out << "Moving to " << unit->GetName();
+                out << "正在移动到 " << unit->GetName();
                 botAI->TellMasterNoFacing(out.str());
                 return MoveNear(bot->GetMapId(), unit->GetPositionX(), unit->GetPositionY(),
                                 unit->GetPositionZ() + 0.5f, sPlayerbotAIConfig.followDistance);
@@ -179,20 +179,20 @@ bool GoAction::Execute(Event event)
         if (ServerFacade::instance().IsDistanceGreaterThan(ServerFacade::instance().GetDistance2d(bot, x, y),
                                                  sPlayerbotAIConfig.reactDistance))
         {
-            botAI->TellMaster("It is too far away");
+            botAI->TellMaster("太远了");
             return false;
         }
 
         if (map->IsInWater(bot->GetPhaseMask(), x, y, z, bot->GetCollisionHeight()))
         {
-            botAI->TellError("It is in water");
+            botAI->TellError("在水里");
             return false;
         }
 
         float ground = map->GetHeight(x, y, z + 0.5f);
         if (ground <= INVALID_HEIGHT)
         {
-            botAI->TellError("I can't go there");
+            botAI->TellError("我去不了那里");
             return false;
         }
 
@@ -212,7 +212,7 @@ bool GoAction::Execute(Event event)
         if (ServerFacade::instance().IsDistanceGreaterThan(ServerFacade::instance().GetDistance2d(bot, pos.x, pos.y),
                                                  sPlayerbotAIConfig.reactDistance))
         {
-            botAI->TellError("It is too far away");
+            botAI->TellError("太远了");
             return false;
         }
 
@@ -222,6 +222,6 @@ bool GoAction::Execute(Event event)
         return MoveNear(bot->GetMapId(), pos.x, pos.y, pos.z + 0.5f, sPlayerbotAIConfig.followDistance);
     }
 
-    botAI->TellMaster("Whisper 'go x,y', 'go [game object]', 'go unit' or 'go position' and I will go there");
+    botAI->TellMaster("密语 'go x,y'、'go [游戏对象]'、'go unit' 或 'go position'，我将前往该处");
     return false;
 }

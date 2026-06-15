@@ -39,7 +39,7 @@ bool RewardAction::Execute(Event event)
     if (groupLeaderUnit && Reward(itemId, groupLeaderUnit))
         return true;
 
-    botAI->TellError("Cannot talk to quest giver");
+    botAI->TellError("无法与任务发布者对话");
     return false;
 }
 

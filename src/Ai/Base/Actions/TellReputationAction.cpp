@@ -49,7 +49,7 @@ std::string TellReputationAction::BuildReputationLine(FactionEntry const* entry)
             out << "00ffffexalted";
             break;
         default:
-            out << "808080unknown";
+            out << "808080未知";
             break;
     }
 
@@ -93,7 +93,7 @@ bool TellReputationAction::Execute(Event event)
 
         std::sort(lines.begin(), lines.end());
 
-        botAI->TellMaster("=== Reputations ===");
+        botAI->TellMaster("=== 声望 ===");
         for (auto const& line : lines)
             botAI->TellMaster(line);
 

@@ -26,7 +26,7 @@ bool SetCraftAction::Execute(Event event)
     {
         data.Reset();
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "craft_reset", "I will not craft anything", {}));
+            "craft_reset", "我不会制作任何物品", {}));
         return true;
     }
 
@@ -40,7 +40,7 @@ bool SetCraftAction::Execute(Event event)
     if (itemIds.empty())
     {
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "craft_usage", "Usage: 'craft [itemId]' or 'craft reset'", {}));
+            "craft_usage", "用法: 'craft [物品ID]' 或 'craft reset'", {}));
         return false;
     }
 
@@ -98,7 +98,7 @@ bool SetCraftAction::Execute(Event event)
     if (data.required.empty())
     {
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "craft_cannot_craft", "I cannot craft this", {}));
+            "craft_cannot_craft", "我无法制作此物品", {}));
         return false;
     }
 
@@ -114,7 +114,7 @@ void SetCraftAction::TellCraft()
     if (data.IsEmpty())
     {
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "craft_reset", "I will not craft anything", {}));
+            "craft_reset", "我不会制作任何物品", {}));
         return;
     }
 
@@ -147,7 +147,7 @@ void SetCraftAction::TellCraft()
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "craft_summary",
-        "I will craft %item using reagents: %reagents (craft fee: %money)",
+        "我将使用材料 %reagents 制作 %item（制作费: %money）",
         {{"%item", chat->FormatItem(proto)},
          {"%reagents", reagentsOut.str()},
          {"%money", chat->formatMoney(GetCraftFee(data))}}));

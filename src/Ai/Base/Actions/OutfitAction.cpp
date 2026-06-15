@@ -20,11 +20,11 @@ bool OutfitAction::Execute(Event event)
     {
         List();
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "outfit_usage_add", "outfit <name> +[item] to add items", {}));
+            "outfit_usage_add", "outfit <名称> +[物品] 添加物品", {}));
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "outfit_usage_remove", "outfit <name> -[item] to remove items", {}));
+            "outfit_usage_remove", "outfit <名称> -[物品] 移除物品", {}));
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "outfit_usage_equip", "outfit <name> equip/replace to equip items", {}));
+            "outfit_usage_equip", "outfit <名称> equip/replace 装备物品", {}));
     }
     else
     {
@@ -38,7 +38,7 @@ bool OutfitAction::Execute(Event event)
             std::ostringstream out;
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "outfit_set_as",
-                "Setting outfit %name as %param",
+                "将套装 %name 设为 %param",
                 {{"%name", name}, {"%param", param}}));
             return true;
         }
@@ -57,7 +57,7 @@ bool OutfitAction::Execute(Event event)
         {
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "outfit_equipping",
-                "Equipping outfit %name",
+                "正在装备套装 %name",
                 {{"%name", name}}));
 
             EquipItems(outfit);
@@ -67,7 +67,7 @@ bool OutfitAction::Execute(Event event)
         {
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "outfit_replace_current",
-                "Replacing current equip with outfit %name",
+                "正在用套装 %name 替换当前装备",
                 {{"%name", name}}));
 
             for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; slot++)
@@ -93,7 +93,7 @@ bool OutfitAction::Execute(Event event)
         {
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "outfit_resetting",
-                "Resetting outfit %name",
+                "正在重置套装 %name",
                 {{"%name", name}}));
 
             Save(name, ItemIds());
@@ -104,7 +104,7 @@ bool OutfitAction::Execute(Event event)
         {
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "outfit_updating_current",
-                "Updating with current items outfit %name",
+                "正在用当前物品更新套装 %name",
                 {{"%name", name}}));
 
             Update(name);
@@ -125,7 +125,7 @@ bool OutfitAction::Execute(Event event)
 
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "outfit_item_removed_from",
-                    "%item removed from %name",
+                    "已从 %name 移除 %item",
                     {{"%item", chat->FormatItem(proto)}, {"%name", name}}));
             }
             else
@@ -133,7 +133,7 @@ bool OutfitAction::Execute(Event event)
                 outfit.insert(itemid);
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "outfit_item_added_to",
-                    "%item added to %name",
+                    "已添加 %item 到 %name",
                     {{"%item", chat->FormatItem(proto)}, {"%name", name}}));
             }
         }

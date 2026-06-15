@@ -34,7 +34,7 @@ bool ShareQuestAction::Execute(Event event)
             p << entry;
             bot->GetSession()->HandlePushQuestToParty(p);
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "quest_shared", "Quest shared", {}));
+                "quest_shared", "任务已分享", {}));
             return true;
         }
     }
@@ -101,7 +101,7 @@ bool AutoShareQuestAction::Execute(Event /*event*/)
         p << logQuest;
         bot->GetSession()->HandlePushQuestToParty(p);
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "quest_shared", "Quest shared", {}));
+            "quest_shared", "任务已分享", {}));
         shared = true;
     }
 

@@ -73,6 +73,9 @@ public:
     static std::set<uint32> ExtractAllQuestIds(const std::string& text);
     static std::set<uint32> ExtractAllItemIds(const std::string& text);
 
+    // 将密语中文命令别名解析为模块内部英文 trigger 名
+    static std::string ResolveChatCommandAlias(std::string const& command);
+
 private:
     static std::map<std::string, uint32> consumableSubClasses;
     static std::map<std::string, uint32> tradeSubClasses;

@@ -42,16 +42,28 @@ ChatHelper::ChatHelper(PlayerbotAI* botAI) : PlayerbotAIAware(botAI)
 {
     itemQualities["poor"] = ITEM_QUALITY_POOR;
     itemQualities["gray"] = ITEM_QUALITY_POOR;
+    itemQualities["劣质"] = ITEM_QUALITY_POOR;
+    itemQualities["灰色"] = ITEM_QUALITY_POOR;
     itemQualities["normal"] = ITEM_QUALITY_NORMAL;
     itemQualities["white"] = ITEM_QUALITY_NORMAL;
+    itemQualities["普通"] = ITEM_QUALITY_NORMAL;
+    itemQualities["白色"] = ITEM_QUALITY_NORMAL;
     itemQualities["uncommon"] = ITEM_QUALITY_UNCOMMON;
     itemQualities["green"] = ITEM_QUALITY_UNCOMMON;
+    itemQualities["优秀"] = ITEM_QUALITY_UNCOMMON;
+    itemQualities["绿色"] = ITEM_QUALITY_UNCOMMON;
     itemQualities["rare"] = ITEM_QUALITY_RARE;
     itemQualities["blue"] = ITEM_QUALITY_RARE;
+    itemQualities["精良"] = ITEM_QUALITY_RARE;
+    itemQualities["蓝色"] = ITEM_QUALITY_RARE;
     itemQualities["epic"] = ITEM_QUALITY_EPIC;
     itemQualities["violet"] = ITEM_QUALITY_EPIC;
+    itemQualities["史诗"] = ITEM_QUALITY_EPIC;
+    itemQualities["紫色"] = ITEM_QUALITY_EPIC;
     itemQualities["legendary"] = ITEM_QUALITY_LEGENDARY;
     itemQualities["yellow"] = ITEM_QUALITY_LEGENDARY;
+    itemQualities["传说"] = ITEM_QUALITY_LEGENDARY;
+    itemQualities["橙色"] = ITEM_QUALITY_LEGENDARY;
 
     consumableSubClasses["potion"] = ITEM_SUBCLASS_POTION;
     consumableSubClasses["elixir"] = ITEM_SUBCLASS_ELIXIR;
@@ -60,6 +72,12 @@ ChatHelper::ChatHelper(PlayerbotAI* botAI) : PlayerbotAIAware(botAI)
     consumableSubClasses["food"] = ITEM_SUBCLASS_FOOD;
     consumableSubClasses["bandage"] = ITEM_SUBCLASS_BANDAGE;
     consumableSubClasses["enchant"] = ITEM_SUBCLASS_CONSUMABLE_OTHER;
+    consumableSubClasses["药水"] = ITEM_SUBCLASS_POTION;
+    consumableSubClasses["药剂"] = ITEM_SUBCLASS_ELIXIR;
+    consumableSubClasses["合剂"] = ITEM_SUBCLASS_FLASK;
+    consumableSubClasses["卷轴"] = ITEM_SUBCLASS_SCROLL;
+    consumableSubClasses["食物"] = ITEM_SUBCLASS_FOOD;
+    consumableSubClasses["绷带"] = ITEM_SUBCLASS_BANDAGE;
 
     projectileSubClasses["arrows"] = ITEM_SUBCLASS_ARROW;
     projectileSubClasses["bullets"] = ITEM_SUBCLASS_BULLET;
@@ -97,6 +115,25 @@ ChatHelper::ChatHelper(PlayerbotAI* botAI) : PlayerbotAIAware(botAI)
     slots["off hand"] = EQUIPMENT_SLOT_OFFHAND;
     slots["ranged"] = EQUIPMENT_SLOT_RANGED;
     slots["tabard"] = EQUIPMENT_SLOT_TABARD;
+    slots["头部"] = EQUIPMENT_SLOT_HEAD;
+    slots["项链"] = EQUIPMENT_SLOT_NECK;
+    slots["肩膀"] = EQUIPMENT_SLOT_SHOULDERS;
+    slots["衬衣"] = EQUIPMENT_SLOT_BODY;
+    slots["胸部"] = EQUIPMENT_SLOT_CHEST;
+    slots["腰带"] = EQUIPMENT_SLOT_WAIST;
+    slots["腿部"] = EQUIPMENT_SLOT_LEGS;
+    slots["脚部"] = EQUIPMENT_SLOT_FEET;
+    slots["手腕"] = EQUIPMENT_SLOT_WRISTS;
+    slots["手套"] = EQUIPMENT_SLOT_HANDS;
+    slots["手指1"] = EQUIPMENT_SLOT_FINGER1;
+    slots["手指2"] = EQUIPMENT_SLOT_FINGER2;
+    slots["饰品1"] = EQUIPMENT_SLOT_TRINKET1;
+    slots["饰品2"] = EQUIPMENT_SLOT_TRINKET2;
+    slots["背部"] = EQUIPMENT_SLOT_BACK;
+    slots["主手"] = EQUIPMENT_SLOT_MAINHAND;
+    slots["副手"] = EQUIPMENT_SLOT_OFFHAND;
+    slots["远程"] = EQUIPMENT_SLOT_RANGED;
+    slots["战袍"] = EQUIPMENT_SLOT_TABARD;
 
     skills["first aid"] = SKILL_FIRST_AID;
     skills["fishing"] = SKILL_FISHING;
@@ -111,15 +148,32 @@ ChatHelper::ChatHelper(PlayerbotAI* botAI) : PlayerbotAIAware(botAI)
     skills["mining"] = SKILL_MINING;
     skills["skinning"] = SKILL_SKINNING;
     skills["jewelcrafting"] = SKILL_JEWELCRAFTING;
+    skills["急救"] = SKILL_FIRST_AID;
+    skills["钓鱼"] = SKILL_FISHING;
+    skills["烹饪"] = SKILL_COOKING;
+    skills["炼金"] = SKILL_ALCHEMY;
+    skills["附魔"] = SKILL_ENCHANTING;
+    skills["工程"] = SKILL_ENGINEERING;
+    skills["制皮"] = SKILL_LEATHERWORKING;
+    skills["锻造"] = SKILL_BLACKSMITHING;
+    skills["裁缝"] = SKILL_TAILORING;
+    skills["草药"] = SKILL_HERBALISM;
+    skills["采矿"] = SKILL_MINING;
+    skills["剥皮"] = SKILL_SKINNING;
+    skills["珠宝"] = SKILL_JEWELCRAFTING;
 
     chats["party"] = CHAT_MSG_PARTY;
     chats["p"] = CHAT_MSG_PARTY;
+    chats["队伍"] = CHAT_MSG_PARTY;
     chats["guild"] = CHAT_MSG_GUILD;
     chats["g"] = CHAT_MSG_GUILD;
+    chats["公会"] = CHAT_MSG_GUILD;
     chats["raid"] = CHAT_MSG_RAID;
     chats["r"] = CHAT_MSG_RAID;
+    chats["团队"] = CHAT_MSG_RAID;
     chats["whisper"] = CHAT_MSG_WHISPER;
     chats["w"] = CHAT_MSG_WHISPER;
+    chats["密语"] = CHAT_MSG_WHISPER;
 
     classes[CLASS_DRUID] = "druid";
     specs[CLASS_DRUID][0] = "balance";
@@ -410,7 +464,7 @@ std::string const ChatHelper::FormatWorldEntry(int32 entry)
     else if (entry > 0 && cInfo)
         out << cInfo->Name;
     else
-        out << "unknown";
+        out << "未知";
 
     out << "]|h|r";
     return out.str();
@@ -489,7 +543,7 @@ std::string const ChatHelper::FormatChat(ChatMsg chat)
             break;
     }
 
-    return "unknown";
+    return "未知";
 }
 
 uint32 ChatHelper::parseSpell(std::string const text)
@@ -701,4 +755,155 @@ std::set<uint32> ChatHelper::ExtractAllQuestIds(const std::string& text)
 std::set<uint32> ChatHelper::ExtractAllItemIds(const std::string& text)
 {
     return extractGeneric(text, "Hitem:");
+}
+
+std::string ChatHelper::ResolveChatCommandAlias(std::string const& command)
+{
+    static const std::pair<const char*, const char*> aliases[] = {
+        {"帮助", "help"},
+        {"跟随", "follow"},
+        {"停留", "stay"},
+        {"攻击", "attack"},
+        {"使用", "u"},
+        {"数量", "c"},
+        {"装备", "e"},
+        {"卸下", "ue"},
+        {"交易", "t"},
+        {"不交易", "nt"},
+        {"出售", "s"},
+        {"购买", "b"},
+        {"奖励", "r"},
+        {"接受", "accept"},
+        {"逃跑", "flee"},
+        {"拉怪", "pull"},
+        {"拉回", "pull back"},
+        {"就绪", "ready"},
+        {"驱散", "disperse"},
+        {"任务", "q"},
+        {"声望", "rep"},
+        {"离开", "leave"},
+        {"光环", "aura"},
+        {"放弃", "drop"},
+        {"分享", "share"},
+        {"释放", "release"},
+        {"传送", "teleport"},
+        {"修理", "repair"},
+        {"天赋", "talents"},
+        {"法术", "spells"},
+        {"法术书", "spells"},
+        {"战斗", "co"},
+        {"非战斗", "nc"},
+        {"死亡", "de"},
+        {"训练师", "trainer"},
+        {"维护", "maintenance"},
+        {"自动装备", "autogear"},
+        {"聊天", "chat"},
+        {"炉石", "home"},
+        {"销毁", "destroy"},
+        {"表情", "emote"},
+        {"增益", "buff"},
+        {"银行", "bank"},
+        {"邀请", "invite"},
+        {"召唤", "summon"},
+        {"阵型", "formation"},
+        {"姿态", "stance"},
+        {"邮件", "mail"},
+        {"发邮件", "sendmail"},
+        {"套装", "outfit"},
+        {"前往", "go"},
+        {"调试", "debug"},
+        {"雇佣", "hire"},
+        {"制作", "craft"},
+        {"范围", "range"},
+        {"喝水", "drink"},
+        {"计算", "calc"},
+        {"掷点", "roll"},
+        {"驯服", "tame"},
+        {"雕文", "glyphs"},
+        {"宠物", "pet"},
+        {"擦除", "wipe"},
+        {"位置", "position"},
+        {"目标", "target"},
+        {"属性", "stats"},
+        {"日志", "log"},
+        {"视线", "los"},
+        {"徽记", "emblems"},
+        {"升级装备", "equip upgrade"},
+        {"重置AI", "reset botAI"},
+        {"大祝福", "gb"},
+        {"团队标记", "rti"},
+        {"谁", "who"},
+        {"出售物品", "wts"},
+        {"随机副本", "lfg"},
+        {"副本调试", "cdebug"},
+        {"策略", "cs"},
+        {"随机攻击", "ra"},
+        {"记录点", "rtsc"},
+        {"焦点治疗", "focus heal"},
+        {"查询物品", "qi"},
+        {"物品栏", "inv"},
+        {"物品", "items"},
+        {"说话", "talk"},
+        {"对话", "talk"},
+        {"研磨", "grind"},
+        {"坦克攻击", "tank attack"},
+        {"最大输出", "max dps"},
+        {"攻击者", "attackers"},
+        {"远离", "runaway"},
+        {"警告", "warning"},
+        {"复活", "revive"},
+        {"进入载具", "enter vehicle"},
+        {"离开载具", "leave vehicle"},
+        {"施法", "cast"},
+        {"非战斗施法", "castnc"},
+        {"脱离队伍", "move from group"},
+        {"全部拾取", "add all loot"},
+        {"拉怪标记", "pull rti"},
+        {"PVP统计", "pvp stats"},
+        {"RPG状态", "rpg status"},
+        {"RPG任务", "rpg do quest"},
+        {"自动装备极品", "autogear bis"},
+        {"宠物攻击", "pet attack"},
+        {"等待攻击", "wait for attack time"},
+        {"保存法力", "save mana"},
+        {"公会邀请", "ginvite"},
+        {"公会晋升", "guild promote"},
+        {"公会降级", "guild demote"},
+        {"公会移除", "guild remove"},
+        {"离开公会", "guild leave"},
+        {"给予队长", "give leader"},
+        {"作弊", "cheat"},
+        {"打开物品", "open items"},
+        {"解锁物品", "unlock items"},
+        {"解锁交易物品", "unlock traded item"},
+        {"移除雕文", "remove glyph"},
+        {"雕文装备", "glyph equip"},
+        {"低威胁拾取", "ll"},
+        {"灵魂拾取", "ss"},
+        {"任务列表", "quests"},
+        {"法术信息", "spell"},
+        {"就绪检查", "ready check"},
+        {"查询任务", "q"},
+        {"接受任务", "accept"},
+        {"攻击目标", "attack"},
+        {"拉目标", "pull"},
+        {"灵魂医者", "revive"},
+        {"取消树形态", "cancel tree form"},
+        {"取消旅行形态", "cancel travel form"},
+        {"取消熊形态", "cancel bear form"},
+        {"取消巨熊形态", "cancel dire bear form"},
+        {"取消猫形态", "cancel cat form"},
+        {"取消枭兽形态", "cancel moonkin form"},
+        {"取消水栖形态", "cancel aquatic form"},
+        {"装备升级", "equip upgrade"},
+        {"重置机器人AI", "reset botAI"},
+    };
+
+    for (auto const& [zh, en] : aliases)
+    {
+        if (command == zh)
+            return en;
+    }
+
+    return command;
 }

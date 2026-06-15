@@ -30,7 +30,7 @@ bool TradeStatusAction::Execute(Event event)
     if (trader != master && !traderBotAI && (!bot->GetGroup() || !bot->GetGroup()->IsMember(trader->GetGUID())))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "trade_busy_now", "I'm kind of busy now", {}),
+                         "trade_busy_now", "我现在有点忙", {}),
                      LANG_UNIVERSAL, trader);
         return false;
     }
@@ -38,7 +38,7 @@ bool TradeStatusAction::Execute(Event event)
     if (sPlayerbotAIConfig.enableRandomBotTrading == 0 && (sRandomPlayerbotMgr.IsRandomBot(bot)|| sRandomPlayerbotMgr.IsAddclassBot(bot)))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "trade_disabled", "Trading is disabled", {}),
+                         "trade_disabled", "交易已禁用", {}),
                      LANG_UNIVERSAL, trader);
         return false;
     }
@@ -141,7 +141,7 @@ void TradeStatusAction::BeginTrade()
     ListItemsVisitor visitor;
     IterateItems(&visitor);
 
-    botAI->TellMaster("=== Inventory ===");
+    botAI->TellMaster("=== 背包 ===");
     TellItems(visitor.items, visitor.soulbound);
 
     if (sRandomPlayerbotMgr.IsRandomBot(bot))
@@ -187,12 +187,12 @@ bool TradeStatusAction::CheckTrade()
                 botAI->HasRealPlayerMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "trade_thank_you_player",
-                    "Thank you %player",
+                    "谢谢你 %player",
                     {{"%player", chat->FormatWorldobject(bot->GetTrader())}}));
             else
                 bot->Say(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                              "trade_thank_you_player",
-                             "Thank you %player",
+                             "谢谢你 %player",
                              {{"%player", chat->FormatWorldobject(bot->GetTrader())}}),
                          (bot->GetTeamId() == TEAM_ALLIANCE ? LANG_COMMON : LANG_ORCISH));
         }
@@ -222,14 +222,14 @@ bool TradeStatusAction::CheckTrade()
     if (botItemsMoney > 0 && sPlayerbotAIConfig.enableRandomBotTrading == 2 && (sRandomPlayerbotMgr.IsRandomBot(bot)|| sRandomPlayerbotMgr.IsAddclassBot(bot)))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "trade_selling_disabled", "Selling is disabled.", {}),
+                         "trade_selling_disabled", "出售已禁用。", {}),
                      LANG_UNIVERSAL, trader);
         return false;
     }
     if (playerItemsMoney && sPlayerbotAIConfig.enableRandomBotTrading == 3 && (sRandomPlayerbotMgr.IsRandomBot(bot)|| sRandomPlayerbotMgr.IsAddclassBot(bot)))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "trade_buying_disabled", "Buying is disabled.", {}),
+                         "trade_buying_disabled", "购买已禁用。", {}),
                      LANG_UNIVERSAL, trader);
         return false;
     }
@@ -241,7 +241,7 @@ bool TradeStatusAction::CheckTrade()
             std::ostringstream out;
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "trade_item_not_for_sale",
-                "%item - This is not for sale",
+                "%item - 此物品不出售",
                 {{"%item", chat->FormatItem(item->GetTemplate())}}));
             botAI->PlaySound(TEXT_EMOTE_NO);
             return false;
@@ -258,7 +258,7 @@ bool TradeStatusAction::CheckTrade()
                 std::ostringstream out;
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "trade_item_not_needed",
-                    "%item - I don't need this",
+                    "%item - 我不需要此物品",
                     {{"%item", chat->FormatItem(item->GetTemplate())}}));
                 botAI->PlaySound(TEXT_EMOTE_NO);
                 return false;
@@ -272,7 +272,7 @@ bool TradeStatusAction::CheckTrade()
     if (!botItemsMoney && !playerItemsMoney)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "trade_no_items_error", "There are no items to trade", {}));
+            "trade_no_items_error", "没有可交易的物品", {}));
         return false;
     }
 
@@ -287,7 +287,7 @@ bool TradeStatusAction::CheckTrade()
             if (moneyDelta < 0)
             {
                 botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "trade_discount_buy_only", "You can use discount to buy items only", {}));
+                    "trade_discount_buy_only", "折扣只能用于购买物品", {}));
                 botAI->PlaySound(TEXT_EMOTE_NO);
                 return false;
             }
@@ -304,19 +304,19 @@ bool TradeStatusAction::CheckTrade()
         {
             case 0:
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "trade_success_pleasure", "A pleasure doing business with you", {}));
+                    "trade_success_pleasure", "很高兴与你交易", {}));
                 break;
             case 1:
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "trade_success_fair_trade", "Fair trade", {}));
+                    "trade_success_fair_trade", "公平交易", {}));
                 break;
             case 2:
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "trade_success_thanks", "Thanks", {}));
+                    "trade_success_thanks", "谢谢", {}));
                 break;
             case 3:
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "trade_success_off_with_you", "Off with you", {}));
+                    "trade_success_off_with_you", "走吧", {}));
                 break;
         }
 
@@ -327,7 +327,7 @@ bool TradeStatusAction::CheckTrade()
     std::ostringstream out;
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "trade_want_money_for_this",
-        "I want %money for this",
+        "此物品我要 %money",
         {{"%money", chat->formatMoney(-(delta + discount))}}));
     botAI->PlaySound(TEXT_EMOTE_NO);
     return false;

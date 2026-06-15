@@ -87,7 +87,7 @@ bool FollowChatShortcutAction::Execute(Event /*event*/)
         if (moved)
         {
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "following", "Following", {}));
+                "following", "跟随中", {}));
             return true;
         }
     }
@@ -102,7 +102,7 @@ bool FollowChatShortcutAction::Execute(Event /*event*/)
             botAI->TellMasterNoFacing("Back from the grave!");
         }
         else
-            botAI->TellMaster("You are too far away from me! I will there soon.");
+            botAI->TellMaster("你离我太远了！我很快就到。");
 
         bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
         bot->TeleportTo(master->GetMapId(), master->GetPositionX(), master->GetPositionY(), master->GetPositionZ(),
@@ -111,7 +111,7 @@ bool FollowChatShortcutAction::Execute(Event /*event*/)
     */
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "following", "Following", {}));
+        "following", "跟随中", {}));
     return true;
 }
 
@@ -129,7 +129,7 @@ bool StayChatShortcutAction::Execute(Event /*event*/)
     SetStayPosition(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ());
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "staying", "Staying", {}));
+        "staying", "停留中", {}));
     return true;
 }
 
@@ -145,7 +145,7 @@ bool MoveFromGroupChatShortcutAction::Execute(Event /*event*/)
     botAI->ChangeStrategy("+move from group", BOT_STATE_COMBAT);
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "move_from_group", "Moving away from group", {}));
+        "move_from_group", "正在远离队伍", {}));
     return true;
 }
 
@@ -165,12 +165,12 @@ bool FleeChatShortcutAction::Execute(Event /*event*/)
     if (bot->GetMapId() != master->GetMapId() || bot->GetDistance(master) > sPlayerbotAIConfig.sightDistance)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "fleeing_far", "I will not flee with you - too far away", {}));
+            "fleeing_far", "距离太远，我不会与你一起逃跑", {}));
         return true;
     }
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "fleeing", "Fleeing", {}));
+        "fleeing", "逃跑中", {}));
     return true;
 }
 
@@ -188,7 +188,7 @@ bool GoawayChatShortcutAction::Execute(Event /*event*/)
     ResetStayPosition();
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "running_away", "Running away", {}));
+        "running_away", "正在逃离", {}));
     return true;
 }
 
@@ -205,7 +205,7 @@ bool GrindChatShortcutAction::Execute(Event /*event*/)
     ResetStayPosition();
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "grinding", "Grinding", {}));
+        "grinding", "刷怪中", {}));
     return true;
 }
 
@@ -226,7 +226,7 @@ bool TankAttackChatShortcutAction::Execute(Event /*event*/)
     ResetStayPosition();
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "attacking", "Attacking", {}));
+        "attacking", "攻击中", {}));
     return true;
 }
 
@@ -242,7 +242,7 @@ bool MaxDpsChatShortcutAction::Execute(Event /*event*/)
     botAI->Reset();
 
     botAI->ChangeStrategy("-threat,-conserve mana,-cast time,+dps debuff,+boost", BOT_STATE_COMBAT);
-    botAI->TellMaster("Max DPS!");
+    botAI->TellMaster("最大 DPS！");
 
     return true;
 }
@@ -256,7 +256,7 @@ bool NaxxChatShortcutAction::Execute(Event /*event*/)
     botAI->Reset();
     botAI->ChangeStrategy("+naxx", BOT_STATE_NON_COMBAT);
     botAI->ChangeStrategy("+naxx", BOT_STATE_COMBAT);
-    botAI->TellMasterNoFacing("Add Naxx Strategies!");
+    botAI->TellMasterNoFacing("已启用纳克萨玛斯策略！");
     // bot->Say("Add Naxx Strategies!", LANG_UNIVERSAL);
     return true;
 }
@@ -270,6 +270,6 @@ bool BwlChatShortcutAction::Execute(Event /*event*/)
     botAI->Reset();
     botAI->ChangeStrategy("+bwl", BOT_STATE_NON_COMBAT);
     botAI->ChangeStrategy("+bwl", BOT_STATE_COMBAT);
-    botAI->TellMasterNoFacing("Add Bwl Strategies!");
+    botAI->TellMasterNoFacing("已启用黑翼之巢策略！");
     return true;
 }

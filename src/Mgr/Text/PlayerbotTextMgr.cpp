@@ -24,7 +24,7 @@ void PlayerbotTextMgr::replaceAll(std::string& str, const std::string& from, con
 
 void PlayerbotTextMgr::LoadBotTexts()
 {
-    LOG_INFO("playerbots", "Loading playerbots texts...");
+    LOG_INFO("playerbots", "正在加载玩家机器人文本...");
 
     uint32 count = 0;
     if (PreparedQueryResult result =
@@ -48,7 +48,7 @@ void PlayerbotTextMgr::LoadBotTexts()
         } while (result->NextRow());
     }
 
-    LOG_INFO("playerbots", "{} playerbots texts loaded", count);
+    LOG_INFO("playerbots", "已加载 {} 条玩家机器人文本", count);
 }
 
 void PlayerbotTextMgr::LoadBotTextChance()
@@ -76,13 +76,13 @@ std::string PlayerbotTextMgr::GetBotText(std::string name)
 {
     if (botTexts.empty())
     {
-        LOG_ERROR("playerbots", "Can't get bot text {}! No bots texts loaded!", name);
+        LOG_ERROR("playerbots", "无法获取机器人文本 {}！未加载任何机器人文本！", name);
         return "";
     }
 
     if (botTexts[name].empty())
     {
-        LOG_ERROR("playerbots", "Can't get bot text {}! No bots texts for this name!", name);
+        LOG_ERROR("playerbots", "无法获取机器人文本 {}！没有此名称的机器人文本！", name);
         return "";
     }
 
@@ -125,12 +125,12 @@ std::string PlayerbotTextMgr::GetBotText(ChatReplyType replyType, std::map<std::
 {
     if (botTexts.empty())
     {
-        LOG_ERROR("playerbots", "Can't get bot text reply {}! No bots texts loaded!", replyType);
+        LOG_ERROR("playerbots", "无法获取机器人文本回复 {}！未加载任何机器人文本！", replyType);
         return "";
     }
     if (botTexts["reply"].empty())
     {
-        LOG_ERROR("playerbots", "Can't get bot text reply {}! No bots texts replies!", replyType);
+        LOG_ERROR("playerbots", "无法获取机器人文本回复 {}！没有机器人文本回复！", replyType);
         return "";
     }
 
@@ -194,7 +194,7 @@ void PlayerbotTextMgr::AddLocalePriority(uint32 locale)
 {
     if (locale >= TOTAL_LOCALES)
     {
-        LOG_WARN("playerbots", "Ignoring locale {} for bot texts because it exceeds TOTAL_LOCALES ({})", locale, TOTAL_LOCALES - 1);
+        LOG_WARN("playerbots", "忽略机器人文本的语言 {}，因为超出 TOTAL_LOCALES ({})", locale, TOTAL_LOCALES - 1);
         return;
     }
 

@@ -395,7 +395,7 @@ bool EquipFishingPoleAction::isUseful()
 
     std::string masterName = master->GetName();
     std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-    "no_fishing_pole_error", "I don't have a Fishing Pole",{});
+    "no_fishing_pole_error", "我没有鱼竿",{});
     botAI->Whisper(text, masterName);
 
     return false;

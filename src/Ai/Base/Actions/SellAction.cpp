@@ -84,7 +84,7 @@ bool SellAction::Execute(Event event)
         return true;
     }
 
-    botAI->TellError("Usage: s gray/*/vendor/[item link]");
+    botAI->TellError("用法: s gray/*/vendor/[物品链接]");
     return false;
 }
 

@@ -96,9 +96,9 @@ public:
         {
             sPlayerbotAIConfig.perfMonEnabled = !sPlayerbotAIConfig.perfMonEnabled;
             if (sPlayerbotAIConfig.perfMonEnabled)
-                LOG_INFO("playerbots", "Performance monitor enabled");
+                LOG_INFO("playerbots", "性能监控已启用");
             else
-                LOG_INFO("playerbots", "Performance monitor disabled");
+                LOG_INFO("playerbots", "性能监控已禁用");
             return true;
         }
 
@@ -115,7 +115,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->PSendSysMessage("Usage: .playerbots account setKey <securityKey>");
+            handler->PSendSysMessage("用法: .playerbots account setKey <安全密钥>");
             return false;
         }
 
@@ -130,7 +130,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("PlayerbotMgr instance not found.");
+            handler->PSendSysMessage("未找到 PlayerbotMgr 实例。");
             return false;
         }
     }
@@ -145,7 +145,7 @@ public:
 
         if (!accountName || !key)
         {
-            handler->PSendSysMessage("Usage: .playerbots account link <accountName> <securityKey>");
+            handler->PSendSysMessage("用法: .playerbots account link <账号名> <安全密钥>");
             return false;
         }
 
@@ -159,7 +159,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("PlayerbotMgr instance not found.");
+            handler->PSendSysMessage("未找到 PlayerbotMgr 实例。");
             return false;
         }
     }
@@ -176,7 +176,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("PlayerbotMgr instance not found.");
+            handler->PSendSysMessage("未找到 PlayerbotMgr 实例。");
             return false;
         }
     }
@@ -189,7 +189,7 @@ public:
         char* accountName = strtok((char*)args, " ");
         if (!accountName)
         {
-            handler->PSendSysMessage("Usage: .playerbots account unlink <accountName>");
+            handler->PSendSysMessage("用法: .playerbots account unlink <账号名>");
             return false;
         }
 
@@ -203,7 +203,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("PlayerbotMgr instance not found.");
+            handler->PSendSysMessage("未找到 PlayerbotMgr 实例。");
             return false;
         }
     }

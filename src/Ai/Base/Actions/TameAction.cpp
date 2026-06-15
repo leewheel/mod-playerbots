@@ -77,7 +77,7 @@ bool TameAction::Execute(Event event)
 
         // Build the output message for the user
         std::ostringstream oss;
-        oss << "Available pet families: ";
+        oss << "可用宠物家族: ";
         size_t count = 0;
         for (auto const& name : normalFamilies)
         {
@@ -116,7 +116,7 @@ bool TameAction::Execute(Event event)
     }
     else if (mode == "id" && !value.empty())
     {
-        // Try to convert value to an integer and set pet by ID
+        // Try to convert value to an integer and set 宠物 by ID
         try
         {
             uint32 id = std::stoul(value);
@@ -125,7 +125,7 @@ bool TameAction::Execute(Event event)
         catch (...)
         {
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "tame_invalid_id_error", "Invalid tame id.", {}));
+                "tame_invalid_id_error", "无效的驯服 ID。", {}));
         }
     }
     else if (mode == "family" && !value.empty())
@@ -141,7 +141,7 @@ bool TameAction::Execute(Event event)
         // Unrecognized command or missing argument; show usage
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "tame_usage_error",
-            "Usage: tame name <name> | tame id <id> | tame family <family> | tame rename <new name> | tame abandon",
+            "用法: tame name <名称> | tame id <id> | tame family <家族> | tame rename <新名称> | tame abandon",
             {}));
         return false;
     }
@@ -163,13 +163,13 @@ bool TameAction::Execute(Event event)
             std::ostringstream oss;
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "tame_pet_changed",
-                "Pet changed to %name, ID: %id.",
+                "宠物已更换为 %name，ID: %id。",
                 {{"%name", lastPetName}, {"%id", std::to_string(lastPetId)}}));
         }
         else
         {
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "tame_pet_changed_initialized", "Pet changed and initialized!", {}));
+                "tame_pet_changed_initialized", "宠物已更换并初始化！", {}));
         }
     }
 
@@ -206,7 +206,7 @@ bool TameAction::SetPetByName(const std::string& name)
             {
                 botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "tame_exotic_requires_beast_mastery",
-                    "I cannot use exotic pets unless I have the Beast Mastery talent.",
+                    "除非拥有野兽掌控天赋，否则我无法使用 exotic pet。",
                     {}));
                 return false;
             }
@@ -215,7 +215,7 @@ bool TameAction::SetPetByName(const std::string& name)
             if (!creature.IsTameable(bot->CanTameExoticPets()))
                 continue;
 
-            // Store the found pet's name and entry ID for later use/feedback
+            // Store the found 宠物's name and entry ID for later use/feedback
             lastPetName = creature.Name;
             lastPetId = creature.Entry;
             // Create and set this pet for the bot
@@ -223,9 +223,9 @@ bool TameAction::SetPetByName(const std::string& name)
         }
     }
 
-    // If no suitable pet found, show an error and return failure
+    // If no suitable 宠物 found, show an error and return failure
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "tame_no_pet_by_name", "No tameable pet found with name: %name", {{"%name", name}}));
+        "tame_no_pet_by_name", "未找到可驯服的宠物，名称: %name", {{"%name", name}}));
     return false;
 }
 
@@ -243,7 +243,7 @@ bool TameAction::SetPetById(uint32 id)
         {
             // If not tameable at all, show an error and fail
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "tame_no_pet_by_id", "No tameable pet found with id: %id", {{"%id", std::to_string(id)}}));
+                "tame_no_pet_by_id", "未找到可驯服的宠物，ID: %id", {{"%id", std::to_string(id)}}));
             return false;
         }
 
@@ -252,7 +252,7 @@ bool TameAction::SetPetById(uint32 id)
         {
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "tame_exotic_requires_beast_mastery",
-                "I cannot use exotic pets unless I have the Beast Mastery talent.",
+                "除非拥有野兽掌控天赋，否则我无法使用 exotic pet。",
                 {}));
             return false;
         }
@@ -261,7 +261,7 @@ bool TameAction::SetPetById(uint32 id)
         if (!creature->IsTameable(bot->CanTameExoticPets()))
         {
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "tame_no_pet_by_id", "No tameable pet found with id: %id", {{"%id", std::to_string(id)}}));
+                "tame_no_pet_by_id", "未找到可驯服的宠物，ID: %id", {{"%id", std::to_string(id)}}));
             return false;
         }
 
@@ -274,7 +274,7 @@ bool TameAction::SetPetById(uint32 id)
 
     // If no valid creature was found by id, show an error
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "tame_no_pet_by_id", "No tameable pet found with id: %id", {{"%id", std::to_string(id)}}));
+        "tame_no_pet_by_id", "未找到可驯服的宠物，ID: %id", {{"%id", std::to_string(id)}}));
     return false;
 }
 
@@ -334,11 +334,11 @@ bool TameAction::SetPetByFamily(const std::string& family)
         if (foundExotic && !HasBeastMastery(bot))
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "tame_exotic_requires_beast_mastery",
-                "I cannot use exotic pets unless I have the Beast Mastery talent.",
+                "除非拥有野兽掌控天赋，否则我无法使用 exotic pet。",
                 {}));
         else
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "tame_no_pet_by_family", "No tameable pet found with family: %family", {{"%family", family}}));
+                "tame_no_pet_by_family", "未找到可驯服的宠物，家族: %family", {{"%family", family}}));
         return false;
     }
 
@@ -349,7 +349,7 @@ bool TameAction::SetPetByFamily(const std::string& family)
 
     const CreatureTemplate* selected = candidates[dis(gen)];
 
-    // Save the selected pet's name and id for feedback
+    // Save the selected 宠物's name and id for feedback
     lastPetName = selected->Name;
     lastPetId = selected->Entry;
     // Attempt to create and set the new pet for the bot
@@ -364,7 +364,7 @@ bool TameAction::RenamePet(const std::string& newName)
     if (!pet)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "tame_no_pet_to_rename", "You have no pet to rename.", {}));
+            "tame_no_pet_to_rename", "你没有可重命名的宠物。", {}));
         return false;
     }
 
@@ -373,7 +373,7 @@ bool TameAction::RenamePet(const std::string& newName)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "tame_pet_name_length_error",
-            "Pet name must be between 1 and 12 alphabetic characters.",
+            "宠物名称必须为 1 到 12 个字母字符。",
             {}));
         return false;
     }
@@ -385,7 +385,7 @@ bool TameAction::RenamePet(const std::string& newName)
         {
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "tame_pet_name_alpha_error",
-                "Pet name must only contain alphabetic characters (A-Z, a-z).",
+                "宠物名称只能包含字母（A-Z, a-z）。",
                 {}));
             return false;
         }
@@ -402,7 +402,7 @@ bool TameAction::RenamePet(const std::string& newName)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "tame_pet_name_forbidden_error",
-            "That pet name is forbidden. Please choose another name.",
+            "该宠物名称被禁止，请选择其他名称。",
             {}));
         return false;
     }
@@ -414,10 +414,10 @@ bool TameAction::RenamePet(const std::string& newName)
 
     // Notify the master about the rename and give a tip to update the client name display
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "tame_pet_renamed", "Your pet has been renamed to %name!", {{"%name", normalized}}));
+        "tame_pet_renamed", "你的宠物已重命名为 %name！", {{"%name", normalized}}));
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "tame_pet_rename_refresh_hint",
-        "If you do not see the new name, please dismiss and recall your pet.",
+        "如果未看到新名称，请解散并重新召唤宠物。",
         {}));
 
     // Remove the current pet and (re-)cast Call Pet spell if the bot is a hunter
@@ -436,16 +436,16 @@ bool TameAction::CreateAndSetPet(uint32 creatureEntry)
     if (bot->getClass() != CLASS_HUNTER || bot->GetLevel() < 10)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "tame_only_hunters_level_10", "Only level 10+ hunters can have pets.", {}));
+            "tame_only_hunters_level_10", "只有 10 级以上的猎人才能有宠物。", {}));
         return false;
     }
 
-    // Retrieve the creature template for the given entry (pet species info)
+    // Retrieve the creature template for the given entry (宠物 species info)
     CreatureTemplate const* creature = sObjectMgr->GetCreatureTemplate(creatureEntry);
     if (!creature)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "tame_creature_template_not_found", "Creature template not found.", {}));
+            "tame_creature_template_not_found", "未找到生物模板。", {}));
         return false;
     }
 
@@ -467,7 +467,7 @@ bool TameAction::CreateAndSetPet(uint32 creatureEntry)
     if (!pet)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "tame_create_pet_failed", "Failed to create pet.", {}));
+            "tame_create_pet_failed", "创建宠物失败。", {}));
         return false;
     }
 
@@ -481,7 +481,7 @@ bool TameAction::CreateAndSetPet(uint32 creatureEntry)
     pet->InitTalentForLevel();
     // Save pet to the database as the current pet
     pet->SavePetToDB(PET_SAVE_AS_CURRENT);
-    // Initialize available pet spells
+    // Initialize available 宠物 spells
     bot->PetSpellInitialize();
 
     // Further initialize pet stats to match the bot's level
@@ -523,14 +523,14 @@ bool TameAction::AbandonPet()
         bot->RemovePet(pet, PET_SAVE_AS_DELETED);
         // Inform the bot's master/player that the pet was abandoned
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "tame_pet_abandoned", "Your pet has been abandoned.", {}));
+            "tame_pet_abandoned", "你的宠物已被放弃。", {}));
         return true;
     }
     else
     {
         // If there is no hunter pet, show an error message
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "tame_no_hunter_pet_to_abandon", "You have no hunter pet to abandon.", {}));
+            "tame_no_hunter_pet_to_abandon", "你没有可放弃的猎人宠物。", {}));
         return false;
     }
 }

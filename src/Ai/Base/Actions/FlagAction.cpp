@@ -10,7 +10,7 @@
 
 bool FlagAction::TellUsage()
 {
-    botAI->TellError("Usage: flag cloak/helm/pvp on/set/off/clear/toggle/?");
+    botAI->TellError("用法: flag cloak/helm/pvp on/set/off/clear/toggle/?");
     return false;
 }
 
