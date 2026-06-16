@@ -38,6 +38,7 @@
 #include "BroadcastHelper.h"
 #include "WorldSessionMgr.h"
 #include "DatabaseEnv.h"
+#include "QuickPartyHelper.h"
 
 namespace PlayerbotCmd
 {
@@ -65,6 +66,18 @@ std::string NormalizeBotSubCommand(std::string const& cmd)
         return "init";
     if (cmd == "移除" || cmd == "删除")
         return "remove";
+    if (cmd == "5人队")
+        return "party5";
+    if (cmd == "10人团")
+        return "party10";
+    if (cmd == "25人团")
+        return "party25";
+    if (cmd == "40人团")
+        return "party40";
+    if (cmd == "解散队伍")
+        return "disbandparty";
+    if (cmd == "随机装备")
+        return "randgear";
     return cmd;
 }
 }  // namespace PlayerbotCmd
@@ -933,6 +946,8 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
     {
         messages.push_back("用法: list/列表/reload/重载/tweak/微调/self/自己 或 add/添加/addaccount/添加账号/init/初始化/remove/移除 玩家名\n");
         messages.push_back("用法: addclass/添加职业 职业名 [male|female|男|女|0|1]");
+        messages.push_back("用法: party5/5人队 party10/10人团 party25/25人团 party40/40人团 disbandparty/解散队伍");
+        messages.push_back("用法: randgear/随机装备 [玩家名]（无参数时对自身或当前选中目标）");
         return messages;
     }
 
@@ -1106,6 +1121,45 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
     {
         messages.push_back(LookupBots(master));
         return messages;
+    }
+
+    if (botCmd == "party5")
+        return QuickPartyHelper::FormParty(master, 5);
+
+    if (botCmd == "party10")
+        return QuickPartyHelper::FormParty(master, 10);
+
+    if (botCmd == "party25")
+        return QuickPartyHelper::FormParty(master, 25);
+
+    if (botCmd == "party40")
+        return QuickPartyHelper::FormParty(master, 40);
+
+    if (botCmd == "disbandparty")
+        return QuickPartyHelper::DisbandParty(master);
+
+    if (botCmd == "randgear")
+    {
+        Player* target = master;
+        if (charname)
+        {
+            std::string name = charname;
+            if (!normalizePlayerName(name))
+            {
+                messages.push_back("未找到玩家 " + std::string(charname));
+                return messages;
+            }
+            target = ObjectAccessor::FindPlayerByName(name, false);
+            if (!target)
+            {
+                messages.push_back("未找到在线玩家 " + name);
+                return messages;
+            }
+        }
+        else if (Player* selected = master->GetSelectedPlayer())
+            target = selected;
+
+        return QuickPartyHelper::RandomGear(master, target);
     }
 
     if (botCmd == "addclass")

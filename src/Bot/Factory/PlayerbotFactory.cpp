@@ -2252,6 +2252,9 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
                         if (!proto)
                             continue;
 
+                        if (excludeHeirloom && proto->Quality == ITEM_QUALITY_HEIRLOOM)
+                            continue;
+
                         bool shouldCheckGS = desiredQuality > ITEM_QUALITY_NORMAL;
 
                         if (shouldCheckGS && gearScoreLimit != 0 &&

@@ -800,9 +800,8 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
                 int divisor = RandomPlayerbotFactory::CalculateAvailableCharsPerAccount();
                 uint32 moreAccountsNeeded = (maxAllowedBotCount + divisor - 1) / divisor;
                 LOG_ERROR("playerbots",
-                          "无法登录所有请求的机器人，请尝试在配置文件中增加 RandomBotAccountCount。
-"
-                          "{} more accounts needed.", moreAccountsNeeded);
+                          "无法登录所有请求的机器人，请尝试在配置文件中增加 RandomBotAccountCount。还需要 {} 个账号。",
+                          moreAccountsNeeded);
                 missingBotsTimer = 0;    // Reset timer so error is not spammed every tick
             }
         }
@@ -2839,7 +2838,7 @@ void RandomPlayerbotMgr::PrintStats()
         {
             uint32 lvl = lvlPerRace[race] * 10 / perRace[race];
             float flvl = lvl / 10.0f;
-            LOG_INFO("playerbots", "    {}: {}, 平均等级: {}", ChatHelper::FormatRace(race).c_str(), perRace[race],
+            LOG_INFO("playerbots", "    {}: {}, 平均等级: {}", ChatHelper::FormatRaceLog(race).c_str(), perRace[race],
                      flvl);
         }
     }
@@ -2851,7 +2850,7 @@ void RandomPlayerbotMgr::PrintStats()
         {
             uint32 lvl = lvlPerClass[cls] * 10 / perClass[cls];
             float flvl = lvl / 10.0f;
-            LOG_INFO("playerbots", "    {}: {}, 平均等级: {}", ChatHelper::FormatClass(cls).c_str(), perClass[cls],
+            LOG_INFO("playerbots", "    {}: {}, 平均等级: {}", ChatHelper::FormatClassLog(cls).c_str(), perClass[cls],
                      flvl);
         }
     }

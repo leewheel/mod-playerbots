@@ -685,6 +685,64 @@ std::string const ChatHelper::FormatClass(uint8 cls) { return classes[cls]; }
 
 std::string const ChatHelper::FormatRace(uint8 race) { return races[race]; }
 
+std::string const ChatHelper::FormatClassLog(uint8 cls)
+{
+    switch (cls)
+    {
+        case CLASS_WARRIOR:
+            return "战士";
+        case CLASS_PALADIN:
+            return "圣骑士";
+        case CLASS_HUNTER:
+            return "猎人";
+        case CLASS_ROGUE:
+            return "盗贼";
+        case CLASS_PRIEST:
+            return "牧师";
+        case CLASS_DEATH_KNIGHT:
+            return "死亡骑士";
+        case CLASS_SHAMAN:
+            return "萨满";
+        case CLASS_MAGE:
+            return "法师";
+        case CLASS_WARLOCK:
+            return "术士";
+        case CLASS_DRUID:
+            return "德鲁伊";
+        default:
+            return FormatClass(cls);
+    }
+}
+
+std::string const ChatHelper::FormatRaceLog(uint8 race)
+{
+    switch (race)
+    {
+        case RACE_HUMAN:
+            return "人类";
+        case RACE_ORC:
+            return "兽人";
+        case RACE_DWARF:
+            return "矮人";
+        case RACE_NIGHTELF:
+            return "暗夜精灵";
+        case RACE_UNDEAD_PLAYER:
+            return "亡灵";
+        case RACE_TAUREN:
+            return "牛头人";
+        case RACE_GNOME:
+            return "侏儒";
+        case RACE_TROLL:
+            return "巨魔";
+        case RACE_BLOODELF:
+            return "血精灵";
+        case RACE_DRAENEI:
+            return "德莱尼";
+        default:
+            return FormatRace(race);
+    }
+}
+
 uint32 ChatHelper::parseSkill(std::string const text)
 {
     if (skills.find(text) != skills.end())

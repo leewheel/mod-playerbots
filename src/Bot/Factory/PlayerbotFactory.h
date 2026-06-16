@@ -82,6 +82,7 @@ public:
     void InitFood();
     void InitMounts();
     void InitBags(bool destroyOld = true);
+    void SetExcludeHeirloom(bool exclude) { excludeHeirloom = exclude; }
     void ApplyEnchantAndGemsNew(bool destroyOld = true);
     void InitInstanceQuests();
     void UnbindInstance();
@@ -218,6 +219,7 @@ private:
     uint32 level;
     uint32 itemQuality;
     uint32 gearScoreLimit;
+    bool excludeHeirloom = false;
     static std::list<uint32> specialQuestIds;
     static std::unordered_map<uint32, std::vector<uint32>> trainerIdCache;
     static std::vector<uint32> enchantSpellIdCache;
