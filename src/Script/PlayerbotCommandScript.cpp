@@ -52,6 +52,8 @@ public:
 
         static ChatCommandTable commandTable = {
             {"playerbots", playerbotsCommandTable},
+            {"playerbot", playerbotsCommandTable},
+            {"bot", HandlePlayerbotCommand, SEC_PLAYER, Console::No},
         };
 
         return commandTable;
