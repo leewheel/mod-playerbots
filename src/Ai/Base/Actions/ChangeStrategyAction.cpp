@@ -51,7 +51,7 @@ bool ChangeNonCombatStrategyAction::Execute(Event event)
     if (sPlayerbotAIConfig.IsInRandomAccountList(account) && botAI->GetMaster() &&
         !botAI->GetMaster()->CanBeGameMaster())
     {
-        if (text.find("loot") != std::string::npos || text.find("gather") != std::string::npos)
+        if (text.find("loot") != std::string::npos)
         {
             botAI->TellError("除拾取和采集外，你可以更改任何策略");
             return false;
