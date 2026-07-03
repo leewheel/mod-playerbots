@@ -173,13 +173,13 @@ uint32 SpellIdValue::Calculate()
                 continue;
             }
 
-            if (!highestRank || id > highestRank)
+            if (!highestRank || (uint32)id > highestRank)
             {
                 highestRank = id;
                 highestSpellId = spellId;
             }
 
-            if (!lowestRank || (lowestRank && id < lowestRank))
+            if (!lowestRank || (lowestRank && (uint32)id < lowestRank))
             {
                 lowestRank = id;
                 lowestSpellId = spellId;
@@ -193,7 +193,7 @@ uint32 SpellIdValue::Calculate()
             auto spellId = *it;
             if (!highestSpellId)
                 highestSpellId = spellId;
-            if (saveMana == rank)
+            if (saveMana == (int32)rank)
                 return spellId;
             lowestSpellId = spellId;
             rank++;
