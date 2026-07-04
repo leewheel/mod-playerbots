@@ -1412,7 +1412,7 @@ bool RandomItemMgr::IsValidItem(ItemTemplate const* proto)
     if ((proto->AllowableClass & CLASSMASK_ALL_PLAYABLE) == 0)
         return false;
 
-    constexpr uint32 RACEMASK_ALL_PLAYABLE =
+    constexpr uint32 ALL_PLAYABLE_RACEMASK =
         (1 << (RACE_HUMAN - 1))         |
         (1 << (RACE_ORC - 1))           |
         (1 << (RACE_DWARF - 1))         |
@@ -1425,7 +1425,7 @@ bool RandomItemMgr::IsValidItem(ItemTemplate const* proto)
         (1 << (RACE_DRAENEI - 1));
 
     // check race-restricted items
-    if ((proto->AllowableRace & RACEMASK_ALL_PLAYABLE) == 0)
+    if ((proto->AllowableRace & ALL_PLAYABLE_RACEMASK) == 0)
         return false;
 
     // check test/internal items
@@ -2924,8 +2924,6 @@ void RandomItemMgr::DebugCacheRandomItem()
         }
     }
 }
-
-float RandomItemMgr::GetItemRarity(uint32 itemId) { return rarityCache[itemId]; }
 
 inline bool IsCraftedBySpellInfo(ItemTemplate const* proto, SpellInfo const* spellInfo)
 {
