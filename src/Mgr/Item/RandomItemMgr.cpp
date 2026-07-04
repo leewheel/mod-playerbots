@@ -2734,6 +2734,33 @@ void RandomItemMgr::BuildCacheTrade()
         if (proto->RequiredSkill)
             continue;
 
+        uint32 requiredLevel = proto->RequiredLevel;
+        for (uint32 level = 1; level <= DEFAULT_MAX_LEVEL; level += 10)
+        {
+            // skip items whose item level is below the current bucket
+            if (proto->ItemLevel < level)
+                continue;
+
+            if (requiredLevel)
+            {
+                // skip items above the level bucket
+                if (requiredLevel > level)
+                    continue;
+
+                // skip items below the level bucket window
+                if (level > MAX_TRADE_LEVEL_DELTA && requiredLevel < level - MAX_TRADE_LEVEL_DELTA)
+                    continue;
+            }
+
+            tradeCache[(level - 1) / 10].push_back(itr.first);
+            ++count;
+        }
+    }
+
+    LOG_INFO("server.loading", ">> Cached total {} trade entries in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", " ");
+}
+
 void RandomItemMgr::BuildCacheRarity()
 {
     uint32 const oldMSTime = getMSTime();
