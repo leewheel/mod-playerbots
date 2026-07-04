@@ -30,6 +30,17 @@ constexpr RandomPlayerbotFactory::NameRaceAndGender RandomPlayerbotFactory::Comb
         case RACE_TROLL:      baseIndex = NameRaceAndGender::TrollMale; break;
         case RACE_BLOODELF:   baseIndex = NameRaceAndGender::BloodelfMale; break;
         case RACE_DRAENEI:    baseIndex = NameRaceAndGender::DraeneiMale; break;
+        case RACE_GOBLIN:     baseIndex = NameRaceAndGender::GoblinMale; break;
+        case RACE_FEL_ORC:    baseIndex = NameRaceAndGender::VoidElfMale; break;
+        case RACE_NAGA:       baseIndex = NameRaceAndGender::VulperaMale; break;
+        case RACE_BROKEN:     baseIndex = NameRaceAndGender::HighElfMale; break;
+        case RACE_SKELETON:   baseIndex = NameRaceAndGender::PandarenMale; break;
+        case RACE_VRYKUL:     baseIndex = NameRaceAndGender::WorgenMale; break;
+        case RACE_TUSKARR:    baseIndex = NameRaceAndGender::ManariEredarMale; break;
+        case RACE_FOREST_TROLL: baseIndex = NameRaceAndGender::ZandalariMale; break;
+        case RACE_TAUNKA:     baseIndex = NameRaceAndGender::LightforgedMale; break;
+        case RACE_NORTHREND_SKELETON: baseIndex = NameRaceAndGender::DemonHunterAllianceMale; break;
+        case RACE_ICE_TROLL:  baseIndex = NameRaceAndGender::DemonHunterHordeMale; break;
         case RACE_HUMAN:
         case RACE_UNDEAD_PLAYER:
         default:
@@ -137,12 +148,17 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
     }
 
     //uint8 skinColor = skinColors[urand(0, skinColors.size() - 1)]; //not used, line marked for removal.
+    if (faces.empty() || hairs.empty())
+    {
+        LOG_ERROR("playerbots", "Cannot create bot: no CharSections data for race {} gender {}", race, gender);
+        return nullptr;
+    }
     std::pair<uint8, uint8> face = faces[urand(0, faces.size() - 1)];
     std::pair<uint8, uint8> hair = hairs[urand(0, hairs.size() - 1)];
 
     bool excludeCheck = (race == RACE_TAUREN) || (race == RACE_DRAENEI) ||
                         (gender == GENDER_FEMALE && race != RACE_NIGHTELF && race != RACE_UNDEAD_PLAYER);
-    uint8 facialHair = excludeCheck ? 0 : facialHairTypes[urand(0, facialHairTypes.size() - 1)];
+    uint8 facialHair = excludeCheck ? 0 : (facialHairTypes.empty() ? 0 : facialHairTypes[urand(0, facialHairTypes.size() - 1)]);
 
     std::unique_ptr<CharacterCreateInfo> characterInfo = std::make_unique<CharacterCreateInfo>(
         name, race, cls, gender, face.second, face.first, hair.first, hair.second, facialHair);
@@ -814,7 +830,23 @@ void RandomPlayerbotFactory::CreateRandomArenaTeams(ArenaType type, uint32 count
         {
             Player* player = ObjectAccessor::FindConnectedPlayer(captain);
 
-            if (!arenateam && player && player->GetLevel() >= 70)
+            if (!player || player->GetLevel() < 70)
+                continue;
+
+            // Skip if player is already a member of any team of this type
+            bool alreadyMember = false;
+            for (auto const& [teamId, team] : sArenaTeamMgr->GetArenaTeams())
+            {
+                if (team->GetType() == type && team->IsMember(captain))
+                {
+                    ++arenaTeamNumber;
+                    sPlayerbotAIConfig.randomBotArenaTeams.push_back(teamId);
+                    alreadyMember = true;
+                    break;
+                }
+            }
+
+            if (!alreadyMember)
                 availableCaptains.push_back(captain);
         }
     }
@@ -827,12 +859,13 @@ void RandomPlayerbotFactory::CreateRandomArenaTeams(ArenaType type, uint32 count
 
         if (availableCaptains.empty())
         {
-            LOG_ERROR("playerbots", "No captains for random arena teams available");
+            LOG_DEBUG("playerbots", "No more available captains (all eligible bots already have teams), created {} arena teams", arenaTeamNumber);
             continue;
         }
 
         uint32 index = urand(0, availableCaptains.size() - 1);
         ObjectGuid captain = availableCaptains[index];
+        availableCaptains.erase(availableCaptains.begin() + index);
         Player* player = ObjectAccessor::FindConnectedPlayer(captain);
         if (!player)
         {

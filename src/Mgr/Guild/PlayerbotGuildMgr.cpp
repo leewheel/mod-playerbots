@@ -189,7 +189,7 @@ void PlayerbotGuildMgr::ValidateGuildCache()
     QueryResult result = CharacterDatabase.Query("SELECT guildid, name FROM guild");
     if (!result)
     {
-        LOG_ERROR("playerbots", "数据库中未找到公会，正在重置公会缓存");
+        LOG_WARN("playerbots", "数据库中未找到公会，正在重置公会缓存");
         ResetGuildCache();
         return;
     }

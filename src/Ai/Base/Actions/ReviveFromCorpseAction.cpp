@@ -252,9 +252,11 @@ GraveyardStruct const* SpiritHealerAction::GetGrave(bool startZone)
     std::vector<uint32> races;
 
     if (bot->GetTeamId() == TEAM_ALLIANCE)
-        races = {RACE_HUMAN, RACE_DWARF, RACE_GNOME, RACE_NIGHTELF, RACE_DRAENEI};
+        races = {RACE_HUMAN, RACE_DWARF, RACE_GNOME, RACE_NIGHTELF, RACE_DRAENEI,
+                 RACE_FEL_ORC, RACE_BROKEN, RACE_VRYKUL, RACE_TAUNKA, RACE_NORTHREND_SKELETON};
     else
-        races = {RACE_ORC, RACE_TROLL, RACE_TAUREN, RACE_UNDEAD_PLAYER, RACE_BLOODELF};
+        races = {RACE_ORC, RACE_TROLL, RACE_TAUREN, RACE_UNDEAD_PLAYER, RACE_BLOODELF,
+                 RACE_GOBLIN, RACE_NAGA, RACE_SKELETON, RACE_TUSKARR, RACE_FOREST_TROLL, RACE_ICE_TROLL};
 
     float graveDistance = -1;
 

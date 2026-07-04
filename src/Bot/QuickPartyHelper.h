@@ -6,6 +6,7 @@
 #ifndef _PLAYERBOT_QUICKPARTYHELPER_H
 #define _PLAYERBOT_QUICKPARTYHELPER_H
 
+#include "Define.h"
 #include <string>
 #include <vector>
 

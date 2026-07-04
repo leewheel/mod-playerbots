@@ -235,6 +235,17 @@ ChatHelper::ChatHelper(PlayerbotAI* botAI) : PlayerbotAIAware(botAI)
     races[RACE_UNDEAD_PLAYER] = "Undead";
     races[RACE_BLOODELF] = "Blood Elf";
     races[RACE_DRAENEI] = "Draenei";
+    races[RACE_GOBLIN] = "Goblin";
+    races[RACE_FEL_ORC] = "Void Elf";
+    races[RACE_NAGA] = "Vulpera";
+    races[RACE_BROKEN] = "High Elf";
+    races[RACE_SKELETON] = "Pandaren";
+    races[RACE_VRYKUL] = "Worgen";
+    races[RACE_TUSKARR] = "Man'ari Eredar";
+    races[RACE_FOREST_TROLL] = "Zandalari Troll";
+    races[RACE_TAUNKA] = "Lightforged Draenei";
+    races[RACE_NORTHREND_SKELETON] = "Demon Hunter";
+    races[RACE_ICE_TROLL] = "Demon Hunter";
 }
 
 std::string const ChatHelper::formatMoney(uint32 copper)
@@ -734,10 +745,32 @@ std::string const ChatHelper::FormatRaceLog(uint8 race)
             return "侏儒";
         case RACE_TROLL:
             return "巨魔";
+        case RACE_GOBLIN:
+            return "地精";
         case RACE_BLOODELF:
             return "血精灵";
         case RACE_DRAENEI:
             return "德莱尼";
+        case RACE_FEL_ORC:
+            return "虚空精灵";
+        case RACE_NAGA:
+            return "狐人";
+        case RACE_BROKEN:
+            return "高等精灵";
+        case RACE_SKELETON:
+            return "熊猫人";
+        case RACE_VRYKUL:
+            return "狼人";
+        case RACE_TUSKARR:
+            return "曼阿里·艾瑞達";
+        case RACE_FOREST_TROLL:
+            return "贊達拉巨魔";
+        case RACE_TAUNKA:
+            return "光鑄德萊尼";
+        case RACE_NORTHREND_SKELETON:
+            return "惡魔獵手(聯盟)";
+        case RACE_ICE_TROLL:
+            return "惡魔獵手(部落)";
         default:
             return FormatRace(race);
     }

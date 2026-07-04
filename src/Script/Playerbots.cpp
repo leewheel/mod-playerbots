@@ -350,16 +350,16 @@ public:
         // especially if you are distributing a repack or hosting a public server
         // e.g. you can replace the URL with your own repository,
         // but it should be publicly accessible and include all modifications you've made
-        LOG_INFO("server.loading", "╔══════════════════════════════════════════════════════════╗");
-        LOG_INFO("server.loading", "║                                                          ║");
-        LOG_INFO("server.loading", "║              AzerothCore Playerbots Module               ║");
-        LOG_INFO("server.loading", "║                                                          ║");
-        LOG_INFO("server.loading", "╟──────────────────────────────────────────────────────────╢");
-        LOG_INFO("server.loading", "║     mod-playerbots is a community-driven open-source     ║");
-        LOG_INFO("server.loading", "║  project based on AzerothCore, licensed under AGPLv3.0   ║");
-        LOG_INFO("server.loading", "╟──────────────────────────────────────────────────────────╢");
-        LOG_INFO("server.loading", "║      https://github.com/mod-playerbots/mod-playerbots    ║");
-        LOG_INFO("server.loading", "╚══════════════════════════════════════════════════════════╝");
+        LOG_INFO("server.loading", "┌──────────────────────────────────────────────────────────┐");
+        LOG_INFO("server.loading", "│                                                          │");
+        LOG_INFO("server.loading", "│              AzerothCore Playerbots Module               │");
+        LOG_INFO("server.loading", "│                                                          │");
+        LOG_INFO("server.loading", "├──────────────────────────────────────────────────────────┤");
+        LOG_INFO("server.loading", "│     mod-playerbots is a community-driven open-source     │");
+        LOG_INFO("server.loading", "│  project based on AzerothCore, licensed under AGPLv3.0   │");
+        LOG_INFO("server.loading", "├──────────────────────────────────────────────────────────┤");
+        LOG_INFO("server.loading", "│      https://github.com/mod-playerbots/mod-playerbots    │");
+        LOG_INFO("server.loading", "└──────────────────────────────────────────────────────────┘");
 
         uint32 oldMSTime = getMSTime();
 

@@ -41,7 +41,30 @@ public:
         TaurenMale,
         TaurenFemale,
         BloodelfMale,
-        BloodelfFemale
+        BloodelfFemale,
+        // New races
+        GoblinMale,
+        GoblinFemale,
+        VoidElfMale,
+        VoidElfFemale,
+        VulperaMale,
+        VulperaFemale,
+        HighElfMale,
+        HighElfFemale,
+        PandarenMale,
+        PandarenFemale,
+        WorgenMale,
+        WorgenFemale,
+        ManariEredarMale,
+        ManariEredarFemale,
+        ZandalariMale,
+        ZandalariFemale,
+        LightforgedMale,
+        LightforgedFemale,
+        DemonHunterAllianceMale,
+        DemonHunterAllianceFemale,
+        DemonHunterHordeMale,
+        DemonHunterHordeFemale
     };
 
     static constexpr NameRaceAndGender CombineRaceAndGender(uint8 race, uint8 gender);

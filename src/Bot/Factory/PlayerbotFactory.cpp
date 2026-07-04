@@ -3723,6 +3723,20 @@ void PlayerbotFactory::InitMounts()
             slow = {33660, 35020, 35022, 35018};
             fast = {35025, 35025, 35027};
             break;
+        case RACE_VRYKUL:  // Worgen - uses Running Wild racial
+            slow = {87840};
+            fast = {87840};
+            break;
+        case RACE_GOBLIN:     // Uses faction mounts via default
+        case RACE_FEL_ORC:
+        case RACE_NAGA:
+        case RACE_BROKEN:
+        case RACE_SKELETON:
+        case RACE_TUSKARR:
+        case RACE_FOREST_TROLL:
+        case RACE_TAUNKA:
+        case RACE_NORTHREND_SKELETON:
+        case RACE_ICE_TROLL:
         default:
             if (bot->GetTeamId() == TEAM_HORDE)
             { // Orc mounts

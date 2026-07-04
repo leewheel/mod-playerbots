@@ -911,6 +911,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == 305)
@@ -949,6 +951,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == 306)
@@ -981,6 +985,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_HELLO)
@@ -1013,6 +1019,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == 323)
@@ -1049,6 +1057,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 1;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == 325)
@@ -1081,6 +1091,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 2;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == 326)
@@ -1107,6 +1119,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_CHEER)
@@ -1133,6 +1147,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 2;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_OPENFIRE)
@@ -1156,6 +1172,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_BYE)
@@ -1182,6 +1200,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 4;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_NOD)
@@ -1214,6 +1234,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 4;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_NO)
@@ -1240,6 +1262,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_THANK)
@@ -1272,6 +1296,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_WELCOME)
@@ -1296,6 +1322,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
                     return 2;
                 return 3;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_CONGRATULATE)
@@ -1328,6 +1356,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 4;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_FLIRT)
@@ -1371,6 +1401,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 6;
             }
+            default:
+                return 2;
         }
     }
     else if (emote == TEXT_EMOTE_JOKE)
@@ -1433,6 +1465,8 @@ uint32 EmoteActionBase::GetNumberOfEmoteVariants(TextEmotes emote, uint8 Race, u
 
                 return 7;
             }
+            default:
+                return 2;
         }
     }
 

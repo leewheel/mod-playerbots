@@ -1661,6 +1661,19 @@ void TravelNodeMap::generateStartNodes()
     startNames[RACE_TAUREN] = "Tauren";
     startNames[RACE_GNOME] = "Dwarf and Gnome";
     startNames[RACE_TROLL] = "Orc and Troll";
+    startNames[RACE_DRAENEI] = "Draenei";
+    startNames[RACE_BLOODELF] = "Blood Elf";
+    startNames[RACE_GOBLIN] = "Goblin";
+    startNames[RACE_FEL_ORC] = "Void Elf";
+    startNames[RACE_NAGA] = "Vulpera";
+    startNames[RACE_BROKEN] = "High Elf";
+    startNames[RACE_SKELETON] = "Pandaren";
+    startNames[RACE_VRYKUL] = "Worgen";
+    startNames[RACE_TUSKARR] = "Man'ari Eredar";
+    startNames[RACE_FOREST_TROLL] = "Zandalari Troll";
+    startNames[RACE_TAUNKA] = "Lightforged Draenei";
+    startNames[RACE_NORTHREND_SKELETON] = "Demon Hunter Alliance";
+    startNames[RACE_ICE_TROLL] = "Demon Hunter Horde";
 
     for (uint32 i = 0; i < sRaceMgr->GetMaxRaces(); i++)
     {
