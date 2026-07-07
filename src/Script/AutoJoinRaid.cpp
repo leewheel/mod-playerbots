@@ -11,10 +11,12 @@
  *   配置参数：Playerbot.Auto.Join.Raid（默认开启）
  *
  * 工作原理：
- *   1. 通过 OnPlayerAfterUpdate 钩子定期检测玩家 LFR 状态
- *   2. 当检测到玩家处于 LFG_STATE_RAIDBROWSER 时，
- *      获取玩家选择的团本副本，根据副本地图的 maxPlayers 确定人数
- *   3. 调用 DoFastGroup 自动召唤机器人组建标准配置的团队
+ *   1. 通过 OnPlayerCanJoinLfg 钩子截获玩家选择的团本副本信息
+ *      （根本原因：JoinLfg 的 Raid 分支调用了 JoinRaidBrowser + SetState(LFG_STATE_RAIDBROWSER)，
+ *       但没有调用 SetSelectedDungeons，所以 GetSelectedDungeons 在 RaidBrowser 状态下返回空集合）
+ *   2. 通过 OnPlayerAfterUpdate 钩子定期检测玩家 LFR 状态
+ *   3. 当检测到玩家处于 LFG_STATE_RAIDBROWSER 时，
+ *      使用之前截获的团本信息确定人数，调用 DoFastGroup 自动召唤机器人
  *   4. 玩家离开 LFR 或下线时，自动清理已召唤的机器人
  *
  *   机器人上线后的等级/天赋/装备设置由 FastGroupPlayerScript
@@ -62,48 +64,33 @@ static bool IsAutoJoinRaidEnabled()
 }
 
 // ============================================================
-//  辅助函数：根据 LFR 选择的副本确定团本人数
-//  返回值：maxPlayers（10/25/40），0 表示无法确定
+//  辅助函数：根据副本 ID 确定 maxPlayers
+//  返回值：maxPlayers（10/25/40），0 表示不是团本或无法确定
 // ============================================================
-static uint32 GetRaidMaxPlayersFromDungeons(Player* player)
+static uint32 GetRaidMaxPlayers(uint32 dungeonId)
 {
-    if (!player)
+    lfg::LFGDungeonData const* dungeon = sLFGMgr->GetLFGDungeon(dungeonId);
+    if (!dungeon)
         return 0;
 
-    // 获取玩家在 LFR 中选择的副本列表
-    lfg::LfgDungeonSet const& dungeons = sLFGMgr->GetSelectedDungeons(player->GetGUID());
-    if (dungeons.empty())
+    // 只处理团本类型（LFG_TYPE_RAID = 2）
+    if (dungeon->type != lfg::LFG_TYPE_RAID)
         return 0;
 
-    // 遍历所有选择的副本，找到第一个有效的团本地图
-    for (uint32 dungeonId : dungeons)
+    // 通过地图 ID 查找 MapEntry，获取 maxPlayers
+    MapEntry const* mapEntry = sMapStore.LookupEntry(dungeon->map);
+    if (mapEntry && mapEntry->maxPlayers > 0)
     {
-        // 获取副本数据
-        lfg::LFGDungeonData const* dungeon = sLFGMgr->GetLFGDungeon(dungeonId);
-        if (!dungeon)
-            continue;
-
-        // 只处理团本类型（LFG_TYPE_RAID = 2）
-        if (dungeon->type != lfg::LFG_TYPE_RAID)
-            continue;
-
-        // 通过地图 ID 查找 MapEntry，获取 maxPlayers
-        MapEntry const* mapEntry = sMapStore.LookupEntry(dungeon->map);
-        if (mapEntry && mapEntry->maxPlayers > 0)
-        {
-            return mapEntry->maxPlayers;
-        }
-
-        // 如果 MapEntry 没有有效的 maxPlayers，使用难度来判断
-        // RAID_DIFFICULTY_25MAN_NORMAL = 1, RAID_DIFFICULTY_25MAN_HEROIC = 3
-        // RAID_DIFFICULTY_MASK_25MAN = 1
-        if (dungeon->difficulty & RAID_DIFFICULTY_MASK_25MAN)
-            return 25;
-        else
-            return 10;
+        return mapEntry->maxPlayers;
     }
 
-    return 0;
+    // 如果 MapEntry 没有有效的 maxPlayers，使用难度来判断
+    // RAID_DIFFICULTY_25MAN_NORMAL = 1, RAID_DIFFICULTY_25MAN_HEROIC = 3
+    // RAID_DIFFICULTY_MASK_25MAN = 1
+    if (dungeon->difficulty & RAID_DIFFICULTY_MASK_25MAN)
+        return 25;
+    else
+        return 10;
 }
 
 // ============================================================
@@ -128,9 +115,48 @@ class AutoJoinRaidPlayerScript : public PlayerScript
 {
 public:
     AutoJoinRaidPlayerScript() : PlayerScript("AutoJoinRaidPlayerScript", {
+        PLAYERHOOK_CAN_JOIN_LFG,
         PLAYERHOOK_ON_AFTER_UPDATE,
         PLAYERHOOK_ON_LOGOUT
     }) {}
+
+    // By leewheel 2026-07-07
+    // 在玩家尝试加入 LFG 时截获团本信息
+    // 根本原因：JoinLfg 的 Raid 分支调用了 JoinRaidBrowser + SetState(LFG_STATE_RAIDBROWSER)，
+    // 但没有调用 SetSelectedDungeons，所以 GetSelectedDungeons 在 RaidBrowser 状态下返回空集合。
+    // 必须在此钩子中提前截获 dungeons 参数。
+    bool OnPlayerCanJoinLfg(Player* player, uint8 /*roles*/, std::set<uint32>& dungeons, const std::string& /*comment*/) override
+    {
+        if (!player)
+            return true;
+
+        // 跳过机器人
+        if (GET_PLAYERBOT_AI(player))
+            return true;
+
+        // 检查配置是否开启
+        if (!IsAutoJoinRaidEnabled())
+            return true;
+
+        // 遍历玩家选择的副本，找到第一个团本类型
+        for (uint32 dungeonId : dungeons)
+        {
+            uint32 maxPlayers = GetRaidMaxPlayers(dungeonId);
+            if (maxPlayers == 0)
+                continue;
+
+            // 记录玩家选择的团本人数
+            m_pendingRaidMaxPlayers[player->GetGUID()] = maxPlayers;
+
+            LOG_DEBUG("playerbots", "自动加入团本：玩家 {} 选择了团本（副本ID:{}），最大人数：{}",
+                player->GetName(), dungeonId, maxPlayers);
+            break;  // 只需要第一个团本信息
+        }
+
+        // 始终返回 true，不阻止玩家加入 LFG
+        return true;
+    }
+    // End By leewheel
 
     // 定期检测玩家是否在团本浏览器中
     void OnPlayerAfterUpdate(Player* player, uint32 /*p_time*/) override
@@ -146,7 +172,7 @@ public:
         if (!IsAutoJoinRaidEnabled())
             return;
 
-        // 只处理满级或高等级玩家（等级太低没有团本）
+        // 只处理高等级玩家（等级太低没有团本）
         if (player->GetLevel() < 10)
             return;
 
@@ -183,10 +209,12 @@ public:
         if (player->IsInCombat())
             return;
 
-        // 获取团本人数
-        uint32 maxPlayers = GetRaidMaxPlayersFromDungeons(player);
-        if (maxPlayers == 0)
-            return;  // 无法确定团本人数，等下次检测
+        // 获取之前在 OnPlayerCanJoinLfg 中截获的团本人数
+        auto raidIt = m_pendingRaidMaxPlayers.find(guid);
+        if (raidIt == m_pendingRaidMaxPlayers.end() || raidIt->second == 0)
+            return;  // 没有截获到团本信息，等下次检测
+
+        uint32 maxPlayers = raidIt->second;
 
         // 确定队伍配置
         FastGroupConfigIndex configIndex = GetConfigIndexByMaxPlayers(maxPlayers);
@@ -223,6 +251,7 @@ public:
         ObjectGuid guid = player->GetGUID();
         m_nextCheck.erase(guid);
         m_processed.erase(guid);
+        m_pendingRaidMaxPlayers.erase(guid);
 
         // 注意：机器人下线由 FastGroupPlayerScript::OnPlayerLogout 处理
         // 这里只需要清理 AutoJoinRaid 自己的状态
@@ -234,6 +263,12 @@ private:
 
     // 已处理的玩家 GUID 集合（防止重复触发）
     std::set<ObjectGuid> m_processed;
+
+    // By leewheel 2026-07-07
+    // 玩家 GUID -> 截获的团本最大人数
+    // 在 OnPlayerCanJoinLfg 中记录，在 OnPlayerAfterUpdate 中使用
+    std::unordered_map<ObjectGuid, uint32> m_pendingRaidMaxPlayers;
+    // End By leewheel
 };
 
 // ============================================================
