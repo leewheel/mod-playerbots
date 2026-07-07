@@ -379,8 +379,11 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
 
     if (sPlayerbotAIConfig.randomBotJoinBG /* && !players.empty()*/)
     {
-        if (time(nullptr) > (BgCheckTimer + 35))
+        // By leewheel 2026-07-07
+        // 缩短战场队列检查间隔：35秒 → 15秒，让机器人更快响应玩家排队
+        if (time(nullptr) > (BgCheckTimer + 15))
             sRandomPlayerbotMgr.CheckBgQueue();
+        // End By leewheel
     }
 
     if (sPlayerbotAIConfig.randomBotJoinLfg /* && !players.empty()*/)
@@ -909,13 +912,19 @@ void RandomPlayerbotMgr::CheckBgQueue()
 
     // Initialize Battleground Data (do not clear here)
 
+    // By leewheel 2026-07-07
+    // 重置BattlegroundData时保留bgQueueStartTime，确保排队开始时间不被每次检查重置
+    // 这样可以正确追踪真实玩家从开始排队到现在的总等待时间
     for (int bracket = BG_BRACKET_ID_FIRST; bracket < MAX_BATTLEGROUND_BRACKETS; ++bracket)
     {
         for (int queueType = BATTLEGROUND_QUEUE_AV; queueType < MAX_BATTLEGROUND_QUEUE_TYPES; ++queueType)
         {
+            time_t savedQueueStartTime = BattlegroundData[queueType][bracket].bgQueueStartTime;
             BattlegroundData[queueType][bracket] = BattlegroundInfo();
+            BattlegroundData[queueType][bracket].bgQueueStartTime = savedQueueStartTime;
         }
     }
+    // End By leewheel
 
     // Process real players and populate Battleground Data with player/queue count
     // Opens a queue for bots to join
@@ -1005,10 +1014,32 @@ void RandomPlayerbotMgr::CheckBgQueue()
                 else
                 {
                     BattlegroundData[queueTypeId][bracketId].activeBgQueue = 1;
+                    // By leewheel 2026-07-07
+                    // 记录真实玩家开始排队的时间（仅首次记录），用于超时强制加入机器人
+                    if (BattlegroundData[queueTypeId][bracketId].bgQueueStartTime == 0)
+                        BattlegroundData[queueTypeId][bracketId].bgQueueStartTime = time(nullptr);
+                    // End By leewheel
                 }
             }
         }
     }
+
+    // By leewheel 2026-07-07
+    // 清理没有真实玩家排队的队列的bgQueueStartTime
+    // 当activeBgQueue为0时，说明该队列没有真实玩家在等待，重置排队开始时间
+    // 这样下次有新玩家排队时，计时器会重新开始
+    for (int bracket = BG_BRACKET_ID_FIRST; bracket < MAX_BATTLEGROUND_BRACKETS; ++bracket)
+    {
+        for (int queueType = BATTLEGROUND_QUEUE_AV; queueType < MAX_BATTLEGROUND_QUEUE_TYPES; ++queueType)
+        {
+            if (BattlegroundData[queueType][bracket].activeBgQueue == 0 &&
+                BattlegroundData[queueType][bracket].bgQueueStartTime != 0)
+            {
+                BattlegroundData[queueType][bracket].bgQueueStartTime = 0;
+            }
+        }
+    }
+    // End By leewheel
 
     // Process player bots
     for (auto& [guid, bot] : playerBots)

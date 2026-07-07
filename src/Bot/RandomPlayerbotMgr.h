@@ -26,6 +26,11 @@ struct BattlegroundInfo
     uint32 activeSkirmishArenaQueue = 0;  // 0 = Inactive, 1 = Active
     uint32 activeBgQueue = 0;             // 0 = Inactive, 1 = Active
 
+    // By leewheel 2026-07-07
+    // 记录真实玩家开始排队的时间，用于超时强制加入机器人
+    time_t bgQueueStartTime = 0;
+    // End By leewheel
+
     // Bots (Arena)
     uint32 ratedArenaBotCount = 0;
     uint32 skirmishArenaBotCount = 0;

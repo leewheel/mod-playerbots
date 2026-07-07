@@ -294,15 +294,41 @@ bool BGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battlegroun
     uint32 activeBgQueue = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].activeBgQueue;
     uint32 bgInstanceCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgInstanceCount;
 
+    // By leewheel 2026-07-07
+    // 超时强制加入机制：当真实玩家排队超过配置的最大等待时间（默认180秒=3分钟）的2/3时，
+    // 强制更多机器人加入以确保3分钟内战场能够开启
+    bool forceJoin = false;
+    time_t queueStartTime = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgQueueStartTime;
+    if (queueStartTime > 0)
+    {
+        uint32 waitTime = (uint32)(time(nullptr) - queueStartTime);
+        // 当排队时间超过最大等待时间的2/3（默认120秒=2分钟）时，强制机器人加入
+        uint32 forceJoinThreshold = sPlayerbotAIConfig.randomBotBgMaxQueueWaitTime * 2 / 3;
+        if (waitTime >= forceJoinThreshold)
+        {
+            forceJoin = true;
+            LOG_INFO("playerbots", "战场排队超时强制加入: 队列类型={}, 等待时间={}秒, 阈值={}秒",
+                     queueTypeId, waitTime, forceJoinThreshold);
+        }
+    }
+    // End By leewheel
+
     if (teamId == TEAM_ALLIANCE)
     {
-        if ((bgAllianceBotCount + bgAlliancePlayerCount) < TeamSize * (activeBgQueue + bgInstanceCount))
+        // By leewheel 2026-07-07
+        // 超时时将目标人数翻倍（填满双方队伍），确保战场能快速开启
+        uint32 targetCount = forceJoin ? TeamSize * 2 : TeamSize;
+        if ((bgAllianceBotCount + bgAlliancePlayerCount) < targetCount * (activeBgQueue + bgInstanceCount))
             return true;
+        // End By leewheel
     }
     else
     {
-        if ((bgHordeBotCount + bgHordePlayerCount) < TeamSize * (activeBgQueue + bgInstanceCount))
+        // By leewheel 2026-07-07
+        uint32 targetCount = forceJoin ? TeamSize * 2 : TeamSize;
+        if ((bgHordeBotCount + bgHordePlayerCount) < targetCount * (activeBgQueue + bgInstanceCount))
             return true;
+        // End By leewheel
     }
 
     return false;
@@ -322,9 +348,12 @@ bool BGJoinAction::isUseful()
     if (bot->InBattlegroundQueue())
         return false;
 
-    // do not try right after login (currently not working)
-    if ((time(nullptr) - bot->GetInGameTime()) < 120)
+    // By leewheel 2026-07-07
+    // 缩短机器人登录后加入战场的等待时间：120秒 → 配置值（默认30秒）
+    // 让机器人更快响应战场排队
+    if ((time(nullptr) - bot->GetInGameTime()) < sPlayerbotAIConfig.randomBotBgJoinLoginDelay)
         return false;
+    // End By leewheel
 
     // check level
     if (bot->GetLevel() < 10)
@@ -625,15 +654,38 @@ bool FreeBGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battleg
     uint32 activeBgQueue = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].activeBgQueue;
     uint32 bgInstanceCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgInstanceCount;
 
+    // By leewheel 2026-07-07
+    // 超时强制加入机制：与BGJoinAction::shouldJoinBg相同的逻辑
+    bool forceJoin = false;
+    time_t queueStartTime = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgQueueStartTime;
+    if (queueStartTime > 0)
+    {
+        uint32 waitTime = (uint32)(time(nullptr) - queueStartTime);
+        uint32 forceJoinThreshold = sPlayerbotAIConfig.randomBotBgMaxQueueWaitTime * 2 / 3;
+        if (waitTime >= forceJoinThreshold)
+        {
+            forceJoin = true;
+            LOG_INFO("playerbots", "FreeBG战场排队超时强制加入: 队列类型={}, 等待时间={}秒, 阈值={}秒",
+                     queueTypeId, waitTime, forceJoinThreshold);
+        }
+    }
+    // End By leewheel
+
     if (teamId == TEAM_ALLIANCE)
     {
-        if ((bgAllianceBotCount + bgAlliancePlayerCount) < TeamSize * (activeBgQueue + bgInstanceCount))
+        // By leewheel 2026-07-07
+        uint32 targetCount = forceJoin ? TeamSize * 2 : TeamSize;
+        if ((bgAllianceBotCount + bgAlliancePlayerCount) < targetCount * (activeBgQueue + bgInstanceCount))
             return true;
+        // End By leewheel
     }
     else
     {
-        if ((bgHordeBotCount + bgHordePlayerCount) < TeamSize * (activeBgQueue + bgInstanceCount))
+        // By leewheel 2026-07-07
+        uint32 targetCount = forceJoin ? TeamSize * 2 : TeamSize;
+        if ((bgHordeBotCount + bgHordePlayerCount) < targetCount * (activeBgQueue + bgInstanceCount))
             return true;
+        // End By leewheel
     }
 
     return false;

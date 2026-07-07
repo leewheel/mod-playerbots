@@ -1265,6 +1265,17 @@ AiPlayerbot.RandomBotJoinBG = 1
 # Enable auto-joining of battlegrounds - have bots start battlegrounds and arenas on their own
 AiPlayerbot.RandomBotAutoJoinBG = 0
 
+# By leewheel 2026-07-07
+# 战场排队最大等待时间（秒），默认180秒（3分钟）
+# 当真实玩家排队超过此时间的2/3（默认120秒=2分钟）时，强制更多机器人加入战场队列
+# 确保玩家排队最多等待3分钟即可进入战场（除非可用机器人数量不足）
+AiPlayerbot.RandomBotBgMaxQueueWaitTime = 180
+
+# 机器人登录后多久可以加入战场（秒），默认30秒
+# 缩短此值让机器人更快响应战场排队（原值为120秒）
+AiPlayerbot.RandomBotBgJoinLoginDelay = 30
+# End By leewheel
+
 # Required Configuration for RandomBotAutoJoinBG
 #
 # Known issue: When enabling many brackets in combination with multiple instances, it can lead to more

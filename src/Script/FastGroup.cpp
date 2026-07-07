@@ -30,6 +30,13 @@
 #include "Playerbots.h"
 #include "AiFactory.h"
 #include "PlayerbotFactory.h"
+#include "DBCStores.h"
+#include "DBCStructure.h"
+
+#include <unordered_set>
+#include <map>
+#include <set>
+#include <string>
 
 using namespace Acore::ChatCommands;
 
@@ -104,9 +111,10 @@ static const ClassRoleEntry ClassRoleTable[] =
     { CLASS_PRIEST,       0, FG_ROLE_HEAL },
     { CLASS_PRIEST,       1, FG_ROLE_HEAL },
     { CLASS_PRIEST,       2, FG_ROLE_DPS  },
-    // 死骑：鲜血(0)=TANK, 冰霜(1)=TANK, 邪恶(2)=DPS
+    // 死骑：鲜血(0)=TANK, 冰霜(1)=DPS, 邪恶(2)=DPS
+    // 注：WLK中冰霜DK主要做DPS，与IsTankBySpec只判鲜血保持一致
     { CLASS_DEATH_KNIGHT, 0, FG_ROLE_TANK },
-    { CLASS_DEATH_KNIGHT, 1, FG_ROLE_TANK },
+    { CLASS_DEATH_KNIGHT, 1, FG_ROLE_DPS  },
     { CLASS_DEATH_KNIGHT, 2, FG_ROLE_DPS  },
     // 萨满：元素(0)=DPS, 增强(1)=DPS, 恢复(2)=HEAL
     { CLASS_SHAMAN,       0, FG_ROLE_DPS  },
@@ -325,20 +333,94 @@ private:
 #define sFastGroupMgr FastGroupMgr::instance()
 
 // ============================================================
+//  按天赋页索引直接分配天赋点（不依赖预设天赋链接）
+//  作者: leewheel 2026-07-07
+//  说明：InitTalentsBySpecNo 依赖 parsedSpecLinkOrder 预设天赋链接，
+//        如果配置中没有则什么都不做。本函数直接按天赋页 tabpage 分配天赋点，
+//        逻辑与 PlayerbotFactory::InitTalents 一致。
+// ============================================================
+static void InitTalentsByTab(Player* player, uint8 specTab)
+{
+    if (!player || player->GetLevel() < 10)
+        return;
+
+    // 先重置所有天赋
+    player->resetTalents(true);
+
+    uint32 classMask = player->getClassMask();
+
+    // 按行收集指定天赋页的所有天赋
+    std::map<uint32, std::vector<TalentEntry const*>> spells;
+    for (uint32 i = 0; i < sTalentStore.GetNumRows(); ++i)
+    {
+        TalentEntry const* talentInfo = sTalentStore.LookupEntry(i);
+        if (!talentInfo)
+            continue;
+
+        TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TalentTab);
+        if (!talentTabInfo || talentTabInfo->tabpage != specTab)
+            continue;
+
+        if ((classMask & talentTabInfo->ClassMask) == 0)
+            continue;
+
+        spells[talentInfo->Row].push_back(talentInfo);
+    }
+
+    // 逐行随机分配天赋点
+    for (auto i = spells.begin(); i != spells.end(); ++i)
+    {
+        std::vector<TalentEntry const*>& spells_row = i->second;
+        if (spells_row.empty())
+            continue;
+
+        int attemptCount = 0;
+        while (!spells_row.empty() && (int)player->GetFreeTalentPoints() > 0 && attemptCount++ < 3)
+        {
+            int index = urand(0, spells_row.size() - 1);
+            TalentEntry const* talentInfo = spells_row[index];
+            int maxRank = 0;
+            for (uint32 rank = 0; rank < std::min((uint32)MAX_TALENT_RANK, player->GetFreeTalentPoints()); ++rank)
+            {
+                uint32 spellId = talentInfo->RankID[rank];
+                if (!spellId)
+                    continue;
+                maxRank = rank;
+            }
+            if (talentInfo->DependsOn)
+            {
+                player->LearnTalent(talentInfo->DependsOn,
+                                    std::min(talentInfo->DependsOnRank, player->GetFreeTalentPoints() - 1));
+            }
+            player->LearnTalent(talentInfo->TalentID, maxRank);
+            spells_row.erase(spells_row.begin() + index);
+        }
+    }
+
+    player->SendTalentsInfoData(false);
+}
+
+// ============================================================
 //  从数据库中查找符合职业和阵营要求的离线机器人
+//  修复说明（By leewheel 2026-07-07）：
+//    1. 增加全局 usedGuids 参数，防止同一角色被分配到不同角色定位
+//    2. 一次性查询所有可用职业，按职业分组后轮流取用，确保职业均匀分布
+//    3. 增加全局 usedClasses 参数，跨角色定位去重职业
+//       5人队每种职业最多1人，10人团以此类推
+//       当需求超过可用职业种类数时，才允许同职业重复
 // ============================================================
 static std::vector<BotCandidate> FindOfflineBotsForRole(
     FastGroupRole role,
     uint8 teamId,
     uint32 neededCount,
-    uint32 masterLevel)
+    uint32 masterLevel,
+    std::unordered_set<uint32>& usedGuids,
+    std::set<uint8>& usedClasses)
 {
     std::vector<BotCandidate> candidates;
 
-    // 收集该角色定位下所有可用的（职业, 天赋页）组合
-    struct ClassSpecPair { uint8 cls; int tab; };
-    std::vector<ClassSpecPair> wantedSpecs;
-
+    // 收集该角色定位下所有不同的职业（去重），并记录每个职业对应的天赋页
+    std::map<uint8, int> classToSpecTab;
     for (auto const& entry : ClassRoleTable)
     {
         if (entry.role != role)
@@ -348,10 +430,12 @@ static std::vector<BotCandidate> FindOfflineBotsForRole(
         if (entry.playerClass == CLASS_DEATH_KNIGHT && masterLevel < 55)
             continue;
 
-        wantedSpecs.push_back({ entry.playerClass, entry.specTab });
+        // 同一职业只取第一个匹配项的天赋页
+        if (classToSpecTab.find(entry.playerClass) == classToSpecTab.end())
+            classToSpecTab[entry.playerClass] = entry.specTab;
     }
 
-    if (wantedSpecs.empty())
+    if (classToSpecTab.empty())
         return candidates;
 
     // 构建阵营种族条件
@@ -365,48 +449,86 @@ static std::vector<BotCandidate> FindOfflineBotsForRole(
         raceCondition = "race IN (2, 5, 6, 8, 10)";
     }
 
-    for (auto const& ws : wantedSpecs)
+    // 构建职业 IN 条件
+    std::string classList;
+    bool first = true;
+    for (auto const& [cls, tab] : classToSpecTab)
+    {
+        if (!first)
+            classList += ",";
+        classList += std::to_string(cls);
+        first = false;
+    }
+
+    // 一次性查询所有符合职业和阵营的离线角色
+    QueryResult results = CharacterDatabase.Query(
+        "SELECT guid, name, race, account, class FROM characters "
+        "WHERE class IN ({}) AND online = 0 AND {} "
+        "ORDER BY RAND()",
+        classList, raceCondition);
+
+    if (!results)
+        return candidates;
+
+    // 按职业分组（排除已被其他角色定位使用的角色）
+    std::map<uint8, std::vector<BotCandidate>> byClass;
+    do
+    {
+        Field* fields = results->Fetch();
+        uint32 guidLow = fields[0].Get<uint32>();
+
+        // 跳过已被其他角色定位使用的角色
+        if (usedGuids.find(guidLow) != usedGuids.end())
+            continue;
+
+        BotCandidate candidate;
+        candidate.guid = ObjectGuid(HighGuid::Player, guidLow);
+        candidate.name = fields[1].Get<std::string>();
+        candidate.race = fields[2].Get<uint8>();
+        candidate.accountId = fields[3].Get<uint32>();
+        candidate.playerClass = fields[4].Get<uint8>();
+        candidate.role = role;
+        candidate.specTab = classToSpecTab[candidate.playerClass];
+
+        byClass[candidate.playerClass].push_back(candidate);
+    } while (results->NextRow());
+
+    // 第一轮：优先从尚未被使用的职业中各取1个（确保每种职业最多1人）
+    for (auto& [cls, list] : byClass)
     {
         if (candidates.size() >= neededCount)
             break;
-
-        uint8 claz = ws.cls;
-
-        QueryResult results = CharacterDatabase.Query(
-            "SELECT guid, name, race, account FROM characters "
-            "WHERE class = '{}' AND online = 0 AND {} "
-            "ORDER BY RAND() LIMIT {}",
-            claz, raceCondition, neededCount - candidates.size());
-
-        if (!results)
+        // 跳过已被其他角色定位使用的职业
+        if (usedClasses.find(cls) != usedClasses.end())
             continue;
-
-        do
+        if (!list.empty())
         {
-            Field* fields = results->Fetch();
-            BotCandidate candidate;
-            candidate.guid = ObjectGuid(HighGuid::Player, fields[0].Get<uint32>());
-            candidate.name = fields[1].Get<std::string>();
-            candidate.race = fields[2].Get<uint8>();
-            candidate.accountId = fields[3].Get<uint32>();
-            candidate.playerClass = claz;
-            candidate.role = role;
-            candidate.specTab = ws.tab;
+            candidates.push_back(list.back());
+            usedGuids.insert(list.back().guid.GetCounter());
+            usedClasses.insert(cls);
+            list.pop_back();
+        }
+    }
 
-            // 去重检查
-            bool duplicate = false;
-            for (auto const& c : candidates)
+    // 第二轮：如果数量不够，轮流从所有职业（含已使用的）中取用
+    while (candidates.size() < neededCount)
+    {
+        bool added = false;
+        for (auto& [cls, list] : byClass)
+        {
+            if (candidates.size() >= neededCount)
+                break;
+            if (!list.empty())
             {
-                if (c.guid == candidate.guid)
-                {
-                    duplicate = true;
-                    break;
-                }
+                candidates.push_back(list.back());
+                usedGuids.insert(list.back().guid.GetCounter());
+                usedClasses.insert(cls);
+                list.pop_back();
+                added = true;
             }
-            if (!duplicate)
-                candidates.push_back(candidate);
-
-        } while (results->NextRow());
+        }
+        if (!added)
+            break;  // 所有职业都取完了
     }
 
     return candidates;
@@ -467,26 +589,32 @@ static bool ExecuteFastGroup(Player* master, FastGroupConfigIndex configIndex, C
     handler->PSendSysMessage("|cff00ccff[快速组队] 需要机器人：{} 坦克 + {} 治疗 + {} 输出 = {} 个|r",
         needTanks, needHeals, needDps, totalBotsNeeded);
 
-    // 招募各角色机器人
+    // 招募各角色机器人（使用全局usedGuids防止同一角色被分配到多个定位）
+    // By leewheel 2026-07-07：增加 usedClasses 跨定位职业去重，5人队每种职业最多1人
     std::vector<BotCandidate> allBots;
+    std::unordered_set<uint32> usedGuids;
+    std::set<uint8> usedClasses;
+
+    // 玩家自身的职业也算已使用，避免机器人与玩家同职业
+    usedClasses.insert(master->getClass());
 
     if (needTanks > 0)
     {
-        auto tanks = FindOfflineBotsForRole(FG_ROLE_TANK, teamId, needTanks, targetLevel);
+        auto tanks = FindOfflineBotsForRole(FG_ROLE_TANK, teamId, needTanks, targetLevel, usedGuids, usedClasses);
         for (auto& t : tanks)
             allBots.push_back(t);
     }
 
     if (needHeals > 0)
     {
-        auto heals = FindOfflineBotsForRole(FG_ROLE_HEAL, teamId, needHeals, targetLevel);
+        auto heals = FindOfflineBotsForRole(FG_ROLE_HEAL, teamId, needHeals, targetLevel, usedGuids, usedClasses);
         for (auto& h : heals)
             allBots.push_back(h);
     }
 
     if (needDps > 0)
     {
-        auto dps = FindOfflineBotsForRole(FG_ROLE_DPS, teamId, needDps, targetLevel);
+        auto dps = FindOfflineBotsForRole(FG_ROLE_DPS, teamId, needDps, targetLevel, usedGuids, usedClasses);
         for (auto& d : dps)
             allBots.push_back(d);
     }
@@ -677,10 +805,11 @@ public:
         PlayerbotFactory factory(player, targetLevel, quality);
         factory.SetExcludeHeirloom(true);
 
-        // 强制重置并按指定天赋页设置天赋
+        // 强制重置并按指定天赋页设置天赋（直接按tabpage分配，不依赖预设天赋链接）
+        // By leewheel 2026-07-07：修复 specTab=-1 导致数组越界 + InitTalentsBySpecNo 不生效的问题
         uint32 cls = player->getClass();
-        uint32 specNo = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
-        PlayerbotFactory::InitTalentsBySpecNo(player, specNo, true);
+        uint8 actualTab = (specTab >= 0 && specTab <= 2) ? (uint8)specTab : 0;  // specTab=-1 时用第0页
+        InitTalentsByTab(player, actualTab);
 
         // 学习法术
         factory.InitClassSpells();

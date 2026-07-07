@@ -362,6 +362,13 @@ bool PlayerbotAIConfig::Initialize()
     randomBotJoinBG = sConfigMgr->GetOption<bool>("AiPlayerbot.RandomBotJoinBG", true);
     randomBotAutoJoinBG = sConfigMgr->GetOption<bool>("AiPlayerbot.RandomBotAutoJoinBG", false);
 
+    // By leewheel 2026-07-07
+    // 战场排队最大等待时间（秒），默认180秒（3分钟），超过此时间强制更多机器人加入
+    randomBotBgMaxQueueWaitTime = sConfigMgr->GetOption<uint32>("AiPlayerbot.RandomBotBgMaxQueueWaitTime", 180);
+    // 机器人登录后多久可以加入战场（秒），默认30秒
+    randomBotBgJoinLoginDelay = sConfigMgr->GetOption<uint32>("AiPlayerbot.RandomBotBgJoinLoginDelay", 30);
+    // End By leewheel
+
     randomBotAutoJoinArenaBracket = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotAutoJoinArenaBracket", 14);
 
     randomBotAutoJoinWSBrackets = sConfigMgr->GetOption<std::string>("AiPlayerbot.RandomBotAutoJoinWSBrackets", "7");

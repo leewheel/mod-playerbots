@@ -231,6 +231,14 @@ public:
     bool randomBotJoinBG;
     bool randomBotAutoJoinBG;
 
+    // By leewheel 2026-07-07
+    // 战场排队相关配置：最大排队等待时间（秒），默认180秒（3分钟）
+    // 超过此时间后强制更多机器人加入战场队列
+    uint32 randomBotBgMaxQueueWaitTime;
+    // 机器人登录后多久可以加入战场（秒），默认30秒
+    uint32 randomBotBgJoinLoginDelay;
+    // End By leewheel
+
     std::string randomBotAutoJoinICBrackets;
     std::string randomBotAutoJoinEYBrackets;
     std::string randomBotAutoJoinAVBrackets;
