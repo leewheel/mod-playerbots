@@ -171,6 +171,15 @@ bool FastGroupMgr::HasFastGroupBots(ObjectGuid masterGuid)
 {
     return m_fastGroupBots.find(masterGuid) != m_fastGroupBots.end();
 }
+
+// By leewheel 2026-07-07 - 获取已注册的机器人GUID列表，供 AutoJoinRaid 检查上线状态后执行传送
+std::vector<ObjectGuid> FastGroupMgr::GetFastGroupBotGuids(ObjectGuid masterGuid)
+{
+    auto itr = m_fastGroupBots.find(masterGuid);
+    if (itr == m_fastGroupBots.end())
+        return {};
+    return itr->second;
+}
 // End By leewheel
 
 // ============================================================

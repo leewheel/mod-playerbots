@@ -123,6 +123,12 @@ public:
     // 检查玩家是否已有快速组队机器人
     bool HasFastGroupBots(ObjectGuid masterGuid);
 
+    // By leewheel 2026-07-07
+    // 获取玩家已注册的快速组队机器人GUID列表
+    // 供 AutoJoinRaid 检查机器人是否全部上线后执行传送
+    std::vector<ObjectGuid> GetFastGroupBotGuids(ObjectGuid masterGuid);
+    // End By leewheel
+
 private:
     FastGroupMgr() = default;
     ~FastGroupMgr() = default;
