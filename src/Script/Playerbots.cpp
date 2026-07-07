@@ -530,6 +530,10 @@ void AddSC_IcecrownBotScripts();
 void AddSC_RubySanctumBotScripts();
 void AddSC_HyjalSummitBotScripts();
 
+//By leewheel 2026-07-06 - 快速组队系统
+void AddSC_FastGroup();
+//End By leewheel
+
 void AddPlayerbotsScripts()
 {
     new PlayerbotsBattlefieldScript();
@@ -547,4 +551,8 @@ void AddPlayerbotsScripts()
     AddSC_IcecrownBotScripts();
     AddSC_RubySanctumBotScripts();
     AddSC_HyjalSummitBotScripts();
+
+    //By leewheel 2026-07-06 - 快速组队系统
+    AddSC_FastGroup();
+    //End By leewheel
 }
