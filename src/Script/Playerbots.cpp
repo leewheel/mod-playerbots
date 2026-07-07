@@ -534,6 +534,10 @@ void AddSC_HyjalSummitBotScripts();
 void AddSC_FastGroup();
 //End By leewheel
 
+//By leewheel 2026-07-07 - 自动加入团本系统
+void AddSC_AutoJoinRaid();
+//End By leewheel
+
 void AddPlayerbotsScripts()
 {
     new PlayerbotsBattlefieldScript();
@@ -554,5 +558,9 @@ void AddPlayerbotsScripts()
 
     //By leewheel 2026-07-06 - 快速组队系统
     AddSC_FastGroup();
+    //End By leewheel
+
+    //By leewheel 2026-07-07 - 自动加入团本系统
+    AddSC_AutoJoinRaid();
     //End By leewheel
 }

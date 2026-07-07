@@ -117,6 +117,13 @@ AiPlayerbot.DisabledWithoutRealPlayer = 0
 AiPlayerbot.DisabledWithoutRealPlayerLoginDelay = 30
 AiPlayerbot.DisabledWithoutRealPlayerLogoutDelay = 300
 
+# By leewheel 2026-07-07 - 自动加入团本系统
+# 当玩家处于团队浏览器（LFR）中时，机器人自动响应加入玩家想去的团本，
+# 按照团本规定实际人数入团，并满足坦克、治疗、DPS的配置。
+# Default: 1 (enabled)
+Playerbot.Auto.Join.Raid = 1
+# End By leewheel
+
 ####################################################################################################
 
 ###################################

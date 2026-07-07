@@ -33,6 +33,10 @@
 #include "DBCStores.h"
 #include "DBCStructure.h"
 
+// By leewheel 2026-07-07 - 引入共享头文件，供 AutoJoinRaid.cpp 共同使用
+#include "FastGroupCommon.h"
+// End By leewheel
+
 #include <unordered_set>
 #include <map>
 #include <set>
@@ -41,31 +45,9 @@
 using namespace Acore::ChatCommands;
 
 // ============================================================
-//  角色定位枚举
+//  标准队伍配置表定义
 // ============================================================
-enum FastGroupRole
-{
-    FG_ROLE_TANK  = 0,
-    FG_ROLE_HEAL  = 1,
-    FG_ROLE_DPS   = 2,
-    FG_ROLE_MAX   = 3
-};
-
-// ============================================================
-//  队伍配置结构
-// ============================================================
-struct FastGroupConfig
-{
-    uint32 totalMembers;  // 总人数（含玩家）
-    uint32 tanks;          // 坦克数量（含玩家）
-    uint32 heals;          // 治疗数量（含玩家）
-    uint32 dps;            // 输出数量（含玩家）
-};
-
-// ============================================================
-//  标准队伍配置表
-// ============================================================
-static const FastGroupConfig FastGroupConfigs[] =
+const FastGroupConfig FastGroupConfigs[] =
 {
     { 5,  1, 1,  3 },   // 5人队
     { 10, 2, 3,  5 },   // 10人团
@@ -73,27 +55,11 @@ static const FastGroupConfig FastGroupConfigs[] =
     { 40, 2, 8, 30 },   // 40人团
 };
 
-// 配置索引
-enum FastGroupConfigIndex
-{
-    FG_CONFIG_PARTY_5  = 0,
-    FG_CONFIG_RAID_10  = 1,
-    FG_CONFIG_RAID_25  = 2,
-    FG_CONFIG_RAID_40  = 3,
-};
-
 // ============================================================
-//  每个职业可担当的角色列表
+//  每个职业可担当的角色列表定义
 //  说明：specTab 是天赋页索引（0/1/2），对应客户端天赋面板从左到右
 // ============================================================
-struct ClassRoleEntry
-{
-    uint8 playerClass;
-    int   specTab;       // 天赋页索引，-1表示该职业所有天赋均可
-    FastGroupRole role;
-};
-
-static const ClassRoleEntry ClassRoleTable[] =
+const ClassRoleEntry ClassRoleTable[] =
 {
     // 战士：武器(0)=DPS, 狂暴(1)=DPS, 防护(2)=TANK
     { CLASS_WARRIOR,      2, FG_ROLE_TANK },
@@ -130,13 +96,90 @@ static const ClassRoleEntry ClassRoleTable[] =
     { CLASS_DRUID,        2, FG_ROLE_HEAL },
 };
 
+const size_t ClassRoleTableSize = sizeof(ClassRoleTable) / sizeof(ClassRoleTable[0]);
+
 // ============================================================
-//  辅助函数：基于天赋页判断角色定位
+//  FastGroupMgr 方法实现
+// ============================================================
+
+FastGroupMgr& FastGroupMgr::instance()
+{
+    static FastGroupMgr inst;
+    return inst;
+}
+
+void FastGroupMgr::AddPendingSetup(ObjectGuid botGuid, const PendingBotSetup& setup)
+{
+    m_pendingSetups[botGuid] = setup;
+}
+
+bool FastGroupMgr::PopPendingSetup(ObjectGuid botGuid, PendingBotSetup& out)
+{
+    auto itr = m_pendingSetups.find(botGuid);
+    if (itr == m_pendingSetups.end())
+        return false;
+    out = itr->second;
+    m_pendingSetups.erase(itr);
+    return true;
+}
+
+void FastGroupMgr::ClearPendingSetups(ObjectGuid masterGuid)
+{
+    for (auto it = m_pendingSetups.begin(); it != m_pendingSetups.end(); )
+    {
+        if (it->second.masterGuid == masterGuid)
+            it = m_pendingSetups.erase(it);
+        else
+            ++it;
+    }
+}
+
+void FastGroupMgr::RegisterFastGroupBots(Player* master, const std::vector<ObjectGuid>& botGuids)
+{
+    m_fastGroupBots[master->GetGUID()] = botGuids;
+}
+
+void FastGroupMgr::LogoutFastGroupBots(Player* master)
+{
+    if (!master)
+        return;
+
+    auto itr = m_fastGroupBots.find(master->GetGUID());
+    if (itr == m_fastGroupBots.end())
+        return;
+
+    PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(master);
+    if (mgr)
+    {
+        for (ObjectGuid botGuid : itr->second)
+        {
+            Player* bot = mgr->GetPlayerBot(botGuid);
+            if (bot)
+            {
+                LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，机器人 {} 正在下线。",
+                    master->GetName(), bot->GetName());
+                mgr->LogoutPlayerBot(botGuid);
+            }
+        }
+    }
+
+    m_fastGroupBots.erase(itr);
+}
+
+// By leewheel 2026-07-07 - 添加 HasFastGroupBots 方法，供 AutoJoinRaid 使用
+bool FastGroupMgr::HasFastGroupBots(ObjectGuid masterGuid)
+{
+    return m_fastGroupBots.find(masterGuid) != m_fastGroupBots.end();
+}
+// End By leewheel
+
+// ============================================================
+//  辅助函数实现：基于天赋页判断角色定位
 //  说明：不依赖 PlayerbotAI 对象，对真实玩家和机器人都适用
 // ============================================================
 
 // 获取玩家的天赋页索引（0/1/2），基于天赋点数最多的那一页
-static uint8 GetSpecTab(Player* player)
+uint8 GetSpecTab(Player* player)
 {
     if (!player || player->GetLevel() < 10)
         return 0;
@@ -144,7 +187,7 @@ static uint8 GetSpecTab(Player* player)
 }
 
 // 判断是否为坦克（纯天赋页判断，不依赖形态/光环）
-static bool IsTankBySpec(Player* player)
+bool IsTankBySpec(Player* player)
 {
     if (!player)
         return false;
@@ -160,7 +203,7 @@ static bool IsTankBySpec(Player* player)
 }
 
 // 判断是否为治疗（纯天赋页判断）
-static bool IsHealBySpec(Player* player)
+bool IsHealBySpec(Player* player)
 {
     if (!player)
         return false;
@@ -176,7 +219,7 @@ static bool IsHealBySpec(Player* player)
 }
 
 // 获取玩家角色定位
-static FastGroupRole GetPlayerRole(Player* player)
+FastGroupRole GetPlayerRole(Player* player)
 {
     if (IsTankBySpec(player))
         return FG_ROLE_TANK;
@@ -186,7 +229,7 @@ static FastGroupRole GetPlayerRole(Player* player)
 }
 
 // 获取角色中文名
-static const char* GetRoleNameCN(FastGroupRole role)
+const char* GetRoleNameCN(FastGroupRole role)
 {
     switch (role)
     {
@@ -198,7 +241,7 @@ static const char* GetRoleNameCN(FastGroupRole role)
 }
 
 // 获取职业中文名
-static const char* GetClassNameCN(uint8 playerClass)
+const char* GetClassNameCN(uint8 playerClass)
 {
     switch (playerClass)
     {
@@ -217,129 +260,13 @@ static const char* GetClassNameCN(uint8 playerClass)
 }
 
 // ============================================================
-//  候选机器人信息结构
-// ============================================================
-struct BotCandidate
-{
-    ObjectGuid guid;
-    std::string name;
-    uint8 playerClass;
-    uint8 race;
-    uint32 accountId;
-    FastGroupRole role;       // 该机器人要担当的角色
-    int  specTab;             // 要设置的天赋页索引
-};
-
-// ============================================================
-//  待设置的机器人信息（用于 OnPlayerLogin 时设置）
-// ============================================================
-struct PendingBotSetup
-{
-    uint32 targetLevel;
-    FastGroupRole role;
-    int specTab;
-    ObjectGuid masterGuid;
-    std::string botName;
-    std::string masterName;
-};
-
-// ============================================================
-//  快速组队核心管理类
-// ============================================================
-class FastGroupMgr
-{
-public:
-    static FastGroupMgr& instance()
-    {
-        static FastGroupMgr inst;
-        return inst;
-    }
-
-    // ---- 待设置机器人管理 ----
-
-    void AddPendingSetup(ObjectGuid botGuid, const PendingBotSetup& setup)
-    {
-        m_pendingSetups[botGuid] = setup;
-    }
-
-    bool PopPendingSetup(ObjectGuid botGuid, PendingBotSetup& out)
-    {
-        auto itr = m_pendingSetups.find(botGuid);
-        if (itr == m_pendingSetups.end())
-            return false;
-        out = itr->second;
-        m_pendingSetups.erase(itr);
-        return true;
-    }
-
-    void ClearPendingSetups(ObjectGuid masterGuid)
-    {
-        for (auto it = m_pendingSetups.begin(); it != m_pendingSetups.end(); )
-        {
-            if (it->second.masterGuid == masterGuid)
-                it = m_pendingSetups.erase(it);
-            else
-                ++it;
-        }
-    }
-
-    // ---- 快速组队机器人列表管理 ----
-
-    void RegisterFastGroupBots(Player* master, const std::vector<ObjectGuid>& botGuids)
-    {
-        m_fastGroupBots[master->GetGUID()] = botGuids;
-    }
-
-    void LogoutFastGroupBots(Player* master)
-    {
-        if (!master)
-            return;
-
-        auto itr = m_fastGroupBots.find(master->GetGUID());
-        if (itr == m_fastGroupBots.end())
-            return;
-
-        PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(master);
-        if (mgr)
-        {
-            for (ObjectGuid botGuid : itr->second)
-            {
-                Player* bot = mgr->GetPlayerBot(botGuid);
-                if (bot)
-                {
-                    LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，机器人 {} 正在下线。",
-                        master->GetName(), bot->GetName());
-                    mgr->LogoutPlayerBot(botGuid);
-                }
-            }
-        }
-
-        m_fastGroupBots.erase(itr);
-    }
-
-private:
-    FastGroupMgr() = default;
-    ~FastGroupMgr() = default;
-    FastGroupMgr(const FastGroupMgr&) = delete;
-    FastGroupMgr& operator=(const FastGroupMgr&) = delete;
-
-    // 主控玩家GUID -> 快速组队上线的机器人GUID列表
-    std::unordered_map<ObjectGuid, std::vector<ObjectGuid>> m_fastGroupBots;
-
-    // 机器人GUID -> 待设置信息（用于 OnPlayerLogin 时设置等级/天赋/装备）
-    std::unordered_map<ObjectGuid, PendingBotSetup> m_pendingSetups;
-};
-
-#define sFastGroupMgr FastGroupMgr::instance()
-
-// ============================================================
 //  按天赋页索引直接分配天赋点（不依赖预设天赋链接）
 //  作者: leewheel 2026-07-07
 //  说明：InitTalentsBySpecNo 依赖 parsedSpecLinkOrder 预设天赋链接，
 //        如果配置中没有则什么都不做。本函数直接按天赋页 tabpage 分配天赋点，
 //        逻辑与 PlayerbotFactory::InitTalents 一致。
 // ============================================================
-static void InitTalentsByTab(Player* player, uint8 specTab)
+void InitTalentsByTab(Player* player, uint8 specTab)
 {
     if (!player || player->GetLevel() < 10)
         return;
@@ -409,7 +336,7 @@ static void InitTalentsByTab(Player* player, uint8 specTab)
 //       5人队每种职业最多1人，10人团以此类推
 //       当需求超过可用职业种类数时，才允许同职业重复
 // ============================================================
-static std::vector<BotCandidate> FindOfflineBotsForRole(
+std::vector<BotCandidate> FindOfflineBotsForRole(
     FastGroupRole role,
     uint8 teamId,
     uint32 neededCount,
@@ -421,8 +348,9 @@ static std::vector<BotCandidate> FindOfflineBotsForRole(
 
     // 收集该角色定位下所有不同的职业（去重），并记录每个职业对应的天赋页
     std::map<uint8, int> classToSpecTab;
-    for (auto const& entry : ClassRoleTable)
+    for (size_t i = 0; i < ClassRoleTableSize; ++i)
     {
+        auto const& entry = ClassRoleTable[i];
         if (entry.role != role)
             continue;
 
@@ -536,8 +464,10 @@ static std::vector<BotCandidate> FindOfflineBotsForRole(
 
 // ============================================================
 //  主组队函数
+//  By leewheel 2026-07-07：从 ExecuteFastGroup 重命名为 DoFastGroup，
+//  ChatHandler 参数改为可选（默认 nullptr），供 AutoJoinRaid 调用。
 // ============================================================
-static bool ExecuteFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* handler)
+bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* handler)
 {
     if (!master)
         return false;
@@ -547,7 +477,8 @@ static bool ExecuteFastGroup(Player* master, FastGroupConfigIndex configIndex, C
     // 战斗中无法使用
     if (master->IsInCombat())
     {
-        handler->PSendSysMessage("|cffff0000[快速组队] 战斗中无法使用快速组队。|r");
+        if (handler)
+            handler->PSendSysMessage("|cffff0000[快速组队] 战斗中无法使用快速组队。|r");
         return false;
     }
 
@@ -563,15 +494,17 @@ static bool ExecuteFastGroup(Player* master, FastGroupConfigIndex configIndex, C
         oldGroup->RemoveMember(master->GetGUID(), GROUP_REMOVEMETHOD_LEAVE);
     }
 
-    handler->PSendSysMessage("|cff00ff00[快速组队] 正在组建 {} 人队伍...|r", config.totalMembers);
+    if (handler)
+        handler->PSendSysMessage("|cff00ff00[快速组队] 正在组建 {} 人队伍...|r", config.totalMembers);
 
     // 分析玩家自身的角色定位
     FastGroupRole playerRole = GetPlayerRole(master);
     uint8 teamId = master->GetTeamId(true);
     uint32 targetLevel = master->GetLevel();
 
-    handler->PSendSysMessage("|cff00ccff[快速组队] 玩家 {} 角色定位：{}，目标等级：{}|r",
-        master->GetName(), GetRoleNameCN(playerRole), targetLevel);
+    if (handler)
+        handler->PSendSysMessage("|cff00ccff[快速组队] 玩家 {} 角色定位：{}，目标等级：{}|r",
+            master->GetName(), GetRoleNameCN(playerRole), targetLevel);
 
     // 计算需要补充的各角色数量（扣除玩家自身）
     uint32 needTanks = config.tanks;
@@ -586,8 +519,9 @@ static bool ExecuteFastGroup(Player* master, FastGroupConfigIndex configIndex, C
     }
 
     uint32 totalBotsNeeded = needTanks + needHeals + needDps;
-    handler->PSendSysMessage("|cff00ccff[快速组队] 需要机器人：{} 坦克 + {} 治疗 + {} 输出 = {} 个|r",
-        needTanks, needHeals, needDps, totalBotsNeeded);
+    if (handler)
+        handler->PSendSysMessage("|cff00ccff[快速组队] 需要机器人：{} 坦克 + {} 治疗 + {} 输出 = {} 个|r",
+            needTanks, needHeals, needDps, totalBotsNeeded);
 
     // 招募各角色机器人（使用全局usedGuids防止同一角色被分配到多个定位）
     // By leewheel 2026-07-07：增加 usedClasses 跨定位职业去重，5人队每种职业最多1人
@@ -621,21 +555,24 @@ static bool ExecuteFastGroup(Player* master, FastGroupConfigIndex configIndex, C
 
     if (allBots.empty())
     {
-        handler->PSendSysMessage("|cffff0000[快速组队] 没有找到任何可用的离线机器人，组队失败。|r");
+        if (handler)
+            handler->PSendSysMessage("|cffff0000[快速组队] 没有找到任何可用的离线机器人，组队失败。|r");
         return false;
     }
 
     if (allBots.size() < totalBotsNeeded)
     {
-        handler->PSendSysMessage("|cffffcc00[快速组队] 警告：可用机器人不足，仅找到 {} 个（需要 {} 个）。|r",
-            allBots.size(), totalBotsNeeded);
+        if (handler)
+            handler->PSendSysMessage("|cffffcc00[快速组队] 警告：可用机器人不足，仅找到 {} 个（需要 {} 个）。|r",
+                allBots.size(), totalBotsNeeded);
     }
 
     // 获取 PlayerbotMgr
     PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(master);
     if (!mgr)
     {
-        handler->PSendSysMessage("|cffff0000[快速组队] 错误：无法获取 PlayerbotMgr。|r");
+        if (handler)
+            handler->PSendSysMessage("|cffff0000[快速组队] 错误：无法获取 PlayerbotMgr。|r");
         return false;
     }
 
@@ -648,12 +585,14 @@ static bool ExecuteFastGroup(Player* master, FastGroupConfigIndex configIndex, C
         // 检查是否已在线
         if (ObjectAccessor::FindConnectedPlayer(candidate.guid))
         {
-            handler->PSendSysMessage("|cffffcc00[快速组队] 机器人 {} 已在线，跳过。|r", candidate.name);
+            if (handler)
+                handler->PSendSysMessage("|cffffcc00[快速组队] 机器人 {} 已在线，跳过。|r", candidate.name);
             continue;
         }
 
-        handler->PSendSysMessage("|cff00ccff[快速组队] 正在召唤：{}（{}-{}）...|r",
-            candidate.name, GetClassNameCN(candidate.playerClass), GetRoleNameCN(candidate.role));
+        if (handler)
+            handler->PSendSysMessage("|cff00ccff[快速组队] 正在召唤：{}（{}-{}）...|r",
+                candidate.name, GetClassNameCN(candidate.playerClass), GetRoleNameCN(candidate.role));
 
         // 记录待设置信息，供 OnPlayerLogin 使用
         PendingBotSetup setup;
@@ -672,15 +611,19 @@ static bool ExecuteFastGroup(Player* master, FastGroupConfigIndex configIndex, C
 
     if (addedBotGuids.empty())
     {
-        handler->PSendSysMessage("|cffff0000[快速组队] 没有机器人被成功召唤，组队终止。|r");
+        if (handler)
+            handler->PSendSysMessage("|cffff0000[快速组队] 没有机器人被成功召唤，组队终止。|r");
         return false;
     }
 
     // 注册快速组队机器人列表（用于后续离队自动下线）
     sFastGroupMgr.RegisterFastGroupBots(master, addedBotGuids);
 
-    handler->PSendSysMessage("|cff00ff00[快速组队] 已召唤 {} 个机器人，正在设置等级和装备...|r", addedBotGuids.size());
-    handler->PSendSysMessage("|cff00ccff[快速组队] 机器人将自动加入队伍。玩家离队时所有机器人将自动下线。|r");
+    if (handler)
+    {
+        handler->PSendSysMessage("|cff00ff00[快速组队] 已召唤 {} 个机器人，正在设置等级和装备...|r", addedBotGuids.size());
+        handler->PSendSysMessage("|cff00ccff[快速组队] 机器人将自动加入队伍。玩家离队时所有机器人将自动下线。|r");
+    }
 
     LOG_INFO("playerbots", "快速组队：玩家 {} 组建 {} 人队伍，召唤了 {} 个机器人。",
         master->GetName(), config.totalMembers, addedBotGuids.size());
@@ -697,7 +640,7 @@ static bool HandleFastGroupParty5Command(ChatHandler* handler)
     Player* master = handler->GetSession()->GetPlayer();
     if (!master)
         return false;
-    return ExecuteFastGroup(master, FG_CONFIG_PARTY_5, handler);
+    return DoFastGroup(master, FG_CONFIG_PARTY_5, handler);
 }
 
 static bool HandleFastGroupRaid10Command(ChatHandler* handler)
@@ -705,7 +648,7 @@ static bool HandleFastGroupRaid10Command(ChatHandler* handler)
     Player* master = handler->GetSession()->GetPlayer();
     if (!master)
         return false;
-    return ExecuteFastGroup(master, FG_CONFIG_RAID_10, handler);
+    return DoFastGroup(master, FG_CONFIG_RAID_10, handler);
 }
 
 static bool HandleFastGroupRaid25Command(ChatHandler* handler)
@@ -713,7 +656,7 @@ static bool HandleFastGroupRaid25Command(ChatHandler* handler)
     Player* master = handler->GetSession()->GetPlayer();
     if (!master)
         return false;
-    return ExecuteFastGroup(master, FG_CONFIG_RAID_25, handler);
+    return DoFastGroup(master, FG_CONFIG_RAID_25, handler);
 }
 
 static bool HandleFastGroupRaid40Command(ChatHandler* handler)
@@ -721,7 +664,7 @@ static bool HandleFastGroupRaid40Command(ChatHandler* handler)
     Player* master = handler->GetSession()->GetPlayer();
     if (!master)
         return false;
-    return ExecuteFastGroup(master, FG_CONFIG_RAID_40, handler);
+    return DoFastGroup(master, FG_CONFIG_RAID_40, handler);
 }
 
 static bool HandleFastGroupDisbandCommand(ChatHandler* handler)
