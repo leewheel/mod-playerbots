@@ -33,6 +33,13 @@
 #include "DBCStores.h"
 #include "DBCStructure.h"
 
+// By leewheel 2026-07-08 - LFG角色分配所需头文件
+#include "LFGMgr.h"
+#include "LFG.h"
+#include "WorldPacket.h"
+#include "Opcodes.h"
+// End By leewheel
+
 // By leewheel 2026-07-07 - 引入共享头文件，供 AutoJoinRaid.cpp 共同使用
 #include "FastGroupCommon.h"
 // End By leewheel
@@ -164,6 +171,10 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
     }
 
     m_fastGroupBots.erase(itr);
+
+    // By leewheel 2026-07-08 - 清除角色分配标记
+    m_rolesAssigned.erase(master->GetGUID());
+    // End By leewheel
 }
 
 // By leewheel 2026-07-07 - 添加 HasFastGroupBots 方法，供 AutoJoinRaid 使用
@@ -179,6 +190,21 @@ std::vector<ObjectGuid> FastGroupMgr::GetFastGroupBotGuids(ObjectGuid masterGuid
     if (itr == m_fastGroupBots.end())
         return {};
     return itr->second;
+}
+// End By leewheel
+
+// By leewheel 2026-07-08 - LFG角色分配跟踪
+bool FastGroupMgr::HasRolesAssigned(ObjectGuid masterGuid)
+{
+    return m_rolesAssigned.find(masterGuid) != m_rolesAssigned.end();
+}
+
+void FastGroupMgr::SetRolesAssigned(ObjectGuid masterGuid, bool assigned)
+{
+    if (assigned)
+        m_rolesAssigned.insert(masterGuid);
+    else
+        m_rolesAssigned.erase(masterGuid);
 }
 // End By leewheel
 
@@ -641,8 +667,77 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
 }
 
 // ============================================================
-//  命令处理函数
+//  LFG角色分配函数
+//  By leewheel 2026-07-08
+//  为队伍中所有成员分配LFG角色（坦克/治疗/输出），
+//  并发送 SMSG_LFG_ROLE_CHOSEN 包使客户端显示角色图标。
+//  原理：WoW 3.3.5中队伍角色图标通过LFG系统显示，
+//  需要设置 sLFGMgr->SetRoles 并广播 SMSG_LFG_ROLE_CHOSEN 包。
 // ============================================================
+void AssignLfgRoles(Player* master)
+{
+    if (!master)
+        return;
+
+    Group* group = master->GetGroup();
+    if (!group)
+        return;
+
+    // 收集每个成员的角色
+    std::map<ObjectGuid, uint8> roleMap;
+
+    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+    {
+        Player* member = itr->GetSource();
+        if (!member)
+            continue;
+
+        // 基于天赋页判断角色定位
+        FastGroupRole role = GetPlayerRole(member);
+        uint8 roleMask = 0;
+        switch (role)
+        {
+            case FG_ROLE_TANK: roleMask = lfg::PLAYER_ROLE_TANK; break;
+            case FG_ROLE_HEAL: roleMask = lfg::PLAYER_ROLE_HEALER; break;
+            case FG_ROLE_DPS:  roleMask = lfg::PLAYER_ROLE_DAMAGE; break;
+            default: break;
+        }
+
+        // 队长额外加上队长标记
+        if (member->GetGUID() == group->GetLeaderGUID())
+            roleMask |= lfg::PLAYER_ROLE_LEADER;
+
+        roleMap[member->GetGUID()] = roleMask;
+
+        // 设置 LFG 角色
+        sLFGMgr->SetRoles(member->GetGUID(), roleMask);
+
+        LOG_DEBUG("playerbots", "快速组队：角色分配 - {} -> {}",
+            member->GetName(), GetRoleNameCN(role));
+    }
+
+    // 向每个成员发送所有成员的角色信息
+    // SMSG_LFG_ROLE_CHOSEN 格式: guid(uint64), ready(uint8), roles(uint32)
+    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+    {
+        Player* receiver = itr->GetSource();
+        if (!receiver || !receiver->GetSession())
+            continue;
+
+        for (auto const& [guid, roles] : roleMap)
+        {
+            WorldPacket data(SMSG_LFG_ROLE_CHOSEN, 8 + 1 + 4);
+            data << guid;
+            data << uint8(roles > 0 ? 1 : 0);
+            data << uint32(roles);
+            receiver->GetSession()->SendPacket(&data);
+        }
+    }
+
+    LOG_INFO("playerbots", "快速组队：玩家 {} 的队伍已完成LFG角色分配（{}人）。",
+        master->GetName(), roleMap.size());
+}
+// End By leewheel
 
 static bool HandleFastGroupParty5Command(ChatHandler* handler)
 {
@@ -722,7 +817,8 @@ class FastGroupPlayerScript : public PlayerScript
 public:
     FastGroupPlayerScript() : PlayerScript("FastGroupPlayerScript", {
         PLAYERHOOK_ON_LOGIN,
-        PLAYERHOOK_ON_LOGOUT
+        PLAYERHOOK_ON_LOGOUT,
+        PLAYERHOOK_ON_AFTER_UPDATE
     }) {}
 
     // 机器人上线时设置等级、天赋、装备
@@ -792,6 +888,57 @@ public:
         // 清除待设置记录
         sFastGroupMgr.ClearPendingSetups(player->GetGUID());
     }
+
+    // By leewheel 2026-07-08
+    // 定期检测机器人是否全部进组，全部进组后分配LFG角色
+    void OnPlayerAfterUpdate(Player* player, uint32 /*p_time*/) override
+    {
+        if (!player)
+            return;
+
+        // 跳过机器人
+        if (GET_PLAYERBOT_AI(player))
+            return;
+
+        ObjectGuid guid = player->GetGUID();
+
+        // 只处理有快速组队机器人的主控玩家
+        if (!sFastGroupMgr.HasFastGroupBots(guid))
+            return;
+
+        // 如果角色已分配，不再重复
+        if (sFastGroupMgr.HasRolesAssigned(guid))
+            return;
+
+        // 获取已注册的机器人列表
+        std::vector<ObjectGuid> botGuids = sFastGroupMgr.GetFastGroupBotGuids(guid);
+        if (botGuids.empty())
+            return;
+
+        // 检查玩家是否在队伍中
+        Group* group = player->GetGroup();
+        if (!group)
+            return;
+
+        // 检查所有机器人是否已进组
+        uint32 inGroupCount = 0;
+        for (ObjectGuid botGuid : botGuids)
+        {
+            if (group->IsMember(botGuid))
+                ++inGroupCount;
+        }
+
+        // 全部进组则分配角色
+        if (inGroupCount == botGuids.size())
+        {
+            AssignLfgRoles(player);
+            sFastGroupMgr.SetRolesAssigned(guid, true);
+
+            ChatHandler handler(player->GetSession());
+            handler.PSendSysMessage("|cff00ff00[快速组队] 所有成员已进组，LFG角色分配完成。|r");
+        }
+    }
+    // End By leewheel
 };
 
 // ============================================================

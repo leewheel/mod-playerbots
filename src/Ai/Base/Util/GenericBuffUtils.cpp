@@ -16,6 +16,43 @@
 #include "Unit.h"
 #include "Value.h"
 
+//By leewheel 2026-07-08: 机器人buff技能名称中文映射表（来源: chs_dbc.db_spell_12340_chs.Name_Lang_enUS）
+//服务端 spell.dbc 为英文（Playerbots 不识别中文技能），故在此将硬编码的英文技能名映射为中文显示
+namespace
+{
+    static const std::unordered_map<std::string, std::string> SPELL_NAME_CN = {
+        // 法师
+        {"arcane intellect",     "奥术智慧"},
+        {"arcane brilliance",   "奥术光辉"},
+        // 德鲁伊
+        {"mark of the wild",    "野性印记"},
+        {"gift of the wild",    "野性赐福"},
+        // 牧师
+        {"power word: fortitude",       "真言术：韧"},
+        {"prayer of fortitude",         "坚韧祷言"},
+        {"divine spirit",               "神圣之灵"},
+        {"prayer of spirit",            "精神祷言"},
+        {"shadow protection",           "暗影防护"},
+        {"prayer of shadow protection", "暗影防护祷言"},
+        // 圣骑士
+        {"blessing of kings",               "王者祝福"},
+        {"greater blessing of kings",       "强效王者祝福"},
+        {"blessing of might",               "力量祝福"},
+        {"greater blessing of might",       "强效力量祝福"},
+        {"blessing of wisdom",              "智慧祝福"},
+        {"greater blessing of wisdom",      "强效智慧祝福"},
+        {"blessing of sanctuary",           "庇护祝福"},
+        {"greater blessing of sanctuary",   "强效庇护祝福"},
+    };
+
+    std::string GetSpellNameCN(std::string const& enName)
+    {
+        auto it = SPELL_NAME_CN.find(enName);
+        return it != SPELL_NAME_CN.end() ? it->second : enName;
+    }
+}
+//End By leewheel
+
 namespace ai::buff
 {
     namespace
@@ -237,14 +274,15 @@ namespace ai::buff
             return false;
         }
 
+        //By leewheel 2026-07-08: 技能名称转中文显示
         std::map<std::string, std::string> placeholders = {
-            {"%base_spell", baseName},
-            {"%group_spell", groupName}
+            {"%base_spell", GetSpellNameCN(baseName)},
+            {"%group_spell", GetSpellNameCN(groupName)}
         };
 
         std::string const message = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "missing_group_buff_reagent",
-            "I am out of reagents for %group_spell and am casting %base_spell instead.",
+            "我的 %group_spell 施法材料用完了，改为施放 %base_spell。",
             placeholders);
 
         Group* group = bot->GetGroup();

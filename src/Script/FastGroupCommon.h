@@ -129,6 +129,12 @@ public:
     std::vector<ObjectGuid> GetFastGroupBotGuids(ObjectGuid masterGuid);
     // End By leewheel
 
+    // By leewheel 2026-07-08
+    // 角色分配跟踪：记录哪些主控玩家已经完成了LFG角色分配
+    bool HasRolesAssigned(ObjectGuid masterGuid);
+    void SetRolesAssigned(ObjectGuid masterGuid, bool assigned);
+    // End By leewheel
+
 private:
     FastGroupMgr() = default;
     ~FastGroupMgr() = default;
@@ -140,6 +146,11 @@ private:
 
     // 机器人GUID -> 待设置信息（用于 OnPlayerLogin 时设置等级/天赋/装备）
     std::unordered_map<ObjectGuid, PendingBotSetup> m_pendingSetups;
+
+    // By leewheel 2026-07-08
+    // 已完成LFG角色分配的主控玩家GUID集合
+    std::set<ObjectGuid> m_rolesAssigned;
+    // End By leewheel
 };
 
 #define sFastGroupMgr FastGroupMgr::instance()
@@ -180,5 +191,11 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
 
 // 主组队函数（ChatHandler 可选，为 nullptr 时不发送聊天消息）
 bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* handler = nullptr);
+
+// By leewheel 2026-07-08
+// 为队伍中所有成员分配LFG角色（坦克/治疗/输出），并发送 SMSG_LFG_ROLE_CHOSEN 包
+// 使客户端显示角色图标
+void AssignLfgRoles(Player* master);
+// End By leewheel
 
 #endif // FAST_GROUP_COMMON_H

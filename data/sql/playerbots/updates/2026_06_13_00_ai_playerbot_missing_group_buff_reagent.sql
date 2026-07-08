@@ -20,7 +20,7 @@ INSERT INTO ai_playerbot_texts
   (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
   (1900, 'missing_group_buff_reagent',
-   'I am out of reagents for %group_spell and am casting %base_spell instead.',
+   '我的 %group_spell 施法材料用完了，改为施放 %base_spell。',
    0, 0, '', '', '', '', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts_chance

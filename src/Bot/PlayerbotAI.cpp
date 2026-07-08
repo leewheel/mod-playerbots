@@ -9,6 +9,7 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 #include "AiFactory.h"
 #include "BudgetValues.h"
@@ -1632,6 +1633,51 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         "wotlk-vh", "zulaman"
     };
 
+    //By leewheel 2026-07-08: 副本策略名中文映射（来源: chs_dbc 及魔兽世界中文副本名）
+    static const std::unordered_map<std::string, std::string> INSTANCE_STRATEGY_CN = {
+        // 经典旧世
+        {"onyxia",        "奥妮克希亚的巢穴"},
+        {"moltencore",    "熔火之心"},
+        {"bwl",           "黑翼之巢"},
+        {"aq20",          "安其拉废墟"},
+        // 燃烧的远征
+        {"karazhan",      "卡拉赞"},
+        {"gruulslair",    "格鲁尔的巢穴"},
+        {"magtheridon",   "玛瑟里顿的巢穴"},
+        {"ssc",           "毒蛇神殿"},
+        {"tempestkeep",   "风暴要塞"},
+        {"hyjal",         "海加尔山"},
+        {"blacktemple",   "黑暗神殿"},
+        {"zulaman",       "祖阿曼"},
+        {"tbc-ac",        "奥金尼地穴"},
+        // 巫妖王之怒（5人副本）
+        {"wotlk-uk",      "乌特加德城堡"},
+        {"wotlk-up",      "乌特加德之巅"},
+        {"wotlk-nex",     "魔枢"},
+        {"wotlk-occ",     "魔环"},
+        {"wotlk-cos",     "净化斯坦索姆"},
+        {"wotlk-hos",     "岩石大厅"},
+        {"wotlk-dtk",     "达克萨隆要塞"},
+        {"wotlk-an",      "艾卓-尼鲁布"},
+        {"wotlk-hol",     "闪电大厅"},
+        {"wotlk-gd",      "古达克"},
+        {"wotlk-vh",      "紫罗兰监狱"},
+        {"wotlk-ok",      "安卡赫特：古代王国"},
+        {"wotlk-fos",     "灵魂洪炉"},
+        {"wotlk-pos",     "萨隆矿坑"},
+        {"wotlk-hor",     "映像大厅"},
+        {"wotlk-toc",     "冠军的试炼"},
+        // 巫妖王之怒（团队副本）
+        {"naxx",          "纳克萨玛斯"},
+        {"wotlk-os",      "黑曜石圣殿"},
+        {"wotlk-eoe",     "永恒之眼"},
+        {"ulduar",        "奥杜尔"},
+        {"voa",           "阿尔卡冯的宝库"},
+        {"icc",           "冰冠堡垒"},
+        {"rs",            "红玉圣殿"},
+    };
+    //End By leewheel
+
     for (const std::string& strat : allInstanceStrategies)
     {
         engines[BOT_STATE_COMBAT]->removeStrategy(strat);
@@ -1762,7 +1808,8 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     if (tellMaster && !strategyName.empty())
     {
         std::ostringstream out;
-        out << "已添加副本策略 " << strategyName;
+        auto cnIt = INSTANCE_STRATEGY_CN.find(strategyName);
+        out << "已添加副本策略 " << (cnIt != INSTANCE_STRATEGY_CN.end() ? cnIt->second : strategyName);
         TellMasterNoFacing(out.str());
     }
 }
