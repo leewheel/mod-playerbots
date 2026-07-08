@@ -156,18 +156,45 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
         return;
 
     PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(master);
-    if (mgr)
+
+    // By leewheel 2026-07-08
+    // 获取队伍指针，用于移除不在线的机器人
+    // 原因：玩家下线时 OnPlayerbotLogout 先执行 LogoutAllBots 下线了所有机器人，
+    //       然后 OnPlayerLogout 中 GetPlayerBot 返回 null，但机器人的 GUID 可能还在队伍中
+    //       （raid group 不会自动移除成员），需要手动从队伍中移除
+    Group* group = master->GetGroup();
+    // End By leewheel
+
+    for (ObjectGuid botGuid : itr->second)
     {
-        for (ObjectGuid botGuid : itr->second)
+        Player* bot = nullptr;
+        if (mgr)
+            bot = mgr->GetPlayerBot(botGuid);
+
+        if (bot)
         {
-            Player* bot = mgr->GetPlayerBot(botGuid);
-            if (bot)
-            {
-                LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，机器人 {} 正在下线。",
-                    master->GetName(), bot->GetName());
+            // 机器人在线，清除装备并下线
+            // By leewheel 2026-07-08
+            PlayerbotFactory clearFactory(bot, bot->GetLevel(), 0);
+            clearFactory.ClearAllItems();
+            bot->SaveToDB(false, false);
+            // End By leewheel
+
+            LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，机器人 {} 正在下线（已清除装备）。",
+                master->GetName(), bot->GetName());
+
+            if (mgr)
                 mgr->LogoutPlayerBot(botGuid);
-            }
         }
+        // By leewheel 2026-07-08
+        // 机器人不在线（可能已被 LogoutAllBots 下线），从队伍中移除 GUID
+        else if (group)
+        {
+            group->RemoveMember(botGuid, GROUP_REMOVEMETHOD_LEAVE);
+            LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，不在线的机器人 GUID {} 已从队伍移除。",
+                master->GetName(), botGuid.ToString());
+        }
+        // End By leewheel
     }
 
     m_fastGroupBots.erase(itr);
@@ -863,8 +890,12 @@ public:
         factory.InitClassSpells();
         factory.InitAvailableSpells();
 
-        // 装备
-        factory.InitEquipment(true);
+        // By leewheel 2026-07-08
+        // 装备：先清除所有旧装备，再以非增量模式安装当前等级最佳装备
+        // 双保险：虽然下线时已清除，但防止数据库残留或其他路径带入旧装备
+        factory.ClearAllItems();
+        factory.InitEquipment(false);
+        // End By leewheel
         factory.InitBags(true);
         factory.InitAmmo();
         if (targetLevel >= sPlayerbotAIConfig.minEnchantingBotLevel)
@@ -887,10 +918,15 @@ public:
 
         // 清除待设置记录
         sFastGroupMgr.ClearPendingSetups(player->GetGUID());
+
+        // By leewheel 2026-07-08 - 清除遗留机器人检查冷却
+        m_nextOrphanCheck.erase(player->GetGUID());
+        // End By leewheel
     }
 
     // By leewheel 2026-07-08
     // 定期检测机器人是否全部进组，全部进组后分配LFG角色
+    // 同时检测遗留机器人（上次快速组队遗留的机器人）
     void OnPlayerAfterUpdate(Player* player, uint32 /*p_time*/) override
     {
         if (!player)
@@ -901,6 +937,44 @@ public:
             return;
 
         ObjectGuid guid = player->GetGUID();
+
+        // By leewheel 2026-07-08
+        // 遗留机器人检查：如果玩家在队伍中，且队伍中有在线的机器人，
+        // 但 m_fastGroupBots 中没有记录，重新注册
+        // 原因：玩家下线时 m_fastGroupBots 记录被清除，但机器人可能通过 botAutologin 重新上线
+        //       导致退队时找不到记录无法下线机器人
+        if (!sFastGroupMgr.HasFastGroupBots(guid))
+        {
+            // 冷却检查：每 5 秒检测一次
+            time_t now = time(nullptr);
+            auto checkIt = m_nextOrphanCheck.find(guid);
+            if (checkIt != m_nextOrphanCheck.end() && now < checkIt->second)
+                return;
+            m_nextOrphanCheck[guid] = now + 5;
+
+            Group* group = player->GetGroup();
+            if (group)
+            {
+                std::vector<ObjectGuid> orphanBots;
+                for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                {
+                    Player* member = itr->GetSource();
+                    if (member && GET_PLAYERBOT_AI(member))
+                        orphanBots.push_back(member->GetGUID());
+                }
+
+                if (!orphanBots.empty())
+                {
+                    sFastGroupMgr.RegisterFastGroupBots(player, orphanBots);
+                    LOG_INFO("playerbots", "快速组队：玩家 {} 发现 {} 个遗留机器人，已重新纳入管理。",
+                        player->GetName(), orphanBots.size());
+
+                    ChatHandler handler(player->GetSession());
+                    handler.PSendSysMessage("|cff00ccff[快速组队] 检测到 {} 个遗留机器人，已重新纳入管理。|r", orphanBots.size());
+                }
+            }
+        }
+        // End By leewheel
 
         // 只处理有快速组队机器人的主控玩家
         if (!sFastGroupMgr.HasFastGroupBots(guid))
@@ -939,6 +1013,12 @@ public:
         }
     }
     // End By leewheel
+
+private:
+    // By leewheel 2026-07-08
+    // 遗留机器人检查冷却：玩家GUID -> 下次检查时间
+    std::unordered_map<ObjectGuid, time_t> m_nextOrphanCheck;
+    // End By leewheel
 };
 
 // ============================================================
@@ -952,7 +1032,7 @@ public:
         GROUPHOOK_ON_DISBAND
     }) {}
 
-    void OnRemoveMember(Group* /*group*/, ObjectGuid guid, RemoveMethod method, ObjectGuid /*kicker*/, const char* /*reason*/) override
+    void OnRemoveMember(Group* group, ObjectGuid guid, RemoveMethod method, ObjectGuid /*kicker*/, const char* /*reason*/) override
     {
         // 只处理玩家主动离队或被踢出
         if (method != GROUP_REMOVEMETHOD_LEAVE && method != GROUP_REMOVEMETHOD_KICK)
@@ -968,6 +1048,33 @@ public:
 
         // 如果该玩家有快速组队机器人在线，下线它们
         sFastGroupMgr.LogoutFastGroupBots(player);
+
+        // By leewheel 2026-07-08
+        // 备用检查：如果 m_fastGroupBots 没有记录（可能是上次下线时记录被清除了），
+        // 检查队伍中是否有在线的机器人需要下线
+        if (!sFastGroupMgr.HasFastGroupBots(guid) && group)
+        {
+            PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(player);
+            if (mgr)
+            {
+                for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                {
+                    Player* member = itr->GetSource();
+                    if (member && GET_PLAYERBOT_AI(member))
+                    {
+                        // 清除装备后下线
+                        PlayerbotFactory clearFactory(member, member->GetLevel(), 0);
+                        clearFactory.ClearAllItems();
+                        member->SaveToDB(false, false);
+
+                        mgr->LogoutPlayerBot(member->GetGUID());
+                        LOG_INFO("playerbots", "快速组队：玩家 {} 退队，遗留机器人 {} 已下线。",
+                            player->GetName(), member->GetName());
+                    }
+                }
+            }
+        }
+        // End By leewheel
     }
 
     void OnDisband(Group* /*group*/) override

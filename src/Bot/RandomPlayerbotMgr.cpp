@@ -2327,14 +2327,18 @@ std::string RandomPlayerbotMgr::GetEventData(uint32 bot, std::string const& even
 uint32 RandomPlayerbotMgr::SetEventValue(uint32 bot, std::string const& event, uint32 value, uint32 validIn,
                                          std::string const& data)
 {
-    PlayerbotsDatabaseTransaction trans = PlayerbotsDatabase.BeginTransaction();
-
+    // By Leewheel 2026-07-08 - 性能优化：将 BeginTransaction/CommitTransaction
+    // 改为异步 Execute。原事务方式会从连接池获取连接（BeginTransaction），
+    // 当批量处理多个机器人时（每次更新循环可能处理数十个机器人），
+    // 大量并发的事务请求会耗尽连接池导致主线程阻塞，造成随机 1s 卡顿。
+    // 这些事件值都是临时机器人状态（更新计时器、传送计划等），
+    // 即使 DELETE 和 INSERT 之间不保证原子性也不会造成问题。
     PlayerbotsDatabasePreparedStatement* stmt =
         PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_RANDOM_BOTS_BY_OWNER_AND_EVENT);
     stmt->SetData(0, 0);
     stmt->SetData(1, bot);
     stmt->SetData(2, event.c_str());
-    trans->Append(stmt);
+    PlayerbotsDatabase.Execute(stmt);
 
     if (value)
     {
@@ -2351,10 +2355,8 @@ uint32 RandomPlayerbotMgr::SetEventValue(uint32 bot, std::string const& event, u
         else
             stmt->SetData(6);  // NULL
 
-        trans->Append(stmt);
+        PlayerbotsDatabase.Execute(stmt);
     }
-
-    PlayerbotsDatabase.CommitTransaction(trans);
 
     // Update in-memory cache
     BotEventCache& cache = eventCache[bot];

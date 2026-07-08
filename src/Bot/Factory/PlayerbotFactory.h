@@ -91,6 +91,11 @@ public:
     void InitAttunementQuests();
     void InitGuild();
 
+    // By leewheel 2026-07-08 - 移至 public 供快速组队系统调用
+    void ClearInventory();
+    void ClearAllItems();
+    // End By leewheel
+
 private:
     enum class ProfessionSpecializationSpell : uint32
     {
@@ -184,8 +189,6 @@ private:
     void InitTalents(uint32 specNo);
     void InitTalentsByTemplate(uint32 specNo);
     void InitQuests(std::list<uint32>& questMap, bool withRewardItem = true);
-    void ClearInventory();
-    void ClearAllItems();
     void ResetQuests();
 
     std::vector<uint32> GetCurrentGemsCount();
