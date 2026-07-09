@@ -1630,7 +1630,10 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         "ulduar", "voa", "wotlk-an", "wotlk-cos", "wotlk-dtk", "wotlk-eoe", "wotlk-fos",
         "wotlk-gd", "wotlk-hol", "wotlk-hor", "wotlk-hos", "wotlk-nex", "wotlk-occ",
         "wotlk-ok", "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up",
-        "wotlk-vh", "zulaman"
+        "wotlk-vh", "zulaman",
+        //By leewheel 2026-07-08
+        "sunwell"
+        //End By leewheel
     };
 
     //By leewheel 2026-07-08: 副本策略名中文映射（来源: chs_dbc 及魔兽世界中文副本名）
@@ -1675,6 +1678,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         {"voa",           "阿尔卡冯的宝库"},
         {"icc",           "冰冠堡垒"},
         {"rs",            "红玉圣殿"},
+        //By leewheel 2026-07-08
+        {"sunwell",       "太阳井高地"},
+        //End By leewheel
     };
     //End By leewheel
 
@@ -1729,6 +1735,11 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         case 568:
             strategyName = "zulaman";  // Zul'Aman
             break;
+        //By leewheel 2026-07-08
+        case 580:
+            strategyName = "sunwell";  // Sunwell Plateau
+            break;
+        //End By leewheel
         case 574:
             strategyName = "wotlk-uk";  // Utgarde Keep
             break;

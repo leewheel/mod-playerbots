@@ -21,6 +21,9 @@
 #include "OnyStrategy.h"
 #include "ICCStrategy.h"
 #include "RSStrategy.h"
+//By leewheel 2026-07-08
+#include "SWPStrategy.h"
+//End By leewheel
 
 class RaidStrategyContext : public NamedObjectContext<Strategy>
 {
@@ -46,6 +49,9 @@ public:
         creators["onyxia"] = &RaidStrategyContext::onyxia;
         creators["icc"] = &RaidStrategyContext::icc;
         creators["rs"] = &RaidStrategyContext::rs;
+        //By leewheel 2026-07-08
+        creators["sunwell"] = &RaidStrategyContext::sunwell;
+        //End By leewheel
     }
 
 private:
@@ -68,6 +74,9 @@ private:
     static Strategy* ulduar(PlayerbotAI* botAI) { return new RaidUlduarStrategy(botAI); }
     static Strategy* icc(PlayerbotAI* botAI) { return new RaidIccStrategy(botAI); }
     static Strategy* rs(PlayerbotAI* botAI) { return new RaidRsStrategy(botAI); }
+    //By leewheel 2026-07-08
+    static Strategy* sunwell(PlayerbotAI* botAI) { return new RaidSunwellPlateauStrategy(botAI); }
+    //End By leewheel
 };
 
 #endif

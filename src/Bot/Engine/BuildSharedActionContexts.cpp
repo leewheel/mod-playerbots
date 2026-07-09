@@ -21,6 +21,9 @@
 #include "OnyActionContext.h"
 #include "ICCActionContext.h"
 #include "RSActionContext.h"
+//By leewheel 2026-07-08
+#include "SWPActionContext.h"
+//End By leewheel
 #include "Ai/Dungeon/TbcDungeonActionContext.h"
 #include "Ai/Dungeon/WotlkDungeonActionContext.h"
 
@@ -48,6 +51,9 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new RaidOnyxiaActionContext());
     actionContexts.Add(new RaidIccActionContext());
     actionContexts.Add(new RaidRsActionContext());
+    //By leewheel 2026-07-08
+    actionContexts.Add(new RaidSunwellPlateauActionContext());
+    //End By leewheel
     actionContexts.Add(new TbcDungeonAuchenaiCryptsActionContext());
     actionContexts.Add(new WotlkDungeonUKActionContext());
     actionContexts.Add(new WotlkDungeonNexActionContext());
