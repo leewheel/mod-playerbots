@@ -23,6 +23,86 @@ bool SunwellBotIsNotInCombatTrigger::IsActive()
     return !bot->IsInCombat() && bot->GetMapId() == SUNWELL_MAP_ID;
 }
 
+// ===== 入口小怪 (Entrance Trash) =====
+
+bool SwpTrashTankPullTrigger::IsActive()
+{
+    // 只有坦克触发
+    if (!botAI->IsTank(bot))
+        return false;
+
+    // 必须在SWP地图
+    if (bot->GetMapId() != SUNWELL_MAP_ID)
+        return false;
+
+    // 如果有BOSS在场则不触发（BOSS阶段优先）
+    if (IsAnySwBossPresent(botAI))
+        return false;
+
+    // 必须有存活的入口小怪
+    if (!HasAliveEntranceTrash(botAI, bot))
+        return false;
+
+    // 坦克必须在入口区域附近
+    float distToEntrance = bot->GetExactDist2d(
+        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
+        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
+    if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
+        return false;
+
+    return true;
+}
+
+bool SwpTrashGroupHoldTrigger::IsActive()
+{
+    // 非坦克才触发（坦克用拉怪触发器）
+    if (botAI->IsTank(bot))
+        return false;
+
+    // 必须在SWP地图
+    if (bot->GetMapId() != SUNWELL_MAP_ID)
+        return false;
+
+    // 如果有BOSS在场则不触发
+    if (IsAnySwBossPresent(botAI))
+        return false;
+
+    // 必须有存活的入口小怪
+    if (!HasAliveEntranceTrash(botAI, bot))
+        return false;
+
+    // 机器人必须在入口区域附近
+    float distToEntrance = bot->GetExactDist2d(
+        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
+        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
+    if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
+        return false;
+
+    // 如果小怪已经到达参战位置，则不触发等待（让正常战斗AI接管）
+    if (HasTrashNearEngagePos(botAI, bot))
+        return false;
+
+    return true;
+}
+
+bool SwpDeadPartyMemberWaitingTrigger::IsActive()
+{
+    // 必须在SWP地图
+    if (bot->GetMapId() != SUNWELL_MAP_ID)
+        return false;
+
+    // 机器人必须存活
+    if (!bot->IsAlive())
+        return false;
+
+    // 不在战斗中时才触发（战斗中不阻止行动）
+    if (bot->IsInCombat())
+        return false;
+
+    // 检查是否有尚未复活的死亡队友
+    return HasDeadPartyMemberNotResurrected(botAI, bot);
+}
+
 // ===== 卡雷苟斯 (Kalecgos) =====
 
 bool KalecgosPullingBossTrigger::IsActive()

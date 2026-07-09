@@ -21,6 +21,14 @@ public:
         creators["sunwell erase timers and trackers"] =
             &RaidSunwellPlateauActionContext::sunwell_erase_timers_and_trackers;
 
+        // 入口小怪
+        creators["swp trash tank pull"] =
+            &RaidSunwellPlateauActionContext::swp_trash_tank_pull;
+        creators["swp trash group hold"] =
+            &RaidSunwellPlateauActionContext::swp_trash_group_hold;
+        creators["swp wait for dead party members"] =
+            &RaidSunwellPlateauActionContext::swp_wait_for_dead_party_members;
+
         // 卡雷苟斯
         creators["kalecgos misdirect boss to main tank"] =
             &RaidSunwellPlateauActionContext::kalecgos_misdirect_boss_to_main_tank;
@@ -110,6 +118,14 @@ private:
     // 通用
     static Action* sunwell_erase_timers_and_trackers(
         PlayerbotAI* botAI) { return new SunwellEraseTimersAndTrackersAction(botAI); }
+
+    // 入口小怪
+    static Action* swp_trash_tank_pull(
+        PlayerbotAI* botAI) { return new SwpTrashTankPullAction(botAI); }
+    static Action* swp_trash_group_hold(
+        PlayerbotAI* botAI) { return new SwpTrashGroupHoldAction(botAI); }
+    static Action* swp_wait_for_dead_party_members(
+        PlayerbotAI* botAI) { return new SwpWaitForDeadPartyMembersAction(botAI); }
 
     // 卡雷苟斯
     static Action* kalecgos_misdirect_boss_to_main_tank(

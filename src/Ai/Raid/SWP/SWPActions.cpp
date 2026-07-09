@@ -17,6 +17,101 @@
 
 using namespace SunwellPlateauHelpers;
 
+// ===== 入口小怪 (Entrance Trash) =====
+
+bool SwpTrashTankPullAction::Execute(Event /*event*/)
+{
+    // 获取最近的存活入口小怪
+    Unit* nearestTrash = GetNearestAliveEntranceTrash(botAI, bot);
+    if (!nearestTrash)
+        return false;
+
+    // 检查坦克是否已经在与小怪战斗
+    bool inCombatWithTrash = bot->IsInCombat() && nearestTrash->GetVictim() == bot;
+
+    if (!inCombatWithTrash)
+    {
+        // 阶段1: 坦克尚未引怪，移动到最近的小怪位置进行body-pull
+        float distToTrash = bot->GetExactDist2d(nearestTrash);
+        if (distToTrash > 5.0f)
+        {
+            // 向小怪方向移动
+            float dX = nearestTrash->GetPositionX() - bot->GetPositionX();
+            float dY = nearestTrash->GetPositionY() - bot->GetPositionY();
+            float moveDist = std::min(10.0f, distToTrash);
+            float moveX = bot->GetPositionX() + (dX / distToTrash) * moveDist;
+            float moveY = bot->GetPositionY() + (dY / distToTrash) * moveDist;
+
+            return MoveTo(SUNWELL_MAP_ID, moveX, moveY, nearestTrash->GetPositionZ(),
+                          false, false, false, false,
+                          MovementPriority::MOVEMENT_FORCED, true, false);
+        }
+
+        // 近距离直接攻击引怪
+        return Attack(nearestTrash);
+    }
+
+    // 阶段2: 坦克已引怪，将小怪拉回参战位置
+    float distToEngage = bot->GetExactDist2d(
+        SWP_ENTRANCE_ENGAGE_POS.GetPositionX(),
+        SWP_ENTRANCE_ENGAGE_POS.GetPositionY());
+
+    if (distToEngage > 5.0f)
+    {
+        // 向参战位置移动，同时保持对小怪的仇恨
+        float dX = SWP_ENTRANCE_ENGAGE_POS.GetPositionX() - bot->GetPositionX();
+        float dY = SWP_ENTRANCE_ENGAGE_POS.GetPositionY() - bot->GetPositionY();
+        float moveDist = std::min(8.0f, distToEngage);
+        float moveX = bot->GetPositionX() + (dX / distToEngage) * moveDist;
+        float moveY = bot->GetPositionY() + (dY / distToEngage) * moveDist;
+
+        return MoveTo(SUNWELL_MAP_ID, moveX, moveY, SWP_ENTRANCE_ENGAGE_POS.GetPositionZ(),
+                      false, false, false, false,
+                      MovementPriority::MOVEMENT_COMBAT, true, true);
+    }
+
+    // 已到达参战位置，正常攻击
+    if (AI_VALUE(Unit*, "current target") != nearestTrash)
+        return Attack(nearestTrash);
+
+    return false;
+}
+
+bool SwpTrashGroupHoldAction::Execute(Event /*event*/)
+{
+    // 非坦克机器人在参战位置等待，不参战也不捡尸体
+    float distToEngage = bot->GetExactDist2d(
+        SWP_ENTRANCE_ENGAGE_POS.GetPositionX(),
+        SWP_ENTRANCE_ENGAGE_POS.GetPositionY());
+
+    if (distToEngage > 5.0f)
+    {
+        // 移动到参战位置
+        float dX = SWP_ENTRANCE_ENGAGE_POS.GetPositionX() - bot->GetPositionX();
+        float dY = SWP_ENTRANCE_ENGAGE_POS.GetPositionY() - bot->GetPositionY();
+        float moveDist = std::min(10.0f, distToEngage);
+        float moveX = bot->GetPositionX() + (dX / distToEngage) * moveDist;
+        float moveY = bot->GetPositionY() + (dY / distToEngage) * moveDist;
+
+        return MoveTo(SUNWELL_MAP_ID, moveX, moveY, SWP_ENTRANCE_ENGAGE_POS.GetPositionZ(),
+                      false, false, false, false,
+                      MovementPriority::MOVEMENT_FORCED, true, false);
+    }
+
+    // 已在参战位置，停止移动等待
+    bot->StopMoving();
+    return true;
+}
+
+bool SwpWaitForDeadPartyMembersAction::Execute(Event /*event*/)
+{
+    // 团灭后有队友尚未复活时，存活机器人原地等待
+    // 不捡尸体、不移动，防止引怪
+    bot->StopMoving();
+    bot->SetTarget(ObjectGuid::Empty);
+    return true;
+}
+
 // ===== 通用 =====
 
 bool SunwellEraseTimersAndTrackersAction::Execute(Event /*event*/)

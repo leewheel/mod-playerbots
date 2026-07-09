@@ -3,6 +3,10 @@
  * 太阳之井高地 (Sunwell Plateau) 策略辅助函数实现
  * 作者: leewheel
  */
+//By leewheel 2026-07-09 修复AI_VALUE2宏在自由函数中不可用的问题，改用botAI->GetAiObjectContext()直接访问
+//                修复using namespace导致的函数重载歧义，改为namespace块包裹定义（与其他RaidHelper一致）
+//                修复SPELL_ENCAPSULATE枚举名错误，改为SPELL_ENCAPSULATE_CHANNEL
+//End By leewheel 2026-07-09
 //End By leewheel
 
 #include "SWPHelpers.h"
@@ -10,7 +14,8 @@
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
 
-using namespace SunwellPlateauHelpers;
+namespace SunwellPlateauHelpers
+{
 
 // ===== 卡雷苟斯 - 坐标定义 =====
 const Position KALECGOS_TANK_POSITION      = { 1704.0f, 930.0f, -74.5f, 0.0f };
@@ -59,6 +64,12 @@ const Position KILJAEDEN_SAFE_POSITION     = { 1720.0f, 400.0f, 28.0f, 0.0f };
 
 std::unordered_map<uint32, int> kiljaedenLastPhase;
 std::unordered_map<uint32, time_t> kiljaedenPhaseTimer;
+
+// ===== 入口区域 - 坐标定义 =====
+// 坐标1: 门口第一群怪的位置（坦克引怪点）
+const Position SWP_ENTRANCE_TRASH_GROUP1_POS = { 1655.14f, 923.453f, 15.6266f, 0.0f };
+// 坐标2: 坦克拉怪目的地 / 团队等待参战位置
+const Position SWP_ENTRANCE_ENGAGE_POS = { 1720.8975f, 876.3326f, 15.572174f, 0.0f };
 
 // ===== 辅助函数实现 =====
 
@@ -120,12 +131,14 @@ bool HasEncapsulateNearby(PlayerbotAI* botAI, Player* bot)
         return false;
 
     // 查找正在施放包裹的菲米丝
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    // By leewheel 2026-07-09 自由函数中不能使用AI_VALUE2宏，改用botAI->GetAiObjectContext()直接访问
+    Unit* felmyst = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "felmyst")->Get();
+    // End By leewheel 2026-07-09
     if (!felmyst)
         return false;
 
     // 检查菲米丝是否正在施放包裹法术（通道法术，用FindCurrentSpellBySpellId检测）
-    if (felmyst->FindCurrentSpellBySpellId(static_cast<uint32>(SunwellSpells::SPELL_ENCAPSULATE)))
+    if (felmyst->FindCurrentSpellBySpellId(static_cast<uint32>(SunwellSpells::SPELL_ENCAPSULATE_CHANNEL)))
     {
         // 如果菲米丝的目标是附近玩家，或自己在范围内
         if (felmyst->GetVictim() && bot->GetExactDist2d(felmyst->GetVictim()) < 20.0f)
@@ -141,7 +154,9 @@ Unit* GetNearestVoidSentinel(PlayerbotAI* botAI, Player* bot)
     if (!botAI || !bot)
         return nullptr;
 
-    return AI_VALUE2(Unit*, "find target", "void sentinel");
+    // By leewheel 2026-07-09 自由函数中不能使用AI_VALUE2宏
+    return botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "void sentinel")->Get();
+    // End By leewheel 2026-07-09
 }
 
 // 检查基尔加丹是否在施放千魂之暗
@@ -160,7 +175,9 @@ Unit* GetShieldOrb(PlayerbotAI* botAI, Player* bot)
     if (!botAI || !bot)
         return nullptr;
 
-    return AI_VALUE2(Unit*, "find target", "shield orb");
+    // By leewheel 2026-07-09 自由函数中不能使用AI_VALUE2宏
+    return botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "shield orb")->Get();
+    // End By leewheel 2026-07-09
 }
 
 // 获取邪恶映像列表
@@ -212,8 +229,10 @@ float GetKalecgosHealthDifference(PlayerbotAI* botAI, Player* bot)
     if (!botAI || !bot)
         return FLT_MAX;
 
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
-    Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor");
+    // By leewheel 2026-07-09 自由函数中不能使用AI_VALUE2宏，改用botAI->GetAiObjectContext()直接访问
+    Unit* kalecgos = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "kalecgos")->Get();
+    Unit* sathrovarr = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "sathrovarr the corruptor")->Get();
+    // End By leewheel 2026-07-09
 
     if (!kalecgos || !sathrovarr)
         return FLT_MAX;
@@ -251,8 +270,10 @@ bool IsKalecgosEnrageImminent(PlayerbotAI* botAI, Player* bot)
     if (!botAI || !bot)
         return false;
 
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
-    Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor");
+    // By leewheel 2026-07-09 自由函数中不能使用AI_VALUE2宏，改用botAI->GetAiObjectContext()直接访问
+    Unit* kalecgos = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "kalecgos")->Get();
+    Unit* sathrovarr = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "sathrovarr the corruptor")->Get();
+    // End By leewheel 2026-07-09
 
     if (!kalecgos || !sathrovarr)
         return false;
@@ -320,3 +341,153 @@ bool HasCurseOfBoundlessAgonyNearby(Player* bot)
 
     return false;
 }
+
+// ===== 入口小怪辅助函数实现 =====
+
+// 检查NPC entry是否为SWP入口小怪
+bool IsSunwellEntranceTrash(uint32 entry)
+{
+    switch (entry)
+    {
+        case static_cast<uint32>(SunwellTrashNpcs::NPC_SUNBLADE_CABALIST):
+        case static_cast<uint32>(SunwellTrashNpcs::NPC_SUNBLADE_ARCH_MAGE):
+        case static_cast<uint32>(SunwellTrashNpcs::NPC_SUNBLADE_SLAYER):
+        case static_cast<uint32>(SunwellTrashNpcs::NPC_SUNBLADE_VINDICATOR):
+        case static_cast<uint32>(SunwellTrashNpcs::NPC_SUNBLADE_DUSK_PRIEST):
+        case static_cast<uint32>(SunwellTrashNpcs::NPC_SUNBLADE_DAWN_PRIEST):
+        case static_cast<uint32>(SunwellTrashNpcs::NPC_SUNBLADE_SCOUT):
+        case static_cast<uint32>(SunwellTrashNpcs::NPC_SUNBLADE_PROTECTOR):
+            return true;
+        default:
+            return false;
+    }
+}
+
+// 检查是否有存活的入口小怪
+bool HasAliveEntranceTrash(PlayerbotAI* botAI, Player* bot)
+{
+    if (!botAI || !bot)
+        return false;
+
+    auto const& npcs =
+        botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+    for (auto const& guid : npcs)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->IsAlive() && IsSunwellEntranceTrash(unit->GetEntry()))
+            return true;
+    }
+
+    return false;
+}
+
+// 获取最近的存活入口小怪
+Unit* GetNearestAliveEntranceTrash(PlayerbotAI* botAI, Player* bot)
+{
+    if (!botAI || !bot)
+        return nullptr;
+
+    Unit* nearest = nullptr;
+    float bestDist = std::numeric_limits<float>::max();
+
+    auto const& npcs =
+        botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+    for (auto const& guid : npcs)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        if (!IsSunwellEntranceTrash(unit->GetEntry()))
+            continue;
+
+        float dist = bot->GetExactDist2d(unit);
+        if (dist < bestDist)
+        {
+            bestDist = dist;
+            nearest = unit;
+        }
+    }
+
+    return nearest;
+}
+
+// 检查是否有入口小怪已经到达参战位置附近
+bool HasTrashNearEngagePos(PlayerbotAI* botAI, Player* bot)
+{
+    if (!botAI || !bot)
+        return false;
+
+    auto const& npcs =
+        botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+    for (auto const& guid : npcs)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        if (!IsSunwellEntranceTrash(unit->GetEntry()))
+            continue;
+
+        float dist = unit->GetExactDist2d(
+            SWP_ENTRANCE_ENGAGE_POS.GetPositionX(),
+            SWP_ENTRANCE_ENGAGE_POS.GetPositionY());
+        if (dist <= SWP_ENGAGE_POS_RADIUS)
+            return true;
+    }
+
+    return false;
+}
+
+// 检查是否有任何BOSS正在被战斗
+bool IsAnySwBossPresent(PlayerbotAI* botAI)
+{
+    if (!botAI)
+        return false;
+
+    static const char* bossNames[] = {
+        "kalecgos",
+        "brutallus",
+        "felmyst",
+        "lady sacrolash",
+        "grand warlock alythess",
+        "muru",
+        "entropius",
+        "kil'jaeden"
+    };
+
+    for (const char* name : bossNames)
+    {
+        Unit* boss = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", name)->Get();
+        if (boss)
+            return true;
+    }
+
+    return false;
+}
+
+// 检查是否有尚未复活的死亡队友（幽灵状态）
+bool HasDeadPartyMemberNotResurrected(PlayerbotAI* botAI, Player* bot)
+{
+    if (!botAI || !bot)
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || member == bot)
+            continue;
+
+        // 检查是否死亡且尚未接受复活
+        if (!member->IsAlive() && !member->isResurrectRequested())
+            return true;
+    }
+
+    return false;
+}
+
+}  // namespace SunwellPlateauHelpers

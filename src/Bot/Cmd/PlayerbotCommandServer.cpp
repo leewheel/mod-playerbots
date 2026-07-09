@@ -77,7 +77,7 @@ void Run()
     }
 
     std::ostringstream s;
-    s << "Starting Playerbots Command Server on port " << sPlayerbotAIConfig.commandServerPort;
+    s << "\x1b[32m" << "正在启动 Playerbots 命令服务器，端口 " << sPlayerbotAIConfig.commandServerPort << "\x1b[0m";
     LOG_INFO("playerbots", "{}", s.str().c_str());
 
     try

@@ -287,6 +287,11 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
     if (!player->InBattleground())
         engine->addStrategiesNoInit("racials", "chat", "default", "cast time", "potions", "duel", "boost", nullptr);
 
+    //By leewheel 2026-07-09: Vimgol quest strategy (summon + interrupt phases)
+    if (!player->InBattleground())
+        engine->addStrategy("vimgol", false);
+    //End By leewheel
+
     if (sPlayerbotAIConfig.autoAvoidAoe && facade->HasRealPlayerMaster())
         engine->addStrategy("avoid aoe", false);
 
@@ -584,6 +589,11 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
         nonCombatEngine->addStrategiesNoInit("nc", "food", "chat", "follow", "default", "quest", "loot",
                                             "gather", "duel", "pvp", "buff", "mount", "emote", nullptr);
     }
+
+    //By leewheel 2026-07-09: Vimgol quest strategy (summon + interrupt phases)
+    if (!player->InBattleground())
+        nonCombatEngine->addStrategy("vimgol", false);
+    //End By leewheel
 
     if (sPlayerbotAIConfig.autoSaveMana && PlayerbotAI::IsHeal(player, true))
         nonCombatEngine->addStrategy("save mana", false);

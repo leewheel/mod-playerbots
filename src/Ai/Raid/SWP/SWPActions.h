@@ -24,6 +24,32 @@ public:
     bool Execute(Event event) override;
 };
 
+// ===== 入口小怪 (Entrance Trash) =====
+
+class SwpTrashTankPullAction : public AttackAction
+{
+public:
+    SwpTrashTankPullAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "swp trash tank pull") {}
+    bool Execute(Event event) override;
+};
+
+class SwpTrashGroupHoldAction : public MovementAction
+{
+public:
+    SwpTrashGroupHoldAction(
+        PlayerbotAI* botAI) : MovementAction(botAI, "swp trash group hold") {}
+    bool Execute(Event event) override;
+};
+
+class SwpWaitForDeadPartyMembersAction : public Action
+{
+public:
+    SwpWaitForDeadPartyMembersAction(
+        PlayerbotAI* botAI) : Action(botAI, "swp wait for dead party members") {}
+    bool Execute(Event event) override;
+};
+
 // ===== 卡雷苟斯 (Kalecgos) =====
 
 class KalecgosMisdirectBossToMainTankAction : public AttackAction

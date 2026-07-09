@@ -22,6 +22,32 @@ public:
     bool IsActive() override;
 };
 
+// ===== 入口小怪 (Entrance Trash) =====
+
+class SwpTrashTankPullTrigger : public Trigger
+{
+public:
+    SwpTrashTankPullTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "swp trash tank pull") {}
+    bool IsActive() override;
+};
+
+class SwpTrashGroupHoldTrigger : public Trigger
+{
+public:
+    SwpTrashGroupHoldTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "swp trash group hold") {}
+    bool IsActive() override;
+};
+
+class SwpDeadPartyMemberWaitingTrigger : public Trigger
+{
+public:
+    SwpDeadPartyMemberWaitingTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "swp dead party member waiting") {}
+    bool IsActive() override;
+};
+
 // ===== 卡雷苟斯 (Kalecgos) =====
 
 class KalecgosPullingBossTrigger : public Trigger

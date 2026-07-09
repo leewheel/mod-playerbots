@@ -160,6 +160,19 @@ enum class SunwellNpcs : uint32
     NPC_ARMAGEDDON_TARGET           = 25735,  // 末日审判目标标记
 };
 
+// 太阳之井高地入口小怪 NPC ID
+enum class SunwellTrashNpcs : uint32
+{
+    NPC_SUNBLADE_CABALIST     = 25363,
+    NPC_SUNBLADE_ARCH_MAGE    = 25367,
+    NPC_SUNBLADE_SLAYER       = 25368,
+    NPC_SUNBLADE_VINDICATOR   = 25369,
+    NPC_SUNBLADE_DUSK_PRIEST  = 25370,
+    NPC_SUNBLADE_DAWN_PRIEST  = 25371,
+    NPC_SUNBLADE_SCOUT        = 25372,
+    NPC_SUNBLADE_PROTECTOR    = 25507,
+};
+
 // 太阳之井高地物品ID
 enum class SunwellItems : uint32
 {
@@ -181,6 +194,16 @@ enum class SunwellObjects : uint32
 
 // 太阳之井高地地图ID
 constexpr uint32 SUNWELL_MAP_ID = 580;
+
+// ===== 入口区域 - 坐标定义 =====
+// 坐标1: 门口第一群怪的位置（坦克引怪点）
+extern const Position SWP_ENTRANCE_TRASH_GROUP1_POS;
+// 坐标2: 坦克拉怪目的地 / 团队等待参战位置
+extern const Position SWP_ENTRANCE_ENGAGE_POS;
+// 入口区域检测半径
+constexpr float SWP_ENTRANCE_DETECT_RADIUS = 120.0f;
+// 小怪到达参战位置的判定半径
+constexpr float SWP_ENGAGE_POS_RADIUS = 20.0f;
 
 // ===== 卡雷苟斯 - 坐标定义 =====
 extern const Position KALECGOS_TANK_POSITION;
@@ -274,6 +297,26 @@ Unit* GetShieldOrb(PlayerbotAI* botAI, Player* bot);
 
 // 获取邪恶映像列表
 std::vector<Unit*> GetSinisterReflections(PlayerbotAI* botAI, Player* bot);
+
+// ===== 入口小怪辅助函数 =====
+
+// 检查NPC entry是否为SWP入口小怪
+bool IsSunwellEntranceTrash(uint32 entry);
+
+// 检查是否有存活的入口小怪
+bool HasAliveEntranceTrash(PlayerbotAI* botAI, Player* bot);
+
+// 获取最近的存活入口小怪
+Unit* GetNearestAliveEntranceTrash(PlayerbotAI* botAI, Player* bot);
+
+// 检查是否有入口小怪已经到达参战位置附近
+bool HasTrashNearEngagePos(PlayerbotAI* botAI, Player* bot);
+
+// 检查是否有任何BOSS正在被战斗（用于区分小怪阶段和BOSS阶段）
+bool IsAnySwBossPresent(PlayerbotAI* botAI);
+
+// 检查是否有尚未复活的死亡队友（幽灵状态）
+bool HasDeadPartyMemberNotResurrected(PlayerbotAI* botAI, Player* bot);
 
 }  // namespace SunwellPlateauHelpers
 

@@ -24,6 +24,9 @@
 //By leewheel 2026-07-08
 #include "SWPTriggerContext.h"
 //End By leewheel
+//By leewheel 2026-07-09
+#include "VimgolTriggerContext.h"
+//End By leewheel
 #include "Ai/Dungeon/TbcDungeonTriggerContext.h"
 #include "Ai/Dungeon/WotlkDungeonTriggerContext.h"
 
@@ -53,6 +56,9 @@ void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Tr
     triggerContexts.Add(new RaidRsTriggerContext());
     //By leewheel 2026-07-08
     triggerContexts.Add(new RaidSunwellPlateauTriggerContext());
+    //End By leewheel
+    //By leewheel 2026-07-09
+    triggerContexts.Add(new VimgolTriggerContext());
     //End By leewheel
     triggerContexts.Add(new TbcDungeonAuchenaiCryptsTriggerContext());
     triggerContexts.Add(new WotlkDungeonUKTriggerContext());
