@@ -165,8 +165,7 @@ bool KalecgosEnterSpectralRealmAction::Execute(Event /*event*/)
         return false;
 
     // 查找附近的幽灵裂缝游戏对象
-    // GO_SPECTRAL_RIFT = 187355
-    GameObject* portal = bot->FindNearestGameObject(187355, 50.0f);
+    GameObject* portal = bot->FindNearestGameObject(static_cast<uint32>(SunwellObjects::GO_SPECTRAL_RIFT), 50.0f);
     if (portal)
     {
         const float dist = bot->GetExactDist2d(portal);
@@ -263,7 +262,7 @@ bool KalecgosManageArcaneBuffetAction::Execute(Event /*event*/)
         {
             return MoveTo(SUNWELL_MAP_ID, portal->GetPositionX(), portal->GetPositionY(),
                           portal->GetPositionZ(), false, false, false, false,
-                          MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                          MovementPriority::MOVEMENT_FORCED, true, true);
         }
         return true;
     }
@@ -275,7 +274,7 @@ bool KalecgosManageArcaneBuffetAction::Execute(Event /*event*/)
     {
         return MoveTo(SUNWELL_MAP_ID, portalPos.GetPositionX(), portalPos.GetPositionY(),
                       portalPos.GetPositionZ(), false, false, false, false,
-                      MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                      MovementPriority::MOVEMENT_FORCED, true, true);
     }
 
     return false;
@@ -452,7 +451,7 @@ bool BrutallusBurnMoveAwayAction::Execute(Event /*event*/)
     constexpr float safeDistFromPlayer = 15.0f;
 
     // 查找最近的玩家
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
+    Unit* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
     if (!nearestPlayer)
         return false;  // 已经在安全距离
 
@@ -463,7 +462,7 @@ bool BrutallusBurnMoveAwayAction::Execute(Event /*event*/)
     const float moveY = bot->GetPositionY() + moveDist * std::sin(angle);
 
     return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                  false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                  false, false, MovementPriority::MOVEMENT_FORCED, true, true);
 }
 
 // ===== 菲米丝 (Felmyst) =====
@@ -540,7 +539,7 @@ bool FelmystDisperseFromGasNovaAction::Execute(Event /*event*/)
         const float moveY = bot->GetPositionY() + moveDist * std::sin(angle);
 
         return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                      false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                      false, false, MovementPriority::MOVEMENT_FORCED, true, true);
     }
 
     return false;
@@ -566,7 +565,7 @@ bool FelmystAvoidEncapsulateAction::Execute(Event /*event*/)
             const float moveY = bot->GetPositionY() + moveDist * std::sin(angle);
 
             return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                          false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                          false, false, MovementPriority::MOVEMENT_FORCED, true, true);
         }
     }
 
@@ -581,7 +580,7 @@ bool FelmystFlightPhaseSpreadAction::Execute(Event /*event*/)
 
     // 飞行阶段时分散站位，避免深呼吸命中多人
     constexpr float safeDistFromPlayer = 8.0f;
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
+    Unit* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
     if (!nearestPlayer)
         return false;
 
@@ -758,7 +757,7 @@ bool EredarTwinsAvoidConflagrationAction::Execute(Event /*event*/)
     // 爆燃会使目标昏迷并受到持续火焰伤害
     // 被点名的玩家需要跑到远离人群的位置
     constexpr float safeDistFromPlayer = 12.0f;
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
+    Unit* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
     if (!nearestPlayer)
         return false;
 
@@ -768,7 +767,7 @@ bool EredarTwinsAvoidConflagrationAction::Execute(Event /*event*/)
     const float moveY = bot->GetPositionY() + moveDist * std::sin(angle);
 
     return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                  false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                  false, false, MovementPriority::MOVEMENT_FORCED, true, true);
 }
 
 // ===== 穆鲁 (Muru) =====
@@ -850,8 +849,9 @@ bool MuruAvoidDarknessAction::Execute(Event /*event*/)
     if (!muru)
         return false;
 
-    // 检查附近是否有黑暗NPC（NPC_DARKNESS = 25879）
-    Unit* darkness = bot->FindNearestCreature(25879, 30.0f);
+    // 检查附近是否有暗魔（NPC_DARK_FIEND = 25744）
+    // Acore源码: SPELL_DARKNESS_PERIODIC(45998)的第2tick召唤暗魔
+    Unit* darkness = bot->FindNearestCreature(static_cast<uint32>(SunwellNpcs::NPC_DARK_FIEND), 30.0f);
     if (darkness)
     {
         const float dist = bot->GetExactDist2d(darkness);
@@ -863,7 +863,7 @@ bool MuruAvoidDarknessAction::Execute(Event /*event*/)
             const float moveY = bot->GetPositionY() + moveDist * std::sin(angle);
 
             return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                          false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                          false, false, MovementPriority::MOVEMENT_FORCED, true, true);
         }
     }
 
@@ -881,8 +881,8 @@ bool MuruEntropiusPhaseAction::Execute(Event /*event*/)
         return Attack(entropius);
 
     // 恩特罗皮乌斯阶段需要注意黑洞 avoidance
-    // 检查附近是否有黑洞
-    Unit* blackHole = bot->FindNearestCreature(25879, 20.0f);
+    // 检查附近是否有奇点/黑洞（NPC_SINGULARITY = 25855）
+    Unit* blackHole = bot->FindNearestCreature(static_cast<uint32>(SunwellNpcs::NPC_SINGULARITY), 20.0f);
     if (blackHole && bot->GetExactDist2d(blackHole) < 10.0f)
     {
         const float angle = bot->GetAngle(blackHole) + M_PI;
@@ -891,7 +891,7 @@ bool MuruEntropiusPhaseAction::Execute(Event /*event*/)
         const float moveY = bot->GetPositionY() + moveDist * std::sin(angle);
 
         return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                      false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                      false, false, MovementPriority::MOVEMENT_FORCED, true, true);
     }
 
     return false;
@@ -979,7 +979,7 @@ bool KiljaedenAvoidDarknessAction::Execute(Event /*event*/)
             const float moveY = bot->GetPositionY() + (dY / minDist) * moveDist;
 
             return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                          false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                          false, false, MovementPriority::MOVEMENT_FORCED, true, true);
         }
     }
 
@@ -995,7 +995,7 @@ bool KiljaedenAvoidDarknessAction::Execute(Event /*event*/)
         const float moveY = bot->GetPositionY() + (dY / distToSafe) * moveDist;
 
         return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                      false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                      false, false, MovementPriority::MOVEMENT_FORCED, true, true);
     }
 
     return false;
@@ -1005,7 +1005,7 @@ bool KiljaedenAvoidArmageddonAction::Execute(Event /*event*/)
 {
     // 末日审判：陨石从天而降，需要躲避
     // NPC_ARMAGEDDON_TARGET = 25735
-    Unit* armageddon = bot->FindNearestCreature(25735, 30.0f);
+    Unit* armageddon = bot->FindNearestCreature(static_cast<uint32>(SunwellNpcs::NPC_ARMAGEDDON_TARGET), 30.0f);
     if (armageddon)
     {
         const float dist = bot->GetExactDist2d(armageddon);
@@ -1017,7 +1017,7 @@ bool KiljaedenAvoidArmageddonAction::Execute(Event /*event*/)
             const float moveY = bot->GetPositionY() + moveDist * std::sin(angle);
 
             return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                          false, false, MovementPriority::MOVEMENT_EMERGENCY, true, true);
+                          false, false, MovementPriority::MOVEMENT_FORCED, true, true);
         }
     }
 
@@ -1098,7 +1098,7 @@ bool KiljaedenRangedDisperseAction::Execute(Event /*event*/)
 
     // 远程DPS分散站位，避免火焰飞镖命中多人
     constexpr float safeDistFromPlayer = 8.0f;
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
+    Unit* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
     if (!nearestPlayer)
         return false;
 
