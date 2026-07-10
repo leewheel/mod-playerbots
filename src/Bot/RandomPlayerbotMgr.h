@@ -154,8 +154,19 @@ public:
     std::map<uint32, std::map<uint32, std::map<TeamId, uint32>>> VisualBots;
     std::map<uint32, std::map<uint32, std::map<uint32, uint32>>> Supporters;
     std::map<TeamId, std::vector<uint32>> LfgDungeons;
+
+    // By leewheel 2026-07-10
+    // LFG排队追踪数据：记录每个阵营真实玩家开始排队的时间
+    // 用于超时强制机器人加入LFG队列
+    std::map<TeamId, time_t> lfgQueueStartTime;
+    // End By leewheel
+
     void CheckBgQueue();
     void CheckLfgQueue();
+    // By leewheel 2026-07-10
+    // 强制机器人加入LFG队列（含天赋切换）
+    void ForceBotsJoinLfg(TeamId teamId);
+    // End By leewheel
     void CheckPlayers();
     void LogBattlegroundInfo();
 

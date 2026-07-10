@@ -239,6 +239,13 @@ public:
     uint32 randomBotBgJoinLoginDelay;
     // End By leewheel
 
+    // By leewheel 2026-07-10
+    // 随机副本排队最大等待时间（秒），默认180秒（3分钟）
+    // 超过此时间的2/3（默认120秒=2分钟）后，强制坦克/治疗天赋的机器人加入LFG队列
+    // 确保真实玩家排队最多等待3分钟即可成队进入副本
+    uint32 randomBotLfgMaxQueueWaitTime;
+    // End By leewheel
+
     std::string randomBotAutoJoinICBrackets;
     std::string randomBotAutoJoinEYBrackets;
     std::string randomBotAutoJoinAVBrackets;

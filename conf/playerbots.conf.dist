@@ -719,6 +719,16 @@ AiPlayerbot.PreQuests = 0
 # Default: 1 (enabled)
 AiPlayerbot.RandomBotJoinLfg = 1
 
+# By leewheel 2026-07-10
+# 随机副本排队最大等待时间（秒），默认180秒（3分钟）
+# 当真实玩家排队超过此时间的2/3（默认120秒=2分钟）时，强制机器人加入LFG队列
+# 优先找已经是坦克/治疗天赋的空闲机器人加入
+# 如果找不到，会切换符合职业条件的机器人天赋后加入
+# 同时加入2个DPS机器人帮助成团
+# 确保真实玩家排队最多等待3分钟即可成队进入副本
+AiPlayerbot.RandomBotLfgMaxQueueWaitTime = 180
+# End By leewheel
+
 # Enable/Disable periodic online - offline of randombots to mimic the real-world scenario where not all players are online simultaneously
 # When enabled, randombots are randomly selected to go online or offline periodically from a larger set
 # Default: 0 (disabled, the set of online bots remains fixed)
