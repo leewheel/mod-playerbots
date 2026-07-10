@@ -251,6 +251,10 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
         bot->GetSession()->isLogingOut() || bot->IsDuringRemoveFromWorld())
         return;
 
+    // Track last combat time for post-combat acceleration (looting, next target finding)
+    if (bot->IsInCombat())
+        m_lastCombatTime = time(nullptr);
+
     // Handle cheat options (set bot health and power if cheats are enabled)
     if (bot->IsAlive() &&
         (static_cast<uint32>(GetCheat()) > 0 || static_cast<uint32>(sPlayerbotAIConfig.botCheatMask) > 0))
@@ -6676,8 +6680,14 @@ uint32 PlayerbotAI::GetReactDelay()
         bool inCombat = bot->IsInCombat();
 
         if (!inCombat)
-            return base * 10;
+        {
+            // Post-combat acceleration: if bot was in combat recently, use fast delay
+            // to prevent "standing still" after killing, during looting, and when finding next target
+            if (m_lastCombatTime && (time(nullptr) - m_lastCombatTime) < 10)
+                return base * 3;  // 300ms - fast post-combat response
 
+            return base * 10;
+        }
         else if (inCombat)
             return static_cast<uint32>(base * 2.5f);
 
@@ -6706,6 +6716,15 @@ uint32 PlayerbotAI::GetReactDelay()
     // When in combat, return 5 times the base
     if (bot->IsInCombat() || currentState == BOT_STATE_COMBAT)
         return base * 5;
+
+    // Post-combat acceleration: if bot was in combat within the last 10 seconds,
+    // use a much lower delay to make looting and target-finding feel responsive.
+    // Without this, the bot would wait 1-3 seconds between each post-combat action,
+    // causing the "standing still after combat" behavior reported by players.
+    if (m_lastCombatTime && (time(nullptr) - m_lastCombatTime) < 10)
+    {
+        return base * 3;  // 300ms - fast post-combat response for looting and target finding
+    }
 
     // When not resting, return 10-30 times the base
     if (!bot->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING))

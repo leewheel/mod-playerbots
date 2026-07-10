@@ -645,6 +645,7 @@ protected:
     std::pair<ChatMsg, time_t> currentChat;
     static std::set<std::string> unsecuredCommands;
     bool allowActive[MAX_ACTIVITY_TYPE];
+    time_t m_lastCombatTime = 0;  // Tracks last time bot was in combat, for post-combat acceleration
     time_t allowActiveCheckTimer[MAX_ACTIVITY_TYPE];
     bool inCombat = false;
     BotCheatMask cheatMask = BotCheatMask::none;
