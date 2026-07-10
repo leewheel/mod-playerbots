@@ -34,6 +34,26 @@ public:
     bool Execute(Event event) override;
 };
 
+//By leewheel 2026-07-09
+// 坦克等待动作：主坦克在等待位置待命，直到收到攻击命令
+class SwpTrashTankWaitAction : public MovementAction
+{
+public:
+    SwpTrashTankWaitAction(
+        PlayerbotAI* botAI) : MovementAction(botAI, "swp trash tank wait") {}
+    bool Execute(Event event) override;
+};
+
+// 治疗接应动作：前两个治疗在坦克拉怪过程中保持治疗距离
+class SwpTrashHealerEscortAction : public MovementAction
+{
+public:
+    SwpTrashHealerEscortAction(
+        PlayerbotAI* botAI) : MovementAction(botAI, "swp trash healer escort") {}
+    bool Execute(Event event) override;
+};
+//End By leewheel
+
 class SwpTrashGroupHoldAction : public MovementAction
 {
 public:

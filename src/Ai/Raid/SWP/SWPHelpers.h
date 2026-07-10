@@ -182,7 +182,9 @@ enum class SunwellItems : uint32
 // 太阳之井高地游戏对象ID
 enum class SunwellObjects : uint32
 {
-    GO_SPECTRAL_RIFT                = 187355,  // 幽灵裂缝（卡雷苟斯传送门视觉）
+    //By leewheel 2026-07-09 修复GO entry错误：187355是魔导师平台，正确的传送门是187055
+    GO_SPECTRAL_RIFT                = 187055,  // 幽魂裂隙（卡雷苟斯传送门，type=10 GOOBER，data10=44811）
+    //End By leewheel
     GO_ICE_BARRIER                  = 188119,  // 冰屏障（布鲁塔卢斯场地入口）
     GO_FORCE_FIELD                  = 188421,  // 力场
     GO_FIRE_BARRIER                 = 188075,  // 火焰屏障
@@ -195,15 +197,30 @@ enum class SunwellObjects : uint32
 // 太阳之井高地地图ID
 constexpr uint32 SUNWELL_MAP_ID = 580;
 
+//By leewheel 2026-07-09
 // ===== 入口区域 - 坐标定义 =====
 // 坐标1: 门口第一群怪的位置（坦克引怪点）
 extern const Position SWP_ENTRANCE_TRASH_GROUP1_POS;
+// 坦克等待位置 / 拉怪中途中转点（幻日广场）
+extern const Position SWP_ENTRANCE_TANK_WAIT_POS;
 // 坐标2: 坦克拉怪目的地 / 团队等待参战位置
 extern const Position SWP_ENTRANCE_ENGAGE_POS;
 // 入口区域检测半径
 constexpr float SWP_ENTRANCE_DETECT_RADIUS = 120.0f;
 // 小怪到达参战位置的判定半径
 constexpr float SWP_ENGAGE_POS_RADIUS = 20.0f;
+// 治疗施法距离（码）
+constexpr float SWP_HEALER_CAST_RANGE = 35.0f;
+// 治疗接应距离（当超出此距离时治疗需要移动靠近坦克）
+constexpr float SWP_HEALER_FOLLOW_RANGE = 28.0f;
+// 入口策略失效追踪的怪物entry和guid列表
+struct SwpEntranceTrashEntry
+{
+    uint32 entry;
+    uint32 guid;
+};
+extern const std::vector<SwpEntranceTrashEntry> SWP_ENTRANCE_TRACKED_TRASH;
+//End By leewheel
 
 // ===== 卡雷苟斯 - 坐标定义 =====
 extern const Position KALECGOS_TANK_POSITION;
@@ -257,6 +274,26 @@ int GetKiljaedenPhase(Unit* kiljaeden);
 
 // 检查机器人是否在幽灵领域中（卡雷苟斯战斗）
 bool IsInSpectralRealm(Player* bot);
+
+//By leewheel 2026-07-09
+// 查找萨斯罗瓦尔（内场BOSS）
+// find target 只搜索仇恨表，外场机器人无法通过它找到内场BOSS
+// 此函数依次尝试：find target -> possible targets no los -> FindNearestCreature
+Unit* FindSathrovarr(PlayerbotAI* botAI, Player* bot);
+
+// 查找卡雷苟斯（外场龙形态BOSS）
+Unit* FindKalecgosBoss(PlayerbotAI* botAI, Player* bot);
+
+//By leewheel 2026-07-09
+// 统计当前在幽灵领域中的小队成员数量
+// 用于控制内外场人数平衡，避免过多机器人同时进入内场
+uint32 CountGroupMembersInSpectralRealm(Player* bot);
+
+// 统计小队中没有幽灵力竭debuff且不在幽灵领域中的成员数量
+// 这些成员是可以进入幽灵领域的候选人
+uint32 CountGroupMembersEligibleForSpectralRealm(Player* bot);
+//End By leewheel
+//End By leewheel
 
 // 获取卡雷苟斯内外场血量差异（正值=外场低，负值=内场低）
 // 返回FLT_MAX如果无法获取任一BOSS血量
@@ -317,6 +354,19 @@ bool IsAnySwBossPresent(PlayerbotAI* botAI);
 
 // 检查是否有尚未复活的死亡队友（幽灵状态）
 bool HasDeadPartyMemberNotResurrected(PlayerbotAI* botAI, Player* bot);
+
+//By leewheel 2026-07-09
+// 检查入口策略是否应该失效
+// 当指定的4个怪物全部被击杀或到达参战位置后，策略失效
+bool IsEntranceStrategyDone(PlayerbotAI* botAI, Player* bot);
+
+// 获取团队中前两个治疗（用于治疗接应坦克）
+// 返回第一个治疗的指针（第二个通过参数返回）
+Player* GetFirstTwoHealers(PlayerbotAI* botAI, Player* bot, Player*& secondHealer);
+
+// 检查当前机器人是否是治疗接应者（前两个治疗之一）
+bool IsHealerEscort(PlayerbotAI* botAI, Player* bot);
+//End By leewheel
 
 }  // namespace SunwellPlateauHelpers
 

@@ -24,6 +24,12 @@ public:
         // 入口小怪
         creators["swp trash tank pull"] =
             &RaidSunwellPlateauActionContext::swp_trash_tank_pull;
+        //By leewheel 2026-07-09
+        creators["swp trash tank wait"] =
+            &RaidSunwellPlateauActionContext::swp_trash_tank_wait;
+        creators["swp trash healer escort"] =
+            &RaidSunwellPlateauActionContext::swp_trash_healer_escort;
+        //End By leewheel
         creators["swp trash group hold"] =
             &RaidSunwellPlateauActionContext::swp_trash_group_hold;
         creators["swp wait for dead party members"] =
@@ -122,6 +128,12 @@ private:
     // 入口小怪
     static Action* swp_trash_tank_pull(
         PlayerbotAI* botAI) { return new SwpTrashTankPullAction(botAI); }
+    //By leewheel 2026-07-09
+    static Action* swp_trash_tank_wait(
+        PlayerbotAI* botAI) { return new SwpTrashTankWaitAction(botAI); }
+    static Action* swp_trash_healer_escort(
+        PlayerbotAI* botAI) { return new SwpTrashHealerEscortAction(botAI); }
+    //End By leewheel
     static Action* swp_trash_group_hold(
         PlayerbotAI* botAI) { return new SwpTrashGroupHoldAction(botAI); }
     static Action* swp_wait_for_dead_party_members(

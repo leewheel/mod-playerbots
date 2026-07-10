@@ -17,10 +17,14 @@
 namespace SunwellPlateauHelpers
 {
 
+//By leewheel 2026-07-09 修复Z坐标：外场龙领域Z≈53，内场幽灵领域Z≈-74
 // ===== 卡雷苟斯 - 坐标定义 =====
-const Position KALECGOS_TANK_POSITION      = { 1704.0f, 930.0f, -74.5f, 0.0f };
-const Position KALECGOS_RANGED_CENTER      = { 1700.0f, 950.0f, -74.5f, 0.0f };
-const Position KALECGOS_PORTAL_POSITION    = { 1705.0f, 940.0f, -74.5f, 0.0f };
+// 外场（龙领域）坐标，Z≈53 (DRAGON_REALM_Z)
+const Position KALECGOS_TANK_POSITION      = { 1704.0f, 930.0f, 53.0f, 0.0f };
+const Position KALECGOS_RANGED_CENTER      = { 1700.0f, 950.0f, 53.0f, 0.0f };
+// 传送门位置是动态的（由BOSS的幽灵冲击在玩家位置生成），此处仅作为找不到GO时的备选
+const Position KALECGOS_PORTAL_POSITION    = { 1705.0f, 940.0f, 53.0f, 0.0f };
+//End By leewheel
 
 std::unordered_map<uint32, time_t> kalecgosPhaseTimer;
 std::unordered_map<ObjectGuid, bool> kalecgosHasEnteredSpectral;
@@ -65,11 +69,23 @@ const Position KILJAEDEN_SAFE_POSITION     = { 1720.0f, 400.0f, 28.0f, 0.0f };
 std::unordered_map<uint32, int> kiljaedenLastPhase;
 std::unordered_map<uint32, time_t> kiljaedenPhaseTimer;
 
+//By leewheel 2026-07-09
 // ===== 入口区域 - 坐标定义 =====
 // 坐标1: 门口第一群怪的位置（坦克引怪点）
 const Position SWP_ENTRANCE_TRASH_GROUP1_POS = { 1655.14f, 923.453f, 15.6266f, 0.0f };
+// 坦克等待位置 / 拉怪中途中转点（幻日广场）
+const Position SWP_ENTRANCE_TANK_WAIT_POS = { 1686.4767f, 879.3102f, 15.578464f, 0.0f };
 // 坐标2: 坦克拉怪目的地 / 团队等待参战位置
 const Position SWP_ENTRANCE_ENGAGE_POS = { 1720.8975f, 876.3326f, 15.572174f, 0.0f };
+
+// 入口策略失效追踪的怪物列表
+const std::vector<SwpEntranceTrashEntry> SWP_ENTRANCE_TRACKED_TRASH = {
+    { 25363, 238 },   // Sunblade Cabalist
+    { 25370, 126 },   // Sunblade Dusk Priest
+    { 25867, 286 },   // Sunblade Scout (entry 25867)
+    { 25369, 111 },   // Sunblade Vindicator
+};
+//End By leewheel
 
 // ===== 辅助函数实现 =====
 
@@ -222,6 +238,7 @@ int GetKiljaedenPhase(Unit* kiljaeden)
 
 // ===== 卡雷苟斯辅助函数实现 =====
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss/FindSathrovarr替代find target
 // 获取卡雷苟斯内外场血量差异（正值=外场高，负值=内场高）
 // 返回FLT_MAX如果无法获取任一BOSS血量
 float GetKalecgosHealthDifference(PlayerbotAI* botAI, Player* bot)
@@ -229,10 +246,8 @@ float GetKalecgosHealthDifference(PlayerbotAI* botAI, Player* bot)
     if (!botAI || !bot)
         return FLT_MAX;
 
-    // By leewheel 2026-07-09 自由函数中不能使用AI_VALUE2宏，改用botAI->GetAiObjectContext()直接访问
-    Unit* kalecgos = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "kalecgos")->Get();
-    Unit* sathrovarr = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "sathrovarr the corruptor")->Get();
-    // End By leewheel 2026-07-09
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
+    Unit* sathrovarr = FindSathrovarr(botAI, bot);
 
     if (!kalecgos || !sathrovarr)
         return FLT_MAX;
@@ -240,6 +255,7 @@ float GetKalecgosHealthDifference(PlayerbotAI* botAI, Player* bot)
     // 正值=外场(卡雷苟斯)血量更高，负值=内场(萨斯罗瓦尔)血量更高
     return kalecgos->GetHealthPct() - sathrovarr->GetHealthPct();
 }
+//End By leewheel
 
 // 检查是否需要压低外场BOSS血量（外场血量明显高于内场）
 bool NeedPushOuterRealmHealth(PlayerbotAI* botAI, Player* bot)
@@ -263,6 +279,7 @@ bool NeedPushInnerRealmHealth(PlayerbotAI* botAI, Player* bot)
     return diff < -10.0f;
 }
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss/FindSathrovarr替代find target
 // 检查双方是否都接近狂暴阶段（都低于15%）
 // 注：Acore源码中双方在10%时互触CRAZED_RAGE(44807)狂暴
 bool IsKalecgosEnrageImminent(PlayerbotAI* botAI, Player* bot)
@@ -270,10 +287,8 @@ bool IsKalecgosEnrageImminent(PlayerbotAI* botAI, Player* bot)
     if (!botAI || !bot)
         return false;
 
-    // By leewheel 2026-07-09 自由函数中不能使用AI_VALUE2宏，改用botAI->GetAiObjectContext()直接访问
-    Unit* kalecgos = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "kalecgos")->Get();
-    Unit* sathrovarr = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "sathrovarr the corruptor")->Get();
-    // End By leewheel 2026-07-09
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
+    Unit* sathrovarr = FindSathrovarr(botAI, bot);
 
     if (!kalecgos || !sathrovarr)
         return false;
@@ -281,6 +296,7 @@ bool IsKalecgosEnrageImminent(PlayerbotAI* botAI, Player* bot)
     // 狂暴在10%触发，15%作为预警阈值
     return kalecgos->GetHealthPct() <= 15.0f && sathrovarr->GetHealthPct() <= 15.0f;
 }
+//End By leewheel
 
 // 获取机器人奥术冲击debuff叠加层数
 uint32 GetArcaneBuffetStacks(Player* bot)
@@ -312,6 +328,123 @@ bool NeedEnterSpectralForArcaneBuffet(Player* bot, uint32 threshold)
 
     return GetArcaneBuffetStacks(bot) >= threshold;
 }
+
+//By leewheel 2026-07-09
+// 查找萨斯罗瓦尔（内场BOSS, NPC 24892）
+// find target 只搜索仇恨表，外场机器人无法通过它找到内场BOSS
+// 此函数依次尝试：find target -> possible targets no los -> FindNearestCreature
+Unit* FindSathrovarr(PlayerbotAI* botAI, Player* bot)
+{
+    if (!botAI || !bot)
+        return nullptr;
+
+    // 方法1: find target（当机器人在幽灵领域内时有仇恨可以找到）
+    Unit* sath = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "sathrovarr the corruptor")->Get();
+    if (sath)
+        return sath;
+
+    // 方法2: 搜索 possible targets no los（当机器人能看到萨斯罗瓦尔时）
+    auto const& npcs = botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+    for (auto const& guid : npcs)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->GetEntry() == static_cast<uint32>(SunwellNpcs::NPC_SATHROVARR))
+            return unit;
+    }
+
+    // 方法3: FindNearestCreature（最后手段）
+    if (Creature* creature = bot->FindNearestCreature(static_cast<uint32>(SunwellNpcs::NPC_SATHROVARR), 200.0f))
+        return creature;
+
+    return nullptr;
+}
+
+// 查找卡雷苟斯（外场龙形态BOSS, NPC 24850）
+Unit* FindKalecgosBoss(PlayerbotAI* botAI, Player* bot)
+{
+    if (!botAI || !bot)
+        return nullptr;
+
+    // 方法1: find target
+    Unit* kalec = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "kalecgos")->Get();
+    if (kalec)
+        return kalec;
+
+    // 方法2: 搜索 possible targets no los
+    auto const& npcs = botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+    for (auto const& guid : npcs)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->GetEntry() == static_cast<uint32>(SunwellNpcs::NPC_KALECGOS_DRAGON))
+            return unit;
+    }
+
+    // 方法3: FindNearestCreature
+    if (Creature* creature = bot->FindNearestCreature(static_cast<uint32>(SunwellNpcs::NPC_KALECGOS_DRAGON), 200.0f))
+        return creature;
+
+    return nullptr;
+}
+//End By leewheel
+
+//By leewheel 2026-07-09
+// 统计当前在幽灵领域中的小队成员数量
+// 用于控制内外场人数平衡，避免过多机器人同时进入内场
+uint32 CountGroupMembersInSpectralRealm(Player* bot)
+{
+    if (!bot)
+        return 0;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return 0;
+
+    uint32 count = 0;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive())
+            continue;
+
+        if (IsInSpectralRealm(member))
+            ++count;
+    }
+
+    return count;
+}
+
+// 统计小队中没有幽灵力竭debuff且不在幽灵领域中的成员数量
+// 这些成员是可以进入幽灵领域的候选人
+uint32 CountGroupMembersEligibleForSpectralRealm(Player* bot)
+{
+    if (!bot)
+        return 0;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return 0;
+
+    uint32 count = 0;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive())
+            continue;
+
+        // 已在幽灵领域中不算候选人
+        if (IsInSpectralRealm(member))
+            continue;
+
+        // 有幽灵力竭debuff不算候选人
+        if (member->HasAura(static_cast<uint32>(SunwellSpells::SPELL_SPECTRAL_EXHAUSTION)))
+            continue;
+
+        ++count;
+    }
+
+    return count;
+}
+//End By leewheel
 
 // 检查附近队友是否有无尽痛苦诅咒需要驱散
 // 该诅咒驱散后会转移给邻近玩家(45034)，需专人驱散
@@ -489,5 +622,104 @@ bool HasDeadPartyMemberNotResurrected(PlayerbotAI* botAI, Player* bot)
 
     return false;
 }
+
+//By leewheel 2026-07-09
+// 检查入口策略是否应该失效
+// 当指定的4个怪物全部被击杀或到达参战位置后，策略失效
+bool IsEntranceStrategyDone(PlayerbotAI* botAI, Player* bot)
+{
+    if (!botAI || !bot)
+        return false;
+
+    // 遍历追踪列表，检查每个怪的状态
+    for (const auto& tracked : SWP_ENTRANCE_TRACKED_TRASH)
+    {
+        bool found = false;
+
+        // 在 possible targets no los 中查找
+        auto const& npcs =
+            botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+        for (auto const& guid : npcs)
+        {
+            Unit* unit = botAI->GetUnit(guid);
+            if (!unit)
+                continue;
+
+            // 通过 entry 和 guid 匹配
+            if (unit->GetEntry() == tracked.entry &&
+                unit->GetGUID().GetCounter() == tracked.guid)
+            {
+                found = true;
+
+                // 如果怪物还活着，检查是否到达参战位置
+                if (unit->IsAlive())
+                {
+                    float distToEngage = unit->GetExactDist2d(
+                        SWP_ENTRANCE_ENGAGE_POS.GetPositionX(),
+                        SWP_ENTRANCE_ENGAGE_POS.GetPositionY());
+                    if (distToEngage > SWP_ENGAGE_POS_RADIUS)
+                        return false;  // 怪物还活着且未到达参战位置，策略继续
+                }
+                // 怪物已死亡，算作已完成
+                break;
+            }
+        }
+
+        // 如果在 possible targets 中没找到（可能已被清除），也算作已完成
+        if (!found)
+            continue;
+    }
+
+    // 所有追踪的怪物都已死亡或到达参战位置
+    return true;
+}
+
+// 获取团队中前两个治疗（用于治疗接应坦克）
+Player* GetFirstTwoHealers(PlayerbotAI* botAI, Player* bot, Player*& secondHealer)
+{
+    secondHealer = nullptr;
+    if (!botAI || !bot)
+        return nullptr;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return nullptr;
+
+    Player* firstHealer = nullptr;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive())
+            continue;
+
+        if (!botAI->IsHeal(member))
+            continue;
+
+        if (!firstHealer)
+        {
+            firstHealer = member;
+        }
+        else if (!secondHealer)
+        {
+            secondHealer = member;
+            break;
+        }
+    }
+
+    return firstHealer;
+}
+
+// 检查当前机器人是否是治疗接应者（前两个治疗之一）
+bool IsHealerEscort(PlayerbotAI* botAI, Player* bot)
+{
+    if (!botAI || !bot)
+        return false;
+
+    Player* secondHealer = nullptr;
+    Player* firstHealer = GetFirstTwoHealers(botAI, bot, secondHealer);
+
+    return (bot == firstHealer) || (bot == secondHealer);
+}
+//End By leewheel
 
 }  // namespace SunwellPlateauHelpers

@@ -5,11 +5,71 @@
 
 #include "LootObjectStack.h"
 
+#include "CellImpl.h"
+#include "Creature.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "LootMgr.h"
 #include "Object.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "Unit.h"
+
+//By leewheel 2026-07-09
+/**
+ * 自定义检查器：查找尸体附近存活的、对玩家敌对的、未进入战斗的怪物
+ * 用于全局防止机器人跑过去捡尸体时引怪
+ * 作者: leewheel
+ */
+class AliveHostileNonCombatCreatureCheck
+{
+public:
+    AliveHostileNonCombatCreatureCheck(WorldObject const* obj, float range, Player const* player)
+        : i_obj(obj), i_range(range), i_bot(player) {}
+
+    WorldObject const& GetFocusObject() const { return *i_obj; }
+
+    bool operator()(Creature* c) const
+    {
+        if (!c || !c->IsAlive())
+            return false;
+        // 已进入战斗的怪物不算威胁（它们正在被打）
+        if (c->IsInCombat())
+            return false;
+        // 只关心对玩家敌对的怪物
+        if (!c->IsHostileTo(i_bot))
+            return false;
+        if (!i_obj->IsWithinDistInMap(c, i_range))
+            return false;
+        return true;
+    }
+
+private:
+    WorldObject const* i_obj;
+    float i_range;
+    Player const* i_bot;
+};
+
+/**
+ * 检查指定世界对象附近是否有存活的、敌对的、未进入战斗的怪物
+ * @param obj 尸体位置
+ * @param bot 机器人玩家
+ * @param radius 搜索半径（码）
+ * @return true 表示附近有危险怪物，不应拾取
+ */
+static bool HasAliveHostileNonCombatCreaturesNearby(WorldObject* obj, Player* bot, float radius)
+{
+    if (!obj || !bot)
+        return false;
+
+    std::list<Creature*> creatures;
+    AliveHostileNonCombatCreatureCheck check(obj, radius, bot);
+    Acore::CreatureListSearcher<AliveHostileNonCombatCreatureCheck> searcher(obj, creatures, check);
+    Cell::VisitObjects(obj, searcher, radius);
+
+    return !creatures.empty();
+}
+//End By leewheel
 
 #define MAX_LOOT_OBJECT_COUNT 200
 
@@ -297,6 +357,14 @@ bool LootObject::IsLootPossible(Player* bot)
     {
         if (!bot->isAllowedToLoot(creature) && skillId != SKILL_SKINNING)
             return false;
+
+        //By leewheel 2026-07-09
+        // 全局安全检查：如果尸体附近有存活的、未进入战斗的敌对怪物，禁止拾取
+        // 防止机器人在任何场景下跑过去捡尸体时引怪（不限于特定副本）
+        constexpr float LOOT_SAFETY_RADIUS = 15.0f;  // 搜索半径15码
+        if (HasAliveHostileNonCombatCreaturesNearby(creature, bot, LOOT_SAFETY_RADIUS))
+            return false;
+        //End By leewheel
     }
 
     // Prevent bot from running to chests that are unlootable (e.g. Gunship Armory before completing the event) or on

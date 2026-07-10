@@ -16,6 +16,19 @@ void RaidSunwellPlateauStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
     triggers.push_back(new TriggerNode("sunwell bot is not in combat", {
         NextAction("sunwell erase timers and trackers", ACTION_EMERGENCY + 11) }));
 
+    // ===== 入口小怪 (Entrance Trash) =====
+    // 已禁用：入口小怪策略全部注释，交由默认AI处理
+    // triggers.push_back(new TriggerNode("swp trash tank wait", {
+    //     NextAction("swp trash tank wait", ACTION_RAID + 4) }));
+    // triggers.push_back(new TriggerNode("swp trash tank pull", {
+    //     NextAction("swp trash tank pull", ACTION_RAID + 5) }));
+    // triggers.push_back(new TriggerNode("swp trash healer escort", {
+    //     NextAction("swp trash healer escort", ACTION_RAID + 4) }));
+    // triggers.push_back(new TriggerNode("swp trash group hold", {
+    //     NextAction("swp trash group hold", ACTION_RAID + 3) }));
+    // triggers.push_back(new TriggerNode("swp dead party member waiting", {
+    //     NextAction("swp wait for dead party members", 12.0f) }));
+
     // ===== 卡雷苟斯 (Kalecgos) =====
     triggers.push_back(new TriggerNode("kalecgos pulling boss", {
         NextAction("kalecgos misdirect boss to main tank", ACTION_RAID + 2) }));

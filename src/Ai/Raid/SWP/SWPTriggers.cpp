@@ -24,82 +24,120 @@ bool SunwellBotIsNotInCombatTrigger::IsActive()
 }
 
 // ===== 入口小怪 (Entrance Trash) =====
+// By leewheel 2026年7月9日
+// 恢复入口小怪触发器实现，解决链接器LNK2001错误
+// 策略层面(SWPStrategy.cpp)已注释掉TriggerNode注册，不会在运行时触发
+// 但Context仍注册了这些类，必须提供实现以满足链接器要求
+// End By leewheel
 
 bool SwpTrashTankPullTrigger::IsActive()
 {
-    // 只有坦克触发
     if (!botAI->IsTank(bot))
         return false;
-
-    // 必须在SWP地图
     if (bot->GetMapId() != SUNWELL_MAP_ID)
         return false;
-
-    // 如果有BOSS在场则不触发（BOSS阶段优先）
     if (IsAnySwBossPresent(botAI))
         return false;
-
-    // 必须有存活的入口小怪
+    if (IsEntranceStrategyDone(botAI, bot))
+        return false;
     if (!HasAliveEntranceTrash(botAI, bot))
         return false;
-
-    // 坦克必须在入口区域附近
     float distToEntrance = bot->GetExactDist2d(
         SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
         SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
     if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
         return false;
+    Unit* currentTarget = AI_VALUE(Unit*, "current target");
+    if (!currentTarget && !bot->IsInCombat())
+        return false;
+    return true;
+}
 
+bool SwpTrashTankWaitTrigger::IsActive()
+{
+    if (!botAI->IsTank(bot))
+        return false;
+    if (bot->GetMapId() != SUNWELL_MAP_ID)
+        return false;
+    if (IsAnySwBossPresent(botAI))
+        return false;
+    if (IsEntranceStrategyDone(botAI, bot))
+        return false;
+    if (!HasAliveEntranceTrash(botAI, bot))
+        return false;
+    float distToEntrance = bot->GetExactDist2d(
+        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
+        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
+    if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
+        return false;
+    if (bot->IsInCombat())
+        return false;
+    Unit* currentTarget = AI_VALUE(Unit*, "current target");
+    if (currentTarget)
+        return false;
+    return true;
+}
+
+bool SwpTrashHealerEscortTrigger::IsActive()
+{
+    if (!botAI->IsHeal(bot))
+        return false;
+    if (!IsHealerEscort(botAI, bot))
+        return false;
+    if (bot->GetMapId() != SUNWELL_MAP_ID)
+        return false;
+    if (IsAnySwBossPresent(botAI))
+        return false;
+    if (IsEntranceStrategyDone(botAI, bot))
+        return false;
+    if (!HasAliveEntranceTrash(botAI, bot))
+        return false;
+    float distToEntrance = bot->GetExactDist2d(
+        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
+        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
+    if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
+        return false;
+    Player* mainTank = GetGroupMainTank(botAI, bot);
+    if (!mainTank || !mainTank->IsAlive())
+        return false;
+    float distToTank = bot->GetExactDist2d(mainTank);
+    if (distToTank <= SWP_HEALER_FOLLOW_RANGE)
+        return false;
     return true;
 }
 
 bool SwpTrashGroupHoldTrigger::IsActive()
 {
-    // 非坦克才触发（坦克用拉怪触发器）
     if (botAI->IsTank(bot))
         return false;
-
-    // 必须在SWP地图
+    if (IsHealerEscort(botAI, bot))
+        return false;
     if (bot->GetMapId() != SUNWELL_MAP_ID)
         return false;
-
-    // 如果有BOSS在场则不触发
     if (IsAnySwBossPresent(botAI))
         return false;
-
-    // 必须有存活的入口小怪
+    if (IsEntranceStrategyDone(botAI, bot))
+        return false;
     if (!HasAliveEntranceTrash(botAI, bot))
         return false;
-
-    // 机器人必须在入口区域附近
     float distToEntrance = bot->GetExactDist2d(
         SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
         SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
     if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
         return false;
-
-    // 如果小怪已经到达参战位置，则不触发等待（让正常战斗AI接管）
     if (HasTrashNearEngagePos(botAI, bot))
         return false;
-
     return true;
 }
 
 bool SwpDeadPartyMemberWaitingTrigger::IsActive()
 {
-    // 必须在SWP地图
     if (bot->GetMapId() != SUNWELL_MAP_ID)
         return false;
-
-    // 机器人必须存活
     if (!bot->IsAlive())
         return false;
-
-    // 不在战斗中时才触发（战斗中不阻止行动）
     if (bot->IsInCombat())
         return false;
-
-    // 检查是否有尚未复活的死亡队友
     return HasDeadPartyMemberNotResurrected(botAI, bot);
 }
 
@@ -139,12 +177,24 @@ bool KalecgosBossEngagedByRangedTrigger::IsActive()
     return GetNearestPlayerInRadius(bot, safeDistFromPlayer) != nullptr;
 }
 
+//By leewheel 2026-07-09 重写进入幽灵领域触发器
+// 原问题：
+// 1. 用 find target 查找萨斯罗瓦尔 -> 外场机器人没有仇恨，永远返回nullptr
+// 2. 所有DPS都试图进入 -> 不打BOSS全跑去点门
+// 3. 用 AI_VALUE2 find target 查找卡雷苟斯 -> 部分机器人不在仇恨表中，触发器不激活
+// 4. GO_SPECTRAL_RIFT entry错误(187355→187055) -> 机器人找不到传送门GO
+// 修复：
+// 1. 使用 FindKalecgosBoss 替代 AI_VALUE2
+// 2. 奥术冲击层数>=3时主动进入（降低阈值，3层=1500额外奥伤/tick已经很危险）
+// 3. 添加内外场人数平衡检查，避免过多机器人同时进入内场
+// 4. BOSS每20-30秒自动传送随机玩家，不需要全员主动进入
 bool KalecgosNeedEnterSpectralRealmTrigger::IsActive()
 {
     if (botAI->IsTank(bot))
         return false;
 
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    // 使用FindKalecgosBoss替代AI_VALUE2，解决部分机器人不在仇恨表中的问题
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
     if (!kalecgos)
         return false;
 
@@ -156,39 +206,42 @@ bool KalecgosNeedEnterSpectralRealmTrigger::IsActive()
     if (bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_SPECTRAL_EXHAUSTION)))
         return false;
 
-    // 检查是否有萨斯罗瓦尔还活着
-    Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor");
-    if (!sathrovarr || !sathrovarr->IsAlive())
+    // 奥术冲击层数>=3时才主动进入幽灵领域刷新debuff
+    // Acore源码: 奥术冲击(45018)每8秒全团AoE，叠加debuff每层增500奥伤，持续40秒
+    // 3层=1500额外奥伤/tick，对于非坦克职业已经很危险
+    if (!NeedEnterSpectralForArcaneBuffet(bot, 3))
         return false;
 
-    // 奥术冲击层数过高时优先进入幽灵领域（层数>=4时进入以刷新debuff）
-    // Acore源码: 奥术冲击(45018)每8秒全团AoE，叠加debuff每层增500奥伤，持续40秒
-    // 进入幽灵领域可重置层数，避免后期层数过高致死
-    if (NeedEnterSpectralForArcaneBuffet(bot, 4))
-        return true;
+    // 内外场人数平衡检查：
+    // 内场人数不应超过小队总人数的1/3
+    // BOSS每20-30秒自动传送1名玩家，不需要太多人主动进入
+    uint32 inSpectral = CountGroupMembersInSpectralRealm(bot);
+    uint32 groupSize = bot->GetGroup() ? bot->GetGroup()->GetMembersCount() : 1;
+    uint32 maxInSpectral = std::max(1u, groupSize / 3);
 
-    // DPS需要进入幽灵领域帮助卡雷苟斯对抗萨斯罗瓦尔
-    if (botAI->IsDps(bot))
-        return true;
+    if (inSpectral >= maxInSpectral)
+        return false;
 
-    return false;
+    return true;
 }
+//End By leewheel
 
+//By leewheel 2026-07-09 去掉Sathrovarr检查
+// 只要机器人在幽灵领域中就触发，不需要额外检查Sathrovarr
+// Sathrovarr的查找放到Action中处理（因为find target在外场找不到内场BOSS）
 bool KalecgosInSpectralRealmTrigger::IsActive()
 {
-    if (!IsInSpectralRealm(bot))
-        return false;
-
-    Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor");
-    return sathrovarr && sathrovarr->IsAlive();
+    return IsInSpectralRealm(bot);
 }
+//End By leewheel
 
 // ===== 卡雷苟斯新增触发器 =====
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
 bool KalecgosHealthNotSyncedTrigger::IsActive()
 {
     // 不在卡雷苟斯战斗中则不触发
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
     if (!kalecgos)
         return false;
 
@@ -203,7 +256,11 @@ bool KalecgosHealthNotSyncedTrigger::IsActive()
 
     return std::abs(diff) > 10.0f;
 }
+//End By leewheel
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
+// 此触发器作为紧急后备：奥术冲击层数>=5时无视人数平衡强制进入
+// 正常情况下KalecgosNeedEnterSpectralRealmTrigger(阈值3)会先触发
 bool KalecgosNeedArcaneBuffetResetTrigger::IsActive()
 {
     // 坦克不需要为此进入幽灵领域
@@ -211,31 +268,34 @@ bool KalecgosNeedArcaneBuffetResetTrigger::IsActive()
         return false;
 
     // 不在卡雷苟斯战斗中则不触发
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
     if (!kalecgos)
         return false;
 
-    // 奥术冲击层数>=5且能进入幽灵领域时触发
-    // Acore源码: 奥术冲击每8秒全团AoE，每层增500奥伤，持续40秒
-    // 层数过高时必须进入幽灵领域刷新
+    // 奥术冲击层数>=5时紧急触发（此时每tick 2500额外奥伤，再不进入会死）
+    // 此触发器作为紧急后备，不考虑人数平衡
     return NeedEnterSpectralForArcaneBuffet(bot, 5);
 }
+//End By leewheel
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
 bool KalecgosCurseOfBoundlessAgonyTrigger::IsActive()
 {
     // 不在卡雷苟斯战斗中则不触发
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
     if (!kalecgos)
         return false;
 
     // 检查附近是否有队友中了无尽痛苦诅咒
     return HasCurseOfBoundlessAgonyNearby(bot);
 }
+//End By leewheel
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
 bool KalecgosFrostBreathOnTankTrigger::IsActive()
 {
     // 不在卡雷苟斯战斗中则不触发
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
     if (!kalecgos)
         return false;
 
@@ -246,6 +306,7 @@ bool KalecgosFrostBreathOnTankTrigger::IsActive()
 
     return mainTank->HasAura(static_cast<uint32>(SunwellSpells::SPELL_FROST_BREATH));
 }
+//End By leewheel
 
 // ===== 布鲁塔卢斯 (Brutallus) =====
 

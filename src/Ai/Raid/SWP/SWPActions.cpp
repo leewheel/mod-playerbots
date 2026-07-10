@@ -18,95 +18,125 @@
 using namespace SunwellPlateauHelpers;
 
 // ===== 入口小怪 (Entrance Trash) =====
+// By leewheel 2026年7月9日
+// 恢复入口小怪动作实现，解决链接器LNK2001错误
+// 策略层面(SWPStrategy.cpp)已注释掉TriggerNode注册，不会在运行时触发
+// 但Context仍注册了这些类，必须提供实现以满足链接器要求
+// End By leewheel
 
 bool SwpTrashTankPullAction::Execute(Event /*event*/)
 {
-    // 获取最近的存活入口小怪
     Unit* nearestTrash = GetNearestAliveEntranceTrash(botAI, bot);
     if (!nearestTrash)
         return false;
-
-    // 检查坦克是否已经在与小怪战斗
-    bool inCombatWithTrash = bot->IsInCombat() && nearestTrash->GetVictim() == bot;
-
-    if (!inCombatWithTrash)
+    bool inCombat = bot->IsInCombat();
+    if (!inCombat)
     {
-        // 阶段1: 坦克尚未引怪，移动到最近的小怪位置进行body-pull
         float distToTrash = bot->GetExactDist2d(nearestTrash);
         if (distToTrash > 5.0f)
         {
-            // 向小怪方向移动
             float dX = nearestTrash->GetPositionX() - bot->GetPositionX();
             float dY = nearestTrash->GetPositionY() - bot->GetPositionY();
             float moveDist = std::min(10.0f, distToTrash);
             float moveX = bot->GetPositionX() + (dX / distToTrash) * moveDist;
             float moveY = bot->GetPositionY() + (dY / distToTrash) * moveDist;
-
             return MoveTo(SUNWELL_MAP_ID, moveX, moveY, nearestTrash->GetPositionZ(),
                           false, false, false, false,
                           MovementPriority::MOVEMENT_FORCED, true, false);
         }
-
-        // 近距离直接攻击引怪
         return Attack(nearestTrash);
     }
-
-    // 阶段2: 坦克已引怪，将小怪拉回参战位置
     float distToEngage = bot->GetExactDist2d(
         SWP_ENTRANCE_ENGAGE_POS.GetPositionX(),
         SWP_ENTRANCE_ENGAGE_POS.GetPositionY());
-
-    if (distToEngage > 5.0f)
+    if (distToEngage <= 5.0f)
     {
-        // 向参战位置移动，同时保持对小怪的仇恨
-        float dX = SWP_ENTRANCE_ENGAGE_POS.GetPositionX() - bot->GetPositionX();
-        float dY = SWP_ENTRANCE_ENGAGE_POS.GetPositionY() - bot->GetPositionY();
-        float moveDist = std::min(8.0f, distToEngage);
-        float moveX = bot->GetPositionX() + (dX / distToEngage) * moveDist;
-        float moveY = bot->GetPositionY() + (dY / distToEngage) * moveDist;
-
-        return MoveTo(SUNWELL_MAP_ID, moveX, moveY, SWP_ENTRANCE_ENGAGE_POS.GetPositionZ(),
-                      false, false, false, false,
-                      MovementPriority::MOVEMENT_COMBAT, true, true);
+        if (AI_VALUE(Unit*, "current target") != nearestTrash)
+            return Attack(nearestTrash);
+        return false;
     }
+    float dxe = SWP_ENTRANCE_ENGAGE_POS.GetPositionX() - SWP_ENTRANCE_TANK_WAIT_POS.GetPositionX();
+    float dye = SWP_ENTRANCE_ENGAGE_POS.GetPositionY() - SWP_ENTRANCE_TANK_WAIT_POS.GetPositionY();
+    float distWaitToEngage = std::sqrt(dxe * dxe + dye * dye);
+    if (distToEngage > distWaitToEngage + 3.0f)
+    {
+        MoveTo(SUNWELL_MAP_ID,
+               SWP_ENTRANCE_TANK_WAIT_POS.GetPositionX(),
+               SWP_ENTRANCE_TANK_WAIT_POS.GetPositionY(),
+               SWP_ENTRANCE_TANK_WAIT_POS.GetPositionZ(),
+               false, false, false, false,
+               MovementPriority::MOVEMENT_FORCED, true, true);
+        return true;
+    }
+    MoveTo(SUNWELL_MAP_ID,
+           SWP_ENTRANCE_ENGAGE_POS.GetPositionX(),
+           SWP_ENTRANCE_ENGAGE_POS.GetPositionY(),
+           SWP_ENTRANCE_ENGAGE_POS.GetPositionZ(),
+           false, false, false, false,
+           MovementPriority::MOVEMENT_FORCED, true, true);
+    return true;
+}
 
-    // 已到达参战位置，正常攻击
-    if (AI_VALUE(Unit*, "current target") != nearestTrash)
-        return Attack(nearestTrash);
+bool SwpTrashTankWaitAction::Execute(Event /*event*/)
+{
+    float distToWait = bot->GetExactDist2d(
+        SWP_ENTRANCE_TANK_WAIT_POS.GetPositionX(),
+        SWP_ENTRANCE_TANK_WAIT_POS.GetPositionY());
+    if (distToWait > 3.0f)
+    {
+        float dX = SWP_ENTRANCE_TANK_WAIT_POS.GetPositionX() - bot->GetPositionX();
+        float dY = SWP_ENTRANCE_TANK_WAIT_POS.GetPositionY() - bot->GetPositionY();
+        float moveDist = std::min(10.0f, distToWait);
+        float moveX = bot->GetPositionX() + (dX / distToWait) * moveDist;
+        float moveY = bot->GetPositionY() + (dY / distToWait) * moveDist;
+        return MoveTo(SUNWELL_MAP_ID, moveX, moveY, SWP_ENTRANCE_TANK_WAIT_POS.GetPositionZ(),
+                      false, false, false, false,
+                      MovementPriority::MOVEMENT_FORCED, true, false);
+    }
+    bot->StopMoving();
+    return true;
+}
 
-    return false;
+bool SwpTrashHealerEscortAction::Execute(Event /*event*/)
+{
+    Player* mainTank = GetGroupMainTank(botAI, bot);
+    if (!mainTank || !mainTank->IsAlive())
+        return false;
+    float distToTank = bot->GetExactDist2d(mainTank);
+    if (distToTank <= SWP_HEALER_FOLLOW_RANGE)
+        return false;
+    float dX = mainTank->GetPositionX() - bot->GetPositionX();
+    float dY = mainTank->GetPositionY() - bot->GetPositionY();
+    float moveDist = std::min(10.0f, distToTank - SWP_HEALER_FOLLOW_RANGE + 5.0f);
+    float moveX = bot->GetPositionX() + (dX / distToTank) * moveDist;
+    float moveY = bot->GetPositionY() + (dY / distToTank) * moveDist;
+    return MoveTo(SUNWELL_MAP_ID, moveX, moveY, mainTank->GetPositionZ(),
+                  false, false, false, false,
+                  MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 bool SwpTrashGroupHoldAction::Execute(Event /*event*/)
 {
-    // 非坦克机器人在参战位置等待，不参战也不捡尸体
     float distToEngage = bot->GetExactDist2d(
         SWP_ENTRANCE_ENGAGE_POS.GetPositionX(),
         SWP_ENTRANCE_ENGAGE_POS.GetPositionY());
-
     if (distToEngage > 5.0f)
     {
-        // 移动到参战位置
         float dX = SWP_ENTRANCE_ENGAGE_POS.GetPositionX() - bot->GetPositionX();
         float dY = SWP_ENTRANCE_ENGAGE_POS.GetPositionY() - bot->GetPositionY();
         float moveDist = std::min(10.0f, distToEngage);
         float moveX = bot->GetPositionX() + (dX / distToEngage) * moveDist;
         float moveY = bot->GetPositionY() + (dY / distToEngage) * moveDist;
-
         return MoveTo(SUNWELL_MAP_ID, moveX, moveY, SWP_ENTRANCE_ENGAGE_POS.GetPositionZ(),
                       false, false, false, false,
                       MovementPriority::MOVEMENT_FORCED, true, false);
     }
-
-    // 已在参战位置，停止移动等待
     bot->StopMoving();
     return true;
 }
 
 bool SwpWaitForDeadPartyMembersAction::Execute(Event /*event*/)
 {
-    // 团灭后有队友尚未复活时，存活机器人原地等待
-    // 不捡尸体、不移动，防止引怪
     bot->StopMoving();
     bot->SetTarget(ObjectGuid::Empty);
     return true;
@@ -122,7 +152,8 @@ bool SunwellEraseTimersAndTrackersAction::Execute(Event /*event*/)
     bool erased = false;
 
     // 卡雷苟斯相关清理
-    if (!AI_VALUE2(Unit*, "find target", "kalecgos"))
+    // By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
+    if (!FindKalecgosBoss(botAI, bot))
     {
         if (kalecgosPhaseTimer.erase(instanceId) > 0)
             erased = true;
@@ -177,12 +208,13 @@ bool SunwellEraseTimersAndTrackersAction::Execute(Event /*event*/)
 // - 现实位面(Z>50)：与卡雷苟斯龙形态战斗
 // - 幽灵领域(Z<50)：与萨斯罗瓦尔战斗，帮助卡雷苟斯人形态
 // - BOSS施放幽灵冲击(44869)随机传送玩家到幽灵领域
-// - 玩家也可通过点击幽灵裂缝(GO 187355)主动进入
+// - 玩家也可通过点击幽魂裂隙(GO 187055)主动进入
 // - 退出后获得幽灵力竭(44867)，60秒内不能再进入
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
 bool KalecgosMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
     if (!kalecgos)
         return false;
 
@@ -201,10 +233,12 @@ bool KalecgosMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
     return false;
 }
+//End By leewheel
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
 bool KalecgosTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
     if (!kalecgos)
         return false;
 
@@ -232,10 +266,12 @@ bool KalecgosTanksPositionBossAction::Execute(Event /*event*/)
 
     return false;
 }
+//End By leewheel
 
+//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
 bool KalecgosRangedDisperseAction::Execute(Event /*event*/)
 {
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
     if (!kalecgos)
         return false;
 
@@ -248,7 +284,11 @@ bool KalecgosRangedDisperseAction::Execute(Event /*event*/)
     return MoveTo(SUNWELL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
                   false, false, MovementPriority::MOVEMENT_COMBAT, true, true);
 }
+//End By leewheel
 
+//By leewheel 2026-07-09 修复进入幽灵领域动作
+// 原问题：机器人走到GO旁边就return true，注释写"靠近即可触发"，完全错误
+// 修复：实际调用 go->Use(bot) 点击传送门GO，触发SPELL_SPECTRAL_REALM(46021)法术
 bool KalecgosEnterSpectralRealmAction::Execute(Event /*event*/)
 {
     // 如果已经在幽灵领域中，不需要再次进入
@@ -259,47 +299,50 @@ bool KalecgosEnterSpectralRealmAction::Execute(Event /*event*/)
     if (bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_SPECTRAL_EXHAUSTION)))
         return false;
 
-    // 查找附近的幽灵裂缝游戏对象
+    //By leewheel 2026-07-09 修复GO entry错误：187355(魔导师平台)→187055(幽魂裂隙)
+    // 查找附近的幽魂裂隙游戏对象（GO_SPECTRAL_RIFT = 187055）
+    // 传送门由BOSS的幽灵冲击(44869)→法术44866(SUMMON_OBJECT)在目标位置生成
+    // GO type=10(GOOBER)，data10=44811(法术ID)，点击时施放44811到使用者
+    // 44811的脚本(spell_kalecgos_spectral_realm_dummy)会施放46019(传送)
+    // spell_linked_spell: 46019→46021(幽灵领域光环)
     GameObject* portal = bot->FindNearestGameObject(static_cast<uint32>(SunwellObjects::GO_SPECTRAL_RIFT), 50.0f);
     if (portal)
     {
         const float dist = bot->GetExactDist2d(portal);
-        if (dist > 3.0f)
+        if (dist > INTERACTION_DISTANCE)
         {
             // 移动到传送门位置
             return MoveTo(SUNWELL_MAP_ID, portal->GetPositionX(), portal->GetPositionY(),
                           portal->GetPositionZ(), false, false, false, false,
-                          MovementPriority::MOVEMENT_COMBAT, true, true);
+                          MovementPriority::MOVEMENT_FORCED, true, true);
         }
 
-        // 到达传送门附近，记录已进入状态
+        // 到达传送门附近，实际点击使用GO
+        // go->Use(bot) 会触发GOOBER类型的GO施放data10中的法术(44811)到使用者
+        // 44811→46019→46021 完成进入幽灵领域的法术链
         kalecgosHasEnteredSpectral[bot->GetGUID()] = true;
-        // 传送门的使用由服务端脚本处理，玩家靠近即可触发
+        portal->Use(bot);
         return true;
     }
 
-    // 如果找不到GO，尝试直接移动到传送门坐标位置
-    const Position& portalPos = KALECGOS_PORTAL_POSITION;
-    const float dist = bot->GetExactDist2d(portalPos.GetPositionX(), portalPos.GetPositionY());
-    if (dist > 3.0f)
-    {
-        return MoveTo(SUNWELL_MAP_ID, portalPos.GetPositionX(), portalPos.GetPositionY(),
-                      portalPos.GetPositionZ(), false, false, false, false,
-                      MovementPriority::MOVEMENT_COMBAT, true, true);
-    }
-
+    // 如果找不到GO，BOSS会自动随机传送玩家进内场（每20-30秒一次）
+    // 不需要主动进入，返回false让机器人继续打外场BOSS
     return false;
 }
+//End By leewheel
 
+//By leewheel 2026-07-09 使用FindSathrovarr替代find target
+// find target 只搜索仇恨表，机器人刚被传送到内场时可能还没有仇恨
 bool KalecgosAttackSathrovarrAction::Execute(Event /*event*/)
 {
     // 在幽灵领域中，攻击萨斯罗瓦尔
-    Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor");
+    Unit* sathrovarr = FindSathrovarr(botAI, bot);
     if (!sathrovarr || !sathrovarr->IsAlive())
         return false;
 
     return Attack(sathrovarr);
 }
+//End By leewheel
 
 // ===== 卡雷苟斯新增动作 =====
 // 内外场血量同步控制：
@@ -338,6 +381,9 @@ bool KalecgosHealthSyncAction::Execute(Event /*event*/)
     return false;  // 正常输出
 }
 
+//By leewheel 2026-07-09 修复奥术冲击重置动作
+// 原问题：同EnterSpectralRealmAction一样，走到GO旁边就return true，从不点击
+// 修复：实际调用 go->Use(bot) 点击传送门GO
 bool KalecgosManageArcaneBuffetAction::Execute(Event /*event*/)
 {
     // 奥术冲击层数过高时进入幽灵领域刷新
@@ -348,32 +394,27 @@ bool KalecgosManageArcaneBuffetAction::Execute(Event /*event*/)
     if (bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_SPECTRAL_EXHAUSTION)))
         return false;
 
-    // 查找附近的幽灵裂缝游戏对象（GO_SPECTRAL_RIFT = 187355）
+    //By leewheel 2026-07-09 修复GO entry错误：187355(魔导师平台)→187055(幽魂裂隙)
+    // 查找附近的幽魂裂隙游戏对象（GO_SPECTRAL_RIFT = 187055）
     GameObject* portal = bot->FindNearestGameObject(static_cast<uint32>(SunwellObjects::GO_SPECTRAL_RIFT), 50.0f);
     if (portal)
     {
         const float dist = bot->GetExactDist2d(portal);
-        if (dist > 3.0f)
+        if (dist > INTERACTION_DISTANCE)
         {
             return MoveTo(SUNWELL_MAP_ID, portal->GetPositionX(), portal->GetPositionY(),
                           portal->GetPositionZ(), false, false, false, false,
                           MovementPriority::MOVEMENT_FORCED, true, true);
         }
+        // 实际点击使用GO，触发44811→46019→46021法术链进入幽灵领域
+        portal->Use(bot);
         return true;
     }
 
-    // 如果找不到GO，尝试移动到传送门坐标位置
-    const Position& portalPos = KALECGOS_PORTAL_POSITION;
-    const float dist = bot->GetExactDist2d(portalPos.GetPositionX(), portalPos.GetPositionY());
-    if (dist > 3.0f)
-    {
-        return MoveTo(SUNWELL_MAP_ID, portalPos.GetPositionX(), portalPos.GetPositionY(),
-                      portalPos.GetPositionZ(), false, false, false, false,
-                      MovementPriority::MOVEMENT_FORCED, true, true);
-    }
-
+    // 找不到GO时BOSS会自动传送，返回false继续输出
     return false;
 }
+//End By leewheel
 
 bool KalecgosDispellingCurseAction::Execute(Event /*event*/)
 {

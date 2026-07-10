@@ -24,6 +24,8 @@ public:
 
 // ===== 入口小怪 (Entrance Trash) =====
 
+//By leewheel 2026-07-09
+// 坦克拉怪触发器：只有主坦克触发，且需要等待用户命令才开始拉怪
 class SwpTrashTankPullTrigger : public Trigger
 {
 public:
@@ -31,6 +33,25 @@ public:
         PlayerbotAI* botAI) : Trigger(botAI, "swp trash tank pull") {}
     bool IsActive() override;
 };
+
+// 坦克等待触发器：坦克在等待位置待命，直到收到攻击命令
+class SwpTrashTankWaitTrigger : public Trigger
+{
+public:
+    SwpTrashTankWaitTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "swp trash tank wait") {}
+    bool IsActive() override;
+};
+
+// 治疗接应触发器：前两个治疗在坦克拉怪过程中保持治疗距离
+class SwpTrashHealerEscortTrigger : public Trigger
+{
+public:
+    SwpTrashHealerEscortTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "swp trash healer escort") {}
+    bool IsActive() override;
+};
+//End By leewheel
 
 class SwpTrashGroupHoldTrigger : public Trigger
 {

@@ -21,6 +21,20 @@ public:
         creators["sunwell bot is not in combat"] =
             &RaidSunwellPlateauTriggerContext::sunwell_bot_is_not_in_combat;
 
+        // 入口小怪
+        creators["swp trash tank pull"] =
+            &RaidSunwellPlateauTriggerContext::swp_trash_tank_pull;
+        //By leewheel 2026-07-09
+        creators["swp trash tank wait"] =
+            &RaidSunwellPlateauTriggerContext::swp_trash_tank_wait;
+        creators["swp trash healer escort"] =
+            &RaidSunwellPlateauTriggerContext::swp_trash_healer_escort;
+        //End By leewheel
+        creators["swp trash group hold"] =
+            &RaidSunwellPlateauTriggerContext::swp_trash_group_hold;
+        creators["swp dead party member waiting"] =
+            &RaidSunwellPlateauTriggerContext::swp_dead_party_member_waiting;
+
         // 卡雷苟斯
         creators["kalecgos pulling boss"] =
             &RaidSunwellPlateauTriggerContext::kalecgos_pulling_boss;
@@ -110,6 +124,20 @@ private:
     // 通用
     static Trigger* sunwell_bot_is_not_in_combat(
         PlayerbotAI* botAI) { return new SunwellBotIsNotInCombatTrigger(botAI); }
+
+    // 入口小怪
+    static Trigger* swp_trash_tank_pull(
+        PlayerbotAI* botAI) { return new SwpTrashTankPullTrigger(botAI); }
+    //By leewheel 2026-07-09
+    static Trigger* swp_trash_tank_wait(
+        PlayerbotAI* botAI) { return new SwpTrashTankWaitTrigger(botAI); }
+    static Trigger* swp_trash_healer_escort(
+        PlayerbotAI* botAI) { return new SwpTrashHealerEscortTrigger(botAI); }
+    //End By leewheel
+    static Trigger* swp_trash_group_hold(
+        PlayerbotAI* botAI) { return new SwpTrashGroupHoldTrigger(botAI); }
+    static Trigger* swp_dead_party_member_waiting(
+        PlayerbotAI* botAI) { return new SwpDeadPartyMemberWaitingTrigger(botAI); }
 
     // 卡雷苟斯
     static Trigger* kalecgos_pulling_boss(
