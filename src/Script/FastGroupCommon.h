@@ -27,6 +27,21 @@ class Player;
 class ChatHandler;
 
 // ============================================================
+//  组队形式枚举 - By leewheel 2026-07-10
+//  记录在 playerbots_fast_group_members 表中
+//  用于区分机器人是快速组队、随机本还是邀请组队的
+//  快速组队的机器人在退队时需要清理装备（装备是系统临时分配的）
+//  随机本和邀请组队的机器人保留装备
+// ============================================================
+enum FastGroupType
+{
+    FG_TYPE_FAST_GROUP  = 0,  // 快速组队（.5人队/.10人团等命令）
+    FG_TYPE_LFG         = 1,  // 随机本（LFG队列匹配）
+    FG_TYPE_INVITE      = 2   // 邀请组队（玩家手动邀请）
+};
+// End By leewheel
+
+// ============================================================
 //  角色定位枚举
 // ============================================================
 enum FastGroupRole
@@ -116,7 +131,7 @@ public:
     bool PopPendingSetup(ObjectGuid botGuid, PendingBotSetup& out);
     void ClearPendingSetups(ObjectGuid masterGuid);
 
-    // ---- 快速组队机器人列表管理 ----
+    // ---- 快速组队机器人列表管理（内存） ----
     void RegisterFastGroupBots(Player* master, const std::vector<ObjectGuid>& botGuids);
     void LogoutFastGroupBots(Player* master);
 
@@ -127,6 +142,24 @@ public:
     // 获取玩家已注册的快速组队机器人GUID列表
     // 供 AutoJoinRaid 检查机器人是否全部上线后执行传送
     std::vector<ObjectGuid> GetFastGroupBotGuids(ObjectGuid masterGuid);
+    // End By leewheel
+
+    // By leewheel 2026-07-10
+    // ---- 数据库记录管理 ----
+    // 向 playerbots_fast_group_members 表插入记录
+    void DbAddFastGroupMember(uint32 masterGuid, uint32 botGuid, const std::string& botName, uint8 botClass, uint8 groupType);
+    // 从表中删除指定机器人的记录
+    void DbRemoveFastGroupMember(uint32 botGuid);
+    // 删除指定主控玩家的所有记录
+    void DbRemoveAllByMaster(uint32 masterGuid);
+    // 查询指定主控玩家的所有快速组队机器人GUID列表
+    std::vector<uint32> DbGetBotGuidsByMaster(uint32 masterGuid);
+    // 检查指定机器人是否在表中（且为快速组队类型）
+    bool DbIsFastGroupBot(uint32 botGuid);
+    // 检查指定主控玩家是否有快速组队记录
+    bool DbHasFastGroupBots(uint32 masterGuid);
+    // 清理表中所有不在线的机器人记录（服务器启动时调用）
+    void DbCleanupOfflineBots();
     // End By leewheel
 
     // By leewheel 2026-07-08

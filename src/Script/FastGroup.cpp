@@ -115,6 +115,72 @@ FastGroupMgr& FastGroupMgr::instance()
     return inst;
 }
 
+// ============================================================
+//  数据库记录管理方法 - By leewheel 2026-07-10
+//  操作 playerbots_fast_group_members 表
+//  用于持久化记录快速组队的机器人信息
+// ============================================================
+
+void FastGroupMgr::DbAddFastGroupMember(uint32 masterGuid, uint32 botGuid, const std::string& botName, uint8 botClass, uint8 groupType)
+{
+    CharacterDatabase.Execute(
+        "INSERT INTO playerbots_fast_group_members (master_guid, bot_guid, bot_name, bot_class, group_type) "
+        "VALUES ({}, {}, '{}', {}, {}) "
+        "ON DUPLICATE KEY UPDATE master_guid = {}, bot_name = '{}', bot_class = {}, group_type = {}",
+        masterGuid, botGuid, botName, botClass, groupType,
+        masterGuid, botName, botClass, groupType);
+}
+
+void FastGroupMgr::DbRemoveFastGroupMember(uint32 botGuid)
+{
+    CharacterDatabase.Execute("DELETE FROM playerbots_fast_group_members WHERE bot_guid = {}", botGuid);
+}
+
+void FastGroupMgr::DbRemoveAllByMaster(uint32 masterGuid)
+{
+    CharacterDatabase.Execute("DELETE FROM playerbots_fast_group_members WHERE master_guid = {}", masterGuid);
+}
+
+std::vector<uint32> FastGroupMgr::DbGetBotGuidsByMaster(uint32 masterGuid)
+{
+    std::vector<uint32> result;
+    QueryResult res = CharacterDatabase.Query(
+        "SELECT bot_guid FROM playerbots_fast_group_members WHERE master_guid = {} AND group_type = {}",
+        masterGuid, FG_TYPE_FAST_GROUP);
+    if (res)
+    {
+        do
+        {
+            result.push_back(res->Fetch()[0].Get<uint32>());
+        } while (res->NextRow());
+    }
+    return result;
+}
+
+bool FastGroupMgr::DbIsFastGroupBot(uint32 botGuid)
+{
+    QueryResult res = CharacterDatabase.Query(
+        "SELECT 1 FROM playerbots_fast_group_members WHERE bot_guid = {} AND group_type = {} LIMIT 1",
+        botGuid, FG_TYPE_FAST_GROUP);
+    return res != nullptr;
+}
+
+bool FastGroupMgr::DbHasFastGroupBots(uint32 masterGuid)
+{
+    QueryResult res = CharacterDatabase.Query(
+        "SELECT 1 FROM playerbots_fast_group_members WHERE master_guid = {} AND group_type = {} LIMIT 1",
+        masterGuid, FG_TYPE_FAST_GROUP);
+    return res != nullptr;
+}
+
+void FastGroupMgr::DbCleanupOfflineBots()
+{
+    // 清理所有记录（服务器启动时调用，此时所有机器人都不在线）
+    CharacterDatabase.Execute("TRUNCATE TABLE playerbots_fast_group_members");
+    LOG_INFO("playerbots", "快速组队：已清理所有快速组队记录（服务器启动）。");
+}
+// End By leewheel
+
 void FastGroupMgr::AddPendingSetup(ObjectGuid botGuid, const PendingBotSetup& setup)
 {
     m_pendingSetups[botGuid] = setup;
@@ -173,18 +239,21 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
 
         if (bot)
         {
-            // 机器人在线，清除装备并下线
-            // By leewheel 2026-07-08
+            // By leewheel 2026-07-10
+            // 快速组队的机器人都是Rndbot，装备是系统临时分配的，退队时必须清理
+            // 原因：如果不清理，下次快速组队可能选到穿着旧等级装备的机器人
+            // Altbot不会出现在快速组队的内存列表中，无需额外判断
             PlayerbotFactory clearFactory(bot, bot->GetLevel(), 0);
             clearFactory.ClearAllItems();
+
             bot->SaveToDB(false, false);
-            // End By leewheel
 
             LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，机器人 {} 正在下线（已清除装备）。",
                 master->GetName(), bot->GetName());
 
             if (mgr)
                 mgr->LogoutPlayerBot(botGuid);
+            // End By leewheel
         }
         // By leewheel 2026-07-08
         // 机器人不在线（可能已被 LogoutAllBots 下线），从队伍中移除 GUID
@@ -195,12 +264,20 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
                 master->GetName(), botGuid.ToString());
         }
         // End By leewheel
+
+        // By leewheel 2026-07-10 - 从数据库删除记录
+        sFastGroupMgr.DbRemoveFastGroupMember(botGuid.GetCounter());
+        // End By leewheel
     }
 
     m_fastGroupBots.erase(itr);
 
     // By leewheel 2026-07-08 - 清除角色分配标记
     m_rolesAssigned.erase(master->GetGUID());
+    // End By leewheel
+
+    // By leewheel 2026-07-10 - 确保数据库中该玩家的所有快速组队记录都已清除
+    sFastGroupMgr.DbRemoveAllByMaster(master->GetGUID().GetCounter());
     // End By leewheel
 }
 
@@ -450,12 +527,17 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
         first = false;
     }
 
-    // 一次性查询所有符合职业和阵营的离线角色
+    // By leewheel 2026-07-10
+    // 只从随机机器人账号中筛选，避免选中玩家手动创建的Altbot角色
+    // Altbot应由玩家手动添加（addbot），不应被快速组队系统自动选中并修改
     QueryResult results = CharacterDatabase.Query(
-        "SELECT guid, name, race, account, class FROM characters "
-        "WHERE class IN ({}) AND online = 0 AND {} "
+        "SELECT c.guid, c.name, c.race, c.account, c.class FROM characters c "
+        "INNER JOIN account a ON c.account = a.id "
+        "WHERE c.class IN ({}) AND c.online = 0 AND {} "
+        "AND a.username LIKE '{}%%' "
         "ORDER BY RAND()",
-        classList, raceCondition);
+        classList, raceCondition, sPlayerbotAIConfig.randomBotAccountPrefix.c_str());
+    // End By leewheel
 
     if (!results)
         return candidates;
@@ -669,6 +751,16 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
         // 异步上线机器人
         mgr->AddPlayerBot(candidate.guid, masterAccountId);
         addedBotGuids.push_back(candidate.guid);
+
+        // By leewheel 2026-07-10
+        // 向数据库记录快速组队信息，用于退队时区分组队方式
+        sFastGroupMgr.DbAddFastGroupMember(
+            master->GetGUID().GetCounter(),
+            candidate.guid.GetCounter(),
+            candidate.name,
+            candidate.playerClass,
+            FG_TYPE_FAST_GROUP);
+        // End By leewheel
     }
 
     if (addedBotGuids.empty())
@@ -859,6 +951,18 @@ public:
         if (!sFastGroupMgr.PopPendingSetup(player->GetGUID(), setup))
             return;
 
+        // By leewheel 2026-07-10
+        // Altbot（玩家手动创建的小号机器人）不执行任何设置
+        // Altbot保留玩家手动设置的等级、天赋、装备，不做任何修改
+        // 原因：Altbot是玩家自己练的小号，已有自己的装备和天赋，不应被快速组队系统覆盖
+        if (!sRandomPlayerbotMgr.IsRandomBot(player))
+        {
+            LOG_INFO("playerbots", "快速组队：Altbot {} 已上线，保留原有装备和设置，为玩家 {} 服务。",
+                player->GetName(), setup.masterName);
+            return;
+        }
+        // End By leewheel
+
         uint32 targetLevel = setup.targetLevel;
         int specTab = setup.specTab;
         FastGroupRole role = setup.role;
@@ -939,10 +1043,11 @@ public:
         ObjectGuid guid = player->GetGUID();
 
         // By leewheel 2026-07-08
-        // 遗留机器人检查：如果玩家在队伍中，且队伍中有在线的机器人，
-        // 但 m_fastGroupBots 中没有记录，重新注册
-        // 原因：玩家下线时 m_fastGroupBots 记录被清除，但机器人可能通过 botAutologin 重新上线
-        //       导致退队时找不到记录无法下线机器人
+        // 遗留机器人检查：如果玩家在队伍中，且队伍中有在线的快速组队机器人，
+        // 但 m_fastGroupBots 内存中没有记录，重新注册
+        // By leewheel 2026-07-10 修订：
+        // 使用数据库表判断是否为快速组队的机器人，而非仅判断 IsRandomBot
+        // 原因：随机本的Rndbot也是IsRandomBot，但不应被纳入快速组队管理
         if (!sFastGroupMgr.HasFastGroupBots(guid))
         {
             // 冷却检查：每 5 秒检测一次
@@ -959,18 +1064,23 @@ public:
                 for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
                 {
                     Player* member = itr->GetSource();
-                    if (member && GET_PLAYERBOT_AI(member))
+                    // By leewheel 2026-07-10
+                    // 只注册数据库表中记录为快速组队的机器人
+                    // 随机本的Rndbot和Altbot都不纳入快速组队管理
+                    if (member && GET_PLAYERBOT_AI(member) &&
+                        sFastGroupMgr.DbIsFastGroupBot(member->GetGUID().GetCounter()))
                         orphanBots.push_back(member->GetGUID());
+                    // End By leewheel
                 }
 
                 if (!orphanBots.empty())
                 {
                     sFastGroupMgr.RegisterFastGroupBots(player, orphanBots);
-                    LOG_INFO("playerbots", "快速组队：玩家 {} 发现 {} 个遗留机器人，已重新纳入管理。",
+                    LOG_INFO("playerbots", "快速组队：玩家 {} 发现 {} 个遗留快速组队机器人，已重新纳入管理。",
                         player->GetName(), orphanBots.size());
 
                     ChatHandler handler(player->GetSession());
-                    handler.PSendSysMessage("|cff00ccff[快速组队] 检测到 {} 个遗留机器人，已重新纳入管理。|r", orphanBots.size());
+                    handler.PSendSysMessage("|cff00ccff[快速组队] 检测到 {} 个遗留快速组队机器人，已重新纳入管理。|r", orphanBots.size());
                 }
             }
         }
@@ -1046,13 +1156,19 @@ public:
         if (GET_PLAYERBOT_AI(player))
             return;
 
-        // 如果该玩家有快速组队机器人在线，下线它们
+        // By leewheel 2026-07-10
+        // 基于数据库表判断是否为快速组队
+        // 数据库记录持久化，不受内存记录清除影响，也不受服务器重启影响
+        // 只有在 playerbots_fast_group_members 表中记录为 FG_TYPE_FAST_GROUP 的机器人才需要清理装备
+        bool hadFastGroupBots = sFastGroupMgr.DbHasFastGroupBots(guid.GetCounter());
+
+        // 如果该玩家有快速组队机器人在线，下线它们（清理注册Rndbot的装备）
         sFastGroupMgr.LogoutFastGroupBots(player);
 
-        // By leewheel 2026-07-08
-        // 备用检查：如果 m_fastGroupBots 没有记录（可能是上次下线时记录被清除了），
-        // 检查队伍中是否有在线的机器人需要下线
-        if (!sFastGroupMgr.HasFastGroupBots(guid) && group)
+        // 备用检查：只有数据库中有快速组队记录时才执行
+        // 处理服务器重启等场景导致内存记录丢失后，遗留的快速组队Rndbot
+        // 随机本的Rndbot和Altbot完全不受影响
+        if (hadFastGroupBots && group)
         {
             PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(player);
             if (mgr)
@@ -1062,14 +1178,21 @@ public:
                     Player* member = itr->GetSource();
                     if (member && GET_PLAYERBOT_AI(member))
                     {
-                        // 清除装备后下线
-                        PlayerbotFactory clearFactory(member, member->GetLevel(), 0);
-                        clearFactory.ClearAllItems();
-                        member->SaveToDB(false, false);
-
-                        mgr->LogoutPlayerBot(member->GetGUID());
-                        LOG_INFO("playerbots", "快速组队：玩家 {} 退队，遗留机器人 {} 已下线。",
-                            player->GetName(), member->GetName());
+                        // By leewheel 2026-07-10
+                        // 用数据库表精确判断：只有在表中记录为快速组队的机器人才清理装备并下线
+                        // 随机本的Rndbot和Altbot完全不受影响
+                        if (sFastGroupMgr.DbIsFastGroupBot(member->GetGUID().GetCounter()))
+                        {
+                            // 快速组队的Rndbot：清理装备并下线
+                            PlayerbotFactory clearFactory(member, member->GetLevel(), 0);
+                            clearFactory.ClearAllItems();
+                            member->SaveToDB(false, false);
+                            mgr->LogoutPlayerBot(member->GetGUID());
+                            sFastGroupMgr.DbRemoveFastGroupMember(member->GetGUID().GetCounter());
+                            LOG_INFO("playerbots", "快速组队：玩家 {} 退队，快速组队机器人 {} 已下线（已清除装备）。",
+                                player->GetName(), member->GetName());
+                        }
+                        // End By leewheel
                     }
                 }
             }
