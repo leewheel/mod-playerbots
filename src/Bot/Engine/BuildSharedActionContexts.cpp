@@ -27,6 +27,9 @@
 //By leewheel 2026-07-09
 #include "VimgolActionContext.h"
 //End By leewheel
+//By leewheel 2026-07-11
+#include "VanillaNaxxActionContext.h"
+//End By leewheel
 #include "Ai/Dungeon/TbcDungeonActionContext.h"
 #include "Ai/Dungeon/WotlkDungeonActionContext.h"
 
@@ -59,6 +62,9 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     //End By leewheel
     //By leewheel 2026-07-09
     actionContexts.Add(new VimgolActionContext());
+    //End By leewheel
+    //By leewheel 2026-07-11
+    actionContexts.Add(new RaidVanillaNaxxActionContext());
     //End By leewheel
     actionContexts.Add(new TbcDungeonAuchenaiCryptsActionContext());
     actionContexts.Add(new WotlkDungeonUKActionContext());

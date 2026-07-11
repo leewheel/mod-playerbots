@@ -1636,7 +1636,10 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         "wotlk-ok", "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up",
         "wotlk-vh", "zulaman",
         //By leewheel 2026-07-08
-        "sunwell"
+        "sunwell",
+        //End By leewheel
+        //By leewheel 2026-07-11
+        "vanilla naxx"
         //End By leewheel
     };
 
@@ -1685,6 +1688,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         //By leewheel 2026-07-08
         {"sunwell",       "太阳井高地"},
         //End By leewheel
+        //By leewheel 2026-07-11
+        {"vanilla naxx",  "纳克萨玛斯（60级）"},
+        //End By leewheel
     };
     //End By leewheel
 
@@ -1713,7 +1719,8 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             strategyName = "karazhan";  // Karazhan
             break;
         case 533:
-            strategyName = "naxx";  // Naxxramas
+            //By leewheel 2026-07-11: Vanilla Naxx40 uses RAID_DIFFICULTY_10MAN_HEROIC
+            strategyName = (bot->GetRaidDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC) ? "vanilla naxx" : "naxx";  // Naxxramas
             break;
         case 534:
             strategyName = "hyjal";  // The Battle for Mount Hyjal (Hyjal Summit)

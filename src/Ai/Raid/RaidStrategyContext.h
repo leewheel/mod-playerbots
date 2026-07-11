@@ -24,6 +24,9 @@
 //By leewheel 2026-07-08
 #include "SWPStrategy.h"
 //End By leewheel
+//By leewheel 2026-07-11
+#include "VanillaNaxxStrategy.h"
+//End By leewheel
 
 class RaidStrategyContext : public NamedObjectContext<Strategy>
 {
@@ -52,6 +55,9 @@ public:
         //By leewheel 2026-07-08
         creators["sunwell"] = &RaidStrategyContext::sunwell;
         //End By leewheel
+        //By leewheel 2026-07-11
+        creators["vanilla naxx"] = &RaidStrategyContext::vanilla_naxx;
+        //End By leewheel
     }
 
 private:
@@ -76,6 +82,9 @@ private:
     static Strategy* rs(PlayerbotAI* botAI) { return new RaidRsStrategy(botAI); }
     //By leewheel 2026-07-08
     static Strategy* sunwell(PlayerbotAI* botAI) { return new RaidSunwellPlateauStrategy(botAI); }
+    //End By leewheel
+    //By leewheel 2026-07-11
+    static Strategy* vanilla_naxx(PlayerbotAI* botAI) { return new RaidVanillaNaxxStrategy(botAI); }
     //End By leewheel
 };
 
