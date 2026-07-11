@@ -175,9 +175,42 @@ bool FastGroupMgr::DbHasFastGroupBots(uint32 masterGuid)
 
 void FastGroupMgr::DbCleanupOfflineBots()
 {
-    // 清理所有记录（服务器启动时调用，此时所有机器人都不在线）
+    // By leewheel 2026-07-10
+    // 服务器启动时调用，此时所有机器人都已下线
+    // 不能简单清空表！如果服务器崩溃，OnPlayerLogout 未被触发，
+    // 机器人的装备没被清理，表记录也还在
+    // 正确做法：读取表中的记录，直接用SQL清空这些机器人在数据库中的装备，
+    //           然后再清空表
+    QueryResult res = CharacterDatabase.Query(
+        "SELECT bot_guid, bot_name FROM playerbots_fast_group_members WHERE group_type = {}",
+        FG_TYPE_FAST_GROUP);
+    
+    if (res)
+    {
+        uint32 count = 0;
+        do
+        {
+            Field* fields = res->Fetch();
+            uint32 botGuid = fields[0].Get<uint32>();
+            std::string botName = fields[1].Get<std::string>();
+
+            // 直接在数据库中清空该角色的所有物品
+            // character_inventory 记录物品位置和entry
+            // item_instance 记录物品详细数据
+            CharacterDatabase.Execute("DELETE FROM character_inventory WHERE guid = {}", botGuid);
+            CharacterDatabase.Execute("DELETE FROM item_instance WHERE owner_guid = {}", botGuid);
+
+            ++count;
+            LOG_INFO("playerbots", "快速组队：服务器启动清理 - 机器人 {} (GUID:{}) 的残留装备已清除。", botName, botGuid);
+        } while (res->NextRow());
+
+        LOG_INFO("playerbots", "快速组队：服务器启动清理完成，共清理 {} 个机器人的残留装备。", count);
+    }
+
+    // 清理完装备后清空表
     CharacterDatabase.Execute("TRUNCATE TABLE playerbots_fast_group_members");
-    LOG_INFO("playerbots", "快速组队：已清理所有快速组队记录（服务器启动）。");
+    LOG_INFO("playerbots", "快速组队：已清空快速组队记录表。");
+    // End By leewheel
 }
 // End By leewheel
 
@@ -228,6 +261,10 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
     // 原因：玩家下线时 OnPlayerbotLogout 先执行 LogoutAllBots 下线了所有机器人，
     //       然后 OnPlayerLogout 中 GetPlayerBot 返回 null，但机器人的 GUID 可能还在队伍中
     //       （raid group 不会自动移除成员），需要手动从队伍中移除
+    // By leewheel 2026-07-11 修订：
+    //       LogoutFastGroupBots 已移到 OnPlayerBeforeLogout 中执行，
+    //       在 LogoutAllBots 之前调用，此时机器人应该还在线。
+    //       但保留 else 分支作为兜底，防止其他调用路径下机器人不在线的情况。
     Group* group = master->GetGroup();
     // End By leewheel
 
@@ -257,10 +294,20 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
         }
         // By leewheel 2026-07-08
         // 机器人不在线（可能已被 LogoutAllBots 下线），从队伍中移除 GUID
+        // By leewheel 2026-07-11 修订：
+        // 增加数据库清理装备逻辑作为兜底
+        // 原因：如果机器人已被 LogoutAllBots 下线，SaveToDB 已将装备保存到数据库，
+        //       必须通过 SQL 直接删除数据库中的装备记录，否则装备会残留
         else if (group)
         {
             group->RemoveMember(botGuid, GROUP_REMOVEMETHOD_LEAVE);
-            LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，不在线的机器人 GUID {} 已从队伍移除。",
+
+            // 直接在数据库中清空该机器人的装备
+            uint32 botGuidRaw = botGuid.GetCounter();
+            CharacterDatabase.Execute("DELETE FROM character_inventory WHERE guid = {}", botGuidRaw);
+            CharacterDatabase.Execute("DELETE FROM item_instance WHERE owner_guid = {}", botGuidRaw);
+
+            LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，不在线的机器人 GUID {} 已从队伍移除并清理数据库装备。",
                 master->GetName(), botGuid.ToString());
         }
         // End By leewheel
@@ -278,6 +325,37 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
 
     // By leewheel 2026-07-10 - 确保数据库中该玩家的所有快速组队记录都已清除
     sFastGroupMgr.DbRemoveAllByMaster(master->GetGUID().GetCounter());
+    // End By leewheel
+
+    // By leewheel 2026-07-11
+    // 解散只剩主控玩家的空队伍
+    // 原因：快速组队的机器人都被移除后，如果队伍中只剩主控玩家自己，
+    //       这个空队伍没有意义，应该解散。
+    //       否则玩家再次上线时会发现自己在一个空队伍中，影响后续操作。
+    if (group)
+    {
+        // 重新获取队伍指针（前面的 RemoveMember 可能已经修改了队伍状态）
+        Group* currentGroup = master->GetGroup();
+        if (currentGroup)
+        {
+            // 统计队伍中在线成员数量
+            uint32 onlineCount = 0;
+            for (GroupReference* itr2 = currentGroup->GetFirstMember(); itr2 != nullptr; itr2 = itr2->next())
+            {
+                Player* member = itr2->GetSource();
+                if (member && member->GetSession() && !member->GetSession()->isLogingOut())
+                    ++onlineCount;
+            }
+
+            // 如果只有主控玩家自己在线，离开队伍
+            if (onlineCount <= 1)
+            {
+                currentGroup->RemoveMember(master->GetGUID(), GROUP_REMOVEMETHOD_LEAVE);
+                LOG_INFO("playerbots", "快速组队：玩家 {} 的快速组队机器人已全部下线，空队伍已解散。",
+                    master->GetName());
+            }
+        }
+    }
     // End By leewheel
 }
 
@@ -936,15 +1014,42 @@ class FastGroupPlayerScript : public PlayerScript
 public:
     FastGroupPlayerScript() : PlayerScript("FastGroupPlayerScript", {
         PLAYERHOOK_ON_LOGIN,
+        PLAYERHOOK_ON_BEFORE_LOGOUT,
         PLAYERHOOK_ON_LOGOUT,
         PLAYERHOOK_ON_AFTER_UPDATE
     }) {}
+
+    // By leewheel 2026-07-11
+    // 玩家下线前处理：在 LogoutAllBots 之前执行
+    // 原因：WorldSession::LogoutPlayer 中 OnPlayerbotLogout(LogoutAllBots) 在第658行执行，
+    //       OnPlayerLogout 在第789行执行。如果放在 OnPlayerLogout 中，
+    //       机器人已被 LogoutAllBots 下线，GetPlayerBot 返回 null，无法清理装备。
+    //       移到 OnPlayerBeforeLogout（第653行）可以在 LogoutAllBots 之前执行，
+    //       此时机器人还在线，可以正常清理装备并下线。
+    void OnPlayerBeforeLogout(Player* player) override
+    {
+        if (!player)
+            return;
+
+        // 在 LogoutAllBots 之前下线快速组队机器人并清理装备
+        sFastGroupMgr.LogoutFastGroupBots(player);
+    }
+    // End By leewheel
 
     // 机器人上线时设置等级、天赋、装备
     void OnPlayerLogin(Player* player) override
     {
         if (!player)
             return;
+
+        // By leewheel 2026-07-11
+        // 主控玩家上线时的残留队伍和数据库记录检查
+        // 原因：如果服务器崩溃或上次下线异常，可能残留快速组队记录和空队伍
+        if (!GET_PLAYERBOT_AI(player))
+        {
+            CleanupMasterLogin(player);
+        }
+        // End By leewheel
 
         // 检查是否是快速组队待设置的机器人
         PendingBotSetup setup;
@@ -1011,14 +1116,14 @@ public:
             player->GetName(), GetClassNameCN(cls), GetRoleNameCN(role), targetLevel, setup.masterName);
     }
 
-    // 玩家下线时清理快速组队记录并下线机器人
+    // By leewheel 2026-07-11
+    // 玩家下线时清理待设置记录和检查冷却
+    // 注意：LogoutFastGroupBots 已移到 OnPlayerBeforeLogout 中执行
+    //       原因：需要在 LogoutAllBots 之前执行，否则机器人已下线无法清理装备
     void OnPlayerLogout(Player* player) override
     {
         if (!player)
             return;
-
-        // 如果是主控玩家（有快速组队机器人），下线所有机器人
-        sFastGroupMgr.LogoutFastGroupBots(player);
 
         // 清除待设置记录
         sFastGroupMgr.ClearPendingSetups(player->GetGUID());
@@ -1027,6 +1132,63 @@ public:
         m_nextOrphanCheck.erase(player->GetGUID());
         // End By leewheel
     }
+    // End By leewheel
+
+    // By leewheel 2026-07-11
+    // 主控玩家上线时的残留清理
+    // 处理服务器崩溃或异常下线后遗留的快速组队记录和空队伍
+    void CleanupMasterLogin(Player* master)
+    {
+        if (!master)
+            return;
+
+        uint32 masterGuid = master->GetGUID().GetCounter();
+
+        // 1. 检查数据库中是否有残留的快速组队记录
+        //    正常下线时 OnPlayerBeforeLogout 已清理，此处处理异常情况
+        if (sFastGroupMgr.DbHasFastGroupBots(masterGuid))
+        {
+            LOG_INFO("playerbots", "快速组队：玩家 {} 上线时发现残留快速组队记录，正在清理...", master->GetName());
+
+            // 获取所有残留的快速组队机器人GUID
+            std::vector<uint32> botGuids = sFastGroupMgr.DbGetBotGuidsByMaster(masterGuid);
+            for (uint32 botGuid : botGuids)
+            {
+                // 直接在数据库中清空这些机器人的装备
+                CharacterDatabase.Execute("DELETE FROM character_inventory WHERE guid = {}", botGuid);
+                CharacterDatabase.Execute("DELETE FROM item_instance WHERE owner_guid = {}", botGuid);
+            }
+
+            // 删除所有残留记录
+            sFastGroupMgr.DbRemoveAllByMaster(masterGuid);
+
+            LOG_INFO("playerbots", "快速组队：玩家 {} 的残留快速组队记录已清理（共 {} 个机器人）。",
+                master->GetName(), botGuids.size());
+        }
+
+        // 2. 检查玩家是否在残留的空队伍中
+        //    如果队伍中只有玩家自己（其他成员都已下线），则离开队伍
+        Group* group = master->GetGroup();
+        if (group)
+        {
+            // 统计队伍中在线成员数量
+            uint32 onlineCount = 0;
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                Player* member = itr->GetSource();
+                if (member && member->GetSession() && !member->GetSession()->isLogingOut())
+                    ++onlineCount;
+            }
+
+            // 如果只有玩家自己在线，离开队伍
+            if (onlineCount <= 1)
+            {
+                group->RemoveMember(master->GetGUID(), GROUP_REMOVEMETHOD_LEAVE);
+                LOG_INFO("playerbots", "快速组队：玩家 {} 上线时发现残留空队伍，已自动离开。", master->GetName());
+            }
+        }
+    }
+    // End By leewheel
 
     // By leewheel 2026-07-08
     // 定期检测机器人是否全部进组，全部进组后分配LFG角色
