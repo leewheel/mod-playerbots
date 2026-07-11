@@ -525,10 +525,11 @@ public:
 
 void AddPlayerbotsSecureLoginScripts();
 
+void AddSC_MagtheridonBotScripts();
 void AddSC_TempestKeepBotScripts();
+void AddSC_HyjalSummitBotScripts();
 void AddSC_IcecrownBotScripts();
 void AddSC_RubySanctumBotScripts();
-void AddSC_HyjalSummitBotScripts();
 
 //By leewheel 2026-07-06 - 快速组队系统
 void AddSC_FastGroup();
@@ -551,10 +552,11 @@ void AddPlayerbotsScripts()
     AddPlayerbotsSecureLoginScripts();
     AddPlayerbotsCommandscripts();
     PlayerBotsGuildValidationScript();
+    AddSC_MagtheridonBotScripts();
     AddSC_TempestKeepBotScripts();
+    AddSC_HyjalSummitBotScripts();
     AddSC_IcecrownBotScripts();
     AddSC_RubySanctumBotScripts();
-    AddSC_HyjalSummitBotScripts();
 
     //By leewheel 2026-07-06 - 快速组队系统
     AddSC_FastGroup();
