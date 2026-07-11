@@ -608,13 +608,36 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
     // By leewheel 2026-07-10
     // 只从随机机器人账号中筛选，避免选中玩家手动创建的Altbot角色
     // Altbot应由玩家手动添加（addbot），不应被快速组队系统自动选中并修改
+    //
+    // By leewheel 2026-07-11 修复：
+    // 原代码 INNER JOIN account a ON c.account = a.id 试图在角色数据库中JOIN account表，
+    // 但 account 表在登录数据库(acore_auth)中，不在角色数据库(acore_characters)中，
+    // 导致SQL报错 "Table 'acore_characters.account' doesn't exist"，查询返回空结果。
+    // 修复方案：使用 sPlayerbotAIConfig.randomBotAccounts 内存列表（服务器启动时已加载）
+    //          构建账号ID的 IN 条件，替代跨库JOIN。
+    std::string accountCondition;
+    if (sPlayerbotAIConfig.randomBotAccounts.empty())
+    {
+        // 兜底：如果内存列表为空，直接返回（不应该发生）
+        LOG_ERROR("playerbots", "快速组队：randomBotAccounts 列表为空，无法查找离线机器人。");
+        return candidates;
+    }
+
+    bool acctFirst = true;
+    for (uint32 acctId : sPlayerbotAIConfig.randomBotAccounts)
+    {
+        if (!acctFirst)
+            accountCondition += ",";
+        accountCondition += std::to_string(acctId);
+        acctFirst = false;
+    }
+
     QueryResult results = CharacterDatabase.Query(
-        "SELECT c.guid, c.name, c.race, c.account, c.class FROM characters c "
-        "INNER JOIN account a ON c.account = a.id "
-        "WHERE c.class IN ({}) AND c.online = 0 AND {} "
-        "AND a.username LIKE '{}%%' "
+        "SELECT guid, name, race, account, class FROM characters "
+        "WHERE class IN ({}) AND online = 0 AND {} "
+        "AND account IN ({}) "
         "ORDER BY RAND()",
-        classList, raceCondition, sPlayerbotAIConfig.randomBotAccountPrefix.c_str());
+        classList, raceCondition, accountCondition);
     // End By leewheel
 
     if (!results)
