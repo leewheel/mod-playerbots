@@ -1083,7 +1083,16 @@ public:
         // Altbot（玩家手动创建的小号机器人）不执行任何设置
         // Altbot保留玩家手动设置的等级、天赋、装备，不做任何修改
         // 原因：Altbot是玩家自己练的小号，已有自己的装备和天赋，不应被快速组队系统覆盖
-        if (!sRandomPlayerbotMgr.IsRandomBot(player))
+        //
+        // By leewheel 2026-07-11 修复：
+        // 原代码使用 sRandomPlayerbotMgr.IsRandomBot(player) 判断是否为Altbot，
+        // 但 IsRandomBot 有两个条件：1) 账号在randomBotAccounts中 2) 角色在currentBots列表中。
+        // FastGroup 通过 SQL 从所有随机账号的离线角色中选取，很多角色不在 currentBots 中，
+        // 导致 IsRandomBot 返回 false，被误判为 Altbot，跳过了全部装备设置逻辑，
+        // 机器人裸体进副本！
+        // 修复：只检查账号是否在随机账号列表中，与代码库中其他地方区分Altbot的方式一致。
+        uint32 botAccountId = player->GetSession()->GetAccountId();
+        if (!sPlayerbotAIConfig.IsInRandomAccountList(botAccountId))
         {
             LOG_INFO("playerbots", "快速组队：Altbot {} 已上线，保留原有装备和设置，为玩家 {} 服务。",
                 player->GetName(), setup.masterName);
