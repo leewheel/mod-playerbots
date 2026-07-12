@@ -35,6 +35,25 @@ void RaidBwlStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("bwl death talon wyrmguard tank move away", ACTION_RAID) }));
     triggers.push_back(new TriggerNode("bwl death talon wyrmguard ranged", {
         NextAction("bwl death talon wyrmguard ranged move away", ACTION_RAID) }));
+
+    //By leewheel 2026年7月12日
+    // 自定义Boss: Valthorax (NPC 100184)
+    // 冰霜抗性 — Boss使用冰霜吐息、冰霜炸弹等冰霜法术
+    triggers.push_back(new TriggerNode("bwl valthorax frost resistance", {
+        NextAction("bwl valthorax frost resistance", ACTION_RAID) }));
+    // 暗影抗性 — Boss使用暗影箭齐射
+    triggers.push_back(new TriggerNode("bwl valthorax shadow resistance", {
+        NextAction("bwl valthorax shadow resistance", ACTION_RAID) }));
+    // 50%血量冰霜炸弹阶段 — Boss定身自身并引导冰霜炸弹，所有人远离
+    triggers.push_back(new TriggerNode("bwl valthorax frost bomb", {
+        NextAction("bwl valthorax avoid frost bomb", ACTION_RAID + 5) }));
+    // 憎恶优先击杀 — 憎盛会移动到Boss身边治疗Boss 35万血量
+    triggers.push_back(new TriggerNode("bwl valthorax vabomination", {
+        NextAction("bwl valthorax attack vabomination", ACTION_RAID + 2) }));
+    // 召唤小怪处理 — DPS和副坦克处理召哠的亡灵小怪
+    triggers.push_back(new TriggerNode("bwl valthorax adds", {
+        NextAction("bwl valthorax attack adds", ACTION_RAID + 1) }));
+    //End By leewheel
 }
 
 void RaidBwlStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)

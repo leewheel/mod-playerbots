@@ -254,3 +254,114 @@ bool McCoreHoundMarkAction::Execute(Event /*event*/)
     bot->GetGroup()->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), target->GetGUID());
     return true;
 }
+
+//By leewheel 2026年7月12日
+// 自定义Boss: Smolder
+
+// 火焰海啸安全距离
+static constexpr float FLAME_TSUNAMI_SAFE_DISTANCE = 15.0f;
+
+bool McSmolderAvoidFlameTsunamiAction::Execute(Event /*event*/)
+{
+    // 火焰海啸NPC（83006-83016）会沿固定路径移动，机器人需要远离这些NPC
+    GuidVector const npcs = AI_VALUE(GuidVector, "nearest hostile npcs");
+    for (auto const& guid : npcs)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        uint32 entry = unit->GetEntry();
+        if (entry >= MoltenCoreHelpers::NPC_FLAME_TSUNAMI_FIRST &&
+            entry <= MoltenCoreHelpers::NPC_FLAME_TSUNAMI_LAST)
+        {
+            // 火焰海啸NPC在安全距离内时，远离它
+            float dist = bot->GetDistance2d(unit);
+            if (dist < FLAME_TSUNAMI_SAFE_DISTANCE)
+            {
+                float distToTravel = FLAME_TSUNAMI_SAFE_DISTANCE - dist;
+                return MoveAway(unit, distToTravel);
+            }
+        }
+    }
+    return false;
+}
+
+bool McSmolderFearWardAction::Execute(Event /*event*/)
+{
+    // 牧师在坦克身上施放反恐结界，应对Smolder的AOE恐惧（咆哮）
+    Unit* boss = AI_VALUE2(Unit*, "find target", MoltenCoreHelpers::BOSS_NAME_SMOLDER);
+    if (!boss || !boss->IsAlive())
+        return false;
+
+    Unit* victim = boss->GetVictim();
+    if (!victim)
+        return false;
+
+    // 如果坦克身上没有反恐结界，施放它
+    if (!botAI->HasAura("fear ward", victim))
+        return botAI->DoSpecificAction("fear ward", Event(), true, victim);
+
+    return false;
+}
+
+// 自定义Boss: Hazzrash
+
+bool McHazzrashEvocationAction::Execute(Event /*event*/)
+{
+    // Hazzrash施放Evocation时暂停攻击20秒，机器人应趁机全力输出
+    // Boss处于Evocation状态时不会攻击，坦克可以继续输出
+    // 此Action主要确保机器人在Evocation期间不会逃跑或做不必要的移动
+    Unit* boss = AI_VALUE2(Unit*, "find target", MoltenCoreHelpers::BOSS_NAME_HAZZRASH);
+    if (!boss || !boss->IsAlive())
+        return false;
+
+    // Boss正在引导Evocation，继续攻击即可
+    if (boss->HasAura(MoltenCoreHelpers::SPELL_HAZZRASH_EVOCATION))
+    {
+        // 确保机器人在攻击Boss
+        if (bot->GetVictim() != boss)
+            return Attack(boss);
+        return false;
+    }
+
+    return false;
+}
+
+bool McHazzrashRangedSpreadAction::Execute(Event /*event*/)
+{
+    // Hazzrash使用连锁燃烧（Chain Burn），远程机器人需要散开
+    // 找到最近的远程队友，远离他
+    if (Group* group = bot->GetGroup())
+    {
+        Player* closestRanged = nullptr;
+        float closestDist = 15.0f; // 只在15码内有其他远程时才散开
+
+        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+        {
+            Player* member = ref->GetSource();
+            if (!member || !member->IsAlive() || member == bot)
+                continue;
+
+            if (!PlayerbotAI::IsRanged(member))
+                continue;
+
+            float dist = bot->GetDistance2d(member);
+            if (dist < closestDist)
+            {
+                closestDist = dist;
+                closestRanged = member;
+            }
+        }
+
+        if (closestRanged)
+        {
+            // 远离最近的远程队友
+            float distToTravel = 12.0f - closestDist; // 散开到12码以上
+            if (distToTravel > 0)
+                return MoveAway(closestRanged, distToTravel);
+        }
+    }
+    return false;
+}
+//End By leewheel

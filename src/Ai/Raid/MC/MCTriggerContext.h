@@ -4,6 +4,7 @@
 #include "BossAuraTriggers.h"
 #include "NamedObjectContext.h"
 #include "MCTriggers.h"
+#include "MCHelpers.h"
 
 class RaidMcTriggerContext : public NamedObjectContext<Trigger>
 {
@@ -26,6 +27,17 @@ public:
         creators["mc majordomo shadow resistance"] = &RaidMcTriggerContext::majordomo_shadow_resistance;
         creators["mc ragnaros fire resistance"] = &RaidMcTriggerContext::ragnaros_fire_resistance;
         creators["mc core hound mark"] = &RaidMcTriggerContext::core_hound_mark;
+
+        //By leewheel 2026年7月12日
+        // 自定义Boss: Smolder
+        creators["mc smolder fire resistance"] = &RaidMcTriggerContext::smolder_fire_resistance;
+        creators["mc smolder flame tsunami"] = &RaidMcTriggerContext::smolder_flame_tsunami;
+        creators["mc smolder fear ward"] = &RaidMcTriggerContext::smolder_fear_ward;
+
+        // 自定义Boss: Hazzrash
+        creators["mc hazzrash evocation"] = &RaidMcTriggerContext::hazzrash_evocation;
+        creators["mc hazzrash ranged spread"] = &RaidMcTriggerContext::hazzrash_ranged_spread;
+        //End By leewheel
     }
 
 private:
@@ -45,6 +57,17 @@ private:
     static Trigger* majordomo_shadow_resistance(PlayerbotAI* botAI) { return new BossShadowResistanceTrigger(botAI, "majordomo executus"); }
     static Trigger* ragnaros_fire_resistance(PlayerbotAI* botAI) { return new BossFireResistanceTrigger(botAI, "ragnaros"); }
     static Trigger* core_hound_mark(PlayerbotAI* botAI) { return new McCoreHoundMarkTrigger(botAI); }
+
+    //By leewheel 2026年7月12日
+    // 自定义Boss: Smolder
+    static Trigger* smolder_fire_resistance(PlayerbotAI* botAI) { return new BossFireResistanceTrigger(botAI, MoltenCoreHelpers::BOSS_NAME_SMOLDER); }
+    static Trigger* smolder_flame_tsunami(PlayerbotAI* botAI) { return new McSmolderFlameTsunamiTrigger(botAI); }
+    static Trigger* smolder_fear_ward(PlayerbotAI* botAI) { return new McSmolderFearWardTrigger(botAI); }
+
+    // 自定义Boss: Hazzrash
+    static Trigger* hazzrash_evocation(PlayerbotAI* botAI) { return new McHazzrashEvocationTrigger(botAI); }
+    static Trigger* hazzrash_ranged_spread(PlayerbotAI* botAI) { return new McHazzrashRangedSpreadTrigger(botAI); }
+    //End By leewheel
 };
 
 #endif

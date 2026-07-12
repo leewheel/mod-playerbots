@@ -358,3 +358,83 @@ bool BwlDeathTalonWyrmguardRangedMoveAwayAction::Execute(Event /*event*/)
 
     return MoveAway(target, distToTravel);
 }
+
+//By leewheel 2026年7月12日
+// 自定义Boss: Valthorax
+
+static constexpr float VALTHORAX_FROST_BOMB_SAFE_DISTANCE = 30.0f;
+
+bool BwlValthoraxAvoidFrostBombAction::Execute(Event /*event*/)
+{
+    // Boss在50%血量时会定身自身并引导冰霜炸弹，所有人需要远离Boss
+    Unit* boss = AI_VALUE2(Unit*, "find target", BlackwingLairHelpers::BOSS_NAME_VALTHORAX);
+    if (!boss || !boss->IsAlive())
+        return false;
+
+    // 主坦克不需要逃跑（但Boss定身了，实际上也不会被追击）
+    if (boss->GetVictim() == bot && PlayerbotAI::IsTank(bot))
+        return false;
+
+    float distToTravel = VALTHORAX_FROST_BOMB_SAFE_DISTANCE - bot->GetDistance2d(boss);
+    if (distToTravel > 0.0f)
+        return MoveAway(boss, distToTravel);
+
+    return false;
+}
+
+Unit* BwlValthoraxAttackVabominationAction::GetTarget()
+{
+    // 优先攻击憎恶（Vabomination），它会移动到Boss身边治疗Boss
+    GuidVector const npcs = AI_VALUE(GuidVector, "possible targets no los");
+    for (auto const& guid : npcs)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->IsAlive() &&
+            unit->GetEntry() == static_cast<uint32>(BlackwingLairHelpers::BlackwingLairNPCs::NPC_VABOMINATION))
+            return unit;
+    }
+    return nullptr;
+}
+
+bool BwlValthoraxAttackVabominationAction::isUseful()
+{
+    // 坦克不需要切换目标（需要继续拉Boss），DPS优先打憎恶
+    return !PlayerbotAI::IsTank(bot);
+}
+
+Unit* BwlValthoraxAttackAddsAction::GetTarget()
+{
+    // 攻击Boss召唤的亡灵小怪（骷髅战士、食尸鬼、女妖）
+    // 优先攻击最近的存活小怪
+    Unit* closest = nullptr;
+    float closestDist = std::numeric_limits<float>::max();
+
+    GuidVector const npcs = AI_VALUE(GuidVector, "possible targets no los");
+    for (auto const& guid : npcs)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        uint32 entry = unit->GetEntry();
+        if (entry == static_cast<uint32>(BlackwingLairHelpers::BlackwingLairNPCs::NPC_SKELETAL_WARRIOR) ||
+            entry == static_cast<uint32>(BlackwingLairHelpers::BlackwingLairNPCs::NPC_GHOUL) ||
+            entry == static_cast<uint32>(BlackwingLairHelpers::BlackwingLairNPCs::NPC_BANSHEE))
+        {
+            float dist = bot->GetDistance2d(unit);
+            if (dist < closestDist)
+            {
+                closestDist = dist;
+                closest = unit;
+            }
+        }
+    }
+    return closest;
+}
+
+bool BwlValthoraxAttackAddsAction::isUseful()
+{
+    // 主坦克继续拉Boss，副坦克和DPS处理小怪
+    return !PlayerbotAI::IsMainTank(bot);
+}
+//End By leewheel

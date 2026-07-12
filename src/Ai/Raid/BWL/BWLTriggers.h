@@ -78,4 +78,29 @@ public:
     bool IsActive() override;
 };
 
+//By leewheel 2026年7月12日
+// 自定义Boss: Valthorax
+
+class BwlValthoraxFrostBombTrigger : public Trigger
+{
+public:
+    BwlValthoraxFrostBombTrigger(PlayerbotAI* botAI) : Trigger(botAI, "bwl valthorax frost bomb") {}
+    bool IsActive() override;
+};
+
+class BwlValthoraxVabominationTrigger : public Trigger
+{
+public:
+    BwlValthoraxVabominationTrigger(PlayerbotAI* botAI) : Trigger(botAI, "bwl valthorax vabomination") {}
+    bool IsActive() override;
+};
+
+class BwlValthoraxAddsTrigger : public Trigger
+{
+public:
+    BwlValthoraxAddsTrigger(PlayerbotAI* botAI) : Trigger(botAI, "bwl valthorax adds") {}
+    bool IsActive() override;
+};
+//End By leewheel
+
 #endif

@@ -73,4 +73,42 @@ public:
     bool Execute(Event event) override;
 };
 
+//By leewheel 2026年7月12日
+// 自定义Boss: Smolder
+
+class McSmolderAvoidFlameTsunamiAction : public MovementAction
+{
+public:
+    McSmolderAvoidFlameTsunamiAction(PlayerbotAI* botAI, std::string const name = "mc smolder avoid flame tsunami")
+        : MovementAction(botAI, name) {}
+    bool Execute(Event event) override;
+};
+
+class McSmolderFearWardAction : public Action
+{
+public:
+    McSmolderFearWardAction(PlayerbotAI* botAI, std::string const name = "mc smolder fear ward")
+        : Action(botAI, name) {}
+    bool Execute(Event event) override;
+};
+
+// 自定义Boss: Hazzrash
+
+class McHazzrashEvocationAction : public Action
+{
+public:
+    McHazzrashEvocationAction(PlayerbotAI* botAI, std::string const name = "mc hazzrash evocation")
+        : Action(botAI, name) {}
+    bool Execute(Event event) override;
+};
+
+class McHazzrashRangedSpreadAction : public MovementAction
+{
+public:
+    McHazzrashRangedSpreadAction(PlayerbotAI* botAI, std::string const name = "mc hazzrash ranged spread")
+        : MovementAction(botAI, name) {}
+    bool Execute(Event event) override;
+};
+//End By leewheel
+
 #endif

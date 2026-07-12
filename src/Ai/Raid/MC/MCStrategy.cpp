@@ -2,6 +2,7 @@
 
 #include "MCMultipliers.h"
 #include "Strategy.h"
+#include "MCHelpers.h"
 
 void RaidMcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
@@ -76,6 +77,32 @@ void RaidMcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(
         new TriggerNode("mc core hound mark",
                         { NextAction("mc core hound mark", ACTION_RAID) }));
+
+    //By leewheel 2026年7月12日
+    // 自定义Boss: Smolder (NPC 83001)
+    // 火焰抗性 — Boss使用多种火焰法术
+    triggers.push_back(
+        new TriggerNode("mc smolder fire resistance",
+                        { NextAction("mc smolder fire resistance", ACTION_RAID) }));
+    // 火焰海啸规避 — 火焰海啸NPC在附近时机器人需要远离
+    triggers.push_back(
+        new TriggerNode("mc smolder flame tsunami",
+                        { NextAction("mc smolder avoid flame tsunami", ACTION_RAID + 5) }));
+    // 反恐结界 — Boss使用AOE恐惧，牧师需要在坦克身上保持反恐结界
+    triggers.push_back(
+        new TriggerNode("mc smolder fear ward",
+                        { NextAction("mc smolder fear ward", ACTION_RAID) }));
+
+    // 自定义Boss: Hazzrash (NPC 83000)
+    // Evocation阶段 — Boss引导唤醒术暂停攻击，机器人可利用此时间输出
+    triggers.push_back(
+        new TriggerNode("mc hazzrash evocation",
+                        { NextAction("mc hazzrash evocation", ACTION_RAID) }));
+    // 远程散开 — Boss使用连锁燃烧，远程需要保持距离
+    triggers.push_back(
+        new TriggerNode("mc hazzrash ranged spread",
+                        { NextAction("mc hazzrash ranged spread", ACTION_RAID) }));
+    //End By leewheel
 }
 
 void RaidMcStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)

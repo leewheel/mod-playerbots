@@ -4,6 +4,8 @@
 #include "Action.h"
 #include "NamedObjectContext.h"
 #include "BWLActions.h"
+#include "BWLHelpers.h"
+#include "BossAuraActions.h"
 
 class RaidBwlActionContext : public NamedObjectContext<Action>
 {
@@ -24,6 +26,14 @@ public:
         creators["bwl nefarian fear ward"] = &RaidBwlActionContext::bwl_nefarian_fear_ward;
         creators["bwl death talon wyrmguard tank move away"] = &RaidBwlActionContext::bwl_death_talon_wyrmguard_tank_move_away;
         creators["bwl death talon wyrmguard ranged move away"] = &RaidBwlActionContext::bwl_death_talon_wyrmguard_ranged_move_away;
+
+        //By leewheel 2026年7月12日
+        // 自定义Boss: Valthorax
+        creators["bwl valthorax frost resistance"] = &RaidBwlActionContext::bwl_valthorax_frost_resistance;
+        creators["bwl valthorax shadow resistance"] = &RaidBwlActionContext::bwl_valthorax_shadow_resistance;
+        creators["bwl valthorax avoid frost bomb"] = &RaidBwlActionContext::bwl_valthorax_avoid_frost_bomb;
+        creators["bwl valthorax attack vabomination"] = &RaidBwlActionContext::bwl_valthorax_attack_vabomination;
+        creators["bwl valthorax attack adds"] = &RaidBwlActionContext::bwl_valthorax_attack_adds;
     }
 
 private:
@@ -38,6 +48,13 @@ private:
     static Action* bwl_nefarian_fear_ward(PlayerbotAI* ai) { return new BwlNefarianFearWardAction(ai); }
     static Action* bwl_death_talon_wyrmguard_tank_move_away(PlayerbotAI* ai) { return new BwlDeathTalonWyrmguardTankMoveAwayAction(ai); }
     static Action* bwl_death_talon_wyrmguard_ranged_move_away(PlayerbotAI* ai) { return new BwlDeathTalonWyrmguardRangedMoveAwayAction(ai); }
+    // Custom Boss: Valthorax
+    static Action* bwl_valthorax_frost_resistance(PlayerbotAI* ai) { return new BossFrostResistanceAction(ai, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
+    static Action* bwl_valthorax_shadow_resistance(PlayerbotAI* ai) { return new BossShadowResistanceAction(ai, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
+    static Action* bwl_valthorax_avoid_frost_bomb(PlayerbotAI* ai) { return new BwlValthoraxAvoidFrostBombAction(ai); }
+    static Action* bwl_valthorax_attack_vabomination(PlayerbotAI* ai) { return new BwlValthoraxAttackVabominationAction(ai); }
+    static Action* bwl_valthorax_attack_adds(PlayerbotAI* ai) { return new BwlValthoraxAttackAddsAction(ai); }
+    //End By leewheel
 };
 
 #endif

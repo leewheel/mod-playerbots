@@ -5,6 +5,7 @@
 #include "BossAuraActions.h"
 #include "NamedObjectContext.h"
 #include "MCActions.h"
+#include "MCHelpers.h"
 
 class RaidMcActionContext : public NamedObjectContext<Action>
 {
@@ -27,6 +28,17 @@ public:
         creators["mc majordomo shadow resistance"] = &RaidMcActionContext::majordomo_shadow_resistance;
         creators["mc ragnaros fire resistance"] = &RaidMcActionContext::ragnaros_fire_resistance;
         creators["mc core hound mark"] = &RaidMcActionContext::core_hound_mark;
+
+        //By leewheel 2026年7月12日
+        // 自定义Boss: Smolder
+        creators["mc smolder fire resistance"] = &RaidMcActionContext::smolder_fire_resistance;
+        creators["mc smolder avoid flame tsunami"] = &RaidMcActionContext::smolder_avoid_flame_tsunami;
+        creators["mc smolder fear ward"] = &RaidMcActionContext::smolder_fear_ward;
+
+        // 自定义Boss: Hazzrash
+        creators["mc hazzrash evocation"] = &RaidMcActionContext::hazzrash_evocation;
+        creators["mc hazzrash ranged spread"] = &RaidMcActionContext::hazzrash_ranged_spread;
+        //End By leewheel
     }
 
 private:
@@ -46,6 +58,17 @@ private:
     static Action* majordomo_shadow_resistance(PlayerbotAI* botAI) { return new BossShadowResistanceAction(botAI, "majordomo executus"); }
     static Action* ragnaros_fire_resistance(PlayerbotAI* botAI) { return new BossFireResistanceAction(botAI, "ragnaros"); }
     static Action* core_hound_mark(PlayerbotAI* botAI) { return new McCoreHoundMarkAction(botAI); }
+
+    //By leewheel 2026年7月12日
+    // 自定义Boss: Smolder
+    static Action* smolder_fire_resistance(PlayerbotAI* botAI) { return new BossFireResistanceAction(botAI, MoltenCoreHelpers::BOSS_NAME_SMOLDER); }
+    static Action* smolder_avoid_flame_tsunami(PlayerbotAI* botAI) { return new McSmolderAvoidFlameTsunamiAction(botAI); }
+    static Action* smolder_fear_ward(PlayerbotAI* botAI) { return new McSmolderFearWardAction(botAI); }
+
+    // 自定义Boss: Hazzrash
+    static Action* hazzrash_evocation(PlayerbotAI* botAI) { return new McHazzrashEvocationAction(botAI); }
+    static Action* hazzrash_ranged_spread(PlayerbotAI* botAI) { return new McHazzrashRangedSpreadAction(botAI); }
+    //End By leewheel
 };
 
 #endif

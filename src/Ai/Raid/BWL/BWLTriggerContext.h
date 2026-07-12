@@ -1,6 +1,8 @@
 #ifndef PLAYERBOTS_BWLTRIGGERCONTEXT_H
 #define PLAYERBOTS_BWLTRIGGERCONTEXT_H
 
+#include "BossAuraTriggers.h"
+#include "BWLHelpers.h"
 #include "NamedObjectContext.h"
 #include "BWLTriggers.h"
 
@@ -23,6 +25,14 @@ public:
         creators["bwl nefarian fear ward"] = &RaidBwlTriggerContext::bwl_nefarian_fear_ward;
         creators["bwl death talon wyrmguard tank"] = &RaidBwlTriggerContext::bwl_death_talon_wyrmguard_tank;
         creators["bwl death talon wyrmguard ranged"] = &RaidBwlTriggerContext::bwl_death_talon_wyrmguard_ranged;
+
+        //By leewheel 2026年7月12日
+        // 自定义Boss: Valthorax
+        creators["bwl valthorax frost resistance"] = &RaidBwlTriggerContext::bwl_valthorax_frost_resistance;
+        creators["bwl valthorax shadow resistance"] = &RaidBwlTriggerContext::bwl_valthorax_shadow_resistance;
+        creators["bwl valthorax frost bomb"] = &RaidBwlTriggerContext::bwl_valthorax_frost_bomb;
+        creators["bwl valthorax vabomination"] = &RaidBwlTriggerContext::bwl_valthorax_vabomination;
+        creators["bwl valthorax adds"] = &RaidBwlTriggerContext::bwl_valthorax_adds;
     }
 
 private:
@@ -37,6 +47,13 @@ private:
     static Trigger* bwl_nefarian_fear_ward(PlayerbotAI* ai) { return new BwlNefarianFearWardTrigger(ai); }
     static Trigger* bwl_death_talon_wyrmguard_tank(PlayerbotAI* ai) { return new BwlDeathTalonWyrmguardTankTrigger(ai); }
     static Trigger* bwl_death_talon_wyrmguard_ranged(PlayerbotAI* ai) { return new BwlDeathTalonWyrmguardRangedTrigger(ai); }
+    // Custom Boss: Valthorax
+    static Trigger* bwl_valthorax_frost_resistance(PlayerbotAI* ai) { return new BossFrostResistanceTrigger(ai, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
+    static Trigger* bwl_valthorax_shadow_resistance(PlayerbotAI* ai) { return new BossShadowResistanceTrigger(ai, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
+    static Trigger* bwl_valthorax_frost_bomb(PlayerbotAI* ai) { return new BwlValthoraxFrostBombTrigger(ai); }
+    static Trigger* bwl_valthorax_vabomination(PlayerbotAI* ai) { return new BwlValthoraxVabominationTrigger(ai); }
+    static Trigger* bwl_valthorax_adds(PlayerbotAI* ai) { return new BwlValthoraxAddsTrigger(ai); }
+    //End By leewheel
 };
 
 #endif

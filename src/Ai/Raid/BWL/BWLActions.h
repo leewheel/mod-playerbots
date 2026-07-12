@@ -87,4 +87,31 @@ public:
     bool Execute(Event event) override;
 };
 
+//By leewheel 2026年7月12日
+// 自定义Boss: Valthorax
+
+class BwlValthoraxAvoidFrostBombAction : public MovementAction
+{
+public:
+    BwlValthoraxAvoidFrostBombAction(PlayerbotAI* botAI) : MovementAction(botAI, "bwl valthorax avoid frost bomb") {}
+    bool Execute(Event event) override;
+};
+
+class BwlValthoraxAttackVabominationAction : public AttackAction
+{
+public:
+    BwlValthoraxAttackVabominationAction(PlayerbotAI* botAI) : AttackAction(botAI, "bwl valthorax attack vabomination") {}
+    Unit* GetTarget() override;
+    bool isUseful() override;
+};
+
+class BwlValthoraxAttackAddsAction : public AttackAction
+{
+public:
+    BwlValthoraxAttackAddsAction(PlayerbotAI* botAI) : AttackAction(botAI, "bwl valthorax attack adds") {}
+    Unit* GetTarget() override;
+    bool isUseful() override;
+};
+//End By leewheel
+
 #endif

@@ -54,4 +54,38 @@ public:
     bool IsActive() override;
 };
 
+//By leewheel 2026年7月12日
+// 自定义Boss: Smolder
+
+class McSmolderFlameTsunamiTrigger : public Trigger
+{
+public:
+    McSmolderFlameTsunamiTrigger(PlayerbotAI* botAI) : Trigger(botAI, "mc smolder flame tsunami") {}
+    bool IsActive() override;
+};
+
+class McSmolderFearWardTrigger : public Trigger
+{
+public:
+    McSmolderFearWardTrigger(PlayerbotAI* botAI) : Trigger(botAI, "mc smolder fear ward") {}
+    bool IsActive() override;
+};
+
+// 自定义Boss: Hazzrash
+
+class McHazzrashEvocationTrigger : public Trigger
+{
+public:
+    McHazzrashEvocationTrigger(PlayerbotAI* botAI) : Trigger(botAI, "mc hazzrash evocation") {}
+    bool IsActive() override;
+};
+
+class McHazzrashRangedSpreadTrigger : public Trigger
+{
+public:
+    McHazzrashRangedSpreadTrigger(PlayerbotAI* botAI) : Trigger(botAI, "mc hazzrash ranged spread") {}
+    bool IsActive() override;
+};
+//End By leewheel
+
 #endif
