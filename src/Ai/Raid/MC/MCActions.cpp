@@ -300,7 +300,7 @@ bool McSmolderFearWardAction::Execute(Event /*event*/)
 
     // 如果坦克身上没有反恐结界，施放它
     if (!botAI->HasAura("fear ward", victim))
-        return botAI->DoSpecificAction("fear ward", Event(), true, victim);
+        return botAI->CastSpell("fear ward", victim);
 
     return false;
 }
@@ -316,12 +316,11 @@ bool McHazzrashEvocationAction::Execute(Event /*event*/)
     if (!boss || !boss->IsAlive())
         return false;
 
-    // Boss正在引导Evocation，继续攻击即可
+    // Boss正在引导Evocation，确保机器人在攻击Boss
     if (boss->HasAura(MoltenCoreHelpers::SPELL_HAZZRASH_EVOCATION))
     {
-        // 确保机器人在攻击Boss
         if (bot->GetVictim() != boss)
-            return Attack(boss);
+            bot->Attack(boss, true);
         return false;
     }
 

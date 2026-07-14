@@ -1009,13 +1009,66 @@ class fastgroup_commandscript : public CommandScript
 public:
     fastgroup_commandscript() : CommandScript("fastgroup_commandscript") {}
 
+    // By leewheel 20260714 添加 .重置全体天赋 命令
+    // 用于重置所有在线机器人的天赋，使天赋配置变更后立即生效
+    // 普通玩家也可用，挑战模式下也可用
+    static bool HandleResetAllBotTalentsCommand(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+        if (!player)
+            return false;
+
+        PlayerBotMap allBots = sRandomPlayerbotMgr.GetAllBots();
+        if (allBots.empty())
+        {
+            handler->PSendSysMessage("|cffffcc00[重置天赋]|r 当前没有任何在线的机器人，无需重置。");
+            return true;
+        }
+
+        handler->PSendSysMessage("|cff00ff00[重置天赋]|r 正在重置 {} 个在线机器人的天赋，请稍候...", allBots.size());
+
+        uint32 successCount = 0;
+        uint32 failCount = 0;
+
+        for (auto const& [guid, bot] : allBots)
+        {
+            if (!bot || !bot->IsInWorld())
+            {
+                ++failCount;
+                continue;
+            }
+
+            // 先重置天赋点
+            bot->resetTalents(true);
+
+            // 使用PlayerbotFactory重新初始化天赋树
+            PlayerbotFactory factory(bot, bot->GetLevel());
+            factory.InitTalentsTree(true, false, false);
+
+            // 重置AI策略以适应新天赋
+            PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
+            if (botAI)
+                botAI->ResetStrategies(false);
+
+            ++successCount;
+        }
+
+        handler->PSendSysMessage("|cff00ff00[重置天赋]|r 已重置 {} 个在线机器人的天赋（失败 {} 个）。", successCount, failCount);
+        LOG_INFO("playerbots", "玩家 {} 执行了 .重置全体天赋 命令，成功重置 {} 个机器人天赋，失败 {} 个",
+            player->GetName(), successCount, failCount);
+        return true;
+    }
+    // End By leewheel
+
     ChatCommandTable GetCommands() const override
     {
-        static ChatCommandTable party5Table  = {{ "", HandleFastGroupParty5Command,  rbac::RBAC_PERM_COMMAND_RELOAD, Console::No }};
-        static ChatCommandTable raid10Table  = {{ "", HandleFastGroupRaid10Command,  rbac::RBAC_PERM_COMMAND_RELOAD, Console::No }};
-        static ChatCommandTable raid25Table  = {{ "", HandleFastGroupRaid25Command,  rbac::RBAC_PERM_COMMAND_RELOAD, Console::No }};
-        static ChatCommandTable raid40Table  = {{ "", HandleFastGroupRaid40Command,  rbac::RBAC_PERM_COMMAND_RELOAD, Console::No }};
-        static ChatCommandTable disbandTable = {{ "", HandleFastGroupDisbandCommand, rbac::RBAC_PERM_COMMAND_RELOAD, Console::No }};
+        // By leewheel 20260713: 将权限从RBAC_PERM_COMMAND_RELOAD改为SEC_PLAYER，使普通玩家也可使用快速组队命令
+        static ChatCommandTable party5Table  = {{ "", HandleFastGroupParty5Command,  SEC_PLAYER, Console::No }};
+        static ChatCommandTable raid10Table  = {{ "", HandleFastGroupRaid10Command,  SEC_PLAYER, Console::No }};
+        static ChatCommandTable raid25Table  = {{ "", HandleFastGroupRaid25Command,  SEC_PLAYER, Console::No }};
+        static ChatCommandTable raid40Table  = {{ "", HandleFastGroupRaid40Command,  SEC_PLAYER, Console::No }};
+        static ChatCommandTable disbandTable = {{ "", HandleFastGroupDisbandCommand, SEC_PLAYER, Console::No }};
+        // End By leewheel
 
         static ChatCommandTable commandTable = {
             { "5人队",        party5Table  },
@@ -1023,6 +1076,9 @@ public:
             { "25人团",       raid25Table  },
             { "40人团",       raid40Table  },
             { "解散快速组队", disbandTable },
+            // By leewheel 20260714 添加重置全体天赋命令
+            { "重置全体天赋", HandleResetAllBotTalentsCommand, SEC_PLAYER, Console::No },
+            // End By leewheel
         };
 
         return commandTable;
