@@ -1700,6 +1700,10 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         engines[BOT_STATE_NON_COMBAT]->removeStrategy(strat);
     }
 
+    // By leewheel 2026-07-15: 移除自动坦克标记策略
+    engines[BOT_STATE_COMBAT]->removeStrategy("auto tank mark");
+    engines[BOT_STATE_NON_COMBAT]->removeStrategy("auto tank mark");
+
     std::string strategyName;
     switch (mapId)
     {
@@ -1822,10 +1826,25 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     }
 
     if (strategyName.empty())
+    {
+        // By leewheel 2026-07-15: 即使不是已知副本，只要是副本/团本就应用自动坦克标记策略
+        if (sPlayerbotAIConfig.autoTankMarkEnabled && !bot->InBattleground() && !bot->InArena())
+        {
+            engines[BOT_STATE_COMBAT]->addStrategy("auto tank mark");
+            engines[BOT_STATE_NON_COMBAT]->addStrategy("auto tank mark");
+        }
         return;
+    }
 
     engines[BOT_STATE_COMBAT]->addStrategy(strategyName);
     engines[BOT_STATE_NON_COMBAT]->addStrategy(strategyName);
+
+    // By leewheel 2026-07-15: 已知副本也应用自动坦克标记策略
+    if (sPlayerbotAIConfig.autoTankMarkEnabled)
+    {
+        engines[BOT_STATE_COMBAT]->addStrategy("auto tank mark");
+        engines[BOT_STATE_NON_COMBAT]->addStrategy("auto tank mark");
+    }
 
     if (tellMaster && !strategyName.empty())
     {

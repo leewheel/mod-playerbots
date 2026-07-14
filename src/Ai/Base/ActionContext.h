@@ -56,6 +56,8 @@
 #include "RevealGatheringItemAction.h"
 #include "RpgAction.h"
 #include "RpgSubActions.h"
+#include "AutoTankMarkActions.h"
+#include "FleeingTargetActions.h"
 #include "RtiAction.h"
 #include "SayAction.h"
 #include "StayActions.h"
@@ -279,6 +281,13 @@ public:
         creators["new rpg travel flight"] = &ActionContext::new_rpg_travel_flight;
         creators["new rpg outdoor pvp"] = &ActionContext::new_rpg_outdoor_pvp;
         creators["wait for attack keep safe distance"] = &ActionContext::wait_for_attack_keep_safe_distance;
+
+        // By leewheel 2026-07-15: 自动坦克标记动作
+        creators["mark skull target"] = &ActionContext::mark_skull_target;
+        creators["mark cross target"] = &ActionContext::mark_cross_target;
+
+        // By leewheel 2026-07-15: 逃跑怪优先集火动作
+        creators["prioritize fleeing target"] = &ActionContext::prioritize_fleeing_target;
     }
 
 private:
@@ -486,6 +495,11 @@ private:
     static Action* new_rpg_travel_flight(PlayerbotAI* ai) { return new NewRpgTravelFlightAction(ai); }
     static Action* new_rpg_outdoor_pvp(PlayerbotAI* ai) { return new NewRpgOutdoorPvpAction(ai); }
     static Action* wait_for_attack_keep_safe_distance(PlayerbotAI* ai) { return new WaitForAttackKeepSafeDistanceAction(ai); }
+    // By leewheel 2026-07-15
+    static Action* mark_skull_target(PlayerbotAI* botAI) { return new MarkSkullTargetAction(botAI); }
+    static Action* mark_cross_target(PlayerbotAI* botAI) { return new MarkCrossTargetAction(botAI); }
+    // By leewheel 2026-07-15
+    static Action* prioritize_fleeing_target(PlayerbotAI* botAI) { return new PrioritizeFleeingTargetAction(botAI); }
 };
 
 #endif

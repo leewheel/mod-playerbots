@@ -139,11 +139,21 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
     bool addClassBot = sRandomPlayerbotMgr.IsAddclassBot(playerGuid.GetCounter());
     bool linkedAccount = sPlayerbotAIConfig.allowTrustedAccountBots && IsAccountLinked(accountId, masterAccountId);
 
+    // By leewheel 2026-07-15
+    // 允许快速组队系统控制随机机器人账号下的角色
+    // 原因：FastGroup 系统从 randomBotAccounts 中筛选离线机器人上线组队，
+    //       但 AddPlayerBot 传入非零 masterAccountId 导致 isRndbot=false，
+    //       随机机器人既不在同一账号、也不在同公会、也不是 addclass bot，
+    //       导致权限检查失败，3/4 机器人被拒绝。
+    // 修复：如果目标机器人的账号属于 randomBotAccounts，则允许任何主控玩家控制。
+    bool isRandomBotAccount = sPlayerbotAIConfig.IsInRandomAccountList(accountId);
+    // End By leewheel
+
     bool allowed = true;
     std::ostringstream out;
     std::string botName;
     sCharacterCache->GetCharacterNameByGuid(playerGuid, botName);
-    if (!isRndbot && !sameAccount && !sameGuild && !addClassBot && !linkedAccount)
+    if (!isRndbot && !sameAccount && !sameGuild && !addClassBot && !linkedAccount && !isRandomBotAccount)
     {
         allowed = false;
         out << "失败：你无权控制机器人 " << botName.c_str();

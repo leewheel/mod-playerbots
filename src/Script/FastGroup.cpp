@@ -298,16 +298,24 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
         // 增加数据库清理装备逻辑作为兜底
         // 原因：如果机器人已被 LogoutAllBots 下线，SaveToDB 已将装备保存到数据库，
         //       必须通过 SQL 直接删除数据库中的装备记录，否则装备会残留
+        // By leewheel 2026-07-15 修订：
+        // 不再调用 group->RemoveMember，避免在 OnRemoveMember 回调中递归调用
+        // RemoveMember 导致 use-after-free 崩溃。
+        // 原因：当玩家退组触发 OnRemoveMember → LogoutFastGroupBots 时，
+        //   如果对离线机器人调用 group->RemoveMember(botGuid)，
+        //   会递归进入 RemoveMember，可能触发 Disband() 销毁 group 对象，
+        //   随后 LogoutFastGroupBots 循环继续使用已释放的 group 指针 → 崩溃。
+        // 修复：离线机器人不需要主动从队伍中移除，队伍的 Disband() 或
+        //   RemoveMember 流程会自然清理所有成员。
+        //   只清理数据库中的装备记录即可。
         else if (group)
         {
-            group->RemoveMember(botGuid, GROUP_REMOVEMETHOD_LEAVE);
-
             // 直接在数据库中清空该机器人的装备
             uint32 botGuidRaw = botGuid.GetCounter();
             CharacterDatabase.Execute("DELETE FROM character_inventory WHERE guid = {}", botGuidRaw);
             CharacterDatabase.Execute("DELETE FROM item_instance WHERE owner_guid = {}", botGuidRaw);
 
-            LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，不在线的机器人 GUID {} 已从队伍移除并清理数据库装备。",
+            LOG_INFO("playerbots", "快速组队：玩家 {} 离队/下线，不在线的机器人 GUID {} 已清理数据库装备。",
                 master->GetName(), botGuid.ToString());
         }
         // End By leewheel
@@ -1244,6 +1252,20 @@ public:
             factory.ApplyEnchantAndGemsNew();
 
         player->DurabilityRepairAll(false, 1.0f, false);
+
+        // By leewheel 2026-07-15
+        // 天赋变更后必须重置AI策略，否则策略仍基于旧天赋导致角色定位判断错误
+        // 原因：PlayerbotAI 在机器人上线时根据当前天赋初始化策略，
+        //       但此时 FastGroup 的 InitTalentsByTab 还未修改天赋。
+        //       InitTalentsByTab 修改天赋后，AI策略仍是基于旧天赋的，
+        //       导致 IsTank(bot)/IsHeal(bot) 等基于策略的判断返回错误结果。
+        //       当玩家点击"随机本"时，LFG角色检查中 GetRoles() 调用
+        //       IsTank(bot)（bySpec=false，检查策略）返回错误角色。
+        //       例如：圣骑士(神圣)的旧策略可能是坦克，导致被误判为坦克。
+        PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
+        if (botAI)
+            botAI->ResetStrategies(false);
+        // End By leewheel
 
         LOG_INFO("playerbots", "快速组队：机器人 {}（{}-{}）已上线，等级 {}，为玩家 {} 服务。",
             player->GetName(), GetClassNameCN(cls), GetRoleNameCN(role), targetLevel, setup.masterName);

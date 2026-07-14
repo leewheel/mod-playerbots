@@ -30,6 +30,7 @@
 #include "LfgStrategy.h"
 #include "LootNonCombatStrategy.h"
 #include "MaintenanceStrategy.h"
+#include "AutoTankMarkStrategy.h"
 #include "MarkRtiStrategy.h"
 #include "MeleeCombatStrategy.h"
 #include "MoveFromGroupStrategy.h"
@@ -134,6 +135,9 @@ public:
         //By leewheel 2026-07-09
         creators["vimgol"] = &StrategyContext::vimgol;
         //End By leewheel
+
+        // By leewheel 2026-07-15: 自动坦克标记策略
+        creators["auto tank mark"] = &StrategyContext::auto_tank_mark;
     }
 
 private:
@@ -141,6 +145,8 @@ private:
     static Strategy* ranged(PlayerbotAI* botAI) { return new RangedCombatStrategy(botAI); }
     static Strategy* close(PlayerbotAI* botAI) { return new MeleeCombatStrategy(botAI); }
     static Strategy* mark_rti(PlayerbotAI* botAI) { return new MarkRtiStrategy(botAI); }
+    // By leewheel 2026-07-15
+    static Strategy* auto_tank_mark(PlayerbotAI* botAI) { return new AutoTankMarkStrategy(botAI); }
     static Strategy* tell_target(PlayerbotAI* botAI) { return new TellTargetStrategy(botAI); }
     static Strategy* threat(PlayerbotAI* botAI) { return new ThreatStrategy(botAI); }
     static Strategy* focus(PlayerbotAI* botAI) { return new FocusStrategy(botAI); }

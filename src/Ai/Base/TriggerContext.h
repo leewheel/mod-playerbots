@@ -19,6 +19,8 @@
 #include "PvpTriggers.h"
 #include "PullTriggers.h"
 #include "RpgTriggers.h"
+#include "AutoTankMarkTriggers.h"
+#include "FleeingTargetTriggers.h"
 #include "RtiTriggers.h"
 #include "StuckTriggers.h"
 #include "TravelTriggers.h"
@@ -245,6 +247,14 @@ public:
         creators["can use fishing bobber"] = &TriggerContext::can_use_fishing_bobber;
         creators["new pet"] = &TriggerContext::new_pet;
         creators["wait for attack safe distance"] = &TriggerContext::wait_for_attack_safe_distance;
+
+        // By leewheel 2026-07-15: 自动坦克标记触发器
+        creators["main tank can mark skull"] = &TriggerContext::main_tank_can_mark_skull;
+        creators["off tank can mark cross"] = &TriggerContext::off_tank_can_mark_cross;
+        creators["main tank can mark cross"] = &TriggerContext::main_tank_can_mark_cross;
+
+        // By leewheel 2026-07-15: 逃跑怪优先集火触发器
+        creators["fleeing target"] = &TriggerContext::fleeing_target;
     }
 
 private:
@@ -459,6 +469,12 @@ private:
     static Trigger* can_use_fishing_bobber(PlayerbotAI* ai) { return new CanUseFishingBobberTrigger(ai); }
     static Trigger* new_pet(PlayerbotAI* ai) { return new NewPetTrigger(ai); }
     static Trigger* wait_for_attack_safe_distance(PlayerbotAI* ai) { return new WaitForAttackSafeDistanceTrigger(ai); }
+    // By leewheel 2026-07-15
+    static Trigger* main_tank_can_mark_skull(PlayerbotAI* botAI) { return new MainTankMarkSkullTrigger(botAI); }
+    static Trigger* off_tank_can_mark_cross(PlayerbotAI* botAI) { return new OffTankMarkCrossTrigger(botAI); }
+    static Trigger* main_tank_can_mark_cross(PlayerbotAI* botAI) { return new MainTankMarkCrossTrigger(botAI); }
+    // By leewheel 2026-07-15
+    static Trigger* fleeing_target(PlayerbotAI* botAI) { return new FleeingTargetTrigger(botAI); }
 };
 
 #endif

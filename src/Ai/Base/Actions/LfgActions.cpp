@@ -21,15 +21,23 @@ bool LfgJoinAction::Execute(Event /*event*/) { return JoinLFG(); }
 
 uint32 LfgJoinAction::GetRoles()
 {
+    // By leewheel 2026-07-15
+    // 修复：非随机机器人（如FastGroup组队的Rndbot）的角色判断必须基于天赋(bySpec=true)，
+    // 而非AI策略(bySpec=false)。
+    // 原因：FastGroup通过 InitTalentsByTab 修改了机器人的天赋，
+    //       但如果策略未及时刷新(ResetStrategies)，
+    //       IsTank(bot)/IsHeal(bot) 的策略检查会返回基于旧天赋的错误结果。
+    //       使用 bySpec=true 直接检查天赋页，不依赖策略状态，结果更可靠。
     if (!RandomPlayerbotMgr::instance().IsRandomBot(bot))
     {
-        if (botAI->IsTank(bot))
+        if (botAI->IsTank(bot, true))
             return PLAYER_ROLE_TANK;
-        if (botAI->IsHeal(bot))
+        if (botAI->IsHeal(bot, true))
             return PLAYER_ROLE_HEALER;
         else
             return PLAYER_ROLE_DAMAGE;
     }
+    // End By leewheel
 
     uint8 spec = AiFactory::GetPlayerSpecTab(bot);
     switch (bot->getClass())
