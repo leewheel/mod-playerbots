@@ -1060,6 +1060,48 @@ public:
     }
     // End By leewheel
 
+    // By leewheel 20260714 添加 .机器人天赋 命令
+    // 列出在线机器人的天赋种类统计（坦克/治疗/输出）
+    static bool HandleBotTalentListCommand(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+        if (!player)
+            return false;
+
+        PlayerBotMap allBots = sRandomPlayerbotMgr.GetAllBots();
+        if (allBots.empty())
+        {
+            handler->PSendSysMessage("|cffffcc00[机器人天赋]|r 当前没有任何在线的机器人。");
+            return true;
+        }
+
+        uint32 tankCount = 0;
+        uint32 healCount = 0;
+        uint32 dpsCount = 0;
+        uint32 totalCount = 0;
+
+        for (auto const& [guid, bot] : allBots)
+        {
+            if (!bot || !bot->IsInWorld())
+                continue;
+
+            ++totalCount;
+            FastGroupRole role = GetPlayerRole(bot);
+            switch (role)
+            {
+                case FG_ROLE_TANK: ++tankCount; break;
+                case FG_ROLE_HEAL: ++healCount; break;
+                case FG_ROLE_DPS:  ++dpsCount;  break;
+                default: break;
+            }
+        }
+
+        handler->PSendSysMessage("|cff00ff00[机器人天赋]|r 在线 {} 个机器人，坦克 {} 个，治疗 {} 个，输出 {} 个。",
+            totalCount, tankCount, healCount, dpsCount);
+        return true;
+    }
+    // End By leewheel
+
     ChatCommandTable GetCommands() const override
     {
         // By leewheel 20260713: 将权限从RBAC_PERM_COMMAND_RELOAD改为SEC_PLAYER，使普通玩家也可使用快速组队命令
@@ -1078,6 +1120,9 @@ public:
             { "解散快速组队", disbandTable },
             // By leewheel 20260714 添加重置全体天赋命令
             { "重置全体天赋", HandleResetAllBotTalentsCommand, SEC_PLAYER, Console::No },
+            // End By leewheel
+            // By leewheel 20260714 添加机器人天赋统计命令
+            { "机器人天赋", HandleBotTalentListCommand, SEC_PLAYER, Console::No },
             // End By leewheel
         };
 
