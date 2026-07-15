@@ -1827,11 +1827,18 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
 
     if (strategyName.empty())
     {
-        // By leewheel 2026-07-15: 即使不是已知副本，只要是副本/团本就应用自动坦克标记策略
-        if (sPlayerbotAIConfig.autoTankMarkEnabled && !bot->InBattleground() && !bot->InArena())
+        // By leewheel 2026-07-15: 只在副本/团本中应用自动坦克标记策略
+        // 修复：原条件 !bot->InBattleground() && !bot->InArena() 对野外地图也成立，
+        //       导致所有 Bot 在野外也加载了 "auto tank mark" 策略。
+        //       现在严格检查是否在副本/团本地图中。
+        if (sPlayerbotAIConfig.autoTankMarkEnabled)
         {
-            engines[BOT_STATE_COMBAT]->addStrategy("auto tank mark");
-            engines[BOT_STATE_NON_COMBAT]->addStrategy("auto tank mark");
+            Map const* map = bot->GetMap();
+            if (map && (map->IsDungeon() || map->IsRaid()))
+            {
+                engines[BOT_STATE_COMBAT]->addStrategy("auto tank mark");
+                engines[BOT_STATE_NON_COMBAT]->addStrategy("auto tank mark");
+            }
         }
         return;
     }

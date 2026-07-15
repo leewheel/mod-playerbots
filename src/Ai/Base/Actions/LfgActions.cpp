@@ -24,10 +24,13 @@ uint32 LfgJoinAction::GetRoles()
     // By leewheel 2026-07-15
     // 修复：非随机机器人（如FastGroup组队的Rndbot）的角色判断必须基于天赋(bySpec=true)，
     // 而非AI策略(bySpec=false)。
-    // 原因：FastGroup通过 InitTalentsByTab 修改了机器人的天赋，
-    //       但如果策略未及时刷新(ResetStrategies)，
-    //       IsTank(bot)/IsHeal(bot) 的策略检查会返回基于旧天赋的错误结果。
-    //       使用 bySpec=true 直接检查天赋页，不依赖策略状态，结果更可靠。
+    // 根因：ApplyInstanceStrategies 给所有 Bot 添加了 "auto tank mark" 策略，
+    //       该策略的 GetType() 原本返回 STRATEGY_TYPE_TANK，
+    //       导致 ContainsStrategy(STRATEGY_TYPE_TANK) 对所有 Bot 返回 true，
+    //       包括猎人和盗贼！IsTank(bot, false) 因此对所有 Bot 返回 true，
+    //       GetRoles() 对所有 Bot 返回 PLAYER_ROLE_TANK。
+    // 修复1（根因）：AutoTankMarkStrategy::GetType() 改为 STRATEGY_TYPE_GENERIC
+    // 修复2（防御）：此处使用 bySpec=true 直接检查天赋页，不依赖策略状态
     if (!RandomPlayerbotMgr::instance().IsRandomBot(bot))
     {
         if (botAI->IsTank(bot, true))

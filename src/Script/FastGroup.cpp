@@ -1254,14 +1254,13 @@ public:
         player->DurabilityRepairAll(false, 1.0f, false);
 
         // By leewheel 2026-07-15
-        // 天赋变更后必须重置AI策略，否则策略仍基于旧天赋导致角色定位判断错误
+        // 天赋变更后必须重置AI策略，否则策略仍基于旧天赋导致 AI 行为错误
         // 原因：PlayerbotAI 在机器人上线时根据当前天赋初始化策略，
         //       但此时 FastGroup 的 InitTalentsByTab 还未修改天赋。
         //       InitTalentsByTab 修改天赋后，AI策略仍是基于旧天赋的，
-        //       导致 IsTank(bot)/IsHeal(bot) 等基于策略的判断返回错误结果。
-        //       当玩家点击"随机本"时，LFG角色检查中 GetRoles() 调用
-        //       IsTank(bot)（bySpec=false，检查策略）返回错误角色。
-        //       例如：圣骑士(神圣)的旧策略可能是坦克，导致被误判为坦克。
+        //       导致 Bot 行为不正确（例如：防护战士不拉怪、神圣骑士不治疗）。
+        // 注意：LFG角色判断已通过 GetRoles() 使用 bySpec=true 修复，
+        //       但 AI 行为（拉怪、治疗等）仍依赖策略，所以 ResetStrategies 仍然必须调用。
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
         if (botAI)
             botAI->ResetStrategies(false);
