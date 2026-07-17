@@ -26,7 +26,9 @@ static bool IsTargetAlreadyMarked(Group* group, ObjectGuid targetGuid)
     return false;
 }
 
-// By leewheel 2026-07-15: 选择最优标记目标的辅助函数
+// By leewheel 2026-07-15: 选择最优标记目标
+// 使用 "possible targets"（视野内所有敌对单位）而非 "attackers"（仅有仇恨的），
+// 确保开局瞬间也能找到目标标记
 // mode=0: 选择最大生命值目标（骷髅），mode=1: 选择第二大生命值目标（叉叉，排除skull）
 static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
 {
@@ -37,16 +39,21 @@ static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
     if (!bot)
         return nullptr;
 
-    GuidVector attackers = botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->Get();
+    // 只用 attackers 列表（已进入战斗的怪），绝不用 possible targets（会标记远处未战斗的怪导致ADD）
+    GuidVector targets = botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->Get();
+
     ObjectGuid skullGuid = group->GetTargetIcon(RtiTargetValue::skullIndex);
 
     Unit* bestTarget = nullptr;
     uint32 bestMaxHealth = 0;
 
-    for (ObjectGuid const guid : attackers)
+    for (ObjectGuid const guid : targets)
     {
         Unit* unit = botAI->GetUnit(guid);
         if (!unit || unit->IsPlayer())
+            continue;
+
+        if (!unit->IsAlive())
             continue;
 
         // 已标记的跳过
@@ -69,10 +76,10 @@ static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
     // 如果没找到最大生命值的目标，退而选择任意未标记目标
     if (!bestTarget)
     {
-        for (ObjectGuid const guid : attackers)
+        for (ObjectGuid const guid : targets)
         {
             Unit* unit = botAI->GetUnit(guid);
-            if (!unit || unit->IsPlayer())
+            if (!unit || unit->IsPlayer() || !unit->IsAlive())
                 continue;
 
             if (IsTargetAlreadyMarked(group, unit->GetGUID()))

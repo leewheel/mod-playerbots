@@ -972,4 +972,16 @@ private:
     bool triggered;
 };
 
+// By leewheel 2026-07-15: Detects when a party member is sapped by stealthed mobs (e.g. Shattered Hand Assassins in Shattered Halls).
+// Non-sapped bots should react by using AoE to break stealth.
+class PartyMemberSappedTrigger : public Trigger
+{
+public:
+    PartyMemberSappedTrigger(PlayerbotAI* botAI) : Trigger(botAI, "party member sapped", 1) {}
+
+    bool IsActive() override;
+};
+
+// End By leewheel
+
 #endif

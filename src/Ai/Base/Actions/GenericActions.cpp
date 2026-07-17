@@ -230,3 +230,79 @@ bool SetPetStanceAction::Execute(Event /*event*/)
 
     return true;
 }
+
+// By leewheel 2026-07-15: Break stealth action - tries class-appropriate AoE spells to flush out stealthed mobs.
+// This is triggered when a party member is sapped (e.g. by Shattered Hand Assassins in Shattered Halls).
+
+// Class-specific instant-cast or fast AoE spell names that can break stealth.
+// Ordered by preference (most effective anti-stealth first).
+struct BreakStealthSpellList
+{
+    uint8 playerClass;
+    std::vector<std::string> spells;
+};
+
+static const BreakStealthSpellList breakStealthSpells[] = {
+    {CLASS_WARRIOR,   {"thunder clap", "demoralizing shout", "piercing howl", "shockwave", "whirlwind"}},
+    {CLASS_PALADIN,   {"consecration", "holy wrath"}},
+    {CLASS_HUNTER,    {"flare", "volley", "multi-shot"}},
+    {CLASS_MAGE,      {"arcane explosion", "frost nova", "cone of cold", "blast wave", "flamestrike", "blizzard"}},
+    {CLASS_PRIEST,    {"holy nova"}},
+    {CLASS_WARLOCK,   {"shadowfury", "rain of fire", "hellfire"}},
+    {CLASS_DRUID,     {"hurricane", "starfall", "swipe"}},
+    {CLASS_SHAMAN,    {"fire nova", "magma totem", "stoneclaw totem"}},
+    {CLASS_ROGUE,     {"fan of knives"}},
+    {CLASS_DEATH_KNIGHT, {"blood boil", "howling blast", "pestilence", "death and decay"}}
+};
+
+bool BreakStealthAction::isUseful()
+{
+    // Not useful if the bot itself is sapped/feared/sleeping
+    if (bot->HasAuraWithMechanic(1 << MECHANIC_SAPPED) ||
+        bot->HasAuraWithMechanic(1 << MECHANIC_SLEEP) ||
+        bot->HasAuraType(SPELL_AURA_MOD_FEAR) ||
+        bot->HasAuraType(SPELL_AURA_MOD_STUN) ||
+        bot->HasAuraType(SPELL_AURA_MOD_CONFUSE))
+        return false;
+
+    // Not useful if not in combat
+    if (!bot->IsInCombat())
+        return false;
+
+    // Not useful if not in a group (no one to be sapped)
+    if (!bot->GetGroup())
+        return false;
+
+    return true;
+}
+
+bool BreakStealthAction::Execute(Event /*event*/)
+{
+    uint8 playerClass = bot->getClass();
+
+    // Find the spell list for this class
+    for (auto const& entry : breakStealthSpells)
+    {
+        if (entry.playerClass != playerClass)
+            continue;
+
+        // Try each spell in order of preference
+        for (auto const& spellName : entry.spells)
+        {
+            if (botAI->CanCastSpell(spellName, bot))
+            {
+                if (botAI->CastSpell(spellName, bot))
+                {
+                    LOG_DEBUG("playerbots", "BreakStealthAction: {} cast {} to break stealth",
+                        bot->GetName(), spellName);
+                    return true;
+                }
+            }
+        }
+        break;  // Found the class entry, no need to keep searching
+    }
+
+    return false;
+}
+
+// End By leewheel

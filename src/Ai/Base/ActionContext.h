@@ -216,6 +216,7 @@ public:
         creators["remove bobber strategy"] = &ActionContext::remove_bobber_strategy;
         creators["roll"] = &ActionContext::roll_action;
         creators["cancel channel"] = &ActionContext::cancel_channel;
+        creators["break stealth"] = &ActionContext::break_stealth;
 
         // BG Tactics
         creators["bg tactics"] = &ActionContext::bg_tactics;
@@ -343,6 +344,7 @@ private:
     static Action* mana_tap(PlayerbotAI* botAI) { return new CastManaTapAction(botAI); }
     static Action* end_pull(PlayerbotAI* botAI) { return new ChangeCombatStrategyAction(botAI, "-pull"); }
     static Action* cancel_channel(PlayerbotAI* botAI) { return new CancelChannelAction(botAI); }
+    static Action* break_stealth(PlayerbotAI* botAI) { return new BreakStealthAction(botAI); }
 
     static Action* emote(PlayerbotAI* botAI) { return new EmoteAction(botAI); }
     static Action* talk(PlayerbotAI* botAI) { return new TalkAction(botAI); }

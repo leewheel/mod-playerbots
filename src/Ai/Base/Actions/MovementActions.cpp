@@ -1960,9 +1960,13 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
         {
             continue;
         }
-        // 0 trap with no despawn after cast. 1 trap despawns after cast. 2 bomb casts on spawn.
-        if (goInfo->trap.type != 0)
-            continue;
+        // By leewheel 2026-07-15: 修复炸弹/陷阱躲避逻辑
+        // 原代码只处理 type==0 的陷阱（施法后不消失），跳过了 type==1（施法后消失）
+        // 和 type==2（生成时即施法的炸弹），导致大量可躲避的危险陷阱被忽略。
+        // 典型案例：鲜血熔炉中影月技师投放的"近距离炸弹"（GO 181877, type=1, spell=30844），
+        //   机器人傻站在炸弹旁边被炸死。
+        // 修复：移除 type 过滤，所有有伤害技能的陷阱都应该躲避。
+        // 注意：type==2 的炸弹有10秒装填时间（GameObject.cpp 中硬编码），完全有时间躲避。
 
         uint32 spellId = goInfo->trap.spellId;
         if (!spellId)
@@ -1980,7 +1984,22 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
             continue;
         }
 
+        // By leewheel 2026-07-15: 修复危险半径计算
+        // 原代码只用 trap.diameter/2（陷阱触发半径），但爆炸技能的实际伤害范围可能远大于触发半径。
+        // 例如：近距离炸弹的 trap.diameter=5（触发半径2.5码），
+        //   但 spell 30844 的 EffectRadiusIndex=13（爆炸半径15码）。
+        // 修复：取陷阱触发半径和技能效果半径中的最大值作为危险半径。
         float radius = (float)goInfo->trap.diameter / 2 + go->GetCombatReach();
+        for (int i = 0; i < MAX_SPELL_EFFECTS; i++)
+        {
+            if (spellInfo->Effects[i].Effect == SPELL_EFFECT_SCHOOL_DAMAGE ||
+                spellInfo->Effects[i].Effect == SPELL_EFFECT_APPLY_AURA)
+            {
+                float spellRadius = spellInfo->Effects[i].CalcRadius();
+                if (spellRadius > radius)
+                    radius = spellRadius;
+            }
+        }
         if (!radius || radius > sPlayerbotAIConfig.maxAoeAvoidRadius)
             continue;
 
@@ -1988,6 +2007,7 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
         {
             continue;
         }
+        // End By leewheel
         std::ostringstream name;
         name << spellInfo->SpellName[LOCALE_enUS];  // << "] (object)";
         if (FleePosition(go->GetPosition(), radius))

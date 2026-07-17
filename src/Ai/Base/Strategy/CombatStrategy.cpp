@@ -51,6 +51,17 @@ void CombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             }
         )
     );
+    // By leewheel 2026-07-15: When a party member is sapped by stealthed mobs (e.g. Shattered Hand Assassins
+    // in Shattered Halls), use AoE to break stealth and reveal the hidden attackers.
+    triggers.push_back(
+        new TriggerNode(
+            "party member sapped",
+            {
+                NextAction("break stealth", ACTION_EMERGENCY)
+            }
+        )
+    );
+    // End By leewheel
     // The pet-attack trigger is commented out because it was forcing the bot's pet to attack, overriding stay and follow commands.
     // Pets will automatically attack the bot's enemy if they are in "defensive" or "aggressive"
     // stance, or if the master issues an attack command.

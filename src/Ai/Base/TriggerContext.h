@@ -71,6 +71,7 @@ public:
         creators["fear sleep sap"] = &TriggerContext::fear_sleep_sap;
         creators["poison disease bleed"] = &TriggerContext::poison_disease_bleed;
         creators["movement impaired"] = &TriggerContext::movement_impaired;
+        creators["party member sapped"] = &TriggerContext::party_member_sapped;
 
         creators["protect party member"] = &TriggerContext::protect_party_member;
 
@@ -397,6 +398,7 @@ private:
     static Trigger* fear_sleep_sap(PlayerbotAI* botAI) { return new FearSleepSapTrigger(botAI); }
     static Trigger* poison_disease_bleed(PlayerbotAI* botAI) { return new PoisonDiseaseBleedTrigger(botAI); }
     static Trigger* movement_impaired(PlayerbotAI* botAI) { return new MovementImpairedTrigger(botAI); }
+    static Trigger* party_member_sapped(PlayerbotAI* botAI) { return new PartyMemberSappedTrigger(botAI); }
     static Trigger* PartyMemberCriticalHealth(PlayerbotAI* botAI)
     {
         return new PartyMemberCriticalHealthTrigger(botAI);

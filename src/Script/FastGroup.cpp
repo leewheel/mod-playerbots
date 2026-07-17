@@ -967,6 +967,102 @@ void AssignLfgRoles(Player* master)
 }
 // End By leewheel
 
+// By leewheel 2026-07-17
+// 检查并学习坐骑技能
+// 快速组队的机器人在上线时自动学习坐骑技能：
+// - 到达地面坐骑等级(默认20级)时，如果没有地面坐骑，随机学一个地面坐骑
+// - 到达飞行坐骑等级(默认60级)时，如果没有飞行坐骑，随机学一个飞行坐骑
+// 坐骑技能从1700001-1700412范围内随机选取
+// 注意：每次快速组队都要检查，确保机器人一定会坐骑
+//      大于等于飞行坐骑等级后必须学会一个地面坐骑和一个飞行坐骑
+void EnsureBotHasMounts(Player* bot)
+{
+    if (!bot)
+        return;
+
+    uint32 botLevel = bot->GetLevel();
+    uint32 groundMountMinLevel = sPlayerbotAIConfig.useGroundMountAtMinLevel;
+    uint32 flyMountMinLevel = sPlayerbotAIConfig.useFlyMountAtMinLevel;
+
+    // 静态缓存：地面坐骑和飞行坐骑技能ID列表
+    // 首次调用时从数据库加载，之后直接使用缓存
+    static std::vector<uint32> groundMountSpells;
+    static std::vector<uint32> flightMountSpells;
+    static bool mountListInitialized = false;
+
+    if (!mountListInitialized)
+    {
+        // 从 spell_dbc 表中加载1700001-1700412范围内的坐骑技能
+        // 地面坐骑: EffectAura_1=78(SPELL_AURA_MOUNTED), EffectAura_2=32(SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED)
+        // 飞行坐骑: EffectAura_1=78(SPELL_AURA_MOUNTED), EffectAura_2=207(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED)
+        QueryResult result = WorldDatabase.Query(
+            "SELECT ID, EffectAura_2 FROM spell_dbc "
+            "WHERE ID BETWEEN 1700001 AND 1700412 AND EffectAura_1 = 78");
+        if (result)
+        {
+            do
+            {
+                Field* fields = result->Fetch();
+                uint32 spellId = fields[0].Get<uint32>();
+                uint32 auraType2 = fields[1].Get<uint32>();
+
+                if (auraType2 == 32)  // SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED
+                    groundMountSpells.push_back(spellId);
+                else if (auraType2 == 207)  // SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED
+                    flightMountSpells.push_back(spellId);
+            } while (result->NextRow());
+        }
+
+        mountListInitialized = true;
+        LOG_INFO("playerbots", "快速组队：坐骑技能缓存已加载，地面坐骑 {} 个，飞行坐骑 {} 个。",
+            groundMountSpells.size(), flightMountSpells.size());
+    }
+
+    // 检查机器人是否已拥有地面坐骑和飞行坐骑
+    bool hasGroundMount = false;
+    bool hasFlightMount = false;
+
+    for (auto const& [spellId, spellPtr] : bot->GetSpellMap())
+    {
+        if (spellPtr->State == PLAYERSPELL_REMOVED)
+            continue;
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+        if (!spellInfo)
+            continue;
+
+        // 检查是否为坐骑法术(EffectAura_1 == SPELL_AURA_MOUNTED = 78)
+        if (spellInfo->Effects[0].ApplyAuraName != SPELL_AURA_MOUNTED)
+            continue;
+
+        // 检查是否为飞行坐骑(EffectAura_2 == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED = 207)
+        if (spellInfo->Effects[1].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED)
+            hasFlightMount = true;
+        else
+            hasGroundMount = true;
+    }
+
+    // 学习地面坐骑
+    if (botLevel >= groundMountMinLevel && !hasGroundMount && !groundMountSpells.empty())
+    {
+        uint32 index = urand(0, groundMountSpells.size() - 1);
+        uint32 spell = groundMountSpells[index];
+        bot->learnSpell(spell);
+        LOG_INFO("playerbots", "快速组队：机器人 {} 已学习地面坐骑技能 {}。", bot->GetName(), spell);
+    }
+
+    // 学习飞行坐骑
+    // 大于等于飞行坐骑等级后必须学会一个飞行坐骑
+    if (botLevel >= flyMountMinLevel && !hasFlightMount && !flightMountSpells.empty())
+    {
+        uint32 index = urand(0, flightMountSpells.size() - 1);
+        uint32 spell = flightMountSpells[index];
+        bot->learnSpell(spell);
+        LOG_INFO("playerbots", "快速组队：机器人 {} 已学习飞行坐骑技能 {}。", bot->GetName(), spell);
+    }
+}
+// End By leewheel
+
 static bool HandleFastGroupParty5Command(ChatHandler* handler)
 {
     Player* master = handler->GetSession()->GetPlayer();
@@ -1252,6 +1348,15 @@ public:
             factory.ApplyEnchantAndGemsNew();
 
         player->DurabilityRepairAll(false, 1.0f, false);
+
+        // By leewheel 2026-07-17
+        // 检查并学习坐骑技能
+        // 快速组队的机器人可能在之前没有学习坐骑技能，导致无法上坐骑
+        // 每次快速组队都必须检查：
+        // - 到达地面坐骑等级(20)必须学会一个地面坐骑
+        // - 到达飞行坐骑等级(60)必须学会一个地面坐骑和一个飞行坐骑
+        EnsureBotHasMounts(player);
+        // End By leewheel
 
         // By leewheel 2026-07-15
         // 天赋变更后必须重置AI策略，否则策略仍基于旧天赋导致 AI 行为错误

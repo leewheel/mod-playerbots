@@ -23,6 +23,7 @@
 #include "PlayerbotAI.h"
 #include "Player.h"
 #include "Corpse.h"
+#include "Group.h"
 
 bool LowManaTrigger::IsActive()
 {
@@ -752,3 +753,38 @@ bool NewPetTrigger::IsActive()
 
     return false;
 }
+
+// By leewheel 2026-07-15: Detects when a party member is sapped by stealthed mobs.
+// Triggers when bot is in combat and any group member (including self) has MECHANIC_SAPPED.
+bool PartyMemberSappedTrigger::IsActive()
+{
+    // Only react during combat (stealthed mobs sap during combat)
+    if (!bot->IsInCombat())
+        return false;
+
+    // Don't trigger if the bot itself is sapped (can't do anything)
+    if (bot->HasAuraWithMechanic(1 << MECHANIC_SAPPED))
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    // Check if any party member is sapped
+    for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
+    {
+        Player* member = gref->GetSource();
+        if (!member || !member->IsAlive() || !member->IsInWorld())
+            continue;
+
+        if (member->GetMapId() != bot->GetMapId())
+            continue;
+
+        if (member->HasAuraWithMechanic(1 << MECHANIC_SAPPED))
+            return true;
+    }
+
+    return false;
+}
+
+// End By leewheel

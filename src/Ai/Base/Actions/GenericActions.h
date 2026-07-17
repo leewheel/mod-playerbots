@@ -44,4 +44,17 @@ public:
     bool Execute(Event event) override;
 };
 
+// By leewheel 2026-07-15: When a party member is sapped by stealthed mobs, use AoE to break stealth.
+// This action tries class-appropriate instant-cast or short-cast AoE spells to flush out stealthed assassins.
+class BreakStealthAction : public Action
+{
+public:
+    BreakStealthAction(PlayerbotAI* botAI) : Action(botAI, "break stealth") {}
+
+    bool Execute(Event event) override;
+    bool isUseful() override;
+};
+
+// End By leewheel
+
 #endif
