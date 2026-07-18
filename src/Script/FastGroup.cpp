@@ -1167,21 +1167,41 @@ void EnsureBotHasMounts(Player* bot)
     }
 
     // 第三步：随机学习一个地面坐骑（如果没有的话）
+    // 学习失败就重新再学，直到学会
     if (botLevel >= groundMountMinLevel && !hasGroundMount && groundMountCount > 0)
     {
-        uint32 index = urand(0, groundMountCount - 1);
-        uint32 spell = groundMountSpells[index];
-        bot->learnSpell(spell);
-        LOG_INFO("playerbots", "快速组队：机器人 {} 已学习地面坐骑技能 {}。", bot->GetName(), spell);
+        for (uint32 attempt = 0; attempt < 10; ++attempt)
+        {
+            uint32 index = urand(0, groundMountCount - 1);
+            uint32 spell = groundMountSpells[index];
+            if (bot->HasSpell(spell))
+                break;
+            bot->learnSpell(spell);
+            if (bot->HasSpell(spell))
+            {
+                LOG_INFO("playerbots", "快速组队：机器人 {} 已学习地面坐骑技能 {}。", bot->GetName(), spell);
+                break;
+            }
+        }
     }
 
     // 第四步：随机学习一个飞行坐骑（如果没有的话）
+    // 学习失败就重新再学，直到学会
     if (botLevel >= flyMountMinLevel && !hasFlightMount && flightMountCount > 0)
     {
-        uint32 index = urand(0, flightMountCount - 1);
-        uint32 spell = flightMountSpells[index];
-        bot->learnSpell(spell);
-        LOG_INFO("playerbots", "快速组队：机器人 {} 已学习飞行坐骑技能 {}。", bot->GetName(), spell);
+        for (uint32 attempt = 0; attempt < 10; ++attempt)
+        {
+            uint32 index = urand(0, flightMountCount - 1);
+            uint32 spell = flightMountSpells[index];
+            if (bot->HasSpell(spell))
+                break;
+            bot->learnSpell(spell);
+            if (bot->HasSpell(spell))
+            {
+                LOG_INFO("playerbots", "快速组队：机器人 {} 已学习飞行坐骑技能 {}。", bot->GetName(), spell);
+                break;
+            }
+        }
     }
 }
 // End By leewheel
