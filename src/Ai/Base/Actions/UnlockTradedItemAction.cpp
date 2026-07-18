@@ -2,6 +2,20 @@
 #include "PlayerbotAI.h"
 #include "TradeData.h"
 #include "SpellInfo.h"
+#include "SpellMgr.h"
+#include "Log.h"
+#include "Spell.h"
+
+// By leewheel 2026-07-18
+// 修复开锁交易物品的问题：第一次成功后后续全部失败
+// 原因：PlayerbotAI::CastSpell 对 OPEN_LOCK 法术走 Spell::prepare 路径，
+//       而交易物品开锁应使用 TradeData::SetSpell 路径（无需创建 Spell 对象）。
+//       原代码传入 OPEN_LOCK 法术但 CastSpell 的 TARGET_FLAG_ITEM 快速路径
+//       只对非 OPEN_LOCK 法术生效（line 3757 检查 Effect != OPEN_LOCK），
+//       导致走入了 Spell::prepare 完整施法路径，可能因各种条件检查失败。
+// 修复：直接使用 TradeData::SetSpell 设置开锁法术到交易窗口，
+//       这是服务端原生的交易物品开锁机制，不经过 PlayerbotAI::CastSpell。
+// End By leewheel
 
 inline constexpr uint32_t PICK_LOCK_SPELL_ID = 1804;
 
@@ -84,15 +98,28 @@ void UnlockTradedItemAction::UnlockItem(Item* item)
         return;
     }
 
-    // Use CastSpell to unlock the item
-    if (botAI->CastSpell(PICK_LOCK_SPELL_ID, bot->GetTrader(), item)) // Unit target is trader
+    // By leewheel 2026-07-18
+    // 修复：直接使用服务端的交易法术机制，不经过 PlayerbotAI::CastSpell
+    // 原因：PlayerbotAI::CastSpell 对 OPEN_LOCK 法术走 Spell::prepare 完整路径，
+    //       创建 Spell 对象后调用 prepare()，会检查各种施法条件。
+    //       但交易物品开锁应通过 TradeData::SetSpell 触发，
+    //       服务端会在交易确认时执行开锁效果，不需要手动施法。
+    TradeData* tradeData = bot->GetTradeData();
+    if (!tradeData)
     {
-        std::ostringstream out;
-        out << "正在开锁交易物品：" << item->GetTemplate()->Name1;
-        botAI->TellMaster(out.str());
+        botAI->TellError("施放开锁失败：无交易数据。");
+        return;
     }
-    else
-    {
-        botAI->TellError("施放开锁失败。");
-    }
+
+    // 设置交易法术为开锁(1804)
+    // 这会让服务端在交易物品上执行开锁效果
+    tradeData->SetSpell(PICK_LOCK_SPELL_ID, nullptr);
+
+    std::ostringstream out;
+    out << "正在开锁交易物品：" << item->GetTemplate()->Name1;
+    botAI->TellMaster(out.str());
+
+    LOG_INFO("playerbots", "开锁交易物品：机器人 {} 对交易物品 {} 施放开锁(1804)，技能值 {}。",
+        bot->GetName(), item->GetTemplate()->Name1, bot->GetSkillValue(SKILL_LOCKPICKING));
+    // End By leewheel
 }

@@ -426,6 +426,14 @@ bool CheckMountStateAction::TryPreferredMount(Player* master) const
     return false;
 }
 
+// By leewheel 2026-07-18
+// 修复：机器人跟随主控移动时无法上坐骑的问题
+// 原因：StopMoving() 只是发送停止移动包，服务端需要下一个tick才更新 isMoving() 状态，
+//       所以紧接着的 CanCastSpell() 检查时 bot->isMoving() 仍为 true，导致 CanCastSpell 返回 false。
+//       结果：地面坐骑时间歇性失败（有时1个上、有时3个上、有时全不上）。
+//       飞行坐骑不受影响，因为飞行区域机器人通常已经停下。
+// 修复：StopMoving 后清除移动状态标志，使 CanCastSpell 通过移动检查。
+// End By leewheel
 bool CheckMountStateAction::TryRandomMountFiltered(const std::map<int32, std::vector<uint32>>& spells, int32 masterSpeed) const
 {
     for (auto it = spells.rbegin(); it != spells.rend(); ++it)
@@ -441,7 +449,13 @@ bool CheckMountStateAction::TryRandomMountFiltered(const std::map<int32, std::ve
         {
             // Required here as otherwise bots won't mount in BGs due to them constant moving
             if (bot->isMoving())
+            {
                 bot->StopMoving();
+                // By leewheel 2026-07-18
+                // StopMoving 后立即清除移动状态标志，否则 CanCastSpell 仍认为机器人在移动
+                bot->ClearUnitState(UNIT_STATE_MOVING);
+                // End By leewheel
+            }
 
             uint32 index = urand(0, ids.size() - 1);
 
@@ -450,6 +464,15 @@ bool CheckMountStateAction::TryRandomMountFiltered(const std::map<int32, std::ve
                 botAI->CastSpell(ids[index], bot);
                 return true;
             }
+            // By leewheel 2026-07-18
+            // 如果 CanCastSpell 仍因移动检查失败，直接尝试施法（坐骑法术不会因移动而真正失败）
+            // 坐骑法术施放时会自动让机器人停下来
+            else if (bot->HasSpell(ids[index]) && !bot->HasSpellCooldown(ids[index]))
+            {
+                botAI->CastSpell(ids[index], bot);
+                return true;
+            }
+            // End By leewheel
         }
     }
     return false;

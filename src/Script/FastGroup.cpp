@@ -1096,22 +1096,30 @@ void EnsureBotHasMounts(Player* bot)
 
     for (auto const& [spellId, spellPtr] : bot->GetSpellMap())
     {
-        if (spellPtr->State == PLAYERSPELL_REMOVED)
+        if (spellPtr->State == PLAYERSPELL_REMOVED || !spellPtr->Active)
             continue;
 
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
-        if (!spellInfo)
+        if (!spellInfo || spellInfo->IsPassive())
             continue;
 
         // 检查是否为坐骑法术(EffectAura_1 == SPELL_AURA_MOUNTED = 78)
         if (spellInfo->Effects[0].ApplyAuraName != SPELL_AURA_MOUNTED)
             continue;
 
-        // 检查是否为飞行坐骑(EffectAura_2 == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED = 207)
-        if (spellInfo->Effects[1].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED)
+        // By leewheel 2026-07-18
+        // 修复：检查飞行坐骑时必须同时检查 Effects[1] 和 Effects[2]
+        // 原代码只检查 Effects[1]，导致飞行效果在 Effects[2] 的飞行坐骑
+        // 被误判为地面坐骑，hasGroundMount=true，不学地面坐骑
+        // 但 CollectMountData 检查 Effects[1] 和 Effects[2]，正确分类为飞行
+        // 结果：有飞行坐骑但没地面坐骑，飞行能上但地面不能上
+        if (spellInfo->Effects[1].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
+            spellInfo->Effects[2].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
+            spellInfo->Id == 54729)  // Winged Steed of the Ebon Blade 特殊处理
             hasFlightMount = true;
         else
             hasGroundMount = true;
+        // End By leewheel
     }
 
     // 学习地面坐骑

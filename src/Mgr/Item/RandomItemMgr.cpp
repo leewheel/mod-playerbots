@@ -1051,6 +1051,21 @@ bool RandomItemMgr::CanEquipArmor(ItemTemplate const* proto, uint8 clazz, uint32
     if (!proto || clazz >= MAX_CLASSES)
         return false;
 
+    // By leewheel 2026-07-18
+    // 修复：检查物品的职业限制（AllowableClass）
+    // 原因：原代码只检查护甲子类和属性，没有检查 AllowableClass，
+    //       导致物品缓存预筛选时将职业专属套装收录到其他职业的可用列表中，
+    //       进而引发 PlayerbotFactory 装备分配时出现套装混穿。
+    //       例：法师套装(布甲)被收录进术士/牧士的可用物品，
+    //            圣骑士套装(板甲)被收录进战士/死亡骑士的可用物品。
+    if (proto->AllowableClass)
+    {
+        uint32 classMask = 1u << (clazz - 1);
+        if ((proto->AllowableClass & classMask) == 0)
+            return false;
+    }
+    // End By leewheel
+
     // skip non-armor and out-of-range armor subclasses
     if (proto->Class != ITEM_CLASS_ARMOR || proto->SubClass >= MAX_ITEM_SUBCLASS_ARMOR)
         return false;
@@ -1107,6 +1122,17 @@ bool RandomItemMgr::CanEquipWeapon(ItemTemplate const* proto, uint8 clazz) const
     // skip null proto or invalid class
     if (!proto || clazz >= MAX_CLASSES)
         return false;
+
+    // By leewheel 2026-07-18
+    // 修复：检查物品的职业限制（AllowableClass）
+    // 原因：与 CanEquipArmor 同理，防止职业专属武器被错误收录进物品缓存。
+    if (proto->AllowableClass)
+    {
+        uint32 classMask = 1u << (clazz - 1);
+        if ((proto->AllowableClass & classMask) == 0)
+            return false;
+    }
+    // End By leewheel
 
     // skip non-weapon and out-of-range weapon subclasses
     if (proto->Class != ITEM_CLASS_WEAPON || proto->SubClass >= MAX_ITEM_SUBCLASS_WEAPON)

@@ -1749,6 +1749,21 @@ private:
 
 bool PlayerbotFactory::CanEquipArmor(ItemTemplate const* proto)
 {
+    // By leewheel 2026-07-18
+    // 修复：检查物品的职业和种族限制（AllowableClass/AllowableRace）
+    // 原因：原代码只检查护甲类型技能（板甲/锁甲/皮甲/布甲/盾牌），
+    //       没有检查物品的 AllowableClass 字段，导致职业间套装混穿：
+    //       - 布甲职业（法师/术士/牧师）互相穿套装
+    //       - 板甲职业（战士/圣骑士/死亡骑士）互相穿套装
+    //       套装在 item_template 中通过 AllowableClass 标记了职业限制，
+    //       必须与 bot 的职业掩码做位与判断，为0则该职业不可装备。
+    //       与 Acore 核心代码 PlayerStorage.cpp 的判断方式一致。
+    if (proto->AllowableClass && (proto->AllowableClass & bot->getClassMask()) == 0)
+        return false;
+    if (proto->AllowableRace && (proto->AllowableRace & bot->getRaceMask()) == 0)
+        return false;
+    // End By leewheel
+
     if (proto->SubClass == ITEM_SUBCLASS_ARMOR_PLATE && !bot->HasSkill(SKILL_PLATE_MAIL))
     {
         return false;
@@ -1864,6 +1879,15 @@ void PlayerbotFactory::AddItemStats(uint32 mod, uint8& sp, uint8& ap, uint8& tan
 
 bool PlayerbotFactory::CanEquipWeapon(ItemTemplate const* proto)
 {
+    // By leewheel 2026-07-18
+    // 修复：检查物品的职业和种族限制（AllowableClass/AllowableRace）
+    // 原因：与 CanEquipArmor 同理，防止职业专属武器被错误分配
+    if (proto->AllowableClass && (proto->AllowableClass & bot->getClassMask()) == 0)
+        return false;
+    if (proto->AllowableRace && (proto->AllowableRace & bot->getRaceMask()) == 0)
+        return false;
+    // End By leewheel
+
     switch (bot->getClass())
     {
         case CLASS_PRIEST:
@@ -1878,15 +1902,20 @@ bool PlayerbotFactory::CanEquipWeapon(ItemTemplate const* proto)
                 return false;
             break;
         case CLASS_WARRIOR:
+            // By leewheel 2026-07-18
+            // 修复：移除战士的法杖(STAFF)允许
+            // 原因：战士不应使用法杖，法杖是法系武器，对战士无属性收益
+            //       且战士有足够的武器选择（剑/斧/锤/长柄/匕首/拳套/弓/枪/弩/投掷）
             if (proto->SubClass != ITEM_SUBCLASS_WEAPON_MACE2 && proto->SubClass != ITEM_SUBCLASS_WEAPON_AXE &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_POLEARM && proto->SubClass != ITEM_SUBCLASS_WEAPON_SWORD2 &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_MACE && proto->SubClass != ITEM_SUBCLASS_WEAPON_SWORD &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_GUN && proto->SubClass != ITEM_SUBCLASS_WEAPON_CROSSBOW &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_BOW && proto->SubClass != ITEM_SUBCLASS_WEAPON_THROWN &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_AXE2 && proto->SubClass != ITEM_SUBCLASS_WEAPON_FIST &&
-                proto->SubClass != ITEM_SUBCLASS_WEAPON_DAGGER && proto->SubClass != ITEM_SUBCLASS_WEAPON_STAFF)
+                proto->SubClass != ITEM_SUBCLASS_WEAPON_DAGGER)
                 return false;
             break;
+            // End By leewheel
         case CLASS_PALADIN:
         case CLASS_DEATH_KNIGHT:
             if (proto->SubClass != ITEM_SUBCLASS_WEAPON_MACE2 && proto->SubClass != ITEM_SUBCLASS_WEAPON_POLEARM &&
