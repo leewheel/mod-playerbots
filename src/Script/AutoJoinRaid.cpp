@@ -42,6 +42,11 @@
 #include "DBCStores.h"
 #include "DBCStructure.h"
 
+//By leewheel 2026-07-18
+// 副本进入条件自动补全系统的核心函数，定义在 BotInstanceEntryFix.cpp 中
+extern bool EnsureBotCanEnterMap(Player* bot, uint32 mapId, Player* master);
+//End By leewheel
+
 // 配置管理
 #include "Config.h"
 
@@ -370,6 +375,18 @@ private:
         LOG_INFO("playerbots", "自动加入团本：玩家 {} 传送团队到 {}（副本ID:{}，地图:{}，坐标:{},{},{})。",
             master->GetName(), dungeon->name, tp.dungeonId, dungeon->map,
             dungeon->x, dungeon->y, dungeon->z);
+
+        //By leewheel 2026-07-18
+        //在传送前检查并修复所有机器人的副本进入条件
+        for (ObjectGuid botGuid : botGuids)
+        {
+            Player* bot = ObjectAccessor::FindConnectedPlayer(botGuid);
+            if (bot)
+            {
+                EnsureBotCanEnterMap(bot, dungeon->map, master);
+            }
+        }
+        //End By leewheel
 
         // 传送主控玩家
         master->TeleportTo(dungeon->map, dungeon->x, dungeon->y, dungeon->z, dungeon->o);

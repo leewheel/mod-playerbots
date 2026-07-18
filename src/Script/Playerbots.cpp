@@ -539,6 +539,14 @@ void AddSC_FastGroup();
 void AddSC_AutoJoinRaid();
 //End By leewheel
 
+//By leewheel 2026-07-17 - 路过增益系统
+void AddSC_PassByBuffScripts();
+//End By leewheel
+
+//By leewheel 2026-07-18 - 机器人副本进入条件自动补全系统
+void AddSC_BotInstanceEntryFixScripts();
+//End By leewheel
+
 void AddPlayerbotsScripts()
 {
     new PlayerbotsBattlefieldScript();
@@ -564,5 +572,13 @@ void AddPlayerbotsScripts()
 
     //By leewheel 2026-07-07 - 自动加入团本系统
     AddSC_AutoJoinRaid();
+    //End By leewheel
+
+    //By leewheel 2026-07-17 - 路过增益系统
+    AddSC_PassByBuffScripts();
+    //End By leewheel
+
+    //By leewheel 2026-07-18 - 机器人副本进入条件自动补全系统
+    AddSC_BotInstanceEntryFixScripts();
     //End By leewheel
 }

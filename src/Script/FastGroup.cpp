@@ -967,6 +967,78 @@ void AssignLfgRoles(Player* master)
 }
 // End By leewheel
 
+// By leewheel 2026-07-18
+// 确保机器人的所有技能达到当前等级对应的最大值
+// 包括：武器技能、防御技能、开锁技能、专业制作技能等
+// 修复问题：快速组队的机器人可能技能值很低（如开锁1/350），
+//          导致副本内无法开箱、专业技能制作失败等问题
+// 原理：
+//   - 等级依赖技能（武器、防御、开锁）：maxValue = level * 5
+//   - 专业制作技能（锻造、炼金等）：maxValue 由专业技能等级上限决定
+//   - 通过 GetPureMaxSkillValue() 获取每个技能的正确 max 值
+//   - 然后用 SetSkill() 把 value 设为 max
+void EnsureBotSkillsMaximized(Player* bot)
+{
+    if (!bot)
+        return;
+
+    // 1. 先调用 UpdateSkillsForLevel 更新等级依赖技能的上限
+    //    这会把武器技能、防御技能的 max 更新为 level * 5
+    bot->UpdateSkillsForLevel();
+
+    // 2. 遍历所有已有技能，把 value 设为 max
+    //    使用 UpdateSkillsToMaxSkillsForLevel 会跳过专业和骑术技能
+    //    所以我们手动遍历，确保所有技能（包括专业制作技能）都满
+    //    注意：SKILL_NONE(0) 到 SKILL_MAX 范围内遍历
+    for (uint32 skillId = 0; skillId < MAX_SKILL_TYPE; ++skillId)
+    {
+        // 检查机器人是否已有这个技能
+        if (!bot->HasSkill(skillId))
+            continue;
+
+        // 获取当前技能的 max 值
+        uint16 maxVal = bot->GetPureMaxSkillValue(skillId);
+
+        // 跳过 max <= 1 的技能（如骑术、双持等特殊技能）
+        if (maxVal <= 1)
+            continue;
+
+        // 获取当前技能值
+        uint16 currVal = bot->GetPureSkillValue(skillId);
+
+        // 如果技能值已满，跳过
+        if (currVal >= maxVal)
+            continue;
+
+        // 获取技能 step（用于专业技能的等级阶段）
+        uint16 step = bot->GetSkillStep(skillId);
+        if (step == 0)
+            step = 1;
+
+        // 设置技能值为 max
+        bot->SetSkill(skillId, step, maxVal, maxVal);
+
+        LOG_DEBUG("playerbots", "技能补满：机器人 {} 的技能(ID:{}) 从 {} 提升到 {}。",
+            bot->GetName(), skillId, currVal, maxVal);
+    }
+
+    // 3. 额外确保盗贼的开锁技能满级
+    //    开锁技能（SKILL_LOCKPICKING）是盗贼专属技能
+    //    必须达到 level * 5，否则副本内的锁箱无法打开
+    if (bot->getClass() == CLASS_ROGUE && bot->HasSkill(SKILL_LOCKPICKING))
+    {
+        uint16 maxLockpicking = bot->GetLevel() * 5;
+        uint16 currLockpicking = bot->GetPureSkillValue(SKILL_LOCKPICKING);
+        if (currLockpicking < maxLockpicking)
+        {
+            bot->SetSkill(SKILL_LOCKPICKING, 1, maxLockpicking, maxLockpicking);
+            LOG_INFO("playerbots", "技能补满：机器人 {}(盗贼) 的开锁技能从 {} 提升到 {}。",
+                bot->GetName(), currLockpicking, maxLockpicking);
+        }
+    }
+}
+// End By leewheel
+
 // By leewheel 2026-07-17
 // 检查并学习坐骑技能
 // 快速组队的机器人在上线时自动学习坐骑技能：
@@ -1335,6 +1407,17 @@ public:
         // 学习法术
         factory.InitClassSpells();
         factory.InitAvailableSpells();
+
+        // By leewheel 2026-07-18
+        // 技能等级补满：确保所有技能（武器技能、防御技能、开锁技能、专业制作技能等）
+        //               达到当前等级对应的最大值
+        // 修复问题：快速组队的机器人可能技能值很低（如盗贼开锁1/350），
+        //          导致副本内无法开箱、武器技能不足导致命中率低等问题
+        // InitSkills 会通过 SetRandomSkill 设置武器技能和开锁为 level*5
+        // EnsureBotSkillsMaximized 会遍历所有已有技能补满（包括专业制作技能）
+        factory.InitSkills();
+        EnsureBotSkillsMaximized(player);
+        // End By leewheel
 
         // By leewheel 2026-07-08
         // 装备：先清除所有旧装备，再以非增量模式安装当前等级最佳装备
