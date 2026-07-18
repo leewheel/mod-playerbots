@@ -1056,41 +1056,91 @@ void EnsureBotHasMounts(Player* bot)
     uint32 groundMountMinLevel = sPlayerbotAIConfig.useGroundMountAtMinLevel;
     uint32 flyMountMinLevel = sPlayerbotAIConfig.useFlyMountAtMinLevel;
 
-    // 静态缓存：地面坐骑和飞行坐骑技能ID列表
-    // 首次调用时从数据库加载，之后直接使用缓存
-    static std::vector<uint32> groundMountSpells;
-    static std::vector<uint32> flightMountSpells;
-    static bool mountListInitialized = false;
+    // By leewheel 2026-07-18
+    // 重写：改用硬编码数组替代数据库查询，不再依赖 spell_dbc 表和静态缓存
+    // 原因：
+    //   1. 数据库查询+静态缓存方式存在隐患（首次查询可能失败、缓存可能为空）
+    //   2. 上一轮添加的 removeSpell+learnSpell 骑术法术逻辑破坏了 InitSkills
+    //      原本正常工作的骑术技能（removeSpell 会级联移除法术链中的法术），
+    //      导致飞行坐骑全部不能用。现已删除该逻辑，骑术技能完全交给
+    //      InitSkills 处理（InitSkills 中的 SetSkill+learnSpell 是正常工作的）。
+    //   3. 本函数只负责：补充缺失的骑术法术（不删除已有法术）+ 学习坐骑法术
+    // 地面坐骑：EffectAura_2=32(SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED)
+    // 飞行坐骑：EffectAura_2=207(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED)
+    static const uint32 groundMountSpells[] = {
+        1700012, 1700013, 1700014, 1700015, 1700016, 1700024, 1700025, 1700026,
+        1700027, 1700028, 1700029, 1700033, 1700038, 1700039, 1700040, 1700041,
+        1700042, 1700043, 1700044, 1700045, 1700046, 1700047, 1700049, 1700054,
+        1700056, 1700057, 1700058, 1700060, 1700069, 1700070, 1700071, 1700073,
+        1700074, 1700075, 1700076, 1700077, 1700078, 1700079, 1700080, 1700081,
+        1700082, 1700083, 1700084, 1700085, 1700086, 1700087, 1700088, 1700089,
+        1700095, 1700096, 1700097, 1700098, 1700099, 1700100, 1700101, 1700103,
+        1700104, 1700105, 1700106, 1700107, 1700109, 1700110, 1700111, 1700113,
+        1700114, 1700115, 1700116, 1700128, 1700129, 1700130, 1700135, 1700136,
+        1700137, 1700138, 1700140, 1700141, 1700142, 1700147, 1700148, 1700149,
+        1700150, 1700151, 1700152, 1700153, 1700154, 1700155, 1700156, 1700163,
+        1700165, 1700166, 1700167, 1700168, 1700169, 1700170, 1700171, 1700172,
+        1700173, 1700174, 1700175, 1700179, 1700184, 1700197, 1700198, 1700199,
+        1700200, 1700201, 1700202, 1700203, 1700204, 1700205, 1700206, 1700207,
+        1700208, 1700217, 1700218, 1700219, 1700220, 1700226, 1700227, 1700228,
+        1700229, 1700230, 1700231, 1700232, 1700235, 1700236, 1700237, 1700238,
+        1700239, 1700240, 1700241, 1700242, 1700243, 1700244, 1700245, 1700246,
+        1700247, 1700248, 1700249, 1700250, 1700251, 1700252, 1700253, 1700254,
+        1700255, 1700256, 1700257, 1700258, 1700260, 1700261, 1700262, 1700263,
+        1700264, 1700265, 1700266, 1700267, 1700268, 1700269, 1700270, 1700271,
+        1700272, 1700273, 1700274, 1700275, 1700276, 1700280, 1700281, 1700282,
+        1700287, 1700288, 1700289, 1700290, 1700291, 1700292, 1700293, 1700294,
+        1700307, 1700308, 1700318, 1700319, 1700320, 1700321, 1700323, 1700326,
+        1700328, 1700329, 1700331, 1700332, 1700333, 1700337, 1700338, 1700339,
+        1700340, 1700341, 1700342, 1700344, 1700345, 1700348, 1700349, 1700359,
+        1700360, 1700361, 1700362, 1700363, 1700364, 1700365, 1700366, 1700367,
+        1700368, 1700369, 1700370, 1700371, 1700372, 1700373, 1700374, 1700375,
+        1700376, 1700377, 1700378, 1700379, 1700380, 1700381, 1700387, 1700388,
+        1700389, 1700390, 1700391, 1700392, 1700393, 1700394, 1700395, 1700396,
+        1700397, 1700398, 1700399, 1700400, 1700401
+    };
+    static const uint32 flightMountSpells[] = {
+        1700001, 1700002, 1700003, 1700004, 1700005, 1700006, 1700007, 1700008,
+        1700009, 1700010, 1700011, 1700017, 1700018, 1700019, 1700020, 1700021,
+        1700022, 1700023, 1700030, 1700031, 1700032, 1700034, 1700035, 1700036,
+        1700037, 1700048, 1700050, 1700051, 1700052, 1700053, 1700055, 1700059,
+        1700061, 1700062, 1700063, 1700064, 1700065, 1700066, 1700067, 1700068,
+        1700072, 1700090, 1700091, 1700092, 1700093, 1700094, 1700102, 1700108,
+        1700112, 1700117, 1700118, 1700119, 1700120, 1700121, 1700122, 1700123,
+        1700124, 1700125, 1700126, 1700127, 1700131, 1700132, 1700133, 1700134,
+        1700139, 1700143, 1700144, 1700145, 1700146, 1700157, 1700158, 1700159,
+        1700160, 1700161, 1700162, 1700164, 1700176, 1700177, 1700178, 1700180,
+        1700181, 1700182, 1700183, 1700185, 1700186, 1700187, 1700188, 1700189,
+        1700190, 1700192, 1700193, 1700194, 1700195, 1700196, 1700209, 1700210,
+        1700211, 1700212, 1700213, 1700214, 1700215, 1700216, 1700221, 1700222,
+        1700223, 1700224, 1700225, 1700233, 1700234, 1700259, 1700277, 1700278,
+        1700279, 1700283, 1700284, 1700285, 1700286, 1700295, 1700296, 1700297,
+        1700298, 1700299, 1700300, 1700301, 1700302, 1700303, 1700304, 1700305,
+        1700306, 1700309, 1700310, 1700311, 1700312, 1700313, 1700314, 1700315,
+        1700316, 1700317, 1700322, 1700324, 1700325, 1700327, 1700330, 1700334,
+        1700335, 1700336, 1700343, 1700346, 1700347, 1700350, 1700351, 1700352,
+        1700353, 1700354, 1700355, 1700356, 1700357, 1700358, 1700382, 1700383,
+        1700384, 1700385, 1700386, 1700402, 1700403, 1700404, 1700405, 1700406,
+        1700407, 1700408, 1700409, 1700410, 1700411, 1700412
+    };
+    static const uint32 groundMountCount = sizeof(groundMountSpells) / sizeof(groundMountSpells[0]);
+    static const uint32 flightMountCount = sizeof(flightMountSpells) / sizeof(flightMountSpells[0]);
 
-    if (!mountListInitialized)
-    {
-        // 从 spell_dbc 表中加载1700001-1700412范围内的坐骑技能
-        // 地面坐骑: EffectAura_1=78(SPELL_AURA_MOUNTED), EffectAura_2=32(SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED)
-        // 飞行坐骑: EffectAura_1=78(SPELL_AURA_MOUNTED), EffectAura_2=207(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED)
-        QueryResult result = WorldDatabase.Query(
-            "SELECT ID, EffectAura_2 FROM spell_dbc "
-            "WHERE ID BETWEEN 1700001 AND 1700412 AND EffectAura_1 = 78");
-        if (result)
-        {
-            do
-            {
-                Field* fields = result->Fetch();
-                uint32 spellId = fields[0].Get<uint32>();
-                uint32 auraType2 = fields[1].Get<uint32>();
+    // 第一步：确保骑术法术被学习（只补充缺失的，不删除已有法术）
+    // 骑术法术由 InitSkills 负责主要学习，此处仅做补充兜底
+    // 注意：绝不使用 removeSpell，避免破坏 InitSkills 已正确设置的骑术技能
+    if (botLevel >= groundMountMinLevel && !bot->HasSpell(33388))
+        bot->learnSpell(33388);  // Apprentice Riding (地面骑术75)
+    if (botLevel >= sPlayerbotAIConfig.useFastGroundMountAtMinLevel && !bot->HasSpell(33391))
+        bot->learnSpell(33391);  // Journeyman Riding (地面骑术150)
+    if (botLevel >= flyMountMinLevel && !bot->HasSpell(34090))
+        bot->learnSpell(34090);  // Expert Riding (飞行骑术225)
+    if (botLevel >= sPlayerbotAIConfig.useFastFlyMountAtMinLevel && !bot->HasSpell(34091))
+        bot->learnSpell(34091);  // Artisan Riding (飞行骑术300)
+    if (botLevel >= 77 && !bot->HasSpell(54197))
+        bot->learnSpell(54197);  // Cold Weather Flying (寒冷天气飞行)
 
-                if (auraType2 == 32)  // SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED
-                    groundMountSpells.push_back(spellId);
-                else if (auraType2 == 207)  // SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED
-                    flightMountSpells.push_back(spellId);
-            } while (result->NextRow());
-        }
-
-        mountListInitialized = true;
-        LOG_INFO("playerbots", "快速组队：坐骑技能缓存已加载，地面坐骑 {} 个，飞行坐骑 {} 个。",
-            groundMountSpells.size(), flightMountSpells.size());
-    }
-
-    // 检查机器人是否已拥有地面坐骑和飞行坐骑
+    // 第二步：检查机器人是否已拥有地面坐骑和飞行坐骑法术
     bool hasGroundMount = false;
     bool hasFlightMount = false;
 
@@ -1107,35 +1157,28 @@ void EnsureBotHasMounts(Player* bot)
         if (spellInfo->Effects[0].ApplyAuraName != SPELL_AURA_MOUNTED)
             continue;
 
-        // By leewheel 2026-07-18
-        // 修复：检查飞行坐骑时必须同时检查 Effects[1] 和 Effects[2]
-        // 原代码只检查 Effects[1]，导致飞行效果在 Effects[2] 的飞行坐骑
-        // 被误判为地面坐骑，hasGroundMount=true，不学地面坐骑
-        // 但 CollectMountData 检查 Effects[1] 和 Effects[2]，正确分类为飞行
-        // 结果：有飞行坐骑但没地面坐骑，飞行能上但地面不能上
+        // 检查飞行坐骑时必须同时检查 Effects[1] 和 Effects[2]
         if (spellInfo->Effects[1].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
             spellInfo->Effects[2].ApplyAuraName == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
             spellInfo->Id == 54729)  // Winged Steed of the Ebon Blade 特殊处理
             hasFlightMount = true;
         else
             hasGroundMount = true;
-        // End By leewheel
     }
 
-    // 学习地面坐骑
-    if (botLevel >= groundMountMinLevel && !hasGroundMount && !groundMountSpells.empty())
+    // 第三步：随机学习一个地面坐骑（如果没有的话）
+    if (botLevel >= groundMountMinLevel && !hasGroundMount && groundMountCount > 0)
     {
-        uint32 index = urand(0, groundMountSpells.size() - 1);
+        uint32 index = urand(0, groundMountCount - 1);
         uint32 spell = groundMountSpells[index];
         bot->learnSpell(spell);
         LOG_INFO("playerbots", "快速组队：机器人 {} 已学习地面坐骑技能 {}。", bot->GetName(), spell);
     }
 
-    // 学习飞行坐骑
-    // 大于等于飞行坐骑等级后必须学会一个飞行坐骑
-    if (botLevel >= flyMountMinLevel && !hasFlightMount && !flightMountSpells.empty())
+    // 第四步：随机学习一个飞行坐骑（如果没有的话）
+    if (botLevel >= flyMountMinLevel && !hasFlightMount && flightMountCount > 0)
     {
-        uint32 index = urand(0, flightMountSpells.size() - 1);
+        uint32 index = urand(0, flightMountCount - 1);
         uint32 spell = flightMountSpells[index];
         bot->learnSpell(spell);
         LOG_INFO("playerbots", "快速组队：机器人 {} 已学习飞行坐骑技能 {}。", bot->GetName(), spell);
