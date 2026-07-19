@@ -184,7 +184,7 @@ bool MaintenanceAction::Execute(Event /*event*/)
     botAI->TellMaster("正在维护中");
     PlayerbotFactory factory(bot, bot->GetLevel());
 
-    if (!botAI->IsAlt())
+    if (!botAI->IsAltBot())
     {
         factory.InitAttunementQuests();
         factory.InitBags(false);
