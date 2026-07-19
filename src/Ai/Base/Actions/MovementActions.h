@@ -121,9 +121,12 @@ protected:
     bool AvoidAuraWithDynamicObj();
     bool AvoidGameObjectWithDamage();
     bool AvoidUnitWithDamageAura();
+    // By leewheel 2026-07-19: 盗贼尝试拆除附近的危险陷阱（spell 1842 Disarm Trap）
+    bool TryDisarmTrap();
     time_t lastTellTimer = 0;
     int lastMoveTimer = 0;
     int moveInterval;
+    time_t lastDisarmTimer = 0;  // 拆陷阱冷却计时
 };
 
 class CombatFormationMoveAction : public MovementAction

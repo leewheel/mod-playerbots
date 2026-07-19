@@ -33,6 +33,7 @@
 #include "Random.h"
 #include "ServerFacade.h"
 #include "SharedDefines.h"
+#include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 #include "Stances.h"
@@ -1865,6 +1866,12 @@ bool AvoidAoeAction::isUseful()
 
 bool AvoidAoeAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-07-19: 盗贼优先尝试拆除危险陷阱，拆不了再躲避
+    if (TryDisarmTrap())
+    {
+        return true;
+    }
+
     // Case #1: Aura with dynamic object (e.g. rain of fire)
     if (AvoidAuraWithDynamicObj())
     {
@@ -2026,6 +2033,97 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
     }
     return false;
 }
+
+// By leewheel 2026-07-19: 盗贼尝试拆除附近的危险陷阱
+// Disarm Trap (spell 1842) 可以对任何 GAMEOBJECT_TYPE_TRAP 施放，直接使其失效
+// 此方法在 AvoidAoeAction::Execute 开头调用，优先拆陷阱，拆不了再躲避
+bool AvoidAoeAction::TryDisarmTrap()
+{
+    // 只有盗贼才能拆陷阱
+    if (bot->getClass() != CLASS_ROGUE)
+        return false;
+
+    static const uint32 DISARM_TRAP_SPELL = 1842;
+
+    // 检查是否学会了 Disarm Trap（30级技能）
+    if (!bot->HasSpell(DISARM_TRAP_SPELL))
+        return false;
+
+    // 冷却限制：5秒内不重复尝试，避免频繁施放失败
+    if (lastDisarmTimer && time(nullptr) - lastDisarmTimer < 5)
+        return false;
+
+    // 获取附近的危险陷阱（复用 AvoidGameObjectWithDamage 的判断标准）
+    GuidVector traps = AI_VALUE(GuidVector, "nearest trap with damage");
+    if (traps.empty())
+        return false;
+
+    const SpellInfo* disarmSpellInfo = sSpellMgr->GetSpellInfo(DISARM_TRAP_SPELL);
+    if (!disarmSpellInfo)
+        return false;
+
+    for (const ObjectGuid& guid : traps)
+    {
+        GameObject* go = botAI->GetGameObject(guid);
+        if (!go || !go->IsInWorld())
+            continue;
+
+        if (go->GetGoType() != GAMEOBJECT_TYPE_TRAP)
+            continue;
+
+        const GameObjectTemplate* goInfo = go->GetGOInfo();
+        if (!goInfo)
+            continue;
+
+        uint32 trapSpellId = goInfo->trap.spellId;
+        if (!trapSpellId)
+            continue;
+
+        // 跳过白名单中的陷阱
+        if (sPlayerbotAIConfig.aoeAvoidSpellWhitelist.find(trapSpellId) !=
+            sPlayerbotAIConfig.aoeAvoidSpellWhitelist.end())
+            continue;
+
+        const SpellInfo* trapSpellInfo = sSpellMgr->GetSpellInfo(trapSpellId);
+        if (!trapSpellInfo || trapSpellInfo->IsPositive())
+            continue;
+
+        // Disarm Trap 施法距离为 20 码，只处理范围内的陷阱
+        if (bot->GetDistance(go) > 20.0f)
+            continue;
+
+        // 检查能否施放（包括距离、冷却、目标有效性等）
+        if (!botAI->CanCastSpell(DISARM_TRAP_SPELL, go))
+            continue;
+
+        // Disarm Trap 施法时间 1 秒，如果 bot 在移动需要先停下来
+        if (bot->isMoving())
+            bot->StopMoving();
+
+        // 构造 Spell 对象对陷阱施放 Disarm Trap
+        Spell* spell = new Spell(bot, disarmSpellInfo, TRIGGERED_NONE);
+        spell->m_targets.SetGOTarget(go);
+        spell->prepare(&spell->m_targets);
+        botAI->WaitForSpellCast(spell);
+
+        lastDisarmTimer = time(nullptr);
+
+        if (sPlayerbotAIConfig.tellWhenAvoidAoe && lastTellTimer < time(nullptr) - 10)
+        {
+            lastTellTimer = time(nullptr);
+            lastMoveTimer = getMSTime();
+            std::ostringstream out;
+            out << "我正在拆除陷阱 " << trapSpellInfo->SpellName[LOCALE_enUS]
+                << " (" << trapSpellId << ") - [盗贼拆陷阱]";
+            bot->Say(out.str(), LANG_UNIVERSAL);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+// End By leewheel
 
 bool AvoidAoeAction::AvoidUnitWithDamageAura()
 {

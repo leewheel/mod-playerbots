@@ -16,10 +16,14 @@
 #include "Playerbots.h"
 #include "Unit.h"
 
-//By leewheel 2026-07-09
+//By leewheel 2026-07-09, updated 2026-07-19
 /**
- * 自定义检查器：查找尸体附近存活的、对玩家敌对的、未进入战斗的怪物
+ * 自定义检查器：查找尸体附近存活的、不友好的、未进入战斗的怪物
  * 用于全局防止机器人跑过去捡尸体时引怪
+ *
+ * 2026-07-19 修复：原代码用 IsHostileTo 过滤，会漏掉中立怪（yellow mob）。
+ * 中立怪虽然不显示为红色敌对，但 bot 靠近后依然会 ADD。
+ * 改用 !IsFriendlyTo 包含所有不友好的怪（敌对 + 中立）。
  * 作者: leewheel
  */
 class AliveHostileNonCombatCreatureCheck
@@ -37,8 +41,8 @@ public:
         // 已进入战斗的怪物不算威胁（它们正在被打）
         if (c->IsInCombat())
             return false;
-        // 只关心对玩家敌对的怪物
-        if (!c->IsHostileTo(i_bot))
+        // 不友好的怪都算威胁（包括敌对怪和中立怪，中立怪靠近也会 ADD）
+        if (c->IsFriendlyTo(i_bot))
             return false;
         if (!i_obj->IsWithinDistInMap(c, i_range))
             return false;
@@ -364,10 +368,11 @@ bool LootObject::IsLootPossible(Player* bot)
         if (!bot->isAllowedToLoot(creature) && skillId != SKILL_SKINNING)
             return false;
 
-        //By leewheel 2026-07-09
-        // 全局安全检查：如果尸体附近有存活的、未进入战斗的敌对怪物，禁止拾取
+        //By leewheel 2026-07-09, updated 2026-07-19
+        // 全局安全检查：如果尸体附近有存活的、未进入战斗的不友好怪物，禁止拾取
         // 防止机器人在任何场景下跑过去捡尸体时引怪（不限于特定副本）
-        constexpr float LOOT_SAFETY_RADIUS = 15.0f;  // 搜索半径15码
+        // 2026-07-19 修复：1) 用 !IsFriendlyTo 包含中立怪；2) 半径从15码增至30码更安全
+        constexpr float LOOT_SAFETY_RADIUS = 30.0f;  // 搜索半径30码
         if (HasAliveHostileNonCombatCreaturesNearby(creature, bot, LOOT_SAFETY_RADIUS))
             return false;
         //End By leewheel
