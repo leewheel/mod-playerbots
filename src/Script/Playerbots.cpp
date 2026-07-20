@@ -34,6 +34,10 @@
 #include "cmath"
 #include "BattleGroundTactics.h"
 
+//By leewheel 2026-07-20 - 新手玩家向高级机器人求助互动
+extern bool HandleBotBeggingInteraction(Player* sender, Player* receiver, const std::string& msg);
+//End By leewheel
+
 class PlayerbotsDatabaseScript : public DatabaseScript
 {
 public:
@@ -194,6 +198,11 @@ public:
         {
             return true;
         }
+
+        //By leewheel 2026-07-20 - 新手玩家向高级机器人求助互动（要金币/背包）
+        if (HandleBotBeggingInteraction(player, receiver, msg))
+            return false;
+        //End By leewheel
 
         botAI->HandleCommand(type, msg, player);
 
