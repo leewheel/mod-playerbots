@@ -547,6 +547,10 @@ void AddSC_PassByBuffScripts();
 void AddSC_BotInstanceEntryFixScripts();
 //End By leewheel
 
+//By leewheel 2026-07-20 - 玩家自用机器人辅助命令
+void AddSC_ForPlayerCommand();
+//End By leewheel
+
 void AddPlayerbotsScripts()
 {
     new PlayerbotsBattlefieldScript();
@@ -580,5 +584,9 @@ void AddPlayerbotsScripts()
 
     //By leewheel 2026-07-18 - 机器人副本进入条件自动补全系统
     AddSC_BotInstanceEntryFixScripts();
+    //End By leewheel
+
+    //By leewheel 2026-07-20 - 玩家自用机器人辅助命令
+    AddSC_ForPlayerCommand();
     //End By leewheel
 }
