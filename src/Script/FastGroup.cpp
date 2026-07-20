@@ -674,14 +674,31 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
         byClass[candidate.playerClass].push_back(candidate);
     } while (results->NextRow());
 
+    // By leewheel 2026-07-21：随机打乱职业挑选顺序。
+    // 原实现遍历 std::map(按职业ID升序)，配合第一轮"取第一个可用职业"的规则，
+    // 导致每次选中的职业固定为编号最小的几个职业——解散再组只有名字变、职业完全不变。
+    // 这里用 Fisher-Yates 洗牌(复用已有 urand)随机打乱职业顺序，使每次组队职业随机；
+    // usedClasses 去重逻辑保持不变(不重复职业、不与玩家重复)。
+    std::vector<uint8> classOrder;
+    classOrder.reserve(byClass.size());
+    for (auto const& [cls, list] : byClass)
+        classOrder.push_back(cls);
+    for (size_t i = classOrder.size(); i > 1; --i)
+    {
+        size_t j = urand(0, static_cast<uint32>(i - 1));
+        std::swap(classOrder[i - 1], classOrder[j]);
+    }
+    // End By leewheel
+
     // 第一轮：优先从尚未被使用的职业中各取1个（确保每种职业最多1人）
-    for (auto& [cls, list] : byClass)
+    for (uint8 cls : classOrder)
     {
         if (candidates.size() >= neededCount)
             break;
         // 跳过已被其他角色定位使用的职业
         if (usedClasses.find(cls) != usedClasses.end())
             continue;
+        auto& list = byClass[cls];
         if (!list.empty())
         {
             candidates.push_back(list.back());
@@ -695,10 +712,11 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
     while (candidates.size() < neededCount)
     {
         bool added = false;
-        for (auto& [cls, list] : byClass)
+        for (uint8 cls : classOrder)
         {
             if (candidates.size() >= neededCount)
                 break;
+            auto& list = byClass[cls];
             if (!list.empty())
             {
                 candidates.push_back(list.back());
