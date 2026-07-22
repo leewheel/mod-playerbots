@@ -133,7 +133,12 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
     Player* masterPlayer = masterSession ? masterSession->GetPlayer() : nullptr;
 
     bool isRndbot = !masterAccountId;
-    bool sameAccount = sPlayerbotAIConfig.allowAccountBots && accountId == masterAccountId;
+    //By leewheel 2026-07-22
+    // 修复：addaccount 命令用于添加不同账号的机器人，原逻辑 allowAccountBots && accountId==masterAccountId
+    // 要求同账号才通过，导致跨账号添加必然失败（"你无权控制机器人"）。
+    // 改为：同账号直接通过，或 allowAccountBots 开启时允许跨账号。
+    bool sameAccount = accountId == masterAccountId || sPlayerbotAIConfig.allowAccountBots;
+    //End By leewheel
     Guild* guild = masterPlayer ? sGuildMgr->GetGuildById(masterPlayer->GetGuildId()) : nullptr;
     bool sameGuild = sPlayerbotAIConfig.allowGuildBots && guild && guild->GetMember(playerGuid);
     bool addClassBot = sRandomPlayerbotMgr.IsAddclassBot(playerGuid.GetCounter());
