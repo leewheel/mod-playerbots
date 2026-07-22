@@ -499,6 +499,15 @@ void InitTalentsByTab(Player* player, uint8 specTab)
     // 先重置所有天赋
     player->resetTalents(true);
 
+    //By leewheel 2026-07-22
+    // 修复：死亡骑士在Ebon Hold地图(609)登录时，CalculateTalentsPoints()只给 level-55 点天赋
+    // （该逻辑是为DK新手村逐步升级设计的），快速组队直接拉到目标等级时天赋点严重不足
+    // （例如60级只有5点，应为51点）。强制修正为标准的 level-9 天赋点数。
+    uint32 expectedPoints = player->GetLevel() < 10 ? 0 : player->GetLevel() - 9;
+    if (player->GetFreeTalentPoints() < expectedPoints)
+        player->SetFreeTalentPoints(expectedPoints);
+    //End By leewheel
+
     uint32 classMask = player->getClassMask();
 
     // 按行收集指定天赋页的所有天赋

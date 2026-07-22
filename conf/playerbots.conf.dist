@@ -768,6 +768,12 @@ AiPlayerbot.LimitTalentsExpansion = 0
 # Default: 1 (enabled)
 AiPlayerbot.EnableRandomBotTrading = 1
 
+# 交易时法师机器人自动给玩家法力面包和水（小队/团队内与法师机器人交易时触发） --By leewheel 2026-07-22
+# When enabled, a mage bot will automatically give conjured mana bread and water
+# to a player who opens a trade window with it (party/raid members or master).
+# Default: 1 (enabled)
+AiPlayerbot.EnableMageTradeFoodWater = 1
+
 # Configure message prefixes which will be excluded in analysis in trade action to open trade window
 AiPlayerbot.TradeActionExcludedPrefixes = "RPLL_H_,DBMv4,{звезда} Questie,{rt1} Questie"
 

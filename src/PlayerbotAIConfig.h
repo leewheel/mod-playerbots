@@ -402,6 +402,7 @@ public:
     bool autoTeleportForLevel;
     bool randomBotGroupNearby;
     int32 enableRandomBotTrading;
+    bool enableMageTradeFoodWater;  // 交易时法师机器人自动给玩家法力面包和水 --By leewheel 2026-07-22
     uint32 tweakValue;  // Debugging config
 
     uint32 randomBotArenaTeamCount;

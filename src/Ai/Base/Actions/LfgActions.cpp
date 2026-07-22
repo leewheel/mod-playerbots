@@ -163,21 +163,11 @@ bool LfgJoinAction::JoinLFG()
     // Set RbotAId Browser comment
     std::string const _gs = std::to_string(botAI->GetEquipGearScore(bot/*, false, false*/));
 
-    // JoinLfg is not threadsafe, so make packet and queue into session
-    // sLFGMgr->JoinLfg(bot, roleMask, list, _gs);
-
-    WorldPacket* data = new WorldPacket(CMSG_LFG_JOIN);
-    *data << (uint32)roleMask;
-    *data << (bool)false;
-    *data << (bool)false;
-    // Slots
-    *data << (uint8)(list.size());
-    for (uint32 dungeon : list)
-        *data << (uint32)dungeon;
-    // Needs
-    *data << (uint8)3 << (uint8)0 << (uint8)0 << (uint8)0;
-    *data << _gs;
-    bot->GetSession()->QueuePacket(data);
+    // By leewheel 2026-07-22
+    // Bot会话m_Socket为nullptr，QueuePacket投入的包永远不被WorldSession::Update处理。
+    // 改为直接调用sLFGMgr->JoinLfg。bot AI更新在世界线程中执行，与LFG更新同线程，线程安全。
+    sLFGMgr->JoinLfg(bot, uint8(roleMask), list, _gs);
+    // End By leewheel
 
     return true;
 }
@@ -190,11 +180,10 @@ bool LfgRoleCheckAction::Execute(Event /*event*/)
         // if (currentRoles == newRoles)
         //     return false;
 
-        WorldPacket* packet = new WorldPacket(CMSG_LFG_SET_ROLES);
-        *packet << (uint8)newRoles;
-        bot->GetSession()->QueuePacket(packet);
-        // sLFGMgr->SetRoles(bot->GetGUID(), newRoles);
-        // sLFGMgr->UpdateRoleCheck(group->GetGUID(), bot->GetGUID(), newRoles);
+        // By leewheel 2026-07-22: 直接调用sLFGMgr，理由同JoinLFG
+        sLFGMgr->SetRoles(bot->GetGUID(), newRoles);
+        sLFGMgr->UpdateRoleCheck(group->GetGUID(), bot->GetGUID(), newRoles);
+        // End By leewheel
 
         LOG_INFO("playerbots", "Bot {} {}:{} <{}>: LFG roles checked", bot->GetGUID().ToString().c_str(),
                  bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName().c_str());
@@ -212,20 +201,17 @@ bool LfgAcceptAction::Execute(Event event)
     // Try accept if already stored
     if (id)
     {
-        if (bot->IsInCombat() || bot->isDead())
-        {
-            WorldPacket* packet = new WorldPacket(CMSG_LFG_PROPOSAL_RESULT);
-            *packet << id << false;
-            bot->GetSession()->QueuePacket(packet);
-            return true;
-        }
+        // By leewheel 2026-07-21
+        // 不再因战斗/死亡拒绝提案：接受后LFG传送会自动脱离战斗/复活，
+        // 主动拒绝会触发150秒冷却光环(71328)，坦克bot刷怪常进战斗导致恶性循环
+        // End By leewheel
 
         botAI->GetAiObjectContext()->GetValue<uint32>("lfg proposal")->Set(0);
         bot->ClearUnitState(UNIT_STATE_ALL_STATE);
 
-        WorldPacket* packet = new WorldPacket(CMSG_LFG_PROPOSAL_RESULT);
-        *packet << id << true;
-        bot->GetSession()->QueuePacket(packet);
+        // By leewheel 2026-07-22: 直接调用sLFGMgr->UpdateProposal，理由同JoinLFG
+        sLFGMgr->UpdateProposal(id, bot->GetGUID(), true);
+        // End By leewheel
 
         if (RandomPlayerbotMgr::instance().IsRandomBot(bot) && !bot->GetGroup())
         {
@@ -247,20 +233,13 @@ bool LfgAcceptAction::Execute(Event event)
 
         if (id)
         {
-            if (bot->IsInCombat() || bot->isDead())
-            {
-                WorldPacket* packet = new WorldPacket(CMSG_LFG_PROPOSAL_RESULT);
-                *packet << id << false;
-                bot->GetSession()->QueuePacket(packet);
-                return true;
-            }
-
+            // By leewheel 2026-07-21: 无条件接受，理由同上
             botAI->GetAiObjectContext()->GetValue<uint32>("lfg proposal")->Set(0);
             bot->ClearUnitState(UNIT_STATE_ALL_STATE);
 
-            WorldPacket* packet = new WorldPacket(CMSG_LFG_PROPOSAL_RESULT);
-            *packet << id << true;
-            bot->GetSession()->QueuePacket(packet);
+            // By leewheel 2026-07-22: 直接调用sLFGMgr->UpdateProposal，理由同JoinLFG
+            sLFGMgr->UpdateProposal(id, bot->GetGUID(), true);
+            // End By leewheel
 
             if (RandomPlayerbotMgr::instance().IsRandomBot(bot) && !bot->GetGroup())
             {
@@ -278,17 +257,19 @@ bool LfgAcceptAction::Execute(Event event)
 
 bool LfgLeaveAction::Execute(Event /*event*/)
 {
-    // Don't leave if lfg strategy enabled
-    // if (botAI->HasStrategy("lfg", BOT_STATE_NON_COMBAT))
-    //    return false;
+    // By leewheel 2026-07-21
+    // 启用LFG策略保护：当lfg策略激活时禁止主动离队，防止bot随机掉出队列
+    if (botAI->HasStrategy("lfg", BOT_STATE_NON_COMBAT))
+        return false;
+    // End By leewheel
 
     // Don't leave if already invited / in dungeon
     if (sLFGMgr->GetState(bot->GetGUID()) > LFG_STATE_QUEUED)
         return false;
 
-    WorldPacket* packet = new WorldPacket(CMSG_LFG_LEAVE);
-    bot->GetSession()->QueuePacket(packet);
-    // sLFGMgr->LeaveLfg(bot->GetGUID());
+    // By leewheel 2026-07-22: 直接调用sLFGMgr->LeaveLfg，理由同JoinLFG
+    sLFGMgr->LeaveLfg(bot->GetGUID());
+    // End By leewheel
     return true;
 }
 
@@ -307,10 +288,9 @@ bool LfgTeleportAction::Execute(Event event)
 
     bot->ClearUnitState(UNIT_STATE_ALL_STATE);
 
-    WorldPacket* packet = new WorldPacket(CMSG_LFG_TELEPORT);
-    *packet << out;
-    bot->GetSession()->QueuePacket(packet);
-    // sLFGMgr->TeleportPlayer(bot, out);
+    // By leewheel 2026-07-22: 直接调用sLFGMgr->TeleportPlayer，理由同JoinLFG
+    sLFGMgr->TeleportPlayer(bot, out);
+    // End By leewheel
 
     return true;
 }

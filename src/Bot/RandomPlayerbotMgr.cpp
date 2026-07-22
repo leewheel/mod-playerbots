@@ -1408,16 +1408,11 @@ static void SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, u
 
     std::string const comment = "0";
 
-    WorldPacket* data = new WorldPacket(CMSG_LFG_JOIN);
-    *data << (uint32)role;
-    *data << (bool)false;
-    *data << (bool)false;
-    *data << (uint8)(validDungeons.size());
-    for (uint32 dungeon : validDungeons)
-        *data << (uint32)dungeon;
-    *data << (uint8)3 << (uint8)0 << (uint8)0 << (uint8)0;
-    *data << comment;
-    bot->GetSession()->QueuePacket(data);
+    // By leewheel 2026-07-22
+    // Bot会话m_Socket为nullptr，QueuePacket投入的包永远不被WorldSession::Update处理。
+    // 改为直接调用sLFGMgr->JoinLfg。此函数在CheckLfgQueue中调用，运行于世界线程，线程安全。
+    sLFGMgr->JoinLfg(bot, role, validDungeons, comment);
+    // End By leewheel
 }
 // End By leewheel
 
@@ -1465,9 +1460,13 @@ void RandomPlayerbotMgr::CheckLfgQueue()
         }
     }
 
-    // By leewheel 2026-07-10
+    // By leewheel 2026-07-21
     // LFG排队超时强制机器人加入机制
-    uint32 forceThreshold = sPlayerbotAIConfig.randomBotLfgMaxQueueWaitTime * 2 / 3;
+    // 阈值从2/3改为1/6(默认180秒→30秒)，大幅缩短真实玩家等待时间
+    uint32 forceThreshold = sPlayerbotAIConfig.randomBotLfgMaxQueueWaitTime / 6;
+    if (forceThreshold < 15)
+        forceThreshold = 15;  // 最低15秒
+    // End By leewheel
     for (int teamIdx = TEAM_ALLIANCE; teamIdx <= TEAM_HORDE; ++teamIdx)
     {
         TeamId teamId = (TeamId)teamIdx;
@@ -1496,12 +1495,14 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     LOG_DEBUG("playerbots", "LFG 队列检查完成");
 }
 
-// By leewheel 2026-07-10
-// 强制机器人加入LFG队列（含天赋切换）
-// 当真实玩家排队超时后，寻找空闲机器人：
-// 1. 优先找已经是坦克/治疗天赋的机器人直接加入
-// 2. 如果找不到，找符合职业条件的机器人切换天赋后加入
-// 3. 同时加入一些DPS机器人帮助成团
+// By leewheel 2026-07-21
+// 强制机器人加入LFG队列（补位模式）
+// 当真实玩家排队超时后，检查队列中各角色bot数量，按缺额补充：
+// 目标: 2坦 + 2奶 + 3DPS (真实玩家+bot共5人即可成团，多出的bot作为候补)
+// 1. 先统计队列中已有的bot角色(用sLFGMgr->GetRoles读排队角色)
+// 2. 优先找对应天赋的空闲bot直接加入
+// 3. 如果找不到，找符合职业条件的bot切换天赋后加入
+// 4. 每次CheckLfgQueue(30秒)都会重新补位，掉线的bot自动被替换
 void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
 {
     // 获取真实玩家排队的副本列表
@@ -1521,12 +1522,52 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     if (dungeonSet.empty())
         return;
 
-    bool tankFound = false;
-    bool healerFound = false;
-    uint8 dpsAdded = 0;
-    const uint8 maxDpsToAdd = 2;  // 最多加入2个DPS帮助成团
+    // 目标：队列中保持的bot角色数量（不含真实玩家）
+    const int TARGET_TANKS = 2;
+    const int TARGET_HEALERS = 2;
+    const int TARGET_DPS = 3;
 
-    // 第一遍：找已经是坦克/治疗天赋的空闲机器人
+    // 统计当前队列中各角色的bot数量
+    int tanksInQueue = 0, healersInQueue = 0, dpsInQueue = 0;
+    for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+    {
+        Player* bot = it->second;
+        if (!bot || bot->GetTeamId() != teamId)
+            continue;
+        if (!IsRandomBot(bot))
+            continue;
+        lfg::LfgState state = sLFGMgr->GetState(bot->GetGUID());
+        if (state == lfg::LFG_STATE_NONE || state >= lfg::LFG_STATE_DUNGEON)
+            continue;
+        // bot正在LFG队列中，按排队角色统计
+        uint8 roles = sLFGMgr->GetRoles(bot->GetGUID());
+        if (roles & lfg::PLAYER_ROLE_TANK)
+            tanksInQueue++;
+        else if (roles & lfg::PLAYER_ROLE_HEALER)
+            healersInQueue++;
+        else
+            dpsInQueue++;
+    }
+
+    // 计算各角色缺额
+    int needTanks = TARGET_TANKS - tanksInQueue;
+    int needHealers = TARGET_HEALERS - healersInQueue;
+    int needDps = TARGET_DPS - dpsInQueue;
+
+    if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
+    {
+        LOG_DEBUG("playerbots", "LFG队列bot已满编: 坦{} 奶{} DPS{} (阵营={})",
+                  tanksInQueue, healersInQueue, dpsInQueue,
+                  teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+        return;
+    }
+
+    LOG_INFO("playerbots", "LFG补位开始: 队列中坦{}奶{}DPS{}, 需补坦{}奶{}DPS{} (阵营={})",
+             tanksInQueue, healersInQueue, dpsInQueue,
+             needTanks > 0 ? needTanks : 0, needHealers > 0 ? needHealers : 0, needDps > 0 ? needDps : 0,
+             teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+
+    // 第一遍：找对应天赋的空闲bot直接加入
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* bot = it->second;
@@ -1537,42 +1578,42 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
         if (!IsBotIdleForLfg(bot))
             continue;
 
-        // 检查是否已经是坦克且还需要坦克
-        if (!tankFound && IsBotTank(bot))
+        // 需要坦克且bot是坦克天赋
+        if (needTanks > 0 && IsBotTank(bot))
         {
             SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK);
-            tankFound = true;
-            LOG_INFO("playerbots", "强制机器人 {} 以坦克身份加入LFG队列", bot->GetName().c_str());
-            if (tankFound && healerFound && dpsAdded >= maxDpsToAdd)
+            needTanks--;
+            LOG_INFO("playerbots", "LFG补位: {} 以坦克身份加入队列", bot->GetName().c_str());
+            if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
                 break;
             continue;
         }
 
-        // 检查是否已经是治疗且还需要治疗
-        if (!healerFound && IsBotHealer(bot))
+        // 需要治疗且bot是治疗天赋
+        if (needHealers > 0 && IsBotHealer(bot))
         {
             SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER);
-            healerFound = true;
-            LOG_INFO("playerbots", "强制机器人 {} 以治疗身份加入LFG队列", bot->GetName().c_str());
-            if (tankFound && healerFound && dpsAdded >= maxDpsToAdd)
+            needHealers--;
+            LOG_INFO("playerbots", "LFG补位: {} 以治疗身份加入队列", bot->GetName().c_str());
+            if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
                 break;
             continue;
         }
 
-        // 检查是否可以当DPS
-        if (dpsAdded < maxDpsToAdd)
+        // 需要DPS
+        if (needDps > 0)
         {
             SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_DAMAGE);
-            dpsAdded++;
-            LOG_INFO("playerbots", "强制机器人 {} 以DPS身份加入LFG队列", bot->GetName().c_str());
-            if (tankFound && healerFound && dpsAdded >= maxDpsToAdd)
+            needDps--;
+            LOG_INFO("playerbots", "LFG补位: {} 以DPS身份加入队列", bot->GetName().c_str());
+            if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
                 break;
             continue;
         }
     }
 
     // 第二遍：如果还缺坦克/治疗，切换天赋
-    if (!tankFound || !healerFound)
+    if (needTanks > 0 || needHealers > 0)
     {
         for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
         {
@@ -1586,65 +1627,51 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
 
             uint8 cls = bot->getClass();
 
-            // 如果还需要坦克，且这个机器人可以当坦克但当前不是坦克天赋
-            if (!tankFound && ClassCanTank(cls) && !IsBotTank(bot))
+            // 需要坦克，bot可以当坦克但当前不是坦克天赋
+            if (needTanks > 0 && ClassCanTank(cls) && !IsBotTank(bot))
             {
                 int32 specTab = GetTankSpecTab(cls);
                 if (specTab >= 0)
                 {
-                    // 切换天赋到坦克
                     uint32 specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
-
-                    // 如果还有剩余天赋点，用PlayerbotFactory填充
                     if (bot->GetFreeTalentPoints() > 0)
                     {
                         PlayerbotFactory factory(bot, bot->GetLevel());
                         factory.InitTalentsTree(true, false, false);
                     }
-
-                    // 重置AI策略以适应新角色
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
                     if (botAI)
                         botAI->ResetStrategies(false);
-
-                    // 发送LFG加入包
                     SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK);
-                    tankFound = true;
-                    LOG_INFO("playerbots", "强制机器人 {} 切换天赋为坦克并加入LFG队列", bot->GetName().c_str());
-                    if (tankFound && healerFound)
+                    needTanks--;
+                    LOG_INFO("playerbots", "LFG补位: {} 切换天赋为坦克并加入队列", bot->GetName().c_str());
+                    if (needTanks <= 0 && needHealers <= 0)
                         break;
                     continue;
                 }
             }
 
-            // 如果还需要治疗，且这个机器人可以当治疗但当前不是治疗天赋
-            if (!healerFound && ClassCanHeal(cls) && !IsBotHealer(bot))
+            // 需要治疗，bot可以当治疗但当前不是治疗天赋
+            if (needHealers > 0 && ClassCanHeal(cls) && !IsBotHealer(bot))
             {
                 int32 specTab = GetHealerSpecTab(cls);
                 if (specTab >= 0)
                 {
-                    // 切换天赋到治疗
                     uint32 specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
-
-                    // 如果还有剩余天赋点，用PlayerbotFactory填充
                     if (bot->GetFreeTalentPoints() > 0)
                     {
                         PlayerbotFactory factory(bot, bot->GetLevel());
                         factory.InitTalentsTree(true, false, false);
                     }
-
-                    // 重置AI策略以适应新角色
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
                     if (botAI)
                         botAI->ResetStrategies(false);
-
-                    // 发送LFG加入包
                     SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER);
-                    healerFound = true;
-                    LOG_INFO("playerbots", "强制机器人 {} 切换天赋为治疗并加入LFG队列", bot->GetName().c_str());
-                    if (tankFound && healerFound)
+                    needHealers--;
+                    LOG_INFO("playerbots", "LFG补位: {} 切换天赋为治疗并加入队列", bot->GetName().c_str());
+                    if (needTanks <= 0 && needHealers <= 0)
                         break;
                     continue;
                 }
@@ -1652,11 +1679,9 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
         }
     }
 
-    if (tankFound || healerFound || dpsAdded > 0)
-    {
-        LOG_INFO("playerbots", "LFG强制加入完成: 坦克={}, 治疗={}, DPS={}",
-                 tankFound ? "已加入" : "未找到", healerFound ? "已加入" : "未找到", dpsAdded);
-    }
+    LOG_INFO("playerbots", "LFG补位完成: 剩余缺额坦{}奶{}DPS{} (阵营={})",
+             needTanks > 0 ? needTanks : 0, needHealers > 0 ? needHealers : 0, needDps > 0 ? needDps : 0,
+             teamId == TEAM_ALLIANCE ? "联盟" : "部落");
 }
 // End By leewheel
 

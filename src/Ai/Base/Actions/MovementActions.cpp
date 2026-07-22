@@ -37,6 +37,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 #include "Stances.h"
+#include "TargetedMovementGenerator.h"
 #include "Timer.h"
 #include "Unit.h"
 #include "Vehicle.h"
@@ -1261,12 +1262,20 @@ bool MovementAction::Follow(Unit* target, float distance, float angle)
     // AI_VALUE(LastMovement&, "last movement").Set(target);
     ClearIdleState();
 
+    // By leewheel 20260721 修复: 原GetChaseTarget()只处理CHASE_MOTION_TYPE，对FOLLOW_MOTION_TYPE返回nullptr，
+    // 导致MoveFollow每tick重复下发→spline不断重启→客户端坐骑动画无法播放(鬼魂移动)。
+    // 改为直接从FollowMovementGenerator取target判断是否需要重新下发。
     if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
     {
-        Unit* currentTarget = ServerFacade::instance().GetChaseTarget(bot);
-        if (currentTarget && currentTarget->GetGUID() == target->GetGUID())
-            return false;
+        MovementGenerator* gen = bot->GetMotionMaster()->top();
+        if (gen)
+        {
+            Unit* currentTarget = static_cast<FollowMovementGenerator<Player>*>(gen)->GetTarget();
+            if (currentTarget && currentTarget->GetGUID() == target->GetGUID())
+                return false;
+        }
     }
+    // End By leewheel
 
     if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
         bot->GetMotionMaster()->Clear();
@@ -1805,6 +1814,20 @@ void MovementAction::DoMovePoint(Unit* unit, float x, float y, float z, bool gen
         float gZ = unit->GetMapWaterOrGroundLevel(unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ());
         unit->UpdatePosition(unit->GetPositionX(), unit->GetPositionY(), gZ, false);
     }
+
+    // By leewheel 20260721: 如果当前spline尚未结束且目的地与新目标接近(3码内)，跳过Clear+MovePoint，
+    // 避免频繁重启spline导致客户端坐骑动画中断。
+    if (!backwards && !unit->movespline->Finalized())
+    {
+        float cx, cy, cz;
+        if (unit->GetMotionMaster()->GetDestination(cx, cy, cz))
+        {
+            float dx = cx - x, dy = cy - y, dz = cz - z;
+            if (dx * dx + dy * dy + dz * dz < 9.0f)  // 3 yards
+                return;
+        }
+    }
+    // End By leewheel
 
     mm->Clear();
     if (backwards)

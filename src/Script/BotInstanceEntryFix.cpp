@@ -53,9 +53,9 @@
 // By leewheel 2026-07-18
 // 遍历所有副本地图，给机器人补全所有缺少的进入条件（钥匙/任务/成就/等级）
 // 用于LFG排队前刷新缓存：不确定会排到哪个副本，所以全部补全
-static void FixAllDungeonRequirements(Player* bot, Player* master)
+static void FixAllDungeonRequirements(Player* bot, Player* master = nullptr)
 {
-    if (!bot || !master)
+    if (!bot)
         return;
 
     // 遍历所有地图，检查有进入要求的副本
@@ -355,20 +355,46 @@ public:
         PLAYERHOOK_CAN_JOIN_LFG
     }) {}
 
-    // By leewheel 2026-07-18
-    // LFG排队钩子：在玩家排队LFG前，检查并修复所有机器人的副本进入条件
+    // By leewheel 2026-07-21
+    // LFG排队钩子：在排队LFG前，检查并修复副本进入条件
     // 关键：LFG系统在玩家登录时就缓存了锁定副本列表（InitializeLockedDungeons），
-    //       即使给机器人添加了钥匙，缓存不会自动更新。必须在此处重新生成缓存。
+    //       即使给机器人添加了钥匙/任务，缓存不会自动更新。必须在此处重新生成缓存。
+    // 处理两种情况：
+    //   1. 随机机器人独立排队（ForceBotsJoinLfg/策略系统触发）→ 修复自身条件
+    //   2. 真实玩家带bot组队排队 → 修复队伍中所有bot的条件
     bool OnPlayerCanJoinLfg(Player* player, uint8 /*roles*/, std::set<uint32>& /*dungeons*/,
                             std::string const& /*comment*/) override
     {
         if (!player)
             return true;
 
-        // 只处理真实玩家（主控玩家）的LFG排队
+        // 情况1：机器人独立排队LFG（随机bot通过ForceBotsJoinLfg或策略系统加入）
+        // 原代码直接return true跳过了bot，导致bot的副本准入条件未被修复
         if (player->GetSession()->IsBot())
-            return true;
+        {
+            PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
+            if (botAI && !botAI->IsRealPlayer())
+            {
+                // By leewheel 2026-07-21
+                // 移除随机本冷却(71328)和逃兵惩罚(71041)：
+                // bot完成随机本后获得冷却光环，或战斗中拒绝提案后获得150秒冷却，
+                // 或离开LFG队伍后获得30分钟逃兵debuff。这些会阻止bot重新排队。
+                // 坦克bot尤其容易中此循环：刷怪进战斗→提案来了→拒绝→冷却→无法排队
+                if (player->HasAura(lfg::LFG_SPELL_DUNGEON_COOLDOWN))
+                    player->RemoveAura(lfg::LFG_SPELL_DUNGEON_COOLDOWN);
+                if (player->HasAura(lfg::LFG_SPELL_DUNGEON_DESERTER))
+                    player->RemoveAura(lfg::LFG_SPELL_DUNGEON_DESERTER);
+                // End By leewheel
 
+                // 修复所有副本进入条件（钥匙/任务/成就）
+                FixAllDungeonRequirements(player);
+                // 重新生成LFG锁定副本缓存（关键！否则修复了条件但缓存还是旧的）
+                sLFGMgr->InitializeLockedDungeons(player, player->GetGroup());
+            }
+            return true;
+        }
+
+        // 情况2：真实玩家带bot组队排队
         // 获取队伍
         Group* group = player->GetGroup();
         if (!group)
@@ -395,6 +421,13 @@ public:
         // 对每个机器人：修复条件 + 刷新LFG缓存
         for (Player* bot : bots)
         {
+            // By leewheel 2026-07-21: 移除冷却/逃兵光环（同情况1）
+            if (bot->HasAura(lfg::LFG_SPELL_DUNGEON_COOLDOWN))
+                bot->RemoveAura(lfg::LFG_SPELL_DUNGEON_COOLDOWN);
+            if (bot->HasAura(lfg::LFG_SPELL_DUNGEON_DESERTER))
+                bot->RemoveAura(lfg::LFG_SPELL_DUNGEON_DESERTER);
+            // End By leewheel
+
             // 1. 检查并修复所有副本的进入条件（钥匙/任务/成就/等级）
             //    遍历所有副本地图，给机器人补全缺少的条件
             FixAllDungeonRequirements(bot, player);

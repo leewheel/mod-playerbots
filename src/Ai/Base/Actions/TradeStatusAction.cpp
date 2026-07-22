@@ -9,14 +9,19 @@
 #include "CraftValue.h"
 #include "Event.h"
 #include "GuildTaskMgr.h"
+#include "ItemTemplate.h"
 #include "ItemUsageValue.h"
 #include "ItemVisitors.h"
+#include "ObjectMgr.h"
+#include "Opcodes.h"
 #include "PlayerbotMgr.h"
 #include "PlayerbotSecurity.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "SetCraftAction.h"
+#include "SpellMgr.h"
+#include "Util.h"
 
 bool TradeStatusAction::Execute(Event event)
 {
@@ -124,6 +129,9 @@ bool TradeStatusAction::Execute(Event event)
             bot->SetFacingToObject(trader);
 
         BeginTrade();
+
+        // 法师机器人交易时自动给玩家法力面包和水 --By leewheel 2026-07-22
+        TryGiveConjuredRefreshment(trader, master);
 
         return true;
     }
@@ -377,4 +385,155 @@ int32 TradeStatusAction::CalculateCost(Player* player, bool sell)
     }
 
     return sum;
+}
+
+// 法师机器人交易时自动给玩家法力面包和水 --By leewheel 2026-07-22
+// 打开交易窗口时：先把背包里已有的魔法面包/水放入交易栏，缺少的则施法 conjure，
+// conjure 完成后由 "item push result" 触发器再次调用 give conjured refreshment 补放。
+void TradeStatusAction::TryGiveConjuredRefreshment(Player* trader, Player* master)
+{
+    if (!sPlayerbotAIConfig.enableMageTradeFoodWater)
+        return;
+
+    // 仅法师机器人
+    if (bot->getClass() != CLASS_MAGE)
+        return;
+
+    // 交易对象必须是真实玩家
+    if (!trader || GET_PLAYERBOT_AI(trader))
+        return;
+
+    // 仅主人或同队/团队成员
+    if (trader != master && (!bot->GetGroup() || !bot->GetGroup()->IsMember(trader->GetGUID())))
+        return;
+
+    if (!bot->GetTradeData())
+        return;
+
+    // 先把背包里已有的魔法面包/水放入交易栏
+    botAI->DoSpecificAction("give conjured refreshment", Event(), true);
+
+    // 缺少的施法 conjure（施法完成后由 item push result 触发器补放进交易栏）
+    if (parseItems("conjured food", ITERATE_ITEMS_IN_BAGS).empty())
+        CastConjure("conjure food", 11);
+
+    if (parseItems("conjured water", ITERATE_ITEMS_IN_BAGS).empty())
+        CastConjure("conjure water", 59);
+}
+
+// 施放 conjure food/water，按生成物品的法术类别匹配（兼容中文客户端法术名） --By leewheel 2026-07-22
+void TradeStatusAction::CastConjure(std::string const& spell, uint32 category)
+{
+    uint32 castId = 0;
+
+    for (PlayerSpellMap::iterator itr = bot->GetSpellMap().begin(); itr != bot->GetSpellMap().end(); ++itr)
+    {
+        uint32 spellId = itr->first;
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+        if (!spellInfo)
+            continue;
+
+        if (spellInfo->Effects[0].Effect != SPELL_EFFECT_CREATE_ITEM)
+            continue;
+
+        uint32 itemId = spellInfo->Effects[0].ItemType;
+        ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
+        if (!proto || bot->CanUseItem(proto) != EQUIP_ERR_OK)
+            continue;
+
+        // 优先按生成物品的法术类别匹配（11=食物 59=饮水），与客户端语言无关
+        bool match = proto->IsConjuredConsumable() && proto->Spells[0].SpellCategory == category;
+
+        // 兼容按法术英文名匹配
+        if (!match)
+        {
+            std::string const namepart = spellInfo->SpellName[0];
+            std::wstring wnamepart;
+            if (Utf8toWStr(namepart, wnamepart))
+            {
+                wstrToLower(wnamepart);
+                match = Utf8FitTo(spell, wnamepart);
+            }
+        }
+
+        if (!match)
+            continue;
+
+        // 取最高等级
+        if (spellInfo->Id > castId)
+            castId = spellInfo->Id;
+    }
+
+    if (castId)
+        botAI->CastSpell(castId, bot);
+}
+
+bool GiveConjuredRefreshmentAction::isUseful()
+{
+    return bot->GetTrader() && bot->getClass() == CLASS_MAGE && sPlayerbotAIConfig.enableMageTradeFoodWater;
+}
+
+bool GiveConjuredRefreshmentAction::Execute(Event /*event*/)
+{
+    Player* trader = bot->GetTrader();
+    if (!trader || GET_PLAYERBOT_AI(trader))
+        return false;
+
+    if (bot->getClass() != CLASS_MAGE || !sPlayerbotAIConfig.enableMageTradeFoodWater)
+        return false;
+
+    if (!bot->GetTradeData())
+        return false;
+
+    bool given = false;
+    given = GiveOne("conjured food", 11) || given;
+    given = GiveOne("conjured water", 59) || given;
+    return given;
+}
+
+// 把背包里一个对应类别的魔法物品放入空闲交易栏 --By leewheel 2026-07-22
+bool GiveConjuredRefreshmentAction::GiveOne(std::string const parseName, uint32 category)
+{
+    TradeData* pTrade = bot->GetTradeData();
+    if (!pTrade)
+        return false;
+
+    // 交易栏里已有该类别的魔法物品则不再重复放
+    for (uint32 slot = 0; slot < TRADE_SLOT_TRADED_COUNT; ++slot)
+    {
+        Item* item = pTrade->GetItem((TradeSlots)slot);
+        if (item && item->GetTemplate()->IsConjuredConsumable() &&
+            item->GetTemplate()->Spells[0].SpellCategory == category)
+            return false;
+    }
+
+    std::vector<Item*> items = parseItems(parseName, ITERATE_ITEMS_IN_BAGS);
+    for (Item* item : items)
+    {
+        if (!item || item->IsInTrade())
+            continue;
+
+        ItemTemplate const* proto = item->GetTemplate();
+        if (!proto || !proto->IsConjuredConsumable() || proto->Spells[0].SpellCategory != category)
+            continue;
+
+        // 找一个空闲交易栏
+        int8 tradeSlot = -1;
+        for (uint8 i = 0; i < TRADE_SLOT_TRADED_COUNT && tradeSlot == -1; i++)
+            if (pTrade->GetItem(TradeSlots(i)) == nullptr)
+                tradeSlot = i;
+
+        if (tradeSlot == -1)
+            return false;
+
+        WorldPacket packet(CMSG_SET_TRADE_ITEM, 3);
+        packet << (uint8)tradeSlot;
+        packet << (uint8)item->GetBagSlot();
+        packet << (uint8)item->GetSlot();
+        bot->GetSession()->HandleSetTradeItemOpcode(packet);
+        return true;
+    }
+
+    return false;
 }
