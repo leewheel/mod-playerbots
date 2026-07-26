@@ -8,6 +8,7 @@
  *   - 玩家停钓: 机器人不回心转意，继续离队
  */
 
+#include "ScriptMgr.h"
 #include "Player.h"
 #include "Chat.h"
 #include "Group.h"
