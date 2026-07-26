@@ -377,7 +377,7 @@ bool FelmystPlayerIsCharmedByFogTrigger::IsActive()
 
 bool FelmystShouldHoldDpsWhileLandingTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(bot, SWP_MAP_ID) && AI_VALUE2(Unit*, "find target", "felmyst");
+    return IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID) && AI_VALUE2(Unit*, "find target", "felmyst");
 }
 
 // Eredar Twins
@@ -679,7 +679,7 @@ bool MuruWarlockHasEnslavedVoidSpawnTrigger::IsActive()
 
 bool KiljaedenEncounterHasBegunTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(bot, SWP_MAP_ID) &&
+    return IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID) &&
         AI_VALUE2(Unit*, "find target", "hand of the deceiver");
 }
 

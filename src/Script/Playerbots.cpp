@@ -560,6 +560,10 @@ void AddSC_BotInstanceEntryFixScripts();
 void AddSC_ForPlayerCommand();
 //End By leewheel
 
+//By leewheel 2026-07-26 - 组队钓鱼策略
+void AddSC_FishingParty();
+//End By leewheel
+
 void AddPlayerbotsScripts()
 {
     new PlayerbotsBattlefieldScript();
@@ -570,6 +574,10 @@ void AddPlayerbotsScripts()
     new PlayerbotsWorldScript();
     new PlayerbotsScript();
     new PlayerBotsBGScript();
+
+    // 组队钓鱼策略
+    AddSC_FishingParty();
+
     AddPlayerbotsSecureLoginScripts();
     AddPlayerbotsCommandscripts();
     PlayerBotsGuildValidationScript();

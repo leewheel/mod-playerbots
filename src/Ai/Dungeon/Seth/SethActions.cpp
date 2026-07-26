@@ -18,7 +18,8 @@ bool TimeLostControllerMarkCharmingTotemWithSkullAction::Execute(Event /*event*/
     if (Unit* totem = bot->FindNearestCreature(
             static_cast<uint32>(SethNpcs::NPC_CHARMING_TOTEM), searchRadius, true))
     {
-        return MarkTargetWithSkull(bot, totem);
+        MarkTargetWithSkull(bot, totem);
+        return true;
     }
 
     return false;
@@ -43,7 +44,8 @@ bool DarkweaverSythMarkElementalsWithSkullAction::Execute(Event /*event*/)
     for (auto const& name : elementals)
     {
         if (Unit* elemental = AI_VALUE2(Unit*, "find target", name))
-            return MarkTargetWithSkull(bot, elemental);
+            MarkTargetWithSkull(bot, elemental);
+            return true;
     }
 
     return false;
@@ -56,9 +58,13 @@ bool AnzuAlternateMarksOnBossAction::Execute(Event /*event*/)
         return false;
 
     if (anzu->HasAura(static_cast<uint32>(SethSpells::SPELL_BANISH_ANZU)))
-        return MarkTargetWithMoon(bot, anzu);
+    {
+        MarkTargetWithMoon(bot, anzu);
+        return true;
+    }
 
-    return MarkTargetWithSkull(bot, anzu);
+    MarkTargetWithSkull(bot, anzu);
+    return true;
 }
 
 // Priority: Falcon (haste) > Eagle during Banish (damage all enemies) > Hawk (damage reduction)

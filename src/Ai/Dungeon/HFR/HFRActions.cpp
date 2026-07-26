@@ -20,8 +20,11 @@ bool GargolmarMarkHellfireWatchersAction::Execute(Event /*event*/)
     if (!watcher)
         return false;
 
-    if (IsMechanicTrackerBot(bot, HFR_MAP_ID) && MarkTargetWithSkull(bot, watcher))
+    if (IsMechanicTrackerBot(botAI, bot, HFR_MAP_ID))
+    {
+        MarkTargetWithSkull(bot, watcher);
         return true;
+    }
 
     return false;
 }
@@ -46,7 +49,7 @@ bool OmorRangedSpreadAction::Execute(Event /*event*/)
 {
     constexpr float minDistance = 15.0f;
 
-    if (Player* nearestPlayer = GetNearestPlayerInRadius(bot, minDistance))
+    if (Unit* nearestPlayer = GetNearestPlayerInRadius(bot, minDistance))
         return FleePosition(nearestPlayer->GetPosition(), minDistance);
 
     return false;
@@ -59,8 +62,11 @@ bool OmorMarkFiendishHoundAction::Execute(Event /*event*/)
     if (!hound)
         return false;
 
-    if (IsMechanicTrackerBot(bot, HFR_MAP_ID) && MarkTargetWithSkull(bot, hound))
+    if (IsMechanicTrackerBot(botAI, bot, HFR_MAP_ID))
+    {
+        MarkTargetWithSkull(bot, hound);
         return true;
+    }
 
     return false;
 }
@@ -126,8 +132,11 @@ bool VazrudenMarkBossAction::Execute(Event /*event*/)
     if (!vaz)
         return false;
 
-    if (IsMechanicTrackerBot(bot, HFR_MAP_ID) && MarkTargetWithSkull(bot, vaz))
+    if (IsMechanicTrackerBot(botAI, bot, HFR_MAP_ID))
+    {
+        MarkTargetWithSkull(bot, vaz);
         return true;
+    }
 
     return false;
 }
