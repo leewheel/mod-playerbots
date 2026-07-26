@@ -1,10 +1,8 @@
-//By leewheel 2026-07-08
 /*
- * 太阳之井高地 (Sunwell Plateau) 动作上下文
- * 作者: leewheel
- * 将动作名称映射到对应的Action类
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
-//End By leewheel
 
 #ifndef PLAYERBOTS_SWPACTIONCONTEXT_H
 #define PLAYERBOTS_SWPACTIONCONTEXT_H
@@ -12,216 +10,420 @@
 #include "NamedObjectContext.h"
 #include "SWPActions.h"
 
-class RaidSunwellPlateauActionContext : public NamedObjectContext<Action>
+class RaidSunwellActionContext : public NamedObjectContext<Action>
 {
 public:
-    RaidSunwellPlateauActionContext()
+    RaidSunwellActionContext()
     {
-        // 通用
-        creators["sunwell erase timers and trackers"] =
-            &RaidSunwellPlateauActionContext::sunwell_erase_timers_and_trackers;
+        // General
+        creators["sunwell plateau reset encounter states"] =
+            &RaidSunwellActionContext::sunwell_plateau_reset_encounter_states;
 
-        // 入口小怪
-        creators["swp trash tank pull"] =
-            &RaidSunwellPlateauActionContext::swp_trash_tank_pull;
-        //By leewheel 2026-07-09
-        creators["swp trash tank wait"] =
-            &RaidSunwellPlateauActionContext::swp_trash_tank_wait;
-        creators["swp trash healer escort"] =
-            &RaidSunwellPlateauActionContext::swp_trash_healer_escort;
-        //End By leewheel
-        creators["swp trash group hold"] =
-            &RaidSunwellPlateauActionContext::swp_trash_group_hold;
-        creators["swp wait for dead party members"] =
-            &RaidSunwellPlateauActionContext::swp_wait_for_dead_party_members;
+        creators["sunwell plateau remove protective aura"] =
+            &RaidSunwellActionContext::sunwell_plateau_remove_protective_aura;
 
-        // 卡雷苟斯
-        creators["kalecgos misdirect boss to main tank"] =
-            &RaidSunwellPlateauActionContext::kalecgos_misdirect_boss_to_main_tank;
-        creators["kalecgos tanks position boss"] =
-            &RaidSunwellPlateauActionContext::kalecgos_tanks_position_boss;
-        creators["kalecgos ranged disperse"] =
-            &RaidSunwellPlateauActionContext::kalecgos_ranged_disperse;
-        creators["kalecgos enter spectral realm"] =
-            &RaidSunwellPlateauActionContext::kalecgos_enter_spectral_realm;
-        creators["kalecgos attack sathrovarr"] =
-            &RaidSunwellPlateauActionContext::kalecgos_attack_sathrovarr;
-        creators["kalecgos health sync"] =
-            &RaidSunwellPlateauActionContext::kalecgos_health_sync;
-        creators["kalecgos manage arcane buffet"] =
-            &RaidSunwellPlateauActionContext::kalecgos_manage_arcane_buffet;
-        creators["kalecgos dispelling curse"] =
-            &RaidSunwellPlateauActionContext::kalecgos_dispelling_curse;
-        creators["kalecgos dispelling frost breath"] =
-            &RaidSunwellPlateauActionContext::kalecgos_dispelling_frost_breath;
+        // Trash
+        creators["volatile fiend keep enemy away from group"] =
+            &RaidSunwellActionContext::volatile_fiend_keep_enemy_away_from_group;
 
-        // 布鲁塔卢斯
+        creators["apocalypse guard attack with holy magic"] =
+            &RaidSunwellActionContext::apocalypse_guard_attack_with_holy_magic;
+
+        // Kalecgos
+        creators["kalecgos tank position boss"] =
+            &RaidSunwellActionContext::kalecgos_tank_position_boss;
+
+        creators["kalecgos enter spectral rift"] =
+            &RaidSunwellActionContext::kalecgos_enter_spectral_rift;
+
+        creators["kalecgos disperse ranged"] =
+            &RaidSunwellActionContext::kalecgos_disperse_ranged;
+
+        creators["kalecgos remove arcane buffet"] =
+            &RaidSunwellActionContext::kalecgos_remove_arcane_buffet;
+
+        creators["kalecgos sathrovarr tank stand with kalec"] =
+            &RaidSunwellActionContext::kalecgos_sathrovarr_tank_stand_with_kalec;
+
+        creators["kalecgos return to spectral realm ground"] =
+            &RaidSunwellActionContext::kalecgos_return_to_spectral_realm_ground;
+
+        // Brutallus
         creators["brutallus misdirect boss to main tank"] =
-            &RaidSunwellPlateauActionContext::brutallus_misdirect_boss_to_main_tank;
-        creators["brutallus tanks position boss"] =
-            &RaidSunwellPlateauActionContext::brutallus_tanks_position_boss;
-        creators["brutallus soak meteor slash"] =
-            &RaidSunwellPlateauActionContext::brutallus_soak_meteor_slash;
-        creators["brutallus burn move away"] =
-            &RaidSunwellPlateauActionContext::brutallus_burn_move_away;
+            &RaidSunwellActionContext::brutallus_misdirect_boss_to_main_tank;
 
-        // 菲米丝
+        creators["brutallus tanks handle boss"] =
+            &RaidSunwellActionContext::brutallus_tanks_handle_boss;
+
+        creators["brutallus position melee"] =
+            &RaidSunwellActionContext::brutallus_position_melee;
+
+        creators["brutallus position ranged"] =
+            &RaidSunwellActionContext::brutallus_position_ranged;
+
+        creators["brutallus handle burn"] =
+            &RaidSunwellActionContext::brutallus_handle_burn;
+
+        // Felmyst
         creators["felmyst misdirect boss to main tank"] =
-            &RaidSunwellPlateauActionContext::felmyst_misdirect_boss_to_main_tank;
-        creators["felmyst tanks position boss"] =
-            &RaidSunwellPlateauActionContext::felmyst_tanks_position_boss;
-        creators["felmyst disperse from gas nova"] =
-            &RaidSunwellPlateauActionContext::felmyst_disperse_from_gas_nova;
-        creators["felmyst avoid encapsulate"] =
-            &RaidSunwellPlateauActionContext::felmyst_avoid_encapsulate;
-        creators["felmyst flight phase spread"] =
-            &RaidSunwellPlateauActionContext::felmyst_flight_phase_spread;
-        creators["felmyst manage phase timer"] =
-            &RaidSunwellPlateauActionContext::felmyst_manage_phase_timer;
+            &RaidSunwellActionContext::felmyst_misdirect_boss_to_main_tank;
 
-        // 艾瑞达双子
-        creators["eredar twins misdirect boss to tanks"] =
-            &RaidSunwellPlateauActionContext::eredar_twins_misdirect_boss_to_tanks;
-        creators["eredar twins assign kill order"] =
-            &RaidSunwellPlateauActionContext::eredar_twins_assign_kill_order;
-        creators["eredar twins move to flame source"] =
-            &RaidSunwellPlateauActionContext::eredar_twins_move_to_flame_source;
-        creators["eredar twins move to shadow source"] =
-            &RaidSunwellPlateauActionContext::eredar_twins_move_to_shadow_source;
-        creators["eredar twins avoid conflagration"] =
-            &RaidSunwellPlateauActionContext::eredar_twins_avoid_conflagration;
+        creators["felmyst main tank position boss on ground"] =
+            &RaidSunwellActionContext::felmyst_main_tank_position_boss_on_ground;
 
-        // 穆鲁
-        creators["muru misdirect boss to main tank"] =
-            &RaidSunwellPlateauActionContext::muru_misdirect_boss_to_main_tank;
-        creators["muru handle adds"] =
-            &RaidSunwellPlateauActionContext::muru_handle_adds;
-        creators["muru handle void sentinel"] =
-            &RaidSunwellPlateauActionContext::muru_handle_void_sentinel;
-        creators["muru avoid darkness"] =
-            &RaidSunwellPlateauActionContext::muru_avoid_darkness;
-        creators["muru entropius phase"] =
-            &RaidSunwellPlateauActionContext::muru_entropius_phase;
+        creators["felmyst position ranged on ground"] =
+            &RaidSunwellActionContext::felmyst_position_ranged_on_ground;
 
-        // 基尔加丹
-        creators["kil'jaeden misdirect to tank"] =
-            &RaidSunwellPlateauActionContext::kiljaeden_misdirect_to_tank;
-        creators["kil'jaeden avoid darkness"] =
-            &RaidSunwellPlateauActionContext::kiljaeden_avoid_darkness;
-        creators["kil'jaeden avoid armageddon"] =
-            &RaidSunwellPlateauActionContext::kiljaeden_avoid_armageddon;
-        creators["kil'jaeden handle sinister reflection"] =
-            &RaidSunwellPlateauActionContext::kiljaeden_handle_sinister_reflection;
-        creators["kil'jaeden handle shield orb"] =
-            &RaidSunwellPlateauActionContext::kiljaeden_handle_shield_orb;
-        creators["kil'jaeden manage phase"] =
-            &RaidSunwellPlateauActionContext::kiljaeden_manage_phase;
-        creators["kil'jaeden ranged disperse"] =
-            &RaidSunwellPlateauActionContext::kiljaeden_ranged_disperse;
+        creators["felmyst position melee on ground"] =
+            &RaidSunwellActionContext::felmyst_position_melee_on_ground;
+
+        creators["felmyst remove encapsulate"] =
+            &RaidSunwellActionContext::felmyst_remove_encapsulate;
+
+        creators["felmyst run away from encapsulated player"] =
+            &RaidSunwellActionContext::felmyst_run_away_from_encapsulated_player;
+
+        creators["felmyst mass dispel gas nova"] =
+            &RaidSunwellActionContext::felmyst_mass_dispel_gas_nova;
+
+        creators["felmyst avoid demonic vapor"] =
+            &RaidSunwellActionContext::felmyst_avoid_demonic_vapor;
+
+        creators["felmyst kite demonic vapor"] =
+            &RaidSunwellActionContext::felmyst_kite_demonic_vapor;
+
+        creators["felmyst move to safe fog lane"] =
+            &RaidSunwellActionContext::felmyst_move_to_safe_fog_lane;
+
+        creators["felmyst melee clear target"] =
+            &RaidSunwellActionContext::felmyst_melee_clear_target;
+
+        creators["felmyst kill charmed player"] =
+            &RaidSunwellActionContext::felmyst_kill_charmed_player;
+
+        creators["felmyst manage landing dps timer"] =
+            &RaidSunwellActionContext::felmyst_manage_landing_dps_timer;
+
+        // Eredar Twins
+        creators["eredar twins melee jump down from balcony"] =
+            &RaidSunwellActionContext::eredar_twins_melee_jump_down_from_balcony;
+
+        creators["eredar twins misdirect bosses to tanks"] =
+            &RaidSunwellActionContext::eredar_twins_misdirect_bosses_to_tanks;
+
+        creators["eredar twins main and second assist tanks position sacrolash"] =
+            &RaidSunwellActionContext::eredar_twins_main_and_second_assist_tanks_position_sacrolash;
+
+        creators["eredar twins first assist tank move out of blaze"] =
+            &RaidSunwellActionContext::eredar_twins_first_assist_tank_move_out_of_blaze;
+
+        creators["eredar twins position ranged"] =
+            &RaidSunwellActionContext::eredar_twins_position_ranged;
+
+        creators["eredar twins stack in room center"] =
+            &RaidSunwellActionContext::eredar_twins_stack_in_room_center;
+
+        creators["eredar twins remove flame sear"] =
+            &RaidSunwellActionContext::eredar_twins_remove_flame_sear;
+
+        creators["eredar twins dps prioritize lady sacrolash"] =
+            &RaidSunwellActionContext::eredar_twins_dps_prioritize_lady_sacrolash;
+
+        creators["eredar twins conflagrated bot move from group"] =
+            &RaidSunwellActionContext::eredar_twins_conflagrated_bot_move_from_group;
+
+        creators["eredar twins move from conflag sacrolash victim"] =
+            &RaidSunwellActionContext::eredar_twins_move_from_conflag_sacrolash_victim;
+
+        // M'uru
+        creators["m'uru misdirect enemies to tanks"] =
+            &RaidSunwellActionContext::muru_misdirect_enemies_to_tanks;
+
+        creators["m'uru main tank pick up entropius"] =
+            &RaidSunwellActionContext::muru_main_tank_pick_up_entropius;
+
+        creators["m'uru position ranged"] =
+            &RaidSunwellActionContext::muru_position_ranged;
+
+        creators["m'uru set dps priority"] =
+            &RaidSunwellActionContext::muru_set_dps_priority;
+
+        creators["m'uru kill dark fiends with dispel"] =
+            &RaidSunwellActionContext::muru_kill_dark_fiends_with_dispel;
+
+        creators["m'uru don't touch the dark fiend"] =
+            &RaidSunwellActionContext::muru_dont_touch_the_dark_fiend;
+
+        creators["m'uru tanks move sentinel to safe position"] =
+            &RaidSunwellActionContext::muru_tanks_move_sentinel_to_safe_position;
+
+        creators["m'uru second assist tank guard ranged"] =
+            &RaidSunwellActionContext::muru_second_assist_tank_guard_ranged;
+
+        creators["m'uru flee the darkness"] =
+            &RaidSunwellActionContext::muru_flee_the_darkness;
+
+        creators["m'uru flee from singularity"] =
+            &RaidSunwellActionContext::muru_flee_from_singularity;
+
+        creators["m'uru cast stun on shadowsword berseker"] =
+            &RaidSunwellActionContext::muru_cast_stun_on_shadowsword_berserker;
+
+        creators["m'uru interrupt fel fireball"] =
+            &RaidSunwellActionContext::muru_interrupt_fel_fireball;
+
+        creators["m'uru cast spellsteal on spell fury"] =
+            &RaidSunwellActionContext::muru_cast_spellsteal_on_spell_fury;
+
+        creators["m'uru warlock enslave void spawn"] =
+            &RaidSunwellActionContext::muru_warlock_enslave_void_spawn;
+
+        creators["m'uru enslaved void spawn cast shadow bolt volley"] =
+            &RaidSunwellActionContext::muru_enslaved_void_spawn_cast_shadow_bolt_volley;
+
+        // Kil'jaeden <The Deceiver>
+        creators["kil'jaeden announce dragon orb user"] =
+            &RaidSunwellActionContext::kiljaeden_announce_dragon_orb_user;
+
+        creators["kil'jaeden mark and prioritize hands of the deceiver"] =
+            &RaidSunwellActionContext::kiljaeden_mark_and_prioritize_hands_of_the_deceiver;
+
+        creators["kil'jaeden stun hands of the deceiver"] =
+            &RaidSunwellActionContext::kiljaeden_stun_hands_of_the_deceiver;
+
+        creators["kil'jaeden position tanks"] =
+            &RaidSunwellActionContext::kiljaeden_position_tanks;
+
+        creators["kil'jaeden position melee"] =
+            &RaidSunwellActionContext::kiljaeden_position_melee;
+
+        creators["kil'jaeden position ranged"] =
+            &RaidSunwellActionContext::kiljaeden_position_ranged;
+
+        creators["kil'jaeden remove fire bloom"] =
+            &RaidSunwellActionContext::kiljaeden_remove_fire_bloom;
+
+        creators["kil'jaeden stack for shield of the blue"] =
+            &RaidSunwellActionContext::kiljaeden_stack_for_shield_of_the_blue;
+
+        creators["kil'jaeden use dragon orb"] =
+            &RaidSunwellActionContext::kiljaeden_use_dragon_orb;
+
+        creators["kil'jaeden release stale root"] =
+            &RaidSunwellActionContext::kiljaeden_release_stale_root;
+
+        creators["kil'jaeden control dragon"] =
+            &RaidSunwellActionContext::kiljaeden_control_dragon;
     }
 
 private:
-    // 通用
-    static Action* sunwell_erase_timers_and_trackers(
-        PlayerbotAI* botAI) { return new SunwellEraseTimersAndTrackersAction(botAI); }
+    // General
+    static Action* sunwell_plateau_reset_encounter_states(PlayerbotAI* botAI) {
+        return new SunwellPlateauResetEncounterStatesAction(botAI);
+    }
+    static Action* sunwell_plateau_remove_protective_aura(PlayerbotAI* botAI) {
+        return new SunwellPlateauRemoveProtectiveAuraAction(botAI);
+    }
 
-    // 入口小怪
-    static Action* swp_trash_tank_pull(
-        PlayerbotAI* botAI) { return new SwpTrashTankPullAction(botAI); }
-    //By leewheel 2026-07-09
-    static Action* swp_trash_tank_wait(
-        PlayerbotAI* botAI) { return new SwpTrashTankWaitAction(botAI); }
-    static Action* swp_trash_healer_escort(
-        PlayerbotAI* botAI) { return new SwpTrashHealerEscortAction(botAI); }
-    //End By leewheel
-    static Action* swp_trash_group_hold(
-        PlayerbotAI* botAI) { return new SwpTrashGroupHoldAction(botAI); }
-    static Action* swp_wait_for_dead_party_members(
-        PlayerbotAI* botAI) { return new SwpWaitForDeadPartyMembersAction(botAI); }
+    // Trash
+    static Action* volatile_fiend_keep_enemy_away_from_group(PlayerbotAI* botAI) {
+        return new VolatileFiendKeepEnemyAwayFromGroupAction(botAI);
+    }
+    static Action* apocalypse_guard_attack_with_holy_magic(PlayerbotAI* botAI) {
+        return new ApocalypseGuardAttackWithHolyMagicAction(botAI);
+    }
 
-    // 卡雷苟斯
-    static Action* kalecgos_misdirect_boss_to_main_tank(
-        PlayerbotAI* botAI) { return new KalecgosMisdirectBossToMainTankAction(botAI); }
-    static Action* kalecgos_tanks_position_boss(
-        PlayerbotAI* botAI) { return new KalecgosTanksPositionBossAction(botAI); }
-    static Action* kalecgos_ranged_disperse(
-        PlayerbotAI* botAI) { return new KalecgosRangedDisperseAction(botAI); }
-    static Action* kalecgos_enter_spectral_realm(
-        PlayerbotAI* botAI) { return new KalecgosEnterSpectralRealmAction(botAI); }
-    static Action* kalecgos_attack_sathrovarr(
-        PlayerbotAI* botAI) { return new KalecgosAttackSathrovarrAction(botAI); }
-    static Action* kalecgos_health_sync(
-        PlayerbotAI* botAI) { return new KalecgosHealthSyncAction(botAI); }
-    static Action* kalecgos_manage_arcane_buffet(
-        PlayerbotAI* botAI) { return new KalecgosManageArcaneBuffetAction(botAI); }
-    static Action* kalecgos_dispelling_curse(
-        PlayerbotAI* botAI) { return new KalecgosDispellingCurseAction(botAI); }
-    static Action* kalecgos_dispelling_frost_breath(
-        PlayerbotAI* botAI) { return new KalecgosDispellingFrostBreathAction(botAI); }
+    // Kalecgos
+    static Action* kalecgos_tank_position_boss(PlayerbotAI* botAI) {
+        return new KalecgosTankPositionBossAction(botAI);
+    }
+    static Action* kalecgos_enter_spectral_rift(PlayerbotAI* botAI) {
+        return new KalecgosEnterSpectralRiftAction(botAI);
+    }
+    static Action* kalecgos_disperse_ranged(PlayerbotAI* botAI) {
+        return new KalecgosDisperseRangedAction(botAI);
+    }
+    static Action* kalecgos_remove_arcane_buffet(PlayerbotAI* botAI) {
+        return new KalecgosRemoveArcaneBuffetAction(botAI);
+    }
+    static Action* kalecgos_sathrovarr_tank_stand_with_kalec(PlayerbotAI* botAI) {
+        return new KalecgosSathrovarrTankStandWithKalecAction(botAI);
+    }
+    static Action* kalecgos_return_to_spectral_realm_ground(PlayerbotAI* botAI) {
+        return new KalecgosReturnToSpectralRealmGroundAction(botAI);
+    }
 
-    // 布鲁塔卢斯
-    static Action* brutallus_misdirect_boss_to_main_tank(
-        PlayerbotAI* botAI) { return new BrutallusMisdirectBossToMainTankAction(botAI); }
-    static Action* brutallus_tanks_position_boss(
-        PlayerbotAI* botAI) { return new BrutallusTanksPositionBossAction(botAI); }
-    static Action* brutallus_soak_meteor_slash(
-        PlayerbotAI* botAI) { return new BrutallusSoakMeteorSlashAction(botAI); }
-    static Action* brutallus_burn_move_away(
-        PlayerbotAI* botAI) { return new BrutallusBurnMoveAwayAction(botAI); }
+    // Brutallus
+    static Action* brutallus_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new BrutallusMisdirectBossToMainTankAction(botAI);
+    }
+    static Action* brutallus_tanks_handle_boss(PlayerbotAI* botAI) {
+        return new BrutallusTanksHandleBossAction(botAI);
+    }
+    static Action* brutallus_position_melee(PlayerbotAI* botAI) {
+        return new BrutallusPositionMeleeAction(botAI);
+    }
+    static Action* brutallus_position_ranged(PlayerbotAI* botAI) {
+        return new BrutallusPositionRangedAction(botAI);
+    }
+    static Action* brutallus_handle_burn(PlayerbotAI* botAI) {
+        return new BrutallusHandleBurnAction(botAI);
+    }
 
-    // 菲米丝
-    static Action* felmyst_misdirect_boss_to_main_tank(
-        PlayerbotAI* botAI) { return new FelmystMisdirectBossToMainTankAction(botAI); }
-    static Action* felmyst_tanks_position_boss(
-        PlayerbotAI* botAI) { return new FelmystTanksPositionBossAction(botAI); }
-    static Action* felmyst_disperse_from_gas_nova(
-        PlayerbotAI* botAI) { return new FelmystDisperseFromGasNovaAction(botAI); }
-    static Action* felmyst_avoid_encapsulate(
-        PlayerbotAI* botAI) { return new FelmystAvoidEncapsulateAction(botAI); }
-    static Action* felmyst_flight_phase_spread(
-        PlayerbotAI* botAI) { return new FelmystFlightPhaseSpreadAction(botAI); }
-    static Action* felmyst_manage_phase_timer(
-        PlayerbotAI* botAI) { return new FelmystManagePhaseTimerAction(botAI); }
+    // Felmyst
+    static Action* felmyst_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new FelmystMisdirectBossToMainTankAction(botAI);
+    }
+    static Action* felmyst_main_tank_position_boss_on_ground(PlayerbotAI* botAI) {
+        return new FelmystMainTankPositionBossOnGroundAction(botAI);
+    }
+    static Action* felmyst_position_ranged_on_ground(PlayerbotAI* botAI) {
+        return new FelmystPositionRangedOnGroundAction(botAI);
+    }
+    static Action* felmyst_position_melee_on_ground(PlayerbotAI* botAI) {
+        return new FelmystPositionMeleeOnGroundAction(botAI);
+    }
+    static Action* felmyst_remove_encapsulate(PlayerbotAI* botAI) {
+        return new FelmystRemoveEncapsulateAction(botAI);
+    }
+    static Action* felmyst_run_away_from_encapsulated_player(PlayerbotAI* botAI) {
+        return new FelmystRunAwayFromEncapsulatedPlayerAction(botAI);
+    }
+    static Action* felmyst_mass_dispel_gas_nova(PlayerbotAI* botAI) {
+        return new FelmystMassDispelGasNovaAction(botAI);
+    }
+    static Action* felmyst_avoid_demonic_vapor(PlayerbotAI* botAI) {
+        return new FelmystAvoidDemonicVaporAction(botAI);
+    }
+    static Action* felmyst_kite_demonic_vapor(PlayerbotAI* botAI) {
+        return new FelmystKiteDemonicVaporAction(botAI);
+    }
+    static Action* felmyst_move_to_safe_fog_lane(PlayerbotAI* botAI) {
+        return new FelmystMoveToSafeFogLaneAction(botAI);
+    }
+    static Action* felmyst_melee_clear_target(PlayerbotAI* botAI) {
+        return new FelmystMeleeClearTargetAction(botAI);
+    }
+    static Action* felmyst_kill_charmed_player(PlayerbotAI* botAI) {
+        return new FelmystKillCharmedPlayerAction(botAI);
+    }
+    static Action* felmyst_manage_landing_dps_timer(PlayerbotAI* botAI) {
+        return new FelmystManageLandingDpsTimerAction(botAI);
+    }
 
-    // 艾瑞达双子
-    static Action* eredar_twins_misdirect_boss_to_tanks(
-        PlayerbotAI* botAI) { return new EredarTwinsMisdirectBossToTanksAction(botAI); }
-    static Action* eredar_twins_assign_kill_order(
-        PlayerbotAI* botAI) { return new EredarTwinsAssignKillOrderAction(botAI); }
-    static Action* eredar_twins_move_to_flame_source(
-        PlayerbotAI* botAI) { return new EredarTwinsMoveToFlameSourceAction(botAI); }
-    static Action* eredar_twins_move_to_shadow_source(
-        PlayerbotAI* botAI) { return new EredarTwinsMoveToShadowSourceAction(botAI); }
-    static Action* eredar_twins_avoid_conflagration(
-        PlayerbotAI* botAI) { return new EredarTwinsAvoidConflagrationAction(botAI); }
+    // Eredar Twins
+    static Action* eredar_twins_melee_jump_down_from_balcony(PlayerbotAI* botAI) {
+        return new EredarTwinsMeleeJumpDownFromBalconyAction(botAI);
+    }
+    static Action* eredar_twins_misdirect_bosses_to_tanks(PlayerbotAI* botAI) {
+        return new EredarTwinsMisdirectBossesToTanksAction(botAI);
+    }
+    static Action* eredar_twins_main_and_second_assist_tanks_position_sacrolash(PlayerbotAI* botAI) {
+        return new EredarTwinsMainAndSecondAssistTanksPositionSacrolashAction(botAI);
+    }
+    static Action* eredar_twins_first_assist_tank_move_out_of_blaze(PlayerbotAI* botAI) {
+        return new EredarTwinsFirstAssistTankMoveOutOfBlazeAction(botAI);
+    }
+    static Action* eredar_twins_position_ranged(PlayerbotAI* botAI) {
+        return new EredarTwinsPositionRangedAction(botAI);
+    }
+    static Action* eredar_twins_stack_in_room_center(PlayerbotAI* botAI) {
+        return new EredarTwinsStackInRoomCenterAction(botAI);
+    }
+    static Action* eredar_twins_remove_flame_sear(PlayerbotAI* botAI) {
+        return new EredarTwinsRemoveFlameSearAction(botAI);
+    }
+    static Action* eredar_twins_dps_prioritize_lady_sacrolash(PlayerbotAI* botAI) {
+        return new EredarTwinsDpsPrioritizeLadySacrolashAction(botAI);
+    }
+    static Action* eredar_twins_conflagrated_bot_move_from_group(PlayerbotAI* botAI) {
+        return new EredarTwinsConflagratedBotMoveFromGroupAction(botAI);
+    }
+    static Action* eredar_twins_move_from_conflag_sacrolash_victim(PlayerbotAI* botAI) {
+        return new EredarTwinsMoveFromConflagSacrolashVictimAction(botAI);
+    }
 
-    // 穆鲁
-    static Action* muru_misdirect_boss_to_main_tank(
-        PlayerbotAI* botAI) { return new MuruMisdirectBossToMainTankAction(botAI); }
-    static Action* muru_handle_adds(
-        PlayerbotAI* botAI) { return new MuruHandleAddsAction(botAI); }
-    static Action* muru_handle_void_sentinel(
-        PlayerbotAI* botAI) { return new MuruHandleVoidSentinelAction(botAI); }
-    static Action* muru_avoid_darkness(
-        PlayerbotAI* botAI) { return new MuruAvoidDarknessAction(botAI); }
-    static Action* muru_entropius_phase(
-        PlayerbotAI* botAI) { return new MuruEntropiusPhaseAction(botAI); }
+    // M'uru
+    static Action* muru_misdirect_enemies_to_tanks(PlayerbotAI* botAI) {
+        return new MuruMisdirectEnemiesToTanksAction(botAI);
+    }
+    static Action* muru_main_tank_pick_up_entropius(PlayerbotAI* botAI) {
+        return new MuruMainTankPickUpEntropiusAction(botAI);
+    }
+    static Action* muru_position_ranged(PlayerbotAI* botAI) {
+        return new MuruPositionRangedAction(botAI);
+    }
+    static Action* muru_set_dps_priority(PlayerbotAI* botAI) {
+        return new MuruSetDpsPriorityAction(botAI);
+    }
+    static Action* muru_kill_dark_fiends_with_dispel(PlayerbotAI* botAI) {
+        return new MuruKillDarkFiendsWithDispelAction(botAI);
+    }
+    static Action* muru_dont_touch_the_dark_fiend(PlayerbotAI* botAI) {
+        return new MuruDontTouchTheDarkFiendAction(botAI);
+    }
+    static Action* muru_tanks_move_sentinel_to_safe_position(PlayerbotAI* botAI) {
+        return new MuruTanksMoveSentinelToSafePositionAction(botAI);
+    }
+    static Action* muru_second_assist_tank_guard_ranged(PlayerbotAI* botAI) {
+        return new MuruSecondAssistTankGuardRangedAction(botAI);
+    }
+    static Action* muru_flee_the_darkness(PlayerbotAI* botAI) {
+        return new MuruFleeTheDarknessAction(botAI);
+    }
+    static Action* muru_flee_from_singularity(PlayerbotAI* botAI) {
+        return new MuruFleeFromSingularityAction(botAI);
+    }
+    static Action* muru_cast_stun_on_shadowsword_berserker(PlayerbotAI* botAI) {
+        return new MuruCastStunOnShadowswordBerserkerAction(botAI);
+    }
+    static Action* muru_interrupt_fel_fireball(PlayerbotAI* botAI) {
+        return new MuruInterruptFelFireballAction(botAI);
+    }
+    static Action* muru_cast_spellsteal_on_spell_fury(PlayerbotAI* botAI) {
+        return new MuruCastSpellStealOnSpellFuryAction(botAI);
+    }
+    static Action* muru_warlock_enslave_void_spawn(PlayerbotAI* botAI) {
+        return new MuruWarlockEnslaveVoidSpawnAction(botAI);
+    }
+    static Action* muru_enslaved_void_spawn_cast_shadow_bolt_volley(PlayerbotAI* botAI) {
+        return new MuruEnslavedVoidSpawnCastShadowBoltVolleyAction(botAI);
+    }
 
-    // 基尔加丹
-    static Action* kiljaeden_misdirect_to_tank(
-        PlayerbotAI* botAI) { return new KiljaedenMisdirectToTankAction(botAI); }
-    static Action* kiljaeden_avoid_darkness(
-        PlayerbotAI* botAI) { return new KiljaedenAvoidDarknessAction(botAI); }
-    static Action* kiljaeden_avoid_armageddon(
-        PlayerbotAI* botAI) { return new KiljaedenAvoidArmageddonAction(botAI); }
-    static Action* kiljaeden_handle_sinister_reflection(
-        PlayerbotAI* botAI) { return new KiljaedenHandleSinisterReflectionAction(botAI); }
-    static Action* kiljaeden_handle_shield_orb(
-        PlayerbotAI* botAI) { return new KiljaedenHandleShieldOrbAction(botAI); }
-    static Action* kiljaeden_manage_phase(
-        PlayerbotAI* botAI) { return new KiljaedenManagePhaseAction(botAI); }
-    static Action* kiljaeden_ranged_disperse(
-        PlayerbotAI* botAI) { return new KiljaedenRangedDisperseAction(botAI); }
+    // Kil'jaeden <The Deceiver>
+    static Action* kiljaeden_announce_dragon_orb_user(PlayerbotAI* botAI) {
+        return new KiljaedenAnnounceDragonOrbUserAction(botAI);
+    }
+    static Action* kiljaeden_mark_and_prioritize_hands_of_the_deceiver(PlayerbotAI* botAI) {
+        return new KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction(botAI);
+    }
+    static Action* kiljaeden_stun_hands_of_the_deceiver(PlayerbotAI* botAI) {
+        return new KiljaedenStunHandsOfTheDeceiverAction(botAI);
+    }
+    static Action* kiljaeden_position_tanks(PlayerbotAI* botAI) {
+        return new KiljaedenPositionTanksAction(botAI);
+    }
+    static Action* kiljaeden_position_melee(PlayerbotAI* botAI) {
+        return new KiljaedenPositionMeleeAction(botAI);
+    }
+    static Action* kiljaeden_position_ranged(PlayerbotAI* botAI) {
+        return new KiljaedenPositionRangedAction(botAI);
+    }
+    static Action* kiljaeden_remove_fire_bloom(PlayerbotAI* botAI) {
+        return new KiljaedenRemoveFireBloomAction(botAI);
+    }
+    static Action* kiljaeden_stack_for_shield_of_the_blue(PlayerbotAI* botAI) {
+        return new KiljaedenStackForShieldOfTheBlueAction(botAI);
+    }
+    static Action* kiljaeden_use_dragon_orb(PlayerbotAI* botAI) {
+        return new KiljaedenUseDragonOrbAction(botAI);
+    }
+    static Action* kiljaeden_release_stale_root(PlayerbotAI* botAI) {
+        return new KiljaedenReleaseStaleRootAction(botAI);
+    }
+    static Action* kiljaeden_control_dragon(PlayerbotAI* botAI) {
+        return new KiljaedenControlDragonAction(botAI);
+    }
 };
 
 #endif

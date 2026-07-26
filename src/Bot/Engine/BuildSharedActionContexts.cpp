@@ -58,7 +58,8 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new RaidIccActionContext());
     actionContexts.Add(new RaidRsActionContext());
     //By leewheel 2026-07-08
-    actionContexts.Add(new RaidSunwellPlateauActionContext());
+    //By leewheel 2026-07-26 替换为brighton-chi版本SWP实现(类名RaidSunwellActionContext)
+    actionContexts.Add(new RaidSunwellActionContext());
     //End By leewheel
     //By leewheel 2026-07-09
     actionContexts.Add(new VimgolActionContext());
@@ -66,7 +67,10 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     //By leewheel 2026-07-11
     actionContexts.Add(new RaidVanillaNaxxActionContext());
     //End By leewheel
+    actionContexts.Add(new TbcDungeonHellfireRampartsActionContext());
     actionContexts.Add(new TbcDungeonAuchenaiCryptsActionContext());
+    actionContexts.Add(new TbcDungeonSethekkHallsActionContext());
+    actionContexts.Add(new TbcDungeonMechanarActionContext());
     actionContexts.Add(new WotlkDungeonUKActionContext());
     actionContexts.Add(new WotlkDungeonNexActionContext());
     actionContexts.Add(new WotlkDungeonANActionContext());

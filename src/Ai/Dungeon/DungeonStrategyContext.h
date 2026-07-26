@@ -2,7 +2,10 @@
 #define PLAYERBOTS_DUNGEONSTRATEGYCONTEXT_H
 
 #include "Strategy.h"
+#include "HFRStrategy.h"
 #include "ACStrategy.h"
+#include "SethStrategy.h"
+#include "MechStrategy.h"
 #include "UKStrategy.h"
 #include "NexStrategy.h"
 #include "ANStrategy.h"
@@ -45,7 +48,10 @@ class DungeonStrategyContext : public NamedObjectContext<Strategy>
             // ...
 
             // Burning Crusade
+            creators["tbc-hfr"] = &DungeonStrategyContext::tbc_hfr;         // Hellfire Citadel: Hellfire Ramparts
             creators["tbc-ac"] = &DungeonStrategyContext::tbc_ac;           // Auchindoun: Auchenai Crypts
+            creators["tbc-seth"] = &DungeonStrategyContext::tbc_seth;       // Auchindoun: Sethekk Halls
+            creators["tbc-mech"] = &DungeonStrategyContext::tbc_mech;       // Tempest Keep: The Mechanar
 
             // Wrath of the Lich King
             creators["wotlk-uk"] = &DungeonStrategyContext::wotlk_uk;       // Utgarde Keep
@@ -66,7 +72,10 @@ class DungeonStrategyContext : public NamedObjectContext<Strategy>
             creators["wotlk-fos"] = &DungeonStrategyContext::wotlk_fos;     // The Forge of Souls
         }
     private:
+        static Strategy* tbc_hfr(PlayerbotAI* botAI) { return new TbcDungeonHellfireRampartsStrategy(botAI); }
         static Strategy* tbc_ac(PlayerbotAI* botAI) { return new TbcDungeonAuchenaiCryptsStrategy(botAI); }
+        static Strategy* tbc_seth(PlayerbotAI* botAI) { return new TbcDungeonSethekkHallsStrategy(botAI); }
+        static Strategy* tbc_mech(PlayerbotAI* botAI) { return new TbcDungeonMechanarStrategy(botAI); }
         static Strategy* wotlk_uk(PlayerbotAI* botAI) { return new WotlkDungeonUKStrategy(botAI); }
         static Strategy* wotlk_nex(PlayerbotAI* botAI) { return new WotlkDungeonNexStrategy(botAI); }
         static Strategy* wotlk_an(PlayerbotAI* botAI) { return new WotlkDungeonANStrategy(botAI); }

@@ -81,7 +81,8 @@ private:
     static Strategy* icc(PlayerbotAI* botAI) { return new RaidIccStrategy(botAI); }
     static Strategy* rs(PlayerbotAI* botAI) { return new RaidRsStrategy(botAI); }
     //By leewheel 2026-07-08
-    static Strategy* sunwell(PlayerbotAI* botAI) { return new RaidSunwellPlateauStrategy(botAI); }
+    //By leewheel 2026-07-26 替换为brighton-chi版本SWP实现(类名RaidSunwellStrategy)
+    static Strategy* sunwell(PlayerbotAI* botAI) { return new RaidSunwellStrategy(botAI); }
     //End By leewheel
     //By leewheel 2026-07-11
     static Strategy* vanilla_naxx(PlayerbotAI* botAI) { return new RaidVanillaNaxxStrategy(botAI); }

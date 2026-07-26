@@ -58,7 +58,8 @@ void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Tr
     triggerContexts.Add(new RaidIccTriggerContext());
     triggerContexts.Add(new RaidRsTriggerContext());
     //By leewheel 2026-07-08
-    triggerContexts.Add(new RaidSunwellPlateauTriggerContext());
+    //By leewheel 2026-07-26 替换为brighton-chi版本SWP实现(类名RaidSunwellTriggerContext)
+    triggerContexts.Add(new RaidSunwellTriggerContext());
     //End By leewheel
     //By leewheel 2026-07-09
     triggerContexts.Add(new VimgolTriggerContext());
@@ -66,7 +67,10 @@ void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Tr
     //By leewheel 2026-07-11
     triggerContexts.Add(new RaidVanillaNaxxTriggerContext());
     //End By leewheel
+    triggerContexts.Add(new TbcDungeonHellfireRampartsTriggerContext());
     triggerContexts.Add(new TbcDungeonAuchenaiCryptsTriggerContext());
+    triggerContexts.Add(new TbcDungeonSethekkHallsTriggerContext());
+    triggerContexts.Add(new TbcDungeonMechanarTriggerContext());
     triggerContexts.Add(new WotlkDungeonUKTriggerContext());
     triggerContexts.Add(new WotlkDungeonNexTriggerContext());
     triggerContexts.Add(new WotlkDungeonANTriggerContext());

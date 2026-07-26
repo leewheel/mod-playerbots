@@ -1,154 +1,101 @@
-//By leewheel 2026-07-08
 /*
- * 太阳之井高地 (Sunwell Plateau) 触发器声明
- * 作者: leewheel
- * 每个 BOSS 的每个关键机制对应一个 Trigger 类
- * 类名和触发器名称与 SWPTriggerContext.h / SWPStrategy.cpp 保持一致
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
-//End By leewheel
 
 #ifndef PLAYERBOTS_SWPTRIGGERS_H
 #define PLAYERBOTS_SWPTRIGGERS_H
 
 #include "Trigger.h"
 
-// ===== 通用 =====
+// General
 
-class SunwellBotIsNotInCombatTrigger : public Trigger
+class SunwellPlateauBotIsNotInCombatTrigger : public Trigger
 {
 public:
-    SunwellBotIsNotInCombatTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "sunwell bot is not in combat") {}
+    SunwellPlateauBotIsNotInCombatTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "sunwell plateau bot is not in combat") {}
     bool IsActive() override;
 };
 
-// ===== 入口小怪 (Entrance Trash) =====
-
-//By leewheel 2026-07-09
-// 坦克拉怪触发器：只有主坦克触发，且需要等待用户命令才开始拉怪
-class SwpTrashTankPullTrigger : public Trigger
+class SunwellPlateauBotHasProtectiveAuraTrigger : public Trigger
 {
 public:
-    SwpTrashTankPullTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "swp trash tank pull") {}
+    SunwellPlateauBotHasProtectiveAuraTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "sunwell plateau bot has protective aura") {}
     bool IsActive() override;
 };
 
-// 坦克等待触发器：坦克在等待位置待命，直到收到攻击命令
-class SwpTrashTankWaitTrigger : public Trigger
+// Trash
+
+class VolatileFiendSelfDestructsWhenNearTrigger : public Trigger
 {
 public:
-    SwpTrashTankWaitTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "swp trash tank wait") {}
+    VolatileFiendSelfDestructsWhenNearTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "volatile fiend self destructs when near") {}
     bool IsActive() override;
 };
 
-// 治疗接应触发器：前两个治疗在坦克拉怪过程中保持治疗距离
-class SwpTrashHealerEscortTrigger : public Trigger
+class ApocalypseGuardProtectedByInfernalDefenseTrigger : public Trigger
 {
 public:
-    SwpTrashHealerEscortTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "swp trash healer escort") {}
-    bool IsActive() override;
-};
-//End By leewheel
-
-class SwpTrashGroupHoldTrigger : public Trigger
-{
-public:
-    SwpTrashGroupHoldTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "swp trash group hold") {}
+    ApocalypseGuardProtectedByInfernalDefenseTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "apocalypse guard protected by infernal defense") {}
     bool IsActive() override;
 };
 
-class SwpDeadPartyMemberWaitingTrigger : public Trigger
+// Kalecgos
+
+class KalecgosBossEngagedByTankTrigger : public Trigger
 {
 public:
-    SwpDeadPartyMemberWaitingTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "swp dead party member waiting") {}
+    KalecgosBossEngagedByTankTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos boss engaged by tank") {}
     bool IsActive() override;
 };
 
-// ===== 卡雷苟斯 (Kalecgos) =====
-
-class KalecgosPullingBossTrigger : public Trigger
+class KalecgosSpectralRiftIsOpenTrigger : public Trigger
 {
 public:
-    KalecgosPullingBossTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos pulling boss") {}
+    KalecgosSpectralRiftIsOpenTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos spectral rift is open") {}
     bool IsActive() override;
 };
 
-class KalecgosBossEngagedByTanksTrigger : public Trigger
+class KalecgosBotsTakeSplashDamageTrigger : public Trigger
 {
 public:
-    KalecgosBossEngagedByTanksTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos boss engaged by tanks") {}
+    KalecgosBotsTakeSplashDamageTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos bots take splash damage") {}
     bool IsActive() override;
 };
 
-class KalecgosBossEngagedByRangedTrigger : public Trigger
+class KalecgosBotHasTooManyArcaneBuffetStacksTrigger : public Trigger
 {
 public:
-    KalecgosBossEngagedByRangedTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos boss engaged by ranged") {}
+    KalecgosBotHasTooManyArcaneBuffetStacksTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos bot has too many arcane buffet stacks") {}
     bool IsActive() override;
 };
 
-class KalecgosNeedEnterSpectralRealmTrigger : public Trigger
+class KalecgosHumanoidKalecTanksSathrovarrTrigger : public Trigger
 {
 public:
-    KalecgosNeedEnterSpectralRealmTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos need enter spectral realm") {}
+    KalecgosHumanoidKalecTanksSathrovarrTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos humanoid kalec tanks sathrovarr") {}
     bool IsActive() override;
 };
 
-class KalecgosInSpectralRealmTrigger : public Trigger
+class KalecgosBotsDontObserveGravityTrigger : public Trigger
 {
 public:
-    KalecgosInSpectralRealmTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos in spectral realm") {}
+    KalecgosBotsDontObserveGravityTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos bots don't observe gravity") {}
     bool IsActive() override;
 };
 
-// 卡雷苟斯内外场血量同步触发器
-// 当内外场BOSS血量差异>10%且未进入狂暴阶段时触发
-class KalecgosHealthNotSyncedTrigger : public Trigger
-{
-public:
-    KalecgosHealthNotSyncedTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos health not synced") {}
-    bool IsActive() override;
-};
-
-// 奥术冲击层数过高需要进入幽灵领域刷新触发器
-class KalecgosNeedArcaneBuffetResetTrigger : public Trigger
-{
-public:
-    KalecgosNeedArcaneBuffetResetTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos need arcane buffet reset") {}
-    bool IsActive() override;
-};
-
-// 附近有无尽痛苦诅咒需要驱散触发器
-class KalecgosCurseOfBoundlessAgonyTrigger : public Trigger
-{
-public:
-    KalecgosCurseOfBoundlessAgonyTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos curse of boundless agony") {}
-    bool IsActive() override;
-};
-
-// 主坦中了冰霜吐息需要驱散触发器
-class KalecgosFrostBreathOnTankTrigger : public Trigger
-{
-public:
-    KalecgosFrostBreathOnTankTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos frost breath on tank") {}
-    bool IsActive() override;
-};
-
-// ===== 布鲁塔卢斯 (Brutallus) =====
+// Brutallus
 
 class BrutallusPullingBossTrigger : public Trigger
 {
@@ -166,23 +113,31 @@ public:
     bool IsActive() override;
 };
 
-class BrutallusCastingMeteorSlashTrigger : public Trigger
+class BrutallusBossEngagedByMeleeTrigger : public Trigger
 {
 public:
-    BrutallusCastingMeteorSlashTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "brutallus casting meteor slash") {}
+    BrutallusBossEngagedByMeleeTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "brutallus boss engaged by melee") {}
     bool IsActive() override;
 };
 
-class BrutallusBotHasBurnTrigger : public Trigger
+class BrutallusBossEngagedByRangedTrigger : public Trigger
 {
 public:
-    BrutallusBotHasBurnTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "brutallus bot has burn") {}
+    BrutallusBossEngagedByRangedTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "brutallus boss engaged by ranged") {}
     bool IsActive() override;
 };
 
-// ===== 菲米丝 (Felmyst) =====
+class BrutallusBotIsBurningTrigger : public Trigger
+{
+public:
+    BrutallusBotIsBurningTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "brutallus bot is burning") {}
+    bool IsActive() override;
+};
+
+// Felmyst
 
 class FelmystPullingBossTrigger : public Trigger
 {
@@ -192,47 +147,111 @@ public:
     bool IsActive() override;
 };
 
-class FelmystBossEngagedByTanksTrigger : public Trigger
+class FelmystBossEngagedByMainTankOnGroundTrigger : public Trigger
 {
 public:
-    FelmystBossEngagedByTanksTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "felmyst boss engaged by tanks") {}
+    FelmystBossEngagedByMainTankOnGroundTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst boss engaged by main tank on ground") {}
     bool IsActive() override;
 };
 
-class FelmystCastingGasNovaTrigger : public Trigger
+class FelmystBossEngagedByRangedOnGroundTrigger : public Trigger
 {
 public:
-    FelmystCastingGasNovaTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "felmyst casting gas nova") {}
+    FelmystBossEngagedByRangedOnGroundTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst boss engaged by ranged on ground") {}
     bool IsActive() override;
 };
 
-class FelmystCastingEncapsulateTrigger : public Trigger
+class FelmystBossEngagedByMeleeOnGroundTrigger : public Trigger
 {
 public:
-    FelmystCastingEncapsulateTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "felmyst casting encapsulate") {}
+    FelmystBossEngagedByMeleeOnGroundTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst boss engaged by melee on ground") {}
     bool IsActive() override;
 };
 
-class FelmystInFlightPhaseTrigger : public Trigger
+class FelmystBotIsEncapsulatedTrigger : public Trigger
 {
 public:
-    FelmystInFlightPhaseTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "felmyst in flight phase") {}
+    FelmystBotIsEncapsulatedTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst bot is encapsulated") {}
     bool IsActive() override;
 };
 
-class FelmystNeedToManagePhaseTimerTrigger : public Trigger
+class FelmystBotNearEncapsulatedPlayerTrigger : public Trigger
 {
 public:
-    FelmystNeedToManagePhaseTimerTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "felmyst need to manage phase timer") {}
+    FelmystBotNearEncapsulatedPlayerTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst bot near encapsulated player") {}
     bool IsActive() override;
 };
 
-// ===== 艾瑞达双子 (Eredar Twins) =====
+class FelmystPlayerHasGasNovaTrigger : public Trigger
+{
+public:
+    FelmystPlayerHasGasNovaTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst player has gas nova") {}
+    bool IsActive() override;
+};
+
+class FelmystDemonicVaporTrailsAreActiveTrigger : public Trigger
+{
+public:
+    FelmystDemonicVaporTrailsAreActiveTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst demonic vapor trails are active") {}
+    bool IsActive() override;
+};
+
+class FelmystBotIsDemonicVaporTargetTrigger : public Trigger
+{
+public:
+    FelmystBotIsDemonicVaporTargetTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst bot is demonic vapor target") {}
+    bool IsActive() override;
+};
+
+class FelmystFogOfCorruptionIsActiveTrigger : public Trigger
+{
+public:
+    FelmystFogOfCorruptionIsActiveTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst fog of corruption is active") {}
+    bool IsActive() override;
+};
+
+class FelmystMeleeCannotReachBossTrigger : public Trigger
+{
+public:
+    FelmystMeleeCannotReachBossTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst melee cannot reach boss") {}
+    bool IsActive() override;
+};
+
+class FelmystPlayerIsCharmedByFogTrigger : public Trigger
+{
+public:
+    FelmystPlayerIsCharmedByFogTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst player is charmed by fog") {}
+    bool IsActive() override;
+};
+
+class FelmystShouldHoldDpsWhileLandingTrigger : public Trigger
+{
+public:
+    FelmystShouldHoldDpsWhileLandingTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst should hold dps while landing") {}
+    bool IsActive() override;
+};
+
+// Eredar Twins
+
+class EredarTwinsMeleeIsAtBalconyTrigger : public Trigger
+{
+public:
+    EredarTwinsMeleeIsAtBalconyTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins melee is at balcony") {}
+    bool IsActive() override;
+};
 
 class EredarTwinsPullingBossesTrigger : public Trigger
 {
@@ -242,27 +261,51 @@ public:
     bool IsActive() override;
 };
 
-class EredarTwinsDeterminingKillOrderTrigger : public Trigger
+class EredarTwinsSacrolashEngagedByTwoTanksTrigger : public Trigger
 {
 public:
-    EredarTwinsDeterminingKillOrderTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins determining kill order") {}
+    EredarTwinsSacrolashEngagedByTwoTanksTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins sacrolash engaged by two tanks") {}
     bool IsActive() override;
 };
 
-class EredarTwinsBotHasDarkTouchedTrigger : public Trigger
+class EredarTwinsAlythessEngagedByFirstAssistTankTrigger : public Trigger
 {
 public:
-    EredarTwinsBotHasDarkTouchedTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins bot has dark touched") {}
+    EredarTwinsAlythessEngagedByFirstAssistTankTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins alythess engaged by first assist tank") {}
     bool IsActive() override;
 };
 
-class EredarTwinsBotHasFlameTouchedTrigger : public Trigger
+class EredarTwinsBossesEngagedByRangedTrigger : public Trigger
 {
 public:
-    EredarTwinsBotHasFlameTouchedTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins bot has flame touched") {}
+    EredarTwinsBossesEngagedByRangedTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins bosses engaged by ranged") {}
+    bool IsActive() override;
+};
+
+class EredarTwinsOnlyOneBossRemainsTrigger : public Trigger
+{
+public:
+    EredarTwinsOnlyOneBossRemainsTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins only one boss remains") {}
+    bool IsActive() override;
+};
+
+class EredarTwinsBotHasTooManyFlameTouchedStacksTrigger : public Trigger
+{
+public:
+    EredarTwinsBotHasTooManyFlameTouchedStacksTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins bot has too many flame touched stacks") {}
+    bool IsActive() override;
+};
+
+class EredarTwinsDeterminingDpsPriorityTrigger : public Trigger
+{
+public:
+    EredarTwinsDeterminingDpsPriorityTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins determining dps priority") {}
     bool IsActive() override;
 };
 
@@ -274,95 +317,167 @@ public:
     bool IsActive() override;
 };
 
-// ===== 穆鲁 (Muru) =====
-
-class MuruEntropiusSpawnedTrigger : public Trigger
+class EredarTwinsSacrolashVictimHasConflagrationTrigger : public Trigger
 {
 public:
-    MuruEntropiusSpawnedTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "muru entropius spawned") {}
+    EredarTwinsSacrolashVictimHasConflagrationTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "eredar twins sacrolash victim has conflagration") {}
     bool IsActive() override;
 };
 
-class MuruAddsSpawnedTrigger : public Trigger
+// M'uru
+
+class MuruVoidSentinelOrEntropiusHasAppearedTrigger : public Trigger
 {
 public:
-    MuruAddsSpawnedTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "muru adds spawned") {}
+    MuruVoidSentinelOrEntropiusHasAppearedTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru void sentinel or entropius has appeared") {}
     bool IsActive() override;
 };
 
-class MuruVoidSentinelSpawnedTrigger : public Trigger
+class MuruBossTransformedIntoEntropiusTrigger : public Trigger
 {
 public:
-    MuruVoidSentinelSpawnedTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "muru void sentinel spawned") {}
+    MuruBossTransformedIntoEntropiusTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru boss transformed into entropius") {}
     bool IsActive() override;
 };
 
-class MuruCastingDarknessTrigger : public Trigger
+class MuruBossesEngagedByRangedTrigger : public Trigger
 {
 public:
-    MuruCastingDarknessTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "muru casting darkness") {}
+    MuruBossesEngagedByRangedTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru bosses engaged by ranged") {}
     bool IsActive() override;
 };
 
-class MuruEntropiusPhaseTrigger : public Trigger
+class MuruDeterminingDpsPriorityTrigger : public Trigger
 {
 public:
-    MuruEntropiusPhaseTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "muru entropius phase") {}
+    MuruDeterminingDpsPriorityTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru determining dps priority") {}
     bool IsActive() override;
 };
 
-// ===== 基尔加丹 (Kil'jaeden) =====
-
-class KiljaedenPullingBossTrigger : public Trigger
+class MuruVoidSentinelPulsesShadowTrigger : public Trigger
 {
 public:
-    KiljaedenPullingBossTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden pulling boss") {}
+    MuruVoidSentinelPulsesShadowTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru void sentinel pulses shadow") {}
     bool IsActive() override;
 };
 
-class KiljaedenCastingDarknessOfSoulsTrigger : public Trigger
+class MuruAddsSpawnAtEntranceTrigger : public Trigger
 {
 public:
-    KiljaedenCastingDarknessOfSoulsTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden casting darkness of souls") {}
+    MuruAddsSpawnAtEntranceTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru adds spawn at entrance") {}
     bool IsActive() override;
 };
 
-class KiljaedenCastingArmageddonTrigger : public Trigger
+class MuruDarkFiendsSpawnedTrigger : public Trigger
 {
 public:
-    KiljaedenCastingArmageddonTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden casting armageddon") {}
+    MuruDarkFiendsSpawnedTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru dark fiends spawned") {}
     bool IsActive() override;
 };
 
-class KiljaedenSpawnedSinisterReflectionTrigger : public Trigger
+class MuruEntropiusSpawnsDarknessPoolsTrigger : public Trigger
 {
 public:
-    KiljaedenSpawnedSinisterReflectionTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden spawned sinister reflection") {}
+    MuruEntropiusSpawnsDarknessPoolsTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru entropius spawns darkness pools") {}
     bool IsActive() override;
 };
 
-class KiljaedenShieldOrbSpawnedTrigger : public Trigger
+class MuruDarknessIsComingTrigger : public Trigger
 {
 public:
-    KiljaedenShieldOrbSpawnedTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden shield orb spawned") {}
+    MuruDarknessIsComingTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru darkness is coming") {}
     bool IsActive() override;
 };
 
-class KiljaedenNeedToManagePhaseTrigger : public Trigger
+class MuruTheSingularityIsNearTrigger : public Trigger
 {
 public:
-    KiljaedenNeedToManagePhaseTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden need to manage phase") {}
+    MuruTheSingularityIsNearTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru the singularity is near") {}
+    bool IsActive() override;
+};
+
+class MuruBerserkerIsBuffedWithFlurryTrigger : public Trigger
+{
+public:
+    MuruBerserkerIsBuffedWithFlurryTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru berserker is buffed with flurry") {}
+    bool IsActive() override;
+};
+
+class MuruFuryMageCastingFelFireballTrigger : public Trigger
+{
+public:
+    MuruFuryMageCastingFelFireballTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru fury mage casting fel fireball") {}
+    bool IsActive() override;
+};
+
+class MuruFuryMageIsBuffedWithSpellFuryTrigger : public Trigger
+{
+public:
+    MuruFuryMageIsBuffedWithSpellFuryTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru fury mage is buffed with spell fury") {}
+    bool IsActive() override;
+};
+
+class MuruVoidSpawnAvailableForEnslaveTrigger : public Trigger
+{
+public:
+    MuruVoidSpawnAvailableForEnslaveTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru void spawn available for enslave") {}
+    bool IsActive() override;
+};
+
+class MuruWarlockHasEnslavedVoidSpawnTrigger : public Trigger
+{
+public:
+    MuruWarlockHasEnslavedVoidSpawnTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "m'uru warlock has enslaved void spawn") {}
+    bool IsActive() override;
+};
+
+// Kil'jaeden <The Deceiver>
+
+class KiljaedenEncounterHasBegunTrigger : public Trigger
+{
+public:
+    KiljaedenEncounterHasBegunTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden encounter has begun") {}
+    bool IsActive() override;
+};
+
+class KiljaedenHandsOfTheDeceiverAreActiveTrigger : public Trigger
+{
+public:
+    KiljaedenHandsOfTheDeceiverAreActiveTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden hands of the deceiver are active") {}
+    bool IsActive() override;
+};
+
+class KiljaedenBossEngagedByTanksTrigger : public Trigger
+{
+public:
+    KiljaedenBossEngagedByTanksTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden boss engaged by tanks") {}
+    bool IsActive() override;
+};
+
+class KiljaedenBossEngagedByMeleeTrigger : public Trigger
+{
+public:
+    KiljaedenBossEngagedByMeleeTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden boss engaged by melee") {}
     bool IsActive() override;
 };
 
@@ -371,6 +486,46 @@ class KiljaedenBossEngagedByRangedTrigger : public Trigger
 public:
     KiljaedenBossEngagedByRangedTrigger(
         PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden boss engaged by ranged") {}
+    bool IsActive() override;
+};
+
+class KiljaedenBotHasFireBloomTrigger : public Trigger
+{
+public:
+    KiljaedenBotHasFireBloomTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden bot has fire bloom") {}
+    bool IsActive() override;
+};
+
+class KiljaedenSaysChaosDestructionOblivionTrigger : public Trigger
+{
+public:
+    KiljaedenSaysChaosDestructionOblivionTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden says: Chaos! Destruction! Oblivion!") {}
+    bool IsActive() override;
+};
+
+class KiljaedenDragonOrbIsActiveTrigger : public Trigger
+{
+public:
+    KiljaedenDragonOrbIsActiveTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden dragon orb is active") {}
+    bool IsActive() override;
+};
+
+class KiljaedenBotHasStaleRootAfterDragonTrigger : public Trigger
+{
+public:
+    KiljaedenBotHasStaleRootAfterDragonTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden bot has stale root after dragon") {}
+    bool IsActive() override;
+};
+
+class KiljaedenBotControlsDragonTrigger : public Trigger
+{
+public:
+    KiljaedenBotControlsDragonTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kil'jaeden bot controls dragon") {}
     bool IsActive() override;
 };
 

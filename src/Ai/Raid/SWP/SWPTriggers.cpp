@@ -1,314 +1,144 @@
-//By leewheel 2026-07-08
 /*
- * 太阳之井高地 (Sunwell Plateau) 触发器实现
- * 作者: leewheel
- * 对照 Acore 源码修正法术ID和检测逻辑
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
-//End By leewheel
 
 #include "SWPTriggers.h"
-
-#include "AiFactory.h"
 #include "Playerbots.h"
-#include "SWPHelpers.h"
 #include "RaidBossHelpers.h"
-#include "SharedDefines.h"
+#include "SWPEncounter_Brut.h"
+#include "SWPEncounter_Felmyst.h"
+#include "SWPEncounter_Kalec.h"
+#include "SWPEncounter_KJ.h"
+#include "SWPEncounter_Muru.h"
+#include "SWPEncounter_Twins.h"
 
-using namespace SunwellPlateauHelpers;
+using namespace SwpHelpers;
 
-// ===== 通用 =====
+// General
 
-bool SunwellBotIsNotInCombatTrigger::IsActive()
+bool SunwellPlateauBotIsNotInCombatTrigger::IsActive()
 {
-    return !bot->IsInCombat() && bot->GetMapId() == SUNWELL_MAP_ID;
+    return bot->GetMapId() == SWP_MAP_ID && !AI_VALUE2(bool, "combat", "self target");
 }
 
-// ===== 入口小怪 (Entrance Trash) =====
-// By leewheel 2026年7月9日
-// 恢复入口小怪触发器实现，解决链接器LNK2001错误
-// 策略层面(SWPStrategy.cpp)已注释掉TriggerNode注册，不会在运行时触发
-// 但Context仍注册了这些类，必须提供实现以满足链接器要求
-// End By leewheel
+bool SunwellPlateauBotHasProtectiveAuraTrigger::IsActive()
+{
+    if (bot->getClass() == CLASS_MAGE)
+    {
+        if (bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_ICE_BLOCK)))
+            return true;
+    }
+    else if (bot->getClass() == CLASS_PALADIN && !botAI->IsHeal(bot))
+    {
+        if (bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_DIVINE_SHIELD)))
+            return true;
+    }
 
-bool SwpTrashTankPullTrigger::IsActive()
+    return false;
+}
+
+// Trash
+
+bool VolatileFiendSelfDestructsWhenNearTrigger::IsActive()
+{
+    constexpr float searchRadius = 25.0f;
+    Unit* volatileFiend = bot->FindNearestCreature(
+        static_cast<uint32>(SwpNpcs::NPC_VOLATILE_FIEND), searchRadius, true);
+
+    if (!volatileFiend)
+        return false;
+
+    // Z-position check is so bots will go up the ramp to M'uru without clearing
+    // the volatile fiends below
+    return std::abs(bot->GetPositionZ() - volatileFiend->GetPositionZ()) < 10.0f;
+}
+
+bool ApocalypseGuardProtectedByInfernalDefenseTrigger::IsActive()
+{
+    return bot->getClass() == CLASS_PRIEST && AI_VALUE2(Unit*, "find target", "apocalypse guard");
+}
+
+// Kalecgos
+
+bool KalecgosBossEngagedByTankTrigger::IsActive()
 {
     if (!botAI->IsTank(bot))
-        return false;
-    if (bot->GetMapId() != SUNWELL_MAP_ID)
-        return false;
-    if (IsAnySwBossPresent(botAI))
-        return false;
-    if (IsEntranceStrategyDone(botAI, bot))
-        return false;
-    if (!HasAliveEntranceTrash(botAI, bot))
-        return false;
-    float distToEntrance = bot->GetExactDist2d(
-        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
-        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
-    if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
-        return false;
-    Unit* currentTarget = AI_VALUE(Unit*, "current target");
-    if (!currentTarget && !bot->IsInCombat())
-        return false;
-    return true;
-}
-
-bool SwpTrashTankWaitTrigger::IsActive()
-{
-    if (!botAI->IsTank(bot))
-        return false;
-    if (bot->GetMapId() != SUNWELL_MAP_ID)
-        return false;
-    if (IsAnySwBossPresent(botAI))
-        return false;
-    if (IsEntranceStrategyDone(botAI, bot))
-        return false;
-    if (!HasAliveEntranceTrash(botAI, bot))
-        return false;
-    float distToEntrance = bot->GetExactDist2d(
-        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
-        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
-    if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
-        return false;
-    if (bot->IsInCombat())
-        return false;
-    Unit* currentTarget = AI_VALUE(Unit*, "current target");
-    if (currentTarget)
-        return false;
-    return true;
-}
-
-bool SwpTrashHealerEscortTrigger::IsActive()
-{
-    if (!botAI->IsHeal(bot))
-        return false;
-    if (!IsHealerEscort(botAI, bot))
-        return false;
-    if (bot->GetMapId() != SUNWELL_MAP_ID)
-        return false;
-    if (IsAnySwBossPresent(botAI))
-        return false;
-    if (IsEntranceStrategyDone(botAI, bot))
-        return false;
-    if (!HasAliveEntranceTrash(botAI, bot))
-        return false;
-    float distToEntrance = bot->GetExactDist2d(
-        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
-        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
-    if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
-        return false;
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (!mainTank || !mainTank->IsAlive())
-        return false;
-    float distToTank = bot->GetExactDist2d(mainTank);
-    if (distToTank <= SWP_HEALER_FOLLOW_RANGE)
-        return false;
-    return true;
-}
-
-bool SwpTrashGroupHoldTrigger::IsActive()
-{
-    if (botAI->IsTank(bot))
-        return false;
-    if (IsHealerEscort(botAI, bot))
-        return false;
-    if (bot->GetMapId() != SUNWELL_MAP_ID)
-        return false;
-    if (IsAnySwBossPresent(botAI))
-        return false;
-    if (IsEntranceStrategyDone(botAI, bot))
-        return false;
-    if (!HasAliveEntranceTrash(botAI, bot))
-        return false;
-    float distToEntrance = bot->GetExactDist2d(
-        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionX(),
-        SWP_ENTRANCE_TRASH_GROUP1_POS.GetPositionY());
-    if (distToEntrance > SWP_ENTRANCE_DETECT_RADIUS)
-        return false;
-    if (HasTrashNearEngagePos(botAI, bot))
-        return false;
-    return true;
-}
-
-bool SwpDeadPartyMemberWaitingTrigger::IsActive()
-{
-    if (bot->GetMapId() != SUNWELL_MAP_ID)
-        return false;
-    if (!bot->IsAlive())
-        return false;
-    if (bot->IsInCombat())
-        return false;
-    return HasDeadPartyMemberNotResurrected(botAI, bot);
-}
-
-// ===== 卡雷苟斯 (Kalecgos) =====
-
-bool KalecgosPullingBossTrigger::IsActive()
-{
-    if (bot->getClass() != CLASS_HUNTER)
         return false;
 
     Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
-    return kalecgos && kalecgos->GetHealthPct() > 95.0f;
+    if (!kalecgos || kalecgos->IsFriendlyTo(bot))
+        return false;
+
+    if (IsInSpectralRealm(bot))
+        return false;
+
+    return GetKalecgosCurrentTank(bot) == bot;
 }
 
-bool KalecgosBossEngagedByTanksTrigger::IsActive()
+bool KalecgosSpectralRiftIsOpenTrigger::IsActive()
 {
-    return botAI->IsTank(bot) &&
-           AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    if (!kalecgos || kalecgos->IsFriendlyTo(bot))
+        return false;
+
+    if (!ShouldEnterKalecgosSpectralRift(bot))
+        return false;
+
+    constexpr float searchRadius = 75.0f;
+    return bot->FindNearestGameObject(
+        static_cast<uint32>(SwpObjects::GO_SPECTRAL_RIFT), searchRadius, true);
 }
 
-bool KalecgosBossEngagedByRangedTrigger::IsActive()
+bool KalecgosBotsTakeSplashDamageTrigger::IsActive()
 {
     if (!botAI->IsRanged(bot))
         return false;
 
     Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
-    if (!kalecgos)
+    if (!kalecgos || kalecgos->IsFriendlyTo(bot) || kalecgos->GetVictim() == bot)
         return false;
 
-    // 检查奥术冲击叠加层数，超过3层需要分散
-    Aura* buffet = bot->GetAura(static_cast<uint32>(SunwellSpells::SPELL_ARCANE_BUFFET));
-    if (buffet && buffet->GetStackAmount() >= 3)
-        return true;
-
-    // 基础分散检查
-    constexpr float safeDistFromPlayer = 8.0f;
-    return GetNearestPlayerInRadius(bot, safeDistFromPlayer) != nullptr;
+    return !ShouldEnterKalecgosSpectralRift(bot);
 }
 
-//By leewheel 2026-07-09 重写进入幽灵领域触发器
-// 原问题：
-// 1. 用 find target 查找萨斯罗瓦尔 -> 外场机器人没有仇恨，永远返回nullptr
-// 2. 所有DPS都试图进入 -> 不打BOSS全跑去点门
-// 3. 用 AI_VALUE2 find target 查找卡雷苟斯 -> 部分机器人不在仇恨表中，触发器不激活
-// 4. GO_SPECTRAL_RIFT entry错误(187355→187055) -> 机器人找不到传送门GO
-// 修复：
-// 1. 使用 FindKalecgosBoss 替代 AI_VALUE2
-// 2. 奥术冲击层数>=3时主动进入（降低阈值，3层=1500额外奥伤/tick已经很危险）
-// 3. 添加内外场人数平衡检查，避免过多机器人同时进入内场
-// 4. BOSS每20-30秒自动传送随机玩家，不需要全员主动进入
-bool KalecgosNeedEnterSpectralRealmTrigger::IsActive()
+bool KalecgosBotHasTooManyArcaneBuffetStacksTrigger::IsActive()
 {
+    if (bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_MAGE &&
+        bot->getClass() != CLASS_PALADIN)
+    {
+        return false;
+    }
+
     if (botAI->IsTank(bot))
         return false;
 
-    // 使用FindKalecgosBoss替代AI_VALUE2，解决部分机器人不在仇恨表中的问题
-    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
-    if (!kalecgos)
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    if (!kalecgos || kalecgos->IsFriendlyTo(bot) || IsInSpectralRealm(bot))
         return false;
 
-    // 如果已经在幽灵领域中，不需要再次进入
-    if (IsInSpectralRealm(bot))
-        return false;
-
-    // 如果有幽灵力竭debuff，不能再次进入
-    if (bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_SPECTRAL_EXHAUSTION)))
-        return false;
-
-    // 奥术冲击层数>=3时才主动进入幽灵领域刷新debuff
-    // Acore源码: 奥术冲击(45018)每8秒全团AoE，叠加debuff每层增500奥伤，持续40秒
-    // 3层=1500额外奥伤/tick，对于非坦克职业已经很危险
-    if (!NeedEnterSpectralForArcaneBuffet(bot, 3))
-        return false;
-
-    // 内外场人数平衡检查：
-    // 内场人数不应超过小队总人数的1/3
-    // BOSS每20-30秒自动传送1名玩家，不需要太多人主动进入
-    uint32 inSpectral = CountGroupMembersInSpectralRealm(bot);
-    uint32 groupSize = bot->GetGroup() ? bot->GetGroup()->GetMembersCount() : 1;
-    uint32 maxInSpectral = std::max(1u, groupSize / 3);
-
-    if (inSpectral >= maxInSpectral)
-        return false;
-
-    return true;
+    Aura* arcaneBuffet = bot->GetAura(
+        static_cast<uint32>(SwpSpells::SPELL_ARCANE_BUFFET));
+    return arcaneBuffet && arcaneBuffet->GetStackAmount() >= 10;
 }
-//End By leewheel
 
-//By leewheel 2026-07-09 去掉Sathrovarr检查
-// 只要机器人在幽灵领域中就触发，不需要额外检查Sathrovarr
-// Sathrovarr的查找放到Action中处理（因为find target在外场找不到内场BOSS）
-bool KalecgosInSpectralRealmTrigger::IsActive()
+bool KalecgosHumanoidKalecTanksSathrovarrTrigger::IsActive()
 {
-    return IsInSpectralRealm(bot);
+    return botAI->IsTank(bot) && IsInSpectralRealm(bot);
 }
-//End By leewheel
 
-// ===== 卡雷苟斯新增触发器 =====
-
-//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
-bool KalecgosHealthNotSyncedTrigger::IsActive()
+bool KalecgosBotsDontObserveGravityTrigger::IsActive()
 {
-    // 不在卡雷苟斯战斗中则不触发
-    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
-    if (!kalecgos)
+    if (!IsInSpectralRealm(bot))
         return false;
 
-    // 狂暴阶段不限制DPS节奏，全力输出
-    if (IsKalecgosEnrageImminent(botAI, bot))
-        return false;
-
-    // 内外场血量差异>10%时触发
-    float diff = GetKalecgosHealthDifference(botAI, bot);
-    if (diff == FLT_MAX)
-        return false;
-
-    return std::abs(diff) > 10.0f;
+    constexpr float verticalOffset = 5.0f;
+    return bot->GetPositionZ() > KALECGOS_SPECTRAL_REALM_Z + verticalOffset ||
+        bot->GetPositionZ() < KALECGOS_SPECTRAL_REALM_Z - verticalOffset;
 }
-//End By leewheel
 
-//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
-// 此触发器作为紧急后备：奥术冲击层数>=5时无视人数平衡强制进入
-// 正常情况下KalecgosNeedEnterSpectralRealmTrigger(阈值3)会先触发
-bool KalecgosNeedArcaneBuffetResetTrigger::IsActive()
-{
-    // 坦克不需要为此进入幽灵领域
-    if (botAI->IsTank(bot))
-        return false;
-
-    // 不在卡雷苟斯战斗中则不触发
-    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
-    if (!kalecgos)
-        return false;
-
-    // 奥术冲击层数>=5时紧急触发（此时每tick 2500额外奥伤，再不进入会死）
-    // 此触发器作为紧急后备，不考虑人数平衡
-    return NeedEnterSpectralForArcaneBuffet(bot, 5);
-}
-//End By leewheel
-
-//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
-bool KalecgosCurseOfBoundlessAgonyTrigger::IsActive()
-{
-    // 不在卡雷苟斯战斗中则不触发
-    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
-    if (!kalecgos)
-        return false;
-
-    // 检查附近是否有队友中了无尽痛苦诅咒
-    return HasCurseOfBoundlessAgonyNearby(bot);
-}
-//End By leewheel
-
-//By leewheel 2026-07-09 使用FindKalecgosBoss替代find target
-bool KalecgosFrostBreathOnTankTrigger::IsActive()
-{
-    // 不在卡雷苟斯战斗中则不触发
-    Unit* kalecgos = FindKalecgosBoss(botAI, bot);
-    if (!kalecgos)
-        return false;
-
-    // 检查主坦是否中了冰霜吐息（降攻速75%，可驱散）
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (!mainTank)
-        return false;
-
-    return mainTank->HasAura(static_cast<uint32>(SunwellSpells::SPELL_FROST_BREATH));
-}
-//End By leewheel
-
-// ===== 布鲁塔卢斯 (Brutallus) =====
+// Brutallus
 
 bool BrutallusPullingBossTrigger::IsActive()
 {
@@ -321,41 +151,45 @@ bool BrutallusPullingBossTrigger::IsActive()
 
 bool BrutallusBossEngagedByTanksTrigger::IsActive()
 {
-    return botAI->IsTank(bot) &&
-           AI_VALUE2(Unit*, "find target", "brutallus");
+    if (!AI_VALUE2(Unit*, "find target", "brutallus"))
+        return false;
+
+    return botAI->IsMainTank(bot) || botAI->IsAssistTankOfIndex(bot, 0, true);
 }
 
-bool BrutallusCastingMeteorSlashTrigger::IsActive()
+bool BrutallusBossEngagedByMeleeTrigger::IsActive()
 {
-    if (botAI->IsHeal(bot))
+    if (!botAI->IsMelee(bot) || botAI->IsMainTank(bot) ||
+        botAI->IsAssistTankOfIndex(bot, 0, true))
+    {
+        return false;
+    }
+
+    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
+    return brutallus && brutallus->GetVictim() != bot;
+}
+
+bool BrutallusBossEngagedByRangedTrigger::IsActive()
+{
+    if (!botAI->IsRanged(bot))
+        return false;
+
+    if (bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_BURN)))
         return false;
 
     Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
-    if (!brutallus)
-        return false;
-
-    // 检查布鲁塔卢斯是否正在施放或刚施放流星猛击
-    if (brutallus->FindCurrentSpellBySpellId(static_cast<uint32>(SunwellSpells::SPELL_METEOR_SLASH)))
-        return true;
-
-    // 检查自己是否有流星猛击debuff（被击中的标志）
-    if (bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_METEOR_SLASH)))
-        return true;
-
-    return false;
+    return brutallus && brutallus->GetVictim() != bot;
 }
 
-bool BrutallusBotHasBurnTrigger::IsActive()
+bool BrutallusBotIsBurningTrigger::IsActive()
 {
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
-    if (!brutallus)
+    if (!bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_BURN)))
         return false;
 
-    // 检查自己是否被燃烧点名（玩家身上的DoT光环是SPELL_BURN_DAMAGE = 46394）
-    return bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_BURN_DAMAGE));
+    return !botAI->IsMainTank(bot) && !botAI->IsAssistTankOfIndex(bot, 0, true);
 }
 
-// ===== 菲米丝 (Felmyst) =====
+// Felmyst
 
 bool FelmystPullingBossTrigger::IsActive()
 {
@@ -363,222 +197,550 @@ bool FelmystPullingBossTrigger::IsActive()
         return false;
 
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
-    return felmyst && felmyst->GetHealthPct() > 95.0f;
+    if (!felmyst)
+        return false;
+
+    if (felmyst->GetHealthPct() > 90.0f)
+        return true;
+
+    if (felmyst->IsFlying())
+        return false;
+
+    Player* mainTank = GetGroupMainTank(botAI, bot);
+    if (mainTank && felmyst->GetVictim() != mainTank)
+        return true;
+
+    return false;
 }
 
-bool FelmystBossEngagedByTanksTrigger::IsActive()
+bool FelmystBossEngagedByMainTankOnGroundTrigger::IsActive()
 {
-    return botAI->IsTank(bot) &&
-           AI_VALUE2(Unit*, "find target", "felmyst");
+    if (!botAI->IsMainTank(bot))
+        return false;
+
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    return felmyst && !felmyst->IsFlying();
 }
 
-bool FelmystCastingGasNovaTrigger::IsActive()
+bool FelmystBossEngagedByRangedOnGroundTrigger::IsActive()
 {
+    if (!botAI->IsRanged(bot))
+        return false;
+
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
     if (!felmyst)
         return false;
 
-    // 检查菲米丝是否正在施放毒气新星
-    return felmyst->FindCurrentSpellBySpellId(static_cast<uint32>(SunwellSpells::SPELL_GAS_NOVA)) != nullptr;
+    if (felmyst->IsFlying())
+    {
+        auto const stateItr = felmystEncounterStates.find(bot->GetInstanceId());
+        if (stateItr != felmystEncounterStates.end())
+            stateItr->second.encapsulateOccurredThisGroundPhase = false;
+
+        return false;
+    }
+
+    if (felmyst->GetVictim() == bot)
+        return false;
+
+    return !GetFelmystEncapsulateTarget(bot) && !DidFelmystEncapsulateOccurThisGroundPhase(bot);
 }
 
-bool FelmystCastingEncapsulateTrigger::IsActive()
+bool FelmystBossEngagedByMeleeOnGroundTrigger::IsActive()
 {
-    return HasEncapsulateNearby(botAI, bot);
-}
+    if (!botAI->IsMelee(bot))
+        return false;
 
-bool FelmystInFlightPhaseTrigger::IsActive()
-{
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
     if (!felmyst)
         return false;
 
-    return GetFelmystPhase(felmyst) == 1;
+    if (felmyst->IsFlying())
+    {
+        auto const stateItr = felmystEncounterStates.find(bot->GetInstanceId());
+        if (stateItr != felmystEncounterStates.end())
+            stateItr->second.encapsulateOccurredThisGroundPhase = false;
+
+        return false;
+    }
+
+    if (felmyst->GetVictim() == bot || botAI->IsMainTank(bot))
+        return false;
+
+    return !GetFelmystEncapsulateTarget(bot) && !DidFelmystEncapsulateOccurThisGroundPhase(bot);
 }
 
-bool FelmystNeedToManagePhaseTimerTrigger::IsActive()
+bool FelmystBotIsEncapsulatedTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "felmyst") != nullptr;
+    if (bot->getClass() != CLASS_MAGE && bot->getClass() != CLASS_PALADIN)
+        return false;
+
+    if (!bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_ENCAPSULATE)))
+        return false;
+
+    return !botAI->IsMainTank(bot);
 }
 
-// ===== 艾瑞达双子 (Eredar Twins) =====
+bool FelmystBotNearEncapsulatedPlayerTrigger::IsActive()
+{
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    if (!felmyst || felmyst->IsFlying())
+        return false;
+
+    Player* encapsulateTarget = GetFelmystEncapsulateTarget(bot);
+    if (!encapsulateTarget || encapsulateTarget == bot)
+        return false;
+
+    if (botAI->IsMainTank(bot))
+        return false;
+
+    FelmystGroundStack const botStack =
+        GetClosestFelmystGroundStack(bot, felmyst, bot);
+    FelmystGroundStack const targetStack =
+        GetClosestFelmystGroundStack(bot, felmyst, encapsulateTarget);
+
+    return botStack != FelmystGroundStack::None && botStack == targetStack;
+}
+
+bool FelmystPlayerHasGasNovaTrigger::IsActive()
+{
+    if (bot->getClass() != CLASS_PRIEST)
+        return false;
+
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    if (!felmyst || felmyst->IsFlying())
+        return false;
+
+    return GetFelmystGasNovaDispelTarget(bot);
+}
+
+bool FelmystDemonicVaporTrailsAreActiveTrigger::IsActive()
+{
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    if (!felmyst || !felmyst->IsFlying())
+        return false;
+
+    if (GetFelmystDemonicVaporSummonedByBot(bot))
+        return false;
+
+    FelmystFogOfCorruptionState fogState;
+    return !TryGetActiveFelmystFogOfCorruptionState(bot, felmyst, fogState);
+}
+
+bool FelmystBotIsDemonicVaporTargetTrigger::IsActive()
+{
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    if (!felmyst || !felmyst->IsFlying())
+        return false;
+
+    FelmystFogOfCorruptionState fogState;
+    if (TryGetActiveFelmystFogOfCorruptionState(bot, felmyst, fogState))
+        return false;
+
+    return IsFelmystDemonicVaporHeadNearBot(bot);
+}
+
+bool FelmystFogOfCorruptionIsActiveTrigger::IsActive()
+{
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    if (!felmyst || !felmyst->IsFlying())
+        return false;
+
+    FelmystFogOfCorruptionState fogState;
+    if (TryGetActiveFelmystFogOfCorruptionState(bot, felmyst, fogState))
+        return true;
+
+    FelmystFogLane thirdPassLane = FelmystFogLane::None;
+    return TryGetFelmystPostThirdPassWindow(felmyst, thirdPassLane);
+}
+
+bool FelmystMeleeCannotReachBossTrigger::IsActive()
+{
+    if (!botAI->IsMelee(bot))
+        return false;
+
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    if (!felmyst || AI_VALUE(Unit*, "current target") != felmyst)
+        return false;
+
+    return IsFelmystAirPhaseTargetSuppressed(felmyst);
+}
+
+bool FelmystPlayerIsCharmedByFogTrigger::IsActive()
+{
+    if (!botAI->IsDps(bot))
+        return false;
+
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    return felmyst && GetFelmystCharmedTarget(bot, felmyst);
+}
+
+bool FelmystShouldHoldDpsWhileLandingTrigger::IsActive()
+{
+    return IsMechanicTrackerBot(bot, SWP_MAP_ID) && AI_VALUE2(Unit*, "find target", "felmyst");
+}
+
+// Eredar Twins
+
+bool EredarTwinsMeleeIsAtBalconyTrigger::IsActive()
+{
+    if (!botAI->IsMelee(bot))
+        return false;
+
+    if (bot->GetPositionZ() <= EREDAR_TWINS_BALCONY_Z)
+        return false;
+
+    return AI_VALUE2(Unit*, "find target", "grand warlock alythess");
+}
 
 bool EredarTwinsPullingBossesTrigger::IsActive()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
     Unit* alythess = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
-
-    return (sacrolash && sacrolash->GetHealthPct() > 95.0f) ||
-           (alythess && alythess->GetHealthPct() > 95.0f);
+    return alythess && alythess->GetHealthPct() > 90.0f;
 }
 
-bool EredarTwinsDeterminingKillOrderTrigger::IsActive()
+bool EredarTwinsSacrolashEngagedByTwoTanksTrigger::IsActive()
 {
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
-    Unit* alythess = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
-
-    return (sacrolash && sacrolash->IsAlive()) ||
-           (alythess && alythess->IsAlive());
-}
-
-bool EredarTwinsBotHasDarkTouchedTrigger::IsActive()
-{
-    // 如果有暗影触碰debuff，需要去火焰源头附近消除
-    Unit* alythess = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
-    if (!alythess)
+    if (!botAI->IsTank(bot))
         return false;
 
-    return bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_DARK_TOUCHED));
-}
-
-bool EredarTwinsBotHasFlameTouchedTrigger::IsActive()
-{
-    // 如果有火焰触碰debuff，需要去暗影源头附近消除
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
-    if (!sacrolash)
+    if (bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z)
         return false;
 
-    return bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_FLAME_TOUCHED));
+    return AI_VALUE2(Unit*, "find target", "lady sacrolash") &&
+        IsAnySacrolashTank(bot);
+}
+
+bool EredarTwinsAlythessEngagedByFirstAssistTankTrigger::IsActive()
+{
+    if (!botAI->IsTank(bot))
+        return false;
+
+    if (bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z)
+        return false;
+
+    return AI_VALUE2(Unit*, "find target", "grand warlock alythess") &&
+        IsAlythessTank(bot);
+}
+
+bool EredarTwinsBossesEngagedByRangedTrigger::IsActive()
+{
+    if (!botAI->IsRanged(bot))
+        return false;
+
+    if (!AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
+        return false;
+
+    return GetEredarTwinsConflagrationTarget(bot) != bot;
+}
+
+bool EredarTwinsOnlyOneBossRemainsTrigger::IsActive()
+{
+    if (bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z)
+        return false;
+
+    if (!AI_VALUE2(Unit*, "find target", "grand warlock alythess") ||
+        AI_VALUE2(Unit*, "find target", "lady sacrolash"))
+    {
+        return false;
+    }
+
+    if (GetEredarTwinsConflagrationTarget(bot) == bot)
+        return false;
+
+    return !IsAlythessTank(bot);
+}
+
+bool EredarTwinsBotHasTooManyFlameTouchedStacksTrigger::IsActive()
+{
+    if (bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_MAGE &&
+        bot->getClass() != CLASS_PALADIN)
+    {
+        return false;
+    }
+
+    if (botAI->IsTank(bot))
+        return false;
+
+    Aura* flameSear = bot->GetAura(
+        static_cast<uint32>(SwpSpells::SPELL_FLAME_SEAR));
+    if (!flameSear || flameSear->GetDuration() > 2000)
+        return false;
+
+    Aura* flameTouched = bot->GetAura(
+        static_cast<uint32>(SwpSpells::SPELL_FLAME_TOUCHED));
+    return flameTouched && flameTouched->GetStackAmount() >= 5;
+}
+
+bool EredarTwinsDeterminingDpsPriorityTrigger::IsActive()
+{
+    if (!AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
+        return false;
+
+    return !IsAnySacrolashTank(bot) && !IsAlythessTank(bot);
 }
 
 bool EredarTwinsBotHasConflagrationTrigger::IsActive()
 {
-    // Acore源码: 爆燃(45342)初始由艾莉赛斯施放
-    // 当萨洛拉尔死后，艾莉赛斯获得充能(45366)，继续施放爆燃
-    // 当艾莉赛斯死后，萨洛拉尔获得充能(45366)，获得爆燃能力
-    Unit* alythess = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
-
-    // 检查艾莉赛斯是否正在施放爆燃
-    if (alythess && alythess->FindCurrentSpellBySpellId(static_cast<uint32>(SunwellSpells::SPELL_CONFLAGRATION)))
-        return true;
-
-    // 检查萨洛拉尔是否在充能状态下施放爆燃（艾莉赛斯死后萨洛拉尔获得爆燃能力）
-    if (sacrolash && sacrolash->HasAura(static_cast<uint32>(SunwellSpells::SPELL_EMPOWERED)) &&
-        sacrolash->FindCurrentSpellBySpellId(static_cast<uint32>(SunwellSpells::SPELL_CONFLAGRATION)))
-        return true;
-
-    // 也检查玩家自身是否有爆燃debuff
-    if (bot->HasAura(static_cast<uint32>(SunwellSpells::SPELL_CONFLAGRATION)))
-        return true;
-
-    return false;
+    return AI_VALUE2(Unit*, "find target", "lady sacrolash") &&
+        GetEredarTwinsConflagrationTarget(bot) == bot;
 }
 
-// ===== 穆鲁 (Muru) =====
+bool EredarTwinsSacrolashVictimHasConflagrationTrigger::IsActive()
+{
+    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
+    if (!sacrolash)
+        return false;
 
-bool MuruEntropiusSpawnedTrigger::IsActive()
+    Player* conflagTarget = GetEredarTwinsConflagrationTarget(bot);
+    if (!conflagTarget || conflagTarget == bot)
+        return false;
+
+    return sacrolash->GetVictim() == conflagTarget;
+}
+
+// M'uru
+
+bool MuruVoidSentinelOrEntropiusHasAppearedTrigger::IsActive()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    // 恩特罗皮乌斯出现后需要误导到坦克
     Unit* entropius = AI_VALUE2(Unit*, "find target", "entropius");
-    return entropius && entropius->GetHealthPct() > 95.0f;
+    if (entropius && entropius->GetHealthPct() > 80.0f)
+        return true;
+
+    Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "void sentinel");
+    return voidSentinel && voidSentinel->GetHealthPct() > 80.0f;
 }
 
-bool MuruAddsSpawnedTrigger::IsActive()
+bool MuruBossTransformedIntoEntropiusTrigger::IsActive()
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "muru");
-    if (!muru)
+    return botAI->IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "entropius");
+}
+
+bool MuruBossesEngagedByRangedTrigger::IsActive()
+{
+    return botAI->IsRanged(bot) && AI_VALUE2(Unit*, "find target", "m'uru");
+}
+
+bool MuruDeterminingDpsPriorityTrigger::IsActive()
+{
+    return botAI->IsDps(bot) && AI_VALUE2(Unit*, "find target", "m'uru");
+}
+
+bool MuruVoidSentinelPulsesShadowTrigger::IsActive()
+{
+    if (!botAI->IsTank(bot))
         return false;
 
-    // 检查是否有需要优先处理的ADD（狂暴者、怒火法师）
-    Unit* berserker = AI_VALUE2(Unit*, "find target", "shadowsword berserker");
-    Unit* furyMage = AI_VALUE2(Unit*, "find target", "shadowsword fury mage");
+    if (AI_VALUE2(Unit*, "find target", "void sentinel"))
+        return true;
 
-    return (berserker && berserker->IsAlive()) ||
-           (furyMage && furyMage->IsAlive());
+    if (!botAI->IsAssistTankOfIndex(bot, 0, true))
+        return false;
+
+    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
+    return muru && muru->GetHealth() > 1;
 }
 
-bool MuruVoidSentinelSpawnedTrigger::IsActive()
+bool MuruAddsSpawnAtEntranceTrigger::IsActive()
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "muru");
-    if (!muru)
+    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
+    if (!muru || muru->GetHealth() == 1)
+        return false;
+
+    if (!botAI->IsAssistTankOfIndex(bot, 1, true))
         return false;
 
     Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "void sentinel");
-    return voidSentinel && voidSentinel->IsAlive();
+    if (voidSentinel && voidSentinel->GetVictim() == bot)
+        return false;
+
+    return !AI_VALUE2(Unit*, "find target", "shadowsword fury mage") &&
+        !AI_VALUE2(Unit*, "find target", "shadowsword berserker");
 }
 
-bool MuruCastingDarknessTrigger::IsActive()
+bool MuruDarkFiendsSpawnedTrigger::IsActive()
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "muru");
+    if (bot->getClass() != CLASS_PRIEST && bot->getClass() != CLASS_SHAMAN)
+        return false;
+
+    return AI_VALUE2(Unit*, "find target", "dark fiend");
+}
+
+bool MuruEntropiusSpawnsDarknessPoolsTrigger::IsActive()
+{
+    if (!AI_VALUE2(Unit*, "find target", "entropius"))
+        return false;
+
+    if (AI_VALUE2(Unit*, "find target", "dark fiend"))
+        return true;
+
+    constexpr float searchDistance = 15.0f;
+    return bot->FindNearestCreature(
+        static_cast<uint32>(SwpNpcs::NPC_DARKNESS), searchDistance, true);
+}
+
+bool MuruDarknessIsComingTrigger::IsActive()
+{
+    if (!botAI->IsMelee(bot))
+        return false;
+
+    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
+    if (!muru || muru->GetHealth() == 1)
+        return false;
+
+    return TryGetMuruDarknessActiveState(bot, muru);
+}
+
+bool MuruTheSingularityIsNearTrigger::IsActive()
+{
+    Unit* entropius = AI_VALUE2(Unit*, "find target", "entropius");
+    if (!entropius)
+        return false;
+
+    Creature* singularity = GetNearestMuruSingularity(bot);
+    if (!singularity)
+        return false;
+
+    float safeDistance = entropius->GetVictim() == bot ? 15.0f : 10.0f;
+    return bot->GetExactDist2d(singularity) < safeDistance;
+}
+
+bool MuruBerserkerIsBuffedWithFlurryTrigger::IsActive()
+{
+    if (bot->getClass() != CLASS_DRUID && bot->getClass() != CLASS_PALADIN &&
+        bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_WARLOCK &&
+        bot->getClass() != CLASS_WARRIOR)
+    {
+        return false;
+    }
+
+    Unit* berserker = AI_VALUE2(Unit*, "find target", "shadowsword berserker");
+    return berserker && berserker->HasAura(
+        static_cast<uint32>(SwpSpells::SPELL_FLURRY));
+}
+
+bool MuruFuryMageCastingFelFireballTrigger::IsActive()
+{
+    if (bot->getClass() == CLASS_DRUID || bot->getClass() == CLASS_PALADIN ||
+        bot->getClass() == CLASS_PRIEST || bot->getClass() == CLASS_WARLOCK)
+    {
+        return false;
+    }
+
+    Unit* furyMage = AI_VALUE2(Unit*, "find target", "shadowsword fury mage");
+    return furyMage && furyMage->HasUnitState(UNIT_STATE_CASTING) &&
+        furyMage->FindCurrentSpellBySpellId(static_cast<uint32>(SwpSpells::SPELL_FEL_FIREBALL));
+}
+
+bool MuruFuryMageIsBuffedWithSpellFuryTrigger::IsActive()
+{
+    if (bot->getClass() != CLASS_MAGE)
+        return false;
+
+    Unit* furyMage = AI_VALUE2(Unit*, "find target", "shadowsword fury mage");
+    return furyMage && furyMage->HasAura(
+        static_cast<uint32>(SwpSpells::SPELL_SPELL_FURY));
+}
+
+bool MuruVoidSpawnAvailableForEnslaveTrigger::IsActive()
+{
+    if (bot->getClass() != CLASS_WARLOCK || bot->GetCharm())
+        return false;
+
+    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
     if (!muru)
         return false;
 
-    // Acore源码: Muru对自己施放SPELL_DARKNESS_PERIODIC(45998)作为周期性光环
-    // 该光环第2tick会召唤暗魔(Dark Fiend)
-    // 应该用HasAura检测，而非FindCurrentSpellBySpellId
-    return muru->HasAura(static_cast<uint32>(SunwellSpells::SPELL_DARKNESS_PERIODIC));
+    return FindAvailableVoidSpawnForEnslave(bot);
 }
 
-bool MuruEntropiusPhaseTrigger::IsActive()
+bool MuruWarlockHasEnslavedVoidSpawnTrigger::IsActive()
 {
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "entropius");
-    return entropius && entropius->IsAlive();
+    if (bot->getClass() != CLASS_WARLOCK)
+        return false;
+
+    Unit* charm = bot->GetCharm();
+    if (!charm || !charm->IsAlive() ||
+        charm->GetEntry() != static_cast<uint32>(SwpNpcs::NPC_VOID_SPAWN))
+    {
+        return false;
+    }
+
+    return AI_VALUE2(Unit*, "find target", "m'uru");
 }
 
-// ===== 基尔加丹 (Kil'jaeden) =====
+// Kil'jaeden <The Deceiver>
 
-bool KiljaedenPullingBossTrigger::IsActive()
+bool KiljaedenEncounterHasBegunTrigger::IsActive()
 {
-    if (bot->getClass() != CLASS_HUNTER)
+    return IsMechanicTrackerBot(bot, SWP_MAP_ID) &&
+        AI_VALUE2(Unit*, "find target", "hand of the deceiver");
+}
+
+bool KiljaedenHandsOfTheDeceiverAreActiveTrigger::IsActive()
+{
+    return AI_VALUE2(Unit*, "find target", "hand of the deceiver");
+}
+
+bool KiljaedenBossEngagedByTanksTrigger::IsActive()
+{
+    if (!botAI->IsTank(bot))
         return false;
 
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
-    return kiljaeden && kiljaeden->GetHealthPct() > 95.0f;
-}
-
-bool KiljaedenCastingDarknessOfSoulsTrigger::IsActive()
-{
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
-    if (!kiljaeden)
+    if (!kiljaeden || HasKiljaedenDragonAura(bot) ||
+        IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
+    {
         return false;
+    }
 
-    return IsKiljaedenCastingDarkness(kiljaeden);
-}
-
-bool KiljaedenCastingArmageddonTrigger::IsActive()
-{
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
-    if (!kiljaeden)
-        return false;
-
-    // 检查基尔加丹是否有末日审判周期性光环（阶段4开始施放）
-    if (kiljaeden->HasAura(static_cast<uint32>(SunwellSpells::SPELL_ARMAGEDDON_PERIODIC)))
+    if (kiljaeden->GetHealthPct() > 85.0f)
         return true;
 
-    return false;
+    if (botAI->IsMainTank(bot))
+        return true;
+
+    constexpr float searchRadius = 100.0f;
+    if (AI_VALUE2(Unit*, "find target", "sinister reflection") ||
+        bot->FindNearestCreature(
+            static_cast<uint32>(SwpNpcs::NPC_SINISTER_REFLECTION), searchRadius, true))
+    {
+        return false;
+    }
+
+    return true;
 }
 
-bool KiljaedenSpawnedSinisterReflectionTrigger::IsActive()
+bool KiljaedenBossEngagedByMeleeTrigger::IsActive()
 {
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
-    if (!kiljaeden)
+    if (botAI->IsRanged(bot) || botAI->IsTank(bot))
         return false;
 
-    // 检查是否有邪恶映像存在
-    auto reflections = GetSinisterReflections(botAI, bot);
-    return !reflections.empty();
-}
-
-bool KiljaedenShieldOrbSpawnedTrigger::IsActive()
-{
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
-    if (!kiljaeden)
+    if (!kiljaeden || HasKiljaedenDragonAura(bot) ||
+        IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
+    {
         return false;
+    }
 
-    Unit* orb = GetShieldOrb(botAI, bot);
-    return orb && orb->IsAlive();
-}
+    if (kiljaeden->GetHealthPct() <= 85.0f)
+    {
+        constexpr float searchRadius = 50.0f;
+        if (AI_VALUE2(Unit*, "find target", "sinister reflection") ||
+            bot->FindNearestCreature(
+                static_cast<uint32>(SwpNpcs::NPC_SINISTER_REFLECTION), searchRadius, true))
+        {
+            return false;
+        }
+    }
 
-bool KiljaedenNeedToManagePhaseTrigger::IsActive()
-{
-    return AI_VALUE2(Unit*, "find target", "kil'jaeden") != nullptr;
+    return true;
 }
 
 bool KiljaedenBossEngagedByRangedTrigger::IsActive()
@@ -587,14 +749,112 @@ bool KiljaedenBossEngagedByRangedTrigger::IsActive()
         return false;
 
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+    if (!kiljaeden || HasKiljaedenDragonAura(bot) ||
+        IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
+    {
+        return false;
+    }
+
+    // Let the demo lock go AoE down the reflections
+    if (bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_METAMORPHOSIS)))
+        return false;
+
+    return true;
+}
+
+bool KiljaedenBotHasFireBloomTrigger::IsActive()
+{
+    if (bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_MAGE &&
+        bot->getClass() != CLASS_PALADIN)
+    {
+        return false;
+    }
+
+    if (botAI->IsTank(bot))
+        return false;
+
+    if (!bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_FIRE_BLOOM)))
+        return false;
+
+    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+    return kiljaeden && kiljaeden->GetHealthPct() < 55.0f;
+}
+
+bool KiljaedenSaysChaosDestructionOblivionTrigger::IsActive()
+{
+    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
     if (!kiljaeden)
         return false;
 
-    // 基尔加丹阶段2+会施放火焰飞镖，远程需要分散
-    int phase = GetKiljaedenPhase(kiljaeden);
-    if (phase < 1)
+    if (HasKiljaedenDragonAura(bot))
         return false;
 
-    constexpr float safeDistFromPlayer = 8.0f;
-    return GetNearestPlayerInRadius(bot, safeDistFromPlayer) != nullptr;
+    return IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden);
+}
+
+bool KiljaedenDragonOrbIsActiveTrigger::IsActive()
+{
+    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+    if (!kiljaeden || kiljaeden->GetHealthPct() > 85.0f)
+        return false;
+
+    if (HasKiljaedenDragonAura(bot))
+        return false;
+
+    if (GetKiljaedenDragonOrbUser(bot) != bot)
+        return false;
+
+    bool orbInUse = false;
+    bool result = false;
+
+    for (uint32 const orbEntry : KILJAEDEN_DRAGON_ORB_ENTRIES)
+    {
+        GameObject* orb = bot->FindNearestGameObject(orbEntry, 200.0f, true);
+        if (!orb)
+            continue;
+
+        bool const inUse = orb->HasGameObjectFlag(GO_FLAG_IN_USE);
+
+        if (inUse)
+            orbInUse = true;
+
+        if (orb && !orb->HasGameObjectFlag(GO_FLAG_NOT_SELECTABLE))
+            result = true;
+    }
+
+    if (orbInUse)
+        result = true;
+
+    return result;
+}
+
+bool KiljaedenBotHasStaleRootAfterDragonTrigger::IsActive()
+{
+    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+    if (!kiljaeden || kiljaeden->GetHealthPct() > 85.0f)
+        return false;
+
+    if (GetKiljaedenDragonOrbUser(bot) != bot)
+        return false;
+
+    constexpr uint32 orbUseGraceMs = 2000;
+    if (HasKiljaedenDragonAura(bot) || !bot->IsRooted() ||
+        bot->HasUnitState(UNIT_STATE_LOST_CONTROL) ||
+        HasRecentKiljaedenDragonOrbUse(bot, orbUseGraceMs))
+    {
+        return false;
+    }
+
+    return bot->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == NULL_MOTION_TYPE;
+}
+
+bool KiljaedenBotControlsDragonTrigger::IsActive()
+{
+    if (!AI_VALUE2(Unit*, "find target", "kil'jaeden"))
+        return false;
+
+    if (!HasKiljaedenDragonAura(bot))
+        return false;
+
+    return GetKiljaedenControlledDragon(bot);
 }
