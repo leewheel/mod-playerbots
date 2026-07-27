@@ -1,4 +1,4 @@
-/*
+﻿/*
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
@@ -333,7 +333,8 @@ bool FelmystMoveToSafeFogLaneAction::TryTeleportStuckBotOntoCrate(
     Position const& destination)
 {
     constexpr float crateCollisionCheckDistance = 2.0f;
-    //By leewheel 2026-07-27 - 常量移到使用处附近，减少变量作用�?    Position const stuckCratePosition = { 1484.443f, 591.337f, 23.391f };
+    //By leewheel 2026-07-27 - move constants closer to usage
+    Position const stuckCratePosition = { 1484.443f, 591.337f, 23.391f };
 
     if (bot->GetExactDist2d(
             stuckCratePosition.GetPositionX(),
@@ -356,7 +357,8 @@ bool FelmystMoveToSafeFogLaneAction::TryTeleportStuckBotOntoCrate(
         return false;
     }
 
-    //By leewheel 2026-07-27 - 常量移到使用�?    constexpr float progressResetDistance = 1.0f;
+    //By leewheel 2026-07-27 - 常量移到使用处
+    constexpr float progressResetDistance = 1.0f;
 
     if (distanceToDestination + progressResetDistance < _fogCrateStuckNearestDistance)
     {
@@ -365,7 +367,8 @@ bool FelmystMoveToSafeFogLaneAction::TryTeleportStuckBotOntoCrate(
         return false;
     }
 
-    //By leewheel 2026-07-27 - 常量移到使用�?    constexpr uint32 stuckTimeoutMs = 1500;
+    //By leewheel 2026-07-27 - 常量移到使用处
+    constexpr uint32 stuckTimeoutMs = 1500;
 
     if (getMSTimeDiff(_fogCrateStuckSampleMs, now) < stuckTimeoutMs)
         return false;

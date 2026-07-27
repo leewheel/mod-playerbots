@@ -3,7 +3,9 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-//By leewheel 2026-07-27 引入brighton-chi的SWP静态方法重�?// Kalecgos遭遇战工具函数重构：使用 PlayerbotAI::IsTank/IsHeal/IsRangedDps/IsMelee/IsDps 静态方�?// 替代 botAI->IsX(member) 实例方法调用，传�?Player* 而非 PlayerbotAI*
+//By leewheel 2026-07-27 引入brighton-chi的SWP静态方法重构
+// Kalecgos遭遇战工具函数重构：使用 PlayerbotAI::IsTank/IsHeal/IsRangedDps/IsMelee/IsDps 静态方法
+// 替代 botAI->IsX(member) 实例方法调用，传递 Player* 而非 PlayerbotAI*
 
 #include "SWPEncounter_Kalec.h"
 #include "PlayerbotAI.h"

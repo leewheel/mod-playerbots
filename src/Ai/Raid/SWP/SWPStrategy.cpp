@@ -1,4 +1,4 @@
-/*
+﻿/*
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
@@ -101,7 +101,8 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player is charmed by fog", {
         NextAction("felmyst kill charmed player", ACTION_EMERGENCY + 9) }));
 
-    //By leewheel 2026-07-27 新增 Felmyst 着陆DPS管理触发�?    triggers.push_back(new TriggerNode("felmyst manage landing dps timer", {
+    //By leewheel 2026-07-27 - Felmyst landing DPS management trigger
+    triggers.push_back(new TriggerNode("felmyst manage landing dps timer", {
         NextAction("felmyst should hold dps while landing", ACTION_EMERGENCY + 8) }));
 
     // Eredar Twins
@@ -238,7 +239,8 @@ void RaidSunwellStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new FelmystPrioritizeDemonicVaporKiteMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeFogAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystFocusAttacksOnCharmedPlayerMultiplier(botAI));
-    //By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘�?    multipliers.push_back(new FelmystDontDotAddsMultiplier(botAI));
+    //By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘数
+    multipliers.push_back(new FelmystDontDotAddsMultiplier(botAI));
     multipliers.push_back(new FelmystDelayCooldownsMultiplier(botAI));
 
     // Eredar Twins

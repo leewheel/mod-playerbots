@@ -3,7 +3,8 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-//By leewheel 2026-07-27 引入brighton-chi的SWP静态方法重�?// Brutallus遭遇战：TryGetBrutallusAssignedPositionIndex 改用 PlayerbotAI::IsMelee �?IsMainTank 静态方�?
+//By leewheel 2026-07-27 引入brighton-chi的SWP静态方法重构
+// Brutallus遭遇战：TryGetBrutallusAssignedPositionIndex 改用 PlayerbotAI::IsMelee 等静态方法
 #include "SWPEncounter_Brut.h"
 #include "Playerbots.h"
 #include <algorithm>
