@@ -21,11 +21,10 @@ using namespace SwpHelpers;
 
 bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
 {
+    //By leewheel 2026-07-27 - 移除isRanged和isTank变量，直接内联使用静态方法调用
     ObjectGuid const guid = bot->GetGUID();
     uint32 const instanceId = bot->GetInstanceId();
     bool const isMechanicTracker = IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID);
-    bool const isRanged = botAI->IsRanged(bot);
-    bool const isTank = botAI->IsTank(bot);
 
     bool didSomething = false;
 
@@ -38,7 +37,8 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         if (kalecgosRealmStates.erase(guid) > 0)
             didSomething = true;
 
-        if (isRanged)
+        //By leewheel 2026-07-27 - 根据upstream修改，从isRanged改为IsTank
+        if (PlayerbotAI::IsTank(bot))
         {
             Action* kalecAction = botAI->GetAiObjectContext()->GetAction(
                 "kalecgos disperse ranged");
@@ -58,10 +58,10 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
             didSomething = true;
         }
 
-        if (botAI->IsRanged(bot) && brutallusRangedBurnStates.erase(guid) > 0)
+        if (PlayerbotAI::IsRanged(bot) && brutallusRangedBurnStates.erase(guid) > 0)
             didSomething = true;
 
-        if (botAI->IsRanged(bot) && ReleaseBrutallusBurnPad(bot))
+        if (PlayerbotAI::IsRanged(bot) && ReleaseBrutallusBurnPad(bot))
             didSomething = true;
 
         if (isMechanicTracker && brutallusRangedAssignments.erase(instanceId) > 0)
@@ -70,7 +70,8 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         if (isMechanicTracker && brutallusRangedBurnPadAssignments.erase(instanceId) > 0)
             didSomething = true;
 
-        if (isTank)
+        //By leewheel 2026-07-27 - 直接内联调用静态方法
+        if (PlayerbotAI::IsTank(bot))
         {
             Action* brutallusAction = botAI->GetAiObjectContext()->GetAction(
                 "brutallus tanks handle boss");
@@ -97,7 +98,8 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
             didSomething = true;
     }
 
-    if (isTank && !AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
+    //By leewheel 2026-07-27 - 直接内联调用静态方法（修复提交5的bug：添加(bot)参数）
+    if (PlayerbotAI::IsTank(bot) && !AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
     {
         Action* twinsAction = botAI->GetAiObjectContext()->GetAction(
             "eredar twins first assist tank move out of blaze");
@@ -159,7 +161,7 @@ bool VolatileFiendKeepEnemyAwayFromGroupAction::Execute(Event /*event*/)
     if (!volatileFiend)
         return false;
 
-    if (botAI->IsTank(bot))
+    if (PlayerbotAI::IsTank(bot))
     {
         if (AI_VALUE(Unit*, "current target") != volatileFiend)
             return Attack(volatileFiend);

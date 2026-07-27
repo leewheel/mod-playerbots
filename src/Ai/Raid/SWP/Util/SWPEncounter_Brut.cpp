@@ -3,7 +3,7 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-
+//By leewheel 2026-07-27 引入brighton-chi的SWP静态方法重�?// Brutallus遭遇战：TryGetBrutallusAssignedPositionIndex 改用 PlayerbotAI::IsMelee �?IsMainTank 静态方�?
 #include "SWPEncounter_Brut.h"
 #include "Playerbots.h"
 #include <algorithm>
@@ -237,13 +237,13 @@ void EnsureBrutallusRangedAssignments(Player* bot)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || member->GetMapId() != SWP_MAP_ID || !botAI->IsRanged(member))
+        if (!member || member->GetMapId() != SWP_MAP_ID || !PlayerbotAI::IsRanged(member))
             continue;
 
         if (assignments.find(member->GetGUID()) != assignments.end())
             continue;
 
-        if (botAI->IsHeal(member))
+        if (PlayerbotAI::IsHeal(member))
             healers.push_back(member);
         else
             rangedDamage.push_back(member);

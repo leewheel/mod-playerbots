@@ -76,7 +76,7 @@ bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::Execute(Event /*event*/
     if (hands.empty())
         return false;
 
-    if (botAI->IsTank(bot))
+    if (PlayerbotAI::IsTank(bot))
     {
         std::vector<Player*> const tanks = { mainTank, firstAssistTank, secondAssistTank };
 
@@ -124,32 +124,34 @@ bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::Execute(Event /*event*/
         if (AI_VALUE(Unit*, "current target") != assignedHand)
             return Attack(assignedHand);
 
-        if (assignedHand->GetVictim() == bot && bot->IsWithinMeleeRange(assignedHand) &&
-            !assignedHand->HasUnitState(UNIT_STATE_STUNNED))
+        if (assignedHand->GetVictim() != bot || !bot->IsWithinMeleeRange(assignedHand) ||
+            assignedHand->HasUnitState(UNIT_STATE_STUNNED))
         {
-            constexpr float minTankDistance = 15.0f;
+            return false;
+        }
 
-            for (size_t i = 0; i < tanks.size(); ++i)
-            {
-                if (i == myIndex)
-                    continue;
+        constexpr float minTankDistance = 15.0f;
 
-                Player* otherTank = tanks[i];
-                if (!otherTank || !otherTank->IsAlive())
-                    continue;
+        for (size_t i = 0; i < tanks.size(); ++i)
+        {
+            if (i == myIndex)
+                continue;
 
-                ObjectGuid const otherGuid = assignments[i];
-                if (otherGuid.IsEmpty())
-                    continue;
+            Player* otherTank = tanks[i];
+            if (!otherTank || !otherTank->IsAlive())
+                continue;
 
-                Unit* otherHand = botAI->GetUnit(otherGuid);
-                if (!otherHand || !otherHand->IsAlive())
-                    continue;
+            ObjectGuid const otherGuid = assignments[i];
+            if (otherGuid.IsEmpty())
+                continue;
 
-                float const distFromTank = bot->GetExactDist2d(otherTank);
-                if (distFromTank < minTankDistance)
-                    return MoveAway(otherTank, minTankDistance - distFromTank, true);
-            }
+            Unit* otherHand = botAI->GetUnit(otherGuid);
+            if (!otherHand || !otherHand->IsAlive())
+                continue;
+
+            float const distFromTank = bot->GetExactDist2d(otherTank);
+            if (distFromTank < minTankDistance)
+                return MoveAway(otherTank, minTankDistance - distFromTank, true);
         }
     }
     else
@@ -303,8 +305,8 @@ bool KiljaedenPositionMeleeAction::TryGetPosition(Position& position) const
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || !botAI->IsMelee(member) || member->GetMapId() != SWP_MAP_ID ||
-            !GET_PLAYERBOT_AI(member) || botAI->IsTank(member))
+        if (!member || !PlayerbotAI::IsMelee(member) || member->GetMapId() != SWP_MAP_ID ||
+            !GET_PLAYERBOT_AI(member) || PlayerbotAI::IsTank(member))
         {
             continue;
         }
@@ -352,10 +354,10 @@ bool KiljaedenPositionMeleeAction::TryAdjustForArmageddon(Position& position)
     {
         for (KiljaedenArmageddon const& armageddon : armageddonItr->second.armageddons)
         {
+            //By leewheel 2026-07-27 - 合并条件判断到单行
             if (pos.GetExactDist2d(
                     armageddon.destination.GetPositionX(),
-                    armageddon.destination.GetPositionY()) <
-                armageddon.safeDistance)
+                    armageddon.destination.GetPositionY()) < armageddon.safeDistance)
             {
                 return false;
             }
@@ -586,11 +588,12 @@ bool KiljaedenControlDragonAction::ExecuteDuringDarknessOfAThousandSouls(
     if (!darknessSpell)
         return false;
 
-    constexpr float desiredDistanceFromStack = 2.0f;
+    //By leewheel 2026-07-27 - 将desiredDistanceFromStack常量移到使用处
     constexpr float castReadyDistanceFromStack = 3.0f;
-    Position const stackPosition = KILJAEDEN_DARKNESS_POSITION;
+    Position const& stackPosition = KILJAEDEN_DARKNESS_POSITION;
     float const distanceToStack = dragon->GetExactDist2d(
         stackPosition.GetPositionX(), stackPosition.GetPositionY());
+
     if (distanceToStack > castReadyDistanceFromStack)
     {
         if (dragon->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE &&
@@ -601,6 +604,9 @@ bool KiljaedenControlDragonAction::ExecuteDuringDarknessOfAThousandSouls(
 
         float const deltaX = stackPosition.GetPositionX() - dragon->GetPositionX();
         float const deltaY = stackPosition.GetPositionY() - dragon->GetPositionY();
+
+        //By leewheel 2026-07-27 - 常量移到使用处
+        constexpr float desiredDistanceFromStack = 2.0f;
         float const moveRatio = (distanceToStack - desiredDistanceFromStack) / distanceToStack;
         float const moveX = dragon->GetPositionX() + deltaX * moveRatio;
         float const moveY = dragon->GetPositionY() + deltaY * moveRatio;
@@ -688,6 +694,8 @@ bool KiljaedenControlDragonAction::ExecuteOutsideDarknessOfAThousandSouls(Unit* 
     constexpr float desiredDistance = 6.0f;
     constexpr float distanceTolerance = 1.0f;
     float const distanceToTarget = dragon->GetExactDist2d(target);
+
+    //By leewheel 2026-07-27 - 增加空行改善可读性
     if (distanceToTarget > desiredDistance + distanceTolerance ||
         (distanceToTarget > std::numeric_limits<float>::min() &&
          distanceToTarget < desiredDistance - distanceTolerance))

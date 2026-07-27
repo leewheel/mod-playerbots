@@ -151,6 +151,8 @@ public:
     virtual float GetValue(Action* action);
 };
 
+//By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘数
+// Felmyst飞行阶段，阻止对非Boss目标施放DoT法术
 class FelmystDontDotAddsMultiplier : public Multiplier
 {
 public:

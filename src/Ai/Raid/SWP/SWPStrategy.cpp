@@ -101,8 +101,7 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player is charmed by fog", {
         NextAction("felmyst kill charmed player", ACTION_EMERGENCY + 9) }));
 
-    //By leewheel 2026-07-27 新增 Felmyst 着陆DPS管理触发器
-    triggers.push_back(new TriggerNode("felmyst manage landing dps timer", {
+    //By leewheel 2026-07-27 新增 Felmyst 着陆DPS管理触发�?    triggers.push_back(new TriggerNode("felmyst manage landing dps timer", {
         NextAction("felmyst should hold dps while landing", ACTION_EMERGENCY + 8) }));
 
     // Eredar Twins
@@ -239,8 +238,7 @@ void RaidSunwellStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new FelmystPrioritizeDemonicVaporKiteMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeFogAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystFocusAttacksOnCharmedPlayerMultiplier(botAI));
-    //By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘数
-    multipliers.push_back(new FelmystDontDotAddsMultiplier(botAI));
+    //By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘�?    multipliers.push_back(new FelmystDontDotAddsMultiplier(botAI));
     multipliers.push_back(new FelmystDelayCooldownsMultiplier(botAI));
 
     // Eredar Twins
@@ -274,7 +272,7 @@ using namespace SwpHelpers;
 void AppendFelmystVaporPhaseMeleeExclusions(
     PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
-    if (!botAI->IsMelee(botAI->GetBot()))
+    if (!PlayerbotAI::IsMelee(botAI->GetBot()))
         return;
 
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
@@ -317,7 +315,7 @@ void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, Guid
         }
 
         Player* bot = botAI->GetBot();
-        if (botAI->IsAssistTankOfIndex(bot, 0, true) && TryGetMuruDarknessActiveState(bot, muru))
+        if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) && TryGetMuruDarknessActiveState(bot, muru))
             continue;
 
         if (attacker->GetExactDist2d(
@@ -332,7 +330,7 @@ void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, Guid
 void AppendKiljaedenShieldOrbExclusions(
     PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
-    if (!botAI->IsMelee(botAI->GetBot()))
+    if (!PlayerbotAI::IsMelee(botAI->GetBot()))
         return;
 
     if (!AI_VALUE2(Unit*, "find target", "kil'jaeden"))
@@ -363,7 +361,7 @@ void AppendKiljaedenSinisterReflectionExclusions(
         }
 
         Unit* victim = attacker->GetVictim();
-        if (!victim || !victim->IsPlayer() || !botAI->IsTank(victim->ToPlayer()))
+        if (!victim || !victim->IsPlayer() || !PlayerbotAI::IsTank(victim->ToPlayer()))
             exclusions.insert(guid);
     }
 }

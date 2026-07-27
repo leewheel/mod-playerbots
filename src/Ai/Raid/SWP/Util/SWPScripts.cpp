@@ -266,8 +266,9 @@ public:
         switch (spellInfo->Id)
         {
 case static_cast<uint32>(SwpSpells::SPELL_SPECTRAL_BLAST_PORTAL):
-if (FindFirstSunwellSurfaceCombatBotInGroup(player))
-RecordKalecgosSpectralBlastTarget(player);
+//By leewheel 2026-07-27 - 将查找到的botAI直接传给RecordKalecgosSpectralBlastTarget
+if (PlayerbotAI* botAI = FindFirstSunwellSurfaceCombatBotInGroup(player))
+    RecordKalecgosSpectralBlastTarget(player, botAI);
 break;
 
 case static_cast<uint32>(SwpSpells::SPELL_TELEPORT_SPECTRAL):

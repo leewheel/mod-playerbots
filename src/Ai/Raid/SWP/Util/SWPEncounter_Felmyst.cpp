@@ -1328,7 +1328,7 @@ Player* GetFelmystCharmedTarget(Player* bot, Unit* felmyst)
     if (!group)
         return nullptr;
 
-    bool const isMelee = PlayerbotAI::IsMelee(bot);
+    //By leewheel 2026-07-27 - 删除isMelee变量，直接内联调用
     Player* lowestHpTarget = nullptr;
     uint32 lowestHp = std::numeric_limits<uint32>::max();
 
@@ -1341,10 +1341,10 @@ Player* GetFelmystCharmedTarget(Player* bot, Unit* felmyst)
         if (!member->HasAura(static_cast<uint32>(SwpSpells::SPELL_FOG_OF_CORRUPTION_CHARM)))
             continue;
 
-        if (isMelee && !felmyst->IsFlying() && !bot->IsWithinMeleeRange(member))
+        if (PlayerbotAI::IsMelee(bot) && !felmyst->IsFlying() && !bot->IsWithinMeleeRange(member))
             continue;
 
-        if (!isMelee && bot->GetDistance2d(member) > 30.0f)
+        if (!PlayerbotAI::IsMelee(bot) && bot->GetDistance2d(member) > 30.0f)
             continue;
 
         if (member->GetHealth() < lowestHp)

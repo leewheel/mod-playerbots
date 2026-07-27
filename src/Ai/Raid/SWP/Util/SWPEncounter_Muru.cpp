@@ -11,7 +11,8 @@
 #include <algorithm>
 #include <list>
 
-// M'uru goes invisible during the Entropius phase but remains on player threat lists
+//By leewheel 2026-07-27 - 注释格式调整，添加Note前缀
+// Note: M'uru goes invisible during the Entropius phase but remains on player threat lists
 
 namespace SwpHelpers
 {

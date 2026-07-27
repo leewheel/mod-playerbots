@@ -65,7 +65,8 @@ void EnsureKalecgosGroupAssignments(Player* bot);
 Player* GetKalecgosCurrentTank(Player* bot);
 Player* GetKalecgosReplacementTank(Player* bot);
 bool ShouldEnterKalecgosSpectralRift(Player* bot);
-void RecordKalecgosSpectralBlastTarget(Player* bot);
+//By leewheel 2026-07-27 - announcerAI参数由调用方传入，避免函数内部重复查找botAI
+void RecordKalecgosSpectralBlastTarget(Player* bot, PlayerbotAI* announcerAI);
 void RecordKalecgosSpectralRealmEnter(Player* bot);
 void UpdateKalecgosRealmState(Player* bot, bool inSpectralRealm, uint32 timestamp);
 

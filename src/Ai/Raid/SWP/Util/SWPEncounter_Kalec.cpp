@@ -3,6 +3,7 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+//By leewheel 2026-07-27 引入brighton-chi的SWP静态方法重�?// Kalecgos遭遇战工具函数重构：使用 PlayerbotAI::IsTank/IsHeal/IsRangedDps/IsMelee/IsDps 静态方�?// 替代 botAI->IsX(member) 实例方法调用，传�?Player* 而非 PlayerbotAI*
 
 #include "SWPEncounter_Kalec.h"
 #include "PlayerbotAI.h"
@@ -133,11 +134,11 @@ std::array<ObjectGuid, KALECGOS_TANK_COUNT> GetExpectedKalecgosTankAssignmentGui
         if (!member)
             continue;
 
-        if (botAI->IsMainTank(member))
+        if (PlayerbotAI::IsMainTank(member))
             tankGuids[0] = member->GetGUID();
-        else if (botAI->IsAssistTankOfIndex(member, 0))
+        else if (PlayerbotAI::IsAssistTankOfIndex(member, 0))
             tankGuids[1] = member->GetGUID();
-        else if (botAI->IsAssistTankOfIndex(member, 1))
+        else if (PlayerbotAI::IsAssistTankOfIndex(member, 1))
             tankGuids[2] = member->GetGUID();
     }
 
@@ -536,7 +537,7 @@ bool IsKalecgosDecurser(Player* bot)
         case CLASS_SHAMAN:
             break;
         case CLASS_DRUID:
-            if (!botAI->IsRanged(bot))
+            if (!PlayerbotAI::IsRanged(bot))
                 return false;
             break;
         default:
@@ -619,11 +620,11 @@ void EnsureKalecgosGroupAssignments(Player* bot)
 
         if (IsKalecgosDecurser(member))
             decursers.push_back(member);
-        else if (botAI->IsHeal(member))
+        else if (PlayerbotAI::IsHeal(member))
             healers.push_back(member);
         else if (botAI->IsRangedDps(member))
             rangedDps.push_back(member);
-        else if (botAI->IsMelee(member) && botAI->IsDps(member))
+        else if (PlayerbotAI::IsMelee(member) && PlayerbotAI::IsDps(member))
             meleeDps.push_back(member);
         else
             others.push_back(member);
@@ -729,7 +730,8 @@ bool ShouldEnterKalecgosSpectralRift(Player* bot)
     return state.blastedPlayerGuid != bot->GetGUID();
 }
 
-void RecordKalecgosSpectralBlastTarget(Player* bot)
+//By leewheel 2026-07-27 - announcerAI由调用方传入，移除函数内部查找botAI的逻辑
+void RecordKalecgosSpectralBlastTarget(Player* bot, PlayerbotAI* announcerAI)
 {
     Group* group = bot->GetGroup();
     if (!group || bot->GetMapId() != SWP_MAP_ID)
@@ -744,7 +746,6 @@ void RecordKalecgosSpectralBlastTarget(Player* bot)
     state.activeRiftGroup = ResolveKalecgosActiveRiftGroup(group, state);
     AssignKalecgosTankTargetsForActiveRift(bot, group, state);
 
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     Player* currentTank = GetKalecgosBlastAnnouncementCurrentTank(group, state);
 
     if (HasKalecgosTankAssignment(state.tankAssignmentGuids, bot->GetGUID()))
@@ -753,7 +754,7 @@ void RecordKalecgosSpectralBlastTarget(Player* bot)
             return;
 
         AnnounceKalecgosTankTransition(
-            botAI, "kalecgos_tank_sent_to_spectral_realm",
+            announcerAI, "kalecgos_tank_sent_to_spectral_realm",
             "Tank %tank has been sent to the Spectral Realm. The active Kalecgos tank is %current.",
             {
                 {"%tank", bot->GetName()},
@@ -767,7 +768,7 @@ void RecordKalecgosSpectralBlastTarget(Player* bot)
         outgoingTank && currentTank)
     {
         AnnounceKalecgosTankTransition(
-            botAI, "kalecgos_tank_should_enter_spectral_realm",
+            announcerAI, "kalecgos_tank_should_enter_spectral_realm",
             "Tank %tank should enter the Spectral Realm. The active Kalecgos tank is %current.",
             {
                 {"%tank", outgoingTank->GetName()},
