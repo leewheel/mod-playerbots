@@ -112,7 +112,7 @@ namespace KarazhanHelpers
         return redBlockers;
     }
 
-    // Blue beam blockers: non-Rogue/Warrior DPS bots, no Nether Exhaustion Blue and <24 stacks of Blue Beam debuff
+    // Blue beam blockers: mana-user DPS bots, no Nether Exhaustion Blue and <24 stacks of Blue Beam debuff
     std::vector<Player*> GetBlueBlockers(PlayerbotAI* botAI, Player* bot)
     {
         std::vector<Player*> blueBlockers;
@@ -128,11 +128,10 @@ namespace KarazhanHelpers
                 Aura* blueBuff = member->GetAura(SPELL_BLUE_BEAM_DEBUFF);
                 bool overStack = blueBuff && blueBuff->GetStackAmount() >= 24;
 
-                bool isDps = botAI->IsDps(member);
-                bool isWarrior = member->getClass() == CLASS_WARRIOR;
-                bool isRogue = member->getClass() == CLASS_ROGUE;
+                bool isDps = PlayerbotAI::IsDps(member);
+                bool isManaUser = member->getPowerType() == POWER_MANA;
 
-                if (isDps && !isWarrior && !isRogue && !hasExhaustion && !overStack)
+                if (isDps && isManaUser && !hasExhaustion && !overStack)
                     blueBlockers.push_back(member);
             }
         }
@@ -141,7 +140,7 @@ namespace KarazhanHelpers
     }
 
     // Green beam blockers:
-    // (1) Prioritize Rogues and non-tank Warrior bots, no Nether Exhaustion Green
+    // (1) Prioritize non-mana-user DPS bots, no Nether Exhaustion Green
     // (2) Then assign Healer bots, no Nether Exhaustion Green and <24 stacks of Green Beam debuff
     std::vector<Player*> GetGreenBlockers(PlayerbotAI* botAI, Player* bot)
     {
@@ -155,11 +154,11 @@ namespace KarazhanHelpers
                     continue;
 
                 bool hasExhaustion = member->HasAura(SPELL_NETHER_EXHAUSTION_GREEN);
-                bool isRogue = member->getClass() == CLASS_ROGUE;
-                bool isDpsWarrior = member->getClass() == CLASS_WARRIOR && botAI->IsDps(member);
-                bool eligibleRogueWarrior = (isRogue || isDpsWarrior) && !hasExhaustion;
+                bool isDps = PlayerbotAI::IsDps(member);
+                bool isNonManaUser = member->getPowerType() != POWER_MANA;
+                bool eligibleNonMana = isDps && isNonManaUser && !hasExhaustion;
 
-                if (eligibleRogueWarrior)
+                if (eligibleNonMana)
                     greenBlockers.push_back(member);
             }
 
@@ -172,7 +171,7 @@ namespace KarazhanHelpers
                 bool hasExhaustion = member->HasAura(SPELL_NETHER_EXHAUSTION_GREEN);
                 Aura* greenBuff = member->GetAura(SPELL_GREEN_BEAM_DEBUFF);
                 bool overStack = greenBuff && greenBuff->GetStackAmount() >= 24;
-                bool isHealer = botAI->IsHeal(member);
+                bool isHealer = PlayerbotAI::IsHeal(member);
                 bool eligibleHealer = isHealer && !hasExhaustion && !overStack;
 
                 if (eligibleHealer)

@@ -219,10 +219,12 @@ bool FelmystKiteDemonicVaporAction::Execute(Event /*event*/)
     if (!TryGetFelmystDemonicVaporKiteDestination(bot, destination))
         return false;
 
-    float const distToDestination = bot->GetExactDist2d(
-        destination.GetPositionX(), destination.GetPositionY());
+float const distToDestination = bot->GetExactDist2d(
+destination.GetPositionX(), destination.GetPositionY());
+if (distToDestination < 0.5f)
+return false;
 
-    float const dX = destination.GetPositionX() - bot->GetPositionX();
+float const dX = destination.GetPositionX() - bot->GetPositionX();
     float const dY = destination.GetPositionY() - bot->GetPositionY();
     float const moveDist = std::min(3.5f, distToDestination);
     float const moveX = bot->GetPositionX() + (dX / distToDestination) * moveDist;

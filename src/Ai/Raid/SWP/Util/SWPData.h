@@ -87,8 +87,9 @@ enum class SwpNpcs : uint32
     NPC_APOCALYPSE_GUARD         = 25593,
     NPC_VOLATILE_FIEND           = 25851,
 
-    // Kalecgos
-    NPC_KALECGOS_HUMANOID        = 24891,
+// Kalecgos
+NPC_KALECGOS_DRAGON          = 24850,
+NPC_KALECGOS_HUMANOID        = 24891,
 
     // Felmyst
     NPC_FELMYST                  = 25038,

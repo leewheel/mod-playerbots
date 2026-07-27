@@ -68,6 +68,9 @@ void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Tr
     triggerContexts.Add(new RaidVanillaNaxxTriggerContext());
     //End By leewheel
     triggerContexts.Add(new TbcDungeonHellfireRampartsTriggerContext());
+    //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
+    triggerContexts.Add(new TbcDungeonUnderbogTriggerContext());
+    //End By leewheel
     triggerContexts.Add(new TbcDungeonAuchenaiCryptsTriggerContext());
     triggerContexts.Add(new TbcDungeonSethekkHallsTriggerContext());
     triggerContexts.Add(new TbcDungeonMechanarTriggerContext());

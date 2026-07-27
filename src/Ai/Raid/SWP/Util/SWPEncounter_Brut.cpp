@@ -176,16 +176,14 @@ bool TryGetBrutallusAssignedPositionIndex(Player* bot, bool wantRanged, uint8& p
     }
 
     positionIndex = 0;
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
         if (!member || member->GetMapId() != SWP_MAP_ID)
             continue;
 
-        if (!botAI->IsMelee(member) || botAI->IsMainTank(member) ||
-            botAI->IsAssistTankOfIndex(member, 0, true))
+        if (!PlayerbotAI::IsMelee(member) || PlayerbotAI::IsMainTank(member) ||
+            PlayerbotAI::IsAssistTankOfIndex(member, 0, true))
         {
             continue;
         }

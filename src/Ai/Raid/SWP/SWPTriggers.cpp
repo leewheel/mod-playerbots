@@ -818,8 +818,8 @@ bool KiljaedenDragonOrbIsActiveTrigger::IsActive()
         if (inUse)
             orbInUse = true;
 
-        if (orb && !orb->HasGameObjectFlag(GO_FLAG_NOT_SELECTABLE))
-            result = true;
+if (!orb->HasGameObjectFlag(GO_FLAG_NOT_SELECTABLE))
+result = true;
     }
 
     if (orbInUse)

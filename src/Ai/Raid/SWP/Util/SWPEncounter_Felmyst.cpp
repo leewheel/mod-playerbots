@@ -756,7 +756,6 @@ void EnsureFelmystRangedAssignments(Player* bot)
     if (!group)
         return;
 
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     auto& assignments = felmystEncounterStates[bot->GetInstanceId()].rangedAssignments;
     std::vector<Player*> healers;
     std::vector<Player*> rangedDamage;
@@ -766,10 +765,10 @@ void EnsureFelmystRangedAssignments(Player* bot)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || !botAI->IsRanged(member))
+        if (!member || !PlayerbotAI::IsRanged(member))
             continue;
 
-        if (botAI->IsHeal(member))
+        if (PlayerbotAI::IsHeal(member))
             healers.push_back(member);
         else
             rangedDamage.push_back(member);
@@ -1079,16 +1078,13 @@ bool TryGetFelmystFogOfCorruptionStageState(Unit* felmyst, FelmystFogOfCorruptio
         return true;
     }
 
-    if (isSweeping)
-    {
-        FelmystFogLane selectedLane = currentLane !=
-            FelmystFogLane::None ? currentLane : tracker.lane;
-        if (selectedLane == FelmystFogLane::None)
-            return false;
+if (isSweeping)
+{
+if (tracker.lane == FelmystFogLane::None)
+return false;
 
-        tracker.lane = selectedLane;
-        tracker.phase = FelmystFogPhase::Sweep;
-        tracker.expireMs = now + fogRecoveryGraceMs;
+tracker.phase = FelmystFogPhase::Sweep;
+tracker.expireMs = now + fogRecoveryGraceMs;
         state = tracker;
         return true;
     }

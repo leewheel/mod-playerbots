@@ -5,6 +5,10 @@
  */
 
 #include "TKStrategy.h"
+#include "AiObjectContext.h"
+#include "PlayerbotAI.h"
+#include "Playerbots.h"
+#include "TKHelpers.h"
 #include "TKMultipliers.h"
 
 void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
@@ -165,4 +169,39 @@ void RaidTempestKeepStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new KaelthasSunstriderDisableDisperseMultiplier(botAI));
     multipliers.push_back(new KaelthasSunstriderDelayCooldownsMultiplier(botAI));
     multipliers.push_back(new KaelthasSunstriderStaySpreadDuringGravityLapseMultiplier(botAI));
+}
+
+namespace
+{
+using namespace TempestKeepHelpers;
+
+void AppendKaelthasDevastationExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    if (Unit* axe = AI_VALUE2(Unit*, "find target", "devastation"))
+        exclusions.insert(axe->GetGUID());
+}
+
+void AppendEmberOfAlarExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->GetEntry() == static_cast<uint32>(TempestKeepNPCs::NPC_EMBER_OF_ALAR))
+            exclusions.insert(unit->GetGUID());
+    }
+}
+
+} // end anonymous namespace
+
+void RaidTempestKeepStrategy::AppendTargetExclusions(
+    GuidSet& exclusions, TargetValueExclusionType /*type*/)
+{
+    Player* bot = botAI->GetBot();
+    if (!botAI->IsMelee(bot) && !botAI->IsDps(bot))
+        return;
+
+    AppendKaelthasDevastationExclusions(botAI, exclusions);
+    AppendEmberOfAlarExclusions(botAI, exclusions);
 }

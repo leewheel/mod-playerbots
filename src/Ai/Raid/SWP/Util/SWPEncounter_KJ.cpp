@@ -10,7 +10,6 @@
 #include "Timer.h"
 #include <algorithm>
 #include <cmath>
-#include <unordered_set>
 
 namespace SwpHelpers
 {
@@ -251,10 +250,9 @@ void EnsureKiljaedenRangedAssignments(Player* bot)
     if (!group || bot->GetMapId() != SWP_MAP_ID)
         return;
 
-    auto& assignments = kiljaedenEncounterStates[bot->GetInstanceId()].rangedAssignments;
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
+auto& assignments = kiljaedenEncounterStates[bot->GetInstanceId()].rangedAssignments;
 
-    std::vector<ObjectGuid> invalidAssignments;
+std::vector<ObjectGuid> invalidAssignments;
     for (auto const& assignment : assignments)
     {
         bool found = false;
@@ -264,8 +262,8 @@ void EnsureKiljaedenRangedAssignments(Player* bot)
             if (!member || member->GetGUID() != assignment.first)
                 continue;
 
-            found = member->GetMapId() == SWP_MAP_ID &&
-                botAI->IsRanged(member) && GET_PLAYERBOT_AI(member);
+found = member->GetMapId() == SWP_MAP_ID &&
+PlayerbotAI::IsRanged(member) && GET_PLAYERBOT_AI(member);
 
             break;
         }
@@ -304,16 +302,16 @@ void EnsureKiljaedenRangedAssignments(Player* bot)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || member->GetMapId() != SWP_MAP_ID || !botAI->IsRanged(member) ||
-            !GET_PLAYERBOT_AI(member))
-        {
-            continue;
-        }
+if (!member || member->GetMapId() != SWP_MAP_ID || !PlayerbotAI::IsRanged(member) ||
+!GET_PLAYERBOT_AI(member))
+{
+continue;
+}
 
-        if (assignments.find(member->GetGUID()) != assignments.end())
-            continue;
+if (assignments.find(member->GetGUID()) != assignments.end())
+continue;
 
-        if (botAI->IsHeal(member))
+if (PlayerbotAI::IsHeal(member))
             healers.push_back(member);
         else
             rangedDamage.push_back(member);

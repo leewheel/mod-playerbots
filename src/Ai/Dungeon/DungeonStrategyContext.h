@@ -3,6 +3,9 @@
 
 #include "Strategy.h"
 #include "HFRStrategy.h"
+//By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
+#include "UBStrategy.h"
+//End By leewheel
 #include "ACStrategy.h"
 #include "SethStrategy.h"
 #include "MechStrategy.h"
@@ -49,6 +52,9 @@ class DungeonStrategyContext : public NamedObjectContext<Strategy>
 
             // Burning Crusade
             creators["tbc-hfr"] = &DungeonStrategyContext::tbc_hfr;         // Hellfire Citadel: Hellfire Ramparts
+            //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
+            creators["tbc-ub"] = &DungeonStrategyContext::tbc_ub;           // Coilfang Reservoir: The Underbog
+            //End By leewheel
             creators["tbc-ac"] = &DungeonStrategyContext::tbc_ac;           // Auchindoun: Auchenai Crypts
             creators["tbc-seth"] = &DungeonStrategyContext::tbc_seth;       // Auchindoun: Sethekk Halls
             creators["tbc-mech"] = &DungeonStrategyContext::tbc_mech;       // Tempest Keep: The Mechanar
@@ -73,6 +79,9 @@ class DungeonStrategyContext : public NamedObjectContext<Strategy>
         }
     private:
         static Strategy* tbc_hfr(PlayerbotAI* botAI) { return new TbcDungeonHellfireRampartsStrategy(botAI); }
+        //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
+        static Strategy* tbc_ub(PlayerbotAI* botAI) { return new TbcDungeonUnderbogStrategy(botAI); }
+        //End By leewheel
         static Strategy* tbc_ac(PlayerbotAI* botAI) { return new TbcDungeonAuchenaiCryptsStrategy(botAI); }
         static Strategy* tbc_seth(PlayerbotAI* botAI) { return new TbcDungeonSethekkHallsStrategy(botAI); }
         static Strategy* tbc_mech(PlayerbotAI* botAI) { return new TbcDungeonMechanarStrategy(botAI); }

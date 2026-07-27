@@ -68,6 +68,9 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new RaidVanillaNaxxActionContext());
     //End By leewheel
     actionContexts.Add(new TbcDungeonHellfireRampartsActionContext());
+    //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
+    actionContexts.Add(new TbcDungeonUnderbogActionContext());
+    //End By leewheel
     actionContexts.Add(new TbcDungeonAuchenaiCryptsActionContext());
     actionContexts.Add(new TbcDungeonSethekkHallsActionContext());
     actionContexts.Add(new TbcDungeonMechanarActionContext());

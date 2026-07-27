@@ -265,15 +265,15 @@ public:
 
         switch (spellInfo->Id)
         {
-            case static_cast<uint32>(SwpSpells::SPELL_SPECTRAL_BLAST_PORTAL):
-                if (PlayerbotAI* botAI = FindFirstSunwellSurfaceCombatBotInGroup(player))
-                    RecordKalecgosSpectralBlastTarget(player);
-                break;
+case static_cast<uint32>(SwpSpells::SPELL_SPECTRAL_BLAST_PORTAL):
+if (FindFirstSunwellSurfaceCombatBotInGroup(player))
+RecordKalecgosSpectralBlastTarget(player);
+break;
 
-            case static_cast<uint32>(SwpSpells::SPELL_TELEPORT_SPECTRAL):
-                if (PlayerbotAI* botAI = FindFirstSunwellCombatBotInGroup(player))
-                    RecordKalecgosSpectralRealmEnter(player);
-                break;
+case static_cast<uint32>(SwpSpells::SPELL_TELEPORT_SPECTRAL):
+if (FindFirstSunwellCombatBotInGroup(player))
+RecordKalecgosSpectralRealmEnter(player);
+break;
 
             case static_cast<uint32>(SwpSpells::SPELL_TELEPORT_NORMAL_REALM):
                 if (FindFirstSunwellCombatBotInGroup(player))

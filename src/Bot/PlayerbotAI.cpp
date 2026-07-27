@@ -1629,6 +1629,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     {
         "aq20", "blacktemple", "bwl", "gruulslair", "hyjal", "icc", "karazhan",
         "magtheridon", "moltencore", "naxx", "onyxia", "rs", "ssc", "tbc-ac", "tempestkeep",
+        "tbc-ub",
         "ulduar", "voa", "wotlk-an", "wotlk-cos", "wotlk-dtk", "wotlk-eoe", "wotlk-fos",
         "wotlk-gd", "wotlk-hol", "wotlk-hor", "wotlk-hos", "wotlk-nex", "wotlk-occ",
         "wotlk-ok", "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up",
@@ -1648,6 +1649,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         {"moltencore",    "熔火之心"},
         {"bwl",           "黑翼之巢"},
         {"aq20",          "安其拉废墟"},
+        //By leewheel 2026-07-11
+        {"vanilla naxx",  "纳克萨玛斯（60级）"},
+        //End By leewheel
         // 燃烧的远征
         {"karazhan",      "卡拉赞"},
         {"gruulslair",    "格鲁尔的巢穴"},
@@ -1658,6 +1662,10 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         {"blacktemple",   "黑暗神殿"},
         {"zulaman",       "祖阿曼"},
         {"tbc-ac",        "奥金尼地穴"},
+        {"tbc-ub",        "幽暗沼泽"},
+        //By leewheel 2026-07-08
+        {"sunwell",       "太阳井高地"},
+        //End By leewheel
         // 巫妖王之怒（5人副本）
         {"wotlk-uk",      "乌特加德城堡"},
         {"wotlk-up",      "乌特加德之巅"},
@@ -1683,12 +1691,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         {"voa",           "阿尔卡冯的宝库"},
         {"icc",           "冰冠堡垒"},
         {"rs",            "红玉圣殿"},
-        //By leewheel 2026-07-08
-        {"sunwell",       "太阳井高地"},
-        //End By leewheel
-        //By leewheel 2026-07-11
-        {"vanilla naxx",  "纳克萨玛斯（60级）"},
-        //End By leewheel
+
     };
     //End By leewheel
 
@@ -1729,6 +1732,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             break;
         case 544:
             strategyName = "magtheridon";  // Magtheridon's Lair
+            break;
+        case 546:
+            strategyName = "tbc-ub";  // Coilfang Reservoir: The Underbog
             break;
         case 548:
             strategyName = "ssc";  // Serpentshrine Cavern

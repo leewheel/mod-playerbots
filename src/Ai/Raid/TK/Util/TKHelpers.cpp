@@ -20,7 +20,7 @@ namespace TempestKeepHelpers
         for (GroupReference* ref = group->GetFirstMember(); ref != nullptr; ref = ref->next())
         {
             Player* member = ref->GetSource();
-            if (!member || !member->IsAlive() || member == bot || botAI->IsTank(member))
+            if (!member || !member->IsAlive() || member == bot || PlayerbotAI::IsTank(member))
                 continue;
 
             float distance = bot->GetExactDist2d(member);
