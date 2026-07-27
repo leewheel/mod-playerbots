@@ -153,6 +153,7 @@ namespace MechanarFlames
         }
     }
 
+    //By leewheel 2026-07-27 收集正在追踪机器人的追逐之火
     void CollectChasingFlames(Player* bot, std::vector<Creature*>& out)
     {
         std::list<Creature*> flames;

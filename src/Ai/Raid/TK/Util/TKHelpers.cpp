@@ -20,6 +20,7 @@ namespace TempestKeepHelpers
         for (GroupReference* ref = group->GetFirstMember(); ref != nullptr; ref = ref->next())
         {
             Player* member = ref->GetSource();
+            //By leewheel 2026-07-27 使用静态方法 PlayerbotAI::IsTank 替代实例方法 botAI->IsTank
             if (!member || !member->IsAlive() || member == bot || PlayerbotAI::IsTank(member))
                 continue;
 

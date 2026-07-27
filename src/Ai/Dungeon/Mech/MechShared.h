@@ -87,6 +87,8 @@ namespace MechanarFlames
 
     void CollectAvoidFlames(Player* bot, std::vector<std::pair<float, float>>& out);
 
+    //By leewheel 2026-07-27 引入brighton-chi的Mech(能源舰)Sepethrea火焰处理重构
+    // 收集正在追踪机器人的追逐之火（用于风筝路线计算）
     void CollectChasingFlames(Player* bot, std::vector<Creature*>& out);
 
     ObjectGuid FindFixatingFlameGuid(Player* bot);

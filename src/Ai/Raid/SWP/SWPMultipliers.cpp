@@ -485,6 +485,8 @@ float FelmystFocusAttacksOnCharmedPlayerMultiplier::GetValue(Action* action)
     return 1.0f;
 }
 
+//By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘数
+// Felmyst飞行阶段，阻止对非Boss目标施放DoT法术
 float FelmystDontDotAddsMultiplier::GetValue(Action* action)
 {
     if (!dynamic_cast<CastDebuffSpellOnAttackerAction*>(action))
@@ -494,6 +496,7 @@ float FelmystDontDotAddsMultiplier::GetValue(Action* action)
     if (!felmyst || !felmyst->IsFlying())
         return 1.0f;
 
+    // 目标不是Felmyst时压制DoT
     if (action->GetTarget() != felmyst)
         return 0.0f;
 

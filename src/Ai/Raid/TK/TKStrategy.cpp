@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 2026-07-27 引入brighton-chi的TK(风暴要塞)目标排除和静态方法重构
+// 风暴要塞策略实现文件
+// 新增目标排除：近战DPS排除 Kael'thas的毁灭斧(Devastation)和Al'ar的灰烬之子(Ember of Alar)
 #include "TKStrategy.h"
 #include "AiObjectContext.h"
 #include "PlayerbotAI.h"
@@ -171,10 +174,12 @@ void RaidTempestKeepStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new KaelthasSunstriderStaySpreadDuringGravityLapseMultiplier(botAI));
 }
 
+//By leewheel 2026-07-27 新增目标排除逻辑
 namespace
 {
 using namespace TempestKeepHelpers;
 
+// 排除 Kael'thas 的毁灭斧（Devastation）—— 近战DPS不应攻击它
 void AppendKaelthasDevastationExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
     AiObjectContext* context = botAI->GetAiObjectContext();
@@ -182,6 +187,7 @@ void AppendKaelthasDevastationExclusions(PlayerbotAI* botAI, GuidSet& exclusions
         exclusions.insert(axe->GetGUID());
 }
 
+// 排除 Al'ar 的灰烬之子（Ember of Alar）—— 近战DPS不应攻击它
 void AppendEmberOfAlarExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
     AiObjectContext* context = botAI->GetAiObjectContext();
@@ -195,10 +201,12 @@ void AppendEmberOfAlarExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 
 } // end anonymous namespace
 
+// 目标排除：近战DPS排除毁灭斧和灰烬之子
 void RaidTempestKeepStrategy::AppendTargetExclusions(
     GuidSet& exclusions, TargetValueExclusionType /*type*/)
 {
     Player* bot = botAI->GetBot();
+    // 只有近战DPS才需要排除这些目标
     if (!botAI->IsMelee(bot) && !botAI->IsDps(bot))
         return;
 

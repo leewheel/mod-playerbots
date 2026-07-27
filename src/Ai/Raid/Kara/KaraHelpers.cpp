@@ -128,6 +128,7 @@ namespace KarazhanHelpers
                 Aura* blueBuff = member->GetAura(SPELL_BLUE_BEAM_DEBUFF);
                 bool overStack = blueBuff && blueBuff->GetStackAmount() >= 24;
 
+                //By leewheel 2026-07-27 使用 PlayerbotAI::IsDps 和 power type 替代按职业判断
                 bool isDps = PlayerbotAI::IsDps(member);
                 bool isManaUser = member->getPowerType() == POWER_MANA;
 
@@ -154,6 +155,7 @@ namespace KarazhanHelpers
                     continue;
 
                 bool hasExhaustion = member->HasAura(SPELL_NETHER_EXHAUSTION_GREEN);
+                //By leewheel 2026-07-27 使用 PlayerbotAI::IsDps 和 power type 替代按职业判断
                 bool isDps = PlayerbotAI::IsDps(member);
                 bool isNonManaUser = member->getPowerType() != POWER_MANA;
                 bool eligibleNonMana = isDps && isNonManaUser && !hasExhaustion;

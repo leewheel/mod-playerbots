@@ -101,6 +101,7 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player is charmed by fog", {
         NextAction("felmyst kill charmed player", ACTION_EMERGENCY + 9) }));
 
+    //By leewheel 2026-07-27 新增 Felmyst 着陆DPS管理触发器
     triggers.push_back(new TriggerNode("felmyst manage landing dps timer", {
         NextAction("felmyst should hold dps while landing", ACTION_EMERGENCY + 8) }));
 
@@ -238,6 +239,7 @@ void RaidSunwellStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new FelmystPrioritizeDemonicVaporKiteMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeFogAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystFocusAttacksOnCharmedPlayerMultiplier(botAI));
+    //By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘数
     multipliers.push_back(new FelmystDontDotAddsMultiplier(botAI));
     multipliers.push_back(new FelmystDelayCooldownsMultiplier(botAI));
 

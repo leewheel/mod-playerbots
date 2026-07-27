@@ -9,6 +9,9 @@
 
 #include "Strategy.h"
 
+//By leewheel 2026-07-27 引入brighton-chi的TK目标排除功能
+// 新增 HasTargetExclusions 和 AppendTargetExclusions 声明
+// 用于近战DPS排除毁灭斧和灰烬之子
 class RaidTempestKeepStrategy : public Strategy
 {
 public:
@@ -16,6 +19,7 @@ public:
 
     std::string const getName() override { return "tempestkeep"; }
 
+    // 启用目标排除：近战DPS排除特定目标
     bool HasTargetExclusions() const override { return true; }
     void AppendTargetExclusions(GuidSet& exclusions, TargetValueExclusionType type) override;
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;

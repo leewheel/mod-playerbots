@@ -304,6 +304,7 @@ private:
     static Trigger* felmyst_player_is_charmed_by_fog(PlayerbotAI* botAI) {
         return new FelmystPlayerIsCharmedByFogTrigger(botAI);
     }
+    //By leewheel 2026-07-27 新增 Felmyst 着陆时延迟DPS触发器
     static Trigger* felmyst_should_hold_dps_while_landing(PlayerbotAI* botAI) {
         return new FelmystShouldHoldDpsWhileLandingTrigger(botAI);
     }

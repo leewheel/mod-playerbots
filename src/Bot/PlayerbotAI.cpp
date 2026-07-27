@@ -1734,7 +1734,8 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             strategyName = "magtheridon";  // Magtheridon's Lair
             break;
         case 546:
-            strategyName = "tbc-ub";  // Coilfang Reservoir: The Underbog
+            //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
+            strategyName = "tbc-ub";  // 盘牙水库：幽暗沼泽 (Coilfang Reservoir: The Underbog)
             break;
         case 548:
             strategyName = "ssc";  // Serpentshrine Cavern
