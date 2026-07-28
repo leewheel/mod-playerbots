@@ -1,4 +1,4 @@
-/*
+﻿/*
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
@@ -15,8 +15,7 @@ class AlarMoveBetweenPlatformsMultiplier : public Multiplier
 {
 public:
     AlarMoveBetweenPlatformsMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar move between platforms multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar move between platforms") {}
     float GetValue(Action* action) override;
 };
 
@@ -24,17 +23,15 @@ class AlarDisableDisperseMultiplier : public Multiplier
 {
 public:
     AlarDisableDisperseMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar disable disperse multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar disable disperse") {}
     float GetValue(Action* action) override;
 };
 
-class AlarDisableTankAssistMultiplier : public Multiplier
+class AlarDisableAutomaticTargetingMultiplier : public Multiplier
 {
 public:
-    AlarDisableTankAssistMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar disable tank assist multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    AlarDisableAutomaticTargetingMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar disable automatic targeting") {}
     float GetValue(Action* action) override;
 };
 
@@ -42,17 +39,15 @@ class AlarStayAwayFromRebirthMultiplier : public Multiplier
 {
 public:
     AlarStayAwayFromRebirthMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar stay away from rebirth multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar stay away from rebirth") {}
     float GetValue(Action* action) override;
 };
 
-class AlarPhase2NoTankingIfArmorMeltedMultiplier : public Multiplier
+class AlarDontTauntBossIfArmorMeltedMultiplier : public Multiplier
 {
 public:
-    AlarPhase2NoTankingIfArmorMeltedMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar phase 2 no tanking if armor melted multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    AlarDontTauntBossIfArmorMeltedMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar don't taunt boss if armor melted") {}
     float GetValue(Action* action) override;
 };
 
@@ -62,19 +57,17 @@ class VoidReaverMaintainPositionsMultiplier : public Multiplier
 {
 public:
     VoidReaverMaintainPositionsMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "void reaver maintain positions multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "void reaver maintain positions") {}
     float GetValue(Action* action) override;
 };
 
 // High Astromancer Solarian
 
-class HighAstromancerSolarianDisableTankAssistMultiplier : public Multiplier
+class HighAstromancerSolarianDisableMeleeTargetingMultiplier : public Multiplier
 {
 public:
-    HighAstromancerSolarianDisableTankAssistMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "high astromancer solarian disable tank assist multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    HighAstromancerSolarianDisableMeleeTargetingMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "high astromancer solarian disable melee targeting") {}
     float GetValue(Action* action) override;
 };
 
@@ -82,8 +75,7 @@ class HighAstromancerSolarianMaintainPositionMultiplier : public Multiplier
 {
 public:
     HighAstromancerSolarianMaintainPositionMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "high astromancer solarian maintain position multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "high astromancer solarian maintain position") {}
     float GetValue(Action* action) override;
 };
 
@@ -93,8 +85,7 @@ class KaelthasSunstriderWaitForDpsMultiplier : public Multiplier
 {
 public:
     KaelthasSunstriderWaitForDpsMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider wait for dps multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider wait for dps") {}
     float GetValue(Action* action) override;
 };
 
@@ -102,8 +93,7 @@ class KaelthasSunstriderKiteThaladredMultiplier : public Multiplier
 {
 public:
     KaelthasSunstriderKiteThaladredMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider kite thaladred multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider kite thaladred") {}
     float GetValue(Action* action) override;
 };
 
@@ -111,8 +101,7 @@ class KaelthasSunstriderControlMisdirectionMultiplier : public Multiplier
 {
 public:
     KaelthasSunstriderControlMisdirectionMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider control misdirection multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider control misdirection") {}
     float GetValue(Action* action) override;
 };
 
@@ -120,8 +109,7 @@ class KaelthasSunstriderKeepDistanceFromCapernianMultiplier : public Multiplier
 {
 public:
     KaelthasSunstriderKeepDistanceFromCapernianMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider keep distance from capernian multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider keep distance from capernian") {}
     float GetValue(Action* action) override;
 };
 
@@ -129,17 +117,23 @@ class KaelthasSunstriderManageWeaponTankingMultiplier : public Multiplier
 {
 public:
     KaelthasSunstriderManageWeaponTankingMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider manage weapon tanking multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider manage weapon tanking") {}
     float GetValue(Action* action) override;
 };
 
-class KaelthasSunstriderDisableAdvisorTankAssistMultiplier : public Multiplier
+class KaelthasSunstriderSuppressEquipUpgradeMultiplier : public Multiplier
 {
 public:
-    KaelthasSunstriderDisableAdvisorTankAssistMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider disable advisor tank assist multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    KaelthasSunstriderSuppressEquipUpgradeMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider suppress equip upgrade") {}
+    float GetValue(Action* action) override;
+};
+
+class KaelthasSunstriderManageAutomaticTargetingMultiplier : public Multiplier
+{
+public:
+    KaelthasSunstriderManageAutomaticTargetingMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider manage automatic targeting") {}
     float GetValue(Action* action) override;
 };
 
@@ -147,8 +141,15 @@ class KaelthasSunstriderDisableDisperseMultiplier : public Multiplier
 {
 public:
     KaelthasSunstriderDisableDisperseMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider disable disperse multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider disable disperse") {}
+    float GetValue(Action* action) override;
+};
+
+class KaelthasSunstriderPrepareForPhase3Multiplier : public Multiplier
+{
+public:
+    KaelthasSunstriderPrepareForPhase3Multiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider prepare for phase 3") {}
     float GetValue(Action* action) override;
 };
 
@@ -156,8 +157,7 @@ class KaelthasSunstriderDelayCooldownsMultiplier : public Multiplier
 {
 public:
     KaelthasSunstriderDelayCooldownsMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider delay cooldowns multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider delay cooldowns") {}
     float GetValue(Action* action) override;
 };
 
@@ -165,8 +165,7 @@ class KaelthasSunstriderStaySpreadDuringGravityLapseMultiplier : public Multipli
 {
 public:
     KaelthasSunstriderStaySpreadDuringGravityLapseMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider stay spread during gravity lapse multiplier") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+        PlayerbotAI* botAI) : Multiplier(botAI, "kael'thas sunstrider stay spread during gravity lapse") {}
     float GetValue(Action* action) override;
 };
 

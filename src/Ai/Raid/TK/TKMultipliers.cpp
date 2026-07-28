@@ -4,10 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 2026-07-28 - 同步上游brighton-chi/mod-playerbots，按副本审核优化
+
 #include "TKMultipliers.h"
-#include "TKActions.h"
-#include "TKHelpers.h"
-#include "TKKaelthasBossAI.h"
 #include "ChooseTargetActions.h"
 #include "DKActions.h"
 #include "DruidActions.h"
@@ -20,99 +19,130 @@
 #include "Playerbots.h"
 #include "RogueActions.h"
 #include "ShamanActions.h"
+#include "TKActions.h"
+#include "TKHelpers.h"
+#include "TKKaelthasBossAI.h"
 #include "WarlockActions.h"
 #include "WarriorActions.h"
 
+namespace
+{
+
+//By leewheel 2026-07-28 - 提取单目标嘲讽判断为公共辅助函数，避免重复代码
+bool IsSingleTargetTaunt(Action* action)
+{
+    return dynamic_cast<CastTauntAction*>(action) ||
+        dynamic_cast<CastGrowlAction*>(action) ||
+        dynamic_cast<CastHandOfReckoningAction*>(action) ||
+        dynamic_cast<CastDarkCommandAction*>(action) ||
+        dynamic_cast<CastDeathGripAction*>(action);
+}
+
+}
+
 // Al'ar <Phoenix God>
 
+//By leewheel 2026-07-28 - 优化判断顺序：先过滤action类型，再查alar状态，减少不必要的AI_VALUE查询
 float AlarMoveBetweenPlatformsMultiplier::GetValue(Action* action)
 {
+    if (!dynamic_cast<TankFaceAction*>(action) &&
+        !dynamic_cast<CastKillingSpreeAction*>(action) &&
+        !dynamic_cast<CastDisengageAction*>(action) &&
+        !dynamic_cast<CastBlinkBackAction*>(action) &&
+        !dynamic_cast<ReachTargetAction*>(action))
+    {
+        return 1.0f;
+    }
+
     Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
-    if (!alar)
-        return 1.0f;
-
-    if (isAlarInPhase2[alar->GetMap()->GetInstanceId()])
-        return 1.0f;
-
-    if (dynamic_cast<ReachTargetAction*>(action) ||
-        dynamic_cast<TankFaceAction*>(action) ||
-        dynamic_cast<CastKillingSpreeAction*>(action) ||
-        dynamic_cast<CastDisengageAction*>(action) ||
-        dynamic_cast<CastBlinkBackAction*>(action))
-        return 0.0f;
-
-    if (botAI->IsDps(bot) &&
-        dynamic_cast<CastReachTargetSpellAction*>(action))
+    if (alar && !isAlarInPhase2[alar->GetMap()->GetInstanceId()])
         return 0.0f;
 
     return 1.0f;
 }
 
+//By leewheel 2026-07-28 - 拆分Follow和Flee判断；phase2前禁止跟随，phase2中非战斗状态也禁止跟随
 float AlarDisableDisperseMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "al'ar"))
+    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    if (!alar)
         return 1.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
         !dynamic_cast<TankFaceAction*>(action) &&
         !dynamic_cast<SetBehindTargetAction*>(action))
+    {
+        return 0.0f;
+    }
+
+    if (dynamic_cast<FleeAction*>(action))
         return 0.0f;
 
-    if (dynamic_cast<FollowAction*>(action) ||
-        dynamic_cast<FleeAction*>(action))
+    if (!isAlarInPhase2[alar->GetMap()->GetInstanceId()])
+        return 1.0f;
+
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (dynamic_cast<FollowAction*>(action))
         return 0.0f;
 
     return 1.0f;
 }
 
-float AlarDisableTankAssistMultiplier::GetValue(Action* action)
+//By leewheel 2026-07-28 - 重命名并优化：先判断非战斗状态和action类型，最后才查alar，减少查询
+float AlarDisableAutomaticTargetingMultiplier::GetValue(Action* action)
 {
-    if (bot->GetVictim() == nullptr)
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (!botAI->IsTank(bot))
+    if (!dynamic_cast<TankAssistAction*>(action) && !dynamic_cast<DpsAssistAction*>(action))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "al'ar"))
-        return 1.0f;
-
-    if (dynamic_cast<TankAssistAction*>(action))
+    if (AI_VALUE2(Unit*, "find target", "al'ar"))
         return 0.0f;
 
     return 1.0f;
 }
 
+//By leewheel 2026-07-28 - 重写远离复生逻辑：ranged/tank检查PASSIVE状态，近战检查血量>5%
 float AlarStayAwayFromRebirthMultiplier::GetValue(Action* action)
 {
     Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
-    if (!alar)
+    if (!alar || isAlarInPhase2[alar->GetMap()->GetInstanceId()])
         return 1.0f;
 
-    Creature* alarCreature = alar->ToCreature();
-    if (!alarCreature || alarCreature->GetReactState() != REACT_PASSIVE)
+    if (botAI->IsRanged(bot) || botAI->IsTank(bot))
+    {
+        Creature* alarCreature = alar->ToCreature();
+        if (!alarCreature || alarCreature->GetReactState() != REACT_PASSIVE)
+            return 1.0f;
+    }
+    else if (alar->GetHealthPct() > 5.0f)
+    {
         return 1.0f;
+    }
 
     if (dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<AlarMoveAwayFromRebirthAction*>(action) &&
-        !dynamic_cast<AlarAvoidFlamePatchesAndDiveBombsAction*>(action))
+        !dynamic_cast<AlarMoveAwayFromRebirthAction*>(action))
+    {
         return 0.0f;
+    }
 
     return 1.0f;
 }
 
-float AlarPhase2NoTankingIfArmorMeltedMultiplier::GetValue(Action* action)
+//By leewheel 2026-07-28 - 使用IsSingleTargetTaunt辅助函数；优化判断顺序先过滤action再查状态
+float AlarDontTauntBossIfArmorMeltedMultiplier::GetValue(Action* action)
 {
-    if (!bot->HasAura(SPELL_MELT_ARMOR))
+    if (!IsSingleTargetTaunt(action))
         return 1.0f;
 
     Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
     if (!alar || AI_VALUE(Unit*, "current target") != alar)
         return 1.0f;
 
-    if (dynamic_cast<CastTauntAction*>(action) ||
-        dynamic_cast<CastGrowlAction*>(action) ||
-        dynamic_cast<CastHandOfReckoningAction*>(action) ||
-        dynamic_cast<CastDarkCommandAction*>(action))
+    if (bot->HasAura(static_cast<uint32>(TkSpells::SPELL_MELT_ARMOR)))
         return 0.0f;
 
     return 1.0f;
@@ -127,49 +157,80 @@ float VoidReaverMaintainPositionsMultiplier::GetValue(Action* action)
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
         !dynamic_cast<SetBehindTargetAction*>(action))
+    {
         return 0.0f;
+    }
 
     return 1.0f;
 }
 
 // High Astromancer Solarian
 
+//By leewheel 2026-07-28 - 重写星术师站位逻辑：拆分各action类型的独立判断
 float HighAstromancerSolarianMaintainPositionMultiplier::GetValue(Action* action)
 {
     Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
-    if (!astromancer || astromancer->HasAura(SPELL_SOLARIAN_TRANSFORM))
+    if (!astromancer || astromancer->HasAura(
+            static_cast<uint32>(TkSpells::SPELL_SOLARIAN_TRANSFORM)))
+    {
         return 1.0f;
+    }
 
-    if (botAI->IsRanged(bot) &&
-        (dynamic_cast<CombatFormationMoveAction*>(action) ||
-         dynamic_cast<FleeAction*>(action) ||
-         dynamic_cast<CastBlinkBackAction*>(action) ||
-         dynamic_cast<CastDisengageAction*>(action)))
+    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<SetBehindTargetAction*>(action))
+    {
+        return 0.0f;
+    }
+
+    if (dynamic_cast<CastBlinkBackAction*>(action) ||
+        dynamic_cast<CastDisengageAction*>(action))
+    {
+        return 0.0f;
+    }
+
+    if (bot->getClass() != CLASS_HUNTER && dynamic_cast<FleeAction*>(action))
         return 0.0f;
 
-    if (!bot->HasAura(SPELL_WRATH_OF_THE_ASTROMANCER))
+    if (!HasWrathOfTheAstromancer(bot))
         return 1.0f;
 
     if (dynamic_cast<CastReachTargetSpellAction*>(action) ||
         (dynamic_cast<MovementAction*>(action) &&
+         !dynamic_cast<AttackAction*>(action) &&
          !dynamic_cast<HighAstromancerSolarianMoveAwayFromGroupAction*>(action)))
+    {
         return 0.0f;
+    }
 
     return 1.0f;
 }
 
-float HighAstromancerSolarianDisableTankAssistMultiplier::GetValue(Action* action)
+//By leewheel 2026-07-28 - 新增：星术师阶段禁止近战自动选目标（主坦除外且需PASSIVE状态）
+float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValue(Action* action)
 {
-    if (bot->GetVictim() == nullptr)
+    if (!botAI->IsMelee(bot))
         return 1.0f;
 
-    if (!botAI->IsTank(bot))
+    Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
+    if (!astromancer)
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "solarium priest"))
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (dynamic_cast<TankAssistAction*>(action))
+    if (!dynamic_cast<TankAssistAction*>(action) && !dynamic_cast<DpsAssistAction*>(action))
+        return 1.0f;
+
+    if (botAI->IsMainTank(bot))
+    {
+        Creature* astromancerCreature = astromancer->ToCreature();
+        if (astromancerCreature && astromancerCreature->GetReactState() != REACT_PASSIVE)
+            return 0.0f;
+
+        return 1.0f;
+    }
+
+    if (AI_VALUE2(Unit*, "find target", "solarium priest"))
         return 0.0f;
 
     return 1.0f;
@@ -177,6 +238,7 @@ float HighAstromancerSolarianDisableTankAssistMultiplier::GetValue(Action* actio
 
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
+//By leewheel 2026-07-28 - 优化DPS等待逻辑：使用sentinel(-1)表示满血不计时，提取变量减少重复调用
 float KaelthasSunstriderWaitForDpsMultiplier::GetValue(Action* action)
 {
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
@@ -190,42 +252,58 @@ float KaelthasSunstriderWaitForDpsMultiplier::GetValue(Action* action)
     if (dynamic_cast<KaelthasSunstriderMisdirectAdvisorsToTanksAction*>(action))
         return 1.0f;
 
-    const time_t now = std::time(nullptr);
+    time_t const now = std::time(nullptr);
     constexpr uint8 dpsWaitSeconds = 10;
 
     auto it = advisorDpsWaitTimer.find(kaelthas->GetMap()->GetInstanceId());
-    if (it == advisorDpsWaitTimer.end() || (now - it->second) < dpsWaitSeconds)
+    if (it != advisorDpsWaitTimer.end())
     {
-        Unit* sanguinar = AI_VALUE2(Unit*, "find target", "lord sanguinar");
-        Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
-        Unit* telonicus = AI_VALUE2(Unit*, "find target", "master engineer telonicus");
-
-        auto isAdvisorActive = [](Unit* advisor)
-        {
-            return advisor && !advisor->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
-                   !advisor->HasAura(SPELL_PERMANENT_FEIGN_DEATH);
-        };
-
-        if ((isAdvisorActive(sanguinar) && botAI->IsMainTank(bot)) ||
-            (isAdvisorActive(telonicus) && botAI->IsAssistTankOfIndex(bot, 0, true)) ||
-            (isAdvisorActive(capernian) && (botAI->IsMainTank(bot) || GetCapernianTank(bot) == bot)))
+        //By leewheel 2026-07-28 - sentinel(-1)表示顾问满血不计倒计时；真实时间戳检查是否已过等待期
+        if (it->second != -1 && (now - it->second) >= dpsWaitSeconds)
             return 1.0f;
+    }
 
-        bool shouldHoldDps =
-            (isAdvisorActive(sanguinar) && !botAI->IsMainTank(bot)) ||
-            (isAdvisorActive(telonicus) && !botAI->IsAssistTankOfIndex(bot, 0, true)) ||
-            (isAdvisorActive(capernian) && !botAI->IsMainTank(bot) && GetCapernianTank(bot) != bot);
+    Unit* sanguinar = AI_VALUE2(Unit*, "find target", "lord sanguinar");
+    Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
+    Unit* telonicus = AI_VALUE2(Unit*, "find target", "master engineer telonicus");
 
-        if (shouldHoldDps &&
-            (dynamic_cast<AttackAction*>(action) ||
-             (dynamic_cast<CastSpellAction*>(action) &&
-              !dynamic_cast<CastHealingSpellAction*>(action))))
-            return 0.0f;
+    auto isAdvisorActive = [](Unit* advisor)
+    {
+        return advisor && !advisor->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
+            !IsFeigningDeath(advisor);
+    };
+
+    //By leewheel 2026-07-28 - 提取角色判断变量避免重复调用
+    bool isMainTank = botAI->IsMainTank(bot);
+    bool isFirstAssistTank = botAI->IsAssistTankOfIndex(bot, 0, false);
+    bool isWarlockTank = GetCapernianTank(bot) == bot;
+
+    if ((isAdvisorActive(sanguinar) && isMainTank) ||
+        (isAdvisorActive(telonicus) && isFirstAssistTank) ||
+        (isAdvisorActive(capernian) && (isMainTank || isWarlockTank)))
+    {
+        return 1.0f;
+    }
+
+    bool shouldHoldDps =
+        (isAdvisorActive(sanguinar) && !isMainTank) ||
+        (isAdvisorActive(telonicus) && !isFirstAssistTank) ||
+        (isAdvisorActive(capernian) && !isMainTank && !isWarlockTank);
+
+    if (!shouldHoldDps)
+        return 1.0f;
+
+    if (dynamic_cast<AttackAction*>(action) ||
+        (dynamic_cast<CastSpellAction*>(action) &&
+         !dynamic_cast<CastHealingSpellAction*>(action)))
+    {
+        return 0.0f;
     }
 
     return 1.0f;
 }
 
+//By leewheel 2026-07-28 - 删除SPELL_PERMANENT_FEIGN_DEATH检查，改用IsFeigningDeath
 float KaelthasSunstriderKiteThaladredMultiplier::GetValue(Action* action)
 {
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
@@ -240,13 +318,14 @@ float KaelthasSunstriderKiteThaladredMultiplier::GetValue(Action* action)
         return 1.0f;
 
     Unit* thaladred = AI_VALUE2(Unit*, "find target", "thaladred the darkener");
-    if (!thaladred || thaladred->GetVictim() != bot ||
-        thaladred->HasAura(SPELL_PERMANENT_FEIGN_DEATH))
+    if (!thaladred || thaladred->GetVictim() != bot)
         return 1.0f;
 
     if (dynamic_cast<MovementAction*>(action) &&
         !dynamic_cast<KaelthasSunstriderKiteThaladredAction*>(action))
+    {
         return 0.0f;
+    }
 
     return 1.0f;
 }
@@ -270,6 +349,7 @@ float KaelthasSunstriderControlMisdirectionMultiplier::GetValue(Action* action)
     return 1.0f;
 }
 
+//By leewheel 2026-07-28 - 用IsFeigningDeath替代SPELL_PERMANENT_FEIGN_DEATH；新增CastReachTargetSpellAction禁用
 float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValue(Action* action)
 {
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
@@ -282,64 +362,76 @@ float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValue(Action* ac
 
     Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
     if (!capernian || capernian->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) ||
-        capernian->HasAura(SPELL_PERMANENT_FEIGN_DEATH))
+        IsFeigningDeath(capernian))
+    {
         return 1.0f;
+    }
+
+    if (dynamic_cast<CastReachTargetSpellAction*>(action))
+        return 0.0f;
 
     if (dynamic_cast<MovementAction*>(action) &&
         !dynamic_cast<AttackAction*>(action) &&
         !dynamic_cast<KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction*>(action))
+    {
         return 0.0f;
+    }
 
     return 1.0f;
 }
 
+//By leewheel 2026-07-28 - 只对主坦生效；用IsSingleTargetTaunt替代逐个判断；CastSwipeBearAction替代CastSwipeAction
 float KaelthasSunstriderManageWeaponTankingMultiplier::GetValue(Action* action)
 {
-    if (!botAI->IsTank(bot))
-        return 1.0f;
-
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
-    if (!kaelthas)
-        return 1.0f;
-
-    boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
-    if (!kaelAI)
-        return 1.0f;
-
-    if (kaelAI->GetPhase() != PHASE_WEAPONS &&
-        dynamic_cast<TankFaceAction*>(action))
-        return 0.0f;
-
     if (!botAI->IsMainTank(bot))
         return 1.0f;
 
-    // Try to keep main tank from grabbing aggro on any weapon other than the axe
-    if (kaelAI->GetPhase() == PHASE_WEAPONS &&
-        (dynamic_cast<TankAssistAction*>(action) ||
-         dynamic_cast<CastTauntAction*>(action) ||
-         dynamic_cast<CastChallengingShoutAction*>(action) ||
-         dynamic_cast<CastThunderClapAction*>(action) ||
-         dynamic_cast<CastShockwaveAction*>(action) ||
-         dynamic_cast<CastCleaveAction*>(action) ||
-         dynamic_cast<CastGrowlAction*>(action) ||
-         dynamic_cast<CastSwipeAction*>(action) ||
-         dynamic_cast<CastHandOfReckoningAction*>(action) ||
-         dynamic_cast<CastAvengersShieldAction*>(action) ||
-         dynamic_cast<CastConsecrationAction*>(action) ||
-         dynamic_cast<CastDarkCommandAction*>(action) ||
-         dynamic_cast<CastDeathAndDecayAction*>(action) ||
-         dynamic_cast<CastPestilenceAction*>(action) ||
-         dynamic_cast<CastBloodBoilAction*>(action)))
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    if (!kaelthas)
+        return 1.0f;
+
+    boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
+    if (!kaelAI || kaelAI->GetPhase() != PHASE_WEAPONS)
+        return 1.0f;
+
+    //By leewheel 2026-07-28 - 阻止主坦在武器阶段抢仇恨（除斧头外）
+    if (IsSingleTargetTaunt(action) ||
+        dynamic_cast<CastChallengingShoutAction*>(action) ||
+        dynamic_cast<CastThunderClapAction*>(action) ||
+        dynamic_cast<CastShockwaveAction*>(action) ||
+        dynamic_cast<CastCleaveAction*>(action) ||
+        dynamic_cast<CastSwipeBearAction*>(action) ||
+        dynamic_cast<CastChallengingRoarAction*>(action) ||
+        dynamic_cast<CastAvengersShieldAction*>(action) ||
+        dynamic_cast<CastConsecrationAction*>(action) ||
+        dynamic_cast<CastDeathAndDecayAction*>(action) ||
+        dynamic_cast<CastPestilenceAction*>(action) ||
+        dynamic_cast<CastBloodBoilAction*>(action))
+    {
+        return 0.0f;
+    }
+
+    return 1.0f;
+}
+
+//By leewheel 2026-07-28 - 优化判断顺序：先过滤action类型再查目标
+float KaelthasSunstriderSuppressEquipUpgradeMultiplier::GetValue(Action* action)
+{
+    if (!dynamic_cast<EquipUpgradeAction*>(action) &&
+        !dynamic_cast<EquipUpgradesPacketAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    if (AI_VALUE2(Unit*, "find target", "kael'thas sunstrider"))
         return 0.0f;
 
     return 1.0f;
 }
 
-float KaelthasSunstriderDisableAdvisorTankAssistMultiplier::GetValue(Action* action)
+//By leewheel 2026-07-28 - 新增：凯子阶段自动选目标管理（DPS全部禁用，主坦/顾问阶段副坦禁用）
+float KaelthasSunstriderManageAutomaticTargetingMultiplier::GetValue(Action* action)
 {
-    if (bot->GetVictim() == nullptr || !botAI->IsTank(bot))
-        return 1.0f;
-
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas)
         return 1.0f;
@@ -348,30 +440,86 @@ float KaelthasSunstriderDisableAdvisorTankAssistMultiplier::GetValue(Action* act
     if (!kaelAI)
         return 1.0f;
 
-    if (kaelAI->GetPhase() != PHASE_SINGLE_ADVISOR &&
-        kaelAI->GetPhase() != PHASE_ALL_ADVISORS)
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (dynamic_cast<TankAssistAction*>(action))
+    if (dynamic_cast<DpsAssistAction*>(action))
         return 0.0f;
+
+    if (dynamic_cast<TankAssistAction*>(action))
+    {
+        if (botAI->IsMainTank(bot))
+            return 0.0f;
+
+        if (kaelAI->GetPhase() == PHASE_SINGLE_ADVISOR ||
+            kaelAI->GetPhase() == PHASE_ALL_ADVISORS)
+        {
+            return 0.0f;
+        }
+    }
 
     return 1.0f;
 }
 
+//By leewheel 2026-07-28 - 新增武器阶段TankFace禁用逻辑
 float KaelthasSunstriderDisableDisperseMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "kael'thas sunstrider"))
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    if (!kaelthas)
         return 1.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
         !dynamic_cast<TankFaceAction*>(action) &&
         !dynamic_cast<SetBehindTargetAction*>(action))
+    {
+        return 0.0f;
+    }
+
+    boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
+    if (!kaelAI || kaelAI->GetPhase() == PHASE_WEAPONS)
+        return 1.0f;
+
+    if (dynamic_cast<TankFaceAction*>(action))
         return 0.0f;
 
     return 1.0f;
 }
 
+//By leewheel 2026-07-28 - 新增：阶段3准备（顾问复活/凯尔对话阶段，指定角色移动就位）
+float KaelthasSunstriderPrepareForPhase3Multiplier::GetValue(Action* action)
+{
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    if (!kaelthas)
+        return 1.0f;
+
+    boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
+    if (!kaelAI || kaelAI->GetPhase() != PHASE_ALL_ADVISORS)
+        return 1.0f;
+
+    //By leewheel 2026-07-28 - 用顾问不可选中状态作为复活/对话阶段的代理判断
+    Unit* thaladred = AI_VALUE2(Unit*, "find target", "thaladred the darkener");
+    if (!thaladred || !thaladred->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
+        return 1.0f;
+
+    if (!dynamic_cast<MovementAction*>(action) ||
+        dynamic_cast<KaelthasSunstriderHandleAdvisorRolesInPhase3Action*>(action))
+    {
+        return 1.0f;
+    }
+
+    if (botAI->IsMainTank(bot) ||
+        botAI->IsAssistTankOfIndex(bot, 0, false) ||
+        botAI->IsAssistHealOfIndex(bot, 0, false) ||
+        (bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot))
+    {
+        return 0.0f;
+    }
+
+    return 1.0f;
+}
+
 // Bloodlust/Heroism and other major cooldowns should be used at the start of Phase 3
+//By leewheel 2026-07-28 - 拆分DPS条件，UseTrinketAction单独判断需IsDps
 float KaelthasSunstriderDelayCooldownsMultiplier::GetValue(Action* action)
 {
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
@@ -379,49 +527,59 @@ float KaelthasSunstriderDelayCooldownsMultiplier::GetValue(Action* action)
         return 1.0f;
 
     boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
-    if (!kaelAI || kaelAI->GetPhase() == PHASE_ALL_ADVISORS ||
-        kaelAI->GetPhase() == PHASE_FINAL)
+    if (!kaelAI || kaelAI->GetPhase() == PHASE_ALL_ADVISORS || kaelAI->GetPhase() == PHASE_FINAL)
         return 1.0f;
 
     if (bot->getClass() == CLASS_SHAMAN &&
         (dynamic_cast<CastBloodlustAction*>(action) ||
          dynamic_cast<CastHeroismAction*>(action)))
+    {
         return 0.0f;
+    }
 
-    if (botAI->IsDps(bot) &&
-        (dynamic_cast<CastMetamorphosisAction*>(action) ||
-         dynamic_cast<CastAdrenalineRushAction*>(action) ||
-         dynamic_cast<CastBladeFlurryAction*>(action) ||
-         dynamic_cast<CastIcyVeinsAction*>(action) ||
-         dynamic_cast<CastColdSnapAction*>(action) ||
-         dynamic_cast<CastArcanePowerAction*>(action) ||
-         dynamic_cast<CastPresenceOfMindAction*>(action) ||
-         dynamic_cast<CastCombustionAction*>(action) ||
-         dynamic_cast<CastRapidFireAction*>(action) ||
-         dynamic_cast<CastReadinessAction*>(action) ||
-         dynamic_cast<CastAvengingWrathAction*>(action) ||
-         dynamic_cast<CastElementalMasteryAction*>(action) ||
-         dynamic_cast<CastFeralSpiritAction*>(action) ||
-         dynamic_cast<CastFireElementalTotemAction*>(action) ||
-         dynamic_cast<CastFireElementalTotemMeleeAction*>(action) ||
-         dynamic_cast<CastForceOfNatureAction*>(action) ||
-         dynamic_cast<CastArmyOfTheDeadAction*>(action) ||
-         dynamic_cast<CastSummonGargoyleAction*>(action) ||
-         dynamic_cast<CastBerserkingAction*>(action) ||
-         dynamic_cast<CastBloodFuryAction*>(action) ||
-         dynamic_cast<UseTrinketAction*>(action)))
+    if (dynamic_cast<CastMetamorphosisAction*>(action) ||
+        dynamic_cast<CastAdrenalineRushAction*>(action) ||
+        dynamic_cast<CastBladeFlurryAction*>(action) ||
+        dynamic_cast<CastIcyVeinsAction*>(action) ||
+        dynamic_cast<CastColdSnapAction*>(action) ||
+        dynamic_cast<CastArcanePowerAction*>(action) ||
+        dynamic_cast<CastPresenceOfMindAction*>(action) ||
+        dynamic_cast<CastCombustionAction*>(action) ||
+        dynamic_cast<CastRapidFireAction*>(action) ||
+        dynamic_cast<CastReadinessAction*>(action) ||
+        dynamic_cast<CastAvengingWrathAction*>(action) ||
+        dynamic_cast<CastElementalMasteryAction*>(action) ||
+        dynamic_cast<CastFeralSpiritAction*>(action) ||
+        dynamic_cast<CastFireElementalTotemAction*>(action) ||
+        dynamic_cast<CastFireElementalTotemMeleeAction*>(action) ||
+        dynamic_cast<CastForceOfNatureAction*>(action) ||
+        dynamic_cast<CastArmyOfTheDeadAction*>(action) ||
+        dynamic_cast<CastSummonGargoyleAction*>(action) ||
+        dynamic_cast<CastBerserkingAction*>(action) ||
+        dynamic_cast<CastBloodFuryAction*>(action))
+    {
+        return 0.0f;
+    }
+
+    if (botAI->IsDps(bot) && dynamic_cast<UseTrinketAction*>(action))
         return 0.0f;
 
     return 1.0f;
 }
 
+//By leewheel 2026-07-28 - 优化判断顺序：先放行攻击和空中分散action，再过滤非移动，最后检查重力失效
 float KaelthasSunstriderStaySpreadDuringGravityLapseMultiplier::GetValue(Action* action)
 {
-    if (!bot->HasAura(SPELL_GRAVITY_LAPSE))
+    if (dynamic_cast<AttackAction*>(action))
         return 1.0f;
 
-    if (dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<KaelthasSunstriderSpreadOutInMidairAction*>(action))
+    if (dynamic_cast<KaelthasSunstriderSpreadOutInMidairAction*>(action))
+        return 1.0f;
+
+    if (!dynamic_cast<MovementAction*>(action))
+        return 1.0f;
+
+    if (bot->HasAura(static_cast<uint32>(TkSpells::SPELL_GRAVITY_LAPSE)))
         return 0.0f;
 
     return 1.0f;
