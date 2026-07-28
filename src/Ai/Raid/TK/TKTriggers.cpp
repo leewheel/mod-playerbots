@@ -1,4 +1,4 @@
-﻿/*
+﻿﻿/*
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
@@ -554,3 +554,98 @@ bool KaelthasSunstriderBossIsManipulatingGravityTrigger::IsActive()
     return kaelthas && kaelthas->GetHealthPct() <= 50.0f;
     // return bot->HasAura(static_cast<uint32>(TkSpells::SPELL_GRAVITY_LAPSE));
 }
+
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地TKTriggerContext.h引用但不存在的Trigger实现
+//                        基于游戏机制和现有代码模式实现业务逻辑
+//End By leewheel
+
+// AlarPhase2EncounterIsAtRoomCenterTrigger - 检查Al'ar阶段2是否在房间中心
+bool AlarPhase2EncounterIsAtRoomCenterTrigger::IsActive()
+{
+    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    if (!alar)
+        return false;
+
+    uint32 const instanceId = alar->GetMap()->GetInstanceId();
+    if (!isAlarInPhase2[instanceId])
+        return false;
+
+    // 检查Al'ar是否在房间中心附近
+    float const distToCenter = alar->GetExactDist2d(ALAR_ROOM_CENTER);
+    return distToCenter < 20.0f;
+}
+
+// AlarStrategyChangesBetweenPhasesTrigger - 检查策略是否需要在阶段间切换
+bool AlarStrategyChangesBetweenPhasesTrigger::IsActive()
+{
+    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    if (!alar)
+        return false;
+
+    uint32 const instanceId = alar->GetMap()->GetInstanceId();
+
+    // 检查阶段2是否刚启动（rebirth施放后阶段切换）
+    bool rebirthActive = alar->HasUnitState(UNIT_STATE_CASTING) &&
+        alar->FindCurrentSpellBySpellId(static_cast<uint32>(TkSpells::SPELL_REBIRTH_PHASE2));
+
+    return !isAlarInPhase2[instanceId] && lastRebirthState[instanceId] && !rebirthActive;
+}
+
+// VoidReaverBossLaunchesArcaneOrbsTrigger - 检查Boss是否发射了奥术宝珠
+bool VoidReaverBossLaunchesArcaneOrbsTrigger::IsActive()
+{
+    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
+    if (!voidReaver)
+        return false;
+
+    uint32 const instanceId = voidReaver->GetMap()->GetInstanceId();
+    auto it = voidReaverArcaneOrbs.find(instanceId);
+    return it != voidReaverArcaneOrbs.end() && !it->second.empty();
+}
+
+// VoidReaverBotIsNotInCombatTrigger - 检查机器人是否不在Void Reaver战斗中
+bool VoidReaverBotIsNotInCombatTrigger::IsActive()
+{
+    if (bot->IsInCombat())
+        return false;
+
+    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
+    return !voidReaver;
+}
+
+// HighAstromancerSolarianBossCastsWrathOfTheAstromancerTrigger - 检查Boss是否施放星术师之怒
+bool HighAstromancerSolarianBossCastsWrathOfTheAstromancerTrigger::IsActive()
+{
+    Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
+    if (!astromancer)
+        return false;
+
+    return astromancer->HasUnitState(UNIT_STATE_CASTING) &&
+        astromancer->FindCurrentSpellBySpellId(static_cast<uint32>(TkSpells::SPELL_WRATH_OF_THE_ASTROMANCER));
+}
+
+// HighAstromancerSolarianBossHasVanishedTrigger - 检查Boss是否消失
+bool HighAstromancerSolarianBossHasVanishedTrigger::IsActive()
+{
+    Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
+    if (!astromancer)
+        return false;
+
+    // Solarian在战斗中会消失然后重新出现
+    // 检查Boss是否处于不可见/不可定位状态
+    return !astromancer->IsVisible() || astromancer->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
+}
+
+// KaelthasSunstriderBossIsCastingPyroblastTrigger - 检查凯尔萨斯是否正在施放炎爆术
+bool KaelthasSunstriderBossIsCastingPyroblastTrigger::IsActive()
+{
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    if (!kaelthas)
+        return false;
+
+    // 凯尔萨斯的炎爆术法术ID为36835
+    constexpr uint32 SPELL_KAELTHAS_PYROBLAST = 36835;
+    return kaelthas->HasUnitState(UNIT_STATE_CASTING) &&
+        kaelthas->FindCurrentSpellBySpellId(SPELL_KAELTHAS_PYROBLAST);
+}
+//End By leewheel

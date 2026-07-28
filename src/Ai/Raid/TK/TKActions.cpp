@@ -1,4 +1,4 @@
-﻿/*
+﻿﻿/*
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
@@ -2145,3 +2145,119 @@ bool KaelthasSunstriderSpreadOutInMidairAction::Execute(Event /*event*/)
 
     return false;
 }
+
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地TKActionContext.h引用但不存在的Action实现
+//                        基于游戏机制和现有代码模式实现业务逻辑
+//End By leewheel
+
+// AlarReturnToRoomCenterAction - Al'ar阶段2返回房间中心
+bool AlarReturnToRoomCenterAction::Execute(Event /*event*/)
+{
+    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    if (!alar)
+        return false;
+
+    uint32 const instanceId = alar->GetMap()->GetInstanceId();
+    if (!isAlarInPhase2[instanceId])
+        return false;
+
+    float const distToCenter = bot->GetExactDist2d(ALAR_ROOM_CENTER);
+    if (distToCenter < 5.0f)
+        return false;
+
+    return MoveTo(
+        TK_MAP_ID, ALAR_ROOM_CENTER.GetPositionX(), ALAR_ROOM_CENTER.GetPositionY(),
+        ALAR_ROOM_CENTER.GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, false, false);
+}
+
+// VoidReaverSpreadRangedAction - 远程DPS分散站位，避免奥术宝珠命中多人
+bool VoidReaverSpreadRangedAction::Execute(Event /*event*/)
+{
+    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
+    if (!voidReaver)
+        return false;
+
+    // 确保与Boss保持安全距离
+    constexpr float minDistFromBoss = 30.0f;
+    if (bot->GetExactDist2d(voidReaver) < minDistFromBoss)
+        return FleePosition(voidReaver->GetPosition(), minDistFromBoss, 0);
+
+    // 与其他玩家保持分散距离
+    constexpr float minDistFromPlayer = 5.0f;
+    if (Player* nearestPlayer = GetNearestPlayerInRadius(bot, minDistFromPlayer))
+        return FleePosition(nearestPlayer->GetPosition(), minDistFromPlayer);
+
+    return false;
+}
+
+// VoidReaverEraseTrackersAction - 清除奥术宝珠追踪数据
+bool VoidReaverEraseTrackersAction::Execute(Event /*event*/)
+{
+    if (!IsMechanicTrackerBot(bot, TK_MAP_ID))
+        return false;
+
+    uint32 const instanceId = bot->GetMap()->GetInstanceId();
+
+    if (!AI_VALUE2(Unit*, "find target", "void reaver"))
+    {
+        if (voidReaverArcaneOrbs.erase(instanceId) > 0)
+            return true;
+    }
+
+    return false;
+}
+
+// HighAstromancerSolarianRangedLeaveSpaceForMeleeAction - 远程给近战留空间
+bool HighAstromancerSolarianRangedLeaveSpaceForMeleeAction::Execute(Event /*event*/)
+{
+    Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
+    if (!astromancer)
+        return false;
+
+    // 远程职业需要与Boss保持足够距离，给近战留出空间
+    constexpr float minRangedDist = 25.0f;
+    if (bot->GetExactDist2d(astromancer) < minRangedDist)
+        return FleePosition(astromancer->GetPosition(), minRangedDist, 0);
+
+    return false;
+}
+
+// HighAstromancerSolarianStackForAoeAction - 为AOE集合
+bool HighAstromancerSolarianStackForAoeAction::Execute(Event /*event*/)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    Player* rangedLeader = GetRangedLeader(bot);
+    if (!rangedLeader || bot == rangedLeader)
+        return false;
+
+    if (bot->GetExactDist2d(rangedLeader) < 3.0f)
+        return false;
+
+    return MoveTo(
+        TK_MAP_ID, rangedLeader->GetPositionX(), rangedLeader->GetPositionY(),
+        rangedLeader->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, false, false);
+}
+
+// KaelthasSunstriderBreakThroughShockBarrierAction - 打破凯尔萨斯的震撼屏障
+bool KaelthasSunstriderBreakThroughShockBarrierAction::Execute(Event /*event*/)
+{
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    if (!kaelthas)
+        return false;
+
+    // 检查Boss是否有震撼屏障
+    if (!kaelthas->HasAura(static_cast<uint32>(TkSpells::SPELL_SHOCK_BARRIER)))
+        return false;
+
+    // 切换目标到Boss并攻击，以打破屏障
+    if (AI_VALUE(Unit*, "current target") != kaelthas)
+        return Attack(kaelthas);
+
+    return false;
+}
+//End By leewheel

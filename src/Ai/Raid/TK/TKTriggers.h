@@ -1,4 +1,4 @@
-﻿/*
+﻿﻿/*
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
@@ -95,6 +95,26 @@ public:
     bool IsActive() override;
 };
 
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地TKTriggerContext.h引用但不存在的Trigger类定义
+//                        AlarPhase2EncounterIsAtRoomCenterTrigger - 检查Al'ar阶段2是否在房间中心
+//                        AlarStrategyChangesBetweenPhasesTrigger - 检查策略是否需要在阶段间切换
+//End By leewheel
+class AlarPhase2EncounterIsAtRoomCenterTrigger : public Trigger
+{
+public:
+    AlarPhase2EncounterIsAtRoomCenterTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "al'ar phase 2 encounter is at room center") {}
+    bool IsActive() override;
+};
+
+class AlarStrategyChangesBetweenPhasesTrigger : public Trigger
+{
+public:
+    AlarStrategyChangesBetweenPhasesTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "al'ar strategy changes between phases") {}
+    bool IsActive() override;
+};
+
 // Void Reaver
 
 class VoidReaverBossCastsPoundingTrigger : public Trigger
@@ -126,6 +146,26 @@ class VoidReaverArcaneOrbIsIncomingTrigger : public Trigger
 public:
     VoidReaverArcaneOrbIsIncomingTrigger(
         PlayerbotAI* botAI) : Trigger(botAI, "void reaver arcane orb is incoming") {}
+    bool IsActive() override;
+};
+
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地自定义Trigger类定义
+//                        VoidReaverBossLaunchesArcaneOrbsTrigger - 检查Boss是否发射奥术宝珠
+//                        VoidReaverBotIsNotInCombatTrigger - 检查机器人是否不在战斗中
+//End By leewheel
+class VoidReaverBossLaunchesArcaneOrbsTrigger : public Trigger
+{
+public:
+    VoidReaverBossLaunchesArcaneOrbsTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "void reaver boss launches arcane orbs") {}
+    bool IsActive() override;
+};
+
+class VoidReaverBotIsNotInCombatTrigger : public Trigger
+{
+public:
+    VoidReaverBotIsNotInCombatTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "void reaver bot is not in combat") {}
     bool IsActive() override;
 };
 
@@ -168,6 +208,26 @@ class HighAstromancerSolarianBossCastsPsychicScreamTrigger : public Trigger
 public:
     HighAstromancerSolarianBossCastsPsychicScreamTrigger(
         PlayerbotAI* botAI) : Trigger(botAI, "high astromancer boss casts psychic scream") {}
+    bool IsActive() override;
+};
+
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地自定义Trigger类定义
+//                        HighAstromancerSolarianBossCastsWrathOfTheAstromancerTrigger - 检查Boss是否施放星术师之怒
+//                        HighAstromancerSolarianBossHasVanishedTrigger - 检查Boss是否消失
+//End By leewheel
+class HighAstromancerSolarianBossCastsWrathOfTheAstromancerTrigger : public Trigger
+{
+public:
+    HighAstromancerSolarianBossCastsWrathOfTheAstromancerTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "high astromancer solarian boss casts wrath of the astromancer") {}
+    bool IsActive() override;
+};
+
+class HighAstromancerSolarianBossHasVanishedTrigger : public Trigger
+{
+public:
+    HighAstromancerSolarianBossHasVanishedTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "high astromancer solarian boss has vanished") {}
     bool IsActive() override;
 };
 
@@ -322,6 +382,17 @@ class KaelthasSunstriderBossIsManipulatingGravityTrigger : public Trigger
 public:
     KaelthasSunstriderBossIsManipulatingGravityTrigger(
         PlayerbotAI* botAI) : Trigger(botAI, "kael'thas sunstrider boss is manipulating gravity") {}
+    bool IsActive() override;
+};
+
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地自定义Trigger类定义
+//                        KaelthasSunstriderBossIsCastingPyroblastTrigger - 检查凯尔萨斯是否正在施放炎爆术
+//End By leewheel
+class KaelthasSunstriderBossIsCastingPyroblastTrigger : public Trigger
+{
+public:
+    KaelthasSunstriderBossIsCastingPyroblastTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kael'thas sunstrider boss is casting pyroblast") {}
     bool IsActive() override;
 };
 
