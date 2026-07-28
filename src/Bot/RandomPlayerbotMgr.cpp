@@ -1316,6 +1316,9 @@ static bool IsBotIdleForLfg(Player* bot)
 }
 
 // 检查机器人当前是否为坦克天赋
+// By leewheel 2026-07-29
+// 修复德鲁伊坦克检测：原代码要求 HasAura(16931) 但此光环仅在熊形态下存在，
+// Feral 德鲁伊在非熊形态下永远被识别为 DPS，导致 LFG 强制补位时永远不选 Feral 德鲁伊当坦。
 static bool IsBotTank(Player* bot)
 {
     uint8 spec = AiFactory::GetPlayerSpecTab(bot);
@@ -1323,7 +1326,10 @@ static bool IsBotTank(Player* bot)
     {
         case CLASS_WARRIOR: return spec == 2;
         case CLASS_PALADIN: return spec == 1;
-        case CLASS_DRUID: return spec == 1 && bot->HasAura(16931);
+        case CLASS_DRUID:
+            return spec == 1 && (bot->GetShapeshiftForm() == FORM_BEAR ||
+                                 bot->GetShapeshiftForm() == FORM_DIREBEAR ||
+                                 bot->HasAura(16931));
         case CLASS_DEATH_KNIGHT: return spec == 0;
         default: return false;
     }
@@ -1466,6 +1472,13 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     uint32 forceThreshold = sPlayerbotAIConfig.randomBotLfgMaxQueueWaitTime / 6;
     if (forceThreshold < 15)
         forceThreshold = 15;  // 最低15秒
+    // By leewheel 2026-07-29
+    // 进一步缩短阈值：从 1/6 改为 1/8（约 22.5 秒），让真实玩家更早看到坦克 bot 入队。
+    // 配合 "lfg role priority" 触发器，坦克 bot 主动入队 + 强制补位双重保险。
+    uint32 forceThresholdFast = sPlayerbotAIConfig.randomBotLfgMaxQueueWaitTime / 8;
+    if (forceThresholdFast < 10)
+        forceThresholdFast = 10;  // 最低10秒
+    uint32 const effectiveThreshold = forceThresholdFast < forceThreshold ? forceThresholdFast : forceThreshold;
     // End By leewheel
     for (int teamIdx = TEAM_ALLIANCE; teamIdx <= TEAM_HORDE; ++teamIdx)
     {
@@ -1477,10 +1490,10 @@ void RandomPlayerbotMgr::CheckLfgQueue()
                 lfgQueueStartTime[teamId] = time(nullptr);
 
             uint32 waitTime = (uint32)(time(nullptr) - lfgQueueStartTime[teamId]);
-            if (waitTime >= forceThreshold)
+            if (waitTime >= effectiveThreshold)
             {
                 LOG_INFO("playerbots", "LFG排队超时强制机器人加入: 阵营={}, 等待时间={}秒, 阈值={}秒",
-                         teamId == TEAM_ALLIANCE ? "联盟" : "部落", waitTime, forceThreshold);
+                         teamId == TEAM_ALLIANCE ? "联盟" : "部落", waitTime, effectiveThreshold);
                 ForceBotsJoinLfg(teamId);
             }
         }

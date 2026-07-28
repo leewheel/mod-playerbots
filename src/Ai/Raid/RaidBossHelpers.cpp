@@ -2,69 +2,81 @@
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
 
-// Functions to mark targets with raid target icons
-// Note that these functions do not allow the player to change the icon during the encounter
-void MarkTargetWithIcon(Player* bot, Unit* target, uint8 iconId)
+//By leewheel 2026-07-28 - 同步brighton-chi/mod-playerbots：所有 Mark* 函数返回 true 表示本次设置
+//                        RTI 图标成功（图标发生改变），false 表示 target 为空/无队伍/图标未变化。
+//                        供 TK、SSC、SWP 等模块用 `if (a && MarkTargetWithXxx(...))` 短路写法。
+//End By leewheel
+bool MarkTargetWithIcon(Player* bot, Unit* target, uint8 iconId)
 {
     if (!target)
-        return;
+        return false;
 
-    if (Group* group = bot->GetGroup())
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    ObjectGuid currentGuid = group->GetTargetIcon(iconId);
+    if (currentGuid != target->GetGUID())
     {
-        ObjectGuid currentGuid = group->GetTargetIcon(iconId);
-        if (currentGuid != target->GetGUID())
-            group->SetTargetIcon(iconId, bot->GetGUID(), target->GetGUID());
+        group->SetTargetIcon(iconId, bot->GetGUID(), target->GetGUID());
+        return true;
     }
+
+    return false;
 }
 
-void MarkTargetWithSkull(Player* bot, Unit* target)
+bool MarkTargetWithSkull(Player* bot, Unit* target)
 {
-    MarkTargetWithIcon(bot, target, RtiTargetValue::skullIndex);
+    return MarkTargetWithIcon(bot, target, RtiTargetValue::skullIndex);
 }
 
-void MarkTargetWithSquare(Player* bot, Unit* target)
+bool MarkTargetWithSquare(Player* bot, Unit* target)
 {
-    MarkTargetWithIcon(bot, target, RtiTargetValue::squareIndex);
+    return MarkTargetWithIcon(bot, target, RtiTargetValue::squareIndex);
 }
 
-void MarkTargetWithStar(Player* bot, Unit* target)
+bool MarkTargetWithStar(Player* bot, Unit* target)
 {
-    MarkTargetWithIcon(bot, target, RtiTargetValue::starIndex);
+    return MarkTargetWithIcon(bot, target, RtiTargetValue::starIndex);
 }
 
-void MarkTargetWithCircle(Player* bot, Unit* target)
+bool MarkTargetWithCircle(Player* bot, Unit* target)
 {
-    MarkTargetWithIcon(bot, target, RtiTargetValue::circleIndex);
+    return MarkTargetWithIcon(bot, target, RtiTargetValue::circleIndex);
 }
 
-void MarkTargetWithDiamond(Player* bot, Unit* target)
+bool MarkTargetWithDiamond(Player* bot, Unit* target)
 {
-    MarkTargetWithIcon(bot, target, RtiTargetValue::diamondIndex);
+    return MarkTargetWithIcon(bot, target, RtiTargetValue::diamondIndex);
 }
 
-void MarkTargetWithTriangle(Player* bot, Unit* target)
+bool MarkTargetWithTriangle(Player* bot, Unit* target)
 {
-    MarkTargetWithIcon(bot, target, RtiTargetValue::triangleIndex);
+    return MarkTargetWithIcon(bot, target, RtiTargetValue::triangleIndex);
 }
 
-void MarkTargetWithCross(Player* bot, Unit* target)
+bool MarkTargetWithCross(Player* bot, Unit* target)
 {
-    MarkTargetWithIcon(bot, target, RtiTargetValue::crossIndex);
+    return MarkTargetWithIcon(bot, target, RtiTargetValue::crossIndex);
 }
 
-void MarkTargetWithMoon(Player* bot, Unit* target)
+bool MarkTargetWithMoon(Player* bot, Unit* target)
 {
-    MarkTargetWithIcon(bot, target, RtiTargetValue::moonIndex);
+    return MarkTargetWithIcon(bot, target, RtiTargetValue::moonIndex);
 }
 
-void ClearTargetIcon(Player* bot, uint8 iconId)
+bool ClearTargetIcon(Player* bot, uint8 iconId)
 {
     if (Group* group = bot->GetGroup())
     {
         ObjectGuid currentGuid = group->GetTargetIcon(iconId);
         if (currentGuid != ObjectGuid::Empty)
+        {
             group->SetTargetIcon(iconId, bot->GetGUID(), ObjectGuid::Empty);
+            return true;
+        }
     }
+    return false;
 }
 
 // For bots to set their raid target icon to the specified icon on the specified target
@@ -192,10 +204,13 @@ Unit* GetFirstAliveUnitByEntry(PlayerbotAI* botAI, uint32 entry)
     return nullptr;
 }
 
-// Return the nearest alive player (human or bot) within the specified radius
-Unit* GetNearestPlayerInRadius(Player* bot, float radius)
+//By leewheel 2026-07-28 - 同步brighton-chi/mod-playerbots：返回类型从 Unit* 改为 Player*，
+//                        仅在队伍成员中查找（不含中立玩家），用于 Al'ar dive bomb 闪避
+//                        和 Capernian 远程分散等场景
+//End By leewheel
+Player* GetNearestPlayerInRadius(Player* bot, float radius)
 {
-    Unit* nearestPlayer = nullptr;
+    Player* nearestPlayer = nullptr;
     float nearestDistance = radius;
 
     if (Group* group = bot->GetGroup())

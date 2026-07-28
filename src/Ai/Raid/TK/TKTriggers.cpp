@@ -1,4 +1,4 @@
-﻿﻿/*
+/*
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
@@ -93,7 +93,7 @@ bool AlarEverythingIsOnFireInPhase2Trigger::IsActive()
 
 bool AlarShouldManagePhaseTrackerTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(bot, TK_MAP_ID) && AI_VALUE2(Unit*, "find target", "al'ar");
+    return IsMechanicTrackerBot(botAI, bot, TK_MAP_ID) && AI_VALUE2(Unit*, "find target", "al'ar");
 }
 
 // Void Reaver
@@ -390,7 +390,7 @@ bool KaelthasSunstriderDeterminingAdvisorKillOrderTrigger::IsActive()
 
 bool KaelthasSunstriderWaitingForTanksToGetAggroOnAdvisorsTrigger::IsActive()
 {
-    if (!IsMechanicTrackerBot(bot, TK_MAP_ID))
+    if (!IsMechanicTrackerBot(botAI, bot, TK_MAP_ID))
         return false;
 
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
@@ -633,7 +633,10 @@ bool HighAstromancerSolarianBossHasVanishedTrigger::IsActive()
 
     // Solarian在战斗中会消失然后重新出现
     // 检查Boss是否处于不可见/不可定位状态
-    return !astromancer->IsVisible() || astromancer->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
+    //By leewheel 2026-07-28 - 修复：brighton-chi 用的 UNIT_FLAG_UNINTERACTIBLE 在本项目 Acore 没有定义，
+    //                        Solarian 消失阶段正确标志位是 UNIT_FLAG_NON_ATTACKABLE（与 Al'ar 等一致）
+    //End By leewheel
+    return !astromancer->IsVisible() || astromancer->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
 }
 
 // KaelthasSunstriderBossIsCastingPyroblastTrigger - 检查凯尔萨斯是否正在施放炎爆术

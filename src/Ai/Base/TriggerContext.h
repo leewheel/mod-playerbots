@@ -168,6 +168,9 @@ public:
 
         creators["unknown dungeon"] = &TriggerContext::unknown_dungeon;
 
+        // By leewheel 2026-07-29: 坦克/治疗 bot 优先 LFG 触发器
+        creators["lfg role priority"] = &TriggerContext::lfg_role_priority;
+
         creators["random bot update"] = &TriggerContext::random_bot_update_trigger;
         creators["no non bot players around"] = &TriggerContext::no_non_bot_players_around;
         creators["new player nearby"] = &TriggerContext::new_player_nearby;
@@ -274,6 +277,8 @@ private:
     static Trigger* collision(PlayerbotAI* botAI) { return new CollisionTrigger(botAI); }
     static Trigger* lfg_proposal_active(PlayerbotAI* botAI) { return new LfgProposalActiveTrigger(botAI); }
     static Trigger* unknown_dungeon(PlayerbotAI* botAI) { return new UnknownDungeonTrigger(botAI); }
+    // By leewheel 2026-07-29: 坦克/治疗 bot 优先 LFG 触发器
+    static Trigger* lfg_role_priority(PlayerbotAI* botAI) { return new LfgRolePriorityTrigger(botAI, "lfg role priority", 2); }
     static Trigger* invalid_target(PlayerbotAI* botAI) { return new InvalidTargetTrigger(botAI); }
     static Trigger* critical_aoe_heal(PlayerbotAI* botAI)
     {

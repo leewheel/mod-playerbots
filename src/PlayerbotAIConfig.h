@@ -252,6 +252,11 @@ public:
     // 超过此时间的2/3（默认120秒=2分钟）后，强制坦克/治疗天赋的机器人加入LFG队列
     // 确保真实玩家排队最多等待3分钟即可成队进入副本
     uint32 randomBotLfgMaxQueueWaitTime;
+    // By leewheel 2026-07-29
+    // 坦克/治疗 bot 优先 LFG 入队（默认 1 启用）
+    // 启用后，坦克/治疗天赋 bot 以约 4 秒/次频率（普通 DPS 14 秒/次的 3.5 倍）入队
+    // 0 = 关闭，所有 bot 走统一的 random 触发器
+    bool randomBotLfgRolePriority;
     // End By leewheel
 
     std::string randomBotAutoJoinICBrackets;

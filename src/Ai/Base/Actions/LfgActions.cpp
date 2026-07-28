@@ -42,13 +42,22 @@ uint32 LfgJoinAction::GetRoles()
     }
     // End By leewheel
 
+    // By leewheel 2026-07-29
+    // Feral 德鲁伊坦克检测 bug 修复：
+    // 原代码要求 HasAura(16931 / Thick Hide)，但此光环仅在熊形态下存在。
+    // Feral 德鲁伊在 caster/cat 形态下永远被判为 DPS，坦克 LFG 进组概率为 0。
+    // 修复：使用 spec==1 (Feral) + ShapeshiftForm OR HasAura 综合判断，
+    //       与 PlayerbotAI::IsTank 的检测口径保持一致。
+    // End By leewheel
     uint8 spec = AiFactory::GetPlayerSpecTab(bot);
     switch (bot->getClass())
     {
         case CLASS_DRUID:
             if (spec == 2)
                 return PLAYER_ROLE_HEALER;
-            else if (spec == 1 && bot->HasAura(16931) /* thick hide */)
+            else if (spec == 1 && (bot->GetShapeshiftForm() == FORM_BEAR ||
+                                   bot->GetShapeshiftForm() == FORM_DIREBEAR ||
+                                   bot->HasAura(16931) /* thick hide */))
                 return PLAYER_ROLE_TANK;
             else
                 return PLAYER_ROLE_DAMAGE;

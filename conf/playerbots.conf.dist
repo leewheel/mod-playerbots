@@ -741,6 +741,15 @@ AiPlayerbot.RandomBotJoinLfg = 1
 AiPlayerbot.RandomBotLfgMaxQueueWaitTime = 180
 # End By leewheel
 
+# By leewheel 2026-07-29
+# 坦克/治疗机器人 LFG 优先入队
+# 启用后，坦克/治疗天赋的随机机器人会主动以更高频率加入 LFG 队列（约 4 秒/次，
+# 相比普通 DPS 的 14 秒/次快 3.5 倍），确保真实玩家排队时能更快看到坦克/治疗补位。
+# 配合 ForceBotsJoinLfg（约 22 秒后强制补位）形成双重保险。
+# 1 = 启用（默认），0 = 关闭（所有 bot 走统一的 random 触发器）
+AiPlayerbot.RandomBotLfgRolePriority = 1
+# End By leewheel
+
 # Enable/Disable periodic online - offline of randombots to mimic the real-world scenario where not all players are online simultaneously
 # When enabled, randombots are randomly selected to go online or offline periodically from a larger set
 # Default: 0 (disabled, the set of online bots remains fixed)

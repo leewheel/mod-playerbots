@@ -374,6 +374,9 @@ bool PlayerbotAIConfig::Initialize()
     // 随机副本排队最大等待时间（秒），默认180秒（3分钟）
     // 超过此时间的2/3（默认120秒=2分钟）后，强制坦克/治疗天赋的机器人加入LFG队列
     randomBotLfgMaxQueueWaitTime = sConfigMgr->GetOption<uint32>("AiPlayerbot.RandomBotLfgMaxQueueWaitTime", 180);
+    // By leewheel 2026-07-29: 坦克/治疗 bot 优先 LFG 入队开关
+    randomBotLfgRolePriority = sConfigMgr->GetOption<bool>("AiPlayerbot.RandomBotLfgRolePriority", true);
+    // End By leewheel
     // End By leewheel
 
     randomBotAutoJoinArenaBracket = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotAutoJoinArenaBracket", 14);

@@ -1,4 +1,4 @@
-﻿﻿/*
+/*
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
@@ -28,7 +28,7 @@ bool TempestKeepResetEncounterStatesAction::Execute(Event /*event*/)
     if (bot->HasAura(static_cast<uint32>(TkSpells::SPELL_SELECT_TRUE_BEAM )))
         bot->RemoveAura(static_cast<uint32>(TkSpells::SPELL_SELECT_TRUE_BEAM));
 
-    if (!IsMechanicTrackerBot(bot, TK_MAP_ID))
+    if (!IsMechanicTrackerBot(botAI, bot, TK_MAP_ID))
         return false;
 
     uint32 const instanceId = bot->GetMap()->GetInstanceId();
@@ -1342,7 +1342,7 @@ bool KaelthasSunstriderManageAdvisorDpsTimerAction::Execute(Event /*event*/)
 
 bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::Execute(Event /*event*/)
 {
-    bool isMechanicTracker = IsMechanicTrackerBot(bot, TK_MAP_ID);
+    bool isMechanicTracker = IsMechanicTrackerBot(botAI, bot, TK_MAP_ID);
 
     // Priority 0: Everybody other than the main tank needs to stay away from the axe
     // But for assist tanks, move away only after getting aggro on the mace, dagger, or sword
@@ -2194,7 +2194,7 @@ bool VoidReaverSpreadRangedAction::Execute(Event /*event*/)
 // VoidReaverEraseTrackersAction - 清除奥术宝珠追踪数据
 bool VoidReaverEraseTrackersAction::Execute(Event /*event*/)
 {
-    if (!IsMechanicTrackerBot(bot, TK_MAP_ID))
+    if (!IsMechanicTrackerBot(botAI, bot, TK_MAP_ID))
         return false;
 
     uint32 const instanceId = bot->GetMap()->GetInstanceId();
