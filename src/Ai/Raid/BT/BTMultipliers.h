@@ -16,7 +16,8 @@ class HighWarlordNajentusDelayDpsCooldownsMultiplier : public Multiplier
 public:
     HighWarlordNajentusDelayDpsCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "high warlord naj'entus delay dps cooldowns multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class HighWarlordNajentusDisableCombatFormationMoveMultiplier : public Multiplier
@@ -24,7 +25,8 @@ class HighWarlordNajentusDisableCombatFormationMoveMultiplier : public Multiplie
 public:
     HighWarlordNajentusDisableCombatFormationMoveMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "high warlord naj'entus disable combat formation move multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 // Supremus
@@ -34,7 +36,8 @@ class SupremusDelayDpsCooldownsMultiplier : public Multiplier
 public:
     SupremusDelayDpsCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "supremus delay dps cooldowns multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class SupremusFocusOnAvoidanceInPhase2Multiplier : public Multiplier
@@ -42,7 +45,8 @@ class SupremusFocusOnAvoidanceInPhase2Multiplier : public Multiplier
 public:
     SupremusFocusOnAvoidanceInPhase2Multiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "supremus focus on avoidance in phase 2 multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class SupremusHitboxIsBuggedMultiplier : public Multiplier
@@ -50,7 +54,8 @@ class SupremusHitboxIsBuggedMultiplier : public Multiplier
 public:
     SupremusHitboxIsBuggedMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "supremus hitbox is bugged multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 // Teron Gorefiend
@@ -60,7 +65,8 @@ class TeronGorefiendDelayDpsCooldownsMultiplier : public Multiplier
 public:
     TeronGorefiendDelayDpsCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "teron gorefiend delay dps cooldowns multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class TeronGorefiendControlMovementMultiplier : public Multiplier
@@ -68,7 +74,8 @@ class TeronGorefiendControlMovementMultiplier : public Multiplier
 public:
     TeronGorefiendControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "teron gorefiend control movement multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class TeronGorefiendMarkedBotOnlyMoveToDieMultiplier : public Multiplier
@@ -76,7 +83,8 @@ class TeronGorefiendMarkedBotOnlyMoveToDieMultiplier : public Multiplier
 public:
     TeronGorefiendMarkedBotOnlyMoveToDieMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "teron gorefiend marked bot only move to die multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier : public Multiplier
@@ -84,7 +92,8 @@ class TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier : public Multip
 public:
     TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "teron gorefiend spirits attack only shadowy constructs multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class TeronGorefiendDisableAttackingConstructsMultiplier : public Multiplier
@@ -92,7 +101,8 @@ class TeronGorefiendDisableAttackingConstructsMultiplier : public Multiplier
 public:
     TeronGorefiendDisableAttackingConstructsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "teron gorefiend disable attacking constructs multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 // Gurtogg Bloodboil
@@ -102,7 +112,8 @@ class GurtoggBloodboilDelayDpsCooldownsMultiplier : public Multiplier
 public:
     GurtoggBloodboilDelayDpsCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "gurtogg bloodboil delay dps cooldowns multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class GurtoggBloodboilControlMovementMultiplier : public Multiplier
@@ -110,7 +121,8 @@ class GurtoggBloodboilControlMovementMultiplier : public Multiplier
 public:
     GurtoggBloodboilControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "gurtogg bloodboil control movement multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 // Reliquary of Souls
@@ -120,7 +132,8 @@ class ReliquaryOfSoulsDelayDpsCooldownsMultiplier : public Multiplier
 public:
     ReliquaryOfSoulsDelayDpsCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "reliquary of souls delay dps cooldowns multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class ReliquaryOfSoulsDontWasteHealingMultiplier : public Multiplier
@@ -128,7 +141,8 @@ class ReliquaryOfSoulsDontWasteHealingMultiplier : public Multiplier
 public:
     ReliquaryOfSoulsDontWasteHealingMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "reliquary of souls don't waste healing multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 // Mother Shahraz
@@ -138,7 +152,8 @@ class MotherShahrazDelayDpsCooldownsMultiplier : public Multiplier
 public:
     MotherShahrazDelayDpsCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "mother shahraz delay dps cooldowns multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class MotherShahrazControlMovementMultiplier : public Multiplier
@@ -146,7 +161,8 @@ class MotherShahrazControlMovementMultiplier : public Multiplier
 public:
     MotherShahrazControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "mother shahraz control movement multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier : public Multiplier
@@ -154,7 +170,8 @@ class MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier : public Multipl
 public:
     MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "mother shahraz bots with fatal attraction only run away multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 // Illidari Council
@@ -164,7 +181,8 @@ class IllidariCouncilDelayDpsCooldownsMultiplier : public Multiplier
 public:
     IllidariCouncilDelayDpsCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidari council delay dps cooldowns multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidariCouncilDisableTankActionsMultiplier : public Multiplier
@@ -172,7 +190,8 @@ class IllidariCouncilDisableTankActionsMultiplier : public Multiplier
 public:
     IllidariCouncilDisableTankActionsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidari council disable tank actions multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidariCouncilControlMovementMultiplier : public Multiplier
@@ -180,7 +199,8 @@ class IllidariCouncilControlMovementMultiplier : public Multiplier
 public:
     IllidariCouncilControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidari council control movement multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidariCouncilControlMisdirectionMultiplier : public Multiplier
@@ -188,7 +208,8 @@ class IllidariCouncilControlMisdirectionMultiplier : public Multiplier
 public:
     IllidariCouncilControlMisdirectionMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidari council control misdirection multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidariCouncilDisableArcaneShotOnZerevorMultiplier : public Multiplier
@@ -196,7 +217,8 @@ class IllidariCouncilDisableArcaneShotOnZerevorMultiplier : public Multiplier
 public:
     IllidariCouncilDisableArcaneShotOnZerevorMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidari council disable arcane shot on zerevor multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidariCouncilDisableIceBlockMultiplier : public Multiplier
@@ -204,7 +226,8 @@ class IllidariCouncilDisableIceBlockMultiplier : public Multiplier
 public:
     IllidariCouncilDisableIceBlockMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidari council disable ice block multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidariCouncilWaitForDpsMultiplier : public Multiplier
@@ -212,7 +235,8 @@ class IllidariCouncilWaitForDpsMultiplier : public Multiplier
 public:
     IllidariCouncilWaitForDpsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidari council wait for dps multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 // Illidan Stormrage <The Betrayer>
@@ -222,7 +246,8 @@ class IllidanStormrageDelayDpsCooldownsMultiplier : public Multiplier
 public:
     IllidanStormrageDelayDpsCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidan stormrage delay dps cooldowns multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidanStormrageControlTankActionsMultiplier : public Multiplier
@@ -230,7 +255,8 @@ class IllidanStormrageControlTankActionsMultiplier : public Multiplier
 public:
     IllidanStormrageControlTankActionsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidan stormrage control tank actions multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidanStormrageDisableDefaultTargetingMultiplier : public Multiplier
@@ -238,7 +264,8 @@ class IllidanStormrageDisableDefaultTargetingMultiplier : public Multiplier
 public:
     IllidanStormrageDisableDefaultTargetingMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidan stormrage disable default targeting multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidanStormrageControlNonTankMovementMultiplier : public Multiplier
@@ -246,7 +273,8 @@ class IllidanStormrageControlNonTankMovementMultiplier : public Multiplier
 public:
     IllidanStormrageControlNonTankMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidan stormrage control non-tank movement multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidanStormrageUseEarthbindTotemMultiplier : public Multiplier
@@ -254,7 +282,8 @@ class IllidanStormrageUseEarthbindTotemMultiplier : public Multiplier
 public:
     IllidanStormrageUseEarthbindTotemMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidan stormrage use earthbind totem multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 class IllidanStormrageWaitForDpsMultiplier : public Multiplier
@@ -262,7 +291,8 @@ class IllidanStormrageWaitForDpsMultiplier : public Multiplier
 public:
     IllidanStormrageWaitForDpsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "illidan stormrage wait for dps multiplier") {}
-    virtual float GetValue(Action* action);
+//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    float GetValue(Action* action) override;
 };
 
 #endif

@@ -19,6 +19,8 @@ public:
         creators["bash"] = &bash;
         creators["swipe"] = &swipe;
         creators["lacerate"] = &lacerate;
+        //By leewheel 2026-07-28 - 注册growl(低吼)为嘲讽技能，使botAI能识别熊德有嘲讽能力
+        creators["taunt spell"] = &growl;
     }
 
 private:
@@ -78,6 +80,17 @@ private:
             "lacerate",
             /*P*/ {},
             /*A*/ { NextAction("maul") },
+            /*C*/ {}
+        );
+    }
+
+    //By leewheel 2026-07-28 - growl(低吼)注册为嘲讽技能节点
+    static ActionNode* growl([[maybe_unused]] PlayerbotAI* botAI)
+    {
+        return new ActionNode(
+            "growl",
+            /*P*/ {},
+            /*A*/ {},
             /*C*/ {}
         );
     }

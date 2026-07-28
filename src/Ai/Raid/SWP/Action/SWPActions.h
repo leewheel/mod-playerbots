@@ -534,9 +534,15 @@ public:
 class KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction : public AttackAction
 {
 public:
-    KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "kil'jaeden mark and prioritize hands of the deceiver") {}
-    bool Execute(Event event) override;
+KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction(
+PlayerbotAI* botAI) : AttackAction(botAI, "kil'jaeden mark and prioritize hands of the deceiver") {}
+bool Execute(Event event) override;
+
+//By leewheel 2026-07-28 - 提取坦克手分配逻辑到独立方法，提高可读性
+private:
+    bool ExecuteTankHandAssignment(
+        std::vector<Unit*> const& hands,
+        Player* mainTank, Player* firstAssistTank, Player* secondAssistTank);
 };
 
 class KiljaedenStunHandsOfTheDeceiverAction : public Action
