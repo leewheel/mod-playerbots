@@ -65,6 +65,11 @@ public:
     KalecgosEnterSpectralRiftAction(
         PlayerbotAI* botAI) : MovementAction(botAI, "kalecgos enter spectral rift") {}
     bool Execute(Event event) override;
+
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，提取坦克进入判断逻辑
+private:
+    bool ShouldTankEnter();
+//End By leewheel
 };
 
 class KalecgosDisperseRangedAction : public MovementAction

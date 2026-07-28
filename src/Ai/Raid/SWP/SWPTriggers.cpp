@@ -71,10 +71,9 @@ bool KalecgosBossEngagedByTankTrigger::IsActive()
     if (!kalecgos || kalecgos->IsFriendlyTo(bot))
         return false;
 
-    if (IsInSpectralRealm(bot))
-        return false;
-
-    return GetKalecgosCurrentTank(bot) == bot;
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，触发器只需检查不在灵界
+return !IsInSpectralRealm(bot);
+//End By leewheel
 }
 
 bool KalecgosSpectralRiftIsOpenTrigger::IsActive()

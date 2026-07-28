@@ -7,8 +7,11 @@
 #ifndef PLAYERBOTS_KARAHELPERS_H
 #define PLAYERBOTS_KARAHELPERS_H
 
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：C风格数组改std::array，更安全且提供大小信息
+#include <array>
 #include <ctime>
 #include <unordered_map>
+//End By leewheel
 
 #include "AiObject.h"
 #include "Position.h"
@@ -103,9 +106,13 @@ namespace KarazhanHelpers
     extern std::unordered_map<ObjectGuid, bool> nightbaneRainOfBonesHit;
 
     extern const Position MAIDEN_OF_VIRTUE_BOSS_POSITION;
-    extern const Position MAIDEN_OF_VIRTUE_RANGED_POSITION[8];
+    //By leewheel 2026-07-28 - C风格数组改std::array
+    extern std::array<Position, 8> const MAIDEN_OF_VIRTUE_RANGED_POSITION;
+    //End By leewheel
     extern const Position BIG_BAD_WOLF_BOSS_POSITION;
-    extern const Position BIG_BAD_WOLF_RUN_POSITION[4];
+    //By leewheel 2026-07-28 - C风格数组改std::array
+    extern std::array<Position, 4> const BIG_BAD_WOLF_RUN_POSITION;
+    //End By leewheel
     extern const Position THE_CURATOR_BOSS_POSITION;
     extern const Position NIGHTBANE_TRANSITION_BOSS_POSITION;
     extern const Position NIGHTBANE_FINAL_BOSS_POSITION;

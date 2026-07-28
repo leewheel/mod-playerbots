@@ -42,8 +42,8 @@ float maxMoveDist = kalecgos->GetVictim() == bot ? 2.25f : 3.5f;
             false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
     }
 
-    // Move to the tank position before taunting during tank swaps to avoid turning the boss
-    if (kalecgos->GetVictim() != bot)
+    //By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，使用指定坦克检查替代直接检查
+    if (GetKalecgosDesignatedTank(bot) == bot && kalecgos->GetVictim() != bot)
         return botAI->DoSpecificAction("taunt spell", event, true);
 
     return false;
@@ -51,27 +51,10 @@ float maxMoveDist = kalecgos->GetVictim() == bot ? 2.25f : 3.5f;
 
 bool KalecgosEnterSpectralRiftAction::Execute(Event /*event*/)
 {
-    if (Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
-        kalecgos && PlayerbotAI::IsTank(bot))
-    {
-        Player* surfaceTank = GetKalecgosCurrentTank(bot);
-        if (!surfaceTank)
-            return false;
-
-        if (surfaceTank == bot)
-        {
-            surfaceTank = GetKalecgosReplacementTank(bot);
-            if (!surfaceTank)
-                return false;
-        }
-
-        Position const& position = KALECGOS_TANK_POSITION;
-        if (surfaceTank->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) > 3.0f ||
-            kalecgos->GetVictim() != surfaceTank)
-        {
-            return false;
-        }
-    }
+    //By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，提取坦克进入判断到ShouldTankEnter
+    if (PlayerbotAI::IsTank(bot) && !ShouldTankEnter())
+        return false;
+    //End By leewheel
 
     constexpr float searchRadius = 75.0f;
     GameObject* rift = bot->FindNearestGameObject(
@@ -94,6 +77,40 @@ bool KalecgosEnterSpectralRiftAction::Execute(Event /*event*/)
         SWP_MAP_ID, destX, destY, rift->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
+
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，提取坦克进入判断逻辑
+bool KalecgosEnterSpectralRiftAction::ShouldTankEnter()
+{
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    if (!kalecgos)
+        return false;
+
+    Player* surfaceTank = GetKalecgosDesignatedTank(bot);
+    if (!surfaceTank)
+        return false;
+
+    if (surfaceTank == bot)
+    {
+        KalecgosEncounterState& state = kalecgosEncounterStates[kalecgos->GetInstanceId()];
+        surfaceTank = GetNextSurfaceTankInOrder(
+            bot->GetGroup(), state.tankAssignmentGuids,
+            state.currentTankGuid, ObjectGuid::Empty, true);
+
+        if (!surfaceTank)
+            return false;
+    }
+
+    // 当前坦克必须等下一个坦克接手后才能进入传送门
+    Position const& position = KALECGOS_TANK_POSITION;
+    if (surfaceTank->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) > 3.0f ||
+        kalecgos->GetVictim() != surfaceTank)
+    {
+        return false;
+    }
+
+    return true;
+}
+//End By leewheel
 
 bool KalecgosDisperseRangedAction::Execute(Event /*event*/)
 {

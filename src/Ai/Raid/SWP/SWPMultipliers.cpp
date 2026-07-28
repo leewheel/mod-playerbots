@@ -161,7 +161,9 @@ float KalecgosRestrictTauntMultiplier::GetValue(Action* action)
     if (IsInSpectralRealm(bot))
         return 1.0f;
 
-    if (GetKalecgosCurrentTank(bot) != bot)
+    //By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，函数重命名
+if (GetKalecgosDesignatedTank(bot) != bot)
+//End By leewheel
         return 0.0f;
 
     return 1.0f;

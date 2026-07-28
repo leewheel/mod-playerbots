@@ -16,6 +16,9 @@
 
 class Player;
 class PlayerbotAI;
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，添加Group前向声明
+class Group;
+//End By leewheel
 
 namespace SwpHelpers
 {
@@ -61,9 +64,17 @@ extern std::unordered_map<ObjectGuid, KalecgosRealmState> kalecgosRealmStates;
 bool IsExhausted(Player* bot);
 bool IsInSpectralRealm(Player* bot);
 bool IsKalecgosDecurser(Player* bot);
-void EnsureKalecgosGroupAssignments(Player* bot);
-Player* GetKalecgosCurrentTank(Player* bot);
-Player* GetKalecgosReplacementTank(Player* bot);
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，函数重命名
+//                        EnsureKalecgosGroupAssignments → EnsureKalecgosRaidAssignments
+//                        GetKalecgosCurrentTank → GetKalecgosDesignatedTank
+//                        GetKalecgosReplacementTank → GetNextSurfaceTankInOrder（新参数签名）
+//End By leewheel
+void EnsureKalecgosRaidAssignments(Player* bot);
+Player* GetKalecgosDesignatedTank(Player* player);
+Player* GetNextSurfaceTankInOrder(
+    Group* group, std::array<ObjectGuid, KALECGOS_TANK_COUNT> const& orderedGuids,
+    ObjectGuid afterGuid, ObjectGuid excludedGuid = ObjectGuid::Empty,
+    bool fallbackToFirst = false);
 bool ShouldEnterKalecgosSpectralRift(Player* bot);
 //By leewheel 2026-07-27 - announcerAI参数由调用方传入，避免函数内部重复查找botAI
 void RecordKalecgosSpectralBlastTarget(Player* bot, PlayerbotAI* announcerAI);

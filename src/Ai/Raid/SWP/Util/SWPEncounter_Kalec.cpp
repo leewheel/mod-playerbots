@@ -81,7 +81,7 @@ KalecgosEncounterState& GetPreparedKalecgosEncounterState(Player* bot)
         state.encounterStartMs = getMSTime();
 
     ClearExpiredKalecgosActiveRift(state, getMSTime());
-    EnsureKalecgosGroupAssignments(bot);
+    EnsureKalecgosRaidAssignments(bot);
     return state;
 }
 
@@ -549,7 +549,7 @@ bool IsKalecgosDecurser(Player* bot)
     return botAI->HasStrategy("cure", BOT_STATE_COMBAT);
 }
 
-void EnsureKalecgosGroupAssignments(Player* bot)
+void EnsureKalecgosRaidAssignments(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group || bot->GetMapId() != SWP_MAP_ID)
@@ -663,7 +663,7 @@ void EnsureKalecgosGroupAssignments(Player* bot)
         state.activeRiftGroup = ResolveKalecgosActiveRiftGroup(group, state);
 }
 
-Player* GetKalecgosCurrentTank(Player* bot)
+Player* GetKalecgosDesignatedTank(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group)
@@ -689,23 +689,15 @@ Player* GetKalecgosCurrentTank(Player* bot)
     return nullptr;
 }
 
-Player* GetKalecgosReplacementTank(Player* bot)
+//By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，删除GetKalecgosReplacementTank包装
+//                        改为公共GetNextSurfaceTankInOrder，委托给匿名命名空间的实现
+Player* GetNextSurfaceTankInOrder(
+    Group* group, std::array<ObjectGuid, KALECGOS_TANK_COUNT> const& orderedGuids,
+    ObjectGuid afterGuid, ObjectGuid excludedGuid, bool fallbackToFirst)
 {
-    Group* group = bot->GetGroup();
-    if (!group)
-        return nullptr;
-
-    KalecgosEncounterState& state = GetPreparedKalecgosEncounterState(bot);
-    Player* currentTank = GetKalecgosSurfaceAssignedTank(group, state.currentTankGuid);
-    if (!currentTank)
-        currentTank = GetKalecgosCurrentVictimTank(bot, group, state);
-
-    if (!currentTank)
-        return nullptr;
-
-    return GetNextKalecgosSurfaceTankInOrder(
-        group, state.tankAssignmentGuids, currentTank->GetGUID(), ObjectGuid::Empty, true);
+    return GetNextKalecgosSurfaceTankInOrder(group, orderedGuids, afterGuid, excludedGuid, fallbackToFirst);
 }
+//End By leewheel
 
 bool ShouldEnterKalecgosSpectralRift(Player* bot)
 {
