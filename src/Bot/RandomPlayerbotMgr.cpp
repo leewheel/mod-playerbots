@@ -9,6 +9,7 @@
 #include <WorldSessionMgr.h>
 
 #include <algorithm>
+#include <array>
 #include <boost/thread/thread.hpp>
 #include <cstdlib>
 #include <ctime>
@@ -1355,6 +1356,33 @@ static bool ClassCanTank(uint8 cls)
            cls == CLASS_DRUID || cls == CLASS_DEATH_KNIGHT;
 }
 
+// By leewheel 2026-07-29
+// 将四个可坦职业映射到稳定的轮转槽位，避免 PlayerBotMap 按GUID固定顺序时长期只选中死亡骑士。
+static int32 GetTankClassSlot(uint8 cls)
+{
+    switch (cls)
+    {
+        case CLASS_WARRIOR: return 0;
+        case CLASS_PALADIN: return 1;
+        case CLASS_DRUID: return 2;
+        case CLASS_DEATH_KNIGHT: return 3;
+        default: return -1;
+    }
+}
+
+static char const* GetTankClassName(uint8 slot)
+{
+    switch (slot)
+    {
+        case 0: return "战士";
+        case 1: return "圣骑士";
+        case 2: return "德鲁伊";
+        case 3: return "死亡骑士";
+        default: return "未知职业";
+    }
+}
+// End By leewheel
+
 // 检查职业是否可以当治疗
 static bool ClassCanHeal(uint8 cls)
 {
@@ -1658,8 +1686,11 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
              teamId == TEAM_ALLIANCE ? "联盟" : "部落");
 
     // By leewheel 2026-07-29
-    // 诊断日志：统计空闲bot中各角色数量，定位找不到坦克的根因
+    // 诊断日志：同时按职业统计现成坦克与可切换坦克，不能只给出总数而隐藏战士/圣骑士/德鲁伊的去向。
     int idleTanks = 0, idleHealers = 0, idleDps = 0, idleTotal = 0;
+    std::array<int, 4> idleTankByClass = {};
+    std::array<int, 4> switchableNonHealerTankByClass = {};
+    std::array<int, 4> switchableHealerTankByClass = {};
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* bot = it->second;
@@ -1669,20 +1700,144 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
             continue;
         if (!IsBotIdleForLfg(bot))
             continue;
+
         idleTotal++;
+        int32 const tankClassSlot = GetTankClassSlot(bot->getClass());
+        bool const isHealer = IsBotHealer(bot);
         if (IsBotTank(bot))
+        {
             idleTanks++;
-        else if (IsBotHealer(bot))
-            idleHealers++;
+            if (tankClassSlot >= 0)
+                idleTankByClass[tankClassSlot]++;
+        }
         else
-            idleDps++;
+        {
+            // By leewheel 2026-07-29
+            // 区分“非治疗可切坦”和“治疗可切坦”，避免圣骑士/德鲁伊治疗被轮转提前改坦导致奶缺额。
+            // 治疗类职业必须且仅能在治疗已经满编、坦克仍缺的情况下才允许转坦。
+            if (tankClassSlot >= 0)
+            {
+                if (isHealer)
+                    switchableHealerTankByClass[tankClassSlot]++;
+                else
+                    switchableNonHealerTankByClass[tankClassSlot]++;
+            }
+            // End By leewheel
+
+            if (isHealer)
+                idleHealers++;
+            else
+                idleDps++;
+        }
     }
     LOG_INFO("playerbots", "[LFG诊断] 空闲bot统计: 总计={} 坦克={} 治疗={} DPS={} (阵营={})",
              idleTotal, idleTanks, idleHealers, idleDps,
              teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+    LOG_INFO("playerbots", "[LFG诊断] 坦克职业候选: 战士(现成{} 非治疗可切{} 治疗可切{}) 圣骑士(现成{} 非治疗可切{} 治疗可切{}) 德鲁伊(现成{} 非治疗可切{} 治疗可切{}) 死亡骑士(现成{} 非治疗可切{} 治疗可切{})",
+             idleTankByClass[0], switchableNonHealerTankByClass[0], switchableHealerTankByClass[0],
+             idleTankByClass[1], switchableNonHealerTankByClass[1], switchableHealerTankByClass[1],
+             idleTankByClass[2], switchableNonHealerTankByClass[2], switchableHealerTankByClass[2],
+             idleTankByClass[3], switchableNonHealerTankByClass[3], switchableHealerTankByClass[3]);
     // End By leewheel
 
-    // 第一遍：找对应天赋的空闲bot直接加入
+    // By leewheel 2026-07-29
+    // 坦克职业轮转：PlayerBotMap 按GUID固定顺序遍历时，鲜血死亡骑士会长期占据最前面的坦克位，
+    // 战士、圣骑士、德鲁伊即使存在，也可能永远等不到第二遍切换天赋。这里先按四职业轮转补坦：
+    // phase0：各职业现成坦克天赋；phase1：非治疗可切坦；phase2：治疗可切坦（必须且仅能在治疗满编时启用）。
+    // 治疗天赋绝不能早于治疗满编之前被轮转改成坦克，否则会把治疗缺额推到玩家身上。
+    // 四职业轮转仍不足时才回落到通用扫描，兼顾职业公平、治疗职责保护和补位成功率。
+    static std::array<uint8, 2> nextTankClassSlot = {0, 0};
+    uint8 const teamSlot = teamId == TEAM_HORDE ? 1 : 0;
+    uint8 const rotationStart = nextTankClassSlot[teamSlot];
+    std::array<bool, 4> selectedTankClass = {};
+
+    // phase 描述：0=现成坦克天赋，1=非治疗可切坦，2=治疗可切坦
+    for (uint8 phase = 0; phase < 3 && needTanks > 0; ++phase)
+    {
+        // By leewheel 2026-07-29
+        // 治疗被改成坦克之前必须保证治疗已经满编，否则会把治疗缺额转嫁到真实玩家身上。
+        if (phase == 2 && needHealers > 0)
+            break;
+        // End By leewheel
+
+        bool const requireCurrentTankSpec = phase == 0;
+        bool const allowHealerReassign = phase == 2;
+        for (uint8 offset = 0; offset < 4 && needTanks > 0; ++offset)
+        {
+            uint8 const classSlot = (rotationStart + offset) % 4;
+            if (selectedTankClass[classSlot])
+                continue;
+
+            for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+            {
+                Player* bot = it->second;
+                if (!bot || bot->GetTeamId() != teamId || !IsRandomBot(bot) || !IsBotIdleForLfg(bot))
+                    continue;
+                if (GetTankClassSlot(bot->getClass()) != classSlot)
+                    continue;
+                bool const isHealer = IsBotHealer(bot);
+                if (requireCurrentTankSpec)
+                {
+                    if (!IsBotTank(bot))
+                        continue;
+                }
+                else
+                {
+                    if (IsBotTank(bot))
+                        continue;
+                    // phase1 严禁挑选治疗天赋机器人；phase2 仅挑选治疗天赋机器人
+                    if (allowHealerReassign != isHealer)
+                        continue;
+                }
+
+                if (!requireCurrentTankSpec)
+                {
+                    int32 const specTab = GetTankSpecTab(bot->getClass());
+                    if (specTab < 0)
+                        continue;
+
+                    uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[bot->getClass()][specTab];
+                    PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
+                    if (bot->GetFreeTalentPoints() > 0)
+                    {
+                        PlayerbotFactory factory(bot, bot->GetLevel());
+                        factory.InitTalentsTree(true, false, false);
+                    }
+                    // By leewheel 2026-07-29
+                    // 天赋模板可能缺失或应用失败，切换后必须重新按实际天赋页验证，禁止把非坦克天赋机器人以坦克职责送入LFG。
+                    if (!IsBotTank(bot))
+                    {
+                        LOG_WARN("playerbots", "LFG坦克职业轮转失败: {}({}) 切换后仍不是坦克天赋，继续尝试该职业其他机器人",
+                            bot->GetName().c_str(), GetTankClassName(classSlot));
+                        continue;
+                    }
+                    // End By leewheel
+                }
+
+                if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot))
+                    botAI->ResetStrategies(false);
+
+                if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
+                {
+                    needTanks--;
+                    selectedTankClass[classSlot] = true;
+                    nextTankClassSlot[teamSlot] = (classSlot + 1) % 4;
+                    char const* phaseDesc = "以现有坦克天赋";
+                    if (phase == 1) phaseDesc = "切换非治疗坦克天赋后";
+                    else if (phase == 2) phaseDesc = "切换治疗坦克天赋后";
+                    LOG_INFO("playerbots", "LFG坦克职业轮转: {}({}) {}成功加入队列",
+                        bot->GetName().c_str(), GetTankClassName(classSlot), phaseDesc);
+                    break;
+                }
+
+                LOG_WARN("playerbots", "LFG坦克职业轮转失败: {}({}) 未进入QUEUED/PROPOSAL，继续尝试该职业其他机器人",
+                    bot->GetName().c_str(), GetTankClassName(classSlot));
+            }
+        }
+    }
+    // End By leewheel
+
+    // 第一遍：找对应天赋的空闲bot直接加入（职业轮转不足时的兜底）
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* bot = it->second;
@@ -1769,6 +1924,11 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
             // 需要坦克，bot可以当坦克但当前不是坦克天赋
             if (needTanks > 0 && ClassCanTank(cls) && !IsBotTank(bot))
             {
+                // By leewheel 2026-07-29
+                // 治疗天赋机器人转坦克必须保证治疗已满编，否则把治疗缺额转嫁给真实玩家。
+                if (IsBotHealer(bot) && needHealers > 0)
+                    continue;
+                // End By leewheel
                 int32 specTab = GetTankSpecTab(cls);
                 if (specTab >= 0)
                 {
@@ -1779,6 +1939,14 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                         PlayerbotFactory factory(bot, bot->GetLevel());
                         factory.InitTalentsTree(true, false, false);
                     }
+                    // By leewheel 2026-07-29
+                    // 天赋模板可能缺失或应用失败，切换后必须重新按实际天赋页验证。
+                    if (!IsBotTank(bot))
+                    {
+                        LOG_WARN("playerbots", "LFG补位失败: {} 切换坦克天赋后仍不是坦克天赋，继续尝试其他机器人", bot->GetName().c_str());
+                        continue;
+                    }
+                    // End By leewheel
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
                     if (botAI)
                         botAI->ResetStrategies(false);
@@ -1834,9 +2002,20 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
         }
     }
 
-    LOG_INFO("playerbots", "LFG补位完成: 剩余缺额坦{}奶{}DPS{} (阵营={})",
-             needTanks > 0 ? needTanks : 0, needHealers > 0 ? needHealers : 0, needDps > 0 ? needDps : 0,
-             teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+    // By leewheel 2026-07-29
+    // 只有所有职责缺额都归零才记录“补位完成”；仍有缺额时必须明确告警，禁止产生假成功日志。
+    if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
+    {
+        LOG_INFO("playerbots", "LFG补位完成: 坦克、治疗和DPS职责均已补齐 (阵营={})",
+            teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+    }
+    else
+    {
+        LOG_WARN("playerbots", "LFG本轮补位结束但仍有缺额: 坦{}奶{}DPS{} (阵营={})",
+            needTanks > 0 ? needTanks : 0, needHealers > 0 ? needHealers : 0, needDps > 0 ? needDps : 0,
+            teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+    }
+    // End By leewheel
 }
 // End By leewheel
 
