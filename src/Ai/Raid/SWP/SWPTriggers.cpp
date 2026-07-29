@@ -313,7 +313,9 @@ bool FelmystPlayerHasGasNovaTrigger::IsActive()
     return GetFelmystGasNovaDispelTarget(bot);
 }
 
-bool FelmystDemonicVaporTrailsAreActiveTrigger::IsActive()
+//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：FelmystDemonicVaporTrailsAreActiveTrigger
+//                          → FelmystShouldAvoidDemonicVaporTrailsTrigger
+bool FelmystShouldAvoidDemonicVaporTrailsTrigger::IsActive()
 {
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
     if (!felmyst || !felmyst->IsFlying())

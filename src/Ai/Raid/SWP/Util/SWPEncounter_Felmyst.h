@@ -98,6 +98,8 @@ struct FelmystEncounterState
     FogPassState fogPass;
     time_t landingDpsWaitTimer = 0;
     time_t landingTouchdownTimer = 0;
+    //By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段非蒸汽 bot 的撤离协调员 GUID
+    ObjectGuid flightCoordinatorGuid = ObjectGuid::Empty;
 };
 
 //By leewheel 2026-07-28 - 移除不再使用的常量，只保留实际引用的
@@ -131,6 +133,9 @@ Player* GetFelmystEncapsulateTarget(Player* bot);
 bool DidEncapsulateOccurThisGroundPhase(Player* bot);
 Player* GetFelmystGasNovaDispelTarget(Player* bot);
 Player* GetFelmystCharmedTarget(Player* bot, Unit* felmyst);
+//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段撤离协调员（避免分散站位）
+Player* GetFelmystFlightCoordinator(Player* player);
+//End By leewheel
 
 }
 

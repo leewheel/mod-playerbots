@@ -62,21 +62,22 @@ float AlarMoveBetweenPlatformsMultiplier::GetValue(Action* action)
 }
 
 //By leewheel 2026-07-28 - 拆分Follow和Flee判断；phase2前禁止跟随，phase2中非战斗状态也禁止跟随
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：反转判断顺序，先做 cheap dynamic_cast 再查 alar
 float AlarDisableDisperseMultiplier::GetValue(Action* action)
 {
+    bool const isCombatMoveBlocked = dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<TankFaceAction*>(action) &&
+        !dynamic_cast<SetBehindTargetAction*>(action);
+
+    if (isCombatMoveBlocked || dynamic_cast<FleeAction*>(action))
+        return AI_VALUE2(Unit*, "find target", "al'ar") ? 0.0f : 1.0f;
+
+    if (!dynamic_cast<FollowAction*>(action))
+        return 1.0f;
+
     Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
     if (!alar)
         return 1.0f;
-
-    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<TankFaceAction*>(action) &&
-        !dynamic_cast<SetBehindTargetAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    if (dynamic_cast<FleeAction*>(action))
-        return 0.0f;
 
     if (!isAlarInPhase2[alar->GetMap()->GetInstanceId()])
         return 1.0f;
@@ -84,10 +85,7 @@ float AlarDisableDisperseMultiplier::GetValue(Action* action)
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (dynamic_cast<FollowAction*>(action))
-        return 0.0f;
-
-    return 1.0f;
+    return 0.0f;
 }
 
 //By leewheel 2026-07-28 - 重命名并优化：先判断非战斗状态和action类型，最后才查alar，减少查询
@@ -106,8 +104,15 @@ float AlarDisableAutomaticTargetingMultiplier::GetValue(Action* action)
 }
 
 //By leewheel 2026-07-28 - 重写远离复生逻辑：ranged/tank检查PASSIVE状态，近战检查血量>5%
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 dynamic_cast 早返回，再查 alar；保留老大 ranged/tank PASSIVE + 近战血量检查
 float AlarStayAwayFromRebirthMultiplier::GetValue(Action* action)
 {
+    if (!dynamic_cast<MovementAction*>(action) ||
+        dynamic_cast<AlarMoveAwayFromRebirthAction*>(action))
+    {
+        return 1.0f;
+    }
+
     Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
     if (!alar || isAlarInPhase2[alar->GetMap()->GetInstanceId()])
         return 1.0f;
@@ -123,13 +128,7 @@ float AlarStayAwayFromRebirthMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<AlarMoveAwayFromRebirthAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    return 1.0f;
+    return 0.0f;
 }
 
 //By leewheel 2026-07-28 - 使用IsSingleTargetTaunt辅助函数；优化判断顺序先过滤action再查状态
@@ -150,16 +149,17 @@ float AlarDontTauntBossIfArmorMeltedMultiplier::GetValue(Action* action)
 
 // Void Reaver
 
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 dynamic_cast 早返回，再查 void reaver
 float VoidReaverMaintainPositionsMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "void reaver"))
-        return 1.0f;
-
-    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<SetBehindTargetAction*>(action))
+    if (!dynamic_cast<CombatFormationMoveAction*>(action) ||
+        dynamic_cast<SetBehindTargetAction*>(action))
     {
-        return 0.0f;
+        return 1.0f;
     }
+
+    if (AI_VALUE2(Unit*, "find target", "void reaver"))
+        return 0.0f;
 
     return 1.0f;
 }
@@ -167,8 +167,36 @@ float VoidReaverMaintainPositionsMultiplier::GetValue(Action* action)
 // High Astromancer Solarian
 
 //By leewheel 2026-07-28 - 重写星术师站位逻辑：拆分各action类型的独立判断
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：拆分为 isCombatMoveBlocked/isBlinkDisengage/isNonHunterFlee 三组标志，
+//                          战斗移动/Blink/Flee 走 fast-path，Reach spell 与 other movement 走 slow-path
 float HighAstromancerSolarianMaintainPositionMultiplier::GetValue(Action* action)
 {
+    bool const isCombatMoveBlocked = dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<SetBehindTargetAction*>(action);
+    bool const isBlinkDisengage = dynamic_cast<CastBlinkBackAction*>(action) ||
+        dynamic_cast<CastDisengageAction*>(action);
+    bool const isNonHunterFlee = bot->getClass() != CLASS_HUNTER &&
+        dynamic_cast<FleeAction*>(action);
+
+    if (isCombatMoveBlocked || isBlinkDisengage || isNonHunterFlee)
+    {
+        Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
+        if (astromancer && !astromancer->HasAura(
+                static_cast<uint32>(TkSpells::SPELL_SOLARIAN_TRANSFORM)))
+        {
+            return 0.0f;
+        }
+        return 1.0f;
+    }
+
+    bool const isReachSpell = dynamic_cast<CastReachTargetSpellAction*>(action);
+    bool const isOtherMovement = dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<AttackAction*>(action) &&
+        !dynamic_cast<HighAstromancerSolarianMoveAwayFromGroupAction*>(action);
+
+    if (!isReachSpell && !isOtherMovement)
+        return 1.0f;
+
     Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
     if (!astromancer || astromancer->HasAura(
             static_cast<uint32>(TkSpells::SPELL_SOLARIAN_TRANSFORM)))
@@ -176,39 +204,20 @@ float HighAstromancerSolarianMaintainPositionMultiplier::GetValue(Action* action
         return 1.0f;
     }
 
-    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<SetBehindTargetAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    if (dynamic_cast<CastBlinkBackAction*>(action) ||
-        dynamic_cast<CastDisengageAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    if (bot->getClass() != CLASS_HUNTER && dynamic_cast<FleeAction*>(action))
-        return 0.0f;
-
     if (!HasWrathOfTheAstromancer(bot))
         return 1.0f;
 
-    if (dynamic_cast<CastReachTargetSpellAction*>(action) ||
-        (dynamic_cast<MovementAction*>(action) &&
-         !dynamic_cast<AttackAction*>(action) &&
-         !dynamic_cast<HighAstromancerSolarianMoveAwayFromGroupAction*>(action)))
-    {
-        return 0.0f;
-    }
-
-    return 1.0f;
+    return 0.0f;
 }
 
 //By leewheel 2026-07-28 - 新增：星术师阶段禁止近战自动选目标（主坦除外且需PASSIVE状态）
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：把 TankAssist/DpsAssist 早返回移到 astromancer 查询之前
 float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValue(Action* action)
 {
     if (!botAI->IsMelee(bot))
+        return 1.0f;
+
+    if (!dynamic_cast<TankAssistAction*>(action) && !dynamic_cast<DpsAssistAction*>(action))
         return 1.0f;
 
     Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
@@ -216,9 +225,6 @@ float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValue(Action* a
         return 1.0f;
 
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!dynamic_cast<TankAssistAction*>(action) && !dynamic_cast<DpsAssistAction*>(action))
         return 1.0f;
 
     if (botAI->IsMainTank(bot))
@@ -239,17 +245,27 @@ float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValue(Action* a
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
 //By leewheel 2026-07-28 - 优化DPS等待逻辑：使用sentinel(-1)表示满血不计时，提取变量减少重复调用
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 Misdirect/Heal/Attack-CastSpell 早返回，再查 kaelthas
 float KaelthasSunstriderWaitForDpsMultiplier::GetValue(Action* action)
 {
+    if (dynamic_cast<KaelthasSunstriderMisdirectAdvisorsToTanksAction*>(action))
+        return 1.0f;
+
+    if (dynamic_cast<CastHealingSpellAction*>(action))
+        return 1.0f;
+
+    if (!dynamic_cast<AttackAction*>(action) &&
+        !dynamic_cast<CastSpellAction*>(action))
+    {
+        return 1.0f;
+    }
+
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas)
         return 1.0f;
 
     boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
     if (!kaelAI || kaelAI->GetPhase() != PHASE_SINGLE_ADVISOR)
-        return 1.0f;
-
-    if (dynamic_cast<KaelthasSunstriderMisdirectAdvisorsToTanksAction*>(action))
         return 1.0f;
 
     time_t const now = std::time(nullptr);
@@ -290,22 +306,22 @@ float KaelthasSunstriderWaitForDpsMultiplier::GetValue(Action* action)
         (isAdvisorActive(telonicus) && !isFirstAssistTank) ||
         (isAdvisorActive(capernian) && !isMainTank && !isWarlockTank);
 
-    if (!shouldHoldDps)
-        return 1.0f;
-
-    if (dynamic_cast<AttackAction*>(action) ||
-        (dynamic_cast<CastSpellAction*>(action) &&
-         !dynamic_cast<CastHealingSpellAction*>(action)))
-    {
+    if (shouldHoldDps)
         return 0.0f;
-    }
 
     return 1.0f;
 }
 
 //By leewheel 2026-07-28 - 删除SPELL_PERMANENT_FEIGN_DEATH检查，改用IsFeigningDeath
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 MovementAction/Kite 早返回，再查 kaelthas
 float KaelthasSunstriderKiteThaladredMultiplier::GetValue(Action* action)
 {
+    if (!dynamic_cast<MovementAction*>(action) ||
+        dynamic_cast<KaelthasSunstriderKiteThaladredAction*>(action))
+    {
+        return 1.0f;
+    }
+
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas)
         return 1.0f;
@@ -321,13 +337,7 @@ float KaelthasSunstriderKiteThaladredMultiplier::GetValue(Action* action)
     if (!thaladred || thaladred->GetVictim() != bot)
         return 1.0f;
 
-    if (dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<KaelthasSunstriderKiteThaladredAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    return 1.0f;
+    return 0.0f;
 }
 
 float KaelthasSunstriderControlMisdirectionMultiplier::GetValue(Action* action)
@@ -350,8 +360,17 @@ float KaelthasSunstriderControlMisdirectionMultiplier::GetValue(Action* action)
 }
 
 //By leewheel 2026-07-28 - 用IsFeigningDeath替代SPELL_PERMANENT_FEIGN_DEATH；新增CastReachTargetSpellAction禁用
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 ReachSpell/BlockedMovement 早返回，再查 kaelthas
 float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValue(Action* action)
 {
+    bool const isReachSpell = dynamic_cast<CastReachTargetSpellAction*>(action);
+    bool const isBlockedMovement = dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<AttackAction*>(action) &&
+        !dynamic_cast<KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction*>(action);
+
+    if (!isReachSpell && !isBlockedMovement)
+        return 1.0f;
+
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas)
         return 1.0f;
@@ -367,17 +386,7 @@ float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValue(Action* ac
         return 1.0f;
     }
 
-    if (dynamic_cast<CastReachTargetSpellAction*>(action))
-        return 0.0f;
-
-    if (dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<AttackAction*>(action) &&
-        !dynamic_cast<KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    return 1.0f;
+    return 0.0f;
 }
 
 //By leewheel 2026-07-28 - 只对主坦生效；用IsSingleTargetTaunt替代逐个判断；CastSwipeBearAction替代CastSwipeAction
@@ -430,8 +439,15 @@ float KaelthasSunstriderSuppressEquipUpgradeMultiplier::GetValue(Action* action)
 }
 
 //By leewheel 2026-07-28 - 新增：凯子阶段自动选目标管理（DPS全部禁用，主坦/顾问阶段副坦禁用）
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 DpsAssist/TankAssist 早返回，再查 kaelthas
 float KaelthasSunstriderManageAutomaticTargetingMultiplier::GetValue(Action* action)
 {
+    if (!dynamic_cast<DpsAssistAction*>(action) &&
+        !dynamic_cast<TankAssistAction*>(action))
+    {
+        return 1.0f;
+    }
+
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas)
         return 1.0f;
@@ -446,48 +462,54 @@ float KaelthasSunstriderManageAutomaticTargetingMultiplier::GetValue(Action* act
     if (dynamic_cast<DpsAssistAction*>(action))
         return 0.0f;
 
-    if (dynamic_cast<TankAssistAction*>(action))
-    {
-        if (botAI->IsMainTank(bot))
-            return 0.0f;
+    //By leewheel 2026-07-29 - TankAssist 分支：主坦/顾问阶段副坦都禁用自动选目标
+    if (botAI->IsMainTank(bot))
+        return 0.0f;
 
-        if (kaelAI->GetPhase() == PHASE_SINGLE_ADVISOR ||
-            kaelAI->GetPhase() == PHASE_ALL_ADVISORS)
-        {
-            return 0.0f;
-        }
+    if (kaelAI->GetPhase() == PHASE_SINGLE_ADVISOR ||
+        kaelAI->GetPhase() == PHASE_ALL_ADVISORS)
+    {
+        return 0.0f;
     }
 
     return 1.0f;
 }
 
 //By leewheel 2026-07-28 - 新增武器阶段TankFace禁用逻辑
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 isCombatMoveBlocked 早返回，再做 TankFace 早返回，最后才查 kaelthas
 float KaelthasSunstriderDisableDisperseMultiplier::GetValue(Action* action)
 {
+    bool const isCombatMoveBlocked = dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<TankFaceAction*>(action) &&
+        !dynamic_cast<SetBehindTargetAction*>(action);
+
+    if (isCombatMoveBlocked)
+        return AI_VALUE2(Unit*, "find target", "kael'thas sunstrider") ? 0.0f : 1.0f;
+
+    if (!dynamic_cast<TankFaceAction*>(action))
+        return 1.0f;
+
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas)
         return 1.0f;
-
-    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<TankFaceAction*>(action) &&
-        !dynamic_cast<SetBehindTargetAction*>(action))
-    {
-        return 0.0f;
-    }
 
     boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
     if (!kaelAI || kaelAI->GetPhase() == PHASE_WEAPONS)
         return 1.0f;
 
-    if (dynamic_cast<TankFaceAction*>(action))
-        return 0.0f;
-
-    return 1.0f;
+    return 0.0f;
 }
 
 //By leewheel 2026-07-28 - 新增：阶段3准备（顾问复活/凯尔对话阶段，指定角色移动就位）
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 MovementAction/HandleAdvisorRoles 早返回，再查 kaelthas
 float KaelthasSunstriderPrepareForPhase3Multiplier::GetValue(Action* action)
 {
+    if (!dynamic_cast<MovementAction*>(action) ||
+        dynamic_cast<KaelthasSunstriderHandleAdvisorRolesInPhase3Action*>(action))
+    {
+        return 1.0f;
+    }
+
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas)
         return 1.0f;
@@ -500,12 +522,6 @@ float KaelthasSunstriderPrepareForPhase3Multiplier::GetValue(Action* action)
     Unit* thaladred = AI_VALUE2(Unit*, "find target", "thaladred the darkener");
     if (!thaladred || !thaladred->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         return 1.0f;
-
-    if (!dynamic_cast<MovementAction*>(action) ||
-        dynamic_cast<KaelthasSunstriderHandleAdvisorRolesInPhase3Action*>(action))
-    {
-        return 1.0f;
-    }
 
     if (botAI->IsMainTank(bot) ||
         botAI->IsAssistTankOfIndex(bot, 0, false) ||
@@ -520,24 +536,14 @@ float KaelthasSunstriderPrepareForPhase3Multiplier::GetValue(Action* action)
 
 // Bloodlust/Heroism and other major cooldowns should be used at the start of Phase 3
 //By leewheel 2026-07-28 - 拆分DPS条件，UseTrinketAction单独判断需IsDps
+//By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：先做 isCooldown 标志计算与早返回，再查 kaelthas 阶段
 float KaelthasSunstriderDelayCooldownsMultiplier::GetValue(Action* action)
 {
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
-    if (!kaelthas)
-        return 1.0f;
-
-    boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
-    if (!kaelAI || kaelAI->GetPhase() == PHASE_ALL_ADVISORS || kaelAI->GetPhase() == PHASE_FINAL)
-        return 1.0f;
-
-    if (bot->getClass() == CLASS_SHAMAN &&
-        (dynamic_cast<CastBloodlustAction*>(action) ||
-         dynamic_cast<CastHeroismAction*>(action)))
-    {
-        return 0.0f;
-    }
-
-    if (dynamic_cast<CastMetamorphosisAction*>(action) ||
+    bool const isCooldown =
+        (bot->getClass() == CLASS_SHAMAN &&
+         (dynamic_cast<CastBloodlustAction*>(action) ||
+          dynamic_cast<CastHeroismAction*>(action))) ||
+        dynamic_cast<CastMetamorphosisAction*>(action) ||
         dynamic_cast<CastAdrenalineRushAction*>(action) ||
         dynamic_cast<CastBladeFlurryAction*>(action) ||
         dynamic_cast<CastIcyVeinsAction*>(action) ||
@@ -556,15 +562,21 @@ float KaelthasSunstriderDelayCooldownsMultiplier::GetValue(Action* action)
         dynamic_cast<CastArmyOfTheDeadAction*>(action) ||
         dynamic_cast<CastSummonGargoyleAction*>(action) ||
         dynamic_cast<CastBerserkingAction*>(action) ||
-        dynamic_cast<CastBloodFuryAction*>(action))
-    {
-        return 0.0f;
-    }
+        dynamic_cast<CastBloodFuryAction*>(action) ||
+        (botAI->IsDps(bot) && dynamic_cast<UseTrinketAction*>(action));
 
-    if (botAI->IsDps(bot) && dynamic_cast<UseTrinketAction*>(action))
-        return 0.0f;
+    if (!isCooldown)
+        return 1.0f;
 
-    return 1.0f;
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    if (!kaelthas)
+        return 1.0f;
+
+    boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
+    if (!kaelAI || kaelAI->GetPhase() == PHASE_ALL_ADVISORS || kaelAI->GetPhase() == PHASE_FINAL)
+        return 1.0f;
+
+    return 0.0f;
 }
 
 //By leewheel 2026-07-28 - 优化判断顺序：先放行攻击和空中分散action，再过滤非移动，最后检查重力失效

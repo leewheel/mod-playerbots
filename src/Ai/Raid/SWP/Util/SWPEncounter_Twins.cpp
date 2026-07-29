@@ -62,6 +62,11 @@ Position const EREDAR_TWINS_MELEE_CONFLAG_POSITION =  { 1812.842f, 611.147f, 33.
 std::unordered_map<uint32, EredarTwinsIncomingConflagrationState>
     eredarTwinsIncomingConflagrationStates;
 
+//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：Blaze 目标状态表
+std::unordered_map<uint32, EredarTwinsBlazeTargetState>
+    eredarTwinsBlazeTargetStates;
+//End By leewheel
+
 std::unordered_map<uint32, time_t> eredarTwinsDpsHoldTimer;
 
 Position GetAlythessTankPosition(Unit* alythess, uint8 index)
@@ -241,5 +246,47 @@ Player* GetEredarTwinsConflagrationTarget(Player* bot)
 
     return nullptr;
 }
+
+//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：Blaze 目标记录与查询（远程站位用）
+void RecordEredarTwinsBlazeTarget(Player* target)
+{
+    if (!target)
+        return;
+
+    constexpr uint32 durationMs = 2000;
+    uint32 const now = getMSTime();
+    EredarTwinsBlazeTargetState& state =
+        eredarTwinsBlazeTargetStates[target->GetInstanceId()];
+    state.targetGuid = target->GetGUID();
+    state.expireMs = now + durationMs;
+}
+
+Player* GetEredarTwinsBlazeTarget(Player* bot)
+{
+    auto const itr = eredarTwinsBlazeTargetStates.find(bot->GetInstanceId());
+    if (itr == eredarTwinsBlazeTargetStates.end())
+        return nullptr;
+
+    EredarTwinsBlazeTargetState const& state = itr->second;
+    if (state.expireMs <= getMSTime())
+    {
+        eredarTwinsBlazeTargetStates.erase(itr);
+        return nullptr;
+    }
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return nullptr;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (member && member->GetGUID() == state.targetGuid)
+            return member;
+    }
+
+    return nullptr;
+}
+//End By leewheel
 
 }

@@ -195,11 +195,13 @@ public:
     bool IsActive() override;
 };
 
-class FelmystDemonicVaporTrailsAreActiveTrigger : public Trigger
+//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：FelmystDemonicVaporTrailsAreActiveTrigger
+//                          → FelmystShouldAvoidDemonicVaporTrailsTrigger（trigger 名称同步改为 felmyst should avoid demonic vapor trails）
+class FelmystShouldAvoidDemonicVaporTrailsTrigger : public Trigger
 {
 public:
-    FelmystDemonicVaporTrailsAreActiveTrigger(
-        PlayerbotAI* botAI) : Trigger(botAI, "felmyst demonic vapor trails are active") {}
+    FelmystShouldAvoidDemonicVaporTrailsTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "felmyst should avoid demonic vapor trails") {}
     bool IsActive() override;
 };
 

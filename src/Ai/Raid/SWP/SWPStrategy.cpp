@@ -86,8 +86,10 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player has gas nova", {
         NextAction("felmyst mass dispel gas nova", ACTION_EMERGENCY + 6) }));
 
-    triggers.push_back(new TriggerNode("felmyst demonic vapor trails are active", {
+    //By leewheel 20260729 同步 e404dc12 trigger 重命名
+    triggers.push_back(new TriggerNode("felmyst should avoid demonic vapor trails", {
         NextAction("felmyst avoid demonic vapor", ACTION_EMERGENCY + 1) }));
+    //End By leewheel
 
     triggers.push_back(new TriggerNode("felmyst bot is demonic vapor target", {
         NextAction("felmyst kite demonic vapor", ACTION_EMERGENCY + 10) }));

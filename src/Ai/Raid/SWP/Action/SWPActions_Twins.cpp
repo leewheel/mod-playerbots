@@ -208,7 +208,9 @@ bool EredarTwinsFirstAssistTankMoveOutOfBlazeAction::Execute(Event /*event*/)
 bool EredarTwinsPositionRangedAction::Execute(Event /*event*/)
 {
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
-    if (sacrolash && sacrolash->GetVictim() != bot)
+    //By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：Bot 是 Blaze 目标时不去 P1 远程站位，让其去 blaze 撤离位
+    if (sacrolash && sacrolash->GetVictim() != bot &&
+        GetEredarTwinsBlazeTarget(bot) != bot)
     {
         Position const& position = EREDAR_TWINS_P1_RANGED_POSITION;
 

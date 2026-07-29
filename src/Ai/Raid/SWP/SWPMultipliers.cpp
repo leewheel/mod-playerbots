@@ -437,11 +437,13 @@ float FelmystPrioritizeDemonicVaporKiteMultiplier::GetValue(Action* action)
     if (dynamic_cast<FelmystKiteDemonicVaporAction*>(action))
         return 1.0f;
 
-    if (!dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action))
+    //By leewheel 20260729 同步 e404dc12 测试：注释 CastReachTargetSpellAction，让多个机器人堆叠到协调员
+    if (!dynamic_cast<MovementAction*>(action) /* &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action) */)
     {
         return 1.0f;
     }
+    //End By leewheel
 
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
     if (!felmyst || !felmyst->IsFlying())

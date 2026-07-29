@@ -8,6 +8,7 @@
 #include "SWPEncounter_Felmyst.h"
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
+#include "RtiTargetValue.h"
 #include "Timer.h"
 #include <array>
 #include <cmath>
@@ -192,26 +193,54 @@ bool FelmystMassDispelGasNovaAction::Execute(Event /*event*/)
         botAI->CastSpell("mass dispel", gasNovaTarget);
 }
 
+//By leewheel 20260729 同步 e404dc12 新的恶魔蒸汽撤离策略：协调员钻石标记 + 跟随
 bool FelmystAvoidDemonicVaporAction::Execute(Event /*event*/)
 {
-    constexpr float searchRadius = 20.0f;
-    Unit* nearestTrail = bot->FindNearestCreature(
-        static_cast<uint32>(SwpNpcs::NPC_DEMONIC_VAPOR_TRAIL), searchRadius, true);
-    Unit* nearestVapor = bot->FindNearestCreature(
-        static_cast<uint32>(SwpNpcs::NPC_DEMONIC_VAPOR), searchRadius, true);
+    Player* coordinator = GetFelmystFlightCoordinator(bot);
 
-    Unit* hazard = nearestTrail ? nearestTrail : nearestVapor;
-    if (!hazard)
+    // 协调员给自己打钻石图标
+    if (coordinator == bot && MarkTargetWithDiamond(bot, coordinator))
+        return true;
+
+    // 协调员本人继续躲避危险；无协调员时回退到原躲避逻辑
+    if (coordinator == bot || !coordinator)
+    {
+        constexpr float searchRadius = 20.0f;
+        Unit* nearestTrail = bot->FindNearestCreature(
+            static_cast<uint32>(SwpNpcs::NPC_DEMONIC_VAPOR_TRAIL), searchRadius, true);
+        Unit* nearestVapor = bot->FindNearestCreature(
+            static_cast<uint32>(SwpNpcs::NPC_DEMONIC_VAPOR), searchRadius, true);
+
+        Unit* hazard = nearestTrail ? nearestTrail : nearestVapor;
+        if (!hazard)
+            return false;
+
+        constexpr float safeDistFromVapor = 15.0f;
+        float const currentDistance = bot->GetDistance2d(hazard);
+        if (currentDistance > safeDistFromVapor)
+            return false;
+
+        botAI->InterruptSpell();
+        return MoveAway(hazard, safeDistFromVapor - currentDistance);
+    }
+
+    // 非协调员：跟向协调员，保持 2 米内
+    constexpr float followDist = 2.0f;
+    float const currentDistance = bot->GetDistance2d(coordinator);
+    if (currentDistance <= followDist)
         return false;
 
-    constexpr float safeDistFromVapor = 15.0f;
-    float const currentDistance = bot->GetDistance2d(hazard);
-    if (currentDistance > safeDistFromVapor)
-        return false;
+    float const dX = coordinator->GetPositionX() - bot->GetPositionX();
+    float const dY = coordinator->GetPositionY() - bot->GetPositionY();
+    float const moveDist = std::min(3.5f, currentDistance);
+    float const moveX = bot->GetPositionX() + (dX / currentDistance) * moveDist;
+    float const moveY = bot->GetPositionY() + (dY / currentDistance) * moveDist;
 
-    botAI->InterruptSpell();
-    return MoveAway(hazard, safeDistFromVapor - currentDistance);
+    return MoveTo(
+        SWP_MAP_ID, moveX, moveY, coordinator->GetPositionZ(), false, false,
+        false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
+//End By leewheel
 
 bool FelmystKiteDemonicVaporAction::Execute(Event /*event*/)
 {

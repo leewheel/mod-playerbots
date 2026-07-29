@@ -121,12 +121,26 @@ static void FixAllDungeonRequirements(Player* bot, Player* master = nullptr)
                 if (questReq->faction != TEAM_NEUTRAL && questReq->faction != bot->GetTeamId(true))
                     continue;
 
+                // By leewheel 2026-07-29
+                // 修复：原 bot->CompleteQuest(questId) 对非 QUEST_FLAGS_TRACKING 任务
+                //      不会触发 RewardQuest，导致 m_RewardedQuests 不含 questId。
+                //      而 LFGMgr::InitializeLockedDungeons 用 GetQuestRewardStatus（=IsQuestRewarded）
+                //      检查，对非重复任务仅查 m_RewardedQuests，于是死循环报"已自动完成"
+                //      但 LFG 永远 LFG_LOCKSTATUS_QUEST_NOT_COMPLETED，dungeons 清空，
+                //      JoinLfg 返回 LFG_JOIN_NOT_MEET_REQS，机器人永远入不了队。
+                // 改用 SetRewardedQuest 直接写入 m_RewardedQuests（含 SaveMap，next save 持久化），
+                //     立即让 GetQuestRewardStatus 返回 true，cache 重生成后通过 LFG 检查。
                 if (!bot->GetQuestRewardStatus(questReq->id))
                 {
-                    bot->CompleteQuest(questReq->id);
-                    LOG_INFO("playerbots", "LFG排队修复：机器人 {} 缺少前置任务(任务ID:{})，已自动完成。",
-                        bot->GetName(), questReq->id);
+                    Quest const* qInfo = sObjectMgr->GetQuestTemplate(questReq->id);
+                    if (qInfo)
+                    {
+                        bot->SetRewardedQuest(questReq->id);
+                        LOG_INFO("playerbots", "LFG排队修复：机器人 {} 缺少前置任务(任务ID:{})，已标记为已奖励。",
+                            bot->GetName(), questReq->id);
+                    }
                 }
+                // End By leewheel
             }
         }
     }
@@ -210,12 +224,20 @@ static void FixProgressionRequirements(Player* bot, uint32 mapId, Player* master
         if (questReq->faction != TEAM_NEUTRAL && questReq->faction != bot->GetTeamId(true))
             continue;
 
+        // By leewheel 2026-07-29
+        // 同 FixAllDungeonReasons：必须 SetRewardedQuest，不能仅 CompleteQuest，
+        // 否则 LFG 缓存仍判定 quest 未奖励 → 入队失败。
         if (!bot->GetQuestRewardStatus(questReq->id))
         {
-            bot->CompleteQuest(questReq->id);
-            LOG_INFO("playerbots", "副本进入修复：机器人 {} 缺少前置任务(任务ID:{})，已自动完成。",
-                bot->GetName(), questReq->id);
+            Quest const* qInfo = sObjectMgr->GetQuestTemplate(questReq->id);
+            if (qInfo)
+            {
+                bot->SetRewardedQuest(questReq->id);
+                LOG_INFO("playerbots", "副本进入修复：机器人 {} 缺少前置任务(任务ID:{})，已标记为已奖励。",
+                    bot->GetName(), questReq->id);
+            }
         }
+        // End By leewheel
     }
 }
 // End By leewheel

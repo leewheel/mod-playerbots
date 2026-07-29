@@ -1352,4 +1352,56 @@ Player* GetFelmystCharmedTarget(Player* bot, Unit* felmyst)
     return lowestHpTarget;
 }
 
+//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段撤离协调员
+//  选 Assistant 玩家优先，否则选第一个符合条件的 bot
+Player* GetFelmystFlightCoordinator(Player* player)
+{
+    Group* group = player->GetGroup();
+    if (!group)
+        return nullptr;
+
+    FelmystEncounterState& state = felmystEncounterStates[player->GetInstanceId()];
+
+    auto const isEligible = [](Player* member) -> bool
+    {
+        return member && member->IsAlive() && member->GetMapId() == SWP_MAP_ID &&
+            !GetFelmystDemonicVaporSummonedByBot(member);
+    };
+
+    //By leewheel 2026-07-29 - 现任协调员仍合格则继续使用
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (member && member->GetGUID() == state.flightCoordinatorGuid)
+            return isEligible(member) ? member : nullptr;
+    }
+
+    state.flightCoordinatorGuid = ObjectGuid::Empty;
+
+    //By leewheel 2026-07-29 - 寻找新协调员
+    Player* fallbackBot = nullptr;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!isEligible(member))
+            continue;
+
+        if (group->IsAssistant(member->GetGUID()))
+        {
+            state.flightCoordinatorGuid = member->GetGUID();
+            return member;
+        }
+
+        if (!fallbackBot && GET_PLAYERBOT_AI(member))
+            fallbackBot = member;
+    }
+
+    if (fallbackBot)
+        state.flightCoordinatorGuid = fallbackBot->GetGUID();
+
+    return fallbackBot;
+}
+//End By leewheel
+
 }
