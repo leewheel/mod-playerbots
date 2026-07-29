@@ -1389,7 +1389,10 @@ static int32 GetHealerSpecTab(uint8 cls)
 }
 
 // 发送LFG加入数据包
-static void SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, uint8 role)
+// By leewheel 2026-07-29
+// 返回机器人是否确实进入了LFG队列，调用方只能在成功后扣减职责缺额。
+static bool SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, uint8 role)
+// End By leewheel
 {
     // 按等级过滤副本
     lfg::LfgDungeonSet validDungeons;
@@ -1409,7 +1412,7 @@ static void SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, u
     }
 
     if (validDungeons.empty())
-        return;
+        return false;
 
     // By leewheel 2026-07-29
     // 改回直接调用 sLFGMgr->JoinLfg（参考 LiyunfanPlayerbotsBranch 的稳定实现）。
@@ -1421,8 +1424,13 @@ static void SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, u
         bot->GetName().c_str(), (uint32)role, (uint32)validDungeons.size(),
         (uint32)sLFGMgr->GetState(bot->GetGUID()));
     sLFGMgr->JoinLfg(bot, role, validDungeons, std::to_string(GET_PLAYERBOT_AI(bot)->GetEquipGearScore(bot)));
+    lfg::LfgState const stateAfterJoin = sLFGMgr->GetState(bot->GetGUID());
     LOG_INFO("playerbots", "[LFG诊断] bot {} JoinLfg后state={}",
-        bot->GetName().c_str(), (uint32)sLFGMgr->GetState(bot->GetGUID()));
+        bot->GetName().c_str(), (uint32)stateAfterJoin);
+
+    // By leewheel 2026-07-29
+    // 只有 QUEUED/PROPOSAL 才表示真实加入成功，不能再把 state=NONE 的失败尝试计为已补位。
+    return stateAfterJoin == lfg::LFG_STATE_QUEUED || stateAfterJoin == lfg::LFG_STATE_PROPOSAL;
     // End By leewheel
 }
 // End By leewheel
@@ -1688,33 +1696,57 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
         // 需要坦克且bot是坦克天赋
         if (needTanks > 0 && IsBotTank(bot))
         {
-            SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK);
-            needTanks--;
-            LOG_INFO("playerbots", "LFG补位: {} 以坦克身份加入队列", bot->GetName().c_str());
-            if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
-                break;
+            // By leewheel 2026-07-29
+            if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
+            {
+                needTanks--;
+                LOG_INFO("playerbots", "LFG补位: {} 以坦克身份成功加入队列", bot->GetName().c_str());
+                if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
+                    break;
+            }
+            else
+            {
+                LOG_WARN("playerbots", "LFG补位失败: {} 以坦克身份加入后未进入QUEUED/PROPOSAL，继续尝试其他机器人", bot->GetName().c_str());
+            }
+            // End By leewheel
             continue;
         }
 
         // 需要治疗且bot是治疗天赋
         if (needHealers > 0 && IsBotHealer(bot))
         {
-            SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER);
-            needHealers--;
-            LOG_INFO("playerbots", "LFG补位: {} 以治疗身份加入队列", bot->GetName().c_str());
-            if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
-                break;
+            // By leewheel 2026-07-29
+            if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER))
+            {
+                needHealers--;
+                LOG_INFO("playerbots", "LFG补位: {} 以治疗身份成功加入队列", bot->GetName().c_str());
+                if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
+                    break;
+            }
+            else
+            {
+                LOG_WARN("playerbots", "LFG补位失败: {} 以治疗身份加入后未进入QUEUED/PROPOSAL，继续尝试其他机器人", bot->GetName().c_str());
+            }
+            // End By leewheel
             continue;
         }
 
         // 需要DPS
         if (needDps > 0)
         {
-            SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_DAMAGE);
-            needDps--;
-            LOG_INFO("playerbots", "LFG补位: {} 以DPS身份加入队列", bot->GetName().c_str());
-            if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
-                break;
+            // By leewheel 2026-07-29
+            if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_DAMAGE))
+            {
+                needDps--;
+                LOG_INFO("playerbots", "LFG补位: {} 以DPS身份成功加入队列", bot->GetName().c_str());
+                if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
+                    break;
+            }
+            else
+            {
+                LOG_WARN("playerbots", "LFG补位失败: {} 以DPS身份加入后未进入QUEUED/PROPOSAL，继续尝试其他机器人", bot->GetName().c_str());
+            }
+            // End By leewheel
             continue;
         }
     }
@@ -1750,11 +1782,19 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
                     if (botAI)
                         botAI->ResetStrategies(false);
-                    SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK);
-                    needTanks--;
-                    LOG_INFO("playerbots", "LFG补位: {} 切换天赋为坦克并加入队列", bot->GetName().c_str());
-                    if (needTanks <= 0 && needHealers <= 0)
-                        break;
+                    // By leewheel 2026-07-29
+                    if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
+                    {
+                        needTanks--;
+                        LOG_INFO("playerbots", "LFG补位: {} 切换天赋为坦克并成功加入队列", bot->GetName().c_str());
+                        if (needTanks <= 0 && needHealers <= 0)
+                            break;
+                    }
+                    else
+                    {
+                        LOG_WARN("playerbots", "LFG补位失败: {} 切换坦克天赋后未进入QUEUED/PROPOSAL，继续尝试其他机器人", bot->GetName().c_str());
+                    }
+                    // End By leewheel
                     continue;
                 }
             }
@@ -1775,11 +1815,19 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
                     if (botAI)
                         botAI->ResetStrategies(false);
-                    SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER);
-                    needHealers--;
-                    LOG_INFO("playerbots", "LFG补位: {} 切换天赋为治疗并加入队列", bot->GetName().c_str());
-                    if (needTanks <= 0 && needHealers <= 0)
-                        break;
+                    // By leewheel 2026-07-29
+                    if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER))
+                    {
+                        needHealers--;
+                        LOG_INFO("playerbots", "LFG补位: {} 切换天赋为治疗并成功加入队列", bot->GetName().c_str());
+                        if (needTanks <= 0 && needHealers <= 0)
+                            break;
+                    }
+                    else
+                    {
+                        LOG_WARN("playerbots", "LFG补位失败: {} 切换治疗天赋后未进入QUEUED/PROPOSAL，继续尝试其他机器人", bot->GetName().c_str());
+                    }
+                    // End By leewheel
                     continue;
                 }
             }

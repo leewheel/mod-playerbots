@@ -58,6 +58,21 @@ static void FixAllDungeonRequirements(Player* bot, Player* master = nullptr)
     if (!bot)
         return;
 
+    // By leewheel 2026-07-29
+    // LFGMgr::InitializeLockedDungeons 对死亡骑士有不在 dungeon_access_requirements 表内的硬编码检查：
+    // 必须已奖励联盟任务 13188“王者之城”或部落任务 13189“酋长的祝福”。
+    // 随机死亡骑士机器人通常跳过新手任务线，若不补齐该条件，所有可用随机地下城都会被标记为
+    // LFG_LOCKSTATUS_QUEST_NOT_COMPLETED，JoinLfg 返回后仍是 LFG_STATE_NONE，导致坦克始终无法进队列。
+    if (bot->IsClass(CLASS_DEATH_KNIGHT) &&
+        !bot->IsQuestRewarded(13188) && !bot->IsQuestRewarded(13189))
+    {
+        uint32 const finalQuestId = bot->GetTeamId() == TEAM_ALLIANCE ? 13188 : 13189;
+        bot->SetRewardedQuest(finalQuestId);
+        LOG_INFO("playerbots", "LFG排队修复：死亡骑士机器人 {} 缺少新手任务线最终任务(任务ID:{})，已标记为已奖励。",
+            bot->GetName(), finalQuestId);
+    }
+    // End By leewheel
+
     // 遍历所有地图，检查有进入要求的副本
     // dungeon_access_template 表中的所有记录都检查一遍
     for (uint32 mapId = 0; mapId < sMapStore.GetNumRows(); ++mapId)
@@ -423,8 +438,11 @@ public:
                         if (!lockInfo.empty()) lockInfo += ",";
                         lockInfo += std::to_string(dungeonId) + "=" + std::to_string((uint32)status);
                     }
-                    LOG_INFO("playerbots", "[LFG诊断] bot {} 锁定的副本({}): {} (LFG_LOCKSTATUS: 0=ok 1=low_lvl 2=high_lvl 3=raid_lk 4=attune 5=insuf_exp 6=low_gs 7=miss_item 8=miss_ach 9=miss_quest 10=not_season)",
+                    // By leewheel 2026-07-29
+                    // 锁定状态必须使用 LFG.h 中的真实枚举值，避免把任务锁定 1022 误诊为普通编号 9。
+                    LOG_INFO("playerbots", "[LFG诊断] bot {} 锁定的副本({}): {} (LFG_LOCKSTATUS: 1=版本不足 2=等级过低 3=等级过高 4=装等过低 5=装等过高 6=副本已锁定 1001=协调等级过低 1002=协调等级过高 1022=任务未完成 1025=缺少物品 1031=不在开放季 1034=缺少成就)",
                         player->GetName().c_str(), (uint32)lockMap.size(), lockInfo.c_str());
+                    // End By leewheel
                 }
                 else
                 {
