@@ -412,6 +412,25 @@ public:
                 FixAllDungeonRequirements(player);
                 // 重新生成LFG锁定副本缓存（关键！否则修复了条件但缓存还是旧的）
                 sLFGMgr->InitializeLockedDungeons(player, player->GetGroup());
+
+                // By leewheel 2026-07-29 诊断：dump 当前 lockmap，找出 bot 无法入队的原因
+                lfg::LfgLockMap const& lockMap = sLFGMgr->GetLockedDungeons(player->GetGUID());
+                if (!lockMap.empty())
+                {
+                    std::string lockInfo;
+                    for (auto const& [dungeonId, status] : lockMap)
+                    {
+                        if (!lockInfo.empty()) lockInfo += ",";
+                        lockInfo += std::to_string(dungeonId) + "=" + std::to_string((uint32)status);
+                    }
+                    LOG_INFO("playerbots", "[LFG诊断] bot {} 锁定的副本({}): {} (LFG_LOCKSTATUS: 0=ok 1=low_lvl 2=high_lvl 3=raid_lk 4=attune 5=insuf_exp 6=low_gs 7=miss_item 8=miss_ach 9=miss_quest 10=not_season)",
+                        player->GetName().c_str(), (uint32)lockMap.size(), lockInfo.c_str());
+                }
+                else
+                {
+                    LOG_INFO("playerbots", "[LFG诊断] bot {} lockmap 为空(全部通过)", player->GetName().c_str());
+                }
+                // End By leewheel
             }
             return true;
         }

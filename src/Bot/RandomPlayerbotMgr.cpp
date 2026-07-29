@@ -1417,7 +1417,12 @@ static void SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, u
     //       导致下次补位仍认为它 idle 并再次 join，循环几十次始终不能进 QUEUED 状态。
     //       直接调 LFGMgr::JoinLfg 是该函数被真实玩家 CMSG_LFG_JOIN handler 内部调用的同一段，
     //       state 设置可靠，能正常进入 LFG_STATE_QUEUED 走撮合流程。
+    LOG_INFO("playerbots", "[LFG诊断] bot {} 准备JoinLfg role={} dungeons={} 当前state={}",
+        bot->GetName().c_str(), (uint32)role, (uint32)validDungeons.size(),
+        (uint32)sLFGMgr->GetState(bot->GetGUID()));
     sLFGMgr->JoinLfg(bot, role, validDungeons, std::to_string(GET_PLAYERBOT_AI(bot)->GetEquipGearScore(bot)));
+    LOG_INFO("playerbots", "[LFG诊断] bot {} JoinLfg后state={}",
+        bot->GetName().c_str(), (uint32)sLFGMgr->GetState(bot->GetGUID()));
     // End By leewheel
 }
 // End By leewheel
@@ -1438,6 +1443,11 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     bool teamHasQueuedPlayer[2] = {false, false};
     // End By leewheel
 
+    // By leewheel 2026-07-29
+    // 诊断日志：显示 players 向量大小，定位 teamHasQueuedPlayer 始终为 false 的根因
+    LOG_INFO("playerbots", "[LFG诊断] CheckLfgQueue开始: players向量大小={}", players.size());
+    // End By leewheel
+
     for (std::vector<Player*>::iterator i = players.begin(); i != players.end(); ++i)
     {
         Player* player = *i;
@@ -1448,7 +1458,19 @@ void RandomPlayerbotMgr::CheckLfgQueue()
         ObjectGuid guid = group ? group->GetGUID() : player->GetGUID();
 
         lfg::LfgState gState = sLFGMgr->GetState(guid);
-        if (gState != lfg::LFG_STATE_NONE && gState < lfg::LFG_STATE_DUNGEON)
+
+        // By leewheel 2026-07-29
+        // 双重GUID检查：同时检查组GUID和玩家自身GUID的LFG状态
+        // 根因：AzerothCore LFG系统中，solo玩家排队时状态存储在玩家GUID下，
+        //       但某些情况下（如先组队后排队、离开队伍后状态残留）
+        //       组GUID和玩家GUID的状态可能不一致，需要双重检查
+        lfg::LfgState pState = sLFGMgr->GetState(player->GetGUID());
+        LOG_INFO("playerbots", "[LFG诊断] 玩家 {} 组GUID状态={} 玩家GUID状态={} 在组={}",
+                 player->GetName().c_str(), (uint32)gState, (uint32)pState, group ? "是" : "否");
+
+        if ((gState != lfg::LFG_STATE_NONE && gState < lfg::LFG_STATE_DUNGEON) ||
+            (pState != lfg::LFG_STATE_NONE && pState < lfg::LFG_STATE_DUNGEON))
+        // End By leewheel
         {
             // By leewheel 2026-07-10
             teamHasQueuedPlayer[player->GetTeamId()] = true;
@@ -1465,6 +1487,53 @@ void RandomPlayerbotMgr::CheckLfgQueue()
             }
         }
     }
+
+    // By leewheel 2026-07-29
+    // 全服扫描兜底：如果 players 向量为空或未检测到排队玩家，
+    // 扫描所有在线玩家检查LFG状态
+    // 根因：players 向量可能因 OnPlayerLogin 未被调用而遗漏真实玩家
+    if (!teamHasQueuedPlayer[TEAM_ALLIANCE] && !teamHasQueuedPlayer[TEAM_HORDE])
+    {
+        LOG_INFO("playerbots", "[LFG诊断] players向量未检测到排队玩家，启动全服扫描...");
+        sWorldSessionMgr->DoForAllOnlinePlayers([&](Player* player)
+        {
+            if (!player || !player->IsInWorld())
+                return;
+            // 跳过随机机器人
+            if (IsRandomBot(player))
+                return;
+
+            Group* group = player->GetGroup();
+            ObjectGuid guid = group ? group->GetGUID() : player->GetGUID();
+            lfg::LfgState gState = sLFGMgr->GetState(guid);
+            lfg::LfgState pState = sLFGMgr->GetState(player->GetGUID());
+
+            LOG_INFO("playerbots", "[LFG诊断] 全服扫描: 玩家 {} 组GUID状态={} 玩家GUID状态={}",
+                     player->GetName().c_str(), (uint32)gState, (uint32)pState);
+
+            if ((gState != lfg::LFG_STATE_NONE && gState < lfg::LFG_STATE_DUNGEON) ||
+                (pState != lfg::LFG_STATE_NONE && pState < lfg::LFG_STATE_DUNGEON))
+            {
+                teamHasQueuedPlayer[player->GetTeamId()] = true;
+
+                lfg::LfgDungeonSet const& dList = sLFGMgr->GetSelectedDungeons(player->GetGUID());
+                for (lfg::LfgDungeonSet::const_iterator itr = dList.begin(); itr != dList.end(); ++itr)
+                {
+                    lfg::LFGDungeonData const* dungeon = sLFGMgr->GetLFGDungeon(*itr);
+                    if (!dungeon)
+                        continue;
+                    LfgDungeons[player->GetTeamId()].push_back(dungeon->id);
+                }
+
+                LOG_INFO("playerbots", "[LFG诊断] 全服扫描发现排队玩家: {} 阵营={}",
+                         player->GetName().c_str(), player->GetTeamId() == TEAM_ALLIANCE ? "联盟" : "部落");
+            }
+        });
+    }
+
+    LOG_INFO("playerbots", "[LFG诊断] 检查结果: 联盟排队={} 部落排队={}",
+             teamHasQueuedPlayer[TEAM_ALLIANCE], teamHasQueuedPlayer[TEAM_HORDE]);
+    // End By leewheel
 
     // By leewheel 2026-07-21
     // LFG排队超时强制机器人加入机制
@@ -1579,6 +1648,31 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
              tanksInQueue, healersInQueue, dpsInQueue,
              needTanks > 0 ? needTanks : 0, needHealers > 0 ? needHealers : 0, needDps > 0 ? needDps : 0,
              teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+
+    // By leewheel 2026-07-29
+    // 诊断日志：统计空闲bot中各角色数量，定位找不到坦克的根因
+    int idleTanks = 0, idleHealers = 0, idleDps = 0, idleTotal = 0;
+    for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+    {
+        Player* bot = it->second;
+        if (!bot || bot->GetTeamId() != teamId)
+            continue;
+        if (!IsRandomBot(bot))
+            continue;
+        if (!IsBotIdleForLfg(bot))
+            continue;
+        idleTotal++;
+        if (IsBotTank(bot))
+            idleTanks++;
+        else if (IsBotHealer(bot))
+            idleHealers++;
+        else
+            idleDps++;
+    }
+    LOG_INFO("playerbots", "[LFG诊断] 空闲bot统计: 总计={} 坦克={} 治疗={} DPS={} (阵营={})",
+             idleTotal, idleTanks, idleHealers, idleDps,
+             teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+    // End By leewheel
 
     // 第一遍：找对应天赋的空闲bot直接加入
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
