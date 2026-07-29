@@ -27,6 +27,14 @@ class NewRpgBaseAction : public MovementAction
 public:
     NewRpgBaseAction(PlayerbotAI* botAI, std::string name) : MovementAction(botAI, name) {}
 
+    // By leewheel 2026-07-29
+    // LFG 状态保护：处于 LFG 队列（QUEUED）或更高级别（DUNGEON/BOOT/FINISHED）的 bot
+    // 必须跳过所有 NewRpg* Action。根因：bot 加入 LFG 后 NewRPG 系统仍会触发
+    //   "new rpg go grind"/"new rpg do quest" 等动作，bot 立刻离开去做其他事，
+    //   导致 ForceBotsJoinLfg 补位的 bot 在数秒内退出队列。
+    // 修复：重写 isUseful() 返回 false，让 bot 在 LFG 中时 NewRpg 整个系统静默。
+    bool isUseful() override;
+
 protected:
     /* MOVEMENT RELATED */
     bool MoveFarTo(WorldPosition dest);

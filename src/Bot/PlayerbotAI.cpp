@@ -2372,8 +2372,13 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
             }
             break;
         case CLASS_DRUID:
-            if (tab == DRUID_TAB_FERAL && (player->GetShapeshiftForm() == FORM_BEAR ||
-                                           player->GetShapeshiftForm() == FORM_DIREBEAR || player->HasAura(16931)))
+            // By leewheel 2026-07-29
+            // 修复：移除 bear form / Thick Hide(16931) 检测。
+            // 原代码要求熊形态或 Thick Hide 光环，导致 Feral 德鲁伊在猫/枭兽形态下
+            //   被 IsTank() 判为 false，LFG 角色识别、LfgRolePriorityTrigger、装备推荐
+            //   等所有依赖 IsTank(bySpec=true) 的地方都失效。
+            // 修复：Feral（tab==1）就是坦克专精，与形态无关。bot 在副本中会按需自动切熊。
+            if (tab == DRUID_TAB_FERAL)
             {
                 return true;
             }

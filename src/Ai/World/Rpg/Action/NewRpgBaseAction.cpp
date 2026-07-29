@@ -31,6 +31,25 @@
 #include "StatsWeightCalculator.h"
 #include "Timer.h"
 #include "TravelMgr.h"
+#include "LFGMgr.h"
+
+// By leewheel 2026-07-29
+// LFG 状态保护：实现见 NewRpgBaseAction.h 注释。
+// 当 bot 处于 LFG 队列或更高级别状态时，所有继承 NewRpgBaseAction 的 Action
+//   （NewRpgStatusUpdateAction, NewRpgGoGrindAction, NewRpgGoCampAction,
+//    NewRpgWanderRandomAction, NewRpgWanderNpcAction, NewRpgDoQuestAction,
+//    NewRpgTravelFlightAction）都会通过 isUseful() 返回 false 来跳过执行。
+bool NewRpgBaseAction::isUseful()
+{
+    if (!bot || !bot->IsInWorld())
+        return false;
+    // LFG 队列中或更高级别（DUNGEON/BOOT/FINISHED）时 NewRPG 系统静默，
+    // 避免 bot 离开 LFG 队列去做刷怪/任务/传送。
+    if (sLFGMgr->GetState(bot->GetGUID()) != lfg::LFG_STATE_NONE)
+        return false;
+    return true;
+}
+// End By leewheel
 
 bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {

@@ -1319,6 +1319,8 @@ static bool IsBotIdleForLfg(Player* bot)
 // By leewheel 2026-07-29
 // 修复德鲁伊坦克检测：原代码要求 HasAura(16931) 但此光环仅在熊形态下存在，
 // Feral 德鲁伊在非熊形态下永远被识别为 DPS，导致 LFG 强制补位时永远不选 Feral 德鲁伊当坦。
+// 根因：Druid 的 Feral 天赋页（spec==1）就是坦克专精，无论熊形态/猫形态/枭兽形态都属 Feral。
+// 修复：移除形态/光环检测，仅按天赋页判断，spec==1 即为坦克。GetRoles() 同问题已同步修复。
 static bool IsBotTank(Player* bot)
 {
     uint8 spec = AiFactory::GetPlayerSpecTab(bot);
@@ -1326,10 +1328,7 @@ static bool IsBotTank(Player* bot)
     {
         case CLASS_WARRIOR: return spec == 2;
         case CLASS_PALADIN: return spec == 1;
-        case CLASS_DRUID:
-            return spec == 1 && (bot->GetShapeshiftForm() == FORM_BEAR ||
-                                 bot->GetShapeshiftForm() == FORM_DIREBEAR ||
-                                 bot->HasAura(16931));
+        case CLASS_DRUID: return spec == 1;  // Feral 天赋即坦克专精，形态无关
         case CLASS_DEATH_KNIGHT: return spec == 0;
         default: return false;
     }
@@ -1412,12 +1411,13 @@ static void SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, u
     if (validDungeons.empty())
         return;
 
-    std::string const comment = "0";
-
-    // By leewheel 2026-07-22
-    // Bot会话m_Socket为nullptr，QueuePacket投入的包永远不被WorldSession::Update处理。
-    // 改为直接调用sLFGMgr->JoinLfg。此函数在CheckLfgQueue中调用，运行于世界线程，线程安全。
-    sLFGMgr->JoinLfg(bot, role, validDungeons, comment);
+    // By leewheel 2026-07-29
+    // 改回直接调用 sLFGMgr->JoinLfg（参考 LiyunfanPlayerbotsBranch 的稳定实现）。
+    // 根因：之前用 QueuePacket(CMSG_LFG_JOIN) 时，bot 入队后 state 立刻被清回 NONE，
+    //       导致下次补位仍认为它 idle 并再次 join，循环几十次始终不能进 QUEUED 状态。
+    //       直接调 LFGMgr::JoinLfg 是该函数被真实玩家 CMSG_LFG_JOIN handler 内部调用的同一段，
+    //       state 设置可靠，能正常进入 LFG_STATE_QUEUED 走撮合流程。
+    sLFGMgr->JoinLfg(bot, role, validDungeons, std::to_string(GET_PLAYERBOT_AI(bot)->GetEquipGearScore(bot)));
     // End By leewheel
 }
 // End By leewheel
@@ -1804,6 +1804,22 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
     if (player->GetGroup() || player->HasUnitState(UNIT_STATE_IN_FLIGHT))
         return false;
 
+    // By leewheel 2026-07-29
+    // LFG 状态保护：处于 LFG 队列（QUEUED）或更高级别（DUNGEON/BOOT/FINISHED）的机器人
+    // 必须跳过 randomize / teleport 操作，否则会立即被踢出队列。
+    // 根因：ForceBotsJoinLfg 补位后，bot 在单人状态（无 group）会被 ProcessBot 当作 idle bot
+    //       执行 "传送以升级和刷新"，导致 sLFGMgr 内部状态被重置，bot 离开 LFG 队列。
+    //       实际表现为：补位的 2 坦 + 2 奶在 30 秒内全部退出队列，下次检查时又变回坦0奶0DPS N。
+    // 修复：处于 LFG_STATE_NONE 以外任何状态的 bot 都跳过 randomize/teleport。
+    lfg::LfgState lfgState = sLFGMgr->GetState(player->GetGUID());
+    if (lfgState != lfg::LFG_STATE_NONE)
+    {
+        // 重置所有事件以延后下一次执行，避免 bot 离开 LFG 后立刻再次被传送
+        SetEventValue(bot, "update", 1, sPlayerbotAIConfig.randomBotUpdateInterval);
+        return false;
+    }
+    // End By leewheel
+
     uint32 update = GetEventValue(bot, "update");
     if (!update)
     {
@@ -1866,6 +1882,13 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
 
     if (bot->InBattlegroundQueue())
         return false;
+
+    // By leewheel 2026-07-29
+    // LFG 状态保护（防御层）：即使 ProcessBot(uint32) 中的检查被绕过，
+    // 这里的 LFG 检查也能阻止 randomize/teleport 操作破坏 LFG 队列。
+    if (sLFGMgr->GetState(bot->GetGUID()) != lfg::LFG_STATE_NONE)
+        return false;
+    // End By leewheel
 
      uint32 botId = bot->GetGUID().GetCounter();
 

@@ -44,10 +44,10 @@ uint32 LfgJoinAction::GetRoles()
 
     // By leewheel 2026-07-29
     // Feral 德鲁伊坦克检测 bug 修复：
-    // 原代码要求 HasAura(16931 / Thick Hide)，但此光环仅在熊形态下存在。
+    // 原代码要求 HasAura(16931 / Thick Hide) 或熊形态，但此光环仅在熊形态下存在。
     // Feral 德鲁伊在 caster/cat 形态下永远被判为 DPS，坦克 LFG 进组概率为 0。
-    // 修复：使用 spec==1 (Feral) + ShapeshiftForm OR HasAura 综合判断，
-    //       与 PlayerbotAI::IsTank 的检测口径保持一致。
+    // 修复：移除形态/光环检测，仅按天赋页判断。Feral（spec==1）= 坦克专精，
+    //       与 IsBotTank() 保持一致。bot 进组后会根据实际形态在副本内自动切熊。
     // End By leewheel
     uint8 spec = AiFactory::GetPlayerSpecTab(bot);
     switch (bot->getClass())
@@ -55,9 +55,7 @@ uint32 LfgJoinAction::GetRoles()
         case CLASS_DRUID:
             if (spec == 2)
                 return PLAYER_ROLE_HEALER;
-            else if (spec == 1 && (bot->GetShapeshiftForm() == FORM_BEAR ||
-                                   bot->GetShapeshiftForm() == FORM_DIREBEAR ||
-                                   bot->HasAura(16931) /* thick hide */))
+            else if (spec == 1)
                 return PLAYER_ROLE_TANK;
             else
                 return PLAYER_ROLE_DAMAGE;
@@ -170,12 +168,12 @@ bool LfgJoinAction::JoinLFG()
              many ? "several dungeons" : dungeon->Name[0]);
 
     // Set RbotAId Browser comment
+    // By leewheel 2026-07-29
+    // 改回直接调 sLFGMgr->JoinLfg（参考 LiyunfanPlayerbotsBranch 的稳定实现）。
+    // QueuePacket(CMSG_LFG_JOIN) 路径下 bot 入队后 state 被瞬间清回 NONE，
+    // 导致 isUseful 每 22.5s 又触发一次 join，循环几十次始终进不了 QUEUED 状态。
     std::string const _gs = std::to_string(botAI->GetEquipGearScore(bot/*, false, false*/));
-
-    // By leewheel 2026-07-22
-    // Bot会话m_Socket为nullptr，QueuePacket投入的包永远不被WorldSession::Update处理。
-    // 改为直接调用sLFGMgr->JoinLfg。bot AI更新在世界线程中执行，与LFG更新同线程，线程安全。
-    sLFGMgr->JoinLfg(bot, uint8(roleMask), list, _gs);
+    sLFGMgr->JoinLfg(bot, roleMask, list, _gs);
     // End By leewheel
 
     return true;
@@ -189,13 +187,11 @@ bool LfgRoleCheckAction::Execute(Event /*event*/)
         // if (currentRoles == newRoles)
         //     return false;
 
-        // By leewheel 2026-07-22: 直接调用sLFGMgr，理由同JoinLFG
+        // By leewheel 2026-07-29
+        // 改回直接调 sLFGMgr::SetRoles / UpdateRoleCheck（参考 LiyunfanPlayerbotsBranch）。
         sLFGMgr->SetRoles(bot->GetGUID(), newRoles);
         sLFGMgr->UpdateRoleCheck(group->GetGUID(), bot->GetGUID(), newRoles);
         // End By leewheel
-
-        LOG_INFO("playerbots", "Bot {} {}:{} <{}>: LFG roles checked", bot->GetGUID().ToString().c_str(),
-                 bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName().c_str());
 
         return true;
     }
@@ -210,15 +206,17 @@ bool LfgAcceptAction::Execute(Event event)
     // Try accept if already stored
     if (id)
     {
-        // By leewheel 2026-07-21
-        // 不再因战斗/死亡拒绝提案：接受后LFG传送会自动脱离战斗/复活，
-        // 主动拒绝会触发150秒冷却光环(71328)，坦克bot刷怪常进战斗导致恶性循环
-        // End By leewheel
+        if (bot->IsInCombat() || bot->isDead())
+        {
+            sLFGMgr->UpdateProposal(id, bot->GetGUID(), false);
+            return true;
+        }
 
         botAI->GetAiObjectContext()->GetValue<uint32>("lfg proposal")->Set(0);
         bot->ClearUnitState(UNIT_STATE_ALL_STATE);
 
-        // By leewheel 2026-07-22: 直接调用sLFGMgr->UpdateProposal，理由同JoinLFG
+        // By leewheel 2026-07-29
+        // 改回直接调 sLFGMgr::UpdateProposal（参考 LiyunfanPlayerbotsBranch）。
         sLFGMgr->UpdateProposal(id, bot->GetGUID(), true);
         // End By leewheel
 
@@ -242,11 +240,17 @@ bool LfgAcceptAction::Execute(Event event)
 
         if (id)
         {
-            // By leewheel 2026-07-21: 无条件接受，理由同上
+            if (bot->IsInCombat() || bot->isDead())
+            {
+                sLFGMgr->UpdateProposal(id, bot->GetGUID(), false);
+                return true;
+            }
+
             botAI->GetAiObjectContext()->GetValue<uint32>("lfg proposal")->Set(0);
             bot->ClearUnitState(UNIT_STATE_ALL_STATE);
 
-            // By leewheel 2026-07-22: 直接调用sLFGMgr->UpdateProposal，理由同JoinLFG
+            // By leewheel 2026-07-29
+            // 改回直接调 sLFGMgr::UpdateProposal（参考 LiyunfanPlayerbotsBranch）。
             sLFGMgr->UpdateProposal(id, bot->GetGUID(), true);
             // End By leewheel
 
@@ -266,17 +270,16 @@ bool LfgAcceptAction::Execute(Event event)
 
 bool LfgLeaveAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-07-21
-    // 启用LFG策略保护：当lfg策略激活时禁止主动离队，防止bot随机掉出队列
-    if (botAI->HasStrategy("lfg", BOT_STATE_NON_COMBAT))
-        return false;
-    // End By leewheel
+    // Don't leave if lfg strategy enabled
+    // if (botAI->HasStrategy("lfg", BOT_STATE_NON_COMBAT))
+    //    return false;
 
     // Don't leave if already invited / in dungeon
     if (sLFGMgr->GetState(bot->GetGUID()) > LFG_STATE_QUEUED)
         return false;
 
-    // By leewheel 2026-07-22: 直接调用sLFGMgr->LeaveLfg，理由同JoinLFG
+    // By leewheel 2026-07-29
+    // 改回直接调 sLFGMgr::LeaveLfg（参考 LiyunfanPlayerbotsBranch）。
     sLFGMgr->LeaveLfg(bot->GetGUID());
     // End By leewheel
     return true;
@@ -297,7 +300,8 @@ bool LfgTeleportAction::Execute(Event event)
 
     bot->ClearUnitState(UNIT_STATE_ALL_STATE);
 
-    // By leewheel 2026-07-22: 直接调用sLFGMgr->TeleportPlayer，理由同JoinLFG
+    // By leewheel 2026-07-29
+    // 改回直接调 sLFGMgr::TeleportPlayer（参考 LiyunfanPlayerbotsBranch）。
     sLFGMgr->TeleportPlayer(bot, out);
     // End By leewheel
 
