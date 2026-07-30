@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 2c578c7450a1185d540e4b829386ea596732e48a - TK static role members (botAI->IsXxx → PlayerbotAI::IsXxx)
+// By leewheel
+// End By leewheel
+
 #include "TKTriggers.h"
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
@@ -57,7 +63,7 @@ bool AlarBossIsFlyingBetweenPlatformsTrigger::IsActive()
 
 bool AlarEmbersOfAlarExplodeUponDeathTrigger::IsActive()
 {
-    return botAI->IsTank(bot) && AI_VALUE2(Unit*, "find target", "ember of al'ar");
+    return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "ember of al'ar");
 }
 
 bool AlarKillingEmbersOfAlarDamagesBossTrigger::IsActive()
@@ -100,7 +106,7 @@ bool AlarShouldManagePhaseTrackerTrigger::IsActive()
 
 bool VoidReaverBossCastsPoundingTrigger::IsActive()
 {
-    if (!botAI->IsTank(bot))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
@@ -115,7 +121,7 @@ bool VoidReaverKnockAwayReducesTankAggroTrigger::IsActive()
         return false;
     }
 
-    if (botAI->IsTank(bot))
+    if (PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
@@ -124,7 +130,7 @@ bool VoidReaverKnockAwayReducesTankAggroTrigger::IsActive()
 
 bool VoidReaverRangedShouldStandBackTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
@@ -155,7 +161,7 @@ bool VoidReaverRangedShouldStandBackTrigger::IsActive()
 
 bool VoidReaverArcaneOrbIsIncomingTrigger::IsActive()
 {
-    if (botAI->IsTank(bot))
+    if (PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
@@ -186,7 +192,7 @@ bool VoidReaverArcaneOrbIsIncomingTrigger::IsActive()
 
 bool HighAstromancerSolarianEngagedByMainTankTrigger::IsActive()
 {
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return false;
 
     Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
@@ -209,10 +215,10 @@ bool HighAstromancerSolarianShouldPositionBotsTrigger::IsActive()
     if (HasWrathOfTheAstromancer(bot))
         return false;
 
-    if (botAI->IsMainTank(bot))
+    if (PlayerbotAI::IsMainTank(bot))
         return false;
 
-    if (botAI->IsMelee(bot) || botAI->IsHeal(bot))
+    if (PlayerbotAI::IsMelee(bot) || PlayerbotAI::IsHeal(bot))
     {
         Creature* astromancerCreature = astromancer->ToCreature();
         if (astromancerCreature && astromancerCreature->GetReactState() == REACT_PASSIVE)
@@ -231,7 +237,7 @@ bool HighAstromancerSolarianBotHasWrathOfTheAstromancerTrigger::IsActive()
 
 bool HighAstromancerSolarianSolariumPriestsSpawnedTrigger::IsActive()
 {
-    if (!botAI->IsMelee(bot) || botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMelee(bot) || PlayerbotAI::IsMainTank(bot))
         return false;
 
     return AI_VALUE2(Unit*, "find target", "solarium priest");
@@ -263,7 +269,7 @@ bool KaelthasSunstriderThaladredIsFixatedOnBotTrigger::IsActive()
     if (!kaelAI)
         return false;
 
-    if (botAI->IsTank(bot) && kaelAI->GetPhase() == PHASE_ALL_ADVISORS)
+    if (PlayerbotAI::IsTank(bot) && kaelAI->GetPhase() == PHASE_ALL_ADVISORS)
         return false;
 
     return true;
@@ -288,7 +294,7 @@ bool KaelthasSunstriderPullingTankableAdvisorsTrigger::IsActive()
 
 bool KaelthasSunstriderSanguinarEngagedByMainTankTrigger::IsActive()
 {
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return false;
 
     Unit* sanguinar = AI_VALUE2(Unit*, "find target", "lord sanguinar");
@@ -340,7 +346,7 @@ bool KaelthasSunstriderCapernianCastsArcaneBurstAndConflagrationTrigger::IsActiv
 
 bool KaelthasSunstriderTelonicusEngagedByFirstAssistTankTrigger::IsActive()
 {
-    if (!botAI->IsAssistTankOfIndex(bot, 0, false))
+    if (!PlayerbotAI::IsAssistTankOfIndex(bot, 0, false))
         return false;
 
     Unit* telonicus = AI_VALUE2(Unit*, "find target", "master engineer telonicus");
@@ -363,16 +369,16 @@ bool KaelthasSunstriderBotsHaveSpecificRolesInPhase3Trigger::IsActive()
     if (!thaladred || !thaladred->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         return false;
 
-    return botAI->IsMainTank(bot) ||
-        botAI->IsAssistTankOfIndex(bot, 0, false) ||
-        botAI->IsAssistHealOfIndex(bot, 0, false) ||
+    return PlayerbotAI::IsMainTank(bot) ||
+        PlayerbotAI::IsAssistTankOfIndex(bot, 0, false) ||
+        PlayerbotAI::IsAssistHealOfIndex(bot, 0, false) ||
         (bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot);
 }
 
 bool KaelthasSunstriderDeterminingAdvisorKillOrderTrigger::IsActive()
 {
-    if (botAI->IsHeal(bot) || botAI->IsMainTank(bot) ||
-        botAI->IsAssistTankOfIndex(bot, 0, false))
+    if (PlayerbotAI::IsHeal(bot) || PlayerbotAI::IsMainTank(bot) ||
+        PlayerbotAI::IsAssistTankOfIndex(bot, 0, false))
     {
         return false;
     }
@@ -413,7 +419,7 @@ bool KaelthasSunstriderLegendaryWeaponsAreAliveTrigger::IsActive()
 
 bool KaelthasSunstriderLegendaryAxeCastsWhirlwindTrigger::IsActive()
 {
-    return botAI->IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "devastation");
+    return PlayerbotAI::IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "devastation");
 }
 
 bool KaelthasSunstriderLegendaryWeaponsAreDeadAndLootableTrigger::IsActive()
@@ -438,10 +444,10 @@ bool KaelthasSunstriderLegendaryWeaponsAreDeadAndLootableTrigger::IsActive()
 
 bool KaelthasSunstriderLegendaryWeaponsAreEquippedTrigger::IsActive()
 {
-    if (botAI->IsHeal(bot))
+    if (PlayerbotAI::IsHeal(bot))
         return false;
 
-    if (botAI->IsMelee(bot) && botAI->IsDps(bot))
+    if (PlayerbotAI::IsMelee(bot) && PlayerbotAI::IsDps(bot))
         return false;
 
     if (!AI_VALUE2(Unit*, "find target", "kael'thas sunstrider"))
@@ -509,7 +515,7 @@ bool KaelthasSunstriderPhoenixesAndEggsAreSpawningTrigger::IsActive()
     if (!kaelthas)
         return false;
 
-    if (botAI->IsMainTank(bot) || kaelthas->GetVictim() == bot)
+    if (PlayerbotAI::IsMainTank(bot) || kaelthas->GetVictim() == bot)
         return false;
 
     return AI_VALUE2(Unit*, "find target", "phoenix") ||
@@ -525,7 +531,7 @@ bool KaelthasSunstriderRaidMemberIsMindControlledTrigger::IsActive()
     if (!kaelthas)
         return false;
 
-    if (botAI->IsTank(bot) && kaelthas->GetVictim() == bot)
+    if (PlayerbotAI::IsTank(bot) && kaelthas->GetVictim() == bot)
         return false;
 
     if (!bot->HasItemCount(static_cast<uint32>(TkItems::ITEM_INFINITY_BLADE), 1, true))

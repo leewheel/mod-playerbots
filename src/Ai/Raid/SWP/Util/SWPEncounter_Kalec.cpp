@@ -36,7 +36,10 @@ void ClearExpiredKalecgosActiveRift(KalecgosEncounterState& state, uint32 now)
     if (!state.activeRiftOpenedMs)
         return;
 
-    constexpr uint32 riftEntryWindowMs = 10000;
+//By leewheel 2026-07-30 - 延长传送门进入窗口，给机器人更多时间跑到传送门位置
+//                        原始值: 10000ms → 新值: 15000ms
+    constexpr uint32 riftEntryWindowMs = 15000;
+//End By leewheel
     if (getMSTimeDiff(state.activeRiftOpenedMs, now) <= riftEntryWindowMs)
         return;
 

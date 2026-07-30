@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 5167dd62ffa05cc4d8f5f1dcfad0b425dd68517f - KJ and Kalec edits (Kalecgos 血量通报状态字段)
+// By leewheel
+// End By leewheel
+
 #ifndef PLAYERBOTS_SWPENCOUNTERKALEC_H
 #define PLAYERBOTS_SWPENCOUNTERKALEC_H
 
@@ -44,6 +50,8 @@ struct KalecgosEncounterState
     ObjectGuid firstEntrantGuid = ObjectGuid::Empty;
     ObjectGuid currentTankGuid = ObjectGuid::Empty;
     ObjectGuid activeRiftOutgoingTankGuid = ObjectGuid::Empty;
+    bool surfaceHealthAnnounced = false;
+    bool spectralHealthAnnounced = false;
     std::array<ObjectGuid, KALECGOS_TANK_COUNT> tankAssignmentGuids =
     {
         ObjectGuid::Empty, ObjectGuid::Empty, ObjectGuid::Empty

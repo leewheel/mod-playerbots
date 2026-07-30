@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 5167dd62ffa05cc4d8f5f1dcfad0b425dd68517f - KJ and Kalec edits (KiljaedenStackForShieldOfTheBlue Fire Bloom 处理 + KiljaedenAnnounceDragonOrbUser 格式)
+// By leewheel
+// End By leewheel
+
 #include "SWPActions.h"
 #include "SWPEncounter_KJ.h"
 #include "Playerbots.h"
@@ -14,6 +20,7 @@
 
 using namespace SwpHelpers;
 
+//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 5167dd62：KiljaedenAnnounceDragonOrbUserAction 代码风格
 bool KiljaedenAnnounceDragonOrbUserAction::Execute(Event /*event*/)
 {
     uint32 const instanceId = bot->GetInstanceId();
@@ -43,12 +50,12 @@ bool KiljaedenAnnounceDragonOrbUserAction::Execute(Event /*event*/)
             "and therefore a player must control the dragons. "
             "If you would like a bot to use the dragon orbs, "
             "please set the assistant flag for a bot.",
-            {}
-        );
+            {});
     }
 
     return botAI->SayToRaid(text);
 }
+//End By leewheel
 
 bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::Execute(Event /*event*/)
 {
@@ -453,17 +460,42 @@ bool KiljaedenRemoveFireBloomAction::Execute(Event /*event*/)
     }
 }
 
+//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots 最终代码（HEAD）：KiljaedenStackForShieldOfTheBlue 加 Fire Bloom 处理
+//  使用 C++17 if-init 语法避免 darknessSpell 为 nullptr 时的空指针解引用（commit 5167dd62 的中间版本有该 bug，已被后续 commit 修复）
 bool KiljaedenStackForShieldOfTheBlueAction::Execute(Event /*event*/)
 {
-    Position const& position = KILJAEDEN_DARKNESS_POSITION;
-    if (bot->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) <= 2.0f)
+    Position const& darknessPosition = KILJAEDEN_DARKNESS_POSITION;
+    float destX = darknessPosition.GetPositionX();
+    float destY = darknessPosition.GetPositionY();
+
+    // 拥有 Fire Bloom 的机器人在黑暗（DarKness of a Thousand Souls）施法完成前 4500ms 内
+    // 必须远离黑暗叠层点 15 米，避免在黑暗爆炸时被炸
+    if (bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_FIRE_BLOOM)))
+    {
+        Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+        if (!kiljaeden)
+            return false;
+
+        if (Spell* darknessSpell = kiljaeden->FindCurrentSpellBySpellId(
+                static_cast<uint32>(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS));
+            darknessSpell && darknessSpell->GetCastTimeRemaining() >= 4500)
+        {
+            constexpr float targetDistance = 15.0f;
+            float const angle = darknessPosition.GetAngle(bot);
+            destX = darknessPosition.GetPositionX() + std::cos(angle) * targetDistance;
+            destY = darknessPosition.GetPositionY() + std::sin(angle) * targetDistance;
+        }
+    }
+
+    if (bot->GetExactDist2d(destX, destY) < 1.0f)
         return false;
 
     botAI->InterruptSpell();
     return MoveTo(
-        SWP_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        SWP_MAP_ID, destX, destY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 }
+//End By leewheel
 
 bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
 {

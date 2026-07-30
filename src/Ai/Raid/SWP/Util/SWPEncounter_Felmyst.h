@@ -4,6 +4,13 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: flight coordinator→leader 重命名
+//   commit 6c788ed68ebb0eb6040f71f5e5bd40ce474b6a13 - Felmyst: TryGetFelmystLandingDestination→IsFelmystLanding 重命名
+// By leewheel
+// End By leewheel
+
 #ifndef PLAYERBOTS_SWPENCOUNTERFELMYST_H
 #define PLAYERBOTS_SWPENCOUNTERFELMYST_H
 
@@ -98,8 +105,8 @@ struct FelmystEncounterState
     FogPassState fogPass;
     time_t landingDpsWaitTimer = 0;
     time_t landingTouchdownTimer = 0;
-    //By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段非蒸汽 bot 的撤离协调员 GUID
-    ObjectGuid flightCoordinatorGuid = ObjectGuid::Empty;
+    //By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段非蒸汽 bot 的撤离领导 GUID
+    ObjectGuid flightLeaderGuid = ObjectGuid::Empty;
 };
 
 //By leewheel 2026-07-28 - 移除不再使用的常量，只保留实际引用的
@@ -122,7 +129,7 @@ bool TryGetFelmystDemonicVaporKiteDestination(Player* bot, Position& destination
 bool TryGetFelmystFogSafeDestinations(
     Player* bot, FogLane dangerLane, std::array<Position, 3>& destinations,
     uint8& destinationCount);
-bool TryGetFelmystLandingDestination(Unit* felmyst, Position& destination);
+bool IsFelmystLanding(Unit* felmyst);
 bool IsFelmystAirPhaseTargetSuppressed(Unit* felmyst);
 bool TryGetFelmystPostThirdPassWindow(Unit* felmyst, FogLane& lane);
 bool TryGetFelmystFogOfCorruptionStageState(Unit* felmyst, FogOfCorruptionState& state);
@@ -133,8 +140,8 @@ Player* GetFelmystEncapsulateTarget(Player* bot);
 bool DidEncapsulateOccurThisGroundPhase(Player* bot);
 Player* GetFelmystGasNovaDispelTarget(Player* bot);
 Player* GetFelmystCharmedTarget(Player* bot, Unit* felmyst);
-//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段撤离协调员（避免分散站位）
-Player* GetFelmystFlightCoordinator(Player* player);
+//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段撤离领导（避免分散站位）
+Player* GetFelmystFlightLeader(Player* player);
 //End By leewheel
 
 }

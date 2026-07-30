@@ -4,6 +4,13 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: flight coordinator→leader 重命名
+//   commit 6c788ed68ebb0eb6040f71f5e5bd40ce474b6a13 - Felmyst: TryGetFelmystLandingDestination→IsFelmystLanding 重命名
+// By leewheel
+// End By leewheel
+
 #include "SWPActions.h"
 #include "SWPEncounter_Felmyst.h"
 #include "Playerbots.h"
@@ -193,17 +200,17 @@ bool FelmystMassDispelGasNovaAction::Execute(Event /*event*/)
         botAI->CastSpell("mass dispel", gasNovaTarget);
 }
 
-//By leewheel 20260729 同步 e404dc12 新的恶魔蒸汽撤离策略：协调员钻石标记 + 跟随
+//By leewheel 20260729 同步 e404dc12 新的恶魔蒸汽撤离策略：领导钻石标记 + 跟随
 bool FelmystAvoidDemonicVaporAction::Execute(Event /*event*/)
 {
-    Player* coordinator = GetFelmystFlightCoordinator(bot);
+    Player* leader = GetFelmystFlightLeader(bot);
 
-    // 协调员给自己打钻石图标
-    if (coordinator == bot && MarkTargetWithDiamond(bot, coordinator))
+    // 领导给自己打钻石图标
+    if (leader == bot && MarkTargetWithDiamond(bot, leader))
         return true;
 
-    // 协调员本人继续躲避危险；无协调员时回退到原躲避逻辑
-    if (coordinator == bot || !coordinator)
+    // 领导本人继续躲避危险；无领导时回退到原躲避逻辑
+    if (leader == bot || !leader)
     {
         constexpr float searchRadius = 20.0f;
         Unit* nearestTrail = bot->FindNearestCreature(
@@ -224,20 +231,20 @@ bool FelmystAvoidDemonicVaporAction::Execute(Event /*event*/)
         return MoveAway(hazard, safeDistFromVapor - currentDistance);
     }
 
-    // 非协调员：跟向协调员，保持 2 米内
+    // 非领导：跟向领导，保持 2 米内
     constexpr float followDist = 2.0f;
-    float const currentDistance = bot->GetDistance2d(coordinator);
+    float const currentDistance = bot->GetDistance2d(leader);
     if (currentDistance <= followDist)
         return false;
 
-    float const dX = coordinator->GetPositionX() - bot->GetPositionX();
-    float const dY = coordinator->GetPositionY() - bot->GetPositionY();
+    float const dX = leader->GetPositionX() - bot->GetPositionX();
+    float const dY = leader->GetPositionY() - bot->GetPositionY();
     float const moveDist = std::min(3.5f, currentDistance);
     float const moveX = bot->GetPositionX() + (dX / currentDistance) * moveDist;
     float const moveY = bot->GetPositionY() + (dY / currentDistance) * moveDist;
 
     return MoveTo(
-        SWP_MAP_ID, moveX, moveY, coordinator->GetPositionZ(), false, false,
+        SWP_MAP_ID, moveX, moveY, leader->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 //End By leewheel
@@ -443,8 +450,7 @@ bool FelmystManageLandingDpsTimerAction::Execute(Event /*event*/)
     uint32 const instanceId = felmyst->GetMap()->GetInstanceId();
     auto& state = felmystEncounterStates[instanceId];
 
-    Position landingDestination;
-    if (felmyst->IsFlying() && TryGetFelmystLandingDestination(felmyst, landingDestination))
+    if (felmyst->IsFlying() && IsFelmystLanding(felmyst))
     {
         if (state.landingDpsWaitTimer)
             return false;

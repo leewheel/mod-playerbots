@@ -47,6 +47,16 @@ public:
 
 // Kalecgos
 
+//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 5167dd62：Kalecgos 血量通报 trigger
+class KalecgosShouldCommunicateBossHealthTrigger : public Trigger
+{
+public:
+    KalecgosShouldCommunicateBossHealthTrigger(
+        PlayerbotAI* botAI) : Trigger(botAI, "kalecgos should communicate boss health") {}
+    bool IsActive() override;
+};
+//End By leewheel
+
 class KalecgosBossEngagedByTankTrigger : public Trigger
 {
 public:

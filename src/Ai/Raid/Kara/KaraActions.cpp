@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 92a469f88d1af2c89231f9e6149d6fe1252d75d2 - KZ static role members (botAI->IsXxx → PlayerbotAI::IsXxx)
+// By leewheel
+// End By leewheel
+
 #include "KaraActions.h"
 #include "KaraHelpers.h"
 #include "Playerbots.h"
@@ -112,7 +118,7 @@ bool AttumenTheHuntsmanStackBehindAction::Execute(Event /*event*/)
     if (!attumenMounted)
         return false;
 
-    const float distanceBehind = botAI->IsRanged(bot) ? 6.0f : 2.0f;
+    const float distanceBehind = PlayerbotAI::IsRanged(bot) ? 6.0f : 2.0f;
     float orientation = attumenMounted->GetOrientation() + M_PI;
     float rearX = attumenMounted->GetPositionX() + std::cos(orientation) * distanceBehind;
     float rearY = attumenMounted->GetPositionY() + std::sin(orientation) * distanceBehind;
@@ -210,7 +216,7 @@ bool MaidenOfVirtueMoveBossToHealerAction::Execute(Event /*event*/)
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             Player* member = ref->GetSource();
-            if (!member || !member->IsAlive() || !botAI->IsHeal(member) ||
+            if (!member || !member->IsAlive() || !PlayerbotAI::IsHeal(member) ||
                 !member->HasAura(SPELL_REPENTANCE))
                 continue;
 
@@ -259,7 +265,7 @@ bool MaidenOfVirtuePositionRangedAction::Execute(Event /*event*/)
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             Player* member = ref->GetSource();
-            if (!member || !botAI->IsRanged(member))
+            if (!member || !PlayerbotAI::IsRanged(member))
                 continue;
 
             if (member == bot)
@@ -719,7 +725,7 @@ bool NetherspiteBlockBlueBeamAction::Execute(Event /*event*/)
         }
         _wasBlockingBlueBeam[botGuid] = true;
 
-        float idealDistance = botAI->IsRanged(bot) ? 25.0f : 18.0f;
+        float idealDistance = PlayerbotAI::IsRanged(bot) ? 25.0f : 18.0f;
         std::vector<Unit*> voidZones = GetAllVoidZones(botAI, bot);
 
         float bx = netherspite->GetPositionX();
@@ -1011,7 +1017,7 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
         if (IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
             netherspiteDpsWaitTimer.insert_or_assign(instanceId, now);
 
-        if (botAI->IsTank(bot) && !bot->HasAura(SPELL_RED_BEAM_DEBUFF))
+        if (PlayerbotAI::IsTank(bot) && !bot->HasAura(SPELL_RED_BEAM_DEBUFF))
         {
             redBeamMoveTimer.erase(botGuid);
             lastBeamMoveSideways.erase(botGuid);
@@ -1022,7 +1028,7 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
         if (IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
             netherspiteDpsWaitTimer.erase(instanceId);
 
-        if (botAI->IsTank(bot))
+        if (PlayerbotAI::IsTank(bot))
         {
             redBeamMoveTimer.erase(botGuid);
             lastBeamMoveSideways.erase(botGuid);
@@ -1033,7 +1039,7 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
         if (IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
             netherspiteDpsWaitTimer.try_emplace(instanceId, now);
 
-        if (botAI->IsTank(bot) && bot->HasAura(SPELL_RED_BEAM_DEBUFF))
+        if (PlayerbotAI::IsTank(bot) && bot->HasAura(SPELL_RED_BEAM_DEBUFF))
         {
             redBeamMoveTimer.try_emplace(botGuid, now);
             lastBeamMoveSideways.try_emplace(botGuid, false);
@@ -1352,7 +1358,7 @@ bool NightbaneCastFearWardOnMainTankAction::Execute(Event /*event*/)
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             Player* member = ref->GetSource();
-            if (member && botAI->IsMainTank(member))
+            if (member && PlayerbotAI::IsMainTank(member))
             {
                 mainTank = member;
                 break;
@@ -1451,10 +1457,10 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
     // Erase DPS wait timer and tank and ranged position tracking on encounter reset
     if (nightbane->GetHealth() == nightbane->GetMaxHealth())
     {
-        if (botAI->IsMainTank(bot))
+        if (PlayerbotAI::IsMainTank(bot))
             nightbaneTankStep.erase(botGuid);
 
-        if (botAI->IsRanged(bot))
+        if (PlayerbotAI::IsRanged(bot))
             nightbaneRangedStep.erase(botGuid);
 
         if (IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
@@ -1475,10 +1481,10 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
     // at beginning of flight phase
     else if (nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
     {
-        if (botAI->IsMainTank(bot))
+        if (PlayerbotAI::IsMainTank(bot))
             nightbaneTankStep.erase(botGuid);
 
-        if (botAI->IsRanged(bot))
+        if (PlayerbotAI::IsRanged(bot))
             nightbaneRangedStep.erase(botGuid);
 
         if (IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))

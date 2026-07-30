@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 92a469f88d1af2c89231f9e6149d6fe1252d75d2 - KZ static role members (botAI->IsXxx → PlayerbotAI::IsXxx)
+// By leewheel
+// End By leewheel
+
 #include "KaraMultipliers.h"
 #include "KaraActions.h"
 #include "KaraHelpers.h"
@@ -47,7 +53,7 @@ float AttumenTheHuntsmanStayStackedMultiplier::GetValue(Action* action)
     if (!attumenMounted)
         return 1.0f;
 
-    if (!botAI->IsMainTank(bot) && attumenMounted->GetVictim() != bot)
+    if (!PlayerbotAI::IsMainTank(bot) && attumenMounted->GetVictim() != bot)
     {
         if (dynamic_cast<CombatFormationMoveAction*>(action) ||
             dynamic_cast<FleeAction*>(action) ||
@@ -75,7 +81,7 @@ float AttumenTheHuntsmanWaitForDpsMultiplier::GetValue(Action* action)
     auto it = attumenDpsWaitTimer.find(instanceId);
     if (it == attumenDpsWaitTimer.end() || (now - it->second) < dpsWaitSeconds)
     {
-        if (!botAI->IsMainTank(bot))
+        if (!PlayerbotAI::IsMainTank(bot))
         {
             if (dynamic_cast<AttackAction*>(action) || (dynamic_cast<CastSpellAction*>(action) &&
                 !dynamic_cast<CastHealingSpellAction*>(action)))
@@ -242,7 +248,7 @@ float NetherspiteWaitForDpsMultiplier::GetValue(Action* action)
     auto it = netherspiteDpsWaitTimer.find(instanceId);
     if (it == netherspiteDpsWaitTimer.end() || (now - it->second) < dpsWaitSeconds)
     {
-        if (!botAI->IsTank(bot))
+        if (!PlayerbotAI::IsTank(bot))
         {
             if (dynamic_cast<AttackAction*>(action) || (dynamic_cast<CastSpellAction*>(action) &&
                 !dynamic_cast<CastHealingSpellAction*>(action)))
@@ -344,7 +350,7 @@ float NightbaneWaitForDpsMultiplier::GetValue(Action* action)
     auto it = nightbaneDpsWaitTimer.find(instanceId);
     if (it == nightbaneDpsWaitTimer.end() || (now - it->second) < dpsWaitSeconds)
     {
-        if (!botAI->IsMainTank(bot))
+        if (!PlayerbotAI::IsMainTank(bot))
         {
             if (dynamic_cast<AttackAction*>(action) || (dynamic_cast<CastSpellAction*>(action) &&
                 !dynamic_cast<CastHealingSpellAction*>(action)))
@@ -364,7 +370,7 @@ float NightbaneDisableAvoidAoeMultiplier::GetValue(Action* action)
     if (!nightbane)
         return 1.0f;
 
-    if (nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z || botAI->IsMainTank(bot))
+    if (nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z || PlayerbotAI::IsMainTank(bot))
     {
         if (dynamic_cast<AvoidAoeAction*>(action))
             return 0.0f;

@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 5167dd62ffa05cc4d8f5f1dcfad0b425dd68517f - KJ and Kalec edits (KalecgosAnnounceBossHealthAction 类)
+// By leewheel
+// End By leewheel
+
 #ifndef PLAYERBOTS_SWPACTIONS_H
 #define PLAYERBOTS_SWPACTIONS_H
 
@@ -50,6 +56,14 @@ public:
 };
 
 // Kalecgos
+
+class KalecgosAnnounceBossHealthAction : public Action
+{
+public:
+    KalecgosAnnounceBossHealthAction(
+        PlayerbotAI* botAI) : Action(botAI, "kalecgos announce boss health") {}
+    bool Execute(Event event) override;
+};
 
 class KalecgosTankPositionBossAction : public AttackAction
 {

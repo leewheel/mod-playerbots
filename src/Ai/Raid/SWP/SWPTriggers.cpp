@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: BossEngagedByRangedOnGround 新增 MT 仇恨检查
+// By leewheel
+// End By leewheel
+
 #include "SWPTriggers.h"
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
@@ -61,6 +67,43 @@ bool ApocalypseGuardProtectedByInfernalDefenseTrigger::IsActive()
 }
 
 // Kalecgos
+
+//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 5167dd62：Kalecgos 血量通报 trigger
+bool KalecgosShouldCommunicateBossHealthTrigger::IsActive()
+{
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    if (!kalecgos || kalecgos->GetHealthPct() >= 20.0f)
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    Player* spectralBot = nullptr;
+    Player* surfaceBot = nullptr;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive() || member->GetMapId() != SWP_MAP_ID ||
+            !GET_PLAYERBOT_AI(member))
+        {
+            continue;
+        }
+
+        if (!spectralBot && IsInSpectralRealm(member))
+            spectralBot = member;
+
+        if (!surfaceBot && !IsInSpectralRealm(member))
+            surfaceBot = member;
+
+        if (spectralBot && surfaceBot)
+            break;
+    }
+
+    return bot == spectralBot || bot == surfaceBot;
+}
+//End By leewheel
 
 bool KalecgosBossEngagedByTankTrigger::IsActive()
 {
@@ -240,6 +283,12 @@ bool FelmystBossEngagedByRangedOnGroundTrigger::IsActive()
     }
 
     if (felmyst->GetVictim() == bot)
+        return false;
+
+    //By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 4a2fa24d：
+    //                          初次降落时让 MT 拿到仇恨再上线排，避免远程过早暴露
+    Player* mainTank = GetGroupMainTank(botAI, bot);
+    if (mainTank && felmyst->GetVictim() != mainTank && felmyst->GetHealthPct() > 90.0f)
         return false;
 
     return !GetFelmystEncapsulateTarget(bot) && !DidEncapsulateOccurThisGroundPhase(bot);

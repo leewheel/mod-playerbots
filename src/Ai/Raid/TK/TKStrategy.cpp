@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 2c578c7450a1185d540e4b829386ea596732e48a - TK static role members (botAI->IsXxx → PlayerbotAI::IsXxx)
+// By leewheel
+// End By leewheel
+
 #include "TKStrategy.h"
 #include "AiObjectContext.h"
 #include "PlayerbotAI.h"
@@ -198,7 +204,7 @@ void RaidTempestKeepStrategy::AppendTargetExclusions(
     GuidSet& exclusions, TargetValueExclusionType /*type*/)
 {
     Player* bot = botAI->GetBot();
-    if (!botAI->IsMelee(bot) && !botAI->IsDps(bot))
+    if (!PlayerbotAI::IsMelee(bot) && !PlayerbotAI::IsDps(bot))
         return;
 
     AppendKaelthasDevastationExclusions(botAI, exclusions);

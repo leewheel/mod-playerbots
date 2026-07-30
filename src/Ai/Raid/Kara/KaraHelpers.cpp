@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 92a469f88d1af2c89231f9e6149d6fe1252d75d2 - KZ static role members (botAI->IsXxx → PlayerbotAI::IsXxx)
+// By leewheel
+// End By leewheel
+
 #include "KaraHelpers.h"
 #include "Playerbots.h"
 
@@ -105,7 +111,7 @@ namespace KarazhanHelpers
             for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
             {
                 Player* member = ref->GetSource();
-                if (!member || !member->IsAlive() || !botAI->IsTank(member) || !GET_PLAYERBOT_AI(member) ||
+                if (!member || !member->IsAlive() || !PlayerbotAI::IsTank(member) || !GET_PLAYERBOT_AI(member) ||
                     member->HasAura(SPELL_NETHER_EXHAUSTION_RED))
                     continue;
 

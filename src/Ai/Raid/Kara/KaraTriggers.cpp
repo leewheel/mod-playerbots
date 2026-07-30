@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 92a469f88d1af2c89231f9e6149d6fe1252d75d2 - KZ static role members (botAI->IsXxx → PlayerbotAI::IsXxx)
+// By leewheel
+// End By leewheel
+
 #include "KaraTriggers.h"
 #include "KaraHelpers.h"
 #include "KaraActions.h"
@@ -20,7 +26,7 @@ bool ManaWarpIsAboutToExplodeTrigger::IsActive()
 
 bool AttumenTheHuntsmanNeedTargetPriorityTrigger::IsActive()
 {
-    if (botAI->IsHeal(bot))
+    if (PlayerbotAI::IsHeal(bot))
         return false;
 
     Unit* midnight = AI_VALUE2(Unit*, "find target", "midnight");
@@ -29,7 +35,7 @@ bool AttumenTheHuntsmanNeedTargetPriorityTrigger::IsActive()
 
 bool AttumenTheHuntsmanAttumenSpawnedTrigger::IsActive()
 {
-    if (!botAI->IsAssistTankOfIndex(bot, 0))
+    if (!PlayerbotAI::IsAssistTankOfIndex(bot, 0))
         return false;
 
     Unit* attumen = GetFirstAliveUnitByEntry(botAI, NPC_ATTUMEN_THE_HUNTSMAN);
@@ -38,7 +44,7 @@ bool AttumenTheHuntsmanAttumenSpawnedTrigger::IsActive()
 
 bool AttumenTheHuntsmanAttumenIsMountedTrigger::IsActive()
 {
-    if (botAI->IsMainTank(bot))
+    if (PlayerbotAI::IsMainTank(bot))
         return false;
 
     Unit* attumenMounted = GetFirstAliveUnitByEntry(botAI, NPC_ATTUMEN_THE_HUNTSMAN_MOUNTED);
@@ -56,7 +62,7 @@ bool AttumenTheHuntsmanBossWipesAggroWhenMountingTrigger::IsActive()
 
 bool MoroesBossEngagedByMainTankTrigger::IsActive()
 {
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return false;
 
     Unit* moroes = AI_VALUE2(Unit*, "find target", "moroes");
@@ -81,7 +87,7 @@ bool MoroesNeedTargetPriorityTrigger::IsActive()
 
 bool MaidenOfVirtueHealersAreStunnedByRepentanceTrigger::IsActive()
 {
-    if (!botAI->IsTank(bot))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* maiden = AI_VALUE2(Unit*, "find target", "maiden of virtue");
@@ -90,7 +96,7 @@ bool MaidenOfVirtueHealersAreStunnedByRepentanceTrigger::IsActive()
 
 bool MaidenOfVirtueHolyWrathDealsChainDamageTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* maiden = AI_VALUE2(Unit*, "find target", "maiden of virtue");
@@ -99,7 +105,7 @@ bool MaidenOfVirtueHolyWrathDealsChainDamageTrigger::IsActive()
 
 bool BigBadWolfBossEngagedByTankTrigger::IsActive()
 {
-    if (!botAI->IsTank(bot) || bot->HasAura(SPELL_LITTLE_RED_RIDING_HOOD))
+    if (!PlayerbotAI::IsTank(bot) || bot->HasAura(SPELL_LITTLE_RED_RIDING_HOOD))
         return false;
 
     Unit* wolf = AI_VALUE2(Unit*, "find target", "the big bad wolf");
@@ -167,7 +173,7 @@ bool TheCuratorAstralFlareSpawnedTrigger::IsActive()
 
 bool TheCuratorBossEngagedByTanksTrigger::IsActive()
 {
-    if (!botAI->IsMainTank(bot) && !botAI->IsAssistTankOfIndex(bot, 0))
+    if (!PlayerbotAI::IsMainTank(bot) && !PlayerbotAI::IsAssistTankOfIndex(bot, 0))
         return false;
 
     Unit* curator = AI_VALUE2(Unit*, "find target", "the curator");
@@ -176,7 +182,7 @@ bool TheCuratorBossEngagedByTanksTrigger::IsActive()
 
 bool TheCuratorBossAstralFlaresCastArcingSearTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* curator = AI_VALUE2(Unit*, "find target", "the curator");
@@ -219,7 +225,7 @@ bool ShadeOfAranConjuredElementalsSummonedTrigger::IsActive()
 
 bool ShadeOfAranBossUsesCounterspellAndBlizzardTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* aran = AI_VALUE2(Unit*, "find target", "shade of aran");
@@ -286,7 +292,7 @@ bool NetherspiteBossIsBanishedTrigger::IsActive()
 
 bool NetherspiteNeedToManageTimersAndTrackersTrigger::IsActive()
 {
-    if (!botAI->IsTank(bot) && !IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
+    if (!PlayerbotAI::IsTank(bot) && !IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
         return false;
 
     Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
@@ -300,7 +306,7 @@ bool PrinceMalchezaarBotIsEnfeebledTrigger::IsActive()
 
 bool PrinceMalchezaarInfernalsAreSpawnedTrigger::IsActive()
 {
-    if (botAI->IsMainTank(bot) || bot->HasAura(SPELL_ENFEEBLE))
+    if (PlayerbotAI::IsMainTank(bot) || bot->HasAura(SPELL_ENFEEBLE))
         return false;
 
     Unit* malchezaar = AI_VALUE2(Unit*, "find target", "prince malchezaar");
@@ -309,7 +315,7 @@ bool PrinceMalchezaarInfernalsAreSpawnedTrigger::IsActive()
 
 bool PrinceMalchezaarBossEngagedByMainTankTrigger::IsActive()
 {
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return false;
 
     Unit* malchezaar = AI_VALUE2(Unit*, "find target", "prince malchezaar");
@@ -318,7 +324,7 @@ bool PrinceMalchezaarBossEngagedByMainTankTrigger::IsActive()
 
 bool NightbaneBossEngagedByMainTankTrigger::IsActive()
 {
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return false;
 
     Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
@@ -327,7 +333,7 @@ bool NightbaneBossEngagedByMainTankTrigger::IsActive()
 
 bool NightbaneRangedBotsAreInCharredEarthTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
@@ -349,7 +355,7 @@ bool NightbaneMainTankIsSusceptibleToFearTrigger::IsActive()
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             Player* member = ref->GetSource();
-            if (member && botAI->IsMainTank(member))
+            if (member && PlayerbotAI::IsMainTank(member))
             {
                 mainTank = member;
                 break;

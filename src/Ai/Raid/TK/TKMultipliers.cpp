@@ -4,6 +4,12 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 2c578c7450a1185d540e4b829386ea596732e48a - TK static role members (botAI->IsXxx → PlayerbotAI::IsXxx)
+// By leewheel
+// End By leewheel
+
 //By leewheel 2026-07-28 - 同步上游brighton-chi/mod-playerbots，按副本审核优化
 
 #include "TKMultipliers.h"
@@ -117,7 +123,7 @@ float AlarStayAwayFromRebirthMultiplier::GetValue(Action* action)
     if (!alar || isAlarInPhase2[alar->GetMap()->GetInstanceId()])
         return 1.0f;
 
-    if (botAI->IsRanged(bot) || botAI->IsTank(bot))
+    if (PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsTank(bot))
     {
         Creature* alarCreature = alar->ToCreature();
         if (!alarCreature || alarCreature->GetReactState() != REACT_PASSIVE)
@@ -214,7 +220,7 @@ float HighAstromancerSolarianMaintainPositionMultiplier::GetValue(Action* action
 //By leewheel 2026-07-29 - 同步上游brighton-chi 4f20bd10：把 TankAssist/DpsAssist 早返回移到 astromancer 查询之前
 float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValue(Action* action)
 {
-    if (!botAI->IsMelee(bot))
+    if (!PlayerbotAI::IsMelee(bot))
         return 1.0f;
 
     if (!dynamic_cast<TankAssistAction*>(action) && !dynamic_cast<DpsAssistAction*>(action))
@@ -227,7 +233,7 @@ float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValue(Action* a
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (botAI->IsMainTank(bot))
+    if (PlayerbotAI::IsMainTank(bot))
     {
         Creature* astromancerCreature = astromancer->ToCreature();
         if (astromancerCreature && astromancerCreature->GetReactState() != REACT_PASSIVE)
@@ -290,8 +296,8 @@ float KaelthasSunstriderWaitForDpsMultiplier::GetValue(Action* action)
     };
 
     //By leewheel 2026-07-28 - 提取角色判断变量避免重复调用
-    bool isMainTank = botAI->IsMainTank(bot);
-    bool isFirstAssistTank = botAI->IsAssistTankOfIndex(bot, 0, false);
+    bool isMainTank = PlayerbotAI::IsMainTank(bot);
+    bool isFirstAssistTank = PlayerbotAI::IsAssistTankOfIndex(bot, 0, false);
     bool isWarlockTank = GetCapernianTank(bot) == bot;
 
     if ((isAdvisorActive(sanguinar) && isMainTank) ||
@@ -330,7 +336,7 @@ float KaelthasSunstriderKiteThaladredMultiplier::GetValue(Action* action)
     if (!kaelAI)
         return 1.0f;
 
-    if (botAI->IsTank(bot) && kaelAI->GetPhase() == PHASE_ALL_ADVISORS)
+    if (PlayerbotAI::IsTank(bot) && kaelAI->GetPhase() == PHASE_ALL_ADVISORS)
         return 1.0f;
 
     Unit* thaladred = AI_VALUE2(Unit*, "find target", "thaladred the darkener");
@@ -392,7 +398,7 @@ float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValue(Action* ac
 //By leewheel 2026-07-28 - 只对主坦生效；用IsSingleTargetTaunt替代逐个判断；CastSwipeBearAction替代CastSwipeAction
 float KaelthasSunstriderManageWeaponTankingMultiplier::GetValue(Action* action)
 {
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
@@ -463,7 +469,7 @@ float KaelthasSunstriderManageAutomaticTargetingMultiplier::GetValue(Action* act
         return 0.0f;
 
     //By leewheel 2026-07-29 - TankAssist 分支：主坦/顾问阶段副坦都禁用自动选目标
-    if (botAI->IsMainTank(bot))
+    if (PlayerbotAI::IsMainTank(bot))
         return 0.0f;
 
     if (kaelAI->GetPhase() == PHASE_SINGLE_ADVISOR ||
@@ -523,9 +529,9 @@ float KaelthasSunstriderPrepareForPhase3Multiplier::GetValue(Action* action)
     if (!thaladred || !thaladred->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         return 1.0f;
 
-    if (botAI->IsMainTank(bot) ||
-        botAI->IsAssistTankOfIndex(bot, 0, false) ||
-        botAI->IsAssistHealOfIndex(bot, 0, false) ||
+    if (PlayerbotAI::IsMainTank(bot) ||
+        PlayerbotAI::IsAssistTankOfIndex(bot, 0, false) ||
+        PlayerbotAI::IsAssistHealOfIndex(bot, 0, false) ||
         (bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot))
     {
         return 0.0f;
@@ -563,7 +569,7 @@ float KaelthasSunstriderDelayCooldownsMultiplier::GetValue(Action* action)
         dynamic_cast<CastSummonGargoyleAction*>(action) ||
         dynamic_cast<CastBerserkingAction*>(action) ||
         dynamic_cast<CastBloodFuryAction*>(action) ||
-        (botAI->IsDps(bot) && dynamic_cast<UseTrinketAction*>(action));
+        (PlayerbotAI::IsDps(bot) && dynamic_cast<UseTrinketAction*>(action));
 
     if (!isCooldown)
         return 1.0f;

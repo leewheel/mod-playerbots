@@ -4,14 +4,71 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 5167dd62ffa05cc4d8f5f1dcfad0b425dd68517f - KJ and Kalec edits (KalecgosAnnounceBossHealthAction::Execute)
+// By leewheel
+// End By leewheel
+
 #include "SWPActions.h"
 #include "SWPEncounter_Kalec.h"
 #include "Playerbots.h"
+#include "PlayerbotTextMgr.h"
 #include "RaidBossHelpers.h"
 #include "TargetValue.h"
 #include <algorithm>
+#include <map>
 
 using namespace SwpHelpers;
+
+//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 5167dd62：Kalecgos 血量通报
+bool KalecgosAnnounceBossHealthAction::Execute(Event /*event*/)
+{
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    if (!kalecgos)
+        return false;
+
+    auto const stateItr = kalecgosEncounterStates.find(bot->GetInstanceId());
+    if (stateItr == kalecgosEncounterStates.end())
+        return false;
+
+    KalecgosEncounterState& state = stateItr->second;
+    std::string text;
+
+    if (!IsInSpectralRealm(bot))
+    {
+        if (state.surfaceHealthAnnounced)
+            return false;
+
+        state.surfaceHealthAnnounced = true;
+
+        text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "kalecgos_below_twenty_percent_health",
+            "Kalecgos's health is at 20%!",
+            {});
+    }
+    else
+    {
+        if (state.spectralHealthAnnounced)
+            return false;
+
+        Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor");
+        if (!sathrovarr)
+            return false;
+
+        state.spectralHealthAnnounced = true;
+
+        text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "sathrovarr_health_when_kalecgos_below_twenty_percent_health",
+            "Sathrovarr's health is at %sathrovarrHealth%! "
+            "Don't forget that we need to defeat them at about the same time!",
+            std::map<std::string, std::string>{
+                {"%sathrovarrHealth", std::to_string(static_cast<uint32>(sathrovarr->GetHealthPct()))}});
+    }
+
+    return botAI->SayToRaid(text);
+}
+//End By leewheel
 
 bool KalecgosTankPositionBossAction::Execute(Event event)
 {

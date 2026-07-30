@@ -4,6 +4,13 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: 重写 DemonicVaporKite multiplier 逻辑
+//   commit 6c788ed68ebb0eb6040f71f5e5bd40ce474b6a13 - Felmyst: DemonicVaporKite multiplier 进一步调整（ReachTargetAction/FollowAction）
+// By leewheel
+// End By leewheel
+
 #include "SWPMultipliers.h"
 #include "SWPActions.h"
 #include "SWPEncounter_Brut.h"
@@ -432,18 +439,18 @@ float FelmystPrioritizeFogAvoidanceMultiplier::GetValue(Action* action)
     return 1.0f;
 }
 
+//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots 最终代码（HEAD）：
+//   把动作过滤从 MovementAction 改为 ReachTargetAction + CastReachTargetSpellAction + FollowAction
+//   引入 IsFelmystLanding 检查：Felmyst 降落时允许机器人移动以开始 DPS
+//   注释：最终代码删除了 IsFelmystDemonicVaporHeadNearBot 检查（两个分支都返回 0.0f，对结果无影响）
 float FelmystPrioritizeDemonicVaporKiteMultiplier::GetValue(Action* action)
 {
-    if (dynamic_cast<FelmystKiteDemonicVaporAction*>(action))
-        return 1.0f;
-
-    //By leewheel 20260729 同步 e404dc12 测试：注释 CastReachTargetSpellAction，让多个机器人堆叠到协调员
-    if (!dynamic_cast<MovementAction*>(action) /* &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action) */)
+    if (!dynamic_cast<FollowAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action) &&
+        !dynamic_cast<ReachTargetAction*>(action))
     {
         return 1.0f;
     }
-    //End By leewheel
 
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
     if (!felmyst || !felmyst->IsFlying())
@@ -453,10 +460,10 @@ float FelmystPrioritizeDemonicVaporKiteMultiplier::GetValue(Action* action)
     if (TryGetActiveFogOfCorruptionState(bot, felmyst, fogState))
         return 1.0f;
 
-    if (IsFelmystDemonicVaporHeadNearBot(bot))
-        return 0.0f;
+    if (IsFelmystLanding(felmyst))
+        return 1.0f;
 
-    return 1.0f;
+    return 0.0f;
 }
 
 float FelmystFocusAttacksOnCharmedPlayerMultiplier::GetValue(Action* action)

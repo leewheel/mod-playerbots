@@ -4,6 +4,13 @@
  * or (at your option) any later version.
  */
 
+// === 外部代码引入记录 ===
+// 2026-07-30 引入自 brighton-chi/mod-playerbots:
+//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: flight coordinator→leader 重命名
+//   commit 6c788ed68ebb0eb6040f71f5e5bd40ce474b6a13 - Felmyst: TryGetFelmystLandingDestination→IsFelmystLanding 重命名
+// By leewheel
+// End By leewheel
+
 //By leewheel 2026-07-28 - 同步上游brighton-chi/mod-playerbots提交，简化Felmyst相关类型名称，
 //                         将原FelmystFogLane/FelmystFogPhase/FelmystFogLocation等类型去掉Felmyst前缀，
 //                         将头文件常量改为本地constexpr，删除不再使用的FelmystFogCrateStuckState
@@ -835,8 +842,9 @@ bool IsFelmystDemonicVaporHeadNearBot(Player* bot)
     return vapor && bot->GetDistance2d(vapor) <= kiteDistanceThreshold;
 }
 
-bool TryGetFelmystLandingDestination(Unit* felmyst, Position& destination)
+bool IsFelmystLanding(Unit* felmyst)
 {
+    Position destination;
     if (!TryGetFelmystMovementDestination(felmyst, destination))
         return false;
 
@@ -857,8 +865,7 @@ bool TryGetFelmystPostThirdPassWindow(Unit* felmyst, FogLane& lane)
         return false;
     }
 
-    Position landingDestination;
-    if (TryGetFelmystLandingDestination(felmyst, landingDestination))
+    if (IsFelmystLanding(felmyst))
     {
         felmystEncounterStates[instanceId].fogPass = FogPassState{};
         return false;
@@ -1352,9 +1359,9 @@ Player* GetFelmystCharmedTarget(Player* bot, Unit* felmyst)
     return lowestHpTarget;
 }
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段撤离协调员
+//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：飞行阶段撤离领导
 //  选 Assistant 玩家优先，否则选第一个符合条件的 bot
-Player* GetFelmystFlightCoordinator(Player* player)
+Player* GetFelmystFlightLeader(Player* player)
 {
     Group* group = player->GetGroup();
     if (!group)
@@ -1372,13 +1379,13 @@ Player* GetFelmystFlightCoordinator(Player* player)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (member && member->GetGUID() == state.flightCoordinatorGuid)
+        if (member && member->GetGUID() == state.flightLeaderGuid)
             return isEligible(member) ? member : nullptr;
     }
 
-    state.flightCoordinatorGuid = ObjectGuid::Empty;
+    state.flightLeaderGuid = ObjectGuid::Empty;
 
-    //By leewheel 2026-07-29 - 寻找新协调员
+    //By leewheel 2026-07-29 - 寻找新领导
     Player* fallbackBot = nullptr;
 
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
@@ -1389,7 +1396,7 @@ Player* GetFelmystFlightCoordinator(Player* player)
 
         if (group->IsAssistant(member->GetGUID()))
         {
-            state.flightCoordinatorGuid = member->GetGUID();
+            state.flightLeaderGuid = member->GetGUID();
             return member;
         }
 
@@ -1398,7 +1405,7 @@ Player* GetFelmystFlightCoordinator(Player* player)
     }
 
     if (fallbackBot)
-        state.flightCoordinatorGuid = fallbackBot->GetGUID();
+        state.flightLeaderGuid = fallbackBot->GetGUID();
 
     return fallbackBot;
 }
