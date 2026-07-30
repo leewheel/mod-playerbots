@@ -1606,6 +1606,28 @@ void RandomPlayerbotMgr::CheckLfgQueue()
         {
             // 没有真实玩家排队，重置计时器
             lfgQueueStartTime[teamId] = 0;
+
+            // By leewheel 2026-07-30
+            // 清理滞留队列的机器人：真实玩家离开队列(或已进本)后，此前补位/自主排队的
+            // 机器人会以 QUEUED 状态滞留在 LFG 队列中（ProcessBot 对 LFG 状态 bot 跳过
+            // randomize/teleport，"seldom" 离队触发器要数分钟才轮到一次）。
+            // LFGQueue::UpdateQueueTimers 每 8 秒(LFG_QUEUEUPDATE_INTERVAL)对全队列做
+            // 撮合与状态推送，队列里滞留的 bot 越多，世界线程每 8 秒的尖峰越大，
+            // 表现为玩家端每隔 7~8 秒规律性卡顿。没有真实玩家排队时 bot 留在队列毫无意义，
+            // 这里立即让本阵营所有单人 QUEUED 状态的随机机器人离开队列。
+            for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+            {
+                Player* bot = it->second;
+                if (!bot || bot->GetTeamId() != teamId || !IsRandomBot(bot))
+                    continue;
+                // 跟真实玩家组队排队的 bot 状态挂在组 GUID 下，这里只处理单人排队的 bot
+                if (bot->GetGroup())
+                    continue;
+                if (sLFGMgr->GetState(bot->GetGUID()) != lfg::LFG_STATE_QUEUED)
+                    continue;
+                sLFGMgr->LeaveLfg(bot->GetGUID());
+            }
+            // End By leewheel
         }
     }
     // End By leewheel
