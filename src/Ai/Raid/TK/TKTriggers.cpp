@@ -115,12 +115,6 @@ bool AlarShouldManagePhaseTrackerTrigger::IsActive()
            GetAlarDestinationLocationIndex(alar, dest) != POINT_QUILL_OR_DIVE_IDX;
 }
 
-bool AlarStrategyChangesBetweenPhasesTrigger::IsActive()
-{
-    return IsMechanicTrackerBot(botAI, bot, TK_MAP_ID, nullptr) &&
-           AI_VALUE2(Unit*, "find target", "al'ar");
-}
-
 // Void Reaver
 
 bool VoidReaverBossCastsPoundingTrigger::IsActive()
@@ -205,13 +199,6 @@ bool VoidReaverArcaneOrbIsIncomingTrigger::IsActive()
     }
 
     return false;
-}
-
-bool VoidReaverBotIsNotInCombatTrigger::IsActive()
-{
-    return bot->GetMapId() == TEMPEST_KEEP_MAP_ID &&
-           !AI_VALUE2(bool, "combat", "self target") &&
-           !AI_VALUE2(Unit*, "find target", "void reaver");
 }
 
 // High Astromancer Solarian

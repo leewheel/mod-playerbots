@@ -435,7 +435,6 @@ float KaelthasSunstriderManageWeaponTankingMultiplier::GetValue(Action* action)
          dynamic_cast<CastPestilenceAction*>(action) ||
          dynamic_cast<CastBloodBoilAction*>(action)))
         return 0.0f;
-    }
 
     return 1.0f;
 }
