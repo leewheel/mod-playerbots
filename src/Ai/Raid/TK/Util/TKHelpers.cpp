@@ -4,15 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 2026-07-28 - 同步上游brighton-chi/mod-playerbots
-//                        命名空间从TempestKeepHelpers改为TkHelpers
-//                        ALAR_GROUND_0~3内联到GROUND_POSITIONS中
-//                        新增GetTargetUnitPair、IsFeigningDeath、GetRangedLeader
-//                        删除GetFirstTwoEmbersOfAlar、hasReachedVoidReaverPosition
-//                        GetSecondEmberTank参数从PlayerbotAI*改为Player*
-//                        GetNearestNonTankPlayerInRadius参数简化(去掉botAI参数)
-//                        searchStep从M_PI/8改为M_PI/12(更精细搜索)
-
 #include "TKHelpers.h"
 #include "LootObjectStack.h"
 #include "Playerbots.h"

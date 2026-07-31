@@ -409,20 +409,31 @@ float KaelthasSunstriderManageWeaponTankingMultiplier::GetValue(Action* action)
     if (!kaelAI || kaelAI->GetPhase() != PHASE_WEAPONS)
         return 1.0f;
 
-    //By leewheel 2026-07-28 - 阻止主坦在武器阶段抢仇恨（除斧头外）
-    if (IsSingleTargetTaunt(action) ||
-        dynamic_cast<CastChallengingShoutAction*>(action) ||
-        dynamic_cast<CastThunderClapAction*>(action) ||
-        dynamic_cast<CastShockwaveAction*>(action) ||
-        dynamic_cast<CastCleaveAction*>(action) ||
-        dynamic_cast<CastSwipeBearAction*>(action) ||
-        dynamic_cast<CastChallengingRoarAction*>(action) ||
-        dynamic_cast<CastAvengersShieldAction*>(action) ||
-        dynamic_cast<CastConsecrationAction*>(action) ||
-        dynamic_cast<CastDeathAndDecayAction*>(action) ||
-        dynamic_cast<CastPestilenceAction*>(action) ||
-        dynamic_cast<CastBloodBoilAction*>(action))
-    {
+    if (kaelAI->GetPhase() != PHASE_WEAPONS &&
+        dynamic_cast<TankFaceAction*>(action))
+        return 0.0f;
+
+    if (!botAI->IsMainTank(bot))
+        return 1.0f;
+
+    // Try to keep main tank from grabbing aggro on any weapon other than the axe
+    if (kaelAI->GetPhase() == PHASE_WEAPONS &&
+        (dynamic_cast<TankAssistAction*>(action) ||
+         dynamic_cast<CastTauntAction*>(action) ||
+         dynamic_cast<CastChallengingShoutAction*>(action) ||
+         dynamic_cast<CastThunderClapAction*>(action) ||
+         dynamic_cast<CastShockwaveAction*>(action) ||
+         dynamic_cast<CastCleaveAction*>(action) ||
+         dynamic_cast<CastGrowlAction*>(action) ||
+         dynamic_cast<CastSwipeBearAction*>(action) ||
+         dynamic_cast<CastChallengingRoarAction*>(action) ||
+         dynamic_cast<CastHandOfReckoningAction*>(action) ||
+         dynamic_cast<CastAvengersShieldAction*>(action) ||
+         dynamic_cast<CastConsecrationAction*>(action) ||
+         dynamic_cast<CastDarkCommandAction*>(action) ||
+         dynamic_cast<CastDeathAndDecayAction*>(action) ||
+         dynamic_cast<CastPestilenceAction*>(action) ||
+         dynamic_cast<CastBloodBoilAction*>(action)))
         return 0.0f;
     }
 

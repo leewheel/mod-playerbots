@@ -4,11 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 2026-07-28 - 同步上游brighton-chi/mod-playerbots，命名空间从TempestKeepHelpers改为TkHelpers
-//                        枚举从TempestKeepSpells/NPCs/Items改为enum class TkSpells/TkNpcs/TkItems
-//                        删除GetFirstTwoEmbersOfAlar、hasReachedVoidReaverPosition、ALAR_GROUND_0~3
-//                        新增GetTargetUnitPair、IsFeigningDeath、SPELL_MODEL_INVISIBILITY等
-
 #ifndef PLAYERBOTS_TKHELPERS_H
 #define PLAYERBOTS_TKHELPERS_H
 

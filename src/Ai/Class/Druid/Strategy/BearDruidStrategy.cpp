@@ -17,7 +17,7 @@ public:
         creators["dire bear form"] = &dire_bear_form;
         creators["maul"] = &maul;
         creators["bash"] = &bash;
-        creators["swipe"] = &swipe;
+        creators["swipe (bear)"] = &swipe_bear;
         creators["lacerate"] = &lacerate;
         //By leewheel 2026-07-28 - 注册growl(低吼)为嘲讽技能，使botAI能识别熊德有嘲讽能力
         creators["taunt spell"] = &growl;
@@ -64,10 +64,10 @@ private:
         );
     }
 
-    static ActionNode* swipe([[maybe_unused]] PlayerbotAI* botAI)
+    static ActionNode* swipe_bear([[maybe_unused]] PlayerbotAI* botAI)
     {
         return new ActionNode(
-            "swipe",
+            "swipe (bear)",
             /*P*/ {},
             /*A*/ { NextAction("melee") },
             /*C*/ {}

@@ -99,7 +99,26 @@ bool AlarEverythingIsOnFireInPhase2Trigger::IsActive()
 
 bool AlarShouldManagePhaseTrackerTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(botAI, bot, TK_MAP_ID) && AI_VALUE2(Unit*, "find target", "al'ar");
+    if (bot->GetVictim())
+        return false;
+
+    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    if (!alar || !isAlarInPhase2[alar->GetMap()->GetInstanceId()])
+        return false;
+
+    Creature* alarCreature = alar->ToCreature();
+    if (alarCreature && alarCreature->GetReactState() == REACT_PASSIVE)
+        return false;
+
+    Position dest;
+    return GetAlarCurrentLocationIndex(alar) != POINT_QUILL_OR_DIVE_IDX &&
+           GetAlarDestinationLocationIndex(alar, dest) != POINT_QUILL_OR_DIVE_IDX;
+}
+
+bool AlarStrategyChangesBetweenPhasesTrigger::IsActive()
+{
+    return IsMechanicTrackerBot(botAI, bot, TK_MAP_ID, nullptr) &&
+           AI_VALUE2(Unit*, "find target", "al'ar");
 }
 
 // Void Reaver
@@ -186,6 +205,13 @@ bool VoidReaverArcaneOrbIsIncomingTrigger::IsActive()
     }
 
     return false;
+}
+
+bool VoidReaverBotIsNotInCombatTrigger::IsActive()
+{
+    return bot->GetMapId() == TEMPEST_KEEP_MAP_ID &&
+           !AI_VALUE2(bool, "combat", "self target") &&
+           !AI_VALUE2(Unit*, "find target", "void reaver");
 }
 
 // High Astromancer Solarian

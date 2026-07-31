@@ -7,11 +7,9 @@
 #ifndef PLAYERBOTS_KARAHELPERS_H
 #define PLAYERBOTS_KARAHELPERS_H
 
-//By leewheel 2026-07-28 - 从brighton-chi来源移植：C风格数组改std::array，更安全且提供大小信息
 #include <array>
 #include <ctime>
 #include <unordered_map>
-//End By leewheel
 
 #include "AiObject.h"
 #include "Position.h"
@@ -71,6 +69,7 @@ namespace KarazhanHelpers
         NPC_ATTUMEN_THE_HUNTSMAN_MOUNTED = 16152,
 
         // Terestian Illhoof
+        NPC_TERESTIAN_ILLHOOF            = 15688,
         NPC_DEMON_CHAINS                 = 17248,
         NPC_KILREK                       = 17229,
 
@@ -122,7 +121,7 @@ namespace KarazhanHelpers
     extern const Position NIGHTBANE_FLIGHT_STACK_POSITION;
     extern const Position NIGHTBANE_RAIN_OF_BONES_POSITION;
 
-    Unit* GetFirstAliveUnit(const std::vector<Unit*>& units);
+    std::array<const char*, 5> const& GetOzTargets();
     bool IsFlameWreathActive(PlayerbotAI* botAI, Player* bot);
     std::vector<Player*> GetRedBlockers(PlayerbotAI* botAI, Player* bot);
     std::vector<Player*> GetBlueBlockers(PlayerbotAI* botAI, Player* bot);

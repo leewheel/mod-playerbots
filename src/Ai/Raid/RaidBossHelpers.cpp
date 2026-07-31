@@ -1,11 +1,18 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "RaidBossHelpers.h"
+#include "CellImpl.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
 
-//By leewheel 2026-07-28 - 同步brighton-chi/mod-playerbots：所有 Mark* 函数返回 true 表示本次设置
-//                        RTI 图标成功（图标发生改变），false 表示 target 为空/无队伍/图标未变化。
-//                        供 TK、SSC、SWP 等模块用 `if (a && MarkTargetWithXxx(...))` 短路写法。
-//End By leewheel
+// Functions to mark targets with raid target icons
+// Note that these functions do not allow the player to change the icon during the encounter
 bool MarkTargetWithIcon(Player* bot, Unit* target, uint8 iconId)
 {
     if (!target)
@@ -67,15 +74,17 @@ bool MarkTargetWithMoon(Player* bot, Unit* target)
 
 bool ClearTargetIcon(Player* bot, uint8 iconId)
 {
-    if (Group* group = bot->GetGroup())
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    ObjectGuid currentGuid = group->GetTargetIcon(iconId);
+    if (currentGuid != ObjectGuid::Empty)
     {
-        ObjectGuid currentGuid = group->GetTargetIcon(iconId);
-        if (currentGuid != ObjectGuid::Empty)
-        {
-            group->SetTargetIcon(iconId, bot->GetGUID(), ObjectGuid::Empty);
-            return true;
-        }
+        group->SetTargetIcon(iconId, bot->GetGUID(), ObjectGuid::Empty);
+        return true;
     }
+
     return false;
 }
 
@@ -97,6 +106,8 @@ void SetRtiTarget(PlayerbotAI* botAI, const std::string& rtiName, Unit* target)
 
 // Return the first alive DPS bot in the specified instance map, excluding any specified bot
 // Intended for purposes of storing and erasing timers and trackers in associative containers
+// Fork note: keeps the extended signature (botAI + optional exclude) so the mechanic tracker
+// role stays limited to DPS bots, matching the fork's TK/SWP/ZA behavior.
 bool IsMechanicTrackerBot(PlayerbotAI* botAI, Player* bot, uint32 mapId, Player* exclude)
 {
     if (!botAI->IsDps(bot) || !bot->IsAlive() || bot->GetMapId() != mapId)
@@ -190,13 +201,14 @@ Player* GetGroupAssistTank(PlayerbotAI* botAI, Player* bot, uint8 index)
 }
 
 // Return the first matching alive unit from PossibleTargetsValue within sightDistance from config
+// Note that PossibleTargetsValue picks up only hostile units
 Unit* GetFirstAliveUnitByEntry(PlayerbotAI* botAI, uint32 entry)
 {
-    auto const& npcs =
+    auto const& units =
         botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
-    for (auto const& npcGuid : npcs)
+    for (auto const& unitGuid : units)
     {
-        Unit* unit = botAI->GetUnit(npcGuid);
+        Unit* unit = botAI->GetUnit(unitGuid);
         if (unit && unit->IsAlive() && unit->GetEntry() == entry)
             return unit;
     }
@@ -204,31 +216,56 @@ Unit* GetFirstAliveUnitByEntry(PlayerbotAI* botAI, uint32 entry)
     return nullptr;
 }
 
-//By leewheel 2026-07-28 - 同步brighton-chi/mod-playerbots：返回类型从 Unit* 改为 Player*，
-//                        仅在队伍成员中查找（不含中立玩家），用于 Al'ar dive bomb 闪避
-//                        和 Capernian 远程分散等场景
-//End By leewheel
+// Return the nearest alive player (human or bot) within the specified radius. Distance is
+// measured by GetExactDist2d(), which does not take into account player hitboxes (1.5y).
 Player* GetNearestPlayerInRadius(Player* bot, float radius)
 {
+    Group* group = bot->GetGroup();
+    if (!group)
+        return nullptr;
+
     Player* nearestPlayer = nullptr;
     float nearestDistance = radius;
 
-    if (Group* group = bot->GetGroup())
+    for (GroupReference* ref = group->GetFirstMember(); ref != nullptr; ref = ref->next())
     {
-        for (GroupReference* ref = group->GetFirstMember(); ref != nullptr; ref = ref->next())
-        {
-            Player* member = ref->GetSource();
-            if (!member || !member->IsAlive() || member == bot)
-                continue;
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive() || member == bot)
+            continue;
 
-            float distance = bot->GetExactDist2d(member);
-            if (distance < nearestDistance)
-            {
-                nearestDistance = distance;
-                nearestPlayer = member;
-            }
+        float distance = bot->GetExactDist2d(member);
+        if (distance < nearestDistance)
+        {
+            nearestDistance = distance;
+            nearestPlayer = member;
         }
     }
 
     return nearestPlayer;
+}
+
+// Grid search for dynamic objects for methods to avoid dynobj-based AoE hazards
+std::vector<Position> GetDynamicObjectPositions(Player* bot, float searchRadius, uint32 spellId)
+{
+    std::list<WorldObject*> objs;
+    Acore::AllWorldObjectsInRange check(bot, searchRadius);
+    Acore::WorldObjectListSearcher<Acore::AllWorldObjectsInRange> searcher(
+        bot, objs, check, GRID_MAP_TYPE_MASK_DYNAMICOBJECT);
+    Cell::VisitObjects(bot, searcher, searchRadius);
+
+    std::vector<Position> dynObjs;
+    for (WorldObject* obj : objs)
+    {
+        if (obj->GetTypeId() != TYPEID_DYNAMICOBJECT)
+            continue;
+
+        DynamicObject* dynObj = static_cast<DynamicObject*>(obj);
+        if (dynObj->GetSpellId() == spellId)
+        {
+            dynObjs.emplace_back(
+                dynObj->GetPositionX(), dynObj->GetPositionY(), dynObj->GetPositionZ());
+        }
+    }
+
+    return dynObjs;
 }
