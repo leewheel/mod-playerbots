@@ -53,7 +53,7 @@ bool AttumenTheHuntsmanAttumenIsMountedTrigger::IsActive()
 
 bool AttumenTheHuntsmanBossWipesAggroWhenMountingTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(bot, KARAZHAN_MAP_ID) &&
+    return IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr) &&
            AI_VALUE2(Unit*, "find target", "midnight");
 }
 
@@ -68,7 +68,7 @@ bool MoroesBossEngagedByMainTankTrigger::IsActive()
 
 bool MoroesNeedTargetPriorityTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(bot, KARAZHAN_MAP_ID) &&
+    return IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr) &&
            AI_VALUE2(Unit*, "find target", "moroes");
 }
 
@@ -110,7 +110,7 @@ bool BigBadWolfBossIsChasingLittleRedRidingHoodTrigger::IsActive()
 
 bool RomuloAndJulianneBothBossesRevivedTrigger::IsActive()
 {
-    if (!IsMechanicTrackerBot(bot, KARAZHAN_MAP_ID))
+    if (!IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
         return false;
 
     Unit* romulo = AI_VALUE2(Unit*, "find target", "romulo");
@@ -126,7 +126,7 @@ bool RomuloAndJulianneBothBossesRevivedTrigger::IsActive()
 
 bool WizardOfOzNeedTargetPriorityTrigger::IsActive()
 {
-    if (!IsMechanicTrackerBot(bot, KARAZHAN_MAP_ID))
+    if (!IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
         return false;
 
     for (const char* name : GetOzTargets())
@@ -149,7 +149,7 @@ bool WizardOfOzStrawmanIsVulnerableToFireTrigger::IsActive()
 
 bool TheCuratorAstralFlareSpawnedTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(bot, KARAZHAN_MAP_ID) &&
+    return IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr) &&
            AI_VALUE2(Unit*, "find target", "astral flare");
 }
 
@@ -173,7 +173,7 @@ bool TheCuratorBossAstralFlaresCastArcingSearTrigger::IsActive()
 
 bool TerestianIllhoofNeedTargetPriorityTrigger::IsActive()
 {
-    if (!IsMechanicTrackerBot(bot, KARAZHAN_MAP_ID))
+    if (!IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
         return false;
 
     Unit* illhoof = AI_VALUE2(Unit*, "find target", "terestian illhoof");
@@ -197,7 +197,7 @@ bool ShadeOfAranFlameWreathIsActiveTrigger::IsActive()
 // Exclusion of Banish is so the player may Banish elementals if they wish
 bool ShadeOfAranConjuredElementalsSummonedTrigger::IsActive()
 {
-    if (!IsMechanicTrackerBot(bot, KARAZHAN_MAP_ID))
+    if (!IsMechanicTrackerBot(botAI, bot, KARAZHAN_MAP_ID, nullptr))
         return false;
 
     Unit* elemental = AI_VALUE2(Unit*, "find target", "conjured elemental");

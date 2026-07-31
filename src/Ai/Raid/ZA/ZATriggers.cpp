@@ -66,7 +66,7 @@ bool AkilzonElectricalStormIncomingTrigger::IsActive()
 
 bool AkilzonBotsNeedToPrepareForElectricalStormTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(bot, ZULAMAN_MAP_ID);
+    return IsMechanicTrackerBot(botAI, bot, ZULAMAN_MAP_ID, nullptr);
 }
 
 // Nalorakk <Bear Avatar>
