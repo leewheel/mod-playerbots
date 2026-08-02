@@ -13,6 +13,14 @@
 #include "GameTime.h"
 #include "PlayerbotCommandServer.h"
 
+// By leewheel 2026-08-01
+// 周期性卡顿修复：新增 <array>/<map>/<unordered_map> 头文件依赖，
+// 用于 LFG 队列角色计数与入队时间追踪
+#include <array>
+#include <map>
+#include <unordered_map>
+// End By leewheel
+
 struct BattlegroundInfo
 {
     std::vector<uint32> bgInstances;
@@ -168,6 +176,36 @@ public:
     // 强制机器人加入LFG队列（含天赋切换）
     void ForceBotsJoinLfg(TeamId teamId);
     // End By leewheel
+
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：向 AI 触发器暴露 LFG 队列角色计数（坦克/治疗/DPS），
+    // 供 LfgRolePriorityTrigger 判断队列饱和度，避免坦克/治疗机器人无限自主排队。
+    std::array<uint32, 3> GetLfgQueueRoleCount(TeamId teamId) const
+    {
+        auto it = lfgQueueRoleCount.find(teamId);
+        return it != lfgQueueRoleCount.end() ? it->second : std::array<uint32, 3>{0, 0, 0};
+    }
+    // 记录机器人成功进入 LFG 队列的时间，用于滞留超时清理
+    void RecordBotLfgJoinTime(ObjectGuid guid) { lfgBotJoinTime[guid] = time(nullptr); }
+    time_t GetBotLfgJoinTime(ObjectGuid guid) const
+    {
+        auto it = lfgBotJoinTime.find(guid);
+        return it != lfgBotJoinTime.end() ? it->second : 0;
+    }
+    void ClearBotLfgJoinTime(ObjectGuid guid) { lfgBotJoinTime.erase(guid); }
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：天赋切换节流——ForceBotsJoinLfg 补位时会对候选 bot 执行天赋重置
+    // （InitTalentsBySpecNo + InitTalentsTree，重操作：技能/属性重算、大量数据包）。
+    // 7月30日 版本无去重，CheckLfgQueue 每 30 秒刷新一次缺额，同一 bot 可能每轮都被反复
+    // 切换天赋，与 8 秒撮合周期叠加加剧卡顿。这里对同一 bot 的切换做 30 秒节流。
+    bool IsSpecSwitchThrottled(ObjectGuid guid) const
+    {
+        auto it = botLastSpecSwitchTime.find(guid);
+        return it != botLastSpecSwitchTime.end() && time(nullptr) - it->second < 30;
+    }
+    void RecordSpecSwitchTime(ObjectGuid guid) { botLastSpecSwitchTime[guid] = time(nullptr); }
+    // End By leewheel
+
     void CheckPlayers();
     void LogBattlegroundInfo();
 
@@ -220,6 +258,10 @@ private:
         this->BgCheckTimer = 0;
         this->LfgCheckTimer = 0;
         this->PlayersCheckTimer = 0;
+        // By leewheel 2026-08-01
+        // 周期性卡顿修复：初始化全服扫描限频计时器
+        this->FullScanTimer = 0;
+        // End By leewheel
     }
 
     ~RandomPlayerbotMgr() = default;
@@ -246,6 +288,16 @@ private:
     time_t BgCheckTimer;
     time_t LfgCheckTimer;
     time_t PlayersCheckTimer;
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：全服扫描限频计时器（CheckLfgQueue 兜底扫描用）
+    time_t FullScanTimer;
+    // 记录各阵营 LFG 队列中的角色计数（0坦/1奶/2DPS），供 AI 触发器做队列饱和度判断
+    std::map<TeamId, std::array<uint32, 3>> lfgQueueRoleCount;
+    // 记录机器人成功入队的时间，用于滞留超时强制离队清理
+    std::unordered_map<ObjectGuid, time_t> lfgBotJoinTime;
+    // 记录机器人上次天赋切换的时间，用于 ForceBotsJoinLfg 天赋重置去重节流
+    std::unordered_map<ObjectGuid, time_t> botLastSpecSwitchTime;
+    // End By leewheel
     time_t RealPlayerLastTimeSeen = 0;
     time_t DelayLoginBotsTimer;
     time_t printStatsTimer;

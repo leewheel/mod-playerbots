@@ -37,6 +37,29 @@ bool LfgRolePriorityTrigger::IsActive()
     if (!botAI->IsTank(bot, true) && !botAI->IsHeal(bot, true))
         return false;
 
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：bot 已在 LFG 队列中（QUEUED/PROPOSAL 等非 NONE、非 DUNGEON 状态）则不再触发。
+    // 7月30日 版本中缺少该检查：已排队 bot 仍每约4秒触发一次 lfg join，每次 join 都会走
+    // OnPlayerCanJoinLfg 钩子执行全地图遍历修复（FixAllDungeonRequirements + InitializeLockedDungeons），
+    // 与 LFG 每8秒撮合周期(UpdateQueueTimers)叠加，是玩家端每 7~8 秒规律性卡顿的直接来源。
+    lfg::LfgState const state = sLFGMgr->GetState(bot->GetGUID());
+    if (state != lfg::LFG_STATE_NONE && state < lfg::LFG_STATE_DUNGEON)
+        return false;
+    // End By leewheel
+
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：队列饱和度检查——
+    // 该阵营对应角色已有足够 bot 在 LFG 队列中时不再触发，防止坦克/治疗机器人无限自主排队，
+    // 持续膨胀 LFG 队列、加重 8 秒撮合周期(UpdateQueueTimers)的周期性尖峰。
+    // 计数由 CheckLfgQueue 每 30 秒刷新的 lfgQueueRoleCount 提供（索引 0=坦克 1=治疗 2=DPS），
+    // 与 ForceBotsJoinLfg 的目标配额（2坦+2奶）保持一致。
+    std::array<uint32, 3> const queued = sRandomPlayerbotMgr.GetLfgQueueRoleCount(bot->GetTeamId());
+    if (botAI->IsTank(bot, true) && queued[0] >= 2)
+        return false;
+    if (botAI->IsHeal(bot, true) && queued[1] >= 2)
+        return false;
+    // End By leewheel
+
     int32 k = (int32)(probability / sPlayerbotAIConfig.randomChangeMultiplier);
     if (k < 1)
         k = 1;

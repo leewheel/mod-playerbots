@@ -1448,16 +1448,23 @@ static bool SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, u
     //       导致下次补位仍认为它 idle 并再次 join，循环几十次始终不能进 QUEUED 状态。
     //       直接调 LFGMgr::JoinLfg 是该函数被真实玩家 CMSG_LFG_JOIN handler 内部调用的同一段，
     //       state 设置可靠，能正常进入 LFG_STATE_QUEUED 走撮合流程。
-    LOG_INFO("playerbots", "[LFG诊断] bot {} 准备JoinLfg role={} dungeons={} 当前state={}",
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：诊断日志降级为 DEBUG，消除 30 秒周期路径上的日志 I/O 尖峰
+    LOG_DEBUG("playerbots", "[LFG诊断] bot {} 准备JoinLfg role={} dungeons={} 当前state={}",
         bot->GetName().c_str(), (uint32)role, (uint32)validDungeons.size(),
         (uint32)sLFGMgr->GetState(bot->GetGUID()));
     sLFGMgr->JoinLfg(bot, role, validDungeons, std::to_string(GET_PLAYERBOT_AI(bot)->GetEquipGearScore(bot)));
     lfg::LfgState const stateAfterJoin = sLFGMgr->GetState(bot->GetGUID());
-    LOG_INFO("playerbots", "[LFG诊断] bot {} JoinLfg后state={}",
+    LOG_DEBUG("playerbots", "[LFG诊断] bot {} JoinLfg后state={}",
         bot->GetName().c_str(), (uint32)stateAfterJoin);
 
     // By leewheel 2026-07-29
     // 只有 QUEUED/PROPOSAL 才表示真实加入成功，不能再把 state=NONE 的失败尝试计为已补位。
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：入队成功后记录入队时间，供 CheckLfgQueue 滞留超时清理使用
+    if (stateAfterJoin == lfg::LFG_STATE_QUEUED)
+        sRandomPlayerbotMgr.RecordBotLfgJoinTime(bot->GetGUID());
+    // End By leewheel
     return stateAfterJoin == lfg::LFG_STATE_QUEUED || stateAfterJoin == lfg::LFG_STATE_PROPOSAL;
     // End By leewheel
 }
@@ -1481,7 +1488,9 @@ void RandomPlayerbotMgr::CheckLfgQueue()
 
     // By leewheel 2026-07-29
     // 诊断日志：显示 players 向量大小，定位 teamHasQueuedPlayer 始终为 false 的根因
-    LOG_INFO("playerbots", "[LFG诊断] CheckLfgQueue开始: players向量大小={}", players.size());
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：诊断日志降级为 DEBUG，消除每 30 秒一次的世界线程日志 I/O 尖峰
+    LOG_DEBUG("playerbots", "[LFG诊断] CheckLfgQueue开始: players向量大小={}", players.size());
     // End By leewheel
 
     for (std::vector<Player*>::iterator i = players.begin(); i != players.end(); ++i)
@@ -1501,8 +1510,11 @@ void RandomPlayerbotMgr::CheckLfgQueue()
         //       但某些情况下（如先组队后排队、离开队伍后状态残留）
         //       组GUID和玩家GUID的状态可能不一致，需要双重检查
         lfg::LfgState pState = sLFGMgr->GetState(player->GetGUID());
-        LOG_INFO("playerbots", "[LFG诊断] 玩家 {} 组GUID状态={} 玩家GUID状态={} 在组={}",
+        // By leewheel 2026-08-01
+        // 周期性卡顿修复：逐玩家诊断日志降级为 DEBUG，消除每 30 秒一次的日志 I/O 尖峰
+        LOG_DEBUG("playerbots", "[LFG诊断] 玩家 {} 组GUID状态={} 玩家GUID状态={} 在组={}",
                  player->GetName().c_str(), (uint32)gState, (uint32)pState, group ? "是" : "否");
+        // End By leewheel
 
         if ((gState != lfg::LFG_STATE_NONE && gState < lfg::LFG_STATE_DUNGEON) ||
             (pState != lfg::LFG_STATE_NONE && pState < lfg::LFG_STATE_DUNGEON))
@@ -1528,9 +1540,14 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     // 全服扫描兜底：如果 players 向量为空或未检测到排队玩家，
     // 扫描所有在线玩家检查LFG状态
     // 根因：players 向量可能因 OnPlayerLogin 未被调用而遗漏真实玩家
-    if (!teamHasQueuedPlayer[TEAM_ALLIANCE] && !teamHasQueuedPlayer[TEAM_HORDE])
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：全服扫描兜底限频为 5 分钟一次（原来每 30 秒一次），
+    // 且所有诊断日志降级为 DEBUG——世界线程每 30 秒全服遍历 + 逐人日志 I/O 是 30 秒周期卡顿的直接来源。
+    if (!teamHasQueuedPlayer[TEAM_ALLIANCE] && !teamHasQueuedPlayer[TEAM_HORDE] &&
+        time(nullptr) > (FullScanTimer + 300))
     {
-        LOG_INFO("playerbots", "[LFG诊断] players向量未检测到排队玩家，启动全服扫描...");
+        FullScanTimer = time(nullptr);
+        LOG_DEBUG("playerbots", "[LFG诊断] players向量未检测到排队玩家，启动全服扫描...");
         sWorldSessionMgr->DoForAllOnlinePlayers([&](Player* player)
         {
             if (!player || !player->IsInWorld())
@@ -1544,7 +1561,7 @@ void RandomPlayerbotMgr::CheckLfgQueue()
             lfg::LfgState gState = sLFGMgr->GetState(guid);
             lfg::LfgState pState = sLFGMgr->GetState(player->GetGUID());
 
-            LOG_INFO("playerbots", "[LFG诊断] 全服扫描: 玩家 {} 组GUID状态={} 玩家GUID状态={}",
+            LOG_DEBUG("playerbots", "[LFG诊断] 全服扫描: 玩家 {} 组GUID状态={} 玩家GUID状态={}",
                      player->GetName().c_str(), (uint32)gState, (uint32)pState);
 
             if ((gState != lfg::LFG_STATE_NONE && gState < lfg::LFG_STATE_DUNGEON) ||
@@ -1561,13 +1578,13 @@ void RandomPlayerbotMgr::CheckLfgQueue()
                     LfgDungeons[player->GetTeamId()].push_back(dungeon->id);
                 }
 
-                LOG_INFO("playerbots", "[LFG诊断] 全服扫描发现排队玩家: {} 阵营={}",
+                LOG_DEBUG("playerbots", "[LFG诊断] 全服扫描发现排队玩家: {} 阵营={}",
                          player->GetName().c_str(), player->GetTeamId() == TEAM_ALLIANCE ? "联盟" : "部落");
             }
         });
     }
 
-    LOG_INFO("playerbots", "[LFG诊断] 检查结果: 联盟排队={} 部落排队={}",
+    LOG_DEBUG("playerbots", "[LFG诊断] 检查结果: 联盟排队={} 部落排队={}",
              teamHasQueuedPlayer[TEAM_ALLIANCE], teamHasQueuedPlayer[TEAM_HORDE]);
     // End By leewheel
 
@@ -1588,6 +1605,30 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     for (int teamIdx = TEAM_ALLIANCE; teamIdx <= TEAM_HORDE; ++teamIdx)
     {
         TeamId teamId = (TeamId)teamIdx;
+
+        // By leewheel 2026-08-01
+        // 周期性卡顿修复：每轮刷新该阵营 LFG 队列中的角色计数（0坦/1奶/2DPS），
+        // 供 LfgRolePriorityTrigger 做队列饱和度判断，避免坦克/治疗机器人无限自主排队
+        std::array<uint32, 3> roleCount = {0, 0, 0};
+        for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+        {
+            Player* bot = it->second;
+            if (!bot || bot->GetTeamId() != teamId || !IsRandomBot(bot))
+                continue;
+            lfg::LfgState state = sLFGMgr->GetState(bot->GetGUID());
+            if (state == lfg::LFG_STATE_NONE || state >= lfg::LFG_STATE_DUNGEON)
+                continue;
+            uint8 roles = sLFGMgr->GetRoles(bot->GetGUID());
+            if (roles & lfg::PLAYER_ROLE_TANK)
+                roleCount[0]++;
+            else if (roles & lfg::PLAYER_ROLE_HEALER)
+                roleCount[1]++;
+            else
+                roleCount[2]++;
+        }
+        lfgQueueRoleCount[teamId] = roleCount;
+        // End By leewheel
+
         if (teamHasQueuedPlayer[teamIdx])
         {
             // 记录排队开始时间（仅首次）
@@ -1601,6 +1642,30 @@ void RandomPlayerbotMgr::CheckLfgQueue()
                          teamId == TEAM_ALLIANCE ? "联盟" : "部落", waitTime, effectiveThreshold);
                 ForceBotsJoinLfg(teamId);
             }
+
+            // By leewheel 2026-08-01
+            // 周期性卡顿修复：有真实玩家排队期间同样清理滞留机器人——
+            // 补位入队超过 randomBotLfgMaxQueueWaitTime 仍未撮合成功的单人 bot 强制离队，
+            // 防止 8 秒撮合(UpdateQueueTimers)持续承受膨胀队列带来的周期性尖峰。
+            for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+            {
+                Player* bot = it->second;
+                if (!bot || bot->GetTeamId() != teamId || !IsRandomBot(bot))
+                    continue;
+                // 跟真实玩家组队排队的 bot 状态挂在组 GUID 下，这里只处理单人排队的 bot
+                if (bot->GetGroup())
+                    continue;
+                if (sLFGMgr->GetState(bot->GetGUID()) != lfg::LFG_STATE_QUEUED)
+                    continue;
+                time_t const joinTime = GetBotLfgJoinTime(bot->GetGUID());
+                if (!joinTime)
+                    continue;
+                if (time(nullptr) - joinTime < sPlayerbotAIConfig.randomBotLfgMaxQueueWaitTime)
+                    continue;
+                sLFGMgr->LeaveLfg(bot->GetGUID());
+                ClearBotLfgJoinTime(bot->GetGUID());
+            }
+            // End By leewheel
         }
         else
         {
@@ -1626,6 +1691,10 @@ void RandomPlayerbotMgr::CheckLfgQueue()
                 if (sLFGMgr->GetState(bot->GetGUID()) != lfg::LFG_STATE_QUEUED)
                     continue;
                 sLFGMgr->LeaveLfg(bot->GetGUID());
+                // By leewheel 2026-08-01
+                // 同步清除入队时间记录，防止 lfgBotJoinTime 无限增长
+                ClearBotLfgJoinTime(bot->GetGUID());
+                // End By leewheel
             }
             // End By leewheel
         }
@@ -1667,27 +1736,78 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     const int TARGET_HEALERS = 2;
     const int TARGET_DPS = 3;
 
-    // 统计当前队列中各角色的bot数量
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：单次遍历同时完成三件事（原实现需 5 次全 bot 遍历）：
+    //   1. 统计已在队列中的 bot 角色数量（计算缺额）
+    //   2. 收集空闲可用的候选 bot（后续轮转/补位直接在候选列表上操作）
+    //   3. 统计空闲 bot 职业构成（诊断用，已降级为 DEBUG 日志）
+    // 目标：消除 ForceBotsJoinLfg 内 O(12n) 级别的重复全遍历，降低世界线程尖峰。
+    struct LfgBotCandidate
+    {
+        Player* bot;
+        uint8 cls;
+        int32 tankClassSlot;
+        bool used = false;
+    };
+    std::vector<LfgBotCandidate> candidates;
     int tanksInQueue = 0, healersInQueue = 0, dpsInQueue = 0;
+    int idleTanks = 0, idleHealers = 0, idleDps = 0, idleTotal = 0;
+    std::array<int, 4> idleTankByClass = {};
+    std::array<int, 4> switchableNonHealerTankByClass = {};
+    std::array<int, 4> switchableHealerTankByClass = {};
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* bot = it->second;
         if (!bot || bot->GetTeamId() != teamId)
             continue;
-        if (!IsRandomBot(bot))
+        bool const isRandom = IsRandomBot(bot);
+        // 统计已在队列中的 bot 角色数量（用于计算缺额，与 bot 是否空闲无关）
+        if (isRandom)
+        {
+            lfg::LfgState state = sLFGMgr->GetState(bot->GetGUID());
+            if (state != lfg::LFG_STATE_NONE && state < lfg::LFG_STATE_DUNGEON)
+            {
+                uint8 roles = sLFGMgr->GetRoles(bot->GetGUID());
+                if (roles & lfg::PLAYER_ROLE_TANK)
+                    tanksInQueue++;
+                else if (roles & lfg::PLAYER_ROLE_HEALER)
+                    healersInQueue++;
+                else
+                    dpsInQueue++;
+            }
+        }
+        // 收集空闲候选 bot，并顺带完成诊断统计
+        if (!isRandom || !IsBotIdleForLfg(bot))
             continue;
-        lfg::LfgState state = sLFGMgr->GetState(bot->GetGUID());
-        if (state == lfg::LFG_STATE_NONE || state >= lfg::LFG_STATE_DUNGEON)
-            continue;
-        // bot正在LFG队列中，按排队角色统计
-        uint8 roles = sLFGMgr->GetRoles(bot->GetGUID());
-        if (roles & lfg::PLAYER_ROLE_TANK)
-            tanksInQueue++;
-        else if (roles & lfg::PLAYER_ROLE_HEALER)
-            healersInQueue++;
+        bool const isTank = IsBotTank(bot);
+        bool const isHealer = IsBotHealer(bot);
+        int32 const tankClassSlot = GetTankClassSlot(bot->getClass());
+        candidates.push_back({bot, bot->getClass(), tankClassSlot, false});
+        idleTotal++;
+        if (isTank)
+        {
+            idleTanks++;
+            if (tankClassSlot >= 0)
+                idleTankByClass[tankClassSlot]++;
+        }
         else
-            dpsInQueue++;
+        {
+            // 区分“非治疗可切坦”和“治疗可切坦”，避免圣骑士/德鲁伊治疗被轮转提前改坦导致奶缺额。
+            // 治疗类职业必须且仅能在治疗已经满编、坦克仍缺的情况下才允许转坦。
+            if (tankClassSlot >= 0)
+            {
+                if (isHealer)
+                    switchableHealerTankByClass[tankClassSlot]++;
+                else
+                    switchableNonHealerTankByClass[tankClassSlot]++;
+            }
+            if (isHealer)
+                idleHealers++;
+            else
+                idleDps++;
+        }
     }
+    // End By leewheel
 
     // 计算各角色缺额
     int needTanks = TARGET_TANKS - tanksInQueue;
@@ -1702,60 +1822,16 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
         return;
     }
 
-    LOG_INFO("playerbots", "LFG补位开始: 队列中坦{}奶{}DPS{}, 需补坦{}奶{}DPS{} (阵营={})",
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：补位/诊断日志全部降级为 DEBUG，消除世界线程日志 I/O 尖峰
+    LOG_DEBUG("playerbots", "LFG补位开始: 队列中坦{}奶{}DPS{}, 需补坦{}奶{}DPS{} (阵营={})",
              tanksInQueue, healersInQueue, dpsInQueue,
              needTanks > 0 ? needTanks : 0, needHealers > 0 ? needHealers : 0, needDps > 0 ? needDps : 0,
              teamId == TEAM_ALLIANCE ? "联盟" : "部落");
-
-    // By leewheel 2026-07-29
-    // 诊断日志：同时按职业统计现成坦克与可切换坦克，不能只给出总数而隐藏战士/圣骑士/德鲁伊的去向。
-    int idleTanks = 0, idleHealers = 0, idleDps = 0, idleTotal = 0;
-    std::array<int, 4> idleTankByClass = {};
-    std::array<int, 4> switchableNonHealerTankByClass = {};
-    std::array<int, 4> switchableHealerTankByClass = {};
-    for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
-    {
-        Player* bot = it->second;
-        if (!bot || bot->GetTeamId() != teamId)
-            continue;
-        if (!IsRandomBot(bot))
-            continue;
-        if (!IsBotIdleForLfg(bot))
-            continue;
-
-        idleTotal++;
-        int32 const tankClassSlot = GetTankClassSlot(bot->getClass());
-        bool const isHealer = IsBotHealer(bot);
-        if (IsBotTank(bot))
-        {
-            idleTanks++;
-            if (tankClassSlot >= 0)
-                idleTankByClass[tankClassSlot]++;
-        }
-        else
-        {
-            // By leewheel 2026-07-29
-            // 区分“非治疗可切坦”和“治疗可切坦”，避免圣骑士/德鲁伊治疗被轮转提前改坦导致奶缺额。
-            // 治疗类职业必须且仅能在治疗已经满编、坦克仍缺的情况下才允许转坦。
-            if (tankClassSlot >= 0)
-            {
-                if (isHealer)
-                    switchableHealerTankByClass[tankClassSlot]++;
-                else
-                    switchableNonHealerTankByClass[tankClassSlot]++;
-            }
-            // End By leewheel
-
-            if (isHealer)
-                idleHealers++;
-            else
-                idleDps++;
-        }
-    }
-    LOG_INFO("playerbots", "[LFG诊断] 空闲bot统计: 总计={} 坦克={} 治疗={} DPS={} (阵营={})",
+    LOG_DEBUG("playerbots", "[LFG诊断] 空闲bot统计: 总计={} 坦克={} 治疗={} DPS={} (阵营={})",
              idleTotal, idleTanks, idleHealers, idleDps,
              teamId == TEAM_ALLIANCE ? "联盟" : "部落");
-    LOG_INFO("playerbots", "[LFG诊断] 坦克职业候选: 战士(现成{} 非治疗可切{} 治疗可切{}) 圣骑士(现成{} 非治疗可切{} 治疗可切{}) 德鲁伊(现成{} 非治疗可切{} 治疗可切{}) 死亡骑士(现成{} 非治疗可切{} 治疗可切{})",
+    LOG_DEBUG("playerbots", "[LFG诊断] 坦克职业候选: 战士(现成{} 非治疗可切{} 治疗可切{}) 圣骑士(现成{} 非治疗可切{} 治疗可切{}) 德鲁伊(现成{} 非治疗可切{} 治疗可切{}) 死亡骑士(现成{} 非治疗可切{} 治疗可切{})",
              idleTankByClass[0], switchableNonHealerTankByClass[0], switchableHealerTankByClass[0],
              idleTankByClass[1], switchableNonHealerTankByClass[1], switchableHealerTankByClass[1],
              idleTankByClass[2], switchableNonHealerTankByClass[2], switchableHealerTankByClass[2],
@@ -1768,6 +1844,8 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     // phase0：各职业现成坦克天赋；phase1：非治疗可切坦；phase2：治疗可切坦（必须且仅能在治疗满编时启用）。
     // 治疗天赋绝不能早于治疗满编之前被轮转改成坦克，否则会把治疗缺额推到玩家身上。
     // 四职业轮转仍不足时才回落到通用扫描，兼顾职业公平、治疗职责保护和补位成功率。
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：改为在预筛候选列表上操作，消除每 phase×classSlot 一次的全 bot 遍历
     static std::array<uint8, 2> nextTankClassSlot = {0, 0};
     uint8 const teamSlot = teamId == TEAM_HORDE ? 1 : 0;
     uint8 const rotationStart = nextTankClassSlot[teamSlot];
@@ -1776,11 +1854,9 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     // phase 描述：0=现成坦克天赋，1=非治疗可切坦，2=治疗可切坦
     for (uint8 phase = 0; phase < 3 && needTanks > 0; ++phase)
     {
-        // By leewheel 2026-07-29
         // 治疗被改成坦克之前必须保证治疗已经满编，否则会把治疗缺额转嫁到真实玩家身上。
         if (phase == 2 && needHealers > 0)
             break;
-        // End By leewheel
 
         bool const requireCurrentTankSpec = phase == 0;
         bool const allowHealerReassign = phase == 2;
@@ -1790,22 +1866,21 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
             if (selectedTankClass[classSlot])
                 continue;
 
-            for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+            for (LfgBotCandidate& cand : candidates)
             {
-                Player* bot = it->second;
-                if (!bot || bot->GetTeamId() != teamId || !IsRandomBot(bot) || !IsBotIdleForLfg(bot))
+                if (cand.used)
                     continue;
-                if (GetTankClassSlot(bot->getClass()) != classSlot)
+                if (cand.tankClassSlot != (int32)classSlot)
                     continue;
-                bool const isHealer = IsBotHealer(bot);
+                bool const isHealer = IsBotHealer(cand.bot);
                 if (requireCurrentTankSpec)
                 {
-                    if (!IsBotTank(bot))
+                    if (!IsBotTank(cand.bot))
                         continue;
                 }
                 else
                 {
-                    if (IsBotTank(bot))
+                    if (IsBotTank(cand.bot))
                         continue;
                     // phase1 严禁挑选治疗天赋机器人；phase2 仅挑选治疗天赋机器人
                     if (allowHealerReassign != isHealer)
@@ -1814,61 +1889,69 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
 
                 if (!requireCurrentTankSpec)
                 {
-                    int32 const specTab = GetTankSpecTab(bot->getClass());
+                    int32 const specTab = GetTankSpecTab(cand.cls);
                     if (specTab < 0)
                         continue;
 
-                    uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[bot->getClass()][specTab];
-                    PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
-                    if (bot->GetFreeTalentPoints() > 0)
+                    // By leewheel 2026-08-01
+                    // 周期性卡顿修复：天赋切换节流——同一 bot 30 秒内不重复切换天赋，
+                    // 避免 CheckLfgQueue 每 30 秒刷新缺额时反复重置同一批 bot 的天赋
+                    // （InitTalentsBySpecNo + InitTalentsTree 是重操作：技能/属性重算、大量数据包）。
+                    if (sRandomPlayerbotMgr.IsSpecSwitchThrottled(cand.bot->GetGUID()))
+                        continue;
+                    sRandomPlayerbotMgr.RecordSpecSwitchTime(cand.bot->GetGUID());
+                    // End By leewheel
+
+                    uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cand.cls][specTab];
+                    PlayerbotFactory::InitTalentsBySpecNo(cand.bot, specIndex, true);
+                    if (cand.bot->GetFreeTalentPoints() > 0)
                     {
-                        PlayerbotFactory factory(bot, bot->GetLevel());
+                        PlayerbotFactory factory(cand.bot, cand.bot->GetLevel());
                         factory.InitTalentsTree(true, false, false);
                     }
-                    // By leewheel 2026-07-29
                     // 天赋模板可能缺失或应用失败，切换后必须重新按实际天赋页验证，禁止把非坦克天赋机器人以坦克职责送入LFG。
-                    if (!IsBotTank(bot))
+                    if (!IsBotTank(cand.bot))
                     {
                         LOG_WARN("playerbots", "LFG坦克职业轮转失败: {}({}) 切换后仍不是坦克天赋，继续尝试该职业其他机器人",
-                            bot->GetName().c_str(), GetTankClassName(classSlot));
+                            cand.bot->GetName().c_str(), GetTankClassName(classSlot));
                         continue;
                     }
-                    // End By leewheel
                 }
 
-                if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot))
+                if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(cand.bot))
                     botAI->ResetStrategies(false);
 
-                if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
+                if (SendLfgJoinPacket(cand.bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
                 {
                     needTanks--;
+                    cand.used = true;
                     selectedTankClass[classSlot] = true;
                     nextTankClassSlot[teamSlot] = (classSlot + 1) % 4;
                     char const* phaseDesc = "以现有坦克天赋";
                     if (phase == 1) phaseDesc = "切换非治疗坦克天赋后";
                     else if (phase == 2) phaseDesc = "切换治疗坦克天赋后";
-                    LOG_INFO("playerbots", "LFG坦克职业轮转: {}({}) {}成功加入队列",
-                        bot->GetName().c_str(), GetTankClassName(classSlot), phaseDesc);
+                    LOG_DEBUG("playerbots", "LFG坦克职业轮转: {}({}) {}成功加入队列",
+                        cand.bot->GetName().c_str(), GetTankClassName(classSlot), phaseDesc);
                     break;
                 }
 
                 LOG_WARN("playerbots", "LFG坦克职业轮转失败: {}({}) 未进入QUEUED/PROPOSAL，继续尝试该职业其他机器人",
-                    bot->GetName().c_str(), GetTankClassName(classSlot));
+                    cand.bot->GetName().c_str(), GetTankClassName(classSlot));
             }
         }
     }
     // End By leewheel
 
     // 第一遍：找对应天赋的空闲bot直接加入（职业轮转不足时的兜底）
-    for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：改为在预筛候选列表上操作，消除一次全 bot 遍历；
+    // 候选可能被坦克轮转段切换过天赋，因此兜底阶段一律按当前实际天赋重新判断
+    for (LfgBotCandidate& cand : candidates)
     {
-        Player* bot = it->second;
-        if (!bot || bot->GetTeamId() != teamId)
+        if (cand.used)
             continue;
-        if (!IsRandomBot(bot))
-            continue;
-        if (!IsBotIdleForLfg(bot))
-            continue;
+
+        Player* bot = cand.bot;
 
         // 需要坦克且bot是坦克天赋
         if (needTanks > 0 && IsBotTank(bot))
@@ -1877,7 +1960,8 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
             if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
             {
                 needTanks--;
-                LOG_INFO("playerbots", "LFG补位: {} 以坦克身份成功加入队列", bot->GetName().c_str());
+                cand.used = true;
+                LOG_DEBUG("playerbots", "LFG补位: {} 以坦克身份成功加入队列", bot->GetName().c_str());
                 if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
                     break;
             }
@@ -1896,7 +1980,8 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
             if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER))
             {
                 needHealers--;
-                LOG_INFO("playerbots", "LFG补位: {} 以治疗身份成功加入队列", bot->GetName().c_str());
+                cand.used = true;
+                LOG_DEBUG("playerbots", "LFG补位: {} 以治疗身份成功加入队列", bot->GetName().c_str());
                 if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
                     break;
             }
@@ -1915,7 +2000,8 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
             if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_DAMAGE))
             {
                 needDps--;
-                LOG_INFO("playerbots", "LFG补位: {} 以DPS身份成功加入队列", bot->GetName().c_str());
+                cand.used = true;
+                LOG_DEBUG("playerbots", "LFG补位: {} 以DPS身份成功加入队列", bot->GetName().c_str());
                 if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
                     break;
             }
@@ -1927,21 +2013,21 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
             continue;
         }
     }
+    // End By leewheel
 
     // 第二遍：如果还缺坦克/治疗，切换天赋
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：改为在预筛候选列表上操作，消除一次全 bot 遍历；
+    // 候选可能被坦克轮转段切换过天赋，因此此处一律按当前实际天赋重新判断
     if (needTanks > 0 || needHealers > 0)
     {
-        for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+        for (LfgBotCandidate& cand : candidates)
         {
-            Player* bot = it->second;
-            if (!bot || bot->GetTeamId() != teamId)
-                continue;
-            if (!IsRandomBot(bot))
-                continue;
-            if (!IsBotIdleForLfg(bot))
+            if (cand.used)
                 continue;
 
-            uint8 cls = bot->getClass();
+            Player* bot = cand.bot;
+            uint8 cls = cand.cls;
 
             // 需要坦克，bot可以当坦克但当前不是坦克天赋
             if (needTanks > 0 && ClassCanTank(cls) && !IsBotTank(bot))
@@ -1954,6 +2040,13 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                 int32 specTab = GetTankSpecTab(cls);
                 if (specTab >= 0)
                 {
+                    // By leewheel 2026-08-01
+                    // 周期性卡顿修复：天赋切换节流（同坦克职业轮转段），
+                    // 被节流的 bot 本轮不参与切换，交给后续周期补位。
+                    if (sRandomPlayerbotMgr.IsSpecSwitchThrottled(bot->GetGUID()))
+                        continue;
+                    sRandomPlayerbotMgr.RecordSpecSwitchTime(bot->GetGUID());
+                    // End By leewheel
                     uint32 specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
                     if (bot->GetFreeTalentPoints() > 0)
@@ -1976,7 +2069,8 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
                     {
                         needTanks--;
-                        LOG_INFO("playerbots", "LFG补位: {} 切换天赋为坦克并成功加入队列", bot->GetName().c_str());
+                        cand.used = true;
+                        LOG_DEBUG("playerbots", "LFG补位: {} 切换天赋为坦克并成功加入队列", bot->GetName().c_str());
                         if (needTanks <= 0 && needHealers <= 0)
                             break;
                     }
@@ -1995,6 +2089,12 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                 int32 specTab = GetHealerSpecTab(cls);
                 if (specTab >= 0)
                 {
+                    // By leewheel 2026-08-01
+                    // 周期性卡顿修复：天赋切换节流（同坦克职业轮转段）
+                    if (sRandomPlayerbotMgr.IsSpecSwitchThrottled(bot->GetGUID()))
+                        continue;
+                    sRandomPlayerbotMgr.RecordSpecSwitchTime(bot->GetGUID());
+                    // End By leewheel
                     uint32 specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
                     if (bot->GetFreeTalentPoints() > 0)
@@ -2009,7 +2109,8 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER))
                     {
                         needHealers--;
-                        LOG_INFO("playerbots", "LFG补位: {} 切换天赋为治疗并成功加入队列", bot->GetName().c_str());
+                        cand.used = true;
+                        LOG_DEBUG("playerbots", "LFG补位: {} 切换天赋为治疗并成功加入队列", bot->GetName().c_str());
                         if (needTanks <= 0 && needHealers <= 0)
                             break;
                     }
@@ -2023,12 +2124,15 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
             }
         }
     }
+    // End By leewheel
 
     // By leewheel 2026-07-29
     // 只有所有职责缺额都归零才记录“补位完成”；仍有缺额时必须明确告警，禁止产生假成功日志。
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：成功路径降级为 DEBUG，避免每次补位完成都触发 INFO 日志 I/O 尖峰
     if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
     {
-        LOG_INFO("playerbots", "LFG补位完成: 坦克、治疗和DPS职责均已补齐 (阵营={})",
+        LOG_DEBUG("playerbots", "LFG补位完成: 坦克、治疗和DPS职责均已补齐 (阵营={})",
             teamId == TEAM_ALLIANCE ? "联盟" : "部落");
     }
     else

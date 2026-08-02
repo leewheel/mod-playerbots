@@ -163,9 +163,13 @@ bool LfgJoinAction::JoinLFG()
     if (roleMask & PLAYER_ROLE_DAMAGE)
         _roles = "DPS";
 
-    LOG_INFO("playerbots", "Bot {} {}:{} <{}>: queues LFG, Dungeon as {} ({})", bot->GetGUID().ToString().c_str(),
-             bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName().c_str(), _roles,
-             many ? "several dungeons" : dungeon->Name[0]);
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：自主入队日志降级为 DEBUG——队列膨胀期每个 bot 入队都打一条 INFO，
+    // 数百 bot 涌入时形成日志 I/O 尖峰，叠加 8 秒撮合周期导致卡顿。
+    LOG_DEBUG("playerbots", "Bot {} {}:{} <{}>: queues LFG, Dungeon as {} ({})", bot->GetGUID().ToString().c_str(),
+              bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName().c_str(), _roles,
+              many ? "several dungeons" : dungeon->Name[0]);
+    // End By leewheel
 
     // Set RbotAId Browser comment
     // By leewheel 2026-07-29
@@ -174,6 +178,16 @@ bool LfgJoinAction::JoinLFG()
     // 导致 isUseful 每 22.5s 又触发一次 join，循环几十次始终进不了 QUEUED 状态。
     std::string const _gs = std::to_string(botAI->GetEquipGearScore(bot/*, false, false*/));
     sLFGMgr->JoinLfg(bot, roleMask, list, _gs);
+    // End By leewheel
+
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：自主入队成功后同步记录入队时间。
+    // 之前只有 ForceBotsJoinLfg 补位路径（SendLfgJoinPacket）记录入队时间，
+    // 自主入队（LfgRolePriorityTrigger/random 触发器 → 本函数）的 bot 入队时间为 0，
+    // CheckLfgQueue 的"有真实玩家排队期间超时滞留清理"对这些 bot 直接 continue，
+    // 导致自主入队滞留 bot 永远无法被超时清理，持续加重 8 秒撮合周期尖峰。
+    if (sLFGMgr->GetState(bot->GetGUID()) == lfg::LFG_STATE_QUEUED)
+        sRandomPlayerbotMgr.RecordBotLfgJoinTime(bot->GetGUID());
     // End By leewheel
 
     return true;
@@ -351,6 +365,35 @@ bool LfgJoinAction::isUseful()
     LfgState state = sLFGMgr->GetState(bot->GetGUID());
     if (state != LFG_STATE_NONE)
         return false;
+
+    // By leewheel 2026-08-01
+    // 周期性卡顿修复：自主入队容量限制。
+    // 7月30日 版本中只有坦克/治疗触发器（LfgRolePriorityTrigger）有队列饱和限制（8月1日补），
+    // DPS bot 走 "random" 触发器（约14秒/次）无任何上限——真实玩家排队时，
+    // 服务器上所有空闲随机 bot 都会持续涌入 LFG 队列，队列膨胀到数百个后，
+    // LFG 每8秒撮合周期(UpdateQueueTimers/FindBestCompatibleInQueue O(n²))的尖峰
+    // 直接把世界线程拖慢，表现为玩家端每 7~8 秒规律性卡顿。
+    // 这里复用 CheckLfgQueue 每 30 秒刷新的队列角色计数（索引 0=坦克 1=治疗 2=DPS），
+    // 上限与 ForceBotsJoinLfg 的 TARGET 配额（2坦+2奶+3DPS）保持一致。
+    // 注意：必须按 bot 自身角色分流——DPS ≥ 3 时若一刀切拦截，会误伤想入队的坦克/治疗 bot，
+    // 导致补位机制失效。
+    std::array<uint32, 3> const queued = sRandomPlayerbotMgr.GetLfgQueueRoleCount(bot->GetTeamId());
+    if (botAI->IsTank(bot, true))
+    {
+        if (queued[0] >= 2)
+            return false;
+    }
+    else if (botAI->IsHeal(bot, true))
+    {
+        if (queued[1] >= 2)
+            return false;
+    }
+    else
+    {
+        if (queued[2] >= 3)
+            return false;
+    }
+    // End By leewheel
 
     return true;
 }

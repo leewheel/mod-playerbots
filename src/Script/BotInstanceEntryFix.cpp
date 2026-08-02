@@ -43,7 +43,47 @@
 #include "ScriptMgr.h"
 #include "WorldSession.h"
 
+#include <unordered_map>
 #include <vector>
+
+// By leewheel 2026-08-01
+// 周期性卡顿修复：FixAllDungeonRequirements + InitializeLockedDungeons 每次执行都会遍历
+// 全部 900+ 张副本地图并逐项检查钥匙/任务/成就/等级，是重操作。在 7月30日 打包版本中，
+// 坦克/治疗 bot 通过 LfgRolePriorityTrigger 每约4秒触发一次 LFG join，每次 join 都走
+// OnPlayerCanJoinLfg 钩子执行全地图遍历 + lockmap 日志写盘，与 LFG 8秒撮合周期叠加，
+// 形成每 7~8 秒规律性卡顿。这里增加每 bot 节流：同一 bot 在 30 秒内只执行一次完整修复。
+static std::unordered_map<ObjectGuid, time_t> sLastDungeonFixTime;
+
+static bool IsDungeonFixThrottled(Player* bot)
+{
+    if (!bot)
+        return true;
+
+    time_t const now = time(nullptr);
+
+    // By leewheel 2026-08-01
+    // 定期清理过期条目：随机 bot 登出/登入会不断产生新 GUID，map 长期运行会无限增长。
+    // 超过 60 秒的条目对 30 秒节流已无任何意义，map 超过阈值时全量清理。
+    if (sLastDungeonFixTime.size() > 10000)
+    {
+        for (auto it = sLastDungeonFixTime.begin(); it != sLastDungeonFixTime.end();)
+        {
+            if (now - it->second > 60)
+                it = sLastDungeonFixTime.erase(it);
+            else
+                ++it;
+        }
+    }
+    // End By leewheel
+
+    auto it = sLastDungeonFixTime.find(bot->GetGUID());
+    if (it != sLastDungeonFixTime.end() && now - it->second < 30)
+        return true;
+
+    sLastDungeonFixTime[bot->GetGUID()] = now;
+    return false;
+}
+// End By leewheel
 
 // ============================================================================
 // 核心函数：检查并修复 DungeonProgressionRequirements 中的条件
@@ -423,10 +463,17 @@ public:
                     player->RemoveAura(lfg::LFG_SPELL_DUNGEON_DESERTER);
                 // End By leewheel
 
-                // 修复所有副本进入条件（钥匙/任务/成就）
-                FixAllDungeonRequirements(player);
-                // 重新生成LFG锁定副本缓存（关键！否则修复了条件但缓存还是旧的）
-                sLFGMgr->InitializeLockedDungeons(player, player->GetGroup());
+                // By leewheel 2026-08-01
+                // 周期性卡顿修复：全地图遍历修复 + 锁定缓存重建是重操作（900+地图×双难度×全部要求），
+                // 同一 bot 30 秒内只执行一次，避免坦克/治疗 bot 每约4秒一次 LFG join 时反复全量遍历。
+                if (!IsDungeonFixThrottled(player))
+                {
+                    // 修复所有副本进入条件（钥匙/任务/成就）
+                    FixAllDungeonRequirements(player);
+                    // 重新生成LFG锁定副本缓存（关键！否则修复了条件但缓存还是旧的）
+                    sLFGMgr->InitializeLockedDungeons(player, player->GetGroup());
+                }
+                // End By leewheel
 
                 // By leewheel 2026-07-29 诊断：dump 当前 lockmap，找出 bot 无法入队的原因
                 lfg::LfgLockMap const& lockMap = sLFGMgr->GetLockedDungeons(player->GetGUID());
@@ -440,13 +487,19 @@ public:
                     }
                     // By leewheel 2026-07-29
                     // 锁定状态必须使用 LFG.h 中的真实枚举值，避免把任务锁定 1022 误诊为普通编号 9。
-                    LOG_INFO("playerbots", "[LFG诊断] bot {} 锁定的副本({}): {} (LFG_LOCKSTATUS: 1=版本不足 2=等级过低 3=等级过高 4=装等过低 5=装等过高 6=副本已锁定 1001=协调等级过低 1002=协调等级过高 1022=任务未完成 1025=缺少物品 1031=不在开放季 1034=缺少成就)",
+                    // By leewheel 2026-08-01
+                    // 周期性卡顿修复：诊断日志降级为 DEBUG——每次 LFG join 都输出会与 8 秒撮合周期
+                    // 叠加形成日志 I/O 尖峰，属于周期卡顿的来源之一。
+                    LOG_DEBUG("playerbots", "[LFG诊断] bot {} 锁定的副本({}): {} (LFG_LOCKSTATUS: 1=版本不足 2=等级过低 3=等级过高 4=装等过低 5=装等过高 6=副本已锁定 1001=协调等级过低 1002=协调等级过高 1022=任务未完成 1025=缺少物品 1031=不在开放季 1034=缺少成就)",
                         player->GetName().c_str(), (uint32)lockMap.size(), lockInfo.c_str());
                     // End By leewheel
                 }
                 else
                 {
-                    LOG_INFO("playerbots", "[LFG诊断] bot {} lockmap 为空(全部通过)", player->GetName().c_str());
+                    // By leewheel 2026-08-01
+                    // 周期性卡顿修复：诊断日志降级为 DEBUG（同 lockmap dump）
+                    LOG_DEBUG("playerbots", "[LFG诊断] bot {} lockmap 为空(全部通过)", player->GetName().c_str());
+                    // End By leewheel
                 }
                 // End By leewheel
             }

@@ -527,6 +527,12 @@ void AddSC_TempestKeepBotScripts();
 void AddSC_HyjalSummitBotScripts();
 void AddSC_IcecrownBotScripts();
 void AddSC_RubySanctumBotScripts();
+//By leewheel 2026-08-01 - 太阳之井高地机器人脚本注册声明
+//  根因：AddSC_SunwellPlateauBotScripts 只定义未注册，导致 SWP 全部技能监听失效——
+//  Kalecgos 传送门状态永远为空(bot不进内场无法击杀)、Kil'jaeden 末日决战规避失效、
+//  Felmyst封装/双子点燃/千魂之暗预警和打断辅助全部缺失。
+void AddSC_SunwellPlateauBotScripts();
+//End By leewheel
 
 //By leewheel 2026-07-06 - 快速组队系统
 void AddSC_FastGroup();
@@ -574,6 +580,9 @@ void AddPlayerbotsScripts()
     AddSC_HyjalSummitBotScripts();
     AddSC_IcecrownBotScripts();
     AddSC_RubySanctumBotScripts();
+    //By leewheel 2026-08-01 - 注册太阳之井高地机器人脚本（修复漏注册致命问题）
+    AddSC_SunwellPlateauBotScripts();
+    //End By leewheel
 
     //By leewheel 2026-07-06 - 快速组队系统
     AddSC_FastGroup();
