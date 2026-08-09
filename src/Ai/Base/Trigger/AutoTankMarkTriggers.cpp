@@ -11,8 +11,11 @@
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
 
-// By leewheel 2026-07-15: 检查是否在副本/团本中
-static bool IsInInstanceOrRaid(Player* bot)
+// By leewheel 2026-08-08: 检查是否允许自动标记
+// 玩家需求：坦克标记功能扩展到副本外（野外）也生效。
+// 原实现只允许副本/团本（IsInInstanceOrRaid），现放宽为排除战场/竞技场即可，
+// 与 FleeingTargetTrigger（逃跑怪标记）的野外行为保持一致。
+static bool IsMarkAllowed(Player* bot)
 {
     if (!bot || !bot->GetMap())
         return false;
@@ -20,11 +23,7 @@ static bool IsInInstanceOrRaid(Player* bot)
     if (bot->InBattleground() || bot->InArena())
         return false;
 
-    InstanceMap const* instanceMap = bot->GetMap()->ToInstanceMap();
-    if (instanceMap)
-        return true;
-
-    return bot->GetInstanceId() != 0;
+    return true;
 }
 
 bool MainTankMarkSkullTrigger::IsActive()
@@ -32,7 +31,7 @@ bool MainTankMarkSkullTrigger::IsActive()
     if (!sPlayerbotAIConfig.autoTankMarkEnabled)
         return false;
 
-    if (!IsInInstanceOrRaid(bot))
+    if (!IsMarkAllowed(bot))
         return false;
 
     Group* group = bot->GetGroup();
@@ -57,7 +56,7 @@ bool OffTankMarkCrossTrigger::IsActive()
     if (!sPlayerbotAIConfig.autoTankMarkEnabled)
         return false;
 
-    if (!IsInInstanceOrRaid(bot))
+    if (!IsMarkAllowed(bot))
         return false;
 
     Group* group = bot->GetGroup();
@@ -104,7 +103,7 @@ bool MainTankMarkCrossTrigger::IsActive()
     if (!sPlayerbotAIConfig.autoTankMarkEnabled)
         return false;
 
-    if (!IsInInstanceOrRaid(bot))
+    if (!IsMarkAllowed(bot))
         return false;
 
     Group* group = bot->GetGroup();

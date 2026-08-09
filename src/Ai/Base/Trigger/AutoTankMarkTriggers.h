@@ -12,7 +12,8 @@
 class PlayerbotAI;
 
 // By leewheel 2026-07-15: 主坦克自动标记骷髅触发器
-// 条件：配置开启 + 在副本/团本中 + 是主坦克 + 有未标记骷髅的敌人
+// By leewheel 2026-08-08: 扩展到副本外（野外）也标记
+// 条件：配置开启 + 非战场/竞技场 + 是主坦克 + 有未标记骷髅的敌人
 class MainTankMarkSkullTrigger : public Trigger
 {
 public:
@@ -22,7 +23,8 @@ public:
 };
 
 // By leewheel 2026-07-15: 副坦克自动标记叉叉触发器
-// 条件：配置开启 + 在副本/团本中 + 是副坦克 + 有未标记叉叉的敌人
+// By leewheel 2026-08-08: 扩展到副本外（野外）也标记
+// 条件：配置开启 + 非战场/竞技场 + 是副坦克 + 有未标记叉叉的敌人
 class OffTankMarkCrossTrigger : public Trigger
 {
 public:
@@ -32,7 +34,8 @@ public:
 };
 
 // By leewheel 2026-07-15: 5人副本主坦克兼任标记叉叉触发器
-// 条件：配置开启 + 在副本/团本中 + 是主坦克 + 队伍中没有其他坦克（5人场景）
+// By leewheel 2026-08-08: 扩展到副本外（野外）也标记
+// 条件：配置开启 + 非战场/竞技场 + 是主坦克 + 队伍中没有其他坦克（5人场景）
 // + 叉叉未被占用 + 有至少2个未标记敌人
 class MainTankMarkCrossTrigger : public Trigger
 {

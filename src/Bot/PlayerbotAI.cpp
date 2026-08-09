@@ -1828,14 +1828,14 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
 
     if (strategyName.empty())
     {
-        // By leewheel 2026-07-15: 只在副本/团本中应用自动坦克标记策略
-        // 修复：原条件 !bot->InBattleground() && !bot->InArena() 对野外地图也成立，
-        //       导致所有 Bot 在野外也加载了 "auto tank mark" 策略。
-        //       现在严格检查是否在副本/团本地图中。
+        // By leewheel 2026-08-08: 自动坦克标记扩展到副本外（野外）也生效
+        // 玩家需求：队伍中坦克机器人在野外也应标记骷髅/叉叉目标。
+        // 原条件 map->IsDungeon() || map->IsRaid() 只允许副本/团本加载此策略，
+        // 现放宽为排除战场/竞技场即可（野外同样加载），
+        // 触发器层仍会检查 IsTank/IsMainTank/战斗中，非坦克 Bot 不会误标。
         if (sPlayerbotAIConfig.autoTankMarkEnabled)
         {
-            Map const* map = bot->GetMap();
-            if (map && (map->IsDungeon() || map->IsRaid()))
+            if (!bot->InBattleground() && !bot->InArena())
             {
                 engines[BOT_STATE_COMBAT]->addStrategy("auto tank mark");
                 engines[BOT_STATE_NON_COMBAT]->addStrategy("auto tank mark");

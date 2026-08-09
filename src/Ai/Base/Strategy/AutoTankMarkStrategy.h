@@ -13,6 +13,7 @@ class PlayerbotAI;
 
 // By leewheel 2026-07-15: 自动坦克标记策略
 // 在副本/团本中，主坦克自动标记骷髅，副坦克自动标记叉叉
+// By leewheel 2026-08-08: 扩展到副本外（野外）也标记（战场/竞技场除外）
 // 通过配置参数 AiPlayerbot.AutoTankMarkEnabled 控制开关（默认开启）
 // By leewheel 2026-07-15: 修复 GetType 返回值
 // 原值 STRATEGY_TYPE_TANK 会导致所有加载了此策略的 Bot 被误判为坦克。
