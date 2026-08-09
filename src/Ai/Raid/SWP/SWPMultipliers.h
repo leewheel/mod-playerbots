@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 #ifndef PLAYERBOTS_SWPMULTIPLIERS_H
 #define PLAYERBOTS_SWPMULTIPLIERS_H
 
@@ -16,7 +19,7 @@ class KalecgosControlMisdirectionMultiplier : public Multiplier
 public:
     KalecgosControlMisdirectionMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kalecgos control misdirection") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KalecgosWaitToDecurseMultiplier : public Multiplier
@@ -24,7 +27,7 @@ class KalecgosWaitToDecurseMultiplier : public Multiplier
 public:
     KalecgosWaitToDecurseMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kalecgos wait to decurse") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KalecgosControlMovementMultiplier : public Multiplier
@@ -32,7 +35,7 @@ class KalecgosControlMovementMultiplier : public Multiplier
 public:
     KalecgosControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kalecgos control movement") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KalecgosRestrictTauntMultiplier : public Multiplier
@@ -40,7 +43,7 @@ class KalecgosRestrictTauntMultiplier : public Multiplier
 public:
     KalecgosRestrictTauntMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kalecgos restrict taunt") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KalecgosSuppressAssistTankPullThreatMultiplier : public Multiplier
@@ -48,7 +51,7 @@ class KalecgosSuppressAssistTankPullThreatMultiplier : public Multiplier
 public:
     KalecgosSuppressAssistTankPullThreatMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kalecgos suppress assist tank pull threat") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KalecgosDelayCooldownsForSathrovarrMultiplier : public Multiplier
@@ -56,7 +59,7 @@ class KalecgosDelayCooldownsForSathrovarrMultiplier : public Multiplier
 public:
     KalecgosDelayCooldownsForSathrovarrMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kalecgos delay cooldowns for sathrovarr") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 // Brutallus
@@ -66,7 +69,7 @@ class BrutallusControlMisdirectionMultiplier : public Multiplier
 public:
     BrutallusControlMisdirectionMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "brutallus control misdirection") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class BrutallusControlMovementMultiplier : public Multiplier
@@ -74,7 +77,7 @@ class BrutallusControlMovementMultiplier : public Multiplier
 public:
     BrutallusControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "brutallus control movement") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class BrutallusNoKillingSpreeWhenNearbyBurnMultiplier : public Multiplier
@@ -82,7 +85,7 @@ class BrutallusNoKillingSpreeWhenNearbyBurnMultiplier : public Multiplier
 public:
     BrutallusNoKillingSpreeWhenNearbyBurnMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "brutallus no killing spree when nearby burn") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class BrutallusRestrictTauntMultiplier : public Multiplier
@@ -90,7 +93,7 @@ class BrutallusRestrictTauntMultiplier : public Multiplier
 public:
     BrutallusRestrictTauntMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "brutallus restrict taunt") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class BrutallusDelayCooldownsMultiplier : public Multiplier
@@ -98,7 +101,7 @@ class BrutallusDelayCooldownsMultiplier : public Multiplier
 public:
     BrutallusDelayCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "brutallus delay cooldowns") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 // Felmyst
@@ -108,7 +111,7 @@ class FelmystControlMovementMultiplier : public Multiplier
 public:
     FelmystControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "felmyst control movement") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class FelmystWaitForLandingDpsMultiplier : public Multiplier
@@ -116,7 +119,7 @@ class FelmystWaitForLandingDpsMultiplier : public Multiplier
 public:
     FelmystWaitForLandingDpsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "felmyst wait for landing dps") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class FelmystPrioritizeEncapsulateAvoidanceMultiplier : public Multiplier
@@ -124,7 +127,7 @@ class FelmystPrioritizeEncapsulateAvoidanceMultiplier : public Multiplier
 public:
     FelmystPrioritizeEncapsulateAvoidanceMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "felmyst prioritize encapsulate avoidance") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class FelmystPrioritizeFogAvoidanceMultiplier : public Multiplier
@@ -132,15 +135,15 @@ class FelmystPrioritizeFogAvoidanceMultiplier : public Multiplier
 public:
     FelmystPrioritizeFogAvoidanceMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "felmyst prioritize fog avoidance") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
-class FelmystPrioritizeDemonicVaporKiteMultiplier : public Multiplier
+class FelmystPrioritizeDemonicVaporAvoidanceMultiplier : public Multiplier
 {
 public:
-    FelmystPrioritizeDemonicVaporKiteMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "felmyst prioritize demonic vapor kite") {}
-    virtual float GetValue(Action* action);
+    FelmystPrioritizeDemonicVaporAvoidanceMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "felmyst prioritize demonic vapor avoidance") {}
+    float GetValue(Action* action) override;
 };
 
 class FelmystFocusAttacksOnCharmedPlayerMultiplier : public Multiplier
@@ -148,7 +151,7 @@ class FelmystFocusAttacksOnCharmedPlayerMultiplier : public Multiplier
 public:
     FelmystFocusAttacksOnCharmedPlayerMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "felmyst focus attacks on charmed player") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 //By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘数
@@ -158,7 +161,7 @@ class FelmystDontDotAddsMultiplier : public Multiplier
 public:
     FelmystDontDotAddsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "felmyst don't dot adds") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class FelmystDelayCooldownsMultiplier : public Multiplier
@@ -166,7 +169,7 @@ class FelmystDelayCooldownsMultiplier : public Multiplier
 public:
     FelmystDelayCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "felmyst delay cooldowns") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 // Eredar Twins
@@ -176,7 +179,7 @@ class EredarTwinsDisableAutomaticTargetingMultiplier : public Multiplier
 public:
     EredarTwinsDisableAutomaticTargetingMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "eredar twins disable automatic targeting") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class EredarTwinsControlMisdirectionMultiplier : public Multiplier
@@ -184,7 +187,7 @@ class EredarTwinsControlMisdirectionMultiplier : public Multiplier
 public:
     EredarTwinsControlMisdirectionMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "eredar twins misdirect bosses to tanks") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class EredarTwinsHoldDpsAtStartMultiplier : public Multiplier
@@ -192,7 +195,7 @@ class EredarTwinsHoldDpsAtStartMultiplier : public Multiplier
 public:
     EredarTwinsHoldDpsAtStartMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "eredar twins hold dps at start") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class EredarTwinsControlThreatMultiplier : public Multiplier
@@ -200,7 +203,7 @@ class EredarTwinsControlThreatMultiplier : public Multiplier
 public:
     EredarTwinsControlThreatMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "eredar twins control threat") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class EredarTwinsControlMovementMultiplier : public Multiplier
@@ -208,7 +211,7 @@ class EredarTwinsControlMovementMultiplier : public Multiplier
 public:
     EredarTwinsControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "eredar twins control movement") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class EredarTwinsNoMovingIntoConflagrationMultiplier : public Multiplier
@@ -216,7 +219,7 @@ class EredarTwinsNoMovingIntoConflagrationMultiplier : public Multiplier
 public:
     EredarTwinsNoMovingIntoConflagrationMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "eredar twins no moving into conflagration") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class EredarTwinsDelayCooldownsMultiplier : public Multiplier
@@ -224,7 +227,7 @@ class EredarTwinsDelayCooldownsMultiplier : public Multiplier
 public:
     EredarTwinsDelayCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "eredar twins delay cooldowns") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 // M'uru
@@ -234,7 +237,7 @@ class MuruDisableDefaultTargetingMultiplier : public Multiplier
 public:
     MuruDisableDefaultTargetingMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "m'uru disable default targeting") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class MuruControlMisdirectionMultiplier : public Multiplier
@@ -242,7 +245,7 @@ class MuruControlMisdirectionMultiplier : public Multiplier
 public:
     MuruControlMisdirectionMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "m'uru control misdirection") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class MuruControlMovementMultiplier : public Multiplier
@@ -250,7 +253,7 @@ class MuruControlMovementMultiplier : public Multiplier
 public:
     MuruControlMovementMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "m'uru control movement") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class MuruDelayCooldownsMultiplier : public Multiplier
@@ -258,7 +261,7 @@ class MuruDelayCooldownsMultiplier : public Multiplier
 public:
     MuruDelayCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "m'uru delay cooldowns") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 // Kil'jaeden <The Deceiver>
@@ -268,7 +271,7 @@ class KiljaedenDelayCooldownsMultiplier : public Multiplier
 public:
     KiljaedenDelayCooldownsMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kil'jaeden delay cooldowns") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KiljaedenTanksFocusAssignedHandOnlyMultiplier : public Multiplier
@@ -276,7 +279,7 @@ class KiljaedenTanksFocusAssignedHandOnlyMultiplier : public Multiplier
 public:
     KiljaedenTanksFocusAssignedHandOnlyMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kil'jaeden tanks focus assigned hand only") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KiljaedenControlMovementAndTargetingMultiplier : public Multiplier
@@ -284,7 +287,7 @@ class KiljaedenControlMovementAndTargetingMultiplier : public Multiplier
 public:
     KiljaedenControlMovementAndTargetingMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kil'jaeden control movement and targeting") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KiljaedenPrioritizeDarknessProtectionMultiplier : public Multiplier
@@ -292,7 +295,7 @@ class KiljaedenPrioritizeDarknessProtectionMultiplier : public Multiplier
 public:
     KiljaedenPrioritizeDarknessProtectionMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kil'jaeden prioritize darkness protection") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 class KiljaedenControlDragonMultiplier : public Multiplier
@@ -300,7 +303,7 @@ class KiljaedenControlDragonMultiplier : public Multiplier
 public:
     KiljaedenControlDragonMultiplier(
         PlayerbotAI* botAI) : Multiplier(botAI, "kil'jaeden control dragon") {}
-    virtual float GetValue(Action* action);
+    float GetValue(Action* action) override;
 };
 
 #endif

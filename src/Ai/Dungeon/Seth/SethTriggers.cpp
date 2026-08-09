@@ -3,6 +3,8 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
 
 #include "SethTriggers.h"
 #include "Playerbots.h"
@@ -52,7 +54,7 @@ bool TalonKingIkissBossEngagedByTankTrigger::IsActive()
         return false;
 
     Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
-    return ikiss && ikiss->GetVictim() == bot;
+    return ikiss && ikiss->GetVictim() == bot && bot->IsWithinMeleeRange(ikiss);
 }
 
 bool TalonKingIkissRangedPrepareForArcaneExplosionTrigger::IsActive()

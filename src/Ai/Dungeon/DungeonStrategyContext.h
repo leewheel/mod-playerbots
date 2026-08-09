@@ -79,7 +79,6 @@ class DungeonStrategyContext : public NamedObjectContext<Strategy>
             creators["wotlk-up"] = &DungeonStrategyContext::wotlk_up;       // Utgarde Pinnacle
             creators["wotlk-cos"] = &DungeonStrategyContext::wotlk_cos;     // The Culling of Stratholme
             creators["wotlk-toc"] = &DungeonStrategyContext::wotlk_toc;     // Trial of the Champion
-            creators["wotlk-hor"] = &DungeonStrategyContext::wotlk_hor;     // Halls of Reflection
             creators["wotlk-pos"] = &DungeonStrategyContext::wotlk_pos;     // Pit of Saron
             creators["wotlk-fos"] = &DungeonStrategyContext::wotlk_fos;     // The Forge of Souls
         }
@@ -106,8 +105,6 @@ class DungeonStrategyContext : public NamedObjectContext<Strategy>
         static Strategy* wotlk_fos(PlayerbotAI* botAI) { return new WotlkDungeonFoSStrategy(botAI); }
         static Strategy* wotlk_pos(PlayerbotAI* botAI) { return new WotlkDungeonPoSStrategy(botAI); }
         static Strategy* wotlk_toc(PlayerbotAI* botAI) { return new WotlkDungeonToCStrategy(botAI); }
-        // NYI from here down
-        static Strategy* wotlk_hor(PlayerbotAI* botAI) { return new WotlkDungeonUKStrategy(botAI); }
 };
 
 #endif

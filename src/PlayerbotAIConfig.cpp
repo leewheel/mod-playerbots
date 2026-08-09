@@ -694,6 +694,7 @@ bool PlayerbotAIConfig::Initialize()
     enablePeriodicOnlineOffline = sConfigMgr->GetOption<bool>("AiPlayerbot.EnablePeriodicOnlineOffline", false);
     enableRandomBotTrading = sConfigMgr->GetOption<int32>("AiPlayerbot.EnableRandomBotTrading", 1);
     enableMageTradeFoodWater = sConfigMgr->GetOption<bool>("AiPlayerbot.EnableMageTradeFoodWater", true);  // --By leewheel 2026-07-22
+    enableWarlockTradeStones = sConfigMgr->GetOption<bool>("AiPlayerbot.EnableWarlockTradeStones", true);  // --By leewheel 2026-08-05
     periodicOnlineOfflineRatio = sConfigMgr->GetOption<float>("AiPlayerbot.PeriodicOnlineOfflineRatio", 2.0);
     gearscorecheck = sConfigMgr->GetOption<bool>("AiPlayerbot.GearScoreCheck", false);
     randomBotPreQuests = sConfigMgr->GetOption<bool>("AiPlayerbot.PreQuests", false);

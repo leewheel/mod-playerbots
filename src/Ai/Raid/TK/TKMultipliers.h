@@ -3,6 +3,8 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
 
 #ifndef PLAYERBOTS_TKMULTIPLIERS_H
 #define PLAYERBOTS_TKMULTIPLIERS_H
@@ -19,11 +21,11 @@ public:
     float GetValue(Action* action) override;
 };
 
-class AlarDisableDisperseMultiplier : public Multiplier
+class AlarControlMovementMultiplier : public Multiplier
 {
 public:
-    AlarDisableDisperseMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar disable disperse") {}
+    AlarControlMovementMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar control movement") {}
     float GetValue(Action* action) override;
 };
 
@@ -43,11 +45,11 @@ public:
     float GetValue(Action* action) override;
 };
 
-class AlarDontTauntBossIfArmorMeltedMultiplier : public Multiplier
+class AlarControlTauntingMultiplier : public Multiplier
 {
 public:
-    AlarDontTauntBossIfArmorMeltedMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar don't taunt boss if armor melted") {}
+    AlarControlTauntingMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "al'ar control taunting") {}
     float GetValue(Action* action) override;
 };
 
@@ -71,11 +73,11 @@ public:
     float GetValue(Action* action) override;
 };
 
-class HighAstromancerSolarianMaintainPositionMultiplier : public Multiplier
+class HighAstromancerSolarianWrathStayAwayMultiplier : public Multiplier
 {
 public:
-    HighAstromancerSolarianMaintainPositionMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "high astromancer solarian maintain position") {}
+    HighAstromancerSolarianWrathStayAwayMultiplier(
+        PlayerbotAI* botAI) : Multiplier(botAI, "high astromancer solarian wrath stay away") {}
     float GetValue(Action* action) override;
 };
 

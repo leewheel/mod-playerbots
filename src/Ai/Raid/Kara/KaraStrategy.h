@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 #ifndef PLAYERBOTS_KARASTRATEGY_H
 #define PLAYERBOTS_KARASTRATEGY_H
 
@@ -13,9 +16,9 @@ class RaidKarazhanStrategy : public Strategy
 {
 public:
     RaidKarazhanStrategy(PlayerbotAI* botAI) : Strategy(botAI) {}
-
     std::string const getName() override { return "karazhan"; }
-
+    bool HasTargetExclusions() const override { return true; }
+    void AppendTargetExclusions(GuidSet& exclusions, TargetValueExclusionType type) override;
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
     void InitMultipliers(std::vector<Multiplier*>& multipliers) override;
 };

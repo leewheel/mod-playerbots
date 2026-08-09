@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "Player.h"
@@ -103,13 +106,9 @@ static void RequestInterruptForBotsNeedingFelmystFogMovement(
         if (!TryGetActiveFogOfCorruptionState(player, felmyst, fogState))
             continue;
 
-        std::array<Position, 3> destinations;
-        uint8 destinationCount = 0;
-        if (!TryGetFelmystFogSafeDestinations(
-                player, fogState.lane, destinations, destinationCount))
-        {
+        Position ignored;
+        if (!TryGetFelmystFogSafeDestination(player, fogState.lane, ignored))
             continue;
-        }
 
         botAI->RequestSpellInterrupt();
     }
@@ -141,10 +140,10 @@ static void RequestInterruptForBotsWithDelayedFelmystEncapsulate(Creature* felmy
         if (!encapsulateTarget)
             continue;
 
-//By leewheel 2026-07-28 - 使用本地constexpr替代已删除的头文件常量
-        constexpr float encapsulateSafeDistance = 20.0f;
+        //By leewheel 2026-07-28 - 使用本地constexpr替代已删除的头文件常量
+        constexpr float safeDistance = 20.0f;
         if (player != encapsulateTarget &&
-            player->GetExactDist2d(encapsulateTarget) > encapsulateSafeDistance)
+            player->GetExactDist2d(encapsulateTarget) > safeDistance)
         {
             continue;
         }
@@ -202,20 +201,15 @@ public:
 
         switch (spellInfo->Id)
         {
-//By leewheel 2026-07-28 - 3ae5d139: 删除surface combat bot分离逻辑，统一使用FindFirstSunwellCombatBotInGroup
-case static_cast<uint32>(SwpSpells::SPELL_SPECTRAL_BLAST_PORTAL):
-if (PlayerbotAI* botAI = FindFirstSunwellCombatBotInGroup(player))
-    RecordKalecgosSpectralBlastTarget(player, botAI);
-break;
+            //By leewheel 2026-07-28 - 3ae5d139: 删除surface combat bot分离逻辑，统一使用FindFirstSunwellCombatBotInGroup
+            case Id(SwpSpells::SPELL_SPECTRAL_BLAST_PORTAL):
+                if (PlayerbotAI* botAI = FindFirstSunwellCombatBotInGroup(player))
+                    RecordSpectralBlastTarget(player, botAI);
+                break;
 
-case static_cast<uint32>(SwpSpells::SPELL_TELEPORT_SPECTRAL):
-if (FindFirstSunwellCombatBotInGroup(player))
-RecordKalecgosSpectralRealmEnter(player);
-break;
-
-            case static_cast<uint32>(SwpSpells::SPELL_TELEPORT_NORMAL_REALM):
+            case Id(SwpSpells::SPELL_TELEPORT_SPECTRAL):
                 if (FindFirstSunwellCombatBotInGroup(player))
-                    UpdateKalecgosRealmState(player, false, getMSTime());
+                    RecordSpectralRealmEnter(player);
                 break;
 
             default:
@@ -231,7 +225,7 @@ public:
 
     void OnSpellPrepare(Spell* spell, Unit* caster, SpellInfo const* spellInfo) override
     {
-        if (spellInfo->Id != static_cast<uint32>(SwpSpells::SPELL_ENCAPSULATE))
+        if (spellInfo->Id != Id(SwpSpells::SPELL_ENCAPSULATE))
             return;
 
         if (Player* target = GetFirstPlayerSpellTarget(spell, caster))
@@ -246,10 +240,10 @@ public:
     void OnSpellCast(
         Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
     {
-        if (spellInfo->Id == static_cast<uint32>(SwpSpells::SPELL_FOG_OF_CORRUPTION) ||
-            spellInfo->Id == static_cast<uint32>(SwpSpells::SPELL_FELMYST_STRAFE_TOP) ||
-            spellInfo->Id == static_cast<uint32>(SwpSpells::SPELL_FELMYST_STRAFE_MIDDLE) ||
-            spellInfo->Id == static_cast<uint32>(SwpSpells::SPELL_FELMYST_STRAFE_BOTTOM))
+        if (spellInfo->Id == Id(SwpSpells::SPELL_FOG_OF_CORRUPTION) ||
+            spellInfo->Id == Id(SwpSpells::SPELL_FELMYST_STRAFE_TOP) ||
+            spellInfo->Id == Id(SwpSpells::SPELL_FELMYST_STRAFE_MIDDLE) ||
+            spellInfo->Id == Id(SwpSpells::SPELL_FELMYST_STRAFE_BOTTOM))
         {
             Player* targetPlayer = GetFirstPlayerSpellTarget(spell, caster);
             Player* groupReference = targetPlayer;
@@ -294,7 +288,7 @@ public:
         {
             //By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：删除 OnSpellCast 中的 SPELL_ENCAPSULATE 处理
             //                          （已在 OnSpellPrepare 中处理，避免重复）
-            case static_cast<uint32>(SwpSpells::SPELL_SUMMON_DEMONIC_VAPOR):
+            case Id(SwpSpells::SPELL_SUMMON_DEMONIC_VAPOR):
                 if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(target);
                     botAI && botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
                 {
@@ -316,16 +310,16 @@ public:
 
     void OnSpellPrepare(Spell* spell, Unit* caster, SpellInfo const* spellInfo) override
     {
-        if (caster->GetEntry() != static_cast<uint32>(SwpNpcs::NPC_GRAND_WARLOCK_ALYTHESS))
+        if (caster->GetEntry() != Id(SwpNpcs::NPC_GRAND_WARLOCK_ALYTHESS))
             return;
 
         Player* target = GetFirstPlayerSpellTarget(spell, caster);
         if (!target || !FindFirstSunwellCombatBotInGroup(target))
             return;
 
-        if (spellInfo->Id == static_cast<uint32>(SwpSpells::SPELL_CONFLAGRATION))
-            RecordEredarTwinsIncomingConflagrationTarget(target);
-        else if (spellInfo->Id == static_cast<uint32>(SwpSpells::SPELL_BLAZE))
+        if (spellInfo->Id == Id(SwpSpells::SPELL_CONFLAGRATION))
+            RecordIncomingEredarTwinsConflagrationTarget(target);
+        else if (spellInfo->Id == Id(SwpSpells::SPELL_BLAZE))
             RecordEredarTwinsBlazeTarget(target);
     }
 };
@@ -338,7 +332,7 @@ public:
     void OnSpellCast(
         Spell* /*spell*/, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
     {
-        if (spellInfo->Id == static_cast<uint32>(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS))
+        if (spellInfo->Id == Id(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS))
         {
             Map::PlayerList const& players = caster->GetMap()->GetPlayers();
             for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
@@ -376,12 +370,12 @@ public:
 
         switch (creature->GetEntry())
         {
-            case static_cast<uint32>(SwpNpcs::NPC_FELMYST):
+            case Id(SwpNpcs::NPC_FELMYST):
                 RequestInterruptForBotsNeedingFelmystFogMovement(creature, nullptr);
                 RequestInterruptForBotsWithDelayedFelmystEncapsulate(creature);
                 break;
 
-            case static_cast<uint32>(SwpNpcs::NPC_GRAND_WARLOCK_ALYTHESS):
+            case Id(SwpNpcs::NPC_GRAND_WARLOCK_ALYTHESS):
                 RequestInterruptForEredarTwinsAlythessTargets(creature);
                 break;
 
@@ -399,11 +393,8 @@ public:
 
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
     {
-        if (!creature ||
-            creature->GetEntry() != static_cast<uint32>(SwpNpcs::NPC_ARMAGEDDON_TARGET))
-        {
+        if (!creature || creature->GetEntry() != Id(SwpNpcs::NPC_ARMAGEDDON_TARGET))
             return;
-        }
 
         bool hasSunwellStrategy = false;
         std::vector<PlayerbotAI*> botsToInterrupt;
@@ -442,11 +433,8 @@ public:
 
     void OnCreatureRemoveWorld(Creature* creature) override
     {
-        if (!creature ||
-            creature->GetEntry() != static_cast<uint32>(SwpNpcs::NPC_ARMAGEDDON_TARGET))
-        {
+        if (!creature || creature->GetEntry() != Id(SwpNpcs::NPC_ARMAGEDDON_TARGET))
             return;
-        }
 
         kiljaedenTrackedArmageddonTargets.erase(creature->GetGUID());
     }

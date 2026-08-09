@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 #include "SWPStrategy.h"
 #include "AiObjectContext.h"
 #include "PlayerbotAI.h"
@@ -241,10 +244,10 @@ void RaidSunwellStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new FelmystControlMovementMultiplier(botAI));
     multipliers.push_back(new FelmystWaitForLandingDpsMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeEncapsulateAvoidanceMultiplier(botAI));
-    multipliers.push_back(new FelmystPrioritizeDemonicVaporKiteMultiplier(botAI));
+    multipliers.push_back(new FelmystPrioritizeDemonicVaporAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeFogAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystFocusAttacksOnCharmedPlayerMultiplier(botAI));
-    //By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘数
+    //By leewheel 2026-07-27 新增 Felmyst 不小怪施放DoT的乘数
     multipliers.push_back(new FelmystDontDotAddsMultiplier(botAI));
     multipliers.push_back(new FelmystDelayCooldownsMultiplier(botAI));
 
@@ -296,7 +299,7 @@ void AppendMuruDarkFiendExclusions(
     for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* attacker = botAI->GetUnit(guid);
-        if (attacker && attacker->GetEntry() == static_cast<uint32>(SwpNpcs::NPC_DARK_FIEND))
+        if (attacker && attacker->GetEntry() == Id(SwpNpcs::NPC_DARK_FIEND))
             exclusions.insert(guid);
     }
 }
@@ -307,12 +310,12 @@ void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, Guid
     if (!muru || muru->GetHealth() <= 1)
         return;
 
-    constexpr float maxTankTargetDistanceFromStack = 25.0f;
+    constexpr float maxTargetDistFromStack = 25.0f;
 
     for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* attacker = botAI->GetUnit(guid);
-        if (!attacker || attacker->GetEntry() == static_cast<uint32>(SwpNpcs::NPC_VOID_SENTINEL))
+        if (!attacker || attacker->GetEntry() == Id(SwpNpcs::NPC_VOID_SENTINEL))
             continue;
 
         if (guid == muru->GetGUID())
@@ -322,15 +325,14 @@ void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, Guid
         }
 
         Player* bot = botAI->GetBot();
-        if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) && TryGetMuruDarknessActiveState(bot, muru))
-            continue;
-
-        if (attacker->GetExactDist2d(
-                MURU_STACK_POSITION.GetPositionX(), MURU_STACK_POSITION.GetPositionY()) >
-            maxTankTargetDistanceFromStack)
+        if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
+            TryGetMuruDarknessActiveState(bot, muru))
         {
-            exclusions.insert(guid);
+            continue;
         }
+
+        if (attacker->GetExactDist2d(MURU_STACK_POSITION) > maxTargetDistFromStack)
+            exclusions.insert(guid);
     }
 }
 
@@ -343,11 +345,10 @@ void AppendKiljaedenShieldOrbExclusions(
     if (!AI_VALUE2(Unit*, "find target", "kil'jaeden"))
         return;
 
-    for (auto const& guid :
-         AI_VALUE(GuidVector, "attackers"))
+    for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* attacker = botAI->GetUnit(guid);
-        if (attacker && attacker->GetEntry() == static_cast<uint32>(SwpNpcs::NPC_SHIELD_ORB))
+        if (attacker && attacker->GetEntry() == Id(SwpNpcs::NPC_SHIELD_ORB))
             exclusions.insert(guid);
     }
 }
@@ -361,11 +362,8 @@ void AppendKiljaedenSinisterReflectionExclusions(
     for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* attacker = botAI->GetUnit(guid);
-        if (!attacker ||
-            attacker->GetEntry() != static_cast<uint32>(SwpNpcs::NPC_SINISTER_REFLECTION))
-        {
+        if (!attacker || attacker->GetEntry() != Id(SwpNpcs::NPC_SINISTER_REFLECTION))
             continue;
-        }
 
         Unit* victim = attacker->GetVictim();
         if (!victim || !victim->IsPlayer() || !PlayerbotAI::IsTank(victim->ToPlayer()))

@@ -3,6 +3,8 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
 
 #ifndef PLAYERBOTS_TKACTIONS_H
 #define PLAYERBOTS_TKACTIONS_H
@@ -133,17 +135,6 @@ public:
     bool Execute(Event event) override;
 };
 
-//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地TKActionContext.h引用但不存在的Action类定义
-//                        AlarReturnToRoomCenterAction - Al'ar阶段2返回房间中心
-//End By leewheel
-class AlarReturnToRoomCenterAction : public MovementAction
-{
-public:
-    AlarReturnToRoomCenterAction(
-        PlayerbotAI* botAI) : MovementAction(botAI, "al'ar return to room center") {}
-    bool Execute(Event event) override;
-};
-
 // Void Reaver
 
 class VoidReaverTanksPositionBossAction : public AttackAction
@@ -170,26 +161,6 @@ public:
     bool Execute(Event event) override;
 };
 
-//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地自定义Action类定义
-//                        VoidReaverSpreadRangedAction - 远程DPS分散站位
-//                        VoidReaverEraseTrackersAction - 清除奥术宝珠追踪数据
-//End By leewheel
-class VoidReaverSpreadRangedAction : public MovementAction
-{
-public:
-    VoidReaverSpreadRangedAction(
-        PlayerbotAI* botAI) : MovementAction(botAI, "void reaver spread ranged") {}
-    bool Execute(Event event) override;
-};
-
-class VoidReaverEraseTrackersAction : public Action
-{
-public:
-    VoidReaverEraseTrackersAction(
-        PlayerbotAI* botAI) : Action(botAI, "void reaver erase trackers") {}
-    bool Execute(Event event) override;
-};
-
 class VoidReaverAvoidArcaneOrbAction : public MovementAction
 {
 public:
@@ -205,34 +176,6 @@ class HighAstromancerSolarianMainTankPickUpBossAction : public AttackAction
 public:
     HighAstromancerSolarianMainTankPickUpBossAction(
         PlayerbotAI* botAI) : AttackAction(botAI, "high astromancer solarian main tank pick up boss") {}
-    bool Execute(Event event) override;
-};
-
-class HighAstromancerSolarianStackOnRangedLeaderAction : public MovementAction
-{
-public:
-    HighAstromancerSolarianStackOnRangedLeaderAction(
-        PlayerbotAI* botAI) : MovementAction(botAI, "high astromancer solarian stack on ranged leader") {}
-    bool Execute(Event event) override;
-};
-
-//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地自定义Action类定义
-//                        HighAstromancerSolarianRangedLeaveSpaceForMeleeAction - 远程给近战留空间
-//                        HighAstromancerSolarianStackForAoeAction - 为AOE集合
-//End By leewheel
-class HighAstromancerSolarianRangedLeaveSpaceForMeleeAction : public MovementAction
-{
-public:
-    HighAstromancerSolarianRangedLeaveSpaceForMeleeAction(
-        PlayerbotAI* botAI) : MovementAction(botAI, "high astromancer solarian ranged leave space for melee") {}
-    bool Execute(Event event) override;
-};
-
-class HighAstromancerSolarianStackForAoeAction : public MovementAction
-{
-public:
-    HighAstromancerSolarianStackForAoeAction(
-        PlayerbotAI* botAI) : MovementAction(botAI, "high astromancer solarian stack for aoe") {}
     bool Execute(Event event) override;
 };
 
@@ -341,6 +284,9 @@ public:
     KaelthasSunstriderAssignAdvisorDpsPriorityAction(
         PlayerbotAI* botAI) : AttackAction(botAI, "kael'thas sunstrider assign advisor dps priority") {}
     bool Execute(Event event) override;
+
+private:
+    bool MeleeDpsPositionOutsideBombRange(Unit* telonicus);
 };
 
 class KaelthasSunstriderManageAdvisorDpsTimerAction : public Action
@@ -357,6 +303,10 @@ public:
     KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction(
         PlayerbotAI* botAI) : AttackAction(botAI, "kael'thas sunstrider assign legendary weapon dps priority") {}
     bool Execute(Event event) override;
+
+private:
+    bool HandleDevastationAvoidance(
+        Unit* axe, Unit* mace, Unit* dagger, Unit* sword, bool isTank, bool isMeleeDps);
 };
 
 class KaelthasSunstriderMoveDevastationAwayAction : public AttackAction
@@ -443,23 +393,16 @@ public:
     bool Execute(Event event) override;
 };
 
-//By leewheel 2026-07-28 - 从brighton-chi来源移植：补全本地自定义Action类定义
-//                        KaelthasSunstriderBreakThroughShockBarrierAction - 打破凯尔萨斯的震撼屏障
-//End By leewheel
-class KaelthasSunstriderBreakThroughShockBarrierAction : public AttackAction
-{
-public:
-    KaelthasSunstriderBreakThroughShockBarrierAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "kael'thas sunstrider break through shock barrier") {}
-    bool Execute(Event event) override;
-};
-
 class KaelthasSunstriderSpreadOutInMidairAction : public MovementAction
 {
 public:
     KaelthasSunstriderSpreadOutInMidairAction(
         PlayerbotAI* botAI) : MovementAction(botAI, "kael'thas sunstrider spread out in midair") {}
     bool Execute(Event event) override;
+
+private:
+    bool DropToGround();
+    bool HoverAndSpread();
 };
 
 #endif

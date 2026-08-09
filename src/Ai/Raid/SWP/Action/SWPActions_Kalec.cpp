@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 // === 外部代码引入记录 ===
 // 2026-07-30 引入自 brighton-chi/mod-playerbots:
 //   commit 5167dd62ffa05cc4d8f5f1dcfad0b425dd68517f - KJ and Kalec edits (KalecgosAnnounceBossHealthAction::Execute)
@@ -58,12 +61,15 @@ bool KalecgosAnnounceBossHealthAction::Execute(Event /*event*/)
 
         state.spectralHealthAnnounced = true;
 
+        std::string const sathrovarrHealth = std::to_string(
+            static_cast<uint32>(sathrovarr->GetHealthPct()));
+
         text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "sathrovarr_health_when_kalecgos_below_twenty_percent_health",
             "Sathrovarr's health is at %sathrovarrHealth%! "
             "Don't forget that we need to defeat them at about the same time!",
             std::map<std::string, std::string>{
-                {"%sathrovarrHealth", std::to_string(static_cast<uint32>(sathrovarr->GetHealthPct()))}});
+                {"%sathrovarrHealth", sathrovarrHealth}});
     }
 
     return botAI->SayToRaid(text);
@@ -80,19 +86,26 @@ bool KalecgosTankPositionBossAction::Execute(Event event)
         return Attack(kalecgos);
 
     Position const& position = KALECGOS_TANK_POSITION;
-    float const distToPosition = bot->GetExactDist2d(
-        position.GetPositionX(), position.GetPositionY());
+    float const distToPosition = bot->GetExactDist2d(position);
 
-if (distToPosition > 3.0f && bot->IsWithinMeleeRange(kalecgos))
-{
-float maxMoveDist = kalecgos->GetVictim() == bot ? 2.25f : 3.5f;
+    if (distToPosition > 3.0f && bot->IsWithinMeleeRange(kalecgos))
+    {
+        float const posX = position.GetPositionX();
+        float const posY = position.GetPositionY();
+        float const botX = bot->GetPositionX();
+        float const botY = bot->GetPositionY();
+
+        float const toPosX = posX - botX;
+        float const toPosY = posY - botY;
+        float const toBossX = kalecgos->GetPositionX() - botX;
+        float const toBossY = kalecgos->GetPositionY() - botY;
+        bool const backwards = kalecgos->GetVictim() == bot &&
+            (toPosX * toBossX + toPosY * toBossY) < 0.0f;
+
+        float const maxMoveDist = backwards ? 2.25f : 3.5f;
         float const moveDist = std::min(maxMoveDist, distToPosition);
-        bool backwards = kalecgos->GetVictim() == bot;
-
-        float const dX = position.GetPositionX() - bot->GetPositionX();
-        float const dY = position.GetPositionY() - bot->GetPositionY();
-        float const moveX = bot->GetPositionX() + (dX / distToPosition) * moveDist;
-        float const moveY = bot->GetPositionY() + (dY / distToPosition) * moveDist;
+        float const moveX = botX + (toPosX / distToPosition) * moveDist;
+        float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
         return MoveTo(
             SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
@@ -109,13 +122,14 @@ float maxMoveDist = kalecgos->GetVictim() == bot ? 2.25f : 3.5f;
 bool KalecgosEnterSpectralRiftAction::Execute(Event /*event*/)
 {
     //By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，提取坦克进入判断到ShouldTankEnter
+    // Special conditions for tanks only
     if (PlayerbotAI::IsTank(bot) && !ShouldTankEnter())
         return false;
     //End By leewheel
 
     constexpr float searchRadius = 75.0f;
     GameObject* rift = bot->FindNearestGameObject(
-        static_cast<uint32>(SwpObjects::GO_SPECTRAL_RIFT), searchRadius, true);
+        Id(SwpObjects::GO_SPECTRAL_RIFT), searchRadius, true);
     if (!rift)
         return false;
 
@@ -146,24 +160,14 @@ bool KalecgosEnterSpectralRiftAction::ShouldTankEnter()
     if (!surfaceTank)
         return false;
 
+    // The current tank cannot enter a portal until the next tank takes over. If the designated
+    // tank is still this bot, nobody has taken over yet.
     if (surfaceTank == bot)
-    {
-        KalecgosEncounterState& state = kalecgosEncounterStates[kalecgos->GetInstanceId()];
-        surfaceTank = GetNextSurfaceTankInOrder(
-            bot->GetGroup(), state.tankAssignmentGuids,
-            state.currentTankGuid, ObjectGuid::Empty, true);
-
-        if (!surfaceTank)
-            return false;
-    }
-
-    // 当前坦克必须等下一个坦克接手后才能进入传送门
-    Position const& position = KALECGOS_TANK_POSITION;
-    if (surfaceTank->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) > 3.0f ||
-        kalecgos->GetVictim() != surfaceTank)
-    {
         return false;
-    }
+
+    Position const& position = KALECGOS_TANK_POSITION;
+    if (surfaceTank->GetExactDist2d(position) > 3.0f || kalecgos->GetVictim() != surfaceTank)
+        return false;
 
     return true;
 }
@@ -176,8 +180,7 @@ bool KalecgosDisperseRangedAction::Execute(Event /*event*/)
         Position const& initialPos = KALECGOS_INITIAL_RANGED_POSITION;
         constexpr float initialRangedRadius = 10.0f;
 
-        if (bot->GetExactDist2d(initialPos.GetPositionX(), initialPos.GetPositionY()) <=
-            initialRangedRadius)
+        if (bot->GetExactDist2d(initialPos) <= initialRangedRadius)
         {
             _initialRangedPositionReached = true;
             return false;
@@ -197,7 +200,7 @@ bool KalecgosDisperseRangedAction::Execute(Event /*event*/)
     }
 
     constexpr float safeDistFromPlayer = 6.0f;
-    if (Unit* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer))
+    if (Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer))
     {
         constexpr uint32 minInterval = 1000;
         return FleePosition(nearestPlayer->GetPosition(), safeDistFromPlayer, minInterval);
@@ -234,14 +237,12 @@ bool KalecgosSathrovarrTankStandWithKalecAction::Execute(Event /*event*/)
         return false;
 
     constexpr float searchRadius = 20.0f;
-    Unit* kalec = bot->FindNearestCreature(
-        static_cast<uint32>(SwpNpcs::NPC_KALECGOS_HUMANOID), searchRadius);
-
+    Unit* kalec = bot->FindNearestCreature(Id(SwpNpcs::NPC_KALECGOS_HUMANOID), searchRadius);
     if (!kalec || sathrovarr->GetVictim() != kalec)
         return false;
 
     Position const position = kalec->GetPosition();
-    if (bot->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) < 3.0f)
+    if (bot->GetExactDist2d(position) <= 3.0f)
         return false;
 
     return MoveTo(

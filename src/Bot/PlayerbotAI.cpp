@@ -1631,7 +1631,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         "magtheridon", "moltencore", "naxx", "onyxia", "rs", "ssc", "tbc-ac", "tempestkeep",
         "tbc-ub",
         "ulduar", "voa", "wotlk-an", "wotlk-cos", "wotlk-dtk", "wotlk-eoe", "wotlk-fos",
-        "wotlk-gd", "wotlk-hol", "wotlk-hor", "wotlk-hos", "wotlk-nex", "wotlk-occ",
+        "wotlk-gd", "wotlk-hol", "wotlk-hos", "wotlk-nex", "wotlk-occ",
         "wotlk-ok", "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up",
         "wotlk-vh", "zulaman",
         //By leewheel 2026-07-08
@@ -1681,7 +1681,6 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         {"wotlk-ok",      "安卡赫特：古代王国"},
         {"wotlk-fos",     "灵魂洪炉"},
         {"wotlk-pos",     "萨隆矿坑"},
-        {"wotlk-hor",     "映像大厅"},
         {"wotlk-toc",     "冠军的试炼"},
         // 巫妖王之怒（团队副本）
         {"naxx",          "纳克萨玛斯"},
@@ -1819,9 +1818,6 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             break;
         case 658:
             strategyName = "wotlk-pos";  // Pit of Saron
-            break;
-        case 668:
-            strategyName = "wotlk-hor";  // Halls of Reflection
             break;
         case 724:
             strategyName = "rs";  // Ruby Sanctum

@@ -11,13 +11,16 @@
 // By leewheel
 // End By leewheel
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 #include "SWPActions.h"
 #include "SWPEncounter_Felmyst.h"
 #include "Playerbots.h"
+#include "PlayerbotTextMgr.h"
 #include "RaidBossHelpers.h"
 #include "RtiTargetValue.h"
 #include "Timer.h"
-#include <array>
 #include <cmath>
 
 using namespace SwpHelpers;
@@ -35,7 +38,7 @@ bool FelmystMisdirectBossToMainTankAction::Execute(Event /*event*/)
     if (botAI->CanCastSpell("misdirection", mainTank))
         return botAI->CastSpell("misdirection", mainTank);
 
-    if (bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_MISDIRECTION)) &&
+    if (bot->HasAura(Id(SwpSpells::SPELL_MISDIRECTION)) &&
         botAI->CanCastSpell("steady shot", felmyst))
     {
         return botAI->CastSpell("steady shot", felmyst);
@@ -62,17 +65,25 @@ bool FelmystMainTankPositionBossOnGroundAction::Execute(Event /*event*/)
     }
 
     Position const position = GetFelmystMainTankGroundPosition(bot);
-    float const distToPosition = bot->GetExactDist2d(
-        position.GetPositionX(), position.GetPositionY());
-
-    if (distToPosition < 2.0f)
+    float const distToPosition = bot->GetExactDist2d(position);
+    if (distToPosition <= 2.0f)
         return false;
 
-    float const dX = position.GetPositionX() - bot->GetPositionX();
-    float const dY = position.GetPositionY() - bot->GetPositionY();
-    float const moveDist = std::min(2.25f, distToPosition);
-    float const moveX = bot->GetPositionX() + (dX / distToPosition) * moveDist;
-    float const moveY = bot->GetPositionY() + (dY / distToPosition) * moveDist;
+    float const posX = position.GetPositionX();
+    float const posY = position.GetPositionY();
+    float const botX = bot->GetPositionX();
+    float const botY = bot->GetPositionY();
+
+    float const toPosX = posX - botX;
+    float const toPosY = posY - botY;
+    float const toBossX = felmyst->GetPositionX() - botX;
+    float const toBossY = felmyst->GetPositionY() - botY;
+    bool const backwards = (toPosX * toBossX + toPosY * toBossY) < 0.0f;
+
+    float const maxMoveDist = backwards ? 2.25f : 3.5f;
+    float const moveDist = std::min(maxMoveDist, distToPosition);
+    float const moveX = botX + (toPosX / distToPosition) * moveDist;
+    float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
         SWP_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
@@ -105,13 +116,10 @@ bool FelmystPositionMeleeOnGroundAction::Execute(Event /*event*/)
         return false;
 
     Position position;
-    if (!TryGetFelmystGroundStackPosition(
-            bot, felmyst, FelmystGroundStack::Melee, position))
-    {
+    if (!TryGetFelmystGroundStackPosition(bot, felmyst, FelmystGroundStack::Melee, position))
         return false;
-    }
 
-    if (bot->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) < 0.25f)
+    if (bot->GetExactDist2d(position) <= 0.25f)
         return false;
 
     return MoveTo(
@@ -177,8 +185,7 @@ bool FelmystRunAwayFromEncapsulatedPlayerAction::Execute(Event /*event*/)
         return false;
     }
 
-    if (bot->GetExactDist2d(leftPosition.GetPositionX(), leftPosition.GetPositionY()) <=
-        bot->GetExactDist2d(rightPosition.GetPositionX(), rightPosition.GetPositionY()))
+    if (bot->GetExactDist2d(leftPosition) <= bot->GetExactDist2d(rightPosition))
     {
         if (tryMoveToStack(FelmystGroundStack::Left))
             return true;
@@ -196,56 +203,181 @@ bool FelmystMassDispelGasNovaAction::Execute(Event /*event*/)
 {
     Player* gasNovaTarget = GetFelmystGasNovaDispelTarget(bot);
     return gasNovaTarget &&
-        botAI->CanCastSpell("mass dispel", gasNovaTarget) &&
-        botAI->CastSpell("mass dispel", gasNovaTarget);
+        botAI->CanCastSpell(Id(SwpSpells::SPELL_MASS_DISPEL), gasNovaTarget) &&
+        botAI->CastSpell(Id(SwpSpells::SPELL_MASS_DISPEL), gasNovaTarget);
 }
 
 //By leewheel 20260729 同步 e404dc12 新的恶魔蒸汽撤离策略：领导钻石标记 + 跟随
+//(最终版本：MoveAwayFromVapor/MoveToFlightLeader/AnnounceFlightLeader 三段式实现)
 bool FelmystAvoidDemonicVaporAction::Execute(Event /*event*/)
 {
     Player* leader = GetFelmystFlightLeader(bot);
 
-    // 领导给自己打钻石图标
     if (leader == bot && MarkTargetWithDiamond(bot, leader))
         return true;
 
-    // 领导本人继续躲避危险；无领导时回退到原躲避逻辑
-    if (leader == bot || !leader)
+    if (leader && leader->GetGUID() != _announcedFlightLeaderGuid)
     {
-        constexpr float searchRadius = 20.0f;
-        Unit* nearestTrail = bot->FindNearestCreature(
-            static_cast<uint32>(SwpNpcs::NPC_DEMONIC_VAPOR_TRAIL), searchRadius, true);
-        Unit* nearestVapor = bot->FindNearestCreature(
-            static_cast<uint32>(SwpNpcs::NPC_DEMONIC_VAPOR), searchRadius, true);
-
-        Unit* hazard = nearestTrail ? nearestTrail : nearestVapor;
-        if (!hazard)
-            return false;
-
-        constexpr float safeDistFromVapor = 15.0f;
-        float const currentDistance = bot->GetDistance2d(hazard);
-        if (currentDistance > safeDistFromVapor)
-            return false;
-
-        botAI->InterruptSpell();
-        return MoveAway(hazard, safeDistFromVapor - currentDistance);
+        _announcedFlightLeaderGuid = leader->GetGUID();
+        AnnounceFlightLeader(leader);
     }
 
-    // 非领导：跟向领导，保持 2 米内
+    if (!leader || leader == bot)
+        return MoveAwayFromVapor();
+
+    constexpr float farDistance = 20.0f;
+    if (bot->GetDistance2d(leader) > farDistance && MoveAwayFromVapor(true))
+        return true;
+
+    return MoveToFlightLeader(leader);
+}
+
+bool FelmystAvoidDemonicVaporAction::MoveAwayFromVapor(bool unrestricted)
+{
+    std::vector<Creature*> const hazards = GetDemonicVaporHazards(bot);
+
+    constexpr float hazardRadius = 13.5f;
+    bool inDanger = false;
+    for (Creature* hazard : hazards)
+    {
+        if (hazard && bot->GetDistance2d(hazard) < hazardRadius)
+        {
+            inDanger = true;
+            break;
+        }
+    }
+
+    if (!inDanger)
+        return false;
+
+    constexpr float maxSearchRadius = 40.0f;
+    constexpr float distanceStep = 1.0f;
+
+    std::vector<float> angles;
+    if (unrestricted)
+    {
+        for (int i = 0; i < 8; ++i)
+            angles.push_back(static_cast<float>(i) * (2.0f * static_cast<float>(M_PI) / 8.0f));
+    }
+    else
+    {
+        angles.push_back(0.0f);
+        angles.push_back(static_cast<float>(M_PI));
+    }
+
+    Position bestPos;
+    float minMoveDistance = std::numeric_limits<float>::max();
+    bool foundSafe = false;
+
+    float const botX = bot->GetPositionX();
+    float const botY = bot->GetPositionY();
+    float const botZ = bot->GetPositionZ();
+
+    uint32 const stepCount = static_cast<uint32>(maxSearchRadius / distanceStep);
+    for (uint32 step = 0; step <= stepCount; ++step)
+    {
+        float const distance = static_cast<float>(step) * distanceStep;
+        for (float angle : angles)
+        {
+            float candidateX = botX + distance * std::cos(angle);
+            float candidateY = botY + distance * std::sin(angle);
+
+            bool isSafe = true;
+            for (Creature* hazard : hazards)
+            {
+                if (hazard && hazard->GetDistance2d(candidateX, candidateY) < hazardRadius)
+                {
+                    isSafe = false;
+                    break;
+                }
+            }
+
+            if (!isSafe)
+                continue;
+
+            float candidateZ = botZ;
+            bot->GetMap()->CheckCollisionAndGetValidCoords(
+                bot, botX, botY, botZ, candidateX, candidateY, candidateZ, false);
+
+            float const moveDistance = bot->GetExactDist2d(candidateX, candidateY);
+            if (!foundSafe || moveDistance < minMoveDistance)
+            {
+                bestPos = Position(candidateX, candidateY, candidateZ);
+                minMoveDistance = moveDistance;
+                foundSafe = true;
+            }
+        }
+
+        if (foundSafe)
+            break;
+    }
+
+    if (!foundSafe)
+        return false;
+
+    botAI->InterruptSpell();
+    return MoveTo(
+        SWP_MAP_ID, bestPos.GetPositionX(), bestPos.GetPositionY(), bestPos.GetPositionZ(),
+        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+}
+
+bool FelmystAvoidDemonicVaporAction::MoveToFlightLeader(Player* leader)
+{
     constexpr float followDist = 2.0f;
     float const currentDistance = bot->GetDistance2d(leader);
     if (currentDistance <= followDist)
         return false;
 
-    float const dX = leader->GetPositionX() - bot->GetPositionX();
-    float const dY = leader->GetPositionY() - bot->GetPositionY();
+    float const botX = bot->GetPositionX();
+    float const botY = bot->GetPositionY();
+    float const botZ = bot->GetPositionZ();
+
+    float const leaderX = leader->GetPositionX();
+    float const leaderY = leader->GetPositionY();
+    float const leaderZ = leader->GetPositionZ();
+
+    float const toPosX = leaderX - botX;
+    float const toPosY = leaderY - botY;
+    float const toPosZ = leaderZ - botZ;
+
+    botAI->InterruptSpell();
+
+    // 1) Try exact leader position
+    if (MoveTo(
+            SWP_MAP_ID, leaderX, leaderY, leaderZ, false, false, false, false,
+            MovementPriority::MOVEMENT_COMBAT, true, false))
+    {
+        return true;
+    }
+
+    // 2) Try leader XY with bot's own Z
+    if (MoveTo(
+            SWP_MAP_ID, leaderX, leaderY, botZ, false, false, false, false,
+            MovementPriority::MOVEMENT_COMBAT, true, false))
+    {
+        return true;
+    }
+
+    // 3) Try an incremental step toward the leader with linearly interpolated Z.
     float const moveDist = std::min(3.5f, currentDistance);
-    float const moveX = bot->GetPositionX() + (dX / currentDistance) * moveDist;
-    float const moveY = bot->GetPositionY() + (dY / currentDistance) * moveDist;
+    float const moveX = botX + (toPosX / currentDistance) * moveDist;
+    float const moveY = botY + (toPosY / currentDistance) * moveDist;
+    float const moveZ = botZ + (toPosZ / currentDistance) * moveDist;
 
     return MoveTo(
-        SWP_MAP_ID, moveX, moveY, leader->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        SWP_MAP_ID, moveX, moveY, moveZ, false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
+}
+
+void FelmystAvoidDemonicVaporAction::AnnounceFlightLeader(Player* leader)
+{
+    std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+        "felmyst_flight_leader",
+        "[NAME] is now the flight phase leader. Everybody needs to stack on [NAME] "
+        "during the flight phase.",
+        std::map<std::string, std::string>{{"[NAME]", leader->GetName()}});
+
+    botAI->SayToRaid(text);
 }
 //End By leewheel
 
@@ -255,16 +387,18 @@ bool FelmystKiteDemonicVaporAction::Execute(Event /*event*/)
     if (!TryGetFelmystDemonicVaporKiteDestination(bot, destination))
         return false;
 
-float const distToDestination = bot->GetExactDist2d(
-destination.GetPositionX(), destination.GetPositionY());
-if (distToDestination < 0.5f)
-return false;
+    float const distToDestination = bot->GetExactDist2d(destination);
+    if (distToDestination <= 0.5f)
+        return false;
 
-float const dX = destination.GetPositionX() - bot->GetPositionX();
-    float const dY = destination.GetPositionY() - bot->GetPositionY();
+    float const botX = bot->GetPositionX();
+    float const botY = bot->GetPositionY();
+    float const toPosX = destination.GetPositionX() - botX;
+    float const toPosY = destination.GetPositionY() - botY;
+
     float const moveDist = std::min(3.5f, distToDestination);
-    float const moveX = bot->GetPositionX() + (dX / distToDestination) * moveDist;
-    float const moveY = bot->GetPositionY() + (dY / distToDestination) * moveDist;
+    float const moveX = botX + (toPosX / distToDestination) * moveDist;
+    float const moveY = botY + (toPosY / distToDestination) * moveDist;
 
     return MoveTo(
         SWP_MAP_ID, moveX, moveY, destination.GetPositionZ(), false, false,
@@ -281,8 +415,8 @@ bool FelmystMoveToSafeFogLaneAction::Execute(Event /*event*/)
     }
 
     FogOfCorruptionState fogState;
-    bool const hasActiveFog =
-        TryGetActiveFogOfCorruptionState(bot, felmyst, fogState);
+    bool const hasActiveFog = TryGetActiveFogOfCorruptionState(bot, felmyst, fogState);
+
     FogLane thirdPassLane = FogLane::None;
     bool const shouldRepositionAfterThirdPass = !hasActiveFog &&
         TryGetFelmystPostThirdPassWindow(felmyst, thirdPassLane);
@@ -293,74 +427,46 @@ bool FelmystMoveToSafeFogLaneAction::Execute(Event /*event*/)
         return false;
     }
 
-    std::array<Position, 3> destinations;
-    uint8 destinationCount = 0;
-    if (!TryGetFelmystFogSafeDestinations(
+    Position destination;
+    Position const referencePoint(
+        felmyst->GetPositionX(), felmyst->GetPositionY(), felmyst->GetPositionZ());
+    if (!TryGetFelmystFogSafeDestination(
             bot, shouldRepositionAfterThirdPass ? thirdPassLane : fogState.lane,
-            destinations, destinationCount))
+            destination, shouldRepositionAfterThirdPass ? &referencePoint : nullptr))
     {
         _fogCrateStuckSampleMs = 0;
         return false;
     }
 
     LastMovement const& lastMove = AI_VALUE(LastMovement&, "last movement");
-    bool trackedDestinationFound = false;
-    for (uint8 index = 0; index < destinationCount; ++index)
+    if (Position(
+            lastMove.lastMoveToX, lastMove.lastMoveToY,
+            lastMove.lastMoveToZ).GetExactDist(destination) > FELMYST_LOCATION_MATCH_DISTANCE)
     {
-        Position const& destination = destinations[index];
-        if (Position(
-                lastMove.lastMoveToX, lastMove.lastMoveToY,
-                lastMove.lastMoveToZ).GetExactDist(destination) >
-            FELMYST_FOG_LOCATION_MATCH_DISTANCE)
-        {
-            continue;
-        }
-
-        trackedDestinationFound = true;
-        if (TryTeleportStuckBotOntoCrate(destination))
-            return true;
-
-        break;
-    }
-
-    if (!trackedDestinationFound)
         _fogCrateStuckSampleMs = 0;
-
-    if (shouldRepositionAfterThirdPass)
+    }
+    else if (TryTeleportStuckBotOntoCrate(destination))
     {
-        uint8 bestIndex = 0;
-        float bestDistance = std::numeric_limits<float>::max();
-        for (uint8 index = 0; index < destinationCount; ++index)
-        {
-            Position const& destination = destinations[index];
-            float const distanceToFelmyst = felmyst->GetExactDist2d(
-                destination.GetPositionX(), destination.GetPositionY());
-
-            if (distanceToFelmyst < bestDistance)
-            {
-                bestDistance = distanceToFelmyst;
-                bestIndex = index;
-            }
-        }
-
-        Position const& destination = destinations[bestIndex];
-        return MoveTo(
-            SWP_MAP_ID, destination.GetPositionX(), destination.GetPositionY(),
-            destination.GetPositionZ(), false, false, false, false,
-            MovementPriority::MOVEMENT_FORCED, true, false);
+        return true;
     }
 
-    for (uint8 index = 0; index < destinationCount; ++index)
+    // Try CCing skeletons in place before first pass move
+    if (bot->getClass() == CLASS_MAGE &&
+        botAI->CanCastSpell("frost nova", bot) && botAI->CastSpell("frost nova", bot))
     {
-        Position const& destination = destinations[index];
-        if (MoveTo(
-                SWP_MAP_ID, destination.GetPositionX(), destination.GetPositionY(),
-                destination.GetPositionZ(), false, false, false, false,
-                MovementPriority::MOVEMENT_FORCED, true, false))
-        {
-            return true;
-        }
+        return true;
     }
+
+    if (bot->getClass() == CLASS_HUNTER &&
+        botAI->CanCastSpell("frost trap", bot) && botAI->CastSpell("frost trap", bot))
+    {
+        return true;
+    }
+
+    return MoveTo(
+        SWP_MAP_ID, destination.GetPositionX(), destination.GetPositionY(),
+        destination.GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 
     return false;
 }
@@ -368,44 +474,40 @@ bool FelmystMoveToSafeFogLaneAction::Execute(Event /*event*/)
 bool FelmystMoveToSafeFogLaneAction::TryTeleportStuckBotOntoCrate(
     Position const& destination)
 {
-    constexpr float crateCollisionCheckDistance = 2.0f;
+    constexpr float collisionCheckDist = 2.0f;
     //By leewheel 2026-07-27 - move constants closer to usage
     Position const stuckCratePosition = { 1484.443f, 591.337f, 23.391f };
 
-    if (bot->GetExactDist2d(
-            stuckCratePosition.GetPositionX(),
-            stuckCratePosition.GetPositionY()) > crateCollisionCheckDistance)
+    if (bot->GetExactDist2d(stuckCratePosition) > collisionCheckDist)
     {
         _fogCrateStuckSampleMs = 0;
         return false;
     }
 
     uint32 const now = getMSTime();
-    float const distanceToDestination = bot->GetExactDist(
+    float const distToDestination = bot->GetExactDist(
         destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
 
     if (!_fogCrateStuckSampleMs || _fogCrateStuckDestination.GetExactDist(destination) >
-        FELMYST_FOG_LOCATION_MATCH_DISTANCE)
+        FELMYST_LOCATION_MATCH_DISTANCE)
     {
         _fogCrateStuckDestination = destination;
-        _fogCrateStuckNearestDistance = distanceToDestination;
+        _fogCrateStuckNearestDist = distToDestination;
         _fogCrateStuckSampleMs = now;
         return false;
     }
 
     //By leewheel 2026-07-27 - 常量移到使用处
-    constexpr float progressResetDistance = 1.0f;
-
-    if (distanceToDestination + progressResetDistance < _fogCrateStuckNearestDistance)
+    constexpr float progressResetDist = 1.0f;
+    if (distToDestination + progressResetDist < _fogCrateStuckNearestDist)
     {
-        _fogCrateStuckNearestDistance = distanceToDestination;
+        _fogCrateStuckNearestDist = distToDestination;
         _fogCrateStuckSampleMs = now;
         return false;
     }
 
     //By leewheel 2026-07-27 - 常量移到使用处
-    constexpr uint32 stuckTimeoutMs = 1500;
-
+    constexpr uint32 stuckTimeoutMs = 1000;
     if (getMSTimeDiff(_fogCrateStuckSampleMs, now) < stuckTimeoutMs)
         return false;
 

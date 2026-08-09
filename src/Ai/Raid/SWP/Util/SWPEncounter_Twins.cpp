@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 #include "SWPEncounter_Twins.h"
 #include "AiObjectContext.h"
 #include "CellImpl.h"
@@ -23,75 +26,58 @@ namespace SwpHelpers
 namespace
 {
 
-Position const ALYTHESS_START_POSITION = { 1819.180f, 625.539f, 33.4038f };
-std::array<Position, ALYTHESS_TANK_POSITION_COUNT> const alythessTankPositions =
-{{
-    { 1816.830f, 620.792f, 33.404f },
-    { 1824.211f, 625.169f, 33.404f },
-    { 1818.701f, 631.196f, 33.404f },
-    { 1829.375f, 631.110f, 33.404f },
-    { 1830.007f, 620.924f, 33.404f }
-}};
-
 std::unordered_map<ObjectGuid, ObjectGuid> alythessTankLastBlazeGuid;
 
 // Adjusted positions are to address the occasional bug (?) where Alythess moves
-Position GetAlythessAdjustedPosition(Unit* alythess, Position const& basePosition)
+Position GetAdjustedPosition(Unit* alythess, Position const& basePosition)
 {
     if (!alythess)
         return basePosition;
 
-    float const offsetX = alythess->GetPositionX() - ALYTHESS_START_POSITION.GetPositionX();
-    float const offsetY = alythess->GetPositionY() - ALYTHESS_START_POSITION.GetPositionY();
-    float const offsetZ = alythess->GetPositionZ() - ALYTHESS_START_POSITION.GetPositionZ();
+    Position const& alythessPosition = alythess->GetPosition();
+    Position const& startPosition = ALYTHESS_START_POSITION;
 
-    return {
-        basePosition.GetPositionX() + offsetX,
-        basePosition.GetPositionY() + offsetY,
-        basePosition.GetPositionZ() + offsetZ,
-    };
+    float const offsetX = alythessPosition.GetPositionX() - startPosition.GetPositionX();
+    float const offsetY = alythessPosition.GetPositionY() - startPosition.GetPositionY();
+    float const offsetZ = alythessPosition.GetPositionZ() - startPosition.GetPositionZ();
+
+    float const baseX = basePosition.GetPositionX();
+    float const baseY = basePosition.GetPositionY();
+    float const baseZ = basePosition.GetPositionZ();
+
+    return { baseX + offsetX, baseY + offsetY, baseZ + offsetZ };
 }
 
 } // end anonymous namespace
 
-Position const SACROLASH_TANK_POSITION  =             { 1804.255f, 630.193f, 33.404f };
-Position const EREDAR_TWINS_P1_RANGED_POSITION =      { 1808.076f, 603.460f, 51.684f };
-Position const EREDAR_TWINS_RANGED_CONFLAG_POSITION = { 1801.133f, 584.456f, 50.696f };
-Position const EREDAR_TWINS_MELEE_CONFLAG_POSITION =  { 1812.842f, 611.147f, 33.404f };
-
 std::unordered_map<uint32, EredarTwinsIncomingConflagrationState>
-    eredarTwinsIncomingConflagrationStates;
+	eredarTwinsIncomingConflagrationStates;
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：Blaze 目标状态表
-std::unordered_map<uint32, EredarTwinsBlazeTargetState>
-    eredarTwinsBlazeTargetStates;
-//End By leewheel
+std::unordered_map<uint32, EredarTwinsBlazeTargetState> eredarTwinsBlazeTargetStates;
 
 std::unordered_map<uint32, time_t> eredarTwinsDpsHoldTimer;
 
 Position GetAlythessTankPosition(Unit* alythess, uint8 index)
 {
-    if (index >= alythessTankPositions.size())
+    if (index >= ALYTHESS_TANK_POSITIONS.size())
         index = 0;
 
-    return GetAlythessAdjustedPosition(alythess, alythessTankPositions[index]);
+    return GetAdjustedPosition(alythess, ALYTHESS_TANK_POSITIONS[index]);
 }
 
-Position GetEredarTwinsP2MeleeStackPosition(Unit* alythess)
+Position GetEredarTwinsP2MeleePosition(Unit* alythess)
 {
-    Position const basePosition = { 1814.327f, 625.645f, 33.404f };
-    return GetAlythessAdjustedPosition(alythess, basePosition);
+    return GetAdjustedPosition(alythess, EREDAR_TWINS_P2_MELEE_POSITION);
 }
 
-Position GetEredarTwinsP2RangedStackPosition(Unit* alythess)
+Position GetEredarTwinsP2RangedPosition(Unit* alythess)
 {
-    Position const basePosition = { 1805.587f, 625.653f, 33.404f };
-    return GetAlythessAdjustedPosition(alythess, basePosition);
+    return GetAdjustedPosition(alythess, EREDAR_TWINS_P2_RANGED_POSITION);
 }
 
 bool IsAnySacrolashTank(Player* bot)
 {
-return PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 1, false);
+    return PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 1, false);
 }
 
 bool IsAlythessTank(Player* bot)
@@ -118,10 +104,10 @@ bool ShouldHoldTwinThreat(
             continue;
 
         Unit* victim = threatRef->GetVictim();
-if (!victim)
-continue;
+        if (!victim)
+            continue;
 
-Player* threatPlayer = victim->ToPlayer();
+        Player* threatPlayer = victim->ToPlayer();
         if (!threatPlayer || !threatPlayer->IsAlive())
             continue;
 
@@ -159,14 +145,11 @@ bool IsAlythessTankPositionSafe(Player* bot, Position const& position)
 
     for (GameObject* go : targets)
     {
-        if (!go || go->GetEntry() != static_cast<uint32>(SwpObjects::GO_BLAZE))
+        if (!go || go->GetEntry() != Id(SwpObjects::GO_BLAZE))
             continue;
 
-        if (go->GetExactDist2d(
-                position.GetPositionX(), position.GetPositionY()) <= blazeDangerRadius)
-        {
+        if (go->GetExactDist2d(position) <= blazeDangerRadius)
             return false;
-        }
     }
 
     return true;
@@ -181,7 +164,7 @@ bool ShouldAdvanceAlythessTankPosition(Unit* alythess, Player* bot)
     constexpr float blazeObjectRadius = 5.0f;
 
     GameObject* blazeObject = bot->FindNearestGameObject(
-        static_cast<uint32>(SwpObjects::GO_BLAZE), blazeObjectRadius);
+        Id(SwpObjects::GO_BLAZE), blazeObjectRadius);
 
     if (!blazeObject)
     {
@@ -198,18 +181,20 @@ bool ShouldAdvanceAlythessTankPosition(Unit* alythess, Player* bot)
     return true;
 }
 
-void RecordEredarTwinsIncomingConflagrationTarget(Player* target, uint32 durationMs)
+void RecordIncomingEredarTwinsConflagrationTarget(Player* target)
 {
-    if (!target || !durationMs)
+    if (!target)
         return;
 
     uint32 const now = getMSTime();
     EredarTwinsIncomingConflagrationState& state =
         eredarTwinsIncomingConflagrationStates[target->GetInstanceId()];
 
+    constexpr uint32 conflagrationDelayMs = 300;
     if (state.targetGuid != target->GetGUID())
-        state.delayMs = now + EREDAR_TWINS_INCOMING_CONFLAGRATION_DELAY_MS;
+        state.delayMs = now + conflagrationDelayMs;
 
+    constexpr uint32 durationMs = 2000;
     state.targetGuid = target->GetGUID();
     state.expireMs = now + durationMs;
 }
@@ -247,7 +232,6 @@ Player* GetEredarTwinsConflagrationTarget(Player* bot)
     return nullptr;
 }
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：Blaze 目标记录与查询（远程站位用）
 void RecordEredarTwinsBlazeTarget(Player* target)
 {
     if (!target)
@@ -255,8 +239,7 @@ void RecordEredarTwinsBlazeTarget(Player* target)
 
     constexpr uint32 durationMs = 2000;
     uint32 const now = getMSTime();
-    EredarTwinsBlazeTargetState& state =
-        eredarTwinsBlazeTargetStates[target->GetInstanceId()];
+    EredarTwinsBlazeTargetState& state = eredarTwinsBlazeTargetStates[target->GetInstanceId()];
     state.targetGuid = target->GetGUID();
     state.expireMs = now + durationMs;
 }
@@ -287,6 +270,5 @@ Player* GetEredarTwinsBlazeTarget(Player* bot)
 
     return nullptr;
 }
-//End By leewheel
 
 }

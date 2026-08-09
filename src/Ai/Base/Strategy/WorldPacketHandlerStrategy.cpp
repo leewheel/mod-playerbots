@@ -42,7 +42,8 @@ void WorldPacketHandlerStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
                                                                                 NextAction("open items", relevance),
                                                                                 NextAction("query item usage", relevance),
                                                                                 NextAction("equip upgrades packet action", relevance),
-                                                                                NextAction("give conjured refreshment", relevance) }));  // --By leewheel 2026-07-22
+                                                                                NextAction("give conjured refreshment", relevance),  // --By leewheel 2026-07-22
+                                                                                NextAction("give warlock stone", relevance) }));  // --By leewheel 2026-08-05
     triggers.push_back(new TriggerNode("item push result", { NextAction("quest item push result", relevance) }));
     triggers.push_back(new TriggerNode("loot roll won", { NextAction("equip upgrades packet action", relevance) }));
     triggers.push_back(new TriggerNode("ready check finished", { NextAction("finish ready check", relevance) }));

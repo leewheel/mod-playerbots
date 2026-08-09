@@ -26,6 +26,10 @@ private:
     int32 CalculateCost(Player* player, bool sell);
     void TryGiveConjuredRefreshment(Player* trader, Player* master);  // --By leewheel 2026-07-22
     void CastConjure(std::string const& spell, uint32 category);      // --By leewheel 2026-07-22
+    //By leewheel 2026-08-05 术士机器人交易时自动给玩家治疗石/灵魂石
+    void TryGiveWarlockStones(Player* trader, Player* master);
+    void CastWarlockStone(std::string const& spell);
+    //End By leewheel
 };
 
 // 法师机器人交易时自动给玩家法力面包和水 --By leewheel 2026-07-22
@@ -39,6 +43,19 @@ public:
 
 private:
     bool GiveOne(std::string const parseName, uint32 category);
+};
+
+// 术士机器人交易时自动给玩家治疗石/灵魂石(糖果) --By leewheel 2026-08-05
+class GiveWarlockStoneAction : public InventoryAction
+{
+public:
+    GiveWarlockStoneAction(PlayerbotAI* botAI) : InventoryAction(botAI, "give warlock stone") {}
+
+    bool Execute(Event event) override;
+    bool isUseful() override;
+
+private:
+    bool GiveOne(std::string const itemName, bool soul);
 };
 
 #endif

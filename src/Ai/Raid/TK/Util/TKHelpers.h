@@ -3,6 +3,8 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
 
 #ifndef PLAYERBOTS_TKHELPERS_H
 #define PLAYERBOTS_TKHELPERS_H
@@ -11,13 +13,19 @@
 #include "Position.h"
 #include "Unit.h"
 #include <ctime>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
 namespace TkHelpers
 {
 
-//By leewheel 2026-07-28 - 使用enum class替代旧的无作用域枚举，类型安全
+template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+constexpr uint32 Id(T value)
+{
+    return static_cast<uint32>(value);
+}
+
 enum class TkSpells : uint32
 {
     // Trash
@@ -33,7 +41,6 @@ enum class TkSpells : uint32
     SPELL_ARCANE_ORB                = 34172,
 
     // High Astromancer Solarian
-    SPELL_SELECT_TRUE_BEAM          = 33365,
     SPELL_SOLARIAN_TRANSFORM        = 39117,
     SPELL_WRATH_OF_THE_ASTROMANCER  = 42783,
 
@@ -54,7 +61,6 @@ enum class TkSpells : uint32
     SPELL_FEAR_WARD                 = 6346,
 };
 
-//By leewheel 2026-07-28 - 使用enum class替代旧的无作用域枚举
 enum class TkNpcs : uint32
 {
     // General
@@ -82,7 +88,6 @@ enum class TkNpcs : uint32
     NPC_FLAME_STRIKE_TRIGGER        = 21369,
 };
 
-//By leewheel 2026-07-28 - 使用enum class替代旧的无作用域枚举
 enum class TkItems : uint32
 {
     // Kael'thas Sunstrider
@@ -97,7 +102,9 @@ enum class TkItems : uint32
 };
 
 // General
-constexpr uint32 TK_MAP_ID = 550;
+
+inline constexpr uint32 TK_MAP_ID = 550;
+
 std::pair<Unit*, Unit*> GetTargetUnitPair(PlayerbotAI* botAI, uint32 entry);
 Player* GetNearestNonTankPlayerInRadius(Player* bot, float radius);
 std::vector<Unit*> GetAllHazardTriggers(Player* bot, uint32 npcEntry, float searchRadius);
@@ -109,6 +116,7 @@ bool IsPathSafeFromHazards(
     float hazardRadius);
 
 // Al'ar <Phoenix God>
+
 enum AlarLocationIndex
 {
     PLATFORM_0_IDX,
@@ -119,53 +127,107 @@ enum AlarLocationIndex
     POINT_MIDDLE_IDX,
     LOCATION_NONE = -1
 };
-constexpr float ALAR_BALCONY_Z = 17.0f;
-extern Position const ALAR_PLATFORM_0;
-extern Position const ALAR_PLATFORM_1;
-extern Position const ALAR_PLATFORM_2;
-extern Position const ALAR_PLATFORM_3;
-extern std::array<Position, 4> const PLATFORM_POSITIONS;
-extern std::array<Position, 4> const GROUND_POSITIONS;
-extern Position const ALAR_ROOM_CENTER;
-extern Position const ALAR_POINT_QUILL_OR_DIVE;
-extern Position const ALAR_POINT_MIDDLE;
-extern Position const ALAR_SE_RAMP_BASE;
-extern Position const ALAR_SW_RAMP_BASE;
-extern Position const ALAR_ROOM_S_CENTER;
-constexpr uint8 TOTAL_ALAR_LOCATIONS = 6;
+
+inline constexpr float ALAR_BALCONY_Z = 17.0f;
+inline constexpr uint8 TOTAL_ALAR_LOCATIONS = 6;
+
+inline Position const ALAR_LANDING_PLATFORM_0 = { 335.638f,  59.4879f, 17.9319f }; // West
+inline Position const ALAR_LANDING_PLATFORM_1 = { 388.751f,  31.7312f, 20.2636f }; // Northwest
+inline Position const ALAR_LANDING_PLATFORM_2 = { 388.791f, -33.1059f, 20.2636f }; // Northeast
+inline Position const ALAR_LANDING_PLATFORM_3 = { 332.723f, -61.1590f, 17.9791f }; // East
+inline std::array const ALAR_LANDING_PLATFORM_POSITIONS = {
+    ALAR_LANDING_PLATFORM_0,
+    ALAR_LANDING_PLATFORM_1,
+    ALAR_LANDING_PLATFORM_2,
+    ALAR_LANDING_PLATFORM_3,
+};
+
+inline Position const ALAR_TANK_PLATFORM_0 = { 329.433f,  59.914f, 17.548f };
+inline Position const ALAR_TANK_PLATFORM_1 = { 395.772f,  26.779f, 20.181f };
+inline Position const ALAR_TANK_PLATFORM_2 = { 387.498f, -41.909f, 20.182f };
+inline Position const ALAR_TANK_PLATFORM_3 = { 330.342f, -61.902f, 17.719f };
+inline std::array const ALAR_TANK_PLATFORM_POSITIONS = {
+    ALAR_TANK_PLATFORM_0,
+    ALAR_TANK_PLATFORM_1,
+    ALAR_TANK_PLATFORM_2,
+    ALAR_TANK_PLATFORM_3,
+};
+
+inline Position const ALAR_MELEE_DPS_PLATFORM_0 = { 344.037f,  64.339f, 18.350f };
+inline Position const ALAR_MELEE_DPS_PLATFORM_1 = { 387.558f,  40.300f, 20.182f };
+inline Position const ALAR_MELEE_DPS_PLATFORM_2 = { 395.275f, -28.573f, 20.182f };
+inline Position const ALAR_MELEE_DPS_PLATFORM_3 = { 346.427f, -69.361f, 18.750f };
+inline std::array const ALAR_MELEE_DPS_PLATFORM_POSITIONS = {
+    ALAR_MELEE_DPS_PLATFORM_0,
+    ALAR_MELEE_DPS_PLATFORM_1,
+    ALAR_MELEE_DPS_PLATFORM_2,
+    ALAR_MELEE_DPS_PLATFORM_3,
+};
+
+inline std::array const ALAR_GROUND_POSITIONS = {
+    Position{ 336.439f,  48.181f, -2.389f }, // Underish West platform
+    Position{ 379.122f,  25.146f, -2.385f }, // Underish Northwest platform
+    Position{ 378.583f, -27.481f, -2.385f }, // Underish Northeast platform
+    Position{ 331.631f, -49.716f, -2.389f }, // Underish East platform
+};
+
+inline Position const ALAR_ROOM_CENTER         = { 330.611f,  -2.540f, -2.389f };
+inline Position const ALAR_POINT_QUILL_OR_DIVE = { 332.000f,   0.010f, 43.000f };
+inline Position const ALAR_POINT_MIDDLE        = { 331.000f,   0.010f, -2.380f };
+inline Position const ALAR_SE_RAMP_BASE        = { 281.064f, -36.590f, -2.389f };
+inline Position const ALAR_SW_RAMP_BASE        = { 281.064f,  36.590f, -2.389f };
+inline Position const ALAR_ROOM_S_CENTER       = { 281.064f,   0.000f, -2.389f };
+
 extern std::unordered_map<uint32, bool> lastRebirthState;
 extern std::unordered_map<uint32, bool> isAlarInPhase2;
-int8 GetAlarDestinationLocationIndex(Unit* alar, Position dest);
+
+bool IsAlarInPhase2(uint32 instanceId);
+int8 GetAlarDestinationLocationIndex(Unit* alar);
 int8 GetAlarCurrentLocationIndex(Unit* alar);
+int8 GetAlarPlatformIndex(Unit* alar);
 void GetClosestPlatformAndGround(Position const botPos, int8& closestPlatform, Position& ground);
-Player* GetSecondEmberTank(Player* bot);
+bool IsPrimaryEmberTank(Player* bot);
+bool IsFirstAlarTank(Player* bot);
+bool IsSecondAlarTank(Player* bot);
+Player* GetPhase2SecondEmberTank(Player* bot);
 
 // Void Reaver
+
 struct ArcaneOrbData
 {
     Position destination;
     uint32 castTime;
 };
+
+inline constexpr uint32 ARCANE_ORB_DURATION_MS = 7000;
+inline constexpr float ARCANE_ORB_SAFE_DISTANCE = 22.0f;
+inline constexpr float ARCANE_ORB_BUFFER_DISTANCE = 30.0f;
+
+inline Position const VOID_REAVER_TANK_POSITION = { 423.845f, 371.733f, 14.897f };
+
 extern std::unordered_map<uint32, std::vector<ArcaneOrbData>> voidReaverArcaneOrbs;
-extern Position const VOID_REAVER_TANK_POSITION;
 
 // High Astromancer Solarian
+
 bool HasWrathOfTheAstromancer(Player* bot);
-Player* GetRangedLeader(Player* bot);
 
 // Kael'thas Sunstrider <Lord of the Blood Elves>
-constexpr uint32 ITEM_LEGENDARY_WEAPON_MIN = 30311;
-constexpr uint32 ITEM_LEGENDARY_WEAPON_MAX = 30318;
-extern Position const SANGUINAR_TANK_POSITION;
-extern Position const SANGUINAR_WAITING_POSITION;
-extern Position const TELONICUS_TANK_POSITION;
-extern Position const TELONICUS_WAITING_POSITION;
-extern Position const CAPERNIAN_WAITING_POSITION;
-extern Position const ADVISOR_HEAL_POSITION;
-extern Position const KAELTHAS_TANK_POSITION;
+
+inline constexpr uint32 ITEM_LEGENDARY_WEAPON_MIN = 30311;
+inline constexpr uint32 ITEM_LEGENDARY_WEAPON_MAX = 30318;
+
+inline Position const SANGUINAR_TANK_POSITION    = { 775.478f,  39.888f, 46.780f };
+inline Position const SANGUINAR_WAITING_POSITION = { 761.850f,  27.459f, 46.779f };
+inline Position const TELONICUS_TANK_POSITION    = { 773.717f,  44.091f, 46.780f };
+inline Position const TELONICUS_WAITING_POSITION = { 754.347f,  31.739f, 46.796f };
+inline Position const CAPERNIAN_WAITING_POSITION = { 743.897f, -11.575f, 46.779f };
+inline Position const ADVISOR_HEAL_POSITION      = { 752.171f,  19.494f, 46.779f };
+inline Position const KAELTHAS_TANK_POSITION     = { 774.008f,  -0.631f, 48.729f };
+
 extern std::unordered_map<uint32, time_t> advisorDpsWaitTimer;
+
 Player* GetCapernianTank(Player* bot);
-bool IsDebuffHunter(Player* bot);
+bool IsSanguinarDebuffHunter(Player* bot);
 bool IsAnyLegendaryWeaponDead(Player* bot);
 bool IsFeigningDeath(Unit* advisor);
 bool HasEquippableItemForSlot(Player* bot, uint8 slot);

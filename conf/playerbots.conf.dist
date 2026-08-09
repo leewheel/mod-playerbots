@@ -783,6 +783,12 @@ AiPlayerbot.EnableRandomBotTrading = 1
 # Default: 1 (enabled)
 AiPlayerbot.EnableMageTradeFoodWater = 1
 
+# 交易时术士机器人自动给玩家治疗石/灵魂石(糖果)（小队/团队内与术士机器人交易时触发） --By leewheel 2026-08-05
+# When enabled, a warlock bot will automatically give healthstone/soulstone
+# to a player who opens a trade window with it (party/raid members or master).
+# Default: 1 (enabled)
+AiPlayerbot.EnableWarlockTradeStones = 1
+
 # Configure message prefixes which will be excluded in analysis in trade action to open trade window
 AiPlayerbot.TradeActionExcludedPrefixes = "RPLL_H_,DBMv4,{звезда} Questie,{rt1} Questie"
 

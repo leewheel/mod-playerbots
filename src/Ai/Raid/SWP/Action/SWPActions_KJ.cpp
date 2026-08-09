@@ -10,6 +10,9 @@
 // By leewheel
 // End By leewheel
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 #include "SWPActions.h"
 #include "SWPEncounter_KJ.h"
 #include "Playerbots.h"
@@ -59,6 +62,7 @@ bool KiljaedenAnnounceDragonOrbUserAction::Execute(Event /*event*/)
 
 bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::Execute(Event /*event*/)
 {
+    // Don't run this method at all without at least 3 bot tanks
     Player* mainTank = GetGroupMainTank(botAI, bot);
     Player* firstAssistTank = GetGroupAssistTank(botAI, bot, 0);
     Player* secondAssistTank = GetGroupAssistTank(botAI, bot, 1);
@@ -70,98 +74,19 @@ bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::Execute(Event /*event*/
     }
 
     std::vector<Unit*> hands;
-    auto const& targets =
-        botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+    auto const& targets = AI_VALUE(GuidVector, "possible targets no los");
 
-    for (ObjectGuid const targetGuid : targets)
+    for (ObjectGuid const& targetGuid : targets)
     {
         Unit* target = botAI->GetUnit(targetGuid);
-        if (target && target->GetEntry() == static_cast<uint32>(SwpNpcs::NPC_HAND_OF_THE_DECEIVER))
+        if (target && target->GetEntry() == Id(SwpNpcs::NPC_HAND_OF_THE_DECEIVER))
             hands.push_back(target);
     }
 
     if (hands.empty())
         return false;
 
-    if (PlayerbotAI::IsTank(bot))
-    {
-        std::vector<Player*> const tanks = { mainTank, firstAssistTank, secondAssistTank };
-
-        size_t myIndex = tanks.size();
-        for (size_t i = 0; i < tanks.size(); ++i)
-        {
-            if (bot == tanks[i])
-            {
-                myIndex = i;
-                break;
-            }
-        }
-
-        if (myIndex >= tanks.size())
-            return false;
-
-        auto& assignments = kiljaedenHandTankAssignments[bot->GetInstanceId()];
-        ObjectGuid& assignedGuid = assignments[myIndex];
-
-        if (!assignedGuid.IsEmpty())
-        {
-            bool alive = false;
-            for (Unit* hand : hands)
-            {
-                if (hand->GetGUID() == assignedGuid)
-                {
-                    alive = true;
-                    break;
-                }
-            }
-            if (!alive)
-                assignedGuid = ObjectGuid::Empty;
-        }
-
-        if (assignedGuid.IsEmpty() && myIndex < hands.size())
-            assignedGuid = hands[myIndex]->GetGUID();
-
-        if (assignedGuid.IsEmpty())
-            return false;
-
-        Unit* assignedHand = botAI->GetUnit(assignedGuid);
-        if (!assignedHand || !assignedHand->IsAlive())
-            return false;
-
-        if (AI_VALUE(Unit*, "current target") != assignedHand)
-            return Attack(assignedHand);
-
-        if (assignedHand->GetVictim() != bot || !bot->IsWithinMeleeRange(assignedHand) ||
-            assignedHand->HasUnitState(UNIT_STATE_STUNNED))
-        {
-            return false;
-        }
-
-        constexpr float minTankDistance = 15.0f;
-
-        for (size_t i = 0; i < tanks.size(); ++i)
-        {
-            if (i == myIndex)
-                continue;
-
-            Player* otherTank = tanks[i];
-            if (!otherTank || !otherTank->IsAlive())
-                continue;
-
-            ObjectGuid const otherGuid = assignments[i];
-            if (otherGuid.IsEmpty())
-                continue;
-
-            Unit* otherHand = botAI->GetUnit(otherGuid);
-            if (!otherHand || !otherHand->IsAlive())
-                continue;
-
-            float const distFromTank = bot->GetExactDist2d(otherTank);
-            if (distFromTank < minTankDistance)
-                return MoveAway(otherTank, minTankDistance - distFromTank, true);
-        }
-    }
-    else
+    if (IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID))
     {
         Unit* focusHand = hands[0];
         for (Unit* hand : hands)
@@ -170,14 +95,104 @@ bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::Execute(Event /*event*/
                 focusHand = hand;
         }
 
-        if (IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID))
-        {
-            MarkTargetWithSkull(bot, focusHand);
+        if (MarkTargetWithSkull(bot, focusHand))
             return true;
-        }
+    }
 
-        if (AI_VALUE(Unit*, "current target") != focusHand)
-            return Attack(focusHand);
+    if (PlayerbotAI::IsTank(bot))
+        return ExecuteTankHandAssignment(hands, mainTank, firstAssistTank, secondAssistTank);
+
+    Unit* focusHand = hands[0];
+    for (Unit* hand : hands)
+    {
+        if (hand->GetGUID() < focusHand->GetGUID())
+            focusHand = hand;
+    }
+
+    if (AI_VALUE(Unit*, "current target") != focusHand)
+        return Attack(focusHand);
+
+    return false;
+}
+
+bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::ExecuteTankHandAssignment(
+    std::vector<Unit*> const& hands,
+    Player* mainTank, Player* firstAssistTank, Player* secondAssistTank)
+{
+    std::vector<Player*> const tanks = { mainTank, firstAssistTank, secondAssistTank };
+
+    size_t myIndex = tanks.size();
+    for (size_t i = 0; i < tanks.size(); ++i)
+    {
+        if (bot == tanks[i])
+        {
+            myIndex = i;
+            break;
+        }
+    }
+
+    if (myIndex >= tanks.size())
+        return false;
+
+    auto& assignments = kiljaedenHandTankAssignments[bot->GetInstanceId()];
+    ObjectGuid& assignedGuid = assignments[myIndex];
+
+    if (!assignedGuid.IsEmpty())
+    {
+        bool alive = false;
+        for (Unit* hand : hands)
+        {
+            if (hand->GetGUID() == assignedGuid)
+            {
+                alive = true;
+                break;
+            }
+        }
+        if (!alive)
+            assignedGuid = ObjectGuid::Empty;
+    }
+
+    if (assignedGuid.IsEmpty() && myIndex < hands.size())
+        assignedGuid = hands[myIndex]->GetGUID();
+
+    if (assignedGuid.IsEmpty())
+        return false;
+
+    Unit* assignedHand = botAI->GetUnit(assignedGuid);
+    if (!assignedHand || !assignedHand->IsAlive())
+        return false;
+
+    if (AI_VALUE(Unit*, "current target") != assignedHand)
+        return Attack(assignedHand);
+
+    if (assignedHand->GetVictim() != bot || !bot->IsWithinMeleeRange(assignedHand) ||
+        assignedHand->HasUnitState(UNIT_STATE_STUNNED))
+    {
+        return false;
+    }
+
+    constexpr float minTankDistance = 15.0f;
+
+    for (size_t i = 0; i < tanks.size(); ++i)
+    {
+        if (i == myIndex)
+            continue;
+
+        Player* otherTank = tanks[i];
+        if (!otherTank || !otherTank->IsAlive())
+            continue;
+
+        ObjectGuid const otherGuid = assignments[i];
+        if (otherGuid.IsEmpty())
+            continue;
+
+        Unit* otherHand = botAI->GetUnit(otherGuid);
+        if (!otherHand || !otherHand->IsAlive())
+            continue;
+
+        float const distFromTank = bot->GetExactDist2d(otherTank);
+        if (distFromTank < minTankDistance)
+            return MoveAway(otherTank, minTankDistance - distFromTank, true);
     }
 
     return false;
@@ -188,14 +203,13 @@ bool KiljaedenStunHandsOfTheDeceiverAction::Execute(Event /*event*/)
     if (bot->getClass() == CLASS_SHAMAN || bot->getClass() == CLASS_MAGE)
         return false;
 
-    auto const& targets =
-        botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+    auto const& targets = AI_VALUE(GuidVector, "possible targets no los");
 
-    for (ObjectGuid const targetGuid : targets)
+    for (ObjectGuid const& targetGuid : targets)
     {
         Unit* target = botAI->GetUnit(targetGuid);
         if (!target || target->GetHealthPct() <= 20.0f ||
-            target->GetEntry() != static_cast<uint32>(SwpNpcs::NPC_HAND_OF_THE_DECEIVER))
+            target->GetEntry() != Id(SwpNpcs::NPC_HAND_OF_THE_DECEIVER))
         {
             continue;
         }
@@ -215,6 +229,7 @@ bool KiljaedenStunHandsOfTheDeceiverAction::Execute(Event /*event*/)
 
 bool KiljaedenStunHandsOfTheDeceiverAction::CastStunOnHand(Unit* hand)
 {
+    // 80% HP is arbitrary; it's to try to let tanks get some spread before stunning
     if (hand->GetHealthPct() > 80.0f)
         return false;
 
@@ -275,7 +290,7 @@ bool KiljaedenStunHandsOfTheDeceiverAction::CastSilenceOnHand(Unit* hand)
 bool KiljaedenPositionTanksAction::Execute(Event /*event*/)
 {
     Position const& position = KILJAEDEN_TANK_POSITION;
-    if (bot->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) <= 2.0f)
+    if (bot->GetExactDist2d(position) <= 2.0f)
         return false;
 
     return MoveTo(
@@ -292,7 +307,7 @@ bool KiljaedenPositionMeleeAction::Execute(Event /*event*/)
     if (!TryAdjustForArmageddon(position))
         return false;
 
-    if (bot->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) <= 2.0f)
+    if (bot->GetExactDist2d(position) <= 2.0f)
         return false;
 
     return MoveTo(
@@ -312,8 +327,8 @@ bool KiljaedenPositionMeleeAction::TryGetPosition(Position& position) const
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || !PlayerbotAI::IsMelee(member) || member->GetMapId() != SWP_MAP_ID ||
-            !GET_PLAYERBOT_AI(member) || PlayerbotAI::IsTank(member))
+        if (!member || member->GetMapId() != SWP_MAP_ID || !GET_PLAYERBOT_AI(member) ||
+            !PlayerbotAI::IsMelee(member) || PlayerbotAI::IsTank(member))
         {
             continue;
         }
@@ -399,7 +414,7 @@ bool KiljaedenPositionRangedAction::Execute(Event /*event*/)
     if (!TryAdjustForArmageddon(position))
         return false;
 
-    if (bot->GetExactDist2d(position.GetPositionX(), position.GetPositionY()) <= 2.0f)
+    if (bot->GetExactDist2d(position) <= 2.0f)
         return false;
 
     return MoveTo(
@@ -468,16 +483,16 @@ bool KiljaedenStackForShieldOfTheBlueAction::Execute(Event /*event*/)
     float destX = darknessPosition.GetPositionX();
     float destY = darknessPosition.GetPositionY();
 
-    // 拥有 Fire Bloom 的机器人在黑暗（DarKness of a Thousand Souls）施法完成前 4500ms 内
-    // 必须远离黑暗叠层点 15 米，避免在黑暗爆炸时被炸
-    if (bot->HasAura(static_cast<uint32>(SwpSpells::SPELL_FIRE_BLOOM)))
+    // Bots with Fire Bloom wait 15y away from the Darkness stack spot until the Darkness cast
+    // is about to finish (4.5s, same threshold for the bot dragon to cast Shield of the Blue).
+    if (bot->HasAura(Id(SwpSpells::SPELL_FIRE_BLOOM)))
     {
         Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
         if (!kiljaeden)
             return false;
 
         if (Spell* darknessSpell = kiljaeden->FindCurrentSpellBySpellId(
-                static_cast<uint32>(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS));
+                Id(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS));
             darknessSpell && darknessSpell->GetCastTimeRemaining() >= 4500)
         {
             constexpr float targetDistance = 15.0f;
@@ -504,8 +519,6 @@ bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
     float closestDistance = 0.0f;
     float closestInUseOrbDistance = 0.0f;
     bool orbInUse = false;
-
-    constexpr float orbInUsePendingDistance = 15.0f;
 
     for (uint32 const orbEntry : KILJAEDEN_DRAGON_ORB_ENTRIES)
     {
@@ -540,6 +553,7 @@ bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
     {
         if (closestInUseOrb)
         {
+            constexpr float orbInUsePendingDistance = 15.0f;
             if (closestInUseOrbDistance <= orbInUsePendingDistance)
                 return true;
 
@@ -572,9 +586,8 @@ bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
         false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-// There is an issue with the root packets that causes bots to get stuck with
-// the root movement flag after using a dragon orb; this action is a workaround
-// to remove the stale root flag in those cases
+// There is an issue (maybe with the root packets) that causes bots to get stuck with the root
+// movement flag after using a dragon orb; this action is a workaround to remove the stale flag.
 bool KiljaedenReleaseStaleRootAction::Execute(Event /*event*/)
 {
     bot->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ROOT);
@@ -588,14 +601,14 @@ bool KiljaedenControlDragonAction::Execute(Event /*event*/)
     if (!kiljaeden)
         return false;
 
-    // Design choice: End drake control after phase changes
+    // End remaining bot drake control after phase changes, which may not be ideal but
+    // is the safer approach without knowing the player's composition or raid knowledge.
     if (kiljaeden->HasUnitState(UNIT_STATE_CASTING) &&
-        kiljaeden->FindCurrentSpellBySpellId(static_cast<uint32>(SwpSpells::SPELL_SHADOW_SPIKE)))
+        kiljaeden->FindCurrentSpellBySpellId(Id(SwpSpells::SPELL_SHADOW_SPIKE)))
     {
         if (HasKiljaedenDragonAura(bot))
         {
-            bot->RemoveAura(
-                static_cast<uint32>(SwpSpells::SPELL_VENGEANCE_OF_THE_BLUE_FLIGHT));
+            bot->RemoveAura(Id(SwpSpells::SPELL_VENGEANCE_OF_THE_BLUE_FLIGHT));
             return true;
         }
 
@@ -616,7 +629,7 @@ bool KiljaedenControlDragonAction::ExecuteDuringDarknessOfAThousandSouls(
     Unit* kiljaeden, Unit* dragon)
 {
     Spell* darknessSpell = kiljaeden->FindCurrentSpellBySpellId(
-        static_cast<uint32>(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS));
+        Id(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS));
     if (!darknessSpell)
         return false;
 
@@ -647,46 +660,29 @@ bool KiljaedenControlDragonAction::ExecuteDuringDarknessOfAThousandSouls(
         return true;
     }
 
-    if (dragon->GetCurrentSpell(CURRENT_GENERIC_SPELL) ||
-        dragon->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
-    {
+    if (dragon->IsNonMeleeSpellCast(false))
         return false;
-    }
 
     if (darknessSpell->GetCastTimeRemaining() < 4500)
-    {
-        return CastKiljaedenDragonSpell(
-            dragon, static_cast<uint32>(SwpSpells::SPELL_SHIELD_OF_THE_BLUE));
-    }
-    else if (CastKiljaedenDragonSpell(
-        dragon, static_cast<uint32>(SwpSpells::SPELL_DRAGON_BREATH_HASTE)))
-    {
+        return CastKiljaedenDragonSpell(dragon, Id(SwpSpells::SPELL_SHIELD_OF_THE_BLUE));
+    else if (CastKiljaedenDragonSpell(dragon, Id(SwpSpells::SPELL_DRAGON_BREATH_HASTE)))
         return true;
-    }
-    else if (CastKiljaedenDragonSpell(
-        dragon, static_cast<uint32>(SwpSpells::SPELL_DRAGON_BREATH_REVITALIZE)))
-    {
+    else if (CastKiljaedenDragonSpell(dragon, Id(SwpSpells::SPELL_DRAGON_BREATH_REVITALIZE)))
         return true;
-    }
 
     return false;
 }
 
 bool KiljaedenControlDragonAction::ExecuteOutsideDarknessOfAThousandSouls(Unit* dragon)
 {
-    if (dragon->GetCurrentSpell(CURRENT_GENERIC_SPELL) ||
-        dragon->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
-    {
+    if (dragon->IsNonMeleeSpellCast(false))
         return false;
-    }
 
     uint32 spellId = 0;
     Player* target = nullptr;
 
-    constexpr uint32 hasteSpellId =
-        static_cast<uint32>(SwpSpells::SPELL_DRAGON_BREATH_HASTE);
-    constexpr uint32 revitalizeSpellId =
-        static_cast<uint32>(SwpSpells::SPELL_DRAGON_BREATH_REVITALIZE);
+    constexpr uint32 hasteSpellId = Id(SwpSpells::SPELL_DRAGON_BREATH_HASTE);
+    constexpr uint32 revitalizeSpellId = Id(SwpSpells::SPELL_DRAGON_BREATH_REVITALIZE);
 
     if (!dragon->HasSpellCooldown(hasteSpellId))
     {

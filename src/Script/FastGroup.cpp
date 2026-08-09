@@ -1552,6 +1552,21 @@ public:
             botAI->ResetStrategies(false);
         // End By leewheel
 
+        //By leewheel 2026-08-05 修复：野性德鲁伊被快速组队分配坦克职责时策略错误
+        //  原因：AiFactory::AddDefaultCombatStrategies 对野性德鲁伊按形态判断，
+        //        20级会猫形态且未点厚皮天赋时给出"cat"输出策略，与坦克分配不符
+        //  后果：1) 战斗中变猫不变熊 2) botAI->IsTank()=false 使"坦克攻击"命令不生效
+        //  修复：坦克职责的德鲁伊强制切换为bear(熊)策略
+        //  补充：对齐AiFactory中bear分支的完整坦克策略组(tank assist/pull/pull back)
+        if (botAI && role == FG_ROLE_TANK && player->getClass() == CLASS_DRUID)
+        {
+            botAI->ChangeStrategy("-cat", BOT_STATE_COMBAT);
+            botAI->ChangeStrategy("+bear,+tank assist,+pull,+pull back", BOT_STATE_COMBAT);
+            LOG_INFO("playerbots", "快速组队：德鲁伊坦克 {} 已强制切换为熊形态策略(bear)。",
+                player->GetName());
+        }
+        //End By leewheel
+
         LOG_INFO("playerbots", "快速组队：机器人 {}（{}-{}）已上线，等级 {}，为玩家 {} 服务。",
             player->GetName(), GetClassNameCN(cls), GetRoleNameCN(role), targetLevel, setup.masterName);
     }

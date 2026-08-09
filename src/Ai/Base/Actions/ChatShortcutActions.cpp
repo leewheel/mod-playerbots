@@ -226,6 +226,63 @@ bool TankAttackChatShortcutAction::Execute(Event /*event*/)
     ResetReturnPosition();
     ResetStayPosition();
 
+    //By leewheel 2026-08-05 修复：坦克攻击命令不设置攻击目标
+    //  原因：原实现只移除passive策略，bot之后自行选目标，未必攻击玩家选择的怪
+    //  修复：把玩家当前选择的目标设为优先攻击目标(与"攻击"命令逻辑一致)
+    //  注意：必须在 botAI->Reset() 之后设置，否则会被Reset清空
+    //  补充1：设置前校验目标存在且为有效攻击目标，避免对友方/无效目标执行拉怪
+    //  补充2(2026-08-05 security review)：对齐AttackAction::Attack的死亡/PvP禁区校验
+    ObjectGuid targetGuid = master->GetTarget();
+    if (!targetGuid)
+    {
+        //By leewheel 2026-08-05 修复: 未选中目标时明确提示(与"攻击"命令语义一致)
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "attack_target_missing_error", "请先选中要攻击的目标。", {}));
+        return false;
+        //End By leewheel
+    }
+    if (targetGuid)
+    {
+        Unit* target = botAI->GetUnit(targetGuid);
+        if (!target || !target->IsInWorld())
+        {
+            botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "attack_target_not_in_world_error", "目标已不在世界中。", {}));
+            return false;
+        }
+        // 死亡目标不可攻击(与AttackAction一致)
+        if (target->isDead())
+        {
+            botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "attack_target_dead_error", "目标已死亡。", {}));
+            return false;
+        }
+        // 禁PvP区域不可攻击玩家/宠物(与AttackAction一致, 决斗除外)
+        if ((target->IsPlayer() || target->IsPet()) &&
+            (!bot->duel || bot->duel->Opponent != target) &&
+            (sPlayerbotAIConfig.IsPvpProhibited(bot->GetZoneId(), bot->GetAreaId()) ||
+             sPlayerbotAIConfig.IsPvpProhibited(target->GetZoneId(), target->GetAreaId())))
+        {
+            botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "attack_pvp_prohibited_error", "在禁止 PvP 的区域无法攻击其他玩家。", {}));
+            return false;
+        }
+        if (!bot->IsValidAttackTarget(target))
+        {
+            botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "attack_target_friendly_error", "该目标无法攻击(友方或无效目标)。", {}));
+            return false;
+        }
+
+        botAI->GetAiObjectContext()->GetValue<GuidVector>("prioritized targets")->Set({targetGuid});
+        botAI->GetAiObjectContext()->GetValue<ObjectGuid>("pull target")->Set(targetGuid);
+        if (verbose)
+            botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "attacking", "攻击中", {}));
+        return true;
+    }
+    //End By leewheel
+
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "attacking", "攻击中", {}));
     return true;

@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 // === 外部代码引入记录 ===
 // 2026-07-30 引入自 brighton-chi/mod-playerbots:
 //   commit 5167dd62ffa05cc4d8f5f1dcfad0b425dd68517f - KJ and Kalec edits (KalecgosAnnounceBossHealthAction 类)
@@ -252,6 +255,13 @@ public:
     FelmystAvoidDemonicVaporAction(
         PlayerbotAI* botAI) : MovementAction(botAI, "felmyst avoid demonic vapor") {}
     bool Execute(Event event) override;
+
+private:
+    void AnnounceFlightLeader(Player* leader);
+    bool MoveAwayFromVapor(bool unrestricted = false);
+    bool MoveToFlightLeader(Player* leader);
+
+    ObjectGuid _announcedFlightLeaderGuid;
 };
 
 class FelmystKiteDemonicVaporAction : public MovementAction
@@ -271,7 +281,7 @@ public:
 
 private:
     Position _fogCrateStuckDestination;
-    float _fogCrateStuckNearestDistance = std::numeric_limits<float>::max();
+    float _fogCrateStuckNearestDist = std::numeric_limits<float>::max();
     uint32 _fogCrateStuckSampleMs = 0;
     bool TryTeleportStuckBotOntoCrate(Position const& destination);
 };
@@ -418,7 +428,7 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool _entropiusInitialRangedPositionReached = false;
+    bool _entropiusRangedPositionReached = false;
     bool TryGetEntropiusInitialRangedPosition(Position& position) const;
 };
 
@@ -553,9 +563,9 @@ public:
 class KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction : public AttackAction
 {
 public:
-KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction(
-PlayerbotAI* botAI) : AttackAction(botAI, "kil'jaeden mark and prioritize hands of the deceiver") {}
-bool Execute(Event event) override;
+    KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "kil'jaeden mark and prioritize hands of the deceiver") {}
+    bool Execute(Event event) override;
 
 //By leewheel 2026-07-28 - 提取坦克手分配逻辑到独立方法，提高可读性
 private:

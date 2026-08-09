@@ -4,6 +4,9 @@
  * or (at your option) any later version.
  */
 
+//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
+//End By leewheel
+
 // === 外部代码引入记录 ===
 // 2026-07-30 引入自 brighton-chi/mod-playerbots:
 //   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: 重写 DemonicVaporKite multiplier 逻辑
@@ -128,9 +131,10 @@ float KalecgosWaitToDecurseMultiplier::GetValue(Action* action)
     if (!target)
         return 1.0f;
 
-    Aura* aura = target->GetAura(static_cast<uint32>(SwpSpells::SPELL_CURSE_OF_BOUNDLESS_AGONY));
+    // Like Illidan's Shadowfiends, the spread from player-to-player is a separate spell
+    Aura* aura = target->GetAura(Id(SwpSpells::SPELL_CURSE_OF_BOUNDLESS_AGONY));
     if (!aura)
-        aura = target->GetAura(static_cast<uint32>(SwpSpells::SPELL_CURSE_OF_BOUNDLESS_AGONY_SEC));
+        aura = target->GetAura(Id(SwpSpells::SPELL_CURSE_OF_BOUNDLESS_AGONY_SEC));
 
     if (aura && aura->GetDuration() >= 15000) // 15 seconds remaining
         return 0.0f;
@@ -168,9 +172,7 @@ float KalecgosRestrictTauntMultiplier::GetValue(Action* action)
     if (IsInSpectralRealm(bot))
         return 1.0f;
 
-    //By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，函数重命名
-if (GetKalecgosDesignatedTank(bot) != bot)
-//End By leewheel
+    if (GetKalecgosDesignatedTank(bot) != bot)
         return 0.0f;
 
     return 1.0f;
@@ -190,9 +192,12 @@ float KalecgosSuppressAssistTankPullThreatMultiplier::GetValue(Action* action)
     if (!AI_VALUE2(Unit*, "find target", "kalecgos"))
         return 1.0f;
 
-    KalecgosEncounterState& state = kalecgosEncounterStates[bot->GetInstanceId()];
+    auto const stateItr = kalecgosEncounterStates.find(bot->GetInstanceId());
+    if (stateItr == kalecgosEncounterStates.end() || !stateItr->second.encounterStartMs)
+        return 1.0f;
+
     constexpr uint32 pullThreatSuppressionMs = 5000;
-    if (getMSTimeDiff(state.encounterStartMs, getMSTime()) < pullThreatSuppressionMs)
+    if (getMSTimeDiff(stateItr->second.encounterStartMs, getMSTime()) < pullThreatSuppressionMs)
         return 0.0f;
 
     return 1.0f;
@@ -266,8 +271,10 @@ float BrutallusNoKillingSpreeWhenNearbyBurnMultiplier::GetValue(Action* action)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (member && member->HasAura(static_cast<uint32>(SwpSpells::SPELL_BURN)) &&
-            PlayerbotAI::IsMelee(member) && !PlayerbotAI::IsMainTank(member) &&
+        if (!member || !member->HasAura(Id(SwpSpells::SPELL_BURN)))
+            continue;
+
+        if (PlayerbotAI::IsMelee(member) && !PlayerbotAI::IsMainTank(member) &&
             !PlayerbotAI::IsAssistTankOfIndex(member, 0, true))
         {
             return 0.0f;
@@ -369,24 +376,17 @@ float FelmystPrioritizeEncapsulateAvoidanceMultiplier::GetValue(Action* action)
 
 float FelmystPrioritizeFogAvoidanceMultiplier::GetValue(Action* action)
 {
-    bool const isReachOrDrink =
-        dynamic_cast<CastReachTargetSpellAction*>(action) ||
-        dynamic_cast<DrinkAction*>(action);
-
-    bool const isBlockedMovement =
-        dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<AttackAction*>(action) &&
-        !dynamic_cast<FelmystMoveToSafeFogLaneAction*>(action);
-
-    bool const isFogLaneMove =
-        dynamic_cast<FelmystMoveToSafeFogLaneAction*>(action);
-
-    bool const isDpsSpell =
-        dynamic_cast<CastSpellAction*>(action) &&
-        !dynamic_cast<CastHealingSpellAction*>(action);
-
-    if (!isReachOrDrink && !isBlockedMovement && !isFogLaneMove && !isDpsSpell)
+    if (dynamic_cast<AttackAction*>(action) ||
+        dynamic_cast<FelmystMoveToSafeFogLaneAction*>(action))
+    {
         return 1.0f;
+    }
+
+    if (!dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action))
+    {
+        return 1.0f;
+    }
 
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
     if (!felmyst || !felmyst->IsFlying())
@@ -394,60 +394,21 @@ float FelmystPrioritizeFogAvoidanceMultiplier::GetValue(Action* action)
 
     FogOfCorruptionState fogState;
     FogLane thirdPassLane = FogLane::None;
-    bool const shouldRepositionAfterThirdPass =
-        TryGetFelmystPostThirdPassWindow(felmyst, thirdPassLane);
 
-    if (!TryGetFelmystFogOfCorruptionStageState(felmyst, fogState) &&
-        !shouldRepositionAfterThirdPass)
+    if (TryGetFelmystFogOfCorruptionStageState(felmyst, fogState) ||
+        TryGetFelmystPostThirdPassWindow(felmyst, thirdPassLane))
     {
-        return 1.0f;
-    }
-
-    // Fog is active �?always-blocked action types
-    if (isReachOrDrink || isBlockedMovement)
         return 0.0f;
-
-    // Remaining: fog lane move or DPS spell �?these need danger state
-    FogOfCorruptionState dangerousFogState;
-    bool needsFogAvoidance = TryGetActiveFogOfCorruptionState(
-        bot, felmyst, dangerousFogState);
-
-    FogLane const activeLane = needsFogAvoidance ? dangerousFogState.lane :
-        shouldRepositionAfterThirdPass ? thirdPassLane :
-        fogState.lane;
-
-    if (isFogLaneMove)
-    {
-        std::array<Position, 3> destinations;
-        uint8 destinationCount = 0;
-        bool canRelocate = TryGetFelmystFogSafeDestinations(
-            bot, activeLane, destinations, destinationCount);
-        return canRelocate ? 1.0f : 0.0f;
-    }
-
-    // DPS spell �?blocked when in active danger and can relocate
-    if (needsFogAvoidance)
-    {
-        std::array<Position, 3> destinations;
-        uint8 destinationCount = 0;
-        bool canRelocate = TryGetFelmystFogSafeDestinations(
-            bot, dangerousFogState.lane, destinations, destinationCount);
-        if (canRelocate)
-            return 0.0f;
     }
 
     return 1.0f;
 }
 
-//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots 最终代码（HEAD）：
-//   把动作过滤从 MovementAction 改为 ReachTargetAction + CastReachTargetSpellAction + FollowAction
-//   引入 IsFelmystLanding 检查：Felmyst 降落时允许机器人移动以开始 DPS
-//   注释：最终代码删除了 IsFelmystDemonicVaporHeadNearBot 检查（两个分支都返回 0.0f，对结果无影响）
-float FelmystPrioritizeDemonicVaporKiteMultiplier::GetValue(Action* action)
+float FelmystPrioritizeDemonicVaporAvoidanceMultiplier::GetValue(Action* action)
 {
-    if (!dynamic_cast<FollowAction*>(action) &&
+    if (!dynamic_cast<ReachTargetAction*>(action) &&
         !dynamic_cast<CastReachTargetSpellAction*>(action) &&
-        !dynamic_cast<ReachTargetAction*>(action))
+        !dynamic_cast<FollowAction*>(action))
     {
         return 1.0f;
     }
@@ -468,6 +429,8 @@ float FelmystPrioritizeDemonicVaporKiteMultiplier::GetValue(Action* action)
 
 float FelmystFocusAttacksOnCharmedPlayerMultiplier::GetValue(Action* action)
 {
+    // The charmed player is still friendly to group members so is considered to be an
+    // invalid target by bots; blocking "drop target" allows them to be attacked
     if (!dynamic_cast<DpsAssistAction*>(action) &&
         !dynamic_cast<DropTargetAction*>(action))
     {
@@ -485,7 +448,6 @@ float FelmystFocusAttacksOnCharmedPlayerMultiplier::GetValue(Action* action)
     if (!charmedTarget)
         return 1.0f;
 
-    //By leewheel 2026-07-27 - 删除isMelee变量，直接内联调用
     if (PlayerbotAI::IsMelee(bot) && !felmyst->IsFlying() && bot->IsWithinMeleeRange(charmedTarget))
         return 0.0f;
 
@@ -495,7 +457,6 @@ float FelmystFocusAttacksOnCharmedPlayerMultiplier::GetValue(Action* action)
     return 1.0f;
 }
 
-//By leewheel 2026-07-27 新增 Felmyst 不对小怪施放DoT的乘�?// Felmyst飞行阶段，阻止对非Boss目标施放DoT法术
 float FelmystDontDotAddsMultiplier::GetValue(Action* action)
 {
     if (!dynamic_cast<CastDebuffSpellOnAttackerAction*>(action))
@@ -505,7 +466,6 @@ float FelmystDontDotAddsMultiplier::GetValue(Action* action)
     if (!felmyst || !felmyst->IsFlying())
         return 1.0f;
 
-    // 目标不是Felmyst时压制DoT
     if (action->GetTarget() != felmyst)
         return 0.0f;
 
@@ -612,10 +572,10 @@ float EredarTwinsControlThreatMultiplier::GetValue(Action* action)
     constexpr float alythessThreatRatio = 0.9f;
     constexpr float sacrolashThreatRatio = 0.8f;
 
-    bool const shouldHoldSacrolashThreat = sacrolash &&
-        ShouldHoldTwinThreat(bot, sacrolash, sacrolashThreatRatio, IsAnySacrolashTank);
-    bool const shouldHoldAlythessThreat = alythess &&
-        ShouldHoldTwinThreat(bot, alythess, alythessThreatRatio, IsAlythessTank);
+    bool const shouldHoldSacrolashThreat = sacrolash && ShouldHoldTwinThreat(
+        bot, sacrolash, sacrolashThreatRatio, IsAnySacrolashTank);
+    bool const shouldHoldAlythessThreat = alythess && ShouldHoldTwinThreat(
+        bot, alythess, alythessThreatRatio, IsAlythessTank);
 
     if (!shouldHoldSacrolashThreat && !shouldHoldAlythessThreat)
         return 1.0f;
@@ -639,22 +599,20 @@ float EredarTwinsControlMovementMultiplier::GetValue(Action* action)
         dynamic_cast<FleeAction*>(action) ||
         dynamic_cast<CastDisengageAction*>(action) ||
         dynamic_cast<CastBlinkBackAction*>(action) ||
-        dynamic_cast<CastKillingSpreeAction*>(action);
-
-    bool const isTankAvoidAoe =
-        PlayerbotAI::IsTank(bot) && dynamic_cast<AvoidAoeAction*>(action);
+        dynamic_cast<CastKillingSpreeAction*>(action) ||
+        (PlayerbotAI::IsTank(bot) && dynamic_cast<AvoidAoeAction*>(action));
 
     bool const isReachAction =
         dynamic_cast<ReachTargetAction*>(action) ||
         dynamic_cast<CastReachTargetSpellAction*>(action);
 
-    if (!isAlwaysBlocked && !isTankAvoidAoe && !isReachAction)
+    if (!isAlwaysBlocked && !isReachAction)
         return 1.0f;
 
     if (!AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
         return 1.0f;
 
-    if (isAlwaysBlocked || isTankAvoidAoe)
+    if (isAlwaysBlocked)
         return 0.0f;
 
     if (isReachAction && (PlayerbotAI::IsRanged(bot) || IsAlythessTank(bot)))
@@ -699,7 +657,7 @@ float EredarTwinsNoMovingIntoConflagrationMultiplier::GetValue(Action* action)
     if (isReachSpell)
         return 0.0f;
 
-    if (bot->GetDistance2d(victim) < 10.0f) // For MovementAction generally
+    if (bot->GetDistance2d(victim) < 10.0f) // Block MovementAction generally
         return 0.0f;
 
     return 1.0f;
@@ -725,11 +683,11 @@ float EredarTwinsDelayCooldownsMultiplier::GetValue(Action* action)
 
 float MuruDisableDefaultTargetingMultiplier::GetValue(Action* action)
 {
-    bool isDpsAssist =
+    bool const isDpsAssist =
         botAI->GetState() == BOT_STATE_COMBAT && dynamic_cast<DpsAssistAction*>(action);
-    bool isTankAssist =
+    bool const isTankAssist =
         botAI->GetState() == BOT_STATE_COMBAT && dynamic_cast<TankAssistAction*>(action);
-    bool isCastDotOnAddSpell = dynamic_cast<CastDebuffSpellOnAttackerAction*>(action);
+    bool const isCastDotOnAddSpell = dynamic_cast<CastDebuffSpellOnAttackerAction*>(action);
 
     if (!isDpsAssist && !isTankAssist && !isCastDotOnAddSpell)
         return 1.0f;
@@ -747,8 +705,7 @@ float MuruDisableDefaultTargetingMultiplier::GetValue(Action* action)
     }
 
     constexpr float searchRadius = 40.0f;
-    Unit* voidSpawn = bot->FindNearestCreature(
-        static_cast<uint32>(SwpNpcs::NPC_VOID_SPAWN), searchRadius);
+    Unit* voidSpawn = bot->FindNearestCreature(Id(SwpNpcs::NPC_VOID_SPAWN), searchRadius);
     if (isCastDotOnAddSpell && voidSpawn && AI_VALUE(Unit*, "current target") == voidSpawn)
         return 0.0f;
 
@@ -818,12 +775,10 @@ float MuruControlMovementMultiplier::GetValue(Action* action)
         float const targetDistFromMuru = muru->GetExactDist2d(actionTarget);
         Position const& refPosition = PlayerbotAI::IsAssistTankOfIndex(bot, 1, true) ?
             MURU_ENTRANCE_POSITION : MURU_STACK_POSITION;
-        float const targetDistFromRef = actionTarget->GetExactDist2d(
-            refPosition.GetPositionX(), refPosition.GetPositionY());
+        float const targetDistFromRef = actionTarget->GetExactDist2d(refPosition);
         constexpr float targetDistThreshold = 20.0f;
 
-        return targetDistFromMuru > targetDistThreshold &&
-            targetDistFromRef < targetDistThreshold;
+        return targetDistFromMuru > targetDistThreshold && targetDistFromRef < targetDistThreshold;
     };
 
     if (isReachTargetSafeFromDarkness(action))
@@ -831,8 +786,8 @@ float MuruControlMovementMultiplier::GetValue(Action* action)
 
     if (PlayerbotAI::IsTank(bot) && !TryGetMuruDarknessEarlyState(bot, muru))
         return 1.0f;
-    else
-        return 0.0f;
+
+    return 0.0f;
 }
 
 float MuruDelayCooldownsMultiplier::GetValue(Action* action)
@@ -923,7 +878,7 @@ float KiljaedenTanksFocusAssignedHandOnlyMultiplier::GetValue(Action* action)
     if (!AI_VALUE2(Unit*, "find target", "hand of the deceiver"))
         return 1.0f;
 
-    // Apply this multiplier only if there are 3 bot tanks
+    // Apply this multiplier only if there are at least 3 bot tanks
     Player* mainTank = GetGroupMainTank(botAI, bot);
     if (!mainTank || !GET_PLAYERBOT_AI(mainTank))
         return 1.0f;
@@ -986,10 +941,10 @@ float KiljaedenPrioritizeDarknessProtectionMultiplier::GetValue(Action* action)
 
 float KiljaedenControlDragonMultiplier::GetValue(Action* action)
 {
-    if (dynamic_cast<WipeAction*>(action))
+    if (dynamic_cast<KiljaedenControlDragonAction*>(action))
         return 1.0f;
 
-    if (dynamic_cast<KiljaedenControlDragonAction*>(action))
+    if (dynamic_cast<WipeAction*>(action))
         return 1.0f;
 
     if (!AI_VALUE2(Unit*, "find target", "kil'jaeden"))

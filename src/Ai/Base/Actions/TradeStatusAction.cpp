@@ -68,6 +68,14 @@ bool TradeStatusAction::Execute(Event event)
 
     if (status == TRADE_STATUS_TRADE_ACCEPT || (status == TRADE_STATUS_BACK_TO_TRADE && trader->GetTradeData() && trader->GetTradeData()->IsAccepted()))
     {
+        //By leewheel 2026-08-05 交易确认前补放 conjure 面包水/术士石头
+        //  原因：BEGIN_TRADE 时施法 conjure 的物品依赖 "item push result" 事件补放，
+        //        该事件在某些场景不触发导致水/石头不进交易栏；玩家点确认时补放可覆盖。
+        //        GiveOne 已有"交易栏已有同类则跳过"判断，不会重复放置。
+        TryGiveConjuredRefreshment(trader, master);
+        TryGiveWarlockStones(trader, master);
+        //End By leewheel
+
         WorldPacket p;
         uint32 status = 0;
         p << status;
@@ -132,6 +140,8 @@ bool TradeStatusAction::Execute(Event event)
 
         // 法师机器人交易时自动给玩家法力面包和水 --By leewheel 2026-07-22
         TryGiveConjuredRefreshment(trader, master);
+        // 术士机器人交易时自动给玩家治疗石/灵魂石 --By leewheel 2026-08-05
+        TryGiveWarlockStones(trader, master);
 
         return true;
     }
@@ -523,6 +533,155 @@ bool GiveConjuredRefreshmentAction::GiveOne(std::string const parseName, uint32 
         for (uint8 i = 0; i < TRADE_SLOT_TRADED_COUNT && tradeSlot == -1; i++)
             if (pTrade->GetItem(TradeSlots(i)) == nullptr)
                 tradeSlot = i;
+
+        if (tradeSlot == -1)
+            return false;
+
+        WorldPacket packet(CMSG_SET_TRADE_ITEM, 3);
+        packet << (uint8)tradeSlot;
+        packet << (uint8)item->GetBagSlot();
+        packet << (uint8)item->GetSlot();
+        bot->GetSession()->HandleSetTradeItemOpcode(packet);
+        return true;
+    }
+
+    return false;
+}
+
+// 术士机器人交易时自动给玩家治疗石/灵魂石(糖果) --By leewheel 2026-08-05
+// 打开交易窗口时：先把背包里已有的治疗石/灵魂石放入交易栏，缺少的则施法制造，
+// 制造完成后由 "item push result" 触发器或交易确认前补放。
+void TradeStatusAction::TryGiveWarlockStones(Player* trader, Player* master)
+{
+    if (!sPlayerbotAIConfig.enableWarlockTradeStones)
+        return;
+
+    // 仅术士机器人
+    if (bot->getClass() != CLASS_WARLOCK)
+        return;
+
+    // 交易对象必须是真实玩家
+    if (!trader || GET_PLAYERBOT_AI(trader))
+        return;
+
+    // 仅主人或同队/团队成员
+    if (trader != master && (!bot->GetGroup() || !bot->GetGroup()->IsMember(trader->GetGUID())))
+        return;
+
+    if (!bot->GetTradeData())
+        return;
+
+    // 先把背包里已有的治疗石/灵魂石放入交易栏
+    botAI->DoSpecificAction("give warlock stone", Event(), true);
+
+    // 缺少的施法制造（施法完成后由 item push result 触发器或交易确认前补放进交易栏）
+    if (parseItems("healthstone", ITERATE_ITEMS_IN_BAGS).empty())
+        CastWarlockStone("create healthstone");
+
+    if (parseItems("soulstone", ITERATE_ITEMS_IN_BAGS).empty())
+        CastWarlockStone("create soulstone");
+}
+
+// 施放 create healthstone / create soulstone，按法术名匹配（兼容中文客户端法术名） --By leewheel 2026-08-05
+void TradeStatusAction::CastWarlockStone(std::string const& spell)
+{
+    uint32 castId = 0;
+
+    for (PlayerSpellMap::iterator itr = bot->GetSpellMap().begin(); itr != bot->GetSpellMap().end(); ++itr)
+    {
+        uint32 spellId = itr->first;
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+        if (!spellInfo)
+            continue;
+
+        // 只处理生成物品的法术
+        if (spellInfo->Effects[0].Effect != SPELL_EFFECT_CREATE_ITEM)
+            continue;
+
+        // 按法术名匹配（含中文客户端法术名）
+        bool match = false;
+
+        std::string const namepart = spellInfo->SpellName[0];
+        std::wstring wnamepart;
+        if (Utf8toWStr(namepart, wnamepart))
+        {
+            wstrToLower(wnamepart);
+            match = Utf8FitTo(spell, wnamepart);
+        }
+
+        if (!match)
+            continue;
+
+        // 取最高等级
+        if (spellInfo->Id > castId)
+            castId = spellInfo->Id;
+    }
+
+    if (castId)
+        botAI->CastSpell(castId, bot);
+}
+
+bool GiveWarlockStoneAction::isUseful()
+{
+    return bot->GetTrader() && bot->getClass() == CLASS_WARLOCK && sPlayerbotAIConfig.enableWarlockTradeStones;
+}
+
+bool GiveWarlockStoneAction::Execute(Event /*event*/)
+{
+    Player* trader = bot->GetTrader();
+    if (!trader || GET_PLAYERBOT_AI(trader))
+        return false;
+
+    if (bot->getClass() != CLASS_WARLOCK || !sPlayerbotAIConfig.enableWarlockTradeStones)
+        return false;
+
+    if (!bot->GetTradeData())
+        return false;
+
+    bool given = false;
+    given = GiveOne("healthstone", false) || given;
+    given = GiveOne("soulstone", true) || given;
+    return given;
+}
+
+// 把背包里一个对应名称的治疗石/灵魂石放入空闲交易栏 --By leewheel 2026-08-05
+bool GiveWarlockStoneAction::GiveOne(std::string const itemName, bool soul)
+{
+    TradeData* pTrade = bot->GetTradeData();
+    if (!pTrade)
+        return false;
+
+    // 交易栏里已有同类石头则不再重复放
+    for (uint32 slot = 0; slot < TRADE_SLOT_TRADED_COUNT; ++slot)
+    {
+        Item* item = pTrade->GetItem((TradeSlots)slot);
+        if (item && item->GetTemplate() &&
+            strstri(item->GetTemplate()->Name1.c_str(), (soul ? "soulstone" : "healthstone")))
+            return false;
+    }
+
+    // 从背包找一个对应名称的石头
+    std::vector<Item*> items = parseItems(itemName, ITERATE_ITEMS_IN_BAGS);
+    for (Item* item : items)
+    {
+        if (!item || item->IsInTrade())
+            continue;
+
+        ItemTemplate const* proto = item->GetTemplate();
+        if (!proto || !strstri(proto->Name1.c_str(), (soul ? "soulstone" : "healthstone")))
+            continue;
+
+        // 找一个空闲交易栏
+        int32 tradeSlot = -1;
+        for (uint32 slot = 0; slot < TRADE_SLOT_TRADED_COUNT; ++slot)
+        {
+            if (!pTrade->GetItem((TradeSlots)slot))
+            {
+                tradeSlot = slot;
+                break;
+            }
+        }
 
         if (tradeSlot == -1)
             return false;

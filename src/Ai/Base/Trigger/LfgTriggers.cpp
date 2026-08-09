@@ -7,6 +7,12 @@
 #include "LfgTriggers.h"
 
 #include "AiFactory.h"
+// By leewheel 2026-08-02
+// 修复编译错误 C2065/C2039：LfgRolePriorityTrigger::IsActive 使用了 lfg::LfgState / sLFGMgr /
+// lfg::LFG_STATE_NONE / lfg::LFG_STATE_DUNGEON，但本文件缺少核心 LFG 头文件，
+// 编译器无法识别这些标识符。补充 include（LFGMgr.h 内部已包含 LFG.h 提供 LfgState 枚举）。
+#include "LFGMgr.h"
+// End By leewheel
 #include "Playerbots.h"
 
 bool LfgProposalActiveTrigger::IsActive() { return AI_VALUE(uint32, "lfg proposal"); }
