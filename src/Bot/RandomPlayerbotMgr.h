@@ -20,6 +20,9 @@
 #include <map>
 #include <unordered_map>
 // End By leewheel
+// By leewheel 2026-08-09: 合并上游 #2633，currentBots 改为 unordered_set 提升性能
+#include <unordered_set>
+// End By leewheel
 
 struct BattlegroundInfo
 {
@@ -315,7 +318,7 @@ private:
     std::map<uint32, std::map<uint32, std::vector<WorldLocation>>> rpgLocsCacheLevel;
     std::map<TeamId, std::map<BattlegroundTypeId, std::vector<uint32>>> BattleMastersCache;
     std::unordered_map<uint32, BotEventCache> eventCache;
-    std::list<uint32> currentBots;
+    std::unordered_set<uint32> currentBots;
     uint32 bgBotsCount;
     uint32 playersLevel;
 
