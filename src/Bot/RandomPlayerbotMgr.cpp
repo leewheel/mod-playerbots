@@ -1406,6 +1406,33 @@ static int32 GetTankSpecTab(uint8 cls)
     }
 }
 
+// By leewheel 2026-08-11
+// 获取坦克职业机器人的坦克专精天赋点数（用于"边缘判定"诊断）
+// 背景：GetPlayerSpecTab 只返回天赋点最多的那一页，存在严重误判：
+//   战士 30防护/31狂怒 → 判定狂怒(DPS)，本来是潜在坦克被错过
+//   战士 25防护/25狂怒/15武器 → 同样判定为非坦克
+// 此函数返回该 bot 在坦克专精页上的实际天赋点数，供 ForceBotsJoinLfg 判断是否为"潜在坦克"。
+static uint32 GetTankSpecPoints(Player* bot)
+{
+    int32 const tankTab = GetTankSpecTab(bot->getClass());
+    if (tankTab < 0)
+        return 0;
+    std::map<uint8, uint32> tabs = AiFactory::GetPlayerSpecTabs(bot);
+    return tabs[tankTab];
+}
+
+// 判断坦克职业 bot 是否为"潜在坦克"——坦克专精天赋点数≥20但当前未被 IsBotTank 判定为坦克
+// 用于修复 GetPlayerSpecTab 边缘误判导致的坦克缺位问题
+static bool IsPotentialTank(Player* bot)
+{
+    if (!ClassCanTank(bot->getClass()))
+        return false;
+    if (IsBotTank(bot))
+        return false;
+    return GetTankSpecPoints(bot) >= 20;
+}
+// End By leewheel
+
 // 获取治疗天赋页索引
 static int32 GetHealerSpecTab(uint8 cls)
 {
@@ -1546,8 +1573,14 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     // By leewheel 2026-08-01
     // 周期性卡顿修复：全服扫描兜底限频为 5 分钟一次（原来每 30 秒一次），
     // 且所有诊断日志降级为 DEBUG——世界线程每 30 秒全服遍历 + 逐人日志 I/O 是 30 秒周期卡顿的直接来源。
+    // By leewheel 2026-08-11
+    // 修复坦克不进组：全服扫描节流从 5 分钟改为 1 分钟。
+    // 根因：players 向量检测不到真实玩家排队时，5 分钟内 teamHasQueuedPlayer 保持 false，
+    //       lfgQueueStartTime 被反复重置为 0，ForceBotsJoinLfg 永远不触发；
+    //       且 else 分支会立即清掉所有已入队的单人 bot，坦克无法保持入队状态。
+    //       改为 60 秒后，最多 2 轮 CheckLfgQueue（60秒）即可检测到真实玩家排队。
     if (!teamHasQueuedPlayer[TEAM_ALLIANCE] && !teamHasQueuedPlayer[TEAM_HORDE] &&
-        time(nullptr) > (FullScanTimer + 300))
+        time(nullptr) > (FullScanTimer + 60))
     {
         FullScanTimer = time(nullptr);
         LOG_DEBUG("playerbots", "[LFG诊断] players向量未检测到排队玩家，启动全服扫描...");
@@ -1672,8 +1705,26 @@ void RandomPlayerbotMgr::CheckLfgQueue()
         }
         else
         {
-            // 没有真实玩家排队，重置计时器
-            lfgQueueStartTime[teamId] = 0;
+            // By leewheel 2026-08-11
+            // 修复坦克不进组：teamHasQueuedPlayer = false 时不再立即重置 lfgQueueStartTime 和清理所有单人 QUEUED bot。
+            //
+            // 根因（玩家反馈"超过10分钟没有坦克进组"）：
+            //   teamHasQueuedPlayer 在 true/false 之间频繁切换时（players 向量中玩家短暂 IsInWorld()=false、
+            //   全服扫描节流期间检测不到等），原逻辑每轮 false 都会：
+            //     1. lfgQueueStartTime = 0 → waitTime 永远达不到 effectiveThreshold(22.5秒)，ForceBotsJoinLfg 永远不触发
+            //     2. 立即清掉所有单人 QUEUED bot → 坦克 bot 通过 LfgRolePriorityTrigger 自主入队后 30 秒就被清掉，
+            //        无法在队列中保持足够时间让 LFGQueue::UpdateQueueTimers(8秒周期)撮合成功
+            //   两者叠加导致坦克 bot 在入队/离队之间循环，玩家端看到"超过10分钟没有坦克进组"。
+            //
+            // 修复策略（给宽限期，不立即清）：
+            //   1. lfgQueueStartTime 保留 90 秒不重置——下一轮 teamHasQueuedPlayer=true 时 waitTime 可继续累计
+            //   2. 已入队的单人 bot 只清理超时的（randomBotLfgMaxQueueWaitTime=180秒），不立即全部清掉
+            //   3. 90 秒后仍无真实玩家排队，才真正重置 lfgQueueStartTime 并走原来的清理逻辑
+            bool const queueExpired = (lfgQueueStartTime[teamId] != 0 &&
+                                       time(nullptr) - lfgQueueStartTime[teamId] > 90);
+            if (queueExpired)
+                lfgQueueStartTime[teamId] = 0;
+            // End By leewheel
 
             // By leewheel 2026-07-30
             // 清理滞留队列的机器人：真实玩家离开队列(或已进本)后，此前补位/自主排队的
@@ -1683,6 +1734,9 @@ void RandomPlayerbotMgr::CheckLfgQueue()
             // 撮合与状态推送，队列里滞留的 bot 越多，世界线程每 8 秒的尖峰越大，
             // 表现为玩家端每隔 7~8 秒规律性卡顿。没有真实玩家排队时 bot 留在队列毫无意义，
             // 这里立即让本阵营所有单人 QUEUED 状态的随机机器人离开队列。
+            // By leewheel 2026-08-11
+            // 修复坦克不进组：宽限期(90秒)内不清理单人 QUEUED bot，只清理超时的。
+            // 宽限期过后(queueExpired=true)走原来的全量清理逻辑。
             for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
             {
                 Player* bot = it->second;
@@ -1693,6 +1747,17 @@ void RandomPlayerbotMgr::CheckLfgQueue()
                     continue;
                 if (sLFGMgr->GetState(bot->GetGUID()) != lfg::LFG_STATE_QUEUED)
                     continue;
+                // By leewheel 2026-08-11
+                // 宽限期内只清理超时 bot，不立即全部清掉
+                if (!queueExpired)
+                {
+                    time_t const joinTime = GetBotLfgJoinTime(bot->GetGUID());
+                    if (!joinTime)
+                        continue;
+                    if (time(nullptr) - joinTime < sPlayerbotAIConfig.randomBotLfgMaxQueueWaitTime)
+                        continue;
+                }
+                // End By leewheel
                 sLFGMgr->LeaveLfg(bot->GetGUID());
                 // By leewheel 2026-08-01
                 // 同步清除入队时间记录，防止 lfgBotJoinTime 无限增长
@@ -1758,6 +1823,10 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     std::array<int, 4> idleTankByClass = {};
     std::array<int, 4> switchableNonHealerTankByClass = {};
     std::array<int, 4> switchableHealerTankByClass = {};
+    // By leewheel 2026-08-11
+    // 潜在坦克误判统计：坦克专精天赋点数≥20但 GetPlayerSpecTab 误判为非坦克的 bot 数量
+    // 用于诊断"明明是坦克天赋的机器人自认为DPS"问题
+    std::array<int, 4> potentialTanksByClass = {};
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* bot = it->second;
@@ -1803,6 +1872,12 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     switchableHealerTankByClass[tankClassSlot]++;
                 else
                     switchableNonHealerTankByClass[tankClassSlot]++;
+                // By leewheel 2026-08-11
+                // 潜在坦克检测：坦克职业 bot 当前不是坦克天赋，但坦克专精天赋点数≥20
+                // 说明 GetPlayerSpecTab 因天赋点分散而误判，该 bot 实际上是潜在坦克
+                if (GetTankSpecPoints(bot) >= 20)
+                    potentialTanksByClass[tankClassSlot]++;
+                // End By leewheel
             }
             if (isHealer)
                 idleHealers++;
@@ -1827,18 +1902,51 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
 
     // By leewheel 2026-08-01
     // 周期性卡顿修复：补位/诊断日志全部降级为 DEBUG，消除世界线程日志 I/O 尖峰
-    LOG_DEBUG("playerbots", "LFG补位开始: 队列中坦{}奶{}DPS{}, 需补坦{}奶{}DPS{} (阵营={})",
+    // By leewheel 2026-08-11
+    // 玩家反馈"随机本坦克10分钟不进组"，根因之一是诊断日志全部 DEBUG，运维看不到任何信息
+    // 升级关键诊断日志为 INFO，让运维能定位是"无坦克职业bot在线"还是"天赋误判"
+    LOG_INFO("playerbots", "LFG补位开始: 队列中坦{}奶{}DPS{}, 需补坦{}奶{}DPS{} (阵营={})",
              tanksInQueue, healersInQueue, dpsInQueue,
              needTanks > 0 ? needTanks : 0, needHealers > 0 ? needHealers : 0, needDps > 0 ? needDps : 0,
              teamId == TEAM_ALLIANCE ? "联盟" : "部落");
-    LOG_DEBUG("playerbots", "[LFG诊断] 空闲bot统计: 总计={} 坦克={} 治疗={} DPS={} (阵营={})",
+    LOG_INFO("playerbots", "[LFG诊断] 空闲bot统计: 总计={} 坦克={} 治疗={} DPS={} (阵营={})",
              idleTotal, idleTanks, idleHealers, idleDps,
              teamId == TEAM_ALLIANCE ? "联盟" : "部落");
-    LOG_DEBUG("playerbots", "[LFG诊断] 坦克职业候选: 战士(现成{} 非治疗可切{} 治疗可切{}) 圣骑士(现成{} 非治疗可切{} 治疗可切{}) 德鲁伊(现成{} 非治疗可切{} 治疗可切{}) 死亡骑士(现成{} 非治疗可切{} 治疗可切{})",
+    LOG_INFO("playerbots", "[LFG诊断] 坦克职业候选: 战士(现成{} 非治疗可切{} 治疗可切{}) 圣骑士(现成{} 非治疗可切{} 治疗可切{}) 德鲁伊(现成{} 非治疗可切{} 治疗可切{}) 死亡骑士(现成{} 非治疗可切{} 治疗可切{})",
              idleTankByClass[0], switchableNonHealerTankByClass[0], switchableHealerTankByClass[0],
              idleTankByClass[1], switchableNonHealerTankByClass[1], switchableHealerTankByClass[1],
              idleTankByClass[2], switchableNonHealerTankByClass[2], switchableHealerTankByClass[2],
              idleTankByClass[3], switchableNonHealerTankByClass[3], switchableHealerTankByClass[3]);
+
+    // By leewheel 2026-08-11
+    // 无坦克职业bot在线告警：当整个阵营没有战士/圣骑/德鲁伊/DK的空闲bot时，明确告知运维
+    // 这是玩家等不到坦克的根本原因之一——服务器根本没有坦克职业的机器人可调度
+    if (needTanks > 0 &&
+        idleTankByClass[0] == 0 && idleTankByClass[1] == 0 && idleTankByClass[2] == 0 && idleTankByClass[3] == 0 &&
+        switchableNonHealerTankByClass[0] == 0 && switchableNonHealerTankByClass[1] == 0 &&
+        switchableNonHealerTankByClass[2] == 0 && switchableNonHealerTankByClass[3] == 0 &&
+        switchableHealerTankByClass[0] == 0 && switchableHealerTankByClass[1] == 0 &&
+        switchableHealerTankByClass[2] == 0 && switchableHealerTankByClass[3] == 0)
+    {
+        LOG_ERROR("playerbots", "[LFG坦克告警] 阵营{} 缺坦克{}个, 但无任何坦克职业bot在线(战士/圣骑/德鲁伊/DK均无空闲候选), 玩家将一直等不到坦克! 请检查randomBotAccounts是否包含坦克职业账号或增加坦克职业bot数量",
+            teamId == TEAM_ALLIANCE ? "联盟" : "部落", needTanks);
+    }
+    // End By leewheel
+
+    // By leewheel 2026-08-11
+    // 潜在坦克误判告警：坦克职业bot有≥20点坦克专精天赋，但 GetPlayerSpecTab 因天赋点分散误判为DPS
+    // 这些bot会在phase1被强制切坦，但如果是"30防护/31狂怒"这种边缘情况，切换是浪费的
+    // 告警让运维知道存在天赋点分配不合理的bot，可以从源头修复（调整randomClassSpecIndex配置）
+    if (needTanks > 0 &&
+        (potentialTanksByClass[0] > 0 || potentialTanksByClass[1] > 0 ||
+         potentialTanksByClass[2] > 0 || potentialTanksByClass[3] > 0))
+    {
+        LOG_WARN("playerbots", "[LFG坦克告警] 阵营{} 存在潜在坦克被误判为DPS: 战士{} 圣骑{} 德鲁伊{} DK{} (坦克专精天赋≥20但GetPlayerSpecTab判定为非坦克, 将在phase1强制切坦)",
+            teamId == TEAM_ALLIANCE ? "联盟" : "部落",
+            potentialTanksByClass[0], potentialTanksByClass[1],
+            potentialTanksByClass[2], potentialTanksByClass[3]);
+    }
+    // End By leewheel
     // End By leewheel
 
     // By leewheel 2026-07-29
@@ -2133,9 +2241,11 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     // 只有所有职责缺额都归零才记录“补位完成”；仍有缺额时必须明确告警，禁止产生假成功日志。
     // By leewheel 2026-08-01
     // 周期性卡顿修复：成功路径降级为 DEBUG，避免每次补位完成都触发 INFO 日志 I/O 尖峰
+    // By leewheel 2026-08-11
+    // 玩家反馈"随机本坦克10分钟不进组"，需要运维能看到补位结果，升级回 INFO
     if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
     {
-        LOG_DEBUG("playerbots", "LFG补位完成: 坦克、治疗和DPS职责均已补齐 (阵营={})",
+        LOG_INFO("playerbots", "LFG补位完成: 坦克、治疗和DPS职责均已补齐 (阵营={})",
             teamId == TEAM_ALLIANCE ? "联盟" : "部落");
     }
     else
