@@ -597,7 +597,7 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
 
     //By leewheel 2026-07-19: 在非战斗引擎中也添加 avoid aoe 策略
     //原代码只在 AddDefaultCombatStrategies 中添加，导致战斗结束后（捡尸体/走路时）不再躲避炸弹/陷阱
-    if (sPlayerbotAIConfig.autoAvoidAoe && facade->HasRealPlayerMaster())
+    if (sPlayerbotAIConfig.autoAvoidAoe && facade->HasGameClientMaster())
         nonCombatEngine->addStrategy("avoid aoe", false);
     //End By leewheel
 

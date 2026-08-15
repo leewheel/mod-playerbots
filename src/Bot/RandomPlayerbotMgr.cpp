@@ -1310,7 +1310,7 @@ static bool IsBotIdleForLfg(Player* bot)
         return false;
     // 非真实玩家
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-    if (!botAI || botAI->IsRealPlayer())
+    if (!botAI || IsRealPlayer(bot))
         return false;
     return true;
 }

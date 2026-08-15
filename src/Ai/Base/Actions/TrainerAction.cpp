@@ -558,7 +558,7 @@ bool AutoGearAction::Execute(Event event)
     if (!sPlayerbotAIConfig.autoGearCommand)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "自动装备命令不可用，请检查配置。", {}));
+            "autogear_command_disabled_error", "自动装备命令不可用，请检查配置。", {}));
         return false;
     }
 

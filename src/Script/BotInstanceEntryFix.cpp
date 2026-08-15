@@ -450,7 +450,7 @@ public:
         if (player->GetSession()->IsBot())
         {
             PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
-            if (botAI && !botAI->IsRealPlayer())
+            if (botAI && !IsRealPlayer(player))
             {
                 // By leewheel 2026-07-21
                 // 移除随机本冷却(71328)和逃兵惩罚(71041)：
