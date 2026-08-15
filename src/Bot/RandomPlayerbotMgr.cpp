@@ -6,19 +6,11 @@
 
 #include "RandomPlayerbotMgr.h"
 
-#include <WorldSessionMgr.h>
-
-#include <algorithm>
-#include <array>
-#include <boost/thread/thread.hpp>
-#include <cstdlib>
-#include <ctime>
-#include <iomanip>
-#include <random>
-
 #include "AiFactory.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+#include "Cell.h"
+#include "CellImpl.h"
 #include "ChannelMgr.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
@@ -26,6 +18,7 @@
 #include "Define.h"
 #include "FleeManager.h"
 #include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "LFGMgr.h"
 #include "MapMgr.h"
 #include "NewRpgInfo.h"
@@ -48,11 +41,14 @@
 #include "TravelMgr.h"
 #include "Unit.h"
 #include "World.h"
+#include "WorldSessionMgr.h"
 #include "WorldPacket.h"
-#include "Cell.h"
-#include "GridNotifiers.h"
-#include "CellImpl.h"
-#include "GridNotifiersImpl.h"
+#include <algorithm>
+#include <boost/thread/thread.hpp>
+#include <cstdlib>
+#include <ctime>
+#include <iomanip>
+#include <random>
 
 struct GuidClassRaceInfo
 {
@@ -2396,10 +2392,8 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
             if (player->GetGroup() && botAI->GetGroupLeader())
             {
                 PlayerbotAI* groupLeaderBotAI = GET_PLAYERBOT_AI(botAI->GetGroupLeader());
-                if (!groupLeaderBotAI || groupLeaderBotAI->IsRealPlayer())
-                {
+                if (!groupLeaderBotAI || IsSelfBot(botAI->GetGroupLeader()))
                     update = false;
-                }
             }
 
             // if (botAI->HasPlayerNearby(sPlayerbotAIConfig.grindDistance))
@@ -3097,7 +3091,7 @@ bool RandomPlayerbotMgr::IsRandomBot(Player* bot)
 {
     if (bot && GET_PLAYERBOT_AI(bot))
     {
-        if (GET_PLAYERBOT_AI(bot)->IsRealPlayer())
+        if (IsSelfBot(bot))
             return false;
     }
     if (bot)
@@ -3121,7 +3115,7 @@ bool RandomPlayerbotMgr::IsAddclassBot(Player* bot)
 {
     if (bot && GET_PLAYERBOT_AI(bot))
     {
-        if (GET_PLAYERBOT_AI(bot)->IsRealPlayer())
+        if (IsSelfBot(bot))
             return false;
     }
     if (bot)

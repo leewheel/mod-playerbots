@@ -5,7 +5,6 @@
  */
 
 #include "ChooseTravelTargetAction.h"
-
 #include "ChatHelper.h"
 #include "LootObjectStack.h"
 #include "Playerbots.h"
@@ -537,7 +536,7 @@ bool ChooseTravelTargetAction::SetNewQuestTarget(TravelTarget* target)
 
     // Find quest givers.
     std::vector<TravelDestination*> TravelDestinations =
-        TravelMgr::instance().getQuestTravelDestinations(bot, -1, botAI->HasRealPlayerMaster());
+        TravelMgr::instance().getQuestTravelDestinations(bot, -1, botAI->HasGameClientMaster());
 
     activeDestinations.insert(activeDestinations.end(), TravelDestinations.begin(), TravelDestinations.end());
 
@@ -566,7 +565,7 @@ bool ChooseTravelTargetAction::SetRpgTarget(TravelTarget* target)
 
     // Find rpg npcs
     std::vector<TravelDestination*> TravelDestinations =
-        TravelMgr::instance().getRpgTravelDestinations(bot, botAI->HasRealPlayerMaster());
+        TravelMgr::instance().getRpgTravelDestinations(bot, botAI->HasGameClientMaster());
 
     activeDestinations.insert(activeDestinations.end(), TravelDestinations.begin(), TravelDestinations.end());
 
@@ -595,7 +594,7 @@ bool ChooseTravelTargetAction::SetGrindTarget(TravelTarget* target)
 
     // Find grind mobs.
     std::vector<TravelDestination*> TravelDestinations =
-        TravelMgr::instance().getGrindTravelDestinations(bot, botAI->HasRealPlayerMaster());
+        TravelMgr::instance().getGrindTravelDestinations(bot, botAI->HasGameClientMaster());
 
     activeDestinations.insert(activeDestinations.end(), TravelDestinations.begin(), TravelDestinations.end());
 
@@ -624,7 +623,7 @@ bool ChooseTravelTargetAction::SetBossTarget(TravelTarget* target)
 
     // Find boss mobs.
     std::vector<TravelDestination*> TravelDestinations =
-        TravelMgr::instance().getBossTravelDestinations(bot, botAI->HasRealPlayerMaster());
+        TravelMgr::instance().getBossTravelDestinations(bot, botAI->HasGameClientMaster());
 
     activeDestinations.insert(activeDestinations.end(), TravelDestinations.begin(), TravelDestinations.end());
 
@@ -671,7 +670,7 @@ bool ChooseTravelTargetAction::SetExploreTarget(TravelTarget* target)
 
     if (activePoints.empty())
     {
-        TravelDestinations = TravelMgr::instance().getExploreTravelDestinations(bot, botAI->HasRealPlayerMaster());
+        TravelDestinations = TravelMgr::instance().getExploreTravelDestinations(bot, botAI->HasGameClientMaster());
 
         for (auto& activeTarget : activeDestinations)
         {

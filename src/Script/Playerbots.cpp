@@ -4,7 +4,7 @@
  */
 
 #include "Playerbots.h"
-
+#include "BattleGroundTactics.h"
 #include "BattlefieldScript.h"
 #include "Channel.h"
 #include "Config.h"
@@ -13,14 +13,13 @@
 #include "GuildTaskMgr.h"
 #include "PlayerScript.h"
 #include "PlayerbotAIConfig.h"
+#include "PlayerbotCommandScript.h"
 #include "PlayerbotGuildMgr.h"
 #include "PlayerbotSpellRepository.h"
 #include "PlayerbotWorldThreadProcessor.h"
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
-#include "PlayerbotCommandScript.h"
 #include "cmath"
-#include "BattleGroundTactics.h"
 
 //By leewheel 2026-07-20 - 新手玩家向高级机器人求助互动
 extern bool HandleBotBeggingInteraction(Player* sender, Player* receiver, const std::string& msg);
@@ -126,9 +125,9 @@ public:
         if (!player->IsInWorld() || player->GetMapId() == mapid)
             return true;
 
-        // If real player do nothing
+        // If this is a selfbot, do nothing
         PlayerbotAI* ai = GET_PLAYERBOT_AI(player);
-        if (!ai || ai->IsRealPlayer())
+        if (!ai || IsSelfBot(player))
             return true;
 
         // Cross-map bot teleport: defer visibility reference cleanup.
@@ -425,7 +424,7 @@ public:
         if (botAI == nullptr)
             return true;
 
-        return botAI->IsRealPlayer();
+        return IsSelfBot(player);
     }
 
     void OnPlayerbotPacketSent(Player* player, WorldPacket const* packet) override
@@ -460,10 +459,8 @@ public:
         {
             PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(player);
 
-            if (botAI == nullptr || botAI->IsRealPlayer())
-            {
+            if (botAI == nullptr || IsSelfBot(player))
                 playerbotMgr->LogoutAllBots();
-            }
         }
 
         sRandomPlayerbotMgr.OnPlayerLogout(player);
@@ -558,6 +555,8 @@ void AddSC_ForPlayerCommand();
 void AddSC_FishingParty();
 //End By leewheel
 
+void AddSC_randombot_level_mgr();
+
 void AddPlayerbotsScripts()
 {
     new PlayerbotsBattlefieldScript();
@@ -603,4 +602,6 @@ void AddPlayerbotsScripts()
     //By leewheel 2026-07-20 - 玩家自用机器人辅助命令
     AddSC_ForPlayerCommand();
     //End By leewheel
+
+    AddSC_randombot_level_mgr();
 }

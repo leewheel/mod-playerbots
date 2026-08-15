@@ -7,10 +7,10 @@
 #ifndef PLAYERBOTS_BWLTRIGGERCONTEXT_H
 #define PLAYERBOTS_BWLTRIGGERCONTEXT_H
 
-#include "BossAuraTriggers.h"
 #include "BWLHelpers.h"
-#include "NamedObjectContext.h"
 #include "BWLTriggers.h"
+#include "BossAuraTriggers.h"
+#include "NamedObjectContext.h"
 
 class RaidBwlTriggerContext : public NamedObjectContext<Trigger>
 {

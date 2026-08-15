@@ -5,7 +5,6 @@
  */
 
 #include "BearDruidStrategy.h"
-
 #include "Playerbots.h"
 
 class BearDruidStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
@@ -20,7 +19,7 @@ public:
         creators["swipe (bear)"] = &swipe_bear;
         creators["lacerate"] = &lacerate;
         //By leewheel 2026-07-28 - 注册growl(低吼)为嘲讽技能，使botAI能识别熊德有嘲讽能力
-        creators["taunt spell"] = &growl;
+        creators["taunt spell"] = &growl; // Empty ActionNode needed to register as taunt spell
     }
 
 private:

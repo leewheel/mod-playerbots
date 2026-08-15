@@ -7,11 +7,12 @@
 #ifndef PLAYERBOTS_RANDOMPLAYERBOTMGR_H
 #define PLAYERBOTS_RANDOMPLAYERBOTMGR_H
 
+#include "GameTime.h"
 #include "NewRpgInfo.h"
 #include "ObjectGuid.h"
-#include "PlayerbotMgr.h"
-#include "GameTime.h"
 #include "PlayerbotCommandServer.h"
+#include "PlayerbotMgr.h"
+#include <unordered_set>
 
 // By leewheel 2026-08-01
 // 周期性卡顿修复：新增 <array>/<map>/<unordered_map> 头文件依赖，

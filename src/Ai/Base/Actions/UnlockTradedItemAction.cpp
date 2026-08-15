@@ -6,11 +6,11 @@
 
 #include "UnlockTradedItemAction.h"
 #include "PlayerbotAI.h"
-#include "TradeData.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "Log.h"
 #include "Spell.h"
+#include "TradeData.h"
 
 // By leewheel 2026-07-18
 // 修复开锁交易物品的问题：第一次成功后后续全部失败

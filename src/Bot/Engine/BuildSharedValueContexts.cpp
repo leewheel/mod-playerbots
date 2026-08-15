@@ -5,6 +5,7 @@
  */
 
 #include "AiObjectContext.h"
+#include "MechValueContext.h"
 #include "ValueContext.h"
 #include "Ai/Dungeon/Mech/MechValueContext.h"
 //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略

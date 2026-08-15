@@ -8,10 +8,10 @@
 #define PLAYERBOTS_BWLACTIONCONTEXT_H
 
 #include "Action.h"
-#include "NamedObjectContext.h"
 #include "BWLActions.h"
 #include "BWLHelpers.h"
 #include "BossAuraActions.h"
+#include "NamedObjectContext.h"
 
 class RaidBwlActionContext : public NamedObjectContext<Action>
 {

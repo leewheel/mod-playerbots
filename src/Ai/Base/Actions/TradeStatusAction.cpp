@@ -5,7 +5,6 @@
  */
 
 #include "TradeStatusAction.h"
-
 #include "CraftValue.h"
 #include "Event.h"
 #include "GuildTaskMgr.h"
@@ -181,7 +180,7 @@ bool TradeStatusAction::CheckTrade()
     if (!bot->GetTradeData() || !trader || !trader->GetTradeData())
         return false;
 
-    if (!botAI->HasActivePlayerMaster() && GET_PLAYERBOT_AI(bot->GetTrader()))
+    if (!IsRealPlayer(botAI->GetMaster()) && GET_PLAYERBOT_AI(bot->GetTrader()))
     {
         for (uint32 slot = 0; slot < TRADE_SLOT_TRADED_COUNT; ++slot)
         {
@@ -203,7 +202,7 @@ bool TradeStatusAction::CheckTrade()
         if (isGettingItem)
         {
             if (bot->GetGroup() && bot->GetGroup()->IsMember(bot->GetTrader()->GetGUID()) &&
-                botAI->HasRealPlayerMaster())
+                botAI->HasGameClientMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "trade_thank_you_player",
                     "谢谢你 %player",

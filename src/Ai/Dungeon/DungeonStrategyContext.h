@@ -7,46 +7,29 @@
 #ifndef PLAYERBOTS_DUNGEONSTRATEGYCONTEXT_H
 #define PLAYERBOTS_DUNGEONSTRATEGYCONTEXT_H
 
-#include "Strategy.h"
+#include "ACStrategy.h"
+#include "AKStrategy.h"
+#include "ANStrategy.h"
+#include "CoSStrategy.h"
+#include "DTKStrategy.h"
+#include "FoSStrategy.h"
+#include "GDStrategy.h"
 #include "HFRStrategy.h"
 //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
 #include "UBStrategy.h"
 //End By leewheel
-#include "ACStrategy.h"
-#include "SethStrategy.h"
-#include "MechStrategy.h"
-#include "UKStrategy.h"
-#include "NexStrategy.h"
-#include "ANStrategy.h"
-#include "AKStrategy.h"
-#include "DTKStrategy.h"
-#include "VHStrategy.h"
-#include "GDStrategy.h"
-#include "HoSStrategy.h"
 #include "HoLStrategy.h"
+#include "HoSStrategy.h"
+#include "MechStrategy.h"
+#include "NexStrategy.h"
 #include "OCStrategy.h"
-#include "UPStrategy.h"
-#include "CoSStrategy.h"
-#include "FoSStrategy.h"
 #include "PoSStrategy.h"
+#include "SethStrategy.h"
+#include "Strategy.h"
 #include "TOCStrategy.h"
-
-/*
-Full list/TODO:
-
-Trial of the Champion - ToC
-Alliance Champions: Deathstalker Visceri, Eressea Dawnsinger, Mokra the Skullcrusher, Runok Wildmane, Zul'tore
-Horde Champions: Ambrose Boltspark, Colosos, Jacob Alerius, Jaelyne Evensong, Lana Stouthammer
-Argent Champion: Argent Confessor Paletress/Eadric the Pure
-The Black Knight
-Halls of Reflection - HoR
-Falric, Marwyn, The Lich King
-Pit of Saron - PoS
-Forgemaster Garfrost, Krick & Ick, Scourgelord Tyrannus
-The Forge of Souls - FoS
-Bronjahm, Devourer of Souls
-
-*/
+#include "UKStrategy.h"
+#include "UPStrategy.h"
+#include "VHStrategy.h"
 
 class DungeonStrategyContext : public NamedObjectContext<Strategy>
 {

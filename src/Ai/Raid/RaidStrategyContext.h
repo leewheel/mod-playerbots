@@ -7,25 +7,19 @@
 #ifndef PLAYERBOTS_RAIDSTRATEGYCONTEXT_H
 #define PLAYERBOTS_RAIDSTRATEGYCONTEXT_H
 
-#include "Strategy.h"
 #include "Aq20Strategy.h"
-#include "MCStrategy.h"
+#include "BTStrategy.h"
 #include "BWLStrategy.h"
-#include "KaraStrategy.h"
+#include "EoEStrategy.h"
 #include "GruulStrategy.h"
+#include "HyjalStrategy.h"
+#include "ICCStrategy.h"
+#include "KaraStrategy.h"
+#include "MCStrategy.h"
 #include "MagStrategy.h"
 #include "NaxxStrategy.h"
-#include "SSCStrategy.h"
-#include "TKStrategy.h"
-#include "HyjalStrategy.h"
-#include "BTStrategy.h"
-#include "ZAStrategy.h"
 #include "OSStrategy.h"
-#include "EoEStrategy.h"
-#include "VoAStrategy.h"
-#include "UldStrategy.h"
 #include "OnyStrategy.h"
-#include "ICCStrategy.h"
 #include "RSStrategy.h"
 //By leewheel 2026-07-08
 #include "SWPStrategy.h"
@@ -33,6 +27,12 @@
 //By leewheel 2026-07-11
 #include "VanillaNaxxStrategy.h"
 //End By leewheel
+#include "SSCStrategy.h"
+#include "Strategy.h"
+#include "TKStrategy.h"
+#include "UldStrategy.h"
+#include "VoAStrategy.h"
+#include "ZAStrategy.h"
 
 class RaidStrategyContext : public NamedObjectContext<Strategy>
 {

@@ -15,7 +15,7 @@ using namespace SethData;
 
 bool TimeLostControllerDropsCharmingTotemTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(botAI, bot, SETHEKK_HALLS_MAP_ID) &&
+    return IsMechanicTrackerBot(botAI, bot, SETH_MAP_ID) &&
         AI_VALUE2(Unit*, "find target", "time-lost controller");
 }
 
@@ -30,7 +30,7 @@ bool SethekkProphetCastsFearTrigger::IsActive()
 
 bool DarkweaverSythBossSummonsElementalsTrigger::IsActive()
 {
-    if (!IsMechanicTrackerBot(botAI, bot, SETHEKK_HALLS_MAP_ID))
+    if (!IsMechanicTrackerBot(botAI, bot, SETH_MAP_ID))
         return false;
 
     Unit* syth = AI_VALUE2(Unit*, "find target", "darkweaver syth");
@@ -44,13 +44,13 @@ bool AnzuEncounterHasTwoPhasesTrigger::IsActive()
 
 bool AnzuBirdSpiritsProvideBuffsTrigger::IsActive()
 {
-    return bot->getClass() == CLASS_DRUID && botAI->IsHeal(bot) &&
+    return bot->getClass() == CLASS_DRUID && PlayerbotAI::IsHeal(bot) &&
         AI_VALUE2(Unit*, "find target", "anzu");
 }
 
 bool TalonKingIkissBossEngagedByTankTrigger::IsActive()
 {
-    if (!botAI->IsTank(bot))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
@@ -59,7 +59,7 @@ bool TalonKingIkissBossEngagedByTankTrigger::IsActive()
 
 bool TalonKingIkissRangedPrepareForArcaneExplosionTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");

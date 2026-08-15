@@ -5,7 +5,6 @@
  */
 
 #include "LootObjectStack.h"
-
 #include "CellImpl.h"
 #include "Creature.h"
 #include "GridNotifiers.h"

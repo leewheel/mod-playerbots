@@ -8,9 +8,9 @@
 #define PLAYERBOTS_MCTRIGGERCONTEXT_H
 
 #include "BossAuraTriggers.h"
-#include "NamedObjectContext.h"
 #include "MCTriggers.h"
 #include "MCHelpers.h"
+#include "NamedObjectContext.h"
 
 class RaidMcTriggerContext : public NamedObjectContext<Trigger>
 {
