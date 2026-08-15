@@ -241,51 +241,49 @@ bool TankAttackChatShortcutAction::Execute(Event /*event*/)
         return false;
         //End By leewheel
     }
-    if (targetGuid)
+
+    //By leewheel 2026-08-15 简化: 上面已对空目标return, 此处无需再判(原冗余if移除)
+    Unit* target = botAI->GetUnit(targetGuid);
+    if (!target || !target->IsInWorld())
     {
-        Unit* target = botAI->GetUnit(targetGuid);
-        if (!target || !target->IsInWorld())
-        {
-            botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_target_not_in_world_error", "目标已不在世界中。", {}));
-            return false;
-        }
-        // 死亡目标不可攻击(与AttackAction一致)
-        if (target->isDead())
-        {
-            botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_target_dead_error", "目标已死亡。", {}));
-            return false;
-        }
-        // 禁PvP区域不可攻击玩家/宠物(与AttackAction一致, 决斗除外)
-        if ((target->IsPlayer() || target->IsPet()) &&
-            (!bot->duel || bot->duel->Opponent != target) &&
-            (sPlayerbotAIConfig.IsPvpProhibited(bot->GetZoneId(), bot->GetAreaId()) ||
-             sPlayerbotAIConfig.IsPvpProhibited(target->GetZoneId(), target->GetAreaId())))
-        {
-            botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_pvp_prohibited_error", "在禁止 PvP 的区域无法攻击其他玩家。", {}));
-            return false;
-        }
-        if (!bot->IsValidAttackTarget(target))
-        {
-            botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_target_friendly_error", "该目标无法攻击(友方或无效目标)。", {}));
-            return false;
-        }
-
-        botAI->GetAiObjectContext()->GetValue<GuidVector>("prioritized targets")->Set({targetGuid});
-        botAI->GetAiObjectContext()->GetValue<ObjectGuid>("pull target")->Set(targetGuid);
-        if (verbose)
-            botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attacking", "攻击中", {}));
-        return true;
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "attack_target_not_in_world_error", "目标已不在世界中。", {}));
+        return false;
     }
-    //End By leewheel
+    // 死亡目标不可攻击(与AttackAction一致)
+    if (target->isDead())
+    {
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "attack_target_dead_error", "目标已死亡。", {}));
+        return false;
+    }
+    // 禁PvP区域不可攻击玩家/宠物(与AttackAction一致, 决斗除外)
+    if ((target->IsPlayer() || target->IsPet()) &&
+        (!bot->duel || bot->duel->Opponent != target) &&
+        (sPlayerbotAIConfig.IsPvpProhibited(bot->GetZoneId(), bot->GetAreaId()) ||
+         sPlayerbotAIConfig.IsPvpProhibited(target->GetZoneId(), target->GetAreaId())))
+    {
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "attack_pvp_prohibited_error", "在禁止 PvP 的区域无法攻击其他玩家。", {}));
+        return false;
+    }
 
-    botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "attacking", "攻击中", {}));
+    // 目标必须可攻击(敌对/有效), 与AttackAction一致
+    if (!bot->IsValidAttackTarget(target))
+    {
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "attack_target_friendly_error", "该目标无法攻击(友方或无效目标)。", {}));
+        return false;
+    }
+
+    // 设置为优先攻击目标
+    botAI->GetAiObjectContext()->GetValue<GuidVector>("prioritized targets")->Set({targetGuid});
+    botAI->GetAiObjectContext()->GetValue<ObjectGuid>("pull target")->Set(targetGuid);
+    if (verbose)
+        botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "attacking", "攻击中", {}));
     return true;
+    //End By leewheel
 }
 
 bool MaxDpsChatShortcutAction::Execute(Event /*event*/)

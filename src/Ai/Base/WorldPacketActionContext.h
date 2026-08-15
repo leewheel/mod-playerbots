@@ -70,6 +70,7 @@ public:
         creators["remember taxi"] = &WorldPacketActionContext::remember_taxi;
         creators["accept trade"] = &WorldPacketActionContext::accept_trade;
         creators["give conjured refreshment"] = &WorldPacketActionContext::give_conjured_refreshment;  // --By leewheel 2026-07-22
+        creators["give warlock stone"] = &WorldPacketActionContext::give_warlock_stone;  // --By leewheel 2026-08-15
         creators["trade status extended"] = &WorldPacketActionContext::trade_status_extended;
         creators["store loot"] = &WorldPacketActionContext::store_loot;
         creators["self resurrect"] = &WorldPacketActionContext::self_resurrect;
@@ -128,6 +129,7 @@ private:
     static Action* store_loot(PlayerbotAI* botAI) { return new StoreLootAction(botAI); }
     static Action* accept_trade(PlayerbotAI* botAI) { return new TradeStatusAction(botAI); }
     static Action* give_conjured_refreshment(PlayerbotAI* botAI) { return new GiveConjuredRefreshmentAction(botAI); }  // --By leewheel 2026-07-22
+    static Action* give_warlock_stone(PlayerbotAI* botAI) { return new GiveWarlockStoneAction(botAI); }  // --By leewheel 2026-08-15
     static Action* trade_status_extended(PlayerbotAI* botAI) { return new TradeStatusExtendedAction(botAI); }
     static Action* remember_taxi(PlayerbotAI* botAI) { return new RememberTaxiAction(botAI); }
     static Action* check_mount_state(PlayerbotAI* botAI) { return new CheckMountStateAction(botAI); }

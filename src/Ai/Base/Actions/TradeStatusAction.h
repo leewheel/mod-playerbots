@@ -30,6 +30,10 @@ private:
     void TryGiveWarlockStones(Player* trader, Player* master);
     void CastWarlockStone(std::string const& spell);
     //End By leewheel
+    //By leewheel 2026-08-15 施法前联合判断：交易栏是否已有同类物品(避免重复施法)
+    bool TradeHasItem(std::string const itemName) const;
+    bool TradeHasConjured(uint32 category) const;
+    //End By leewheel
 };
 
 // 法师机器人交易时自动给玩家法力面包和水 --By leewheel 2026-07-22

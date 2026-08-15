@@ -423,11 +423,11 @@ void TradeStatusAction::TryGiveConjuredRefreshment(Player* trader, Player* maste
     // 先把背包里已有的魔法面包/水放入交易栏
     botAI->DoSpecificAction("give conjured refreshment", Event(), true);
 
-    // 缺少的施法 conjure（施法完成后由 item push result 触发器补放进交易栏）
-    if (parseItems("conjured food", ITERATE_ITEMS_IN_BAGS).empty())
+    // 缺少的施法 conjure（背包和交易栏都没有时才施法，避免重复制造）--By leewheel 2026-08-15
+    if (parseItems("conjured food", ITERATE_ITEMS_IN_BAGS).empty() && !TradeHasConjured(11))
         CastConjure("conjure food", 11);
 
-    if (parseItems("conjured water", ITERATE_ITEMS_IN_BAGS).empty())
+    if (parseItems("conjured water", ITERATE_ITEMS_IN_BAGS).empty() && !TradeHasConjured(59))
         CastConjure("conjure water", 59);
 }
 
@@ -574,15 +574,15 @@ void TradeStatusAction::TryGiveWarlockStones(Player* trader, Player* master)
     // 先把背包里已有的治疗石/灵魂石放入交易栏
     botAI->DoSpecificAction("give warlock stone", Event(), true);
 
-    // 缺少的施法制造（施法完成后由 item push result 触发器或交易确认前补放进交易栏）
-    if (parseItems("healthstone", ITERATE_ITEMS_IN_BAGS).empty())
+    // 缺少的施法制造（背包和交易栏都没有时才施法，避免重复制造）--By leewheel 2026-08-15
+    if (parseItems("healthstone", ITERATE_ITEMS_IN_BAGS).empty() && !TradeHasItem("healthstone"))
         CastWarlockStone("create healthstone");
 
-    if (parseItems("soulstone", ITERATE_ITEMS_IN_BAGS).empty())
+    if (parseItems("soulstone", ITERATE_ITEMS_IN_BAGS).empty() && !TradeHasItem("soulstone"))
         CastWarlockStone("create soulstone");
 }
 
-// 施放 create healthstone / create soulstone，按法术名匹配（兼容中文客户端法术名） --By leewheel 2026-08-05
+// 施放 create healthstone / create soulstone，按法术英文名(enUS)匹配 --By leewheel 2026-08-05
 void TradeStatusAction::CastWarlockStone(std::string const& spell)
 {
     uint32 castId = 0;
@@ -694,5 +694,39 @@ bool GiveWarlockStoneAction::GiveOne(std::string const itemName, bool soul)
         return true;
     }
 
+    return false;
+}
+
+// 判断交易栏是否已有指定名称的物品(术士石头用) --By leewheel 2026-08-15
+bool TradeStatusAction::TradeHasItem(std::string const itemName) const
+{
+    TradeData* pTrade = bot->GetTradeData();
+    if (!pTrade)
+        return false;
+
+    for (uint32 slot = 0; slot < TRADE_SLOT_TRADED_COUNT; ++slot)
+    {
+        Item* item = pTrade->GetItem((TradeSlots)slot);
+        if (item && item->GetTemplate() &&
+            strstri(item->GetTemplate()->Name1.c_str(), itemName.c_str()))
+            return true;
+    }
+    return false;
+}
+
+// 判断交易栏是否已有指定类别的魔法食物/饮水(法师面包水用) --By leewheel 2026-08-15
+bool TradeStatusAction::TradeHasConjured(uint32 category) const
+{
+    TradeData* pTrade = bot->GetTradeData();
+    if (!pTrade)
+        return false;
+
+    for (uint32 slot = 0; slot < TRADE_SLOT_TRADED_COUNT; ++slot)
+    {
+        Item* item = pTrade->GetItem((TradeSlots)slot);
+        if (item && item->GetTemplate() && item->GetTemplate()->IsConjuredConsumable() &&
+            item->GetTemplate()->Spells[0].SpellCategory == category)
+            return true;
+    }
     return false;
 }
