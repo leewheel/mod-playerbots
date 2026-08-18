@@ -203,7 +203,8 @@ bool LfgRoleCheckAction::Execute(Event /*event*/)
         // By leewheel 2026-07-29
         // 改回直接调 sLFGMgr::SetRoles / UpdateRoleCheck（参考 LiyunfanPlayerbotsBranch）。
         sLFGMgr->SetRoles(bot->GetGUID(), newRoles);
-        sLFGMgr->UpdateRoleCheck(group->GetGUID(), bot->GetGUID(), newRoles);
+        if (Group* group = bot->GetGroup())
+            sLFGMgr->UpdateRoleCheck(group->GetGUID(), bot->GetGUID(), newRoles);
         // End By leewheel
 
         return true;

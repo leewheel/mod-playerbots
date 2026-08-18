@@ -1773,11 +1773,6 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         case 568:
             strategyName = "zulaman";  // Zul'Aman
             break;
-        //By leewheel 2026-07-08
-        case 580:
-            strategyName = "sunwell";  // Sunwell Plateau
-            break;
-        //End By leewheel
         case 574:
             strategyName = "wotlk-uk";  // Utgarde Keep
             break;
