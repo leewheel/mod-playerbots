@@ -4,13 +4,11 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "SWPActions.h"
 #include "SWPEncounter_Twins.h"
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
+#include "SWPData.h"
 #include <vector>
 
 using namespace SwpHelpers;
@@ -138,7 +136,7 @@ bool EredarTwinsMainAndSecondAssistTanksPositionSacrolashAction::Execute(Event /
     float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
-        SWP_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
+        SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -219,7 +217,6 @@ bool EredarTwinsFirstAssistTankMoveOutOfBlazeAction::Execute(Event /*event*/)
 bool EredarTwinsPositionRangedAction::Execute(Event /*event*/)
 {
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
-    //By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：Bot 是 Blaze 目标时不去 P1 远程站位，让其去 blaze 撤离位
     if (sacrolash && sacrolash->GetVictim() != bot && GetEredarTwinsBlazeTarget(bot) != bot)
     {
         Position const& position = EREDAR_TWINS_P1_RANGED_POSITION;
@@ -264,7 +261,6 @@ bool EredarTwinsStackInRoomCenterAction::Execute(Event /*event*/)
     if (!alythess)
         return false;
 
-    //By leewheel 2026-07-27 - Position const 改为 const& 避免拷贝
     Position const position = PlayerbotAI::IsRanged(bot) ?
         GetEredarTwinsP2RangedPosition(alythess) :
         GetEredarTwinsP2MeleePosition(alythess);
@@ -282,16 +278,16 @@ bool EredarTwinsRemoveFlameSearAction::Execute(Event /*event*/)
     switch (bot->getClass())
     {
         case CLASS_MAGE:
-            return botAI->CanCastSpell("ice block", bot) &&
-                botAI->CastSpell("ice block", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot);
 
         case CLASS_PALADIN:
-            return botAI->CanCastSpell("divine shield", bot) &&
-                botAI->CastSpell("divine shield", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot);
 
         case CLASS_ROGUE:
-            return botAI->CanCastSpell("cloak of shadows", bot) &&
-                botAI->CastSpell("cloak of shadows", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot);
 
         default:
             return false;
@@ -367,7 +363,7 @@ bool EredarTwinsConflagratedBotMoveFromGroupAction::Execute(Event /*event*/)
             if (distanceToPlayer >= safeDistance)
                 return false;
 
-            botAI->InterruptSpell();
+            bot->InterruptNonMeleeSpells(false);
             return MoveAway(nearestPlayer, safeDistance - distanceToPlayer);
         }
     }
@@ -389,6 +385,6 @@ bool EredarTwinsMoveFromConflagSacrolashVictimAction::Execute(Event /*event*/)
     if (bot->GetDistance2d(victim) >= safeDistance)
         return false;
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
     return MoveFromGroup(safeDistance);
 }

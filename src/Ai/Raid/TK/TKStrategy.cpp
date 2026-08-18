@@ -3,12 +3,9 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
 
 #include "TKStrategy.h"
 #include "AiObjectContext.h"
-#include "PlayerbotAI.h"
 #include "Playerbots.h"
 #include "TKHelpers.h"
 #include "TKKaelthasBossAI.h"
@@ -91,10 +88,10 @@ void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("kael'thas sunstrider sanguinar casts bellowing roar", {
         NextAction("kael'thas sunstrider cast fear ward on sanguinar tank", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("kael'thas sunstrider capernian should be tanked by a warlock", {
+    triggers.push_back(new TriggerNode("kael'thas sunstrider capernian should be tanked by warlock", {
         NextAction("kael'thas sunstrider warlock tank position capernian", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("kael'thas sunstrider capernian casts arcane burst and conflagration", {
+    triggers.push_back(new TriggerNode("kael'thas sunstrider capernian blows up near and far", {
         NextAction("kael'thas sunstrider spread and move away from capernian", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("kael'thas sunstrider telonicus engaged by first assist tank", {
@@ -115,7 +112,7 @@ void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("kael'thas sunstrider legendary axe casts whirlwind", {
         NextAction("kael'thas sunstrider move devastation away", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("kael'thas sunstrider legendary weapons are dead and lootable", {
+    triggers.push_back(new TriggerNode("kael'thas sunstrider legendary weapons are dead", {
         NextAction("kael'thas sunstrider loot legendary weapons", ACTION_NORMAL) }));
 
     triggers.push_back(new TriggerNode("kael'thas sunstrider legendary weapons are equipped", {

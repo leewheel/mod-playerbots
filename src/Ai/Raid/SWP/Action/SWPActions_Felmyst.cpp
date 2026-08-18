@@ -4,24 +4,16 @@
  * or (at your option) any later version.
  */
 
-// === 外部代码引入记录 ===
-// 2026-07-30 引入自 brighton-chi/mod-playerbots:
-//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: flight coordinator→leader 重命名
-//   commit 6c788ed68ebb0eb6040f71f5e5bd40ce474b6a13 - Felmyst: TryGetFelmystLandingDestination→IsFelmystLanding 重命名
-// By leewheel
-// End By leewheel
-
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "SWPActions.h"
 #include "SWPEncounter_Felmyst.h"
 #include "Playerbots.h"
 #include "PlayerbotTextMgr.h"
 #include "RaidBossHelpers.h"
 #include "RtiTargetValue.h"
+#include "SWPData.h"
 #include "Timer.h"
 #include <cmath>
+#include <string>
 
 using namespace SwpHelpers;
 
@@ -86,11 +78,11 @@ bool FelmystMainTankPositionBossOnGroundAction::Execute(Event /*event*/)
     float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
-        SWP_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
+        SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, true);
 }
 
-bool FelmystPositionRangedOnGroundAction::Execute(Event /*event*/)
+bool FelmystRangedStackInThreeGroupsAction::Execute(Event /*event*/)
 {
     ClearFelmystDemonicVaporKiteState(bot);
 
@@ -107,7 +99,7 @@ bool FelmystPositionRangedOnGroundAction::Execute(Event /*event*/)
         FELMYST_RANGED_GROUP_RADIUS, MovementPriority::MOVEMENT_COMBAT);
 }
 
-bool FelmystPositionMeleeOnGroundAction::Execute(Event /*event*/)
+bool FelmystMeleeStackBehindBossAction::Execute(Event /*event*/)
 {
     ClearFelmystDemonicVaporKiteState(bot);
 
@@ -130,9 +122,13 @@ bool FelmystPositionMeleeOnGroundAction::Execute(Event /*event*/)
 bool FelmystRemoveEncapsulateAction::Execute(Event /*event*/)
 {
     if (bot->getClass() == CLASS_MAGE)
-        return botAI->CanCastSpell("ice block", bot) && botAI->CastSpell("ice block", bot);
-    else
-        return botAI->CanCastSpell("divine shield", bot) && botAI->CastSpell("divine shield", bot);
+    {
+        return botAI->CanCastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot) &&
+            botAI->CastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot);
+    }
+
+    return botAI->CanCastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot) &&
+        botAI->CastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot);
 }
 
 bool FelmystRunAwayFromEncapsulatedPlayerAction::Execute(Event /*event*/)
@@ -207,8 +203,6 @@ bool FelmystMassDispelGasNovaAction::Execute(Event /*event*/)
         botAI->CastSpell(Id(SwpSpells::SPELL_MASS_DISPEL), gasNovaTarget);
 }
 
-//By leewheel 20260729 同步 e404dc12 新的恶魔蒸汽撤离策略：领导钻石标记 + 跟随
-//(最终版本：MoveAwayFromVapor/MoveToFlightLeader/AnnounceFlightLeader 三段式实现)
 bool FelmystAvoidDemonicVaporAction::Execute(Event /*event*/)
 {
     Player* leader = GetFelmystFlightLeader(bot);
@@ -315,7 +309,7 @@ bool FelmystAvoidDemonicVaporAction::MoveAwayFromVapor(bool unrestricted)
     if (!foundSafe)
         return false;
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
     return MoveTo(
         SWP_MAP_ID, bestPos.GetPositionX(), bestPos.GetPositionY(), bestPos.GetPositionZ(),
         false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
@@ -340,7 +334,7 @@ bool FelmystAvoidDemonicVaporAction::MoveToFlightLeader(Player* leader)
     float const toPosY = leaderY - botY;
     float const toPosZ = leaderZ - botZ;
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
 
     // 1) Try exact leader position
     if (MoveTo(
@@ -379,7 +373,6 @@ void FelmystAvoidDemonicVaporAction::AnnounceFlightLeader(Player* leader)
 
     botAI->SayToRaid(text);
 }
-//End By leewheel
 
 bool FelmystKiteDemonicVaporAction::Execute(Event /*event*/)
 {
@@ -401,7 +394,7 @@ bool FelmystKiteDemonicVaporAction::Execute(Event /*event*/)
     float const moveY = botY + (toPosY / distToDestination) * moveDist;
 
     return MoveTo(
-        SWP_MAP_ID, moveX, moveY, destination.GetPositionZ(), false, false,
+        SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
@@ -467,18 +460,14 @@ bool FelmystMoveToSafeFogLaneAction::Execute(Event /*event*/)
         SWP_MAP_ID, destination.GetPositionX(), destination.GetPositionY(),
         destination.GetPositionZ(), false, false, false, false,
         MovementPriority::MOVEMENT_FORCED, true, false);
-
-    return false;
 }
 
 bool FelmystMoveToSafeFogLaneAction::TryTeleportStuckBotOntoCrate(
     Position const& destination)
 {
     constexpr float collisionCheckDist = 2.0f;
-    //By leewheel 2026-07-27 - move constants closer to usage
-    Position const stuckCratePosition = { 1484.443f, 591.337f, 23.391f };
 
-    if (bot->GetExactDist2d(stuckCratePosition) > collisionCheckDist)
+    if (bot->GetExactDist2d(FOG_CRATE_STUCK_POSITION) > collisionCheckDist)
     {
         _fogCrateStuckSampleMs = 0;
         return false;
@@ -497,7 +486,6 @@ bool FelmystMoveToSafeFogLaneAction::TryTeleportStuckBotOntoCrate(
         return false;
     }
 
-    //By leewheel 2026-07-27 - 常量移到使用处
     constexpr float progressResetDist = 1.0f;
     if (distToDestination + progressResetDist < _fogCrateStuckNearestDist)
     {
@@ -506,24 +494,23 @@ bool FelmystMoveToSafeFogLaneAction::TryTeleportStuckBotOntoCrate(
         return false;
     }
 
-    //By leewheel 2026-07-27 - 常量移到使用处
     constexpr uint32 stuckTimeoutMs = 1000;
     if (getMSTimeDiff(_fogCrateStuckSampleMs, now) < stuckTimeoutMs)
         return false;
 
-    //By leewheel 2026-07-27 - 常量重命名为camelCase，移到使用处
-    Position const onCratePosition = { 1482.181f, 591.253f, 24.545f };
+    Position const& onCratePosition = FOG_CRATE_TELEPORT_POSITION;
 
     _fogCrateStuckSampleMs = 0;
-    botAI->InterruptSpell();
-    return bot->TeleportTo(
-        SWP_MAP_ID, onCratePosition.GetPositionX(), onCratePosition.GetPositionY(),
+    bot->InterruptNonMeleeSpells(false);
+    bot->NearTeleportTo(
+        onCratePosition.GetPositionX(), onCratePosition.GetPositionY(),
         onCratePosition.GetPositionZ(), bot->GetOrientation());
+    return true;
 }
 
 bool FelmystMeleeClearTargetAction::Execute(Event /*event*/)
 {
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
     bot->AttackStop();
     context->GetValue<Unit*>("current target")->Set(nullptr);
     bot->SetSelection(ObjectGuid());
@@ -554,37 +541,36 @@ bool FelmystManageLandingDpsTimerAction::Execute(Event /*event*/)
 
     if (felmyst->IsFlying() && IsFelmystLanding(felmyst))
     {
-        if (state.landingDpsWaitTimer)
+        if (state.landingDpsWaitStartMs)
             return false;
 
-        state.landingDpsWaitTimer = std::time(nullptr);
-        state.landingTouchdownTimer = 0;
+        state.landingDpsWaitStartMs = getMSTime();
+        state.landingTouchdownMs = 0;
         return true;
     }
 
     if (felmyst->IsFlying())
     {
-        state.landingDpsWaitTimer = 0;
-        state.landingTouchdownTimer = 0;
+        state.landingDpsWaitStartMs = 0;
+        state.landingTouchdownMs = 0;
         return true;
     }
 
     // Grounded
-    if (!state.landingDpsWaitTimer)
+    if (!state.landingDpsWaitStartMs)
         return false;
 
-    if (!state.landingTouchdownTimer)
+    if (!state.landingTouchdownMs)
     {
-        state.landingTouchdownTimer = std::time(nullptr);
+        state.landingTouchdownMs = getMSTime();
         return true;
     }
 
-    time_t const now = std::time(nullptr);
-    constexpr uint8 groundedDpsWaitSeconds = 3;
-    if ((now - state.landingTouchdownTimer) < groundedDpsWaitSeconds)
+    constexpr uint32 groundedDpsWaitMs = 3000;
+    if (GetMSTimeDiffToNow(state.landingTouchdownMs) < groundedDpsWaitMs)
         return false;
 
-    state.landingDpsWaitTimer = 0;
-    state.landingTouchdownTimer = 0;
+    state.landingDpsWaitStartMs = 0;
+    state.landingTouchdownMs = 0;
     return true;
 }

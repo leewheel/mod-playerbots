@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "SWPEncounter_Kalec.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
@@ -14,6 +11,7 @@
 #include "Timer.h"
 #include <algorithm>
 #include <map>
+#include <string>
 #include <vector>
 
 namespace SwpHelpers

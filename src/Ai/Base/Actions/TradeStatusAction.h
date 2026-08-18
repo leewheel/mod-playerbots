@@ -22,6 +22,7 @@ public:
 
 private:
     void BeginTrade();
+    void CancelTrade();
     bool CheckTrade();
     int32 CalculateCost(Player* player, bool sell);
     void TryGiveConjuredRefreshment(Player* trader, Player* master);  // --By leewheel 2026-07-22

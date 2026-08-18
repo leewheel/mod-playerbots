@@ -11,6 +11,8 @@
 #define PLAYERBOTS_KARASTRATEGY_H
 
 #include "Strategy.h"
+#include <string>
+#include <vector>
 
 class RaidKarazhanStrategy : public Strategy
 {

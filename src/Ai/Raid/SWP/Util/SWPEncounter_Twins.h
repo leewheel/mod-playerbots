@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #ifndef PLAYERBOTS_SWPENCOUNTERTWINS_H
 #define PLAYERBOTS_SWPENCOUNTERTWINS_H
 
@@ -14,7 +11,6 @@
 #include "Position.h"
 #include "SWPData.h"
 #include <array>
-#include <ctime>
 #include <unordered_map>
 
 class Player;
@@ -24,7 +20,6 @@ class Unit;
 namespace SwpHelpers
 {
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：增加 Blaze 目标跟踪；CONFLAGRATION 预警延迟 500→300
 struct EredarTwinsIncomingConflagrationState
 {
     ObjectGuid targetGuid = ObjectGuid::Empty;
@@ -35,7 +30,7 @@ struct EredarTwinsIncomingConflagrationState
 struct EredarTwinsBlazeTargetState
 {
     ObjectGuid targetGuid = ObjectGuid::Empty;
-    uint32 expireMs = 0;
+    uint32 startMs = 0;
 };
 
 inline constexpr float EREDAR_TWINS_BALCONY_Z = 50.0f;
@@ -63,7 +58,7 @@ inline Position const EREDAR_TWINS_P2_RANGED_POSITION =      { 1805.587f, 625.65
 extern std::unordered_map<uint32, EredarTwinsIncomingConflagrationState>
 	eredarTwinsIncomingConflagrationStates;
 extern std::unordered_map<uint32, EredarTwinsBlazeTargetState> eredarTwinsBlazeTargetStates;
-extern std::unordered_map<uint32, time_t> eredarTwinsDpsHoldTimer;
+extern std::unordered_map<uint32, uint32> eredarTwinsDpsHoldStartMs;
 
 Position GetAlythessTankPosition(Unit* alythess, uint8 index);
 Position GetEredarTwinsP2MeleePosition(Unit* alythess);
@@ -76,10 +71,8 @@ bool IsAlythessTankPositionSafe(Player* bot, Position const& position);
 bool ShouldAdvanceAlythessTankPosition(Unit* alythess, Player* bot);
 void RecordIncomingEredarTwinsConflagrationTarget(Player* target);
 Player* GetEredarTwinsConflagrationTarget(Player* bot);
-//By leewheel 2026-07-29 - 新增：Blaze 目标记录与查询
 void RecordEredarTwinsBlazeTarget(Player* target);
 Player* GetEredarTwinsBlazeTarget(Player* bot);
-//End By leewheel
 
 }
 

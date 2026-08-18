@@ -221,7 +221,7 @@ bool QuestAction::AcceptQuest(Quest const* quest, ObjectGuid questGiver)
 
     if (bot->GetQuestStatus(questId) == QUEST_STATUS_COMPLETE)
         out << "已完成";
-    else if (!bot->CanTakeQuest(quest, false))
+    else if (!botAI->IsAltBot() && !bot->CanTakeQuest(quest, false))
     {
         if (!bot->SatisfyQuestStatus(quest, false))
             out << "已接取";

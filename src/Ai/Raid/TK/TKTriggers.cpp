@@ -3,8 +3,6 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
 
 #include "TKTriggers.h"
 #include "Playerbots.h"
@@ -12,13 +10,14 @@
 #include "TKActions.h"
 #include "TKHelpers.h"
 #include "TKKaelthasBossAI.h"
+#include <array>
 
 using namespace TkHelpers;
 
 // General
 bool TempestKeepBotIsNotInCombatTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(botAI, bot, TK_MAP_ID) && !AI_VALUE2(bool, "combat", "self target");
+    return IsMechanicTrackerBot(bot, TK_MAP_ID) && !AI_VALUE2(bool, "combat", "self target");
 }
 
 // Trash
@@ -94,7 +93,7 @@ bool AlarEverythingIsOnFireInPhase2Trigger::IsActive()
 
 bool AlarShouldManagePhaseTrackerTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(botAI, bot, TK_MAP_ID) && AI_VALUE2(Unit*, "find target", "al'ar");
+    return IsMechanicTrackerBot(bot, TK_MAP_ID) && AI_VALUE2(Unit*, "find target", "al'ar");
 }
 
 // Void Reaver
@@ -276,11 +275,10 @@ bool KaelthasSunstriderSanguinarCastsBellowingRoarTrigger::IsActive()
         return false;
 
     return kaelAI->GetPhase() == PHASE_SINGLE_ADVISOR ||
-        kaelAI->GetPhase() == PHASE_TRANSITION ||
-        kaelAI->GetPhase() == PHASE_ALL_ADVISORS;
+        kaelAI->GetPhase() == PHASE_TRANSITION || kaelAI->GetPhase() == PHASE_ALL_ADVISORS;
 }
 
-bool KaelthasSunstriderCapernianShouldBeTankedByAWarlockTrigger::IsActive()
+bool KaelthasSunstriderCapernianShouldBeTankedByWarlockTrigger::IsActive()
 {
     if (bot->getClass() != CLASS_WARLOCK || GetCapernianTank(bot) != bot)
         return false;
@@ -290,7 +288,7 @@ bool KaelthasSunstriderCapernianShouldBeTankedByAWarlockTrigger::IsActive()
         !IsFeigningDeath(capernian);
 }
 
-bool KaelthasSunstriderCapernianCastsArcaneBurstAndConflagrationTrigger::IsActive()
+bool KaelthasSunstriderCapernianBlowsUpNearAndFarTrigger::IsActive()
 {
     Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
     if (!capernian || capernian->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) ||
@@ -357,7 +355,7 @@ bool KaelthasSunstriderDeterminingAdvisorKillOrderTrigger::IsActive()
 
 bool KaelthasSunstriderShouldManageAdvisorDpsTimerTrigger::IsActive()
 {
-    if (!IsMechanicTrackerBot(botAI, bot, TK_MAP_ID))
+    if (!IsMechanicTrackerBot(bot, TK_MAP_ID))
         return false;
 
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
@@ -389,7 +387,7 @@ bool KaelthasSunstriderLegendaryAxeCastsWhirlwindTrigger::IsActive()
     return PlayerbotAI::IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "devastation");
 }
 
-bool KaelthasSunstriderLegendaryWeaponsAreDeadAndLootableTrigger::IsActive()
+bool KaelthasSunstriderLegendaryWeaponsAreDeadTrigger::IsActive()
 {
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas)
@@ -472,6 +470,10 @@ bool KaelthasSunstriderPhoenixesAndEggsAreSpawningTrigger::IsActive()
 {
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
     if (!kaelthas || kaelthas->GetVictim() == bot)
+        return false;
+
+    boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
+    if (!kaelAI || kaelAI->GetPhase() != PHASE_FINAL)
         return false;
 
     if (PlayerbotAI::IsMainTank(bot))

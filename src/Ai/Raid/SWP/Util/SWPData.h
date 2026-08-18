@@ -12,13 +12,12 @@
 
 namespace SwpHelpers
 {
-//By leewheel 20260729 同步 brighton-chi：统一 enum class → uint32 转换模板
+
 template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
 constexpr uint32 Id(T value)
 {
     return static_cast<uint32>(value);
 }
-//End By leewheel
 
 enum class SwpSpells : uint32
 {
@@ -87,6 +86,9 @@ enum class SwpSpells : uint32
     SPELL_SHADOWFORM                   = 15473,
     SPELL_MASS_DISPEL                  = 32375,
 
+    // Rogue
+    SPELL_CLOAK_OF_SHADOWS             = 31224,
+
     // Shaman
     SPELL_PURGE_RANK_1                 = 370,
 
@@ -100,9 +102,9 @@ enum class SwpNpcs : uint32
     NPC_APOCALYPSE_GUARD         = 25593,
     NPC_VOLATILE_FIEND           = 25851,
 
-// Kalecgos
-NPC_KALECGOS_DRAGON          = 24850,
-NPC_KALECGOS_HUMANOID        = 24891,
+    // Kalecgos
+    NPC_KALECGOS_DRAGON          = 24850,
+    NPC_KALECGOS_HUMANOID        = 24891,
 
     // Felmyst
     NPC_FELMYST                  = 25038,

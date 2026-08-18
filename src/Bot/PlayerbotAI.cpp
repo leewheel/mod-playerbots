@@ -49,6 +49,7 @@
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 #include "Transport.h"
+#include "TargetValue.h"
 #include "Unit.h"
 #include "UpdateTime.h"
 #include "Vehicle.h"
@@ -57,8 +58,13 @@
 #include <sstream>
 #include <string>
 
+namespace
+{
 constexpr uint32 SPELL_TITAN_GRIP = 49152;
 constexpr uint32 SPELL_DK_FROST_PRESENCE = 48263;
+constexpr uint32 SPELL_GRAVITY_LAPSE_TK = 39432;
+constexpr uint32 SPELL_GRAVITY_LAPSE_MGT = 44226;
+}
 
 std::vector<std::string> PlayerbotAI::dispel_whitelist = {
     "mutating injection",
@@ -269,6 +275,10 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 
     AllowActivity();
 
+    // If we get attacked, drop the pending delay so the engine can switch to combat.
+    if (nextAICheckDelay && bot->IsInCombat() && currentEngine != engines[BOT_STATE_COMBAT])
+        nextAICheckDelay = 0;
+
     if (!CanUpdateAI())
         return;
 
@@ -285,7 +295,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
             if (spellInterruptRequested)
             {
                 spellInterruptRequested = false;
-                InterruptSpell();
+                bot->InterruptSpell(currentSpell->GetCurrentContainer());
                 YieldThread(bot, GetReactDelay());
                 return;
             }
@@ -297,7 +307,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
                 // Interrupt if target is dead or spell can't target dead units
                 if (spellTarget && !spellTarget->IsAlive() && !spellInfo->IsAllowingDeadTarget())
                 {
-                    InterruptSpell();
+                    bot->InterruptSpell(currentSpell->GetCurrentContainer());
                     YieldThread(bot, GetReactDelay());
                     return;
                 }
@@ -306,7 +316,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 
                 if (goSpellTarget && !goSpellTarget->isSpawned())
                 {
-                    InterruptSpell();
+                    bot->InterruptSpell(currentSpell->GetCurrentContainer());
                     YieldThread(bot, GetReactDelay());
                     return;
                 }
@@ -338,7 +348,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
                 // Interrupt if target ally has full health (heal by other member)
                 if (isHeal && isSingleTarget && spellTarget && spellTarget->IsFullHealth())
                 {
-                    InterruptSpell();
+                    bot->InterruptSpell(currentSpell->GetCurrentContainer());
                     YieldThread(bot, GetReactDelay());
                     return;
                 }
@@ -364,7 +374,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
         if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
         {
             spellInterruptRequested = false;
-            InterruptSpell();
+            bot->InterruptSpell(currentSpell->GetCurrentContainer());
             YieldThread(bot, GetReactDelay());
             return;
         }
@@ -1292,6 +1302,7 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
             // when rooted during lost client control (charm + root effects)
             // @see https://github.com/azerothcore/azerothcore-wotlk/pull/23147
             bool forceRoot = (packet.GetOpcode() == SMSG_FORCE_MOVE_ROOT);
+
             if (forceRoot)
             {
                 bot->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_MASK_MOVING_FLY);
@@ -1457,6 +1468,9 @@ void PlayerbotAI::ChangeEngine(BotState type)
 
 void PlayerbotAI::ChangeEngineOnCombat()
 {
+    if (HasStrategy("wait for attack", BOT_STATE_COMBAT))
+        aiObjectContext->GetValue<time_t>("combat start time")->Set(time(nullptr));
+
     if (HasStrategy("stay", BOT_STATE_COMBAT))
     {
         aiObjectContext->GetValue<PositionInfo>("pos", "stay")
@@ -1466,6 +1480,9 @@ void PlayerbotAI::ChangeEngineOnCombat()
 
 void PlayerbotAI::ChangeEngineOnNonCombat()
 {
+    if (HasStrategy("wait for attack", BOT_STATE_COMBAT))
+        aiObjectContext->GetValue<time_t>("combat start time")->Set(0);
+
     if (HasStrategy("stay", BOT_STATE_NON_COMBAT))
     {
         aiObjectContext->GetValue<PositionInfo>("pos", "stay")->Reset();
@@ -1625,16 +1642,12 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
 {
     static const std::vector<std::string> allInstanceStrategies =
     {
-        "aq20", "blacktemple", "bwl", "gruulslair", "hyjal", "icc", "karazhan",
-        "magtheridon", "moltencore", "naxx", "onyxia", "rs", "ssc", "tbc-ac", "tempestkeep",
-        "tbc-mech", "tbc-seth", "tbc-ub",
-        "ulduar", "voa", "wotlk-an", "wotlk-cos", "wotlk-dtk", "wotlk-eoe", "wotlk-fos",
-        "wotlk-gd", "wotlk-hol", "wotlk-hos", "wotlk-nex", "wotlk-occ",
-        "wotlk-ok", "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up",
-        "wotlk-vh", "zulaman",
-        //By leewheel 2026-07-08
-        "sunwell",
-        //End By leewheel
+        "aq20", "blacktemple", "bwl", "karazhan", "gruulslair", "hyjal", "icc", "magtheridon",
+        "moltencore", "naxx", "onyxia", "rs", "ssc", "sunwell", "tbc-ac", "tbc-hfr", "tbc-mech",
+        "tbc-seth", "tbc-ub", "tempestkeep", "ulduar", "voa", "wotlk-an", "wotlk-cos", "wotlk-dtk",
+        "wotlk-eoe", "wotlk-fos", "wotlk-gd", "wotlk-hol", "wotlk-hos", "wotlk-nex", "wotlk-occ",
+        "wotlk-ok", "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up", "wotlk-vh",
+        "zulaman",
         //By leewheel 2026-07-11
         "vanilla naxx"
         //End By leewheel
@@ -1727,12 +1740,14 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         case 534:
             strategyName = "hyjal";  // The Battle for Mount Hyjal (Hyjal Summit)
             break;
+        case 543:
+            strategyName = "tbc-hfr";  // Hellfire Citadel: Hellfire Ramparts
+            break;
         case 544:
             strategyName = "magtheridon";  // Magtheridon's Lair
             break;
         case 546:
-            //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
-            strategyName = "tbc-ub";  // 盘牙水库：幽暗沼泽 (Coilfang Reservoir: The Underbog)
+            strategyName = "tbc-ub";  // Coilfang Reservoir: The Underbog
             break;
         case 548:
             strategyName = "ssc";  // Serpentshrine Cavern
@@ -1740,11 +1755,11 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         case 550:
             strategyName = "tempestkeep";  // Tempest Keep: The Eye
             break;
-        case 556:
-            strategyName = "tbc-seth";  // Auchindoun: Sethekk Halls
-            break;
         case 554:
             strategyName = "tbc-mech";  // Tempest Keep: The Mechanar
+            break;
+        case 556:
+            strategyName = "tbc-seth";  // Auchindoun: Sethekk Halls
             break;
         case 558:
             strategyName = "tbc-ac";  // Auchindoun: Auchenai Crypts
@@ -1774,6 +1789,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             break;
         case 578:
             strategyName = "wotlk-occ";  // The Oculus
+            break;
+        case 580:
+            strategyName = "sunwell";  // Sunwell Plateau
             break;
         case 595:
             strategyName = "wotlk-cos";  // The Culling of Stratholme
@@ -3704,12 +3722,9 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
     // aiObjectContext->GetValue<LastMovement&>("last movement")->Get().Set(nullptr);
     // aiObjectContext->GetValue<time_t>("stay time")->Set(0);
 
-    if (bot->IsFlying() || bot->HasUnitState(UNIT_STATE_IN_FLIGHT))
+    if ((bot->IsFlying() && !bot->HasAura(SPELL_GRAVITY_LAPSE_TK) && !bot->HasAura(SPELL_GRAVITY_LAPSE_MGT)) ||
+        bot->HasUnitState(UNIT_STATE_IN_FLIGHT))
     {
-        // if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
-        //     LOG_DEBUG("playerbots", "Spell cast is flying - target name: {}, spellid: {}, bot name: {}}",
-        //         target->GetName(), spellId, bot->GetName());
-
         return false;
     }
 
@@ -3957,8 +3972,11 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
 
     // MotionMaster& mm = *bot->GetMotionMaster();
 
-    if (bot->IsFlying() || bot->HasUnitState(UNIT_STATE_IN_FLIGHT))
+    if ((bot->IsFlying() && !bot->HasAura(SPELL_GRAVITY_LAPSE_TK) && !bot->HasAura(SPELL_GRAVITY_LAPSE_MGT)) ||
+        bot->HasUnitState(UNIT_STATE_IN_FLIGHT))
+    {
         return false;
+    }
 
     // bot->ClearUnitState(UNIT_STATE_CHASE);
     // bot->ClearUnitState(UNIT_STATE_FOLLOW);

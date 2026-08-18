@@ -194,7 +194,7 @@ bool LfgJoinAction::JoinLFG()
 
 bool LfgRoleCheckAction::Execute(Event /*event*/)
 {
-    if (Group* group = bot->GetGroup())
+    if (bot->GetGroup())
     {
         uint32 newRoles = GetRoles();
         // if (currentRoles == newRoles)
@@ -293,8 +293,12 @@ bool LfgLeaveAction::Execute(Event /*event*/)
 
     // By leewheel 2026-07-29
     // 改回直接调 sLFGMgr::LeaveLfg（参考 LiyunfanPlayerbotsBranch）。
+    // But don't drop a queue we deliberately joined. The "seldom" tick (RandomTrigger, ~300s)
+    // otherwise pulls random bots straight back out.
+    if (sPlayerbotAIConfig.randomBotJoinLfg && RandomPlayerbotMgr::instance().IsRandomBot(bot))
+        return false;
+
     sLFGMgr->LeaveLfg(bot->GetGUID());
-    // End By leewheel
     return true;
 }
 

@@ -522,6 +522,7 @@ void AddPlayerbotsSecureLoginScripts();
 void AddSC_MagtheridonBotScripts();
 void AddSC_TempestKeepBotScripts();
 void AddSC_HyjalSummitBotScripts();
+void AddSC_SunwellPlateauBotScripts();
 void AddSC_IcecrownBotScripts();
 void AddSC_RubySanctumBotScripts();
 //By leewheel 2026-08-01 - 太阳之井高地机器人脚本注册声明
@@ -577,6 +578,7 @@ void AddPlayerbotsScripts()
     AddSC_MagtheridonBotScripts();
     AddSC_TempestKeepBotScripts();
     AddSC_HyjalSummitBotScripts();
+    AddSC_SunwellPlateauBotScripts();
     AddSC_IcecrownBotScripts();
     AddSC_RubySanctumBotScripts();
     //By leewheel 2026-08-01 - 注册太阳之井高地机器人脚本（修复漏注册致命问题）

@@ -66,6 +66,9 @@ bool DropQuestAction::Execute(Event event)
 
 bool CleanQuestLogAction::Execute(Event event)
 {
+    if (botAI->IsAltBot())
+        return false;
+
     Player* requester = event.getOwner() ? event.getOwner() : GetMaster();
     if (!requester)
         return false;

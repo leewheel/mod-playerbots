@@ -11,6 +11,8 @@
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
 #include "TKActions.h"
+#include <limits>
+#include <list>
 
 namespace TkHelpers
 {

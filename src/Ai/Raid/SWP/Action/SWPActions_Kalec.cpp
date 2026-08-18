@@ -4,27 +4,18 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
-// === 外部代码引入记录 ===
-// 2026-07-30 引入自 brighton-chi/mod-playerbots:
-//   commit 5167dd62ffa05cc4d8f5f1dcfad0b425dd68517f - KJ and Kalec edits (KalecgosAnnounceBossHealthAction::Execute)
-// By leewheel
-// End By leewheel
-
 #include "SWPActions.h"
 #include "SWPEncounter_Kalec.h"
 #include "Playerbots.h"
 #include "PlayerbotTextMgr.h"
 #include "RaidBossHelpers.h"
-#include "TargetValue.h"
+#include "SWPData.h"
 #include <algorithm>
+#include <string>
 #include <map>
 
 using namespace SwpHelpers;
 
-//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 5167dd62：Kalecgos 血量通报
 bool KalecgosAnnounceBossHealthAction::Execute(Event /*event*/)
 {
     Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
@@ -74,9 +65,8 @@ bool KalecgosAnnounceBossHealthAction::Execute(Event /*event*/)
 
     return botAI->SayToRaid(text);
 }
-//End By leewheel
 
-bool KalecgosTankPositionBossAction::Execute(Event event)
+bool KalecgosSurfaceTankPositionDragonAction::Execute(Event event)
 {
     Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
     if (!kalecgos)
@@ -112,7 +102,6 @@ bool KalecgosTankPositionBossAction::Execute(Event event)
             false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
     }
 
-    //By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，使用指定坦克检查替代直接检查
     if (GetKalecgosDesignatedTank(bot) == bot && kalecgos->GetVictim() != bot)
         return botAI->DoSpecificAction("taunt spell", event, true);
 
@@ -121,11 +110,9 @@ bool KalecgosTankPositionBossAction::Execute(Event event)
 
 bool KalecgosEnterSpectralRiftAction::Execute(Event /*event*/)
 {
-    //By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，提取坦克进入判断到ShouldTankEnter
     // Special conditions for tanks only
     if (PlayerbotAI::IsTank(bot) && !ShouldTankEnter())
         return false;
-    //End By leewheel
 
     constexpr float searchRadius = 75.0f;
     GameObject* rift = bot->FindNearestGameObject(
@@ -149,7 +136,6 @@ bool KalecgosEnterSpectralRiftAction::Execute(Event /*event*/)
         false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-//By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，提取坦克进入判断逻辑
 bool KalecgosEnterSpectralRiftAction::ShouldTankEnter()
 {
     Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
@@ -171,7 +157,6 @@ bool KalecgosEnterSpectralRiftAction::ShouldTankEnter()
 
     return true;
 }
-//End By leewheel
 
 bool KalecgosDisperseRangedAction::Execute(Event /*event*/)
 {
@@ -214,16 +199,16 @@ bool KalecgosRemoveArcaneBuffetAction::Execute(Event /*event*/)
     switch (bot->getClass())
     {
         case CLASS_MAGE:
-            return botAI->CanCastSpell("ice block", bot) &&
-                botAI->CastSpell("ice block", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot);
 
         case CLASS_PALADIN:
-            return botAI->CanCastSpell("divine shield", bot) &&
-                botAI->CastSpell("divine shield", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot);
 
         case CLASS_ROGUE:
-            return botAI->CanCastSpell("cloak of shadows", bot) &&
-                botAI->CastSpell("cloak of shadows", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot);
 
         default:
             return false;
@@ -237,7 +222,7 @@ bool KalecgosSathrovarrTankStandWithKalecAction::Execute(Event /*event*/)
         return false;
 
     constexpr float searchRadius = 20.0f;
-    Unit* kalec = bot->FindNearestCreature(Id(SwpNpcs::NPC_KALECGOS_HUMANOID), searchRadius);
+    Creature* kalec = bot->FindNearestCreature(Id(SwpNpcs::NPC_KALECGOS_HUMANOID), searchRadius);
     if (!kalec || sathrovarr->GetVictim() != kalec)
         return false;
 
@@ -252,7 +237,9 @@ bool KalecgosSathrovarrTankStandWithKalecAction::Execute(Event /*event*/)
 
 bool KalecgosReturnToSpectralRealmGroundAction::Execute(Event /*event*/)
 {
-    return bot->TeleportTo(
-        SWP_MAP_ID, bot->GetPositionX(), bot->GetPositionY(),
-        KALECGOS_SPECTRAL_REALM_Z, bot->GetOrientation());
+    bot->NearTeleportTo(
+        bot->GetPositionX(), bot->GetPositionY(), KALECGOS_SPECTRAL_REALM_Z, bot->GetOrientation());
+
+    constexpr float zTolerance = 1.0f;
+    return std::fabs(bot->GetPositionZ() - KALECGOS_SPECTRAL_REALM_Z) <= zTolerance;
 }

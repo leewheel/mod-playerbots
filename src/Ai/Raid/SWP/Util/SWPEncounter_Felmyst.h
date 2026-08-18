@@ -4,16 +4,6 @@
  * or (at your option) any later version.
  */
 
-// === 外部代码引入记录 ===
-// 2026-07-30 引入自 brighton-chi/mod-playerbots:
-//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: flight coordinator→leader 重命名
-//   commit 6c788ed68ebb0eb6040f71f5e5bd40ce474b6a13 - Felmyst: TryGetFelmystLandingDestination→IsFelmystLanding 重命名
-// By leewheel
-// End By leewheel
-
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #ifndef PLAYERBOTS_SWPENCOUNTERFELMYST_H
 #define PLAYERBOTS_SWPENCOUNTERFELMYST_H
 
@@ -21,14 +11,12 @@
 #include "Position.h"
 #include "SWPData.h"
 #include <array>
-#include <ctime>
 #include <limits>
 #include <unordered_map>
 #include <vector>
 
 class Creature;
 class Player;
-class PlayerbotAI;
 class Unit;
 
 namespace SwpHelpers
@@ -105,8 +93,8 @@ struct FelmystEncounterState
     uint8 demonicVaporFirstRegionIndex = 0;
     FogOfCorruptionState fogOfCorruption;
     FogPassState fogPass;
-    time_t landingDpsWaitTimer = 0;
-    time_t landingTouchdownTimer = 0;
+    uint32 landingDpsWaitStartMs = 0;
+    uint32 landingTouchdownMs = 0;
     ObjectGuid flightLeaderGuid = ObjectGuid::Empty;
 };
 
@@ -135,6 +123,9 @@ inline Position const FOG_RIGHT_SIDE = { 1458.556f, 502.200f, 59.900f, 1.606f };
 inline Position const LEFT_LANDING_POSITION =   { 1476.770f, 665.094f, 20.642f };
 inline Position const RIGHT_LANDING_POSITION =  { 1469.930f, 557.009f, 22.632f };
 inline Position const CENTER_GROUND_REFERENCE = { 1473.350f, 611.052f, 21.637f };
+
+inline Position const FOG_CRATE_STUCK_POSITION =    { 1484.443f, 591.337f, 23.391f };
+inline Position const FOG_CRATE_TELEPORT_POSITION = { 1482.181f, 591.253f, 24.545f };
 
 inline std::array const TANK_POSITIONS = {
     Position{ 1460.145f, 598.290f, 21.869f },

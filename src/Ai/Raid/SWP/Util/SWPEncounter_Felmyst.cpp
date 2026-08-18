@@ -4,16 +4,6 @@
  * or (at your option) any later version.
  */
 
-// === 外部代码引入记录 ===
-// 2026-07-30 引入自 brighton-chi/mod-playerbots:
-//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: flight coordinator→leader 重命名
-//   commit 6c788ed68ebb0eb6040f71f5e5bd40ce474b6a13 - Felmyst: TryGetFelmystLandingDestination→IsFelmystLanding 重命名
-// By leewheel
-// End By leewheel
-
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "SWPEncounter_Felmyst.h"
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
@@ -1059,7 +1049,6 @@ bool TryGetFelmystFogOfCorruptionStageState(Unit* felmyst, FogOfCorruptionState&
     const FogLocation currentLocation = GetCurrentFogLocation(felmyst);
     const FogLocation destinationLocation = GetDestinationFogLocation(felmyst);
     const FogLane currentLane = GetFogLaneFromLocation(currentLocation);
-    const FogLane destinationLane = GetFogLaneFromLocation(destinationLocation);
 
     if (currentLane != FogLane::None)
     {

@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "Player.h"
@@ -140,7 +137,6 @@ static void RequestInterruptForBotsWithDelayedFelmystEncapsulate(Creature* felmy
         if (!encapsulateTarget)
             continue;
 
-        //By leewheel 2026-07-28 - 使用本地constexpr替代已删除的头文件常量
         constexpr float safeDistance = 20.0f;
         if (player != encapsulateTarget &&
             player->GetExactDist2d(encapsulateTarget) > safeDistance)
@@ -152,8 +148,6 @@ static void RequestInterruptForBotsWithDelayedFelmystEncapsulate(Creature* felmy
     }
 }
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：函数名 RequestInterruptForBotsWithDelayedEredarTwinsConflagration
-//                          → RequestInterruptForEredarTwinsAlythessTargets；同时处理 Conflagration 与远程 bot 的 Blaze 目标
 static void RequestInterruptForEredarTwinsAlythessTargets(Creature* alythess)
 {
     if (!alythess)
@@ -184,9 +178,6 @@ static void RequestInterruptForEredarTwinsAlythessTargets(Creature* alythess)
     }
 }
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：删除 TrackIncomingEredarTwinsConflagration，
-//                          改为在 EredarTwinsSpellListenerScript::OnSpellPrepare 中统一处理 Conflagration/Blaze
-
 class KalecgosSpellListenerScript : public AllSpellScript
 {
 public:
@@ -201,7 +192,6 @@ public:
 
         switch (spellInfo->Id)
         {
-            //By leewheel 2026-07-28 - 3ae5d139: 删除surface combat bot分离逻辑，统一使用FindFirstSunwellCombatBotInGroup
             case Id(SwpSpells::SPELL_SPECTRAL_BLAST_PORTAL):
                 if (PlayerbotAI* botAI = FindFirstSunwellCombatBotInGroup(player))
                     RecordSpectralBlastTarget(player, botAI);
@@ -286,8 +276,6 @@ public:
 
         switch (spellInfo->Id)
         {
-            //By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：删除 OnSpellCast 中的 SPELL_ENCAPSULATE 处理
-            //                          （已在 OnSpellPrepare 中处理，避免重复）
             case Id(SwpSpells::SPELL_SUMMON_DEMONIC_VAPOR):
                 if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(target);
                     botAI && botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
@@ -302,7 +290,6 @@ public:
     }
 };
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：OnSpellCast → OnSpellPrepare，统一处理 Conflagration/Blaze
 class EredarTwinsSpellListenerScript : public AllSpellScript
 {
 public:
@@ -356,8 +343,6 @@ public:
     }
 };
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi 17547f1b：SunwellDelayedInterruptScript → SunwellBossUpdateScript
-//                          删除 TrackIncomingEredarTwinsConflagration 调用（已迁到 EredarTwinsSpellListenerScript::OnSpellPrepare）
 class SunwellBossUpdateScript : public AllCreatureScript
 {
 public:

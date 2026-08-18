@@ -12,7 +12,14 @@
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
+#include <algorithm>
 #include <array>
+#include <cmath>
+#include <ctime>
+#include <limits>
+#include <list>
+#include <map>
+#include <string>
 
 using namespace KaraHelpers;
 
@@ -44,8 +51,7 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
 
     if (!AI_VALUE2(Unit*, "find target", "the big bad wolf"))
     {
-        Action* wolfAction = botAI->GetAiObjectContext()->GetAction(
-            "big bad wolf little red riding hood run away");
+        Action* wolfAction = context->GetAction("big bad wolf little red riding hood run away");
         if (wolfAction &&
             static_cast<BigBadWolfLittleRedRidingHoodRunAwayAction*>(wolfAction)->ResetRunIndex())
         {
@@ -58,24 +64,21 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
         if (isMechanicTracker && netherspiteDpsWaitTimer.erase(instanceId) > 0)
             reset = true;
 
-        Action* redAction = botAI->GetAiObjectContext()->GetAction(
-            "netherspite block red beam");
+        Action* redAction = context->GetAction("netherspite block red beam");
         if (redAction &&
             static_cast<NetherspiteBlockRedBeamAction*>(redAction)->ResetRedBeamState())
         {
             reset = true;
         }
 
-        Action* blueAction = botAI->GetAiObjectContext()->GetAction(
-            "netherspite block blue beam");
+        Action* blueAction = context->GetAction("netherspite block blue beam");
         if (blueAction &&
             static_cast<NetherspiteBlockBlueBeamAction*>(blueAction)->ResetBlueBeamState())
         {
             reset = true;
         }
 
-        Action* greenAction = botAI->GetAiObjectContext()->GetAction(
-            "netherspite block green beam");
+        Action* greenAction = context->GetAction("netherspite block green beam");
         if (greenAction &&
             static_cast<NetherspiteBlockGreenBeamAction*>(greenAction)->ResetGreenBeamState())
         {
@@ -903,7 +906,6 @@ bool NetherspiteAvoidBeamAndVoidZoneAction::Execute(Event /*event*/)
         return false;
 
     constexpr uint8 numAngles = 36;
-    constexpr float maxSearchDist = 30.0f;
     constexpr float stepDist = 0.5f;
     constexpr uint8 numSteps = 56;
 
@@ -953,7 +955,7 @@ bool NetherspiteAvoidBeamAndVoidZoneAction::Execute(Event /*event*/)
 }
 
 bool NetherspiteAvoidBeamAndVoidZoneAction::IsAwayFromBeams(
-     float x, float y, float botX, float botY, const std::vector<BeamAvoid>& beams)
+     float x, float y, float botX, float botY, std::vector<BeamAvoid> const& beams)
 {
     for (auto const& beam : beams)
     {
@@ -1011,21 +1013,21 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
         if (isMechanicTracker && netherspiteDpsWaitTimer.erase(instanceId) > 0)
             didSomething = true;
 
-        Action* redAction = botAI->GetAiObjectContext()->GetAction("netherspite block red beam");
+        Action* redAction = context->GetAction("netherspite block red beam");
         if (redAction &&
             static_cast<NetherspiteBlockRedBeamAction*>(redAction)->ResetRedBeamState())
         {
             didSomething = true;
         }
 
-        Action* blueAction = botAI->GetAiObjectContext()->GetAction("netherspite block blue beam");
+        Action* blueAction = context->GetAction("netherspite block blue beam");
         if (blueAction &&
             static_cast<NetherspiteBlockBlueBeamAction*>(blueAction)->ResetBlueBeamState())
         {
             didSomething = true;
         }
 
-        Action* greenAction = botAI->GetAiObjectContext()->GetAction("netherspite block green beam");
+        Action* greenAction = context->GetAction("netherspite block green beam");
         if (greenAction &&
             static_cast<NetherspiteBlockGreenBeamAction*>(greenAction)->ResetGreenBeamState())
         {
@@ -1528,9 +1530,12 @@ bool NightbaneFlightPhaseStackAndMoveAction::Execute(Event /*event*/)
 bool NightbaneTeleportBackToTerraceAction::Execute(Event /*event*/)
 {
     Position const& position = NIGHTBANE_TELEPORT_POSITION;
-    return bot->TeleportTo(
-        KARA_MAP_ID, position.GetPositionX(), position.GetPositionY(),
+    bot->NearTeleportTo(
+        position.GetPositionX(), position.GetPositionY(),
         position.GetPositionZ(), bot->GetOrientation());
+
+    constexpr float zTolerance = 1.0f;
+    return std::fabs(bot->GetPositionZ() - NIGHTBANE_GROUND_Z) <= zTolerance;
 }
 
 bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
@@ -1546,8 +1551,7 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
 
     if (nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
     {
-        Action* action = botAI->GetAiObjectContext()->GetAction(
-            "nightbane flight phase stack and move");
+        Action* action = context->GetAction("nightbane flight phase stack and move");
         if (action &&
             static_cast<NightbaneFlightPhaseStackAndMoveAction*>(action)->ResetRainOfBonesHit())
         {

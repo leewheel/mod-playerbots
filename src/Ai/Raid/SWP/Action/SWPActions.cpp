@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "SWPActions.h"
 #include "CreatureAI.h"
 #include "Playerbots.h"
@@ -24,10 +21,9 @@ using namespace SwpHelpers;
 
 bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
 {
-    //By leewheel 2026-07-27 - 移除isRanged和isTank变量，直接内联使用静态方法调用
     ObjectGuid const guid = bot->GetGUID();
     uint32 const instanceId = bot->GetInstanceId();
-    bool const isMechanicTracker = IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID);
+    bool const isMechanicTracker = IsMechanicTrackerBot(bot, SWP_MAP_ID);
 
     bool didSomething = false;
 
@@ -37,11 +33,9 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         if (isMechanicTracker && kalecgosEncounterStates.erase(instanceId) > 0)
             didSomething = true;
 
-        //By leewheel 2026-07-27 - 根据upstream修改，从isRanged改为IsTank
         if (PlayerbotAI::IsTank(bot))
         {
-            Action* kalecAction = botAI->GetAiObjectContext()->GetAction(
-                "kalecgos disperse ranged");
+            Action* kalecAction = context->GetAction("kalecgos disperse ranged");
             if (kalecAction && static_cast<KalecgosDisperseRangedAction*>(
                     kalecAction)->ResetInitialRangedPositionReached())
             {
@@ -73,12 +67,10 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         if (isMechanicTracker && brutallusRangedBurnPadAssignments.erase(instanceId) > 0)
             didSomething = true;
 
-        //By leewheel 2026-07-27 - 直接内联调用静态方法
         if (PlayerbotAI::IsTank(bot))
         {
-            Action* brutallusAction = botAI->GetAiObjectContext()->GetAction(
-                "brutallus tanks handle boss");
-            if (brutallusAction && static_cast<BrutallusTanksHandleBossAction*>(
+            Action* brutallusAction = context->GetAction("brutallus tanks position and swap");
+            if (brutallusAction && static_cast<BrutallusTanksPositionAndSwapAction*>(
                     brutallusAction)->ResetInitialPositionReached())
             {
                 didSomething = true;
@@ -97,14 +89,13 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         if (eredarTwinsIncomingConflagrationStates.erase(instanceId) > 0)
             didSomething = true;
 
-        if (eredarTwinsDpsHoldTimer.erase(instanceId) > 0)
+        if (eredarTwinsDpsHoldStartMs.erase(instanceId) > 0)
             didSomething = true;
     }
 
-    //By leewheel 2026-07-27 - 直接内联调用静态方法（修复提交5的bug：添加(bot)参数）
     if (PlayerbotAI::IsTank(bot) && !AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
     {
-        Action* twinsAction = botAI->GetAiObjectContext()->GetAction(
+        Action* twinsAction = context->GetAction(
             "eredar twins first assist tank move out of blaze");
         if (twinsAction && static_cast<EredarTwinsFirstAssistTankMoveOutOfBlazeAction*>(
                 twinsAction)->ResetAlythessTankStep())
@@ -159,7 +150,7 @@ bool SunwellPlateauRemoveProtectiveAuraAction::Execute(Event /*event*/)
 bool VolatileFiendKeepEnemyAwayFromGroupAction::Execute(Event /*event*/)
 {
     constexpr float searchRadius = 25.0f;
-    Unit* volatileFiend = bot->FindNearestCreature(
+    Creature* volatileFiend = bot->FindNearestCreature(
         Id(SwpNpcs::NPC_VOLATILE_FIEND), searchRadius, true);
     if (!volatileFiend)
         return false;
@@ -175,7 +166,7 @@ bool VolatileFiendKeepEnemyAwayFromGroupAction::Execute(Event /*event*/)
         float const currentDistance = bot->GetDistance(volatileFiend);
         if (currentDistance < safeDistance)
         {
-            botAI->InterruptSpell();
+            bot->InterruptNonMeleeSpells(false);
             return MoveAway(volatileFiend, safeDistance - currentDistance);
         }
     }

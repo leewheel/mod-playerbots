@@ -4,13 +4,11 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "SWPStrategy.h"
 #include "AiObjectContext.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
+#include "SWPData.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
@@ -36,8 +34,8 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("kalecgos should communicate boss health", {
         NextAction("kalecgos announce boss health", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("kalecgos boss engaged by tank", {
-        NextAction("kalecgos tank position boss", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("kalecgos boss requires tank rotation", {
+        NextAction("kalecgos surface tank position dragon", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("kalecgos spectral rift is open", {
         NextAction("kalecgos enter spectral rift", ACTION_EMERGENCY + 1) }));
@@ -59,13 +57,13 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("brutallus misdirect boss to main tank", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("brutallus boss engaged by tanks", {
-        NextAction("brutallus tanks handle boss", ACTION_RAID) }));
+        NextAction("brutallus tanks position and swap", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("brutallus boss engaged by melee", {
-        NextAction("brutallus position melee", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("brutallus melee should stand in place", {
+        NextAction("brutallus position melee at rear center", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("brutallus boss engaged by ranged", {
-        NextAction("brutallus position ranged", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("brutallus ranged should soak meteor slash", {
+        NextAction("brutallus position ranged in two groups", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("brutallus bot is burning", {
         NextAction("brutallus handle burn", ACTION_EMERGENCY + 1) }));
@@ -77,11 +75,11 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst boss engaged by main tank on ground", {
         NextAction("felmyst main tank position boss on ground", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("felmyst boss engaged by ranged on ground", {
-        NextAction("felmyst position ranged on ground", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("felmyst ranged should split in three", {
+        NextAction("felmyst ranged stack in three groups", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("felmyst boss engaged by melee on ground", {
-        NextAction("felmyst position melee on ground", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("felmyst melee should stay together", {
+        NextAction("felmyst melee stack behind boss", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("felmyst bot is encapsulated", {
         NextAction("felmyst remove encapsulate", ACTION_EMERGENCY + 7) }));
@@ -92,10 +90,8 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player has gas nova", {
         NextAction("felmyst mass dispel gas nova", ACTION_EMERGENCY + 6) }));
 
-    //By leewheel 20260729 同步 e404dc12 trigger 重命名
     triggers.push_back(new TriggerNode("felmyst should avoid demonic vapor trails", {
         NextAction("felmyst avoid demonic vapor", ACTION_EMERGENCY + 1) }));
-    //End By leewheel
 
     triggers.push_back(new TriggerNode("felmyst bot is demonic vapor target", {
         NextAction("felmyst kite demonic vapor", ACTION_EMERGENCY + 10) }));
@@ -109,7 +105,6 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player is charmed by fog", {
         NextAction("felmyst kill charmed player", ACTION_EMERGENCY + 9) }));
 
-    //By leewheel 2026-07-27 - Felmyst landing DPS management trigger
     triggers.push_back(new TriggerNode("felmyst manage landing dps timer", {
         NextAction("felmyst should hold dps while landing", ACTION_EMERGENCY + 8) }));
 
@@ -123,7 +118,7 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("eredar twins sacrolash engaged by two tanks", {
         NextAction("eredar twins main and second assist tanks position sacrolash", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("eredar twins alythess engaged by first assist tank", {
+    triggers.push_back(new TriggerNode("eredar twins alythess casts blaze on tank", {
         NextAction("eredar twins first assist tank move out of blaze", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("eredar twins bosses engaged by ranged", {
@@ -161,7 +156,7 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("m'uru second assist tank guard ranged", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("m'uru determining dps priority", {
-        NextAction("m'uru set dps priority", ACTION_RAID) }));
+        NextAction("m'uru assign dps priority", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("m'uru dark fiends spawned", {
         NextAction("m'uru kill dark fiends with dispel", ACTION_EMERGENCY + 10) }));
@@ -170,7 +165,7 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("m'uru don't touch the dark fiend", ACTION_EMERGENCY + 9) }));
 
     triggers.push_back(new TriggerNode("m'uru darkness is coming", {
-        NextAction("m'uru flee the darkness", ACTION_EMERGENCY + 8) }));
+        NextAction("m'uru melee flee the darkness", ACTION_EMERGENCY + 8) }));
 
     triggers.push_back(new TriggerNode("m'uru the singularity is near", {
         NextAction("m'uru flee from singularity", ACTION_EMERGENCY + 7) }));
@@ -247,7 +242,6 @@ void RaidSunwellStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new FelmystPrioritizeDemonicVaporAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeFogAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystFocusAttacksOnCharmedPlayerMultiplier(botAI));
-    //By leewheel 2026-07-27 新增 Felmyst 不小怪施放DoT的乘数
     multipliers.push_back(new FelmystDontDotAddsMultiplier(botAI));
     multipliers.push_back(new FelmystDelayCooldownsMultiplier(botAI));
 
@@ -306,6 +300,10 @@ void AppendMuruDarkFiendExclusions(
 
 void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
+    Player* bot = botAI->GetBot();
+    if (!PlayerbotAI::IsTank(bot))
+        return;
+
     Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
     if (!muru || muru->GetHealth() <= 1)
         return;
@@ -324,7 +322,6 @@ void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, Guid
             continue;
         }
 
-        Player* bot = botAI->GetBot();
         if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
             TryGetMuruDarknessActiveState(bot, muru))
         {
@@ -353,10 +350,16 @@ void AppendKiljaedenShieldOrbExclusions(
     }
 }
 
-void AppendKiljaedenSinisterReflectionExclusions(
+// This activates only after the Reflections become aggressive (after 3s or when attacked,
+// whichever is earlier); up until then, they are not on the attackers list anyway
+/* void AppendKiljaedenSinisterReflectionExclusions(
     PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
-    if (!AI_VALUE2(Unit*, "find target", "kil'jaeden"))
+    if (PlayerbotAI::IsTank(botAI->GetBot()))
+        return;
+
+    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+    if (!kiljaeden || kiljaeden->GetHealthPct() > 85.0f)
         return;
 
     for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
@@ -369,27 +372,17 @@ void AppendKiljaedenSinisterReflectionExclusions(
         if (!victim || !victim->IsPlayer() || !PlayerbotAI::IsTank(victim->ToPlayer()))
             exclusions.insert(guid);
     }
-}
+} */
 
 } // end anonymous namespace
 
-void RaidSunwellStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExclusionType type)
+void RaidSunwellStrategy::AppendTargetExclusions(
+    GuidSet& exclusions, TargetValueExclusionType /*type*/)
 {
     AiObjectContext* context = botAI->GetAiObjectContext();
     AppendFelmystVaporPhaseMeleeExclusions(botAI, context, exclusions);
+    AppendMuruTankExclusions(botAI, context, exclusions);
     AppendMuruDarkFiendExclusions(botAI, context, exclusions);
     AppendKiljaedenShieldOrbExclusions(botAI, context, exclusions);
-
-    switch (type)
-    {
-        case TargetValueExclusionType::Tank:
-            AppendMuruTankExclusions(botAI, context, exclusions);
-            break;
-        case TargetValueExclusionType::Dps:
-        case TargetValueExclusionType::Attacker:
-            AppendKiljaedenSinisterReflectionExclusions(botAI, context, exclusions);
-            break;
-        case TargetValueExclusionType::None:
-            break;
-    }
+    // AppendKiljaedenSinisterReflectionExclusions(botAI, context, exclusions);
 }

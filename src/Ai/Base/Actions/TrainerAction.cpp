@@ -180,6 +180,12 @@ bool MaintenanceAction::Execute(Event /*event*/)
         return false;
     }
 
+    if (IsSelfBot(bot)) // No maintenance for selfbots
+        return false;
+
+    if (bot->GetGUID().GetCounter() == 6143) // No maintenance for Crow
+        return false;
+
     botAI->TellMaster("正在维护中");
     PlayerbotFactory factory(bot, bot->GetLevel());
 

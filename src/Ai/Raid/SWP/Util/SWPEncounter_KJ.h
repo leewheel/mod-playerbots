@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #ifndef PLAYERBOTS_SWPENCOUNTERKJ_H
 #define PLAYERBOTS_SWPENCOUNTERKJ_H
 
@@ -19,7 +16,6 @@
 #include <vector>
 
 class Player;
-class PlayerbotAI;
 class Unit;
 
 namespace SwpHelpers
@@ -54,7 +50,6 @@ struct KiljaedenEncounterState
     uint32 dragonOrbAnnouncementMs = 0;
 };
 
-//By leewheel 2026-07-28 - 使用std::array替代C风格数组
 inline std::array const KILJAEDEN_DRAGON_ORB_ENTRIES = {
     Id(SwpObjects::GO_DRAGON_ORB_1),
     Id(SwpObjects::GO_DRAGON_ORB_2),
@@ -100,6 +95,9 @@ Unit* GetKiljaedenControlledDragon(Player* bot);
 bool CastKiljaedenDragonSpell(Unit* dragon, uint32 spellId);
 Player* FindBestKiljaedenDragonClusterTarget(Player* bot, Unit* dragon, uint32 spellId);
 Player* FindClosestKiljaedenDragonTarget(Player* bot, Unit* dragon, uint32 spellId = 0);
+bool HasAtLeastThreeBotTanks(
+    Player* bot, Player** outMainTank = nullptr, Player** outFirstAssist = nullptr,
+    Player** outSecondAssist = nullptr);
 
 }
 

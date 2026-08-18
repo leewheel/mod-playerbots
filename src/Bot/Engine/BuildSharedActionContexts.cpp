@@ -22,6 +22,7 @@
 #include "OnyActionContext.h"
 #include "RSActionContext.h"
 #include "SSCActionContext.h"
+#include "SWPActionContext.h"
 #include "TKActionContext.h"
 #include "TbcDungeonActionContext.h"
 #include "UldActionContext.h"
@@ -29,9 +30,6 @@
 #include "WorldPacketActionContext.h"
 #include "WotlkDungeonActionContext.h"
 #include "ZAActionContext.h"
-//By leewheel 2026-07-08
-#include "SWPActionContext.h"
-//End By leewheel
 //By leewheel 2026-07-09
 #include "VimgolActionContext.h"
 //End By leewheel
@@ -57,6 +55,7 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new RaidHyjalSummitActionContext());
     actionContexts.Add(new RaidBlackTempleActionContext());
     actionContexts.Add(new RaidZulAmanActionContext());
+    actionContexts.Add(new RaidSunwellActionContext());
     actionContexts.Add(new RaidNaxxActionContext());
     actionContexts.Add(new RaidOsActionContext());
     actionContexts.Add(new RaidEoEActionContext());
@@ -65,10 +64,6 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new RaidOnyxiaActionContext());
     actionContexts.Add(new RaidIccActionContext());
     actionContexts.Add(new RaidRsActionContext());
-    //By leewheel 2026-07-08
-    //By leewheel 2026-07-26 替换为brighton-chi版本SWP实现(类名RaidSunwellActionContext)
-    actionContexts.Add(new RaidSunwellActionContext());
-    //End By leewheel
     //By leewheel 2026-07-09
     actionContexts.Add(new VimgolActionContext());
     //End By leewheel
@@ -76,10 +71,8 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new RaidVanillaNaxxActionContext());
     //End By leewheel
     actionContexts.Add(new TbcDungeonHellfireRampartsActionContext());
-    //By leewheel 2026-07-27 引入brighton-chi的UB(幽暗沼泽)副本策略
-    actionContexts.Add(new TbcDungeonUnderbogActionContext());
-    //End By leewheel
     actionContexts.Add(new TbcDungeonAuchenaiCryptsActionContext());
+    actionContexts.Add(new TbcDungeonUnderbogActionContext());
     actionContexts.Add(new TbcDungeonSethekkHallsActionContext());
     actionContexts.Add(new TbcDungeonMechanarActionContext());
     actionContexts.Add(new WotlkDungeonUKActionContext());

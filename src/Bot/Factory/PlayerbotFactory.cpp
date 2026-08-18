@@ -56,7 +56,8 @@ std::list<uint32> PlayerbotFactory::classQuestIds;
 std::list<uint32> PlayerbotFactory::specialQuestIds;
 std::vector<uint32> PlayerbotFactory::enchantSpellIdCache;
 std::vector<uint32> PlayerbotFactory::enchantGemIdCache;
-std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::trainerIdCache;
+std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::classTrainerIdCache;
+std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::tradeskillTrainerIdCache;
 std::vector<uint32> PlayerbotFactory::ccBreakTrinketCache;
 
 namespace
@@ -2452,7 +2453,7 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
             bool isTrinketSlot = (slot == EQUIPMENT_SLOT_TRINKET1 || slot == EQUIPMENT_SLOT_TRINKET2);
             calculator.SetExcludeResilience(isTrinketSlot);
 
-            if (Item* oldItem = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            if (bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
                 bot->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
 
             std::vector<std::pair<uint32, int32>>& ids = items[slot];
@@ -3071,9 +3072,6 @@ void PlayerbotFactory::UpdateTradeSkills()
 
 void PlayerbotFactory::InitSkills()
 {
-    //uint32 maxValue = level * 5; //not used, line marked for removal.
-    bot->UpdateSkillsForLevel();
-
     bot->SetSkill(SKILL_RIDING, 0, 0, 0);
     if (bot->GetLevel() >= sPlayerbotAIConfig.useGroundMountAtMinLevel)
         bot->learnSpell(33388);
@@ -3241,7 +3239,12 @@ void PlayerbotFactory::SetRandomSkill(uint16 id)
 
 void PlayerbotFactory::InitAvailableSpells()
 {
-    if (trainerIdCache[bot->getClass()].empty())
+    bool const includeTradeskills = sRandomPlayerbotMgr.IsRandomBot(bot);
+    std::unordered_map<uint32, std::vector<uint32>>& trainerIdCache =
+        includeTradeskills ? tradeskillTrainerIdCache : classTrainerIdCache;
+    std::vector<uint32>& trainerIds = trainerIdCache[bot->getClass()];
+
+    if (trainerIds.empty())
     {
         CreatureTemplateContainer const* creatureTemplateContainer = sObjectMgr->GetCreatureTemplates();
         for (CreatureTemplateContainer::const_iterator i = creatureTemplateContainer->begin();
@@ -3252,18 +3255,19 @@ void PlayerbotFactory::InitAvailableSpells()
             if (!trainer)
                 continue;
 
-            if (trainer->GetTrainerType() != Trainer::Type::Tradeskill &&
-                trainer->GetTrainerType() != Trainer::Type::Class)
+            Trainer::Type const trainerType = trainer->GetTrainerType();
+            if (trainerType != Trainer::Type::Class &&
+                !(includeTradeskills && trainerType == Trainer::Type::Tradeskill))
                 continue;
 
-            if (trainer->GetTrainerType() == Trainer::Type::Class &&
-                !trainer->IsTrainerValidForPlayer(bot))
+            if (trainerType == Trainer::Type::Class && !trainer->IsTrainerValidForPlayer(bot))
                 continue;
 
-            trainerIdCache[bot->getClass()].push_back(i->first);
+            trainerIds.push_back(i->first);
         }
     }
-    for (uint32 trainerId : trainerIdCache[bot->getClass()])
+
+    for (uint32 trainerId : trainerIds)
     {
         Trainer::Trainer* trainer = sObjectMgr->GetTrainer(trainerId);
 

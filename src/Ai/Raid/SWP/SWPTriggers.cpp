@@ -4,18 +4,10 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
-// === 外部代码引入记录 ===
-// 2026-07-30 引入自 brighton-chi/mod-playerbots:
-//   commit 4a2fa24d5aed9262aacaf0f97b9d2fb25081bb55 - Felmyst: BossEngagedByRangedOnGround 新增 MT 仇恨检查
-// By leewheel
-// End By leewheel
-
 #include "SWPTriggers.h"
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
+#include "SWPData.h"
 #include "SWPEncounter_Brut.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Kalec.h"
@@ -70,7 +62,6 @@ bool ApocalypseGuardProtectedByInfernalDefenseTrigger::IsActive()
 
 // Kalecgos
 
-//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 5167dd62：Kalecgos 血量通报 trigger
 bool KalecgosShouldCommunicateBossHealthTrigger::IsActive()
 {
     Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
@@ -105,9 +96,8 @@ bool KalecgosShouldCommunicateBossHealthTrigger::IsActive()
 
     return bot == spectralBot || bot == surfaceBot;
 }
-//End By leewheel
 
-bool KalecgosBossEngagedByTankTrigger::IsActive()
+bool KalecgosBossRequiresTankRotationTrigger::IsActive()
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;
@@ -116,9 +106,7 @@ bool KalecgosBossEngagedByTankTrigger::IsActive()
     if (!kalecgos || kalecgos->IsFriendlyTo(bot))
         return false;
 
-    //By leewheel 2026-07-28 - 从brighton-chi来源移植：Kalec简化，触发器只需检查不在灵界
     return !IsInSpectralRealm(bot);
-    //End By leewheel
 }
 
 bool KalecgosSpectralRiftIsOpenTrigger::IsActive()
@@ -205,7 +193,7 @@ bool BrutallusBossEngagedByTanksTrigger::IsActive()
     return PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 }
 
-bool BrutallusBossEngagedByMeleeTrigger::IsActive()
+bool BrutallusMeleeShouldStayInPlaceTrigger::IsActive()
 {
     if (!PlayerbotAI::IsMelee(bot) || PlayerbotAI::IsMainTank(bot) ||
         PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
@@ -279,7 +267,7 @@ bool FelmystBossEngagedByMainTankOnGroundTrigger::IsActive()
     return true;
 }
 
-bool FelmystBossEngagedByRangedOnGroundTrigger::IsActive()
+bool FelmystRangedShouldSplitInThreeTrigger::IsActive()
 {
     if (!PlayerbotAI::IsRanged(bot))
         return false;
@@ -300,8 +288,6 @@ bool FelmystBossEngagedByRangedOnGroundTrigger::IsActive()
     if (felmyst->GetVictim() == bot)
         return false;
 
-    //By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 4a2fa24d：
-    //                          初次降落时让 MT 拿到仇恨再上线排，避免远程过早暴露
     // On initial landing, let MT get aggro before assuming positions
     Player* mainTank = GetGroupMainTank(botAI, bot);
     if (mainTank && felmyst->GetVictim() != mainTank && felmyst->GetHealthPct() > 90.0f)
@@ -310,7 +296,7 @@ bool FelmystBossEngagedByRangedOnGroundTrigger::IsActive()
     return !GetFelmystEncapsulateTarget(bot) && !DidEncapsulateOccurThisGroundPhase(bot);
 }
 
-bool FelmystBossEngagedByMeleeOnGroundTrigger::IsActive()
+bool FelmystMeleeShouldStayTogetherTrigger::IsActive()
 {
     if (!PlayerbotAI::IsMelee(bot) || PlayerbotAI::IsMainTank(bot))
         return false;
@@ -377,8 +363,6 @@ bool FelmystPlayerHasGasNovaTrigger::IsActive()
     return GetFelmystGasNovaDispelTarget(bot);
 }
 
-//By leewheel 2026-07-29 - 同步上游brighton-chi e404dc12：FelmystDemonicVaporTrailsAreActiveTrigger
-//                          → FelmystShouldAvoidDemonicVaporTrailsTrigger
 bool FelmystShouldAvoidDemonicVaporTrailsTrigger::IsActive()
 {
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
@@ -448,7 +432,7 @@ bool FelmystPlayerIsCharmedByFogTrigger::IsActive()
 
 bool FelmystShouldHoldDpsWhileLandingTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID) && AI_VALUE2(Unit*, "find target", "felmyst");
+    return IsMechanicTrackerBot(bot, SWP_MAP_ID) && AI_VALUE2(Unit*, "find target", "felmyst");
 }
 
 // Eredar Twins
@@ -487,7 +471,7 @@ bool EredarTwinsSacrolashEngagedByTwoTanksTrigger::IsActive()
     return IsAnySacrolashTank(bot);
 }
 
-bool EredarTwinsAlythessEngagedByFirstAssistTankTrigger::IsActive()
+bool EredarTwinsAlythessCastsBlazeOnTankTrigger::IsActive()
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;
@@ -716,11 +700,13 @@ bool MuruFuryMageIsBuffedWithSpellFuryTrigger::IsActive()
 
 bool MuruVoidSpawnAvailableForEnslaveTrigger::IsActive()
 {
-    if (bot->getClass() != CLASS_WARLOCK || bot->GetCharm())
+    if (bot->getClass() != CLASS_WARLOCK)
         return false;
 
-    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
-    if (!muru)
+    if (!AI_VALUE2(Unit*, "find target", "m'uru"))
+        return false;
+
+    if (bot->GetCharm())
         return false;
 
     return FindAvailableVoidSpawnForEnslave(bot);
@@ -742,7 +728,7 @@ bool MuruWarlockHasEnslavedVoidSpawnTrigger::IsActive()
 
 bool KiljaedenEncounterHasBegunTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID) &&
+    return IsMechanicTrackerBot(bot, SWP_MAP_ID) &&
         AI_VALUE2(Unit*, "find target", "hand of the deceiver");
 }
 
@@ -757,26 +743,13 @@ bool KiljaedenBossEngagedByTanksTrigger::IsActive()
         return false;
 
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
-    if (!kiljaeden || HasKiljaedenDragonAura(bot) ||
-        IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
-    {
+    if (!kiljaeden)
         return false;
-    }
 
-    if (kiljaeden->GetHealthPct() > 85.0f)
-        return true;
-
-    if (PlayerbotAI::IsMainTank(bot))
-        return true;
-
-    constexpr float searchRadius = 100.0f;
-    if (AI_VALUE2(Unit*, "find target", "sinister reflection") ||
-        bot->FindNearestCreature(Id(SwpNpcs::NPC_SINISTER_REFLECTION), searchRadius, true))
-    {
+    if (HasKiljaedenDragonAura(bot))
         return false;
-    }
 
-    return true;
+    return !IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden);
 }
 
 bool KiljaedenBossEngagedByMeleeTrigger::IsActive()
@@ -785,23 +758,13 @@ bool KiljaedenBossEngagedByMeleeTrigger::IsActive()
         return false;
 
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
-    if (!kiljaeden || kiljaeden->GetHealthPct() > 85.0f)
-        return false;
-
-    if (IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
+    if (!kiljaeden)
         return false;
 
     if (HasKiljaedenDragonAura(bot))
         return false;
 
-    constexpr float searchRadius = 50.0f;
-    if (AI_VALUE2(Unit*, "find target", "sinister reflection") ||
-        bot->FindNearestCreature(Id(SwpNpcs::NPC_SINISTER_REFLECTION), searchRadius, true))
-    {
-        return false;
-    }
-
-    return true;
+    return !IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden);
 }
 
 bool KiljaedenBossEngagedByRangedTrigger::IsActive()
@@ -810,14 +773,18 @@ bool KiljaedenBossEngagedByRangedTrigger::IsActive()
         return false;
 
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
-    if (!kiljaeden || HasKiljaedenDragonAura(bot) ||
-        IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
-    {
+    if (!kiljaeden)
         return false;
-    }
 
-    if (bot->HasAura(Id(SwpSpells::SPELL_METAMORPHOSIS)))
+    if (HasKiljaedenDragonAura(bot))
         return false;
+
+    if (IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
+        return false;
+
+    // Allow Demo Lock to AoE the Reflections
+    if (bot->getClass() == CLASS_WARLOCK && bot->HasAura(Id(SwpSpells::SPELL_METAMORPHOSIS)))
+        return AI_VALUE2(Unit*, "find target", "sinister reflection");
 
     return true;
 }

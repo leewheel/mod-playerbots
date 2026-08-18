@@ -4,15 +4,13 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "SWPActions.h"
 #include "SWPEncounter_Muru.h"
 #include "CharmInfo.h"
 #include "CreatureAI.h"
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
+#include "SWPData.h"
 #include "TargetValue.h"
 #include <array>
 #include <cmath>
@@ -156,7 +154,7 @@ bool MuruPositionRangedAction::TryGetEntropiusInitialRangedPosition(
     return true;
 }
 
-bool MuruSetDpsPriorityAction::Execute(Event /*event*/)
+bool MuruAssignDpsPriorityAction::Execute(Event /*event*/)
 {
     Unit* currentTarget = context->GetValue<Unit*>("current target")->Get();
     Unit* target = ResolveMuruDpsTarget(currentTarget);
@@ -190,7 +188,7 @@ bool MuruSetDpsPriorityAction::Execute(Event /*event*/)
     return false;
 }
 
-Unit* MuruSetDpsPriorityAction::ResolveMuruDpsTarget(Unit*& currentTarget)
+Unit* MuruAssignDpsPriorityAction::ResolveMuruDpsTarget(Unit*& currentTarget)
 {
     bool const isShadowPriest =
         bot->getClass() == CLASS_PRIEST && botAI->HasStrategy("shadow", BOT_STATE_COMBAT);
@@ -336,7 +334,7 @@ Unit* MuruSetDpsPriorityAction::ResolveMuruDpsTarget(Unit*& currentTarget)
     return target;
 }
 
-Unit* MuruSetDpsPriorityAction::SelectMuruEncounterTarget(
+Unit* MuruAssignDpsPriorityAction::SelectMuruEncounterTarget(
     Unit* currentTarget, uint32 entry, std::vector<Unit*> const& candidates) const
 {
     Unit* selected = nullptr;
@@ -505,7 +503,7 @@ bool MuruTanksMoveSentinelToSafePositionAction::Execute(Event /*event*/)
     float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
-        SWP_MAP_ID, moveX, moveY, tankPosition.GetPositionZ(), false, false,
+        SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -532,7 +530,6 @@ Position const& MuruTanksMoveSentinelToSafePositionAction::GetAssignedVoidSentin
 
 bool MuruSecondAssistTankGuardRangedAction::Execute(Event /*event*/)
 {
-    //By leewheel 2026-07-27 - Position const 改为 const& 避免拷贝
     Position const& position = MURU_ENTRANCE_POSITION;
     if (bot->GetExactDist2d(position) <= 1.0f)
         return false;
@@ -542,13 +539,12 @@ bool MuruSecondAssistTankGuardRangedAction::Execute(Event /*event*/)
         false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
-bool MuruFleeTheDarknessAction::Execute(Event /*event*/)
+bool MuruMeleeFleeTheDarknessAction::Execute(Event /*event*/)
 {
     Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
     if (!muru)
         return false;
 
-    //By leewheel 2026-07-27 - Position const 改为 const& 避免拷贝
     Position const& entrancePosition = MURU_ENTRANCE_POSITION;
     Position const& stackPosition = MURU_STACK_POSITION;
 
@@ -576,7 +572,6 @@ bool MuruFleeTheDarknessAction::Execute(Event /*event*/)
         if (!PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
             TryGetMuruDarknessEarlyState(bot, muru))
         {
-            //By leewheel 2026-07-27 - Position const 改为 const& 避免拷贝
             Position const& holdingPosition = PlayerbotAI::IsAssistTankOfIndex(bot, 1, true) ?
                 entrancePosition : stackPosition;
             constexpr float arrivalDistance = 1.0f;
@@ -701,13 +696,6 @@ bool MuruCastSpellStealOnSpellFuryAction::Execute(Event /*event*/)
 
 bool MuruWarlockEnslaveVoidSpawnAction::Execute(Event /*event*/)
 {
-    if (bot->getClass() != CLASS_WARLOCK || bot->GetCharm())
-        return false;
-
-    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
-    if (!muru)
-        return false;
-
     Creature* voidSpawn = FindAvailableVoidSpawnForEnslave(bot);
     if (!voidSpawn)
         return false;
@@ -762,9 +750,6 @@ bool MuruEnslavedVoidSpawnAttackAction::CommandControlledCreatureToAttack(
 
 bool MuruEnslavedVoidSpawnCastShadowBoltVolleyAction::Execute(Event /*event*/)
 {
-    if (bot->getClass() != CLASS_WARLOCK)
-        return false;
-
     Unit* voidSpawn = GetControlledVoidSpawn();
     if (!voidSpawn)
         return false;
@@ -775,7 +760,8 @@ bool MuruEnslavedVoidSpawnCastShadowBoltVolleyAction::Execute(Event /*event*/)
 
     bool const commandedAttack = CommandControlledCreatureToAttack(voidSpawn, target);
 
-    if (voidSpawn->GetExactDist2d(target) > sPlayerbotAIConfig.spellDistance)
+    constexpr float shadowBoltVolleyRange = 20.0f;
+    if (voidSpawn->GetDistance(target) > shadowBoltVolleyRange)
         return commandedAttack;
 
     constexpr uint32 volleySpellId = Id(SwpSpells::SPELL_SHADOW_BOLT_VOLLEY);

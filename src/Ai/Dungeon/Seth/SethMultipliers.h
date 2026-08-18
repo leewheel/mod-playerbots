@@ -12,36 +12,32 @@
 class SethekkProphetSetTremorTotemMultiplier : public Multiplier
 {
 public:
-    SethekkProphetSetTremorTotemMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "sethekk prophet set tremor totem") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    SethekkProphetSetTremorTotemMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "sethekk prophet set tremor totem") {}
     float GetValue(Action* action) override;
 };
 
 class AnzuControlSpellCastingWithSpellBombMultiplier : public Multiplier
 {
 public:
-    AnzuControlSpellCastingWithSpellBombMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "anzu control spell casting with spell bomb") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    AnzuControlSpellCastingWithSpellBombMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "anzu control spell casting with spell bomb") {}
     float GetValue(Action* action) override;
 };
 
 class TalonKingIkissDelayBloodlustAndHeroismMultiplier : public Multiplier
 {
 public:
-    TalonKingIkissDelayBloodlustAndHeroismMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "talon king ikiss delay bloodlust and heroism") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    TalonKingIkissDelayBloodlustAndHeroismMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "talon king ikiss delay bloodlust and heroism") {}
     float GetValue(Action* action) override;
 };
 
 class TalonKingIkissControlMovementMultiplier : public Multiplier
 {
 public:
-    TalonKingIkissControlMovementMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "talon king ikiss control movement") {}
-//By leewheel 2026-07-28 - 使用override替代virtual，遵循C++11最佳实践
+    TalonKingIkissControlMovementMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "talon king ikiss control movement") {}
     float GetValue(Action* action) override;
 };
 

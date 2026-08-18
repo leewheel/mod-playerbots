@@ -3,8 +3,6 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
 
 #include "TKActions.h"
 #include "AiFactory.h"
@@ -20,6 +18,13 @@
 #include "StatsWeightCalculator.h"
 #include "TKHelpers.h"
 #include "TKKaelthasBossAI.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <ctime>
+#include <iterator>
+#include <limits>
+#include <list>
 
 using namespace TkHelpers;
 
@@ -332,7 +337,7 @@ bool AlarRangedDpsPrioritizeEmbersAction::Execute(Event /*event*/)
         float const currentDistance = bot->GetDistance2d(ember);
         if (currentDistance < safeDistance)
         {
-            botAI->InterruptSpell();
+            bot->InterruptNonMeleeSpells(false);
             return MoveAway(ember, safeDistance - currentDistance);
         }
 
@@ -357,7 +362,7 @@ bool AlarJumpFromPlatformAction::Execute(Event /*event*/)
         Position ground;
         GetClosestPlatformAndGround(bot->GetPosition(), closestPlatform, ground);
 
-        botAI->InterruptSpell();
+        bot->InterruptNonMeleeSpells(false);
         return JumpTo(
             TK_MAP_ID, ground.GetPositionX(), ground.GetPositionY(), ground.GetPositionZ(),
             MovementPriority::MOVEMENT_FORCED);
@@ -434,7 +439,7 @@ bool AlarMoveAwayFromRebirthAction::Execute(Event /*event*/)
         Position position;
         GetClosestPlatformAndGround(bot->GetPosition(), closestPlatform, position);
 
-        botAI->InterruptSpell();
+        bot->InterruptNonMeleeSpells(false);
         return JumpTo(
             TK_MAP_ID, position.GetPositionX(), position.GetPositionY(),
             position.GetPositionZ(), MovementPriority::MOVEMENT_FORCED);
@@ -492,7 +497,7 @@ bool AlarAvoidFlamePatchesAndDiveBombsAction::AvoidFlamePatch()
         if (bot->GetExactDist2d(flamePatch) < hazardRadius)
         {
             Position safestPos = FindSafestNearbyPosition(bot, flamePatches, hazardRadius);
-            botAI->InterruptSpell();
+            bot->InterruptNonMeleeSpells(false);
             return MoveTo(
                 TK_MAP_ID, safestPos.GetPositionX(), safestPos.GetPositionY(),
                 safestPos.GetPositionZ(), false, false, false, false,
@@ -514,7 +519,7 @@ bool AlarAvoidFlamePatchesAndDiveBombsAction::HandleDiveBomb(Unit* alar)
         if (currentDistance >= safeDistance)
             return false;
 
-        botAI->InterruptSpell();
+        bot->InterruptNonMeleeSpells(false);
         return MoveAway(alar, safeDistance - currentDistance);
     }
 
@@ -591,7 +596,7 @@ bool VoidReaverTanksPositionBossAction::Execute(Event /*event*/)
     float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
-        TK_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
+        TK_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -721,7 +726,7 @@ bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
         }
     }
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
 
     if (!bestCandidates.empty())
     {
@@ -752,7 +757,7 @@ bool HighAstromancerSolarianMoveAwayFromGroupAction::Execute(Event /*event*/)
     if (!GetNearestPlayerInRadius(bot, safeDistance))
         return false;
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
     return MoveFromGroup(safeDistance);
 }
 
@@ -845,7 +850,7 @@ bool KaelthasSunstriderKiteThaladredAction::Execute(Event /*event*/)
     if (currentDistance >= safeDistance)
         return false;
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
     return MoveAway(thaladred, safeDistance - currentDistance);
 }
 
@@ -950,7 +955,7 @@ bool KaelthasSunstriderMainTankPositionSanguinarAction::Execute(Event /*event*/)
     float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
-        TK_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false, false, false,
+        TK_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -1096,7 +1101,7 @@ bool KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction::RangedBotsDisperse(
         return false;
     }
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
     return MoveTo(
         TK_MAP_ID, targetX, targetY, targetZ, false, false, false, false,
         MovementPriority::MOVEMENT_FORCED, true, false);
@@ -1124,7 +1129,7 @@ bool KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction::MeleeStayBackFromCa
         if (currentDistance >= safeDistance)
             return true;
 
-        botAI->InterruptSpell();
+        bot->InterruptNonMeleeSpells(false);
         return MoveAway(capernian, safeDistance - currentDistance);
     }
 }
@@ -1163,7 +1168,7 @@ bool KaelthasSunstriderFirstAssistTankPositionTelonicusAction::Execute(Event /*e
     float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
-        TK_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false, false, false,
+        TK_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -1435,9 +1440,9 @@ bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::HandleDevastation
 
     bool result = false;
 
-    if (!PlayerbotAI::IsTank(bot) || hasAggroFromWeapon)
+    if (!isTank || hasAggroFromWeapon)
     {
-        float const safeDistance = PlayerbotAI::IsTank(bot) ? 15.0f : 10.0f;
+        float const safeDistance = isTank ? 15.0f : 10.0f;
         float const currentDistance = bot->GetDistance2d(axe);
         if (currentDistance < safeDistance)
             result = MoveAway(axe, safeDistance - currentDistance);
@@ -1446,7 +1451,7 @@ bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::HandleDevastation
     if (isMeleeDps && AI_VALUE(Unit*, "current target") == axe)
     {
         // In case melee ends up on the axe despite the target exclusion
-        botAI->InterruptSpell();
+        bot->InterruptNonMeleeSpells(false);
         bot->AttackStop();
         context->GetValue<Unit*>("current target")->Set(nullptr);
         bot->SetSelection(ObjectGuid());
@@ -1467,7 +1472,7 @@ bool KaelthasSunstriderMoveDevastationAwayAction::Execute(Event /*event*/)
     if (MarkTargetWithCross(bot, axe))
         return true;
 
-    if (axe->GetVictim() != bot)
+    if (axe->GetVictim() != bot || !bot->IsWithinMeleeRange(axe))
         return false;
 
     constexpr float safeDistance = 13.0f;
@@ -1686,7 +1691,7 @@ bool KaelthasSunstriderLootLegendaryWeaponsAction::EquipLegendaryWeapon(uint32 i
     if (alreadyEquipped && alreadyEquipped->GetEntry() == itemId)
         return false;
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
 
     bool ohCleared = false;  // If a 2H is blocking the target OH slot, unequip the 2H first
     if (dstSlot == EQUIPMENT_SLOT_OFFHAND)
@@ -1934,7 +1939,7 @@ bool KaelthasSunstriderMainTankPositionBossAction::Execute(Event /*event*/)
     float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
-        TK_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
+        TK_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -1963,7 +1968,7 @@ bool KaelthasSunstriderAvoidFlameStrikeAction::Execute(Event /*event*/)
 
     Position safestPos = FindSafestNearbyPosition(bot, flameStrikes, hazardRadius);
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
     return MoveTo(
         TK_MAP_ID, safestPos.GetPositionX(), safestPos.GetPositionY(), safestPos.GetPositionZ(),
         false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
@@ -2037,8 +2042,11 @@ bool KaelthasSunstriderHandlePhoenixesAndEggsAction::NonTanksDestroyEggsAndAvoid
     if (!kaelthas->HasAura(Id(TkSpells::SPELL_SHOCK_BARRIER)))
     {
         constexpr float searchRadius = 75.0f;
-        if (Unit* egg = bot->FindNearestCreature(Id(TkNpcs::NPC_PHOENIX_EGG), searchRadius, true))
+        if (Creature* egg = bot->FindNearestCreature(
+                Id(TkNpcs::NPC_PHOENIX_EGG), searchRadius, true))
+        {
             target = egg;
+        }
     }
 
     return AI_VALUE(Unit*, "current target") != target && Attack(target);

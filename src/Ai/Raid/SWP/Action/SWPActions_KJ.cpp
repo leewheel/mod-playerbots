@@ -4,26 +4,18 @@
  * or (at your option) any later version.
  */
 
-// === 外部代码引入记录 ===
-// 2026-07-30 引入自 brighton-chi/mod-playerbots:
-//   commit 5167dd62ffa05cc4d8f5f1dcfad0b425dd68517f - KJ and Kalec edits (KiljaedenStackForShieldOfTheBlue Fire Bloom 处理 + KiljaedenAnnounceDragonOrbUser 格式)
-// By leewheel
-// End By leewheel
-
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "SWPActions.h"
 #include "SWPEncounter_KJ.h"
 #include "Playerbots.h"
 #include "PlayerbotTextMgr.h"
 #include "RaidBossHelpers.h"
+#include "SWPData.h"
 #include <map>
+#include <string>
 #include <vector>
 
 using namespace SwpHelpers;
 
-//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots commit 5167dd62：KiljaedenAnnounceDragonOrbUserAction 代码风格
 bool KiljaedenAnnounceDragonOrbUserAction::Execute(Event /*event*/)
 {
     uint32 const instanceId = bot->GetInstanceId();
@@ -58,20 +50,16 @@ bool KiljaedenAnnounceDragonOrbUserAction::Execute(Event /*event*/)
 
     return botAI->SayToRaid(text);
 }
-//End By leewheel
 
 bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::Execute(Event /*event*/)
 {
-    // Don't run this method at all without at least 3 bot tanks
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    Player* firstAssistTank = GetGroupAssistTank(botAI, bot, 0);
-    Player* secondAssistTank = GetGroupAssistTank(botAI, bot, 1);
-    if (!mainTank || !GET_PLAYERBOT_AI(mainTank) ||
-        !firstAssistTank || !GET_PLAYERBOT_AI(firstAssistTank) ||
-        !secondAssistTank || !GET_PLAYERBOT_AI(secondAssistTank))
-    {
+    // Fewer than 3 bot tanks makes this a headache so just skip in that case;
+    // it's not vital anyway
+    Player* mainTank = nullptr;
+    Player* firstAssistTank = nullptr;
+    Player* secondAssistTank = nullptr;
+    if (!HasAtLeastThreeBotTanks(bot, &mainTank, &firstAssistTank, &secondAssistTank))
         return false;
-    }
 
     std::vector<Unit*> hands;
     auto const& targets = AI_VALUE(GuidVector, "possible targets no los");
@@ -86,7 +74,7 @@ bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::Execute(Event /*event*/
     if (hands.empty())
         return false;
 
-    if (IsMechanicTrackerBot(botAI, bot, SWP_MAP_ID))
+    if (IsMechanicTrackerBot(bot, SWP_MAP_ID))
     {
         Unit* focusHand = hands[0];
         for (Unit* hand : hands)
@@ -200,7 +188,7 @@ bool KiljaedenMarkAndPrioritizeHandsOfTheDeceiverAction::ExecuteTankHandAssignme
 
 bool KiljaedenStunHandsOfTheDeceiverAction::Execute(Event /*event*/)
 {
-    if (bot->getClass() == CLASS_SHAMAN || bot->getClass() == CLASS_MAGE)
+    if (bot->getClass() == CLASS_SHAMAN)
         return false;
 
     auto const& targets = AI_VALUE(GuidVector, "possible targets no los");
@@ -246,6 +234,9 @@ bool KiljaedenStunHandsOfTheDeceiverAction::CastStunOnHand(Unit* hand)
         case CLASS_PALADIN:
             return castSpell("hammer of justice");
 
+        case CLASS_MAGE:
+            return castSpell("deep freeze");
+
         case CLASS_ROGUE:
             return castSpell("kidney shot");
 
@@ -271,14 +262,14 @@ bool KiljaedenStunHandsOfTheDeceiverAction::CastSilenceOnHand(Unit* hand)
 
     switch (bot->getClass())
     {
+        case CLASS_HUNTER:
+            return castSpell("silencing shot");
+
         case CLASS_PRIEST:
             return castSpell("silence");
 
         case CLASS_DEATH_KNIGHT:
             return castSpell("strangulate");
-
-        case CLASS_HUNTER:
-            return castSpell("silencing shot");
 
         default:
             if (bot->getRace() == RACE_BLOODELF)
@@ -289,6 +280,9 @@ bool KiljaedenStunHandsOfTheDeceiverAction::CastSilenceOnHand(Unit* hand)
 
 bool KiljaedenPositionTanksAction::Execute(Event /*event*/)
 {
+    if (AI_VALUE2(Unit*, "find target", "sinister reflection") && !PlayerbotAI::IsMainTank(bot))
+        return PickUpSinisterReflections();
+
     Position const& position = KILJAEDEN_TANK_POSITION;
     if (bot->GetExactDist2d(position) <= 2.0f)
         return false;
@@ -296,6 +290,44 @@ bool KiljaedenPositionTanksAction::Execute(Event /*event*/)
     return MoveTo(
         SWP_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
         false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+}
+
+bool KiljaedenPositionTanksAction::PickUpSinisterReflections()
+{
+    constexpr float searchRadius = 100.0f;
+    Creature* reflection = bot->FindNearestCreature(
+        Id(SwpNpcs::NPC_SINISTER_REFLECTION), searchRadius, true);
+    if (!reflection)
+        return false;
+
+    if (AI_VALUE(Unit*, "current target") != reflection)
+        return Attack(reflection);
+
+    if (reflection->GetReactState() != REACT_PASSIVE)
+        return false;
+
+    auto const castSpell = [&](char const* spell)
+    {
+        return botAI->CanCastSpell(spell, reflection) && botAI->CastSpell(spell, reflection);
+    };
+
+    switch (bot->getClass())
+    {
+        case CLASS_DEATH_KNIGHT:
+            return castSpell("death and decay");
+
+        case CLASS_DRUID:
+            return castSpell("challenging roar");
+
+        case CLASS_PALADIN:
+            return castSpell("consecration");
+
+        case CLASS_WARRIOR:
+            return castSpell("challenging shout");
+
+        default:
+            return false;
+    }
 }
 
 bool KiljaedenPositionMeleeAction::Execute(Event /*event*/)
@@ -376,7 +408,6 @@ bool KiljaedenPositionMeleeAction::TryAdjustForArmageddon(Position& position)
     {
         for (KiljaedenArmageddon const& armageddon : armageddonItr->second.armageddons)
         {
-            //By leewheel 2026-07-27 - 合并条件判断到单行
             if (pos.GetExactDist2d(
                     armageddon.destination.GetPositionX(),
                     armageddon.destination.GetPositionY()) < armageddon.safeDistance)
@@ -459,24 +490,22 @@ bool KiljaedenRemoveFireBloomAction::Execute(Event /*event*/)
     switch (bot->getClass())
     {
         case CLASS_MAGE:
-            return botAI->CanCastSpell("ice block", bot) &&
-                botAI->CastSpell("ice block", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot);
 
         case CLASS_PALADIN:
-            return botAI->CanCastSpell("divine shield", bot) &&
-                botAI->CastSpell("divine shield", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot);
 
         case CLASS_ROGUE:
-            return botAI->CanCastSpell("cloak of shadows", bot) &&
-                botAI->CastSpell("cloak of shadows", bot);
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot);
 
         default:
             return false;
     }
 }
 
-//By leewheel 2026-07-30 - 同步上游brighton-chi/mod-playerbots 最终代码（HEAD）：KiljaedenStackForShieldOfTheBlue 加 Fire Bloom 处理
-//  使用 C++17 if-init 语法避免 darknessSpell 为 nullptr 时的空指针解引用（commit 5167dd62 的中间版本有该 bug，已被后续 commit 修复）
 bool KiljaedenStackForShieldOfTheBlueAction::Execute(Event /*event*/)
 {
     Position const& darknessPosition = KILJAEDEN_DARKNESS_POSITION;
@@ -505,12 +534,11 @@ bool KiljaedenStackForShieldOfTheBlueAction::Execute(Event /*event*/)
     if (bot->GetExactDist2d(destX, destY) < 1.0f)
         return false;
 
-    botAI->InterruptSpell();
+    bot->InterruptNonMeleeSpells(false);
     return MoveTo(
         SWP_MAP_ID, destX, destY, bot->GetPositionZ(), false, false, false, false,
         MovementPriority::MOVEMENT_FORCED, true, false);
 }
-//End By leewheel
 
 bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
 {
@@ -633,7 +661,6 @@ bool KiljaedenControlDragonAction::ExecuteDuringDarknessOfAThousandSouls(
     if (!darknessSpell)
         return false;
 
-    //By leewheel 2026-07-27 - 将desiredDistanceFromStack常量移到使用处
     constexpr float castReadyDistanceFromStack = 3.0f;
     Position const& stackPosition = KILJAEDEN_DARKNESS_POSITION;
     float const distanceToStack = dragon->GetExactDist2d(
@@ -649,8 +676,6 @@ bool KiljaedenControlDragonAction::ExecuteDuringDarknessOfAThousandSouls(
 
         float const deltaX = stackPosition.GetPositionX() - dragon->GetPositionX();
         float const deltaY = stackPosition.GetPositionY() - dragon->GetPositionY();
-
-        //By leewheel 2026-07-27 - 常量移到使用处
         constexpr float desiredDistanceFromStack = 2.0f;
         float const moveRatio = (distanceToStack - desiredDistanceFromStack) / distanceToStack;
         float const moveX = dragon->GetPositionX() + deltaX * moveRatio;
@@ -723,7 +748,6 @@ bool KiljaedenControlDragonAction::ExecuteOutsideDarknessOfAThousandSouls(Unit* 
     constexpr float distanceTolerance = 1.0f;
     float const distanceToTarget = dragon->GetExactDist2d(target);
 
-    //By leewheel 2026-07-27 - 增加空行改善可读性
     if (distanceToTarget > desiredDistance + distanceTolerance ||
         (distanceToTarget > std::numeric_limits<float>::min() &&
          distanceToTarget < desiredDistance - distanceTolerance))
