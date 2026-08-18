@@ -703,8 +703,14 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
 
         for (uint32 accountId : accountsToUse)
         {
+            // By leewheel 2026-08-19
+            // 崩溃修复：合并 acore 后 CHAR_SEL_CHARS_BY_ACCOUNT_ID 改为仅查 guid 单列，
+            // 原代码仍按 3 列读取(guid/class/race)导致 Field::GetData 越界崩溃(ACCESS_VIOLATION)。
+            // 改用 acore 新语句 CHAR_SEL_ACCOUNT_INFO_CHARS（列: guid, name, level, race, class, online），
+            // 并修正列索引：race=3, class=4。
+            // End By leewheel
             CharacterDatabasePreparedStatement* stmt =
-                CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARS_BY_ACCOUNT_ID);
+                CharacterDatabase.GetPreparedStatement(CHAR_SEL_ACCOUNT_INFO_CHARS);
             stmt->SetData(0, accountId);
             PreparedQueryResult result = CharacterDatabase.Query(stmt);
             if (!result)
@@ -715,8 +721,8 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
                 Field* fields = result->Fetch();
                 CharacterInfo info;
                 info.guid = fields[0].Get<uint32>();
-                info.rClass = fields[1].Get<uint8>();
-                info.rRace = fields[2].Get<uint8>();
+                info.rClass = fields[4].Get<uint8>();
+                info.rRace = fields[3].Get<uint8>();
                 info.accountId = accountId;
                 allCharacters.push_back(info);
             } while (result->NextRow());
