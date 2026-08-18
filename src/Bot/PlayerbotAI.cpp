@@ -1328,7 +1328,7 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
                 horizontalSpeed = 0.11f;
             verticalSpeed = -verticalSpeed;
 
-            InterruptSpell();
+            bot->CastStop();
             bot->StopMoving();
             bot->GetMotionMaster()->Clear();
 
@@ -1586,7 +1586,6 @@ void PlayerbotAI::DoNextAction(bool min)
 
 void PlayerbotAI::ReInitCurrentEngine()
 {
-    // InterruptSpell();
     currentEngine->Init();
 }
 
@@ -6786,7 +6785,7 @@ void PlayerbotAI::PetFollow()
     if (!pet)
         return;
     pet->AttackStop();
-    pet->InterruptNonMeleeSpells(false);
+    pet->CastStop();
     pet->ClearInPetCombat();
     pet->GetMotionMaster()->MoveFollow(bot, PET_FOLLOW_DIST, pet->GetFollowAngle());
     if (pet->ToPet())

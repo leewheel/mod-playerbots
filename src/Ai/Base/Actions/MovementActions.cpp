@@ -221,11 +221,8 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
             if (bot->IsSitState())
                 bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-            // if (bot->IsNonMeleeSpellCast(true))
-            // {
-            //     bot->CastStop();
-            //     botAI->InterruptSpell();
-            // }
+            // bot->CastStop();
+
             DoMovePoint(bot, x, y, z, generatePath, backwards);
             float delay = 1000.0f * MoveDelay(distance, backwards);
             if (lessDelay)
@@ -251,11 +248,8 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
             if (bot->IsSitState())
                 bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-            // if (bot->IsNonMeleeSpellCast(true))
-            // {
-            //     bot->CastStop();
-            //     botAI->InterruptSpell();
-            // }
+            // bot->CastStop();
+
             DoMovePoint(bot, x, y, modifiedZ, generatePath, backwards);
             float delay = 1000.0f * MoveDelay(distance, backwards);
             if (lessDelay)
@@ -639,12 +633,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
     //     if (bot->IsSitState())
     //         bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-    //     if (bot->IsNonMeleeSpellCast(true))
-    //     {
-    //         bot->CastStop();
-    //         botAI->InterruptSpell();
-    //     }
-    // }
+    //     bot->CastStop();
 
     //  /* Why do we do this?
     // if (lastMove.lastMoveShort.distance(movePosition) < minDist)
@@ -1248,11 +1237,7 @@ bool MovementAction::Follow(Unit* target, float distance, float angle)
     if (bot->IsSitState())
         bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-    if (bot->IsNonMeleeSpellCast(true))
-    {
-        bot->CastStop();
-        botAI->InterruptSpell();
-    }
+    bot->CastStop();
 
     // AI_VALUE(LastMovement&, "last movement").Set(target);
     ClearIdleState();
@@ -1302,11 +1287,7 @@ bool MovementAction::ChaseTo(WorldObject* obj, float distance)
     if (!bot->IsStandState())
         bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-    if (bot->IsNonMeleeSpellCast(true))
-    {
-        bot->CastStop();
-        botAI->InterruptSpell();
-    }
+    bot->CastStop();
 
     // bot->GetMotionMaster()->Clear();
     bot->GetMotionMaster()->MoveChase((Unit*)obj, distance);
