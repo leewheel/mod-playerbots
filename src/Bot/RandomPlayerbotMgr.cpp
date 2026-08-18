@@ -2233,6 +2233,72 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     }
     // End By leewheel
 
+    // By leewheel 2026-08-18
+    // 强制坦克兜底：解决"随机本20分钟无坦克入队"。常规补位（现成坦克/切换天赋）在候选池
+    // 没有可用的空闲坦克职业机器人、或 SendLfgJoinPacket 失败时，会持续存在坦克缺额。
+    // 此处在"超过5分钟仍缺坦克"时，强制抓取一个本阵营的坦克职业随机机器人：
+    //   1. 强制切到坦克专精天赋（若当前不是）
+    //   2. 刷新装备（保证战力）
+    //   3. 强制加入 LFG 队列
+    // 用 lfgForceTankTime 做 5 分钟节流，避免每 30 秒对同一 bot 反复刷新/入队造成资源浪费。
+    if (needTanks > 0)
+    {
+        time_t const now = time(nullptr);
+        time_t& lastForceTank = lfgForceTankTime[teamId];
+        if (now - lastForceTank >= 300)
+        {
+            for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
+            {
+                Player* bot = it->second;
+                if (!bot || bot->GetTeamId() != teamId || !IsRandomBot(bot))
+                    continue;
+                if (bot->GetLevel() < 15 || bot->InBattleground() || bot->InBattlegroundQueue() ||
+                    bot->isDead() || bot->IsInCombat() || bot->IsBeingTeleported())
+                    continue;
+                Map* botMap = bot->GetMap();
+                if (botMap && botMap->Instanceable())
+                    continue;
+                lfg::LfgState state = sLFGMgr->GetState(bot->GetGUID());
+                if (state != lfg::LFG_STATE_NONE && state < lfg::LFG_STATE_DUNGEON)
+                    continue;  // 已在队列，跳过
+                if (!ClassCanTank(bot->getClass()))
+                    continue;
+                int32 const specTab = GetTankSpecTab(bot->getClass());
+                if (specTab < 0)
+                    continue;
+                // 强制切到坦克天赋
+                if (!IsBotTank(bot))
+                {
+                    uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[bot->getClass()][specTab];
+                    PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
+                    if (bot->GetFreeTalentPoints() > 0)
+                    {
+                        PlayerbotFactory factory(bot, bot->GetLevel());
+                        factory.InitTalentsTree(true, false, false);
+                    }
+                    if (!IsBotTank(bot))
+                        continue;  // 天赋模板缺失等仍非坦克，换下一个
+                }
+                // 刷新装备保证坦克战力
+                PlayerbotFactory eqFactory(bot, bot->GetLevel());
+                eqFactory.InitEquipment(false);
+                if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot))
+                    botAI->ResetStrategies(false);
+                if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
+                {
+                    needTanks--;
+                    lastForceTank = now;
+                    LOG_INFO("playerbots", "[LFG兜底] 强制抓取坦克职业机器人 {} 刷新天赋/装备并成功入队(阵营={}, 角色号={})",
+                        bot->GetName().c_str(), teamId == TEAM_ALLIANCE ? "联盟" : "部落", specTab);
+                    break;  // 每次只强制一个
+                }
+                LOG_WARN("playerbots", "[LFG兜底] 强制抓取坦克 {} 入队失败(state未进QUEUED/PROPOSAL)，尝试下一个",
+                    bot->GetName().c_str());
+            }
+        }
+    }
+    // End By leewheel
+
     // By leewheel 2026-07-29
     // 只有所有职责缺额都归零才记录“补位完成”；仍有缺额时必须明确告警，禁止产生假成功日志。
     // By leewheel 2026-08-01

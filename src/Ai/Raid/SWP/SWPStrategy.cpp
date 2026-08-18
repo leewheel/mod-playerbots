@@ -105,8 +105,10 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player is charmed by fog", {
         NextAction("felmyst kill charmed player", ACTION_EMERGENCY + 9) }));
 
-    triggers.push_back(new TriggerNode("felmyst manage landing dps timer", {
-        NextAction("felmyst should hold dps while landing", ACTION_EMERGENCY + 8) }));
+    // By leewheel 2026-08-18 - 修正 TriggerNode 名与 NextAction 名写反的问题：trigger 应使用 trigger context 注册名(felmyst should hold dps while landing)，action 应使用 action context 注册名(felmyst manage landing dps timer)；修正前两处均无法在对应 context 中找到，导致 Felmyst 战斗落地暂停 DPS 策略完全失效
+    triggers.push_back(new TriggerNode("felmyst should hold dps while landing", {
+        NextAction("felmyst manage landing dps timer", ACTION_EMERGENCY + 8) }));
+    // End By leewheel
 
     // Eredar Twins
     triggers.push_back(new TriggerNode("eredar twins melee is at balcony", {

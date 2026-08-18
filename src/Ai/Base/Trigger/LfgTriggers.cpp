@@ -60,8 +60,14 @@ bool LfgRolePriorityTrigger::IsActive()
     // 计数由 CheckLfgQueue 每 30 秒刷新的 lfgQueueRoleCount 提供（索引 0=坦克 1=治疗 2=DPS），
     // 与 ForceBotsJoinLfg 的目标配额（2坦+2奶）保持一致。
     std::array<uint32, 3> const queued = sRandomPlayerbotMgr.GetLfgQueueRoleCount(bot->GetTeamId());
-    if (botAI->IsTank(bot, true) && queued[0] >= 2)
+    // By leewheel 2026-08-18
+    // 坦克入队慢优化：坦克队列上限 2→3。玩家反馈随机本坦克机器人入队依然过长——
+    // 同一阵营队列中已有 2 个坦克 bot 时，其余坦克全部被拦在自主入队之外；
+    // 当真实玩家多队同时排队时 2 个坦克入口不足。提高到 3，增加坦克供给，
+    // 同时保留上限防止队列无限膨胀引发 8 秒撮合周期卡顿（仍是有限小幅提升）。
+    if (botAI->IsTank(bot, true) && queued[0] >= 3)
         return false;
+    // End By leewheel
     if (botAI->IsHeal(bot, true) && queued[1] >= 2)
         return false;
     // End By leewheel

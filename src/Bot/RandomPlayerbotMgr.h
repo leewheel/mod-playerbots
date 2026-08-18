@@ -301,6 +301,10 @@ private:
     std::unordered_map<ObjectGuid, time_t> lfgBotJoinTime;
     // 记录机器人上次天赋切换的时间，用于 ForceBotsJoinLfg 天赋重置去重节流
     std::unordered_map<ObjectGuid, time_t> botLastSpecSwitchTime;
+    // By leewheel 2026-08-18
+    // 各阵营最近一次"强制坦克兜底"的时间，用于超出5分钟仍无坦克时强制抓坦克职业机器人入队的节流计时
+    std::map<TeamId, time_t> lfgForceTankTime;
+    // End By leewheel
     // End By leewheel
     time_t RealPlayerLastTimeSeen = 0;
     time_t DelayLoginBotsTimer;

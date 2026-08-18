@@ -169,8 +169,10 @@ public:
         creators["m'uru flee from singularity"] =
             &RaidSunwellActionContext::muru_flee_from_singularity;
 
-        creators["m'uru cast stun on shadowsword berseker"] =
+        // By leewheel 2026-08-18 - 修正拼写错误：berseker -> berserker，与 SWPStrategy.cpp:174 引用的动作名及 SWPActions.h 中 Action 名保持一致，否则 m'uru 战斗中 bot 无法对被控制的暗影守卫施放眩晕（功能失效）
+        creators["m'uru cast stun on shadowsword berserker"] =
             &RaidSunwellActionContext::muru_cast_stun_on_shadowsword_berserker;
+        // End By leewheel
 
         creators["m'uru interrupt fel fireball"] =
             &RaidSunwellActionContext::muru_interrupt_fel_fireball;

@@ -382,11 +382,16 @@ bool LfgJoinAction::isUseful()
     // 注意：必须按 bot 自身角色分流——DPS ≥ 3 时若一刀切拦截，会误伤想入队的坦克/治疗 bot，
     // 导致补位机制失效。
     std::array<uint32, 3> const queued = sRandomPlayerbotMgr.GetLfgQueueRoleCount(bot->GetTeamId());
+    // By leewheel 2026-08-18
+    // 坦克入队慢优化：与 LfgRolePriorityTrigger 同步，坦克队列上限 2→3，
+    // 否则 trigger 放行(>=3)但 isUseful 仍按 >=2 拦截，优化会被抵消。
+    // 提升坦克供给以缓解"随机本等坦克过久"，同时保留上限防队列膨胀卡顿。
     if (botAI->IsTank(bot, true))
     {
-        if (queued[0] >= 2)
+        if (queued[0] >= 3)
             return false;
     }
+    // End By leewheel
     else if (botAI->IsHeal(bot, true))
     {
         if (queued[1] >= 2)

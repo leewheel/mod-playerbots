@@ -12,24 +12,11 @@
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
 
-// By leewheel 2026-07-15: 检查目标是否已被任何标记
-static bool IsTargetAlreadyMarked(Group* group, ObjectGuid targetGuid)
-{
-    if (!group || targetGuid.IsEmpty())
-        return false;
-
-    for (uint8 i = 0; i < 8; i++)
-    {
-        if (group->GetTargetIcon(i) == targetGuid)
-            return true;
-    }
-    return false;
-}
-
-// By leewheel 2026-07-15: 选择最优标记目标
-// 使用 "possible targets"（视野内所有敌对单位）而非 "attackers"（仅有仇恨的），
-// 确保开局瞬间也能找到目标标记
-// mode=0: 选择最大生命值目标（骷髅），mode=1: 选择第二大生命值目标（叉叉，排除skull）
+// By leewheel 2026-08-18: 选择最优标记目标
+// mode=0: 骷髅 —— 优先采用坦克的"当前攻击目标"（进入战斗的第一时间坦克正在拉的那只怪），
+//         保证开局瞬间即可标记、且标记稳定（不会在多只怪之间横跳）；
+//         仅在无当前目标时退回从 attackers 选择。
+// mode=1: 叉叉 —— 骷髅之外，从 attackers 选择第二大生命值的未标记目标作为第二仇恨目标。
 static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
 {
     if (!botAI || !group)
@@ -38,6 +25,17 @@ static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
     Player* bot = botAI->GetBot();
     if (!bot)
         return nullptr;
+
+    Unit* target = nullptr;
+
+    if (mode == 0)
+    {
+        // 骷髅优先用坦克当前正在攻击的目标（实时、可靠，进战斗即命中）
+        Unit* currentTarget = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
+        if (currentTarget && currentTarget->IsAlive() && !currentTarget->IsPlayer() &&
+            currentTarget->IsInWorld() && currentTarget->IsValidAttackTarget(bot, nullptr))
+            return currentTarget;
+    }
 
     // 只用 attackers 列表（已进入战斗的怪），绝不用 possible targets（会标记远处未战斗的怪导致ADD）
     GuidVector targets = botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->Get();
@@ -53,11 +51,7 @@ static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
         if (!unit || unit->IsPlayer())
             continue;
 
-        if (!unit->IsAlive())
-            continue;
-
-        // 已标记的跳过
-        if (IsTargetAlreadyMarked(group, unit->GetGUID()))
+        if (!unit->IsAlive() || !unit->IsInWorld())
             continue;
 
         // 叉叉模式：跳过骷髅标记的目标
@@ -73,16 +67,13 @@ static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
         }
     }
 
-    // 如果没找到最大生命值的目标，退而选择任意未标记目标
+    // 如果没找到最大生命值的目标，退而选择任意目标
     if (!bestTarget)
     {
         for (ObjectGuid const guid : targets)
         {
             Unit* unit = botAI->GetUnit(guid);
-            if (!unit || unit->IsPlayer() || !unit->IsAlive())
-                continue;
-
-            if (IsTargetAlreadyMarked(group, unit->GetGUID()))
+            if (!unit || unit->IsPlayer() || !unit->IsAlive() || !unit->IsInWorld())
                 continue;
 
             if (mode == 1 && unit->GetGUID() == skullGuid)
@@ -105,12 +96,27 @@ bool MarkSkullTargetAction::Execute(Event event)
     if (bot->InBattleground())
         return false;
 
+    // By leewheel 2026-08-18: 骷髅锁定 —— 一旦骷髅已指向一只存活的怪，保持标记不变，不因坦克换目标而改变
+    //   唯一允许改变骷髅的场景由逃跑处理（FleeingTarget 用 ACTION_RAID 最高优先级覆盖骷髅），此处不干预
+    ObjectGuid skullGuid = group->GetTargetIcon(RtiTargetValue::skullIndex);
+    if (!skullGuid.IsEmpty())
+    {
+        Unit* skulled = botAI->GetUnit(skullGuid);
+        // 目标仍存活：保持现有骷髅，不再改动
+        if (skulled && skulled->IsAlive() && skulled->IsInWorld() && !skulled->IsPlayer())
+            return true;
+        // 目标已死亡/消失：清空骷髅，以便重新标记下一目标
+        group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), ObjectGuid::Empty);
+    }
+
+    // 骷髅标志为空：选坦克当前第一目标（无当前目标时回退 attackers 列表）
     Unit* target = SelectMarkTarget(botAI, group, 0);
     if (!target)
         return false;
 
-    // 设置骷髅标记 (index = 7)
-    group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), target->GetGUID());
+    // By leewheel 2026-08-18: 去重 —— 骷髅图标已指向该目标时不重复 Set（避免反复广播图标变化导致聊天刷屏）
+    if (group->GetTargetIcon(RtiTargetValue::skullIndex) != target->GetGUID())
+        group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), target->GetGUID());
 
     return true;
 }
@@ -124,12 +130,23 @@ bool MarkCrossTargetAction::Execute(Event event)
     if (bot->InBattleground())
         return false;
 
+    // By leewheel 2026-08-18: 叉叉锁定 —— 叉叉一旦指向存活的怪也保持不变，不随仇恨/换目标而反复变化
+    ObjectGuid crossGuid = group->GetTargetIcon(RtiTargetValue::crossIndex);
+    if (!crossGuid.IsEmpty())
+    {
+        Unit* crossed = botAI->GetUnit(crossGuid);
+        if (crossed && crossed->IsAlive() && crossed->IsInWorld() && !crossed->IsPlayer())
+            return true;
+        group->SetTargetIcon(RtiTargetValue::crossIndex, bot->GetGUID(), ObjectGuid::Empty);
+    }
+
     Unit* target = SelectMarkTarget(botAI, group, 1);
     if (!target)
         return false;
 
-    // 设置叉叉标记 (index = 6)
-    group->SetTargetIcon(RtiTargetValue::crossIndex, bot->GetGUID(), target->GetGUID());
+    // By leewheel 2026-08-18: 去重 —— 叉叉图标已指向该目标时不重复 Set（避免反复广播图标变化导致聊天刷屏）
+    if (group->GetTargetIcon(RtiTargetValue::crossIndex) != target->GetGUID())
+        group->SetTargetIcon(RtiTargetValue::crossIndex, bot->GetGUID(), target->GetGUID());
 
     return true;
 }

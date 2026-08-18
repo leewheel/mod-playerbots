@@ -581,8 +581,7 @@ void AddPlayerbotsScripts()
     AddSC_SunwellPlateauBotScripts();
     AddSC_IcecrownBotScripts();
     AddSC_RubySanctumBotScripts();
-    //By leewheel 2026-08-01 - 注册太阳之井高地机器人脚本（修复漏注册致命问题）
-    AddSC_SunwellPlateauBotScripts();
+    //By leewheel 2026-08-18 - 删除重复注册：brighton-the-lab 版本已在上方 (AddSC_SunwellPlateauBotScripts) 正式注册此脚本，此处旧补丁（2026-08-01 曾修复"漏注册"）与之重复，会令 SWP 的 6 个 ListenerScript/BossUpdateScript/TargetTracker 脚本对象被 new 两次并重复注册，导致 Spell 事件回调触发两次
     //End By leewheel
 
     //By leewheel 2026-07-06 - 快速组队系统
