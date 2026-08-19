@@ -183,10 +183,26 @@ class KalecgosSpellListenerScript : public AllSpellScript
 public:
     KalecgosSpellListenerScript() : AllSpellScript("KalecgosSpellListenerScript") {}
 
+    // Note: Kalecgos' "Spectral Blast" (44866) is a boss-cast spell (caster is the
+    // Kalecgos Dragon, a Creature), and "Teleport: Spectral Realm" (46019) is usually
+    // force-cast by the Spectral Rift GameObject onto the player who clicked it. In both
+    // cases caster->ToPlayer() is null, so the target player must be resolved from the
+    // spell targets instead. This is what enables bots to enter the Spectral Realm at all.
+    // By leewheel 20260820 //End By leewheel
     void OnSpellCast(
-        Spell* /*spell*/, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
+        Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
     {
-        Player* player = caster->ToPlayer();
+        // Resolve the affected player: for boss/GO-cast spells the affected player is the
+        // spell target, not the caster.
+        // By leewheel 20260820 //End By leewheel
+        Player* player = GetFirstPlayerSpellTarget(spell, caster);
+        if (!player)
+        {
+            // Fallback for spells whose only evaluatable target is the caster itself.
+            // By leewheel 20260820 //End By leewheel
+            player = caster->ToPlayer();
+        }
+
         if (!player)
             return;
 
