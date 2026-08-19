@@ -190,7 +190,7 @@ float AnetheronInfernalTargetRunToPositionMultiplier::GetValue(Action* action)
     if (IsInfernalTank(bot))
         return 1.0f;
 
-    return GetInfernoTarget(anetheron) == bot || GetInfernalTargetingBot(botAI, bot) ? 0.0f : 1.0f;
+    return GetInfernoTarget(anetheron) == bot || GetInfernalTargetingBot(bot) ? 0.0f : 1.0f;
 }
 
 float AnetheronControlMovementMultiplier::GetValue(Action* action)

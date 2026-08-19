@@ -128,7 +128,7 @@ bool AnetheronBotIsTargetedByInfernalTrigger::IsActive()
     if (IsInfernalTank(bot))
         return false;
 
-    return GetInfernalTargetingBot(botAI, bot);
+    return GetInfernalTargetingBot(bot);
 }
 
 bool AnetheronInfernalsShouldBeKeptAwayTrigger::IsActive()
@@ -139,7 +139,7 @@ bool AnetheronInfernalsShouldBeKeptAwayTrigger::IsActive()
     if (!AI_VALUE2(Unit*, "find target", "anetheron"))
         return false;
 
-    Unit* infernal = GetInfernalTargetingBot(botAI, bot);
+    Unit* infernal = GetInfernalTargetingBot(bot);
     return infernal && bot->IsWithinMeleeRange(infernal);
 }
 

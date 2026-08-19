@@ -275,7 +275,7 @@ bool AnetheronMisdirectBossAndInfernalsToTanksAction::Execute(Event /*event*/)
         tankTarget = GetGroupMainTank(botAI, bot);
         enemyTarget = anetheron;
     }
-    else if (Unit* infernal = GetLooseInfernal(botAI, bot))
+    else if (Unit* infernal = GetLooseInfernal(bot))
     {
         tankTarget = GetInfernalTank(bot);
         enemyTarget = infernal;
@@ -409,7 +409,7 @@ bool AnetheronInfernalTankTakePositionAction::Execute(Event /*event*/)
     // wandering off to the next player it can see. Measured against the one that has the bot, not
     // whatever the bot happens to be swinging at, since tank assist can have it hitting a second
     bool backwards = false;
-    if (Unit* held = GetInfernalTargetingBot(botAI, bot))
+    if (Unit* held = GetInfernalTargetingBot(bot))
     {
         float const toHeldX = held->GetPositionX() - botX;
         float const toHeldY = held->GetPositionY() - botY;
@@ -438,7 +438,7 @@ bool AnetheronAssignDpsPriorityAction::Execute(Event /*event*/)
     // object sizes, and a Towering Infernal's is not small--the bot would be fleeing from well
     // outside the aura, and since FleePosition reports success on any tick it moves, this would
     // return before reaching the targeting below and leave the bot without a target while it ran
-    if (Unit* nearest = GetNearestInfernal(botAI, bot))
+    if (Unit* nearest = GetNearestInfernal(bot))
     {
         constexpr uint32 minInterval = 0;
         if (nearest->GetVictim() != bot &&
