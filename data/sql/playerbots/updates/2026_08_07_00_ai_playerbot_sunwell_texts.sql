@@ -21,37 +21,37 @@ DELETE FROM ai_playerbot_texts_chance WHERE name IN (
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
-    (1913, 'kalecgos_tank_sent_to_spectral_realm', 'Tank %tank has been sent to the Spectral Realm. The active Kalecgos tank is %current.', 0, 0, '', '', '', '', '', '', '', '');
+    (1913, 'kalecgos_tank_sent_to_spectral_realm', '坦克 %tank 已被送入灵魂世界。当前卡雷苟斯的坦克是 %current。', 0, 0, '', '', '', '', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
-    (1914, 'kalecgos_tank_should_enter_spectral_realm', 'Tank %tank should enter the Spectral Realm. The active Kalecgos tank is %current.', 0, 0, '', '', '', '', '', '', '', '');
+    (1914, 'kalecgos_tank_should_enter_spectral_realm', '坦克 %tank 应进入灵魂世界。当前卡雷苟斯的坦克是 %current。', 0, 0, '', '', '', '', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
-    (1915, 'kalecgos_below_twenty_percent_health', 'Kalecgos''s health is at 20%!', 0, 0, '', '', '', '', '', '', '', '');
+    (1915, 'kalecgos_below_twenty_percent_health', '卡雷苟斯的生命值已低于20%！', 0, 0, '', '', '', '', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
-    (1916, 'sathrovarr_health_when_kalecgos_below_twenty_percent_health', 'Sathrovarr''s health is at %sathrovarrHealth%! Don''t forget that we need to defeat them at about the same time!', 0, 0, '', '', '', '', '', '', '', '');
+    (1916, 'sathrovarr_health_when_kalecgos_below_twenty_percent_health', '腐蚀者萨索瓦尔的生命值是 %sathrovarrHealth%！别忘了我们需要差不多同时击败他们！', 0, 0, '', '', '', '', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
-    (1917, 'felmyst_flight_leader', '[NAME] is now the flight phase leader. Everybody needs to stack on [NAME] during the flight phase.', 0, 0, '', '', '', '', '', '', '', '');
+    (1917, 'felmyst_flight_leader', '[NAME] 现在是飞行阶段领队。飞行阶段所有人都需要集合到 [NAME] 身边。', 0, 0, '', '', '', '', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
-    (1918, 'kiljaeden_designated_dragon_orb_user', '%bot is the first assistant and the designated dragon orb user!', 0, 0, '', '', '', '', '', '', '', '');
+    (1918, 'kiljaeden_designated_dragon_orb_user', '%bot 是第一助理，也是指定的龙珠使用者！', 0, 0, '', '', '', '', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
-    (1919, 'kiljaeden_no_designated_dragon_orb_user', 'No bot has been assigned as the designated dragon orb user, and therefore a player must control the dragons. If you would like a bot to use the dragon orbs, please set the assistant flag for a bot.', 0, 0, '', '', '', '', '', '', '', '');
+    (1919, 'kiljaeden_no_designated_dragon_orb_user', '没有机器人被指定为龙珠使用者，因此需要玩家来控制巨龙。如果您希望机器人使用龙珠，请为机器人设置助理标记。', 0, 0, '', '', '', '', '', '', '', '');
 
 INSERT INTO ai_playerbot_texts_chance (name, probability) VALUES
     ('kalecgos_tank_sent_to_spectral_realm', 100),

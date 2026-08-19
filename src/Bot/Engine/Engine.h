@@ -92,8 +92,13 @@ public:
     bool testMode;
 
 private:
-    bool MultiplyAndPush(std::vector<NextAction> actions, float forceRelevance, bool skipPrerequisites, Event event,
-                         const char* pushType);
+    // By leewheel 2026-08-19
+    // 性能优化：原参数按值传递 std::vector<NextAction>，每次调用都拷贝整个 vector
+    //（含 string 成员）；调用方传入的均为临时对象（getHandlers()/getDefaultActions() 按值返回），
+    // 改为 const& 绑定零拷贝，行为完全不变。
+    bool MultiplyAndPush(std::vector<NextAction> const& actions, float forceRelevance, bool skipPrerequisites,
+                         Event event, const char* pushType);
+    // End By leewheel
     void Reset();
     void ProcessTriggers(bool minimal);
     void PushDefaultActions();

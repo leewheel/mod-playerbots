@@ -490,10 +490,20 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
     if (!bot->GetMap())
         return; // instances are created and destroyed on demand
 
-    // kinda expensive call to make on every single updateAI, do we really need this information?
-    std::string const mapString = WorldPosition(bot).isOverworld() ? std::to_string(bot->GetMapId()) : "I";
-    PerfMonitorOperation* pmo =
-        sPerfMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
+    // By leewheel 2026-08-19
+    // 原注释：每次 updateAI 都做这个昂贵调用，我们真的需要这个信息吗？（kinda expensive call...）
+    // 性能优化：原代码每 tick 每 bot 都无条件构造 WorldPosition 并拼接统计名字符串（堆分配），
+    // 但 PerfMonitor 默认关闭（perfMonEnabled=false）时，start() 直接返回 nullptr，
+    // 拼接结果根本不会被使用，白白浪费 CPU 与内存。
+    // 改为仅在 perfMonEnabled 开启时才执行构造与拼接，行为与原逻辑完全一致。
+    PerfMonitorOperation* pmo = nullptr;
+    if (sPlayerbotAIConfig.perfMonEnabled)
+    {
+        std::string const mapString = PlayerbotAI::IsOverworldMap(bot->GetMapId())
+            ? std::to_string(bot->GetMapId()) : "I";
+        pmo = sPerfMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
+    }
+    // End By leewheel
 
     ExternalEventHelper helper(aiObjectContext);
 
@@ -4719,9 +4729,14 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
             return true;
     }
 
-    // bot is inside a BG, dungeon, or raid — always active
-    if (!WorldPosition(bot).isOverworld())
+    // By leewheel 2026-08-19
+    // 原逻辑：bot 在 BG、地下城或副本中 — 始终活跃（返回 true）。
+    // 性能优化：消除 WorldPosition(bot) 构造，isOverworld() 仅判断 mapId（0/1/530/571），
+    // 此处直接等价判断，行为与原逻辑完全一致。
+    if (!PlayerbotAI::IsOverworldMap(bot->GetMapId()))
         return true;
+    // End By leewheel
+    // End By leewheel
 
     // bot is waiting in a BG queue — stay active to speed up join
     if (bot->InBattlegroundQueue())

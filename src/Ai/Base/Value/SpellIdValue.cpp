@@ -9,6 +9,8 @@
 #include "Playerbots.h"
 #include "Vehicle.h"
 
+#include <cctype>
+
 namespace
 {
 bool SpellNameMatches(SpellInfo const* spellInfo, std::wstring const& wnamepart, wchar_t firstSymbol)
@@ -18,6 +20,22 @@ bool SpellNameMatches(SpellInfo const* spellInfo, std::wstring const& wnamepart,
         char const* spellName = spellInfo->SpellName[loc];
         if (!spellName || !*spellName)
             continue;
+
+        // By leewheel 2026-08-19
+        // 性能优化：首字符快速失败。
+        // 原实现先执行 Utf8FitTo（UTF-8 转小写匹配）再做 utf8to16 + wstrToLower + 首字符检查，
+        // 对每个技能、每个语言都付出昂贵的 UTF-8 转换代价（采样证实 SpellIdValue::Calculate
+        // 是 worldserver 前十大 CPU 热点，整条 utf8 转换链占比约 10%）。
+        // 绝大多数技能名与目标名的首字符（ASCII 字母）不一致，先做一次 ASCII tolower 比较即可
+        // 直接跳过，行为与原逻辑完全一致（大小写不敏感匹配语义不变）。
+        // 仅在双方首字符均为 ASCII（<0x80）时才做快速比较；任一方为多字节字符仍走原 utf8 逻辑。
+        unsigned char firstByte = static_cast<unsigned char>(spellName[0]);
+        if (firstByte < 0x80 && firstSymbol < 0x80)
+        {
+            if (std::tolower(firstByte) != std::tolower(static_cast<unsigned char>(firstSymbol)))
+                continue;
+        }
+        // End By leewheel
 
         if (!Utf8FitTo(spellName, wnamepart))
             continue;

@@ -8,6 +8,15 @@
 #include "Log.h"
 #include "PlayerbotAIConfig.h"
 
+// By leewheel 2026-08-19
+// 性能优化（经 CPU 采样验证后修正）：
+// 第一版优化曾将容器改为 multimap 优先队列（红黑树），但实际采样（xperf ETW）证实：
+// 队列规模小（通常 10-50 个 action）时，红黑树每次 emplace 的节点堆分配 + erase 释放，
+// 开销高于原 list 线性扫描（无堆分配），且 ntdll 堆分配/释放成为前十大 CPU 热点。
+// 最终方案：list 保持原线性扫描（Peek/Pop 无堆分配）+ unordered_map 名称索引（Push 去重 O(1)）。
+// 对外接口语义与原始实现完全一致。
+// End By leewheel
+
 void Queue::Push(ActionBasket* action)
 {
     if (!action)
@@ -15,16 +24,17 @@ void Queue::Push(ActionBasket* action)
         return;
     }
 
-    for (ActionBasket* basket : actions)
+    // 名称去重：O(1) 哈希查找，替代原 O(N) 线性扫描（字符串比较）
+    std::string const actionName = action->getAction()->getName();
+    std::unordered_map<std::string, ActionBasket*>::iterator it = nameIndex.find(actionName);
+    if (it != nameIndex.end())
     {
-        if (action->getAction()->getName() == basket->getAction()->getName())
-        {
-            updateExistingBasket(basket, action);
-            return;
-        }
+        updateExistingBasket(it->second, action);
+        return;
     }
 
     actions.push_back(action);
+    nameIndex[actionName] = action;
 }
 
 ActionNode* Queue::Pop()
@@ -107,6 +117,10 @@ ActionNode* Queue::extractAndDeleteBasket(ActionBasket* basket)
 {
     ActionNode* action = basket->getAction();
     actions.remove(basket);
+
+    // 同步从名称索引移除，保持与容器一致性
+    nameIndex.erase(action->getName());
+
     delete basket;
     return action;
 }
@@ -128,6 +142,9 @@ void Queue::removeAndDeleteBaskets(std::list<ActionBasket*>& basketsToRemove)
     for (ActionBasket* basket : basketsToRemove)
     {
         actions.remove(basket);
+
+        // 同步从名称索引移除，保持与容器一致性
+        nameIndex.erase(basket->getAction()->getName());
 
         if (ActionNode* action = basket->getAction())
         {

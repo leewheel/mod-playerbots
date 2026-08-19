@@ -38,9 +38,15 @@ public:
 class InventoryItemValue : public CalculatedValue<std::vector<Item*>>, public Qualified, InventoryItemValueBase
 {
 public:
-    InventoryItemValue(PlayerbotAI* botAI) : CalculatedValue<std::vector<Item*>>(botAI), InventoryItemValueBase(botAI)
+    // By leewheel 2026-08-19
+    // 性能优化：checkInterval 由默认 1（每 tick 重算）改为 1000ms。
+    // Calculate() 会遍历整个背包构造物品列表，每 tick 每 bot 执行开销大；
+    // 背包内容 1 秒刷新完全满足业务需求（RPG/物品使用/商人判断等）。
+    InventoryItemValue(PlayerbotAI* botAI)
+        : CalculatedValue<std::vector<Item*>>(botAI, "inventory items", 1000), InventoryItemValueBase(botAI)
     {
     }
+    // End By leewheel
 
     std::vector<Item*> Calculate() override;
 };

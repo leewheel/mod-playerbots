@@ -420,6 +420,11 @@ public:
     void ReInitCurrentEngine();
     void Reset(bool full = false);
     void LeaveOrDisbandGroup();
+    // By leewheel 2026-08-19
+    // 性能优化：WorldPosition::isOverworld() 的实现仅比较 mapId 是否为野外地图（0/1/530/571），
+    // 提供静态版本直接判断，避免每 tick 每 bot 构造 WorldPosition 的坐标拷贝开销。
+    static bool IsOverworldMap(uint32 mapId) { return mapId == 0 || mapId == 1 || mapId == 530 || mapId == 571; }
+    // End By leewheel
     static bool IsTank(Player* player, bool bySpec = false);
     static bool IsHeal(Player* player, bool bySpec = false);
     static bool IsDps(Player* player, bool bySpec = false);

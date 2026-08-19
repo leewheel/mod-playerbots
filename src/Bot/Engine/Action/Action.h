@@ -20,8 +20,13 @@ public:
     NextAction(std::string const name, float relevance = 0.0f)
         : relevance(relevance), name(name) {}  // name after relevance - whipowill
 
-    std::string const getName() { return name; }
-    float getRelevance() { return relevance; }
+    // By leewheel 2026-08-19
+    // 修复：为两个访问器补充 const 限定符，允许在 const NextAction 引用上调用。
+    // 起因：Engine::MultiplyAndPush 迭代改为 `for (NextAction const& nextAction : actions)` 后，
+    // 原非 const 方法在 const 对象上调用报 C2662。const 方法对 const/非 const 对象均兼容，无破坏。
+    std::string const getName() const { return name; }
+    float getRelevance() const { return relevance; }
+    // End By leewheel
 
     static std::vector<NextAction> merge(std::vector<NextAction> const& what, std::vector<NextAction> const& with)
     {

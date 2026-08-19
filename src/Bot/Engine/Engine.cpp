@@ -266,7 +266,7 @@ ActionNode* Engine::CreateActionNode(std::string const name)
 }
 
 bool Engine::MultiplyAndPush(
-    std::vector<NextAction> actions,
+    std::vector<NextAction> const& actions,
     float forceRelevance,
     bool skipPrerequisites,
     Event event,
@@ -275,7 +275,11 @@ bool Engine::MultiplyAndPush(
 {
     bool pushed = false;
 
-    for (NextAction nextAction : actions)
+    // By leewheel 2026-08-19
+    // 性能优化：NextAction 含 std::string name 成员，按值拷贝每次迭代产生 string 堆分配；
+    // 循环体内只读使用 nextAction，改为按引用传递，行为完全不变。
+    for (NextAction const& nextAction : actions)
+    // End By leewheel
     {
         ActionNode* action = this->CreateActionNode(nextAction.getName());
 

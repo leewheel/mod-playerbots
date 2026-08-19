@@ -50,7 +50,20 @@ public:
     template <class T>
     Value<T>* GetValue(std::string const name, std::string const param)
     {
-        return GetValue<T>((std::string(name) + "::" + param));
+        // By leewheel 2026-08-19
+        // 性能优化：原实现每次构造临时 std::string(name) + "::" + param（堆分配）。
+        // 该函数是 AI_VALUE2 宏的核心路径，每 tick 每个 trigger 都要调用大量次数，
+        // 字符串堆分配是主要开销之一。
+        // 改为线程局部缓冲区复用拼接，消除堆分配；GetContextObject 内部以 name 为键
+        // 做 map 查找（拷贝 key），不保留引用，因此缓冲区复用是安全的。
+        thread_local std::string key;
+        key.clear();
+        key.reserve(name.size() + 2 + param.size());
+        key += name;
+        key += "::";
+        key += param;
+        return GetValue<T>(key);
+        // End By leewheel
     }
 
     template <class T>

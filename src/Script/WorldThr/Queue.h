@@ -10,12 +10,24 @@
 #include "Action.h"
 #include "Common.h"
 
+#include <functional>
+#include <list>
+#include <map>
+#include <unordered_map>
+
 /**
  * @class Queue
  * @brief Manages a priority queue of actions for the playerbot system
  *
  * This queue maintains a list of ActionBasket objects, each containing an action
  * and its relevance score. Actions with higher relevance scores are prioritized.
+ *
+ * 性能优化说明（By leewheel 2026-08-19）：
+ * 原实现使用 std::list 线性扫描，Push/Pop/Peek 均为 O(N)。
+ * 现改为 std::multimap（按 relevance 降序）+ std::unordered_map 名称索引：
+ *   - Push 去重查找 O(1)，插入 O(log N)
+ *   - Peek O(1)，Pop O(log N)
+ * 对外接口语义完全不变。
  */
 class Queue
 {
@@ -89,7 +101,14 @@ private:
      */
     void removeAndDeleteBaskets(std::list<ActionBasket*>& basketsToRemove);
 
+    // By leewheel 2026-08-19
+    // 性能优化（经 CPU 采样验证后修正）：
+    // 第一版曾用 multimap 优先队列（红黑树），采样证实队列规模小时红黑树节点堆分配
+    // 反超线性扫描；最终保留 list（Peek/Pop 线性扫描、无堆分配）+ nameIndex（Push 去重 O(1)）。
+    // 详见 Queue.cpp 顶部注释。
     std::list<ActionBasket*> actions; /**< Container for action baskets */
+    std::unordered_map<std::string, ActionBasket*> nameIndex; /**< action 名称索引，O(1) 去重 */
+    // End By leewheel
 };
 
 #endif

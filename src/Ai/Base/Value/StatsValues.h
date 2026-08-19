@@ -34,7 +34,13 @@ public:
 class PetIsDeadValue : public BoolCalculatedValue
 {
 public:
-    PetIsDeadValue(PlayerbotAI* botAI, std::string const name = "pet dead") : BoolCalculatedValue(botAI, name) {}
+    // By leewheel 2026-08-19
+    // 性能优化：checkInterval 由默认 1（每 tick 重算）改为 1000ms。
+    // Calculate() 在 bot 无宠物时会执行同步数据库查询（character_pet 表），
+    // 每 tick 每 bot 查询会导致大量 DB 阻塞；宠物状态 1 秒刷新完全满足业务需求。
+    PetIsDeadValue(PlayerbotAI* botAI, std::string const name = "pet dead")
+        : BoolCalculatedValue(botAI, name, 1000) {}
+    // End By leewheel
 
     bool Calculate() override;
 };
