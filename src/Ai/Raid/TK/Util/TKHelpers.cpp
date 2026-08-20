@@ -11,6 +11,7 @@
 #include "Playerbots.h"
 #include "RaidBossHelpers.h"
 #include "TKActions.h"
+#include "TKKaelthasBossAI.h"
 #include <limits>
 #include <list>
 
@@ -327,6 +328,15 @@ bool HasWrathOfTheAstromancer(Player* bot)
 }
 
 // Kael'thas Sunstrider <Lord of the Blood Elves>
+
+uint32 GetKaelthasPhase(Unit* kaelthas)
+{
+    if (!kaelthas)
+        return PHASE_NONE;
+
+    boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
+    return kaelAI ? kaelAI->GetPhase() : PHASE_NONE;
+}
 
 std::unordered_map<uint32, time_t> advisorDpsWaitTimer;
 
