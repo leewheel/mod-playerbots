@@ -5,7 +5,7 @@
 #include "DruidActions.h"
 #include "DruidBearActions.h"
 #include "FollowActions.h"
-#include "GenericActions.h"
+#include "PetsAction.h" // By leewheel 2026-08-21: 上游删除 GenericActions 重构, PetAttackAction 迁移至 PetsAction //End By leewheel
 #include "GenericSpellActions.h"
 #include "HunterActions.h"
 #include "MageActions.h"

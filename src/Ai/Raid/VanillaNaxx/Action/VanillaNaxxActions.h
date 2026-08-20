@@ -3,11 +3,11 @@
 
 #include "Action.h"
 #include "AttackAction.h"
-#include "GenericActions.h"
 #include "MovementActions.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
 #include "VanillaNaxxBossHelper.h"
+// By leewheel 2026-08-21: 上游 the-lab 删除 GenericActions 重构，此处不再需要引用该头文件 //End By leewheel
 
 class VanillaGrobbulusGoBehindAction : public MovementAction
 {
