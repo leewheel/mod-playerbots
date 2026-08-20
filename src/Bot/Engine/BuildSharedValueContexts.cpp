@@ -7,6 +7,7 @@
 #include "AiObjectContext.h"
 #include "HyjalValueContext.h"
 #include "MechValueContext.h"
+#include "TKValueContext.h"
 #include "UBValueContext.h"
 #include "ValueContext.h"
 #include "Ai/Dungeon/Mech/MechValueContext.h"
@@ -18,4 +19,5 @@ void AiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<Unty
     valueContexts.Add(new TbcDungeonMechValueContext());
     valueContexts.Add(new TbcDungeonUnderbogValueContext());
     valueContexts.Add(new RaidHyjalSummitValueContext());
+    valueContexts.Add(new RaidTempestKeepValueContext());
 }
