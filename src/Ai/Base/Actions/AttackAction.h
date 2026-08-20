@@ -52,4 +52,17 @@ public:
     bool isUseful() override;
 };
 
+// By leewheel 2026-07-15（2026-08-21 随 GenericActions 删除重构迁入 AttackAction）:
+// 破潜行动作：当队伍成员被潜行怪物闷棍(如破碎大厅的碎手刺客)时，
+// 使用职业适用的 AoE 法术把隐藏的偷袭者打出来。
+class BreakStealthAction : public Action
+{
+public:
+    BreakStealthAction(PlayerbotAI* botAI) : Action(botAI, "break stealth") {}
+
+    bool Execute(Event event) override;
+    bool isUseful() override;
+};
+// End By leewheel
+
 #endif

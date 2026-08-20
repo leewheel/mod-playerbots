@@ -9,12 +9,14 @@
 #include "Event.h"
 #include "LastMovementValue.h"
 #include "LootObjectStack.h"
+#include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
 #include "Unit.h"
 #include "WaitForAttackStrategy.h"
+#include <vector>
 
 bool AttackAction::Execute(Event /*event*/)
 {
@@ -232,3 +234,78 @@ bool MeleeAction::isUseful()
     // return !(botAI->HasAura("stealth", bot) || botAI->HasAura("prowl", bot));
     return !botAI->HasAura("prowl", bot);
 }
+
+// By leewheel 2026-07-15（2026-08-21 随 GenericActions 删除重构迁入 AttackAction）:
+// 破潜行动作实现：按职业选择最有效的 AoE 法术尝试破除潜行。
+// 法术列表按反潜行效果优先级排列。
+
+// 各职业用于破除潜行的瞬发或快速 AoE 法术名
+struct BreakStealthSpellList
+{
+    uint8 playerClass;
+    std::vector<std::string> spells;
+};
+
+static const BreakStealthSpellList breakStealthSpells[] = {
+    {CLASS_WARRIOR,   {"thunder clap", "demoralizing shout", "piercing howl", "shockwave", "whirlwind"}},
+    {CLASS_PALADIN,   {"consecration", "holy wrath"}},
+    {CLASS_HUNTER,    {"flare", "volley", "multi-shot"}},
+    {CLASS_MAGE,      {"arcane explosion", "frost nova", "cone of cold", "blast wave", "flamestrike", "blizzard"}},
+    {CLASS_PRIEST,    {"holy nova"}},
+    {CLASS_WARLOCK,   {"shadowfury", "rain of fire", "hellfire"}},
+    {CLASS_DRUID,     {"hurricane", "starfall", "swipe"}},
+    {CLASS_SHAMAN,    {"fire nova", "magma totem", "stoneclaw totem"}},
+    {CLASS_ROGUE,     {"fan of knives"}},
+    {CLASS_DEATH_KNIGHT, {"blood boil", "howling blast", "pestilence", "death and decay"}}
+};
+
+bool BreakStealthAction::isUseful()
+{
+    // 自身处于闷棍/沉睡/恐惧/眩晕/混乱状态时不可用
+    if (bot->HasAuraWithMechanic(1 << MECHANIC_SAPPED) ||
+        bot->HasAuraWithMechanic(1 << MECHANIC_SLEEP) ||
+        bot->HasAuraType(SPELL_AURA_MOD_FEAR) ||
+        bot->HasAuraType(SPELL_AURA_MOD_STUN) ||
+        bot->HasAuraType(SPELL_AURA_MOD_CONFUSE))
+        return false;
+
+    // 未进入战斗时不可用
+    if (!bot->IsInCombat())
+        return false;
+
+    // 不在队伍中时不可用（没有需要救援的队员）
+    if (!bot->GetGroup())
+        return false;
+
+    return true;
+}
+
+bool BreakStealthAction::Execute(Event /*event*/)
+{
+    uint8 playerClass = bot->getClass();
+
+    // 查找当前职业对应的法术列表
+    for (auto const& entry : breakStealthSpells)
+    {
+        if (entry.playerClass != playerClass)
+            continue;
+
+        // 按优先级依次尝试每个法术
+        for (auto const& spellName : entry.spells)
+        {
+            if (botAI->CanCastSpell(spellName, bot))
+            {
+                if (botAI->CastSpell(spellName, bot))
+                {
+                    LOG_DEBUG("playerbots", "破潜行动作: {} 施放 {} 破除潜行",
+                        bot->GetName(), spellName);
+                    return true;
+                }
+            }
+        }
+        break;  // 已找到本职业条目，无需继续查找
+    }
+
+    return false;
+}
+// End By leewheel
