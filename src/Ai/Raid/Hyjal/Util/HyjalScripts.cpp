@@ -31,22 +31,26 @@ static Player* GetSpellPlayerTarget(Spell* spell)
     return nullptr;
 }
 
-static bool ShouldInterruptForArchimondeAirBurst(PlayerbotAI* botAI, Player* target)
+// 引入 brighton-chi/the-lab 的 archimonde 脚本修复（5ff7f49c5）：
+// Air Burst 打断判断改用施法者(caster)的当前仇恨目标(activeTank)，
+// 取代原先依赖 botAI 查找 archimonde 再取 mainTank 的方式，逻辑更准确。
+// --By leewheel 2026-08-21
+bool ShouldInterruptForArchimondeAirBurst(Player* bot, Unit* caster, Player* target)
 {
     if (!target)
         return false;
 
-    Player* bot = botAI->GetBot();
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (!mainTank || bot == mainTank)
+    Unit* activeTank = caster->GetVictim();
+    if (!activeTank || activeTank == bot)
         return false;
 
-    if (target != mainTank && target != bot)
+    if (target != activeTank && target != bot)
         return false;
 
-    float const distanceToMainTank = bot->GetExactDist2d(mainTank);
-    return distanceToMainTank < AIR_BURST_SAFE_DISTANCE;
+    float const distanceToActiveTank = bot->GetExactDist2d(activeTank);
+    return distanceToActiveTank < AIR_BURST_SAFE_DISTANCE;
 }
+// End By leewheel
 
 // Interrupts a cast when a Doomfire NPC comes too close. The trail it leaves behind is made of
 // SPELL_DOOMFIRE_TRAIL dynamic objects, which bots query directly, so nothing is recorded here.
@@ -116,7 +120,7 @@ public:
 
             PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
             if (!botAI || !botAI->HasStrategy("hyjal", BOT_STATE_COMBAT) ||
-                !ShouldInterruptForArchimondeAirBurst(botAI, target))
+                !ShouldInterruptForArchimondeAirBurst(player, caster, target))
             {
                 continue;
             }
