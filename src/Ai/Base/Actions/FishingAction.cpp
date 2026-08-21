@@ -5,9 +5,8 @@
  */
 
 #include "FishingAction.h"
-#include "FishValues.h"
 #include "Event.h"
-
+#include "FishValues.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "ItemPackets.h"
@@ -396,7 +395,7 @@ bool EquipFishingPoleAction::isUseful()
 
     std::string masterName = master->GetName();
     std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-    "no_fishing_pole_error", "我没有鱼竿",{});
+    "no_fishing_pole_error", "I don't have a Fishing Pole",{});
     botAI->Whisper(text, masterName);
 
     return false;

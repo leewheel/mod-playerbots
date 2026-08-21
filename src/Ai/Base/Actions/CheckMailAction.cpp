@@ -5,11 +5,10 @@
  */
 
 #include "CheckMailAction.h"
-
 #include "Event.h"
 #include "GuildTaskMgr.h"
-#include "PlayerbotAIConfig.h"
 #include "PlayerbotAI.h"
+#include "PlayerbotAIConfig.h"
 
 bool CheckMailAction::Execute(Event /*event*/)
 {
@@ -73,8 +72,7 @@ void CheckMailAction::ProcessMail(Mail* mail, Player* owner, CharacterDatabaseTr
         return;
     }
 
-    if (mail->subject.find("Item(s) you asked for") != std::string::npos ||
-        mail->subject.find("你需要的物品") != std::string::npos)
+    if (mail->subject.find("Item(s) you asked for") != std::string::npos)
         return;
 
     for (MailItemInfoVec::iterator i = mail->items.begin(); i != mail->items.end(); ++i)
@@ -86,14 +84,14 @@ void CheckMailAction::ProcessMail(Mail* mail, Player* owner, CharacterDatabaseTr
         if (!GuildTaskMgr::instance().CheckItemTask(i->item_template, item->GetCount(), owner, bot, true))
         {
             std::ostringstream body;
-            body << "你好，" << owner->GetName() << "，\n";
+            body << "Hello, " << owner->GetName() << ",\n";
             body << "\n";
-            body << "这是你误寄给我的物品。\n";
+            body << "Here are the item(s) you've sent me by mistake";
             body << "\n";
-            body << "谢谢，\n";
+            body << "Thanks,\n";
             body << bot->GetName() << "\n";
 
-            MailDraft draft("您误寄的物品", body.str());
+            MailDraft draft("Item(s) you've sent me", body.str());
             draft.AddItem(item);
             bot->RemoveMItem(i->item_guid);
             draft.SendMailTo(trans, MailReceiver(owner), MailSender(bot));

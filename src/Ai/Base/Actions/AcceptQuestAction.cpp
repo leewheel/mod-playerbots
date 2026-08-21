@@ -5,7 +5,6 @@
  */
 
 #include "AcceptQuestAction.h"
-
 #include "Event.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
@@ -22,7 +21,7 @@ bool AcceptAllQuestsAction::ProcessQuest(Quest const* quest, Object* questGiver)
         LOG_INFO("playerbots", "{} => Quest [{}] accepted", bot->GetName(), quest->GetTitle());
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "quest_accept_debug",
-            "任务 [%quest] 已接受",
+            "Quest [%quest] accepted",
             {{"%quest", text_quest}});
         bot->Say(text, LANG_UNIVERSAL);
     }
@@ -120,16 +119,16 @@ bool AcceptQuestShareAction::Execute(Event event)
     {
         bot->SetDivider(ObjectGuid::Empty);
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "quest_already_have_error", "我已有此任务", {}));
+            "quest_already_have_error", "I have this quest", {}));
         return false;
     }
 
-    if (!bot->CanTakeQuest(qInfo, false))
+    if (!botAI->IsAltBot() && !bot->CanTakeQuest(qInfo, false))
     {
         // can't take quest
         bot->SetDivider(ObjectGuid::Empty);
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "quest_cant_take_error", "我无法接受此任务", {}));
+            "quest_cant_take_error", "I can't take this quest", {}));
 
         return false;
     }
@@ -158,7 +157,7 @@ bool AcceptQuestShareAction::Execute(Event event)
         }
 
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "quest_accept", "任务已接受", {}));
+            "quest_accept", "Quest accepted", {}));
         return true;
     }
 
@@ -180,7 +179,7 @@ bool ConfirmQuestAction::Execute(Event event)
         return false;
 
     quest = qInfo->GetQuestId();
-    if (!bot->CanTakeQuest(qInfo, false))
+    if (!botAI->IsAltBot() && !bot->CanTakeQuest(qInfo, false))
     {
         // can't take quest
         // botAI->TellError("quest_cant_take");

@@ -5,7 +5,6 @@
  */
 
 #include "AttackAction.h"
-
 #include "CreatureAI.h"
 #include "Event.h"
 #include "LastMovementValue.h"
@@ -14,7 +13,6 @@
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
-#include "SharedDefines.h"
 #include "Unit.h"
 #include "WaitForAttackStrategy.h"
 
@@ -41,7 +39,7 @@ bool AttackMyTargetAction::Execute(Event /*event*/)
     {
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pull_no_target_error", "你没有目标", {}));
+                "pull_no_target_error", "You have no target", {}));
 
         return false;
     }
@@ -60,7 +58,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     {
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_no_target_error", "我没有目标", {}));
+                "attack_no_target_error", "I have no target", {}));
 
         return false;
     }
@@ -70,7 +68,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_target_not_in_world_error",
-                "%target 已不在世界中。",
+                "%target is no longer in the world.",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -81,7 +79,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     {
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_in_flight_error", "飞行中无法攻击", {}));
+                "attack_in_flight_error", "I cannot attack in flight", {}));
 
         return false;
     }
@@ -95,7 +93,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_pvp_prohibited_error",
-                "在禁止 PvP 的区域无法攻击其他玩家。",
+                "I cannot attack other players in PvP prohibited areas.",
                 {}));
 
         return false;
@@ -106,7 +104,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_target_friendly_error",
-                "%target 是我的友方。",
+                "%target is friendly to me.",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -117,7 +115,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_target_dead_error",
-                "%target 已死亡。",
+                "%target is dead.",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -128,7 +126,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_target_not_in_sight_error",
-                "%target 不在我的视线内。",
+                "%target is not in my sight.",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -151,7 +149,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_already_attacking_error",
-                "我已在攻击 %target。",
+                "I am already attacking %target.",
                 {{"%target", target->GetName()}}));
 
         return false;
@@ -161,7 +159,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     {
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "attack_invalid_target_error", "我无法攻击无效目标。", {}));
+                "attack_invalid_target_error", "I cannot attack an invalid target.", {}));
 
         return false;
     }
@@ -195,7 +193,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
 
     if (!WaitForAttackStrategy::ShouldWait(botAI))
         bot->Attack(target, shouldMelee);
-    /* prevent 宠物 dead immediately in group */
+    /* prevent pet dead immediately in group */
     // if (bot->GetMap()->IsDungeon() && bot->GetGroup() && !target->IsInCombat())
     // {
     //     with_pet = false;
@@ -222,3 +220,15 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
 bool AttackDuelOpponentAction::isUseful() { return AI_VALUE(Unit*, "duel target"); }
 
 bool AttackDuelOpponentAction::Execute(Event /*event*/) { return Attack(AI_VALUE(Unit*, "duel target")); }
+
+bool MeleeAction::isUseful()
+{
+    // do not allow if can't attack from vehicle
+    if (botAI->IsInVehicle() && !botAI->IsInVehicle(false, false, true))
+        return false;
+
+    // Do not start autoattack while prowled — let opener spells break stealth intentionally.
+    // Future rogue stealth implementation should use this instead:
+    // return !(botAI->HasAura("stealth", bot) || botAI->HasAura("prowl", bot));
+    return !botAI->HasAura("prowl", bot);
+}

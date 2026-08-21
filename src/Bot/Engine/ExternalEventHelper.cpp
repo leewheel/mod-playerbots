@@ -5,7 +5,6 @@
  */
 
 #include "ExternalEventHelper.h"
-
 #include "ChatHelper.h"
 #include "Playerbots.h"
 #include "Trigger.h"
@@ -61,8 +60,7 @@ void ExternalEventHelper::HandlePacket(std::map<uint16, std::string>& handlers, 
 
 bool ExternalEventHelper::HandleCommand(std::string const name, std::string const param, Player* owner)
 {
-    std::string const resolvedName = ChatHelper::ResolveChatCommandAlias(name);
-    Trigger* trigger = aiObjectContext->GetTrigger(resolvedName);
+    Trigger* trigger = aiObjectContext->GetTrigger(name);
     if (!trigger)
         return false;
 

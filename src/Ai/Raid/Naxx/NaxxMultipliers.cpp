@@ -1,19 +1,24 @@
-#include "NaxxMultipliers.h"
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
 
+#include "NaxxMultipliers.h"
 #include "ChooseTargetActions.h"
 #include "DKActions.h"
 #include "DruidActions.h"
 #include "DruidBearActions.h"
 #include "FollowActions.h"
-#include "GenericActions.h"
 #include "GenericSpellActions.h"
 #include "HunterActions.h"
 #include "MageActions.h"
 #include "MovementActions.h"
-#include "PaladinActions.h"
-#include "PriestActions.h"
 #include "NaxxActions.h"
 #include "NaxxSpellIds.h"
+#include "PaladinActions.h"
+#include "PetsAction.h"
+#include "PriestActions.h"
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "ScriptedCreature.h"

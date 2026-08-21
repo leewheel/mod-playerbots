@@ -7,12 +7,11 @@
 #ifndef PLAYERBOTS_CHATHELPER_H
 #define PLAYERBOTS_CHATHELPER_H
 
-#include <map>
-
 #include "Common.h"
 #include "ObjectGuid.h"
 #include "PlayerbotAIAware.h"
 #include "SharedDefines.h"
+#include <map>
 
 class GameObject;
 class Quest;
@@ -59,12 +58,11 @@ public:
     static std::string const FormatClass(Player* player, int8 spec);
     static std::string const FormatClass(uint8 cls);
     static std::string const FormatRace(uint8 race);
-    static std::string const FormatClassLog(uint8 cls);
-    static std::string const FormatRaceLog(uint8 race);
     static std::string const FormatSkill(uint32 skill);
     static std::string const FormatBoolean(bool flag);
 
     static uint32 parseItemQuality(std::string const text);
+    static std::string const FormatItemQuality(uint32 quality);
     static bool parseItemClass(std::string const text, uint32* itemClass, uint32* itemSubClass);
     static uint32 parseSlot(std::string const text);
     uint32 parseSkill(std::string const text);
@@ -75,9 +73,6 @@ public:
 
     static std::set<uint32> ExtractAllQuestIds(const std::string& text);
     static std::set<uint32> ExtractAllItemIds(const std::string& text);
-
-    // 将密语中文命令别名解析为模块内部英文 trigger 名
-    static std::string ResolveChatCommandAlias(std::string const& command);
 
 private:
     static std::map<std::string, uint32> consumableSubClasses;

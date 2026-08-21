@@ -2,14 +2,21 @@
  * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
+ *
+ * Ported from the CMaNGOS playerbots project (https://github.com/cmangos/playerbots), GPL v2,
+ * with modifications for AzerothCore.
+ * Original authors:
+ *   David Parra Ausina (davidonete/Flekz) <davidparraausina@gmail.com> - original author
+ *   Sebastiaan Keek (mostlikely4r) <sebastiaan.keek@gmail.com>
+ *   Cyberium <cyberium@users.noreply.github.com>
  */
 
+#include "PullActions.h"
 #include "AttackersValue.h"
 #include "CreatureAI.h"
-#include "Playerbots.h"
 #include "PlayerbotTextMgr.h"
+#include "Playerbots.h"
 #include "PositionValue.h"
-#include "PullActions.h"
 #include "PullStrategy.h"
 #include "RtiTargetValue.h"
 #include <algorithm>
@@ -44,7 +51,7 @@ bool PullRequestAction::Execute(Event event)
     if (!target || !target->IsInWorld())
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pull_no_target_error", "你没有目标", {});
+            "pull_no_target_error", "You have no target", {});
         botAI->TellError(text);
         return false;
     }
@@ -53,7 +60,7 @@ bool PullRequestAction::Execute(Event event)
     if (target->GetMapId() != bot->GetMapId() || bot->GetDistance(target) > maxPullDistance)
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pull_target_too_far_error", "目标太远了", {});
+            "pull_target_too_far_error", "The target is too far away", {});
         botAI->TellError(text);
         return false;
     }
@@ -61,7 +68,7 @@ bool PullRequestAction::Execute(Event event)
     if (!AttackersValue::IsPossibleTarget(target, bot))
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pull_invalid_target_error", "无法拉怪", {});
+            "pull_invalid_target_error", "The target can't be pulled", {});
         botAI->TellError(text);
         return false;
     }
@@ -71,7 +78,7 @@ bool PullRequestAction::Execute(Event event)
         std::string const actionName = strategy->GetPullActionName();
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "pull_action_unavailable_error",
-            "无法执行拉怪动作 '%action_name'",
+            "Can't perform pull action '%action_name'",
             {{"%action_name", actionName}});
         botAI->TellError(text);
         return false;

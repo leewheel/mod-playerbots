@@ -5,7 +5,6 @@
  */
 
 #include "UseItemAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "ItemPackets.h"
@@ -38,7 +37,7 @@ bool UseItemAction::Execute(Event event)
     }
 
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "use_item_none_available", "没有可用的物品（或游戏对象）", {}));
+        "use_item_none_available", "No items (or game objects) available", {}));
     return false;
 }
 
@@ -53,7 +52,7 @@ bool UseItemAction::UseGameObject(ObjectGuid guid)
     std::ostringstream out;
     botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "use_gameobject",
-        "正在使用 %gameobject",
+        "Using %gameobject",
         {{"%gameobject", chat->FormatGameobject(go)}}));
     return true;
 }
@@ -130,7 +129,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
             bool fit = SocketItem(itemTarget, item) || SocketItem(itemTarget, item, true);
             if (!fit)
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "socket_does_not_fit", "插槽不匹配", {}));
+                    "socket_does_not_fit", "Socket does not fit", {}));
 
             return fit;
         }
@@ -146,7 +145,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
 
     Player* master = GetMaster();
     if (!targetSelected && item->GetTemplate()->Class != ITEM_CLASS_CONSUMABLE && master &&
-        botAI->HasActivePlayerMaster() && !selfOnly)
+        IsRealPlayer(botAI->GetMaster()) && !selfOnly)
     {
         if (ObjectGuid masterSelection = master->GetTarget())
         {
@@ -179,7 +178,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
             packet << uint32(0);
             bot->GetSession()->HandleQuestgiverAcceptQuestOpcode(packet);
 
-            botAI->TellMasterNoFacing("获得任务 " + chat->FormatQuest(qInfo));
+            botAI->TellMasterNoFacing("Got quest " + chat->FormatQuest(qInfo));
             return true;
         }
     }
@@ -221,7 +220,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
                 targetFlag = TARGET_FLAG_TRADE_ITEM;
                 packet << targetFlag << (uint8)1 << ObjectGuid((uint64)TRADE_SLOT_NONTRADED).WriteAsPacked();
                 targetSelected = true;
-                targetText = "交易物品";
+                targetText = "traded item";
             }
             else
             {
@@ -274,24 +273,24 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
             return false;
 
         // bot->SetStandState(UNIT_STAND_STATE_SIT);
-        botAI->InterruptSpell();
+        bot->CastStop();
         float hp = bot->GetHealthPct();
         float mp = bot->GetPower(POWER_MANA) * 100.0f / bot->GetMaxPower(POWER_MANA);
         float p = 0.f;
         if (isDrink && isFood)
         {
             p = std::min(hp, mp);
-            TellConsumableUse(item, "盛宴", p);
+            TellConsumableUse(item, "Feasting", p);
         }
         else if (isDrink)
         {
             p = mp;
-            TellConsumableUse(item, "饮水", p);
+            TellConsumableUse(item, "Drinking", p);
         }
         else if (isFood)
         {
             p = std::min(hp, mp);
-            TellConsumableUse(item, "进食", p);
+            TellConsumableUse(item, "Eating", p);
         }
 
         if (!bot->IsInCombat() && !bot->InBattleground())
@@ -313,9 +312,9 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
     // botAI->SetNextCheckDelay(sPlayerbotAIConfig.globalCoolDown);
     std::string useText = targetSelected
         ? PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "use_item_on_target", "正在对 %target 使用 %item", {{"%item", itemText}, {"%target", targetText}})
+            "use_item_on_target", "Using %item on %target", {{"%item", itemText}, {"%target", targetText}})
         : PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "use_item", "正在使用 %item", {{"%item", itemText}});
+            "use_item", "Using %item", {{"%item", itemText}});
     botAI->TellMasterNoFacing(useText);
     bot->GetSession()->HandleUseItemOpcode(packet);
     return true;
@@ -383,7 +382,7 @@ bool UseItemAction::SocketItem(Item* item, Item* gem, bool replace)
     {
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "socketing_item_with_gem",
-            "正在用 %gem 镶嵌 %item",
+            "Socketing %item with %gem",
             {{"%item", chat->FormatItem(item->GetTemplate())}, {"%gem", chat->FormatItem(gem->GetTemplate())}}));
 
         WorldPackets::Item::SocketGems nicePacket(std::move(packet));
@@ -448,7 +447,7 @@ bool UseRandomRecipe::Execute(Event /*event*/)
 
 bool UseRandomRecipe::isUseful()
 {
-    return !bot->IsInCombat() && !botAI->HasActivePlayerMaster() && !bot->InBattleground();
+    return !bot->IsInCombat() && !IsRealPlayer(botAI->GetMaster()) && !bot->InBattleground();
 }
 
 bool UseRandomRecipe::isPossible() { return AI_VALUE2(uint32, "item count", "recipe") > 0; }
@@ -493,7 +492,7 @@ bool UseRandomQuestItem::Execute(Event /*event*/)
 
 bool UseRandomQuestItem::isUseful()
 {
-    return !botAI->HasActivePlayerMaster() && !bot->InBattleground() && !bot->HasUnitState(UNIT_STATE_IN_FLIGHT);
+    return !IsRealPlayer(botAI->GetMaster()) && !bot->InBattleground() && !bot->HasUnitState(UNIT_STATE_IN_FLIGHT);
 }
 
 bool UseRandomQuestItem::isPossible() { return AI_VALUE2(uint32, "item count", "quest") > 0; }

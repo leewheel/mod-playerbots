@@ -5,16 +5,9 @@
  */
 
 #include "MovementActions.h"
-
-#include <cmath>
-#include <cstdlib>
-#include <iomanip>
-#include <string>
-
 #include "Corpse.h"
 #include "Event.h"
 #include "FleeManager.h"
-#include "G3D/Vector3.h"
 #include "GameObject.h"
 #include "LastMovementValue.h"
 #include "LootObjectStack.h"
@@ -40,6 +33,11 @@
 #include "Unit.h"
 #include "Vehicle.h"
 #include "WaypointMovementGenerator.h"
+#include "G3D/Vector3.h"
+#include <cmath>
+#include <cstdlib>
+#include <iomanip>
+#include <string>
 
 MovementAction::MovementAction(PlayerbotAI* botAI, std::string const name) : Action(botAI, name)
 {
@@ -163,7 +161,7 @@ bool MovementAction::MoveToLOS(WorldObject* target, bool ranged)
     if (dest.isSet())
         return MoveTo(dest.mapId, dest.x, dest.y, dest.z);
     else
-        botAI->TellError("所有路径都不在视线内");
+        botAI->TellError("All paths not in LOS");
 
     return false;
 }
@@ -221,11 +219,8 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
             if (bot->IsSitState())
                 bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-            // if (bot->IsNonMeleeSpellCast(true))
-            // {
-            //     bot->CastStop();
-            //     botAI->InterruptSpell();
-            // }
+            // bot->CastStop();
+
             DoMovePoint(bot, x, y, z, generatePath, backwards);
             float delay = 1000.0f * MoveDelay(distance, backwards);
             if (lessDelay)
@@ -251,11 +246,8 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
             if (bot->IsSitState())
                 bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-            // if (bot->IsNonMeleeSpellCast(true))
-            // {
-            //     bot->CastStop();
-            //     botAI->InterruptSpell();
-            // }
+            // bot->CastStop();
+
             DoMovePoint(bot, x, y, modifiedZ, generatePath, backwards);
             float delay = 1000.0f * MoveDelay(distance, backwards);
             if (lessDelay)
@@ -439,7 +431,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
     //     uint32 entry;
     //     movePosition = movePath.getNextPoint(startPosition, maxDist, pathType, entry);
 
-    //     if (pathType == TravelNodePathType::portal) // && !botAI->isRealPlayer())
+    //     if (pathType == TravelNodePathType::portal) // && !IsSelfBot(bot))
     //     {
     //         //Log bot movement
     //         if (sPlayerbotAIConfig.hasLog("bot_movement.csv"))
@@ -639,12 +631,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
     //     if (bot->IsSitState())
     //         bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-    //     if (bot->IsNonMeleeSpellCast(true))
-    //     {
-    //         bot->CastStop();
-    //         botAI->InterruptSpell();
-    //     }
-    // }
+    //     bot->CastStop();
 
     //  /* Why do we do this?
     // if (lastMove.lastMoveShort.distance(movePosition) < minDist)
@@ -1022,14 +1009,11 @@ void MovementAction::UpdateMovementState()
     wasMovementRestricted = isCurrentlyRestricted;
 
     // Temporary speed increase in group
-    // if (botAI->HasRealPlayerMaster())
-    // {
+    // if (botAI->HasGameClientMaster())
     //     bot->SetSpeedRate(MOVE_RUN, 1.1f);
-    // }
     // else
-    // {
     //     bot->SetSpeedRate(MOVE_RUN, 1.0f);
-    // }
+
     // check if target is not reachable (from Vmangos)
     // if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == CHASE_MOTION_TYPE && bot->CanNotReachTarget() &&
     // !bot->InBattleground())
@@ -1117,7 +1101,7 @@ bool MovementAction::Follow(Unit* target, float distance, float angle)
         && ServerFacade::instance().IsDistanceLessOrEqualThan(ServerFacade::instance().GetDistance2d(bot, target->GetPositionX(),
     target->GetPositionY()), sPlayerbotAIConfig.sightDistance)
         && abs(bot->GetPositionZ() - target->GetPositionZ()) >= sPlayerbotAIConfig.spellDistance &&
-    botAI->HasRealPlayerMaster()
+    botAI->HasGameClientMaster()
         && (target->GetMapId() && bot->GetMapId() != target->GetMapId()))
     {
         bot->StopMoving();
@@ -1144,7 +1128,7 @@ bool MovementAction::Follow(Unit* target, float distance, float angle)
         return true;
     }
 
-    if (!IsMovingAllowed(target) && botAI->HasRealPlayerMaster())
+    if (!IsMovingAllowed(target) && botAI->HasGameClientMaster())
     {
         if ((target->GetMap() && target->GetMap()->IsBattlegroundOrArena()) || (bot->GetMap() &&
     bot->GetMap()->IsBattlegroundOrArena())) return false;
@@ -1152,10 +1136,10 @@ bool MovementAction::Follow(Unit* target, float distance, float angle)
         if (bot->isDead() && botAI->GetMaster()->IsAlive())
         {
             bot->ResurrectPlayer(1.0f, false);
-            botAI->TellMasterNoFacing("我复活了！");
+            botAI->TellMasterNoFacing("I live, again!");
         }
         else
-            botAI->TellError("跟随过程中卡住了");
+            botAI->TellError("I am stuck while following");
 
         bot->CombatStop(true);
         botAI->TellMasterNoFacing("I will there soon.");
@@ -1251,11 +1235,7 @@ bool MovementAction::Follow(Unit* target, float distance, float angle)
     if (bot->IsSitState())
         bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-    if (bot->IsNonMeleeSpellCast(true))
-    {
-        bot->CastStop();
-        botAI->InterruptSpell();
-    }
+    bot->CastStop();
 
     // AI_VALUE(LastMovement&, "last movement").Set(target);
     ClearIdleState();
@@ -1297,11 +1277,7 @@ bool MovementAction::ChaseTo(WorldObject* obj, float distance)
     if (!bot->IsStandState())
         bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-    if (bot->IsNonMeleeSpellCast(true))
-    {
-        bot->CastStop();
-        botAI->InterruptSpell();
-    }
+    bot->CastStop();
 
     // bot->GetMotionMaster()->Clear();
     bot->GetMotionMaster()->MoveChase((Unit*)obj, distance);
@@ -1371,7 +1347,7 @@ bool MovementAction::Flee(Unit* target)
 
     if (!IsMovingAllowed())
     {
-        botAI->TellError("逃跑过程中卡住了");
+        botAI->TellError("I am stuck while fleeing");
         return false;
     }
 
@@ -1524,7 +1500,7 @@ bool MovementAction::Flee(Unit* target)
     float rx, ry, rz;
     if (!manager.CalculateDestination(&rx, &ry, &rz))
     {
-        botAI->TellError("无处可逃");
+        botAI->TellError("Nowhere to flee");
         return false;
     }
 
@@ -1929,7 +1905,7 @@ bool AvoidAoeAction::AvoidAuraWithDynamicObj()
             lastTellTimer = time(NULL);
             lastMoveTimer = getMSTime();
             std::ostringstream out;
-            out << "我正在躲避 " << name.str() << " (" << spellInfo->Id << ")" << " 范围 " << radius << " - [光环]";
+            out << "I'm avoiding " << name.str() << " (" << spellInfo->Id << ")" << " Radius " << radius << " - [Aura]";
             bot->Say(out.str(), LANG_UNIVERSAL);
         }
         return true;
@@ -1997,8 +1973,8 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
                 lastTellTimer = time(NULL);
                 lastMoveTimer = getMSTime();
                 std::ostringstream out;
-                out << "我正在躲避 " << name.str() << " (" << spellInfo->Id << ")" << " 范围 " << radius
-                    << " - [陷阱]";
+                out << "I'm avoiding " << name.str() << " (" << spellInfo->Id << ")" << " Radius " << radius
+                    << " - [Trap]";
                 bot->Say(out.str(), LANG_UNIVERSAL);
             }
             return true;
@@ -2064,8 +2040,8 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
                                 lastTellTimer = time(NULL);
                                 lastMoveTimer = getMSTime();
                                 std::ostringstream out;
-                                out << "我正在躲避 " << name.str() << " (" << triggerSpellInfo->Id << ")"
-                                    << " 范围 " << radius << " - [单位触发]";
+                                out << "I'm avoiding " << name.str() << " (" << triggerSpellInfo->Id << ")"
+                                    << " Radius " << radius << " - [Unit Trigger]";
                                 bot->Say(out.str(), LANG_UNIVERSAL);
                             }
                         }
@@ -2543,7 +2519,7 @@ bool DisperseSetAction::Execute(Event event)
     if (text == "disable")
     {
         RESET_AI_VALUE(float, "disperse distance");
-        botAI->TellMasterNoFacing("已禁用分散");
+        botAI->TellMasterNoFacing("Disable disperse");
         return true;
     }
     if (text == "enable" || text == "reset")
@@ -2558,7 +2534,7 @@ bool DisperseSetAction::Execute(Event event)
         }
         float dis = AI_VALUE(float, "disperse distance");
         std::ostringstream out;
-        out << "已启用分散距离 " << std::setprecision(2) << dis;
+        out << "Enable disperse distance " << std::setprecision(2) << dis;
         botAI->TellMasterNoFacing(out.str());
         return true;
     }
@@ -2568,13 +2544,13 @@ bool DisperseSetAction::Execute(Event event)
         std::ostringstream out;
         if (dis <= 0.0f)
         {
-            out << "请先启用分散";
+            out << "Enable disperse first";
             botAI->TellMasterNoFacing(out.str());
             return true;
         }
         dis += 1.0f;
         SET_AI_VALUE(float, "disperse distance", dis);
-        out << "分散距离增至 " << std::setprecision(2) << dis;
+        out << "Increase disperse distance to " << std::setprecision(2) << dis;
         botAI->TellMasterNoFacing(out.str());
         return true;
     }
@@ -2588,7 +2564,7 @@ bool DisperseSetAction::Execute(Event event)
         }
         SET_AI_VALUE(float, "disperse distance", dis);
         std::ostringstream out;
-        out << "分散距离增至 " << std::setprecision(2) << dis;
+        out << "Increase disperse distance to " << std::setprecision(2) << dis;
         botAI->TellMasterNoFacing(out.str());
         return true;
     }
@@ -2600,22 +2576,22 @@ bool DisperseSetAction::Execute(Event event)
         std::ostringstream out;
         if (dis < 0 || dis > 100.0f)
         {
-            out << "无效的分散距离 " << std::setprecision(2) << dis;
+            out << "Invalid disperse distance " << std::setprecision(2) << dis;
         }
         else
         {
             SET_AI_VALUE(float, "disperse distance", dis);
-            out << "分散距离设为 " << std::setprecision(2) << dis;
+            out << "Set disperse distance to " << std::setprecision(2) << dis;
         }
         botAI->TellMasterNoFacing(out.str());
         return true;
     }
     std::ostringstream out;
-    out << "用法: disperse [enable | disable | increase | decrease | set {距离}]";
+    out << "Usage: disperse [enable | disable | increase | decrease | set {distance}]";
     float dis = AI_VALUE(float, "disperse distance");
     if (dis > 0.0f)
     {
-        out << "（当前分散距离: " << std::setprecision(2) << dis << "）";
+        out << "(Current disperse distance: " << std::setprecision(2) << dis << ")";
     }
     botAI->TellMasterNoFacing(out.str());
     return true;

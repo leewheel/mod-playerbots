@@ -5,7 +5,6 @@
  */
 
 #include "MoveToTravelTargetAction.h"
-
 #include "ChooseRpgTargetAction.h"
 #include "LootObjectStack.h"
 #include "Playerbots.h"
@@ -56,9 +55,9 @@ bool MoveToTravelTargetAction::Execute(Event /*event*/)
             {
                 std::ostringstream out;
                 if (botAI->GetMaster() && !bot->GetGroup()->IsMember(botAI->GetMaster()->GetGUID()))
-                    out << "稍等 ";
+                    out << "Waiting a bit for ";
                 else
-                    out << "请快点 ";
+                    out << "Please hurry up ";
 
                 out << member->GetName();
 

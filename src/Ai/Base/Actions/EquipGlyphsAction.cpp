@@ -5,16 +5,14 @@
  */
 
 #include "EquipGlyphsAction.h"
-
-#include "Playerbots.h"
-#include "ObjectMgr.h"
-#include "SpellMgr.h"
-#include "DBCStores.h"
 #include "AiObjectContext.h"
+#include "DBCStores.h"
 #include "Log.h"
-
-#include <unordered_map>
+#include "ObjectMgr.h"
+#include "Playerbots.h"
+#include "SpellMgr.h"
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace
@@ -107,7 +105,7 @@ bool EquipGlyphsAction::Execute(Event event)
     std::vector<GlyphInfo const*> glyphs;
     if (!CollectGlyphs(itemIds, glyphs))
     {
-        botAI->TellMaster("用法: glyph equip <6个雕文物品ID>（3主3副）。");
+        botAI->TellMaster("Usage: glyph equip <6 glyph item IDs> (3 major, 3 minor).");
         return false;
     }
 
@@ -145,12 +143,12 @@ bool EquipGlyphsAction::Execute(Event event)
 
         if (!placed)
         {
-            botAI->TellMaster("没有足够的空插槽来镶嵌所有雕文。");
+            botAI->TellMaster("Not enought empty sockets for all glyphs.");
             return false;
         }
     }
 
-    botAI->TellMaster("雕文已更新。");
+    botAI->TellMaster("Glyphs updated.");
 
     // Flag for custom glyphs
     botAI->GetAiObjectContext()->GetValue<bool>("custom_glyphs")->Set(true);

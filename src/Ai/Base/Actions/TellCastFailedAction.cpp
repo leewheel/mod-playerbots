@@ -5,7 +5,6 @@
  */
 
 #include "TellCastFailedAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "Playerbots.h"
@@ -29,26 +28,26 @@ bool TellCastFailedAction::Execute(Event event)
     switch (result)
     {
         case SPELL_FAILED_NOT_READY:
-            out << "未就绪";
+            out << "not ready";
             break;
         case SPELL_FAILED_REQUIRES_SPELL_FOCUS:
-            out << "需要法术焦点";
+            out << "requires spell focus";
             break;
         case SPELL_FAILED_REQUIRES_AREA:
-            out << "此处无法施法";
+            out << "cannot cast here";
             break;
         case SPELL_FAILED_EQUIPPED_ITEM_CLASS:
-            out << "需要物品";
+            out << "requires item";
             break;
         case SPELL_FAILED_EQUIPPED_ITEM_CLASS_MAINHAND:
         case SPELL_FAILED_EQUIPPED_ITEM_CLASS_OFFHAND:
-            out << "需要武器";
+            out << "requires weapon";
             break;
         case SPELL_FAILED_PREVENTED_BY_MECHANIC:
-            out << "被打断";
+            out << "interrupted";
             break;
         default:
-            out << "无法施放";
+            out << "cannot cast";
     }
 
     if (spellInfo->CalcCastTime() >= 2000)

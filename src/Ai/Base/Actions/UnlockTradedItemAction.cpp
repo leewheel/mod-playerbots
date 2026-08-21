@@ -1,7 +1,13 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "UnlockTradedItemAction.h"
 #include "PlayerbotAI.h"
-#include "TradeData.h"
 #include "SpellInfo.h"
+#include "TradeData.h"
 
 inline constexpr uint32_t PICK_LOCK_SPELL_ID = 1804;
 
@@ -18,13 +24,13 @@ bool UnlockTradedItemAction::Execute(Event /*event*/)
     Item* lockbox = tradeData->GetItem(TRADE_SLOT_NONTRADED);
     if (!lockbox)
     {
-        botAI->TellError("请勿交易栏中没有物品。");
+        botAI->TellError("No item in the Do Not Trade slot.");
         return false;
     }
 
     if (!CanUnlockItem(lockbox))
     {
-        botAI->TellError("无法解锁此物品。");
+        botAI->TellError("Cannot unlock this item.");
         return false;
     }
 
@@ -66,7 +72,7 @@ bool UnlockTradedItemAction::CanUnlockItem(Item* item)
             else
             {
                 std::ostringstream out;
-                out << "开锁技能不足（" << botSkill << "/" << requiredSkill << "），无法开锁："
+                out << "Lockpicking skill too low (" << botSkill << "/" << requiredSkill << ") to unlock: "
                     << item->GetTemplate()->Name1;
                 botAI->TellMaster(out.str());
             }
@@ -80,7 +86,7 @@ void UnlockTradedItemAction::UnlockItem(Item* item)
 {
     if (!bot->HasSpell(PICK_LOCK_SPELL_ID))
     {
-        botAI->TellError("无法解锁，缺少开锁技能。");
+        botAI->TellError("Cannot unlock, Pick Lock spell is missing.");
         return;
     }
 
@@ -88,11 +94,11 @@ void UnlockTradedItemAction::UnlockItem(Item* item)
     if (botAI->CastSpell(PICK_LOCK_SPELL_ID, bot->GetTrader(), item)) // Unit target is trader
     {
         std::ostringstream out;
-        out << "正在开锁交易物品：" << item->GetTemplate()->Name1;
+        out << "Picking Lock on traded item: " << item->GetTemplate()->Name1;
         botAI->TellMaster(out.str());
     }
     else
     {
-        botAI->TellError("施放开锁失败。");
+        botAI->TellError("Failed to cast Pick Lock.");
     }
 }

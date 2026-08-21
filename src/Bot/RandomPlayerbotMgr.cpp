@@ -5,19 +5,11 @@
  */
 
 #include "RandomPlayerbotMgr.h"
-
-#include <WorldSessionMgr.h>
-
-#include <algorithm>
-#include <boost/thread/thread.hpp>
-#include <cstdlib>
-#include <ctime>
-#include <iomanip>
-#include <random>
-
 #include "AiFactory.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+#include "Cell.h"
+#include "CellImpl.h"
 #include "ChannelMgr.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
@@ -25,6 +17,7 @@
 #include "Define.h"
 #include "FleeManager.h"
 #include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "LFGMgr.h"
 #include "MapMgr.h"
 #include "NewRpgInfo.h"
@@ -46,10 +39,13 @@
 #include "TravelMgr.h"
 #include "Unit.h"
 #include "World.h"
-#include "Cell.h"
-#include "GridNotifiers.h"
-#include "CellImpl.h"
-#include "GridNotifiersImpl.h"
+#include "WorldSessionMgr.h"
+#include <algorithm>
+#include <boost/thread/thread.hpp>
+#include <cstdlib>
+#include <ctime>
+#include <iomanip>
+#include <random>
 
 struct GuidClassRaceInfo
 {
@@ -294,7 +290,7 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
     {
         LOG_INFO("playerbots", "---------------------------------------");
         LOG_INFO("playerbots",
-                 "原型：玩家机器人性能增强已启用，可能出现问题和不稳定。");
+                 "PROTOTYPE: Playerbot performance enhancements are active. Issues and instability may occur.");
         LOG_INFO("playerbots", "---------------------------------------");
         ScaleBotActivity();
     }*/
@@ -310,7 +306,9 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
     }
 
     GetBots();
-    std::list<uint32> availableBots = currentBots;
+    // Copied deliberately: ProcessBot() erases from currentBots while this is
+    // being iterated below, so the loops must run over a snapshot.
+    std::unordered_set<uint32> availableBots = currentBots;
     uint32 availableBotCount = availableBots.size();
     uint32 onlineBotCount = playerBots.size();
 
@@ -356,7 +354,7 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
                 time(nullptr) > RealPlayerLastTimeSeen + sPlayerbotAIConfig.disabledWithoutRealPlayerLogoutDelay)
             {
                 LogoutAllBots();
-                LOG_INFO("playerbots", "没有真实玩家会话，登出所有机器人。");
+                LOG_INFO("playerbots", "Logout all bots due no real player session.");
             }
         }
 
@@ -390,7 +388,8 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
             sRandomPlayerbotMgr.CheckLfgQueue();
     }
 
-    if (sPlayerbotAIConfig.randomBotAutologin && time(nullptr) > (printStatsTimer + 300))
+    if (sPlayerbotAIConfig.randomBotAutologin && sPlayerbotAIConfig.randomBotPrintStatsInterval &&
+        time(nullptr) > (printStatsTimer + sPlayerbotAIConfig.randomBotPrintStatsInterval))
     {
         if (!printStatsTimer)
         {
@@ -433,7 +432,7 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
             loginBots += updateBots;
             loginBots = std::min(loginBots, maxNewBots);
 
-            LOG_DEBUG("playerbots", "{} 个新机器人准备登录", loginBots);
+            LOG_DEBUG("playerbots", "{} new bots prepared to login", loginBots);
 
             // Log in bots
             for (auto bot : availableBots)
@@ -489,7 +488,7 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
 // be unassigned (type 0)
 void RandomPlayerbotMgr::AssignAccountTypes()
 {
-    LOG_INFO("playerbots", "正在为随机机器人账号分配账号类型...");
+    LOG_INFO("playerbots", "Assigning account types for random bot accounts...");
 
     // Clear existing filtered lists
     rndBotTypeAccounts.clear();
@@ -511,7 +510,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
         } while (allAccounts->NextRow());
     }
 
-    LOG_INFO("playerbots", "数据库中共找到 {} 个随机机器人账号", allRandomBotAccounts.size());
+    LOG_INFO("playerbots", "Found {} total randombot accounts in database", allRandomBotAccounts.size());
 
     // Check existing assignments
     QueryResult existingAssignments = PlayerbotsDatabase.Query("SELECT account_id, account_type FROM playerbots_account_type");
@@ -584,7 +583,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
 
         if (assigned < toAssign)
         {
-            LOG_ERROR("playerbots", "未分配账号不足以满足 RNDbot 需求，还需要 {} 个账号。", toAssign - assigned);
+            LOG_ERROR("playerbots", "Not enough unassigned accounts to fulfill RNDbot requirements. Need {} more accounts.", toAssign - assigned);
         }
     }
 
@@ -609,7 +608,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
 
         if (assigned < toAssign)
         {
-            LOG_ERROR("playerbots", "未分配账号不足以满足 AddClass 需求，还需要 {} 个账号。", toAssign - assigned);
+            LOG_ERROR("playerbots", "Not enough unassigned accounts to fulfill AddClass requirements. Need {} more accounts.", toAssign - assigned);
         }
     }
 
@@ -620,7 +619,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
         else if (accountType == 2) addClassTypeAccounts.push_back(accountId);
     }
 
-    LOG_INFO("playerbots", "账号类型分配完成：{} 个 RNDbot 账号，{} 个 AddClass 账号，{} 个未分配",
+    LOG_INFO("playerbots", "Account type assignment complete: {} RNDbot accounts, {} AddClass accounts, {} unassigned",
              rndBotTypeAccounts.size(), addClassTypeAccounts.size(),
              currentAssignments.size() - rndBotTypeAccounts.size() - addClassTypeAccounts.size());
 }
@@ -739,7 +738,7 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
             if (GetEventValue(charInfo.guid, "add") ||
                 GetEventValue(charInfo.guid, "logout") ||
                 GetPlayerBot(charInfo.guid) ||
-                std::find(currentBots.begin(), currentBots.end(), charInfo.guid) != currentBots.end() ||
+                currentBots.contains(charInfo.guid) ||
                 (sPlayerbotAIConfig.disableDeathKnightLogin && charInfo.rClass == CLASS_DEATH_KNIGHT))
             {
                 return false;
@@ -752,7 +751,7 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
 
             SetEventValue(charInfo.guid, "add", 1, add_time);
             SetEventValue(charInfo.guid, "logout", 0, 0);
-            currentBots.push_back(charInfo.guid);
+            currentBots.insert(charInfo.guid);
 
             return true;
         };
@@ -801,8 +800,8 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
                 int divisor = RandomPlayerbotFactory::CalculateAvailableCharsPerAccount();
                 uint32 moreAccountsNeeded = (maxAllowedBotCount + divisor - 1) / divisor;
                 LOG_ERROR("playerbots",
-                          "无法登录所有请求的机器人，请尝试在配置文件中增加 RandomBotAccountCount。还需要 {} 个账号。",
-                          moreAccountsNeeded);
+                          "Can't log-in all the requested bots. Try increasing RandomBotAccountCount in your conf file.\n"
+                          "{} more accounts needed.", moreAccountsNeeded);
                 missingBotsTimer = 0;    // Reset timer so error is not spammed every tick
             }
         }
@@ -823,7 +822,7 @@ void RandomPlayerbotMgr::LoadBattleMastersCache()
 {
     BattleMastersCache.clear();
 
-    LOG_INFO("playerbots", "正在加载战场管理员缓存...");
+    LOG_INFO("playerbots", "Loading Battlemasters Cache...");
 
     QueryResult result = WorldDatabase.Query("SELECT `entry`,`bg_template` FROM `battlemaster_entry`");
 
@@ -866,14 +865,14 @@ void RandomPlayerbotMgr::LoadBattleMastersCache()
 
         BattleMastersCache[bmTeam][BattlegroundTypeId(bgTypeId)].insert(
             BattleMastersCache[bmTeam][BattlegroundTypeId(bgTypeId)].end(), entry);
-        LOG_DEBUG("playerbots", "已缓存战场管理员 #{}，战场类型 {} ({})", entry, bgTypeId,
+        LOG_DEBUG("playerbots", "Cached Battlemaster #{} for BG Type {} ({})", entry, bgTypeId,
                   bmTeam == TEAM_ALLIANCE ? "Alliance"
                   : bmTeam == TEAM_HORDE  ? "Horde"
                                           : "Neutral");
 
     } while (result->NextRow());
 
-    LOG_INFO("playerbots", ">> 已加载 {} 条战场管理员记录", count);
+    LOG_INFO("playerbots", ">> Loaded {} battlemaster entries", count);
 }
 
 std::vector<uint32> parseBrackets(const std::string& str)
@@ -906,7 +905,7 @@ void RandomPlayerbotMgr::CheckBgQueue()
     // Update the timer to the current time
     BgCheckTimer = time(nullptr);
 
-    LOG_DEBUG("playerbots", "正在检查战场队列...");
+    LOG_DEBUG("playerbots", "Checking BG Queue...");
 
     // Initialize Battleground Data (do not clear here)
 
@@ -1188,8 +1187,8 @@ void RandomPlayerbotMgr::LogBattlegroundInfo()
                 if (bgInfo.minLevel == 0)
                     continue;
                 LOG_INFO("playerbots",
-                         "竞技场:{} {}: 玩家（练习:{}, 评级:{}）机器人（练习:{}, 评级:{}）总计（练习:{} "
-                         "评级:{}），实例（练习:{} 评级:{}）",
+                         "ARENA:{} {}: Player (Skirmish:{}, Rated:{}) Bots (Skirmish:{}, Rated:{}) Total (Skirmish:{} "
+                         "Rated:{}), Instances (Skirmish:{} Rated:{})",
                          type == ARENA_TYPE_2v2   ? "2v2"
                          : type == ARENA_TYPE_3v3 ? "3v3"
                                                   : "5v5",
@@ -1239,14 +1238,14 @@ void RandomPlayerbotMgr::LogBattlegroundInfo()
                 continue;
 
             LOG_INFO("playerbots",
-                     "战场:{} {}: 玩家（联盟:{} 部落:{}）机器人（联盟:{} 部落:{}）总计（联盟:{} 部落:{}），实例 {}，活跃队列: {}", _bgType,
+                     "BG:{} {}: Player ({}:{}) Bot ({}:{}) Total (A:{} H:{}), Instances {}, Active Queue: {}", _bgType,
                      std::to_string(bgInfo.minLevel) + "-" + std::to_string(bgInfo.maxLevel),
                      bgInfo.bgAlliancePlayerCount, bgInfo.bgHordePlayerCount, bgInfo.bgAllianceBotCount,
                      bgInfo.bgHordeBotCount, bgInfo.bgAlliancePlayerCount + bgInfo.bgAllianceBotCount,
                      bgInfo.bgHordePlayerCount + bgInfo.bgHordeBotCount, bgInfo.bgInstanceCount, bgInfo.activeBgQueue);
         }
     }
-    LOG_DEBUG("playerbots", "战场队列检查完成");
+    LOG_DEBUG("playerbots", "BG Queue check finished");
 }
 
 void RandomPlayerbotMgr::CheckLfgQueue()
@@ -1254,7 +1253,7 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     if (!LfgCheckTimer || time(nullptr) > (LfgCheckTimer + 30))
         LfgCheckTimer = time(nullptr);
 
-    LOG_DEBUG("playerbots", "正在检查 LFG 队列...");
+    LOG_DEBUG("playerbots", "Checking LFG Queue...");
 
     // Clear LFG list
     LfgDungeons[TEAM_ALLIANCE].clear();
@@ -1284,7 +1283,7 @@ void RandomPlayerbotMgr::CheckLfgQueue()
         }
     }
 
-    LOG_DEBUG("playerbots", "LFG 队列检查完成");
+    LOG_DEBUG("playerbots", "LFG Queue check finished");
 }
 
 void RandomPlayerbotMgr::CheckPlayers()
@@ -1292,7 +1291,7 @@ void RandomPlayerbotMgr::CheckPlayers()
     if (!PlayersCheckTimer || time(nullptr) > (PlayersCheckTimer + 60))
         PlayersCheckTimer = time(nullptr);
 
-    LOG_INFO("playerbots", "正在检查玩家...");
+    LOG_INFO("playerbots", "Checking Players...");
 
     if (!playersLevel)
         playersLevel = sPlayerbotAIConfig.randombotStartingLevel;
@@ -1311,7 +1310,7 @@ void RandomPlayerbotMgr::CheckPlayers()
             playersLevel = player->GetLevel() + 3;
     }
 
-    LOG_INFO("playerbots", "最高玩家等级为 {}，机器人最高等级设为 {}", playersLevel - 3, playersLevel);
+    LOG_INFO("playerbots", "Max player level is {}, max bot level set to {}", playersLevel - 3, playersLevel);
 }
 
 void RandomPlayerbotMgr::ScheduleRandomize(uint32 bot, uint32 time) { SetEventValue(bot, "randomize", 1, time); }
@@ -1345,13 +1344,13 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
         if (!player || !player->GetGroup())
         {
             if (player)
-                LOG_DEBUG("playerbots", "机器人 #{} {}:{} <{}>: 登出", bot, IsAlliance(player->getRace()) ? "A" : "H",
+                LOG_DEBUG("playerbots", "Bot #{} {}:{} <{}>: log out", bot, IsAlliance(player->getRace()) ? "A" : "H",
                           player->GetLevel(), player->GetName().c_str());
             else
-                LOG_DEBUG("playerbots", "机器人 #{}: 登出", bot);
+                LOG_DEBUG("playerbots", "Bot #{}: log out", bot);
 
             SetEventValue(bot, "add", 0, 0);
-            currentBots.remove(bot);
+            currentBots.erase(bot);
 
             if (player)
                 LogoutPlayerBot(botGUID);
@@ -1409,10 +1408,8 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
             if (player->GetGroup() && botAI->GetGroupLeader())
             {
                 PlayerbotAI* groupLeaderBotAI = GET_PLAYERBOT_AI(botAI->GetGroupLeader());
-                if (!groupLeaderBotAI || groupLeaderBotAI->IsRealPlayer())
-                {
+                if (!groupLeaderBotAI || IsSelfBot(botAI->GetGroupLeader()))
                     update = false;
-                }
             }
 
             // if (botAI->HasPlayerNearby(sPlayerbotAIConfig.grindDistance))
@@ -1431,10 +1428,10 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
     uint32 logout = GetEventValue(bot, "logout");
     if (player && !logout && !isValid)
     {
-        LOG_DEBUG("playerbots", "机器人 #{} {}:{} <{}>: 登出", bot, IsAlliance(player->getRace()) ? "A" : "H",
+        LOG_DEBUG("playerbots", "Bot #{} {}:{} <{}>: log out", bot, IsAlliance(player->getRace()) ? "A" : "H",
                   player->GetLevel(), player->GetName().c_str());
         LogoutPlayerBot(botGUID);
-        currentBots.remove(bot);
+        currentBots.erase(bot);
         SetEventValue(bot, "logout", 1,
                       urand(sPlayerbotAIConfig.minRandomBotInWorldTime, sPlayerbotAIConfig.maxRandomBotInWorldTime));
         return true;
@@ -1465,7 +1462,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
         {
             uint32 randomTime =
                 urand(sPlayerbotAIConfig.minRandomBotReviveTime, sPlayerbotAIConfig.maxRandomBotReviveTime);
-            LOG_DEBUG("playerbots", "标记机器人 {} 为死亡，将在 {} 秒后复活。", bot->GetName().c_str(),
+            LOG_DEBUG("playerbots", "Mark bot {} as dead, will be revived in {}s.", bot->GetName().c_str(),
                       randomTime);
             SetEventValue(botId, "dead", 1, sPlayerbotAIConfig.maxRandomBotInWorldTime);
             SetEventValue(botId, "revive", 1, randomTime);
@@ -1486,7 +1483,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
     if (group && !group->isLFGGroup() && IsRandomBot(group->GetLeader()))
     {
         botAI->LeaveOrDisbandGroup();
-        LOG_INFO("playerbots", "机器人 {} 因队长是随机机器人而从队伍中移除。", bot->GetName().c_str());
+        LOG_INFO("playerbots", "Bot {} remove from group since leader is random bot.", bot->GetName().c_str());
     }
 
     // only randomize and teleport idle bots
@@ -1531,7 +1528,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
             // if (randomiser)
             // {
             Randomize(bot);
-            LOG_DEBUG("playerbots", "机器人 #{} {}:{} <{}>: 已随机化", botId,
+            LOG_DEBUG("playerbots", "Bot #{} {}:{} <{}>: randomized", botId,
                       bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName());
             uint32 randomTime =
                 urand(sPlayerbotAIConfig.minRandomBotRandomizeTime, sPlayerbotAIConfig.maxRandomBotRandomizeTime);
@@ -1550,7 +1547,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
         uint32 teleport = GetEventValue(botId, "teleport");
         if (!teleport)
         {
-            LOG_DEBUG("playerbots", "机器人 #{} <{}>: 传送以升级和刷新", botId, bot->GetName());
+            LOG_DEBUG("playerbots", "Bot #{} <{}>: teleport for level and refresh", botId, bot->GetName());
             Refresh(bot);
             RandomTeleportForLevel(bot);
             uint32 time = urand(sPlayerbotAIConfig.minRandomBotTeleportInterval,
@@ -1611,7 +1608,7 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
 
     if (locs.empty())
     {
-        LOG_DEBUG("playerbots", "无法传送机器人 {} - 没有可用位置", bot->GetName().c_str());
+        LOG_DEBUG("playerbots", "Cannot teleport bot {} - no locations available", bot->GetName().c_str());
         return;
     }
 
@@ -1630,7 +1627,7 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
                 tlocs.end());
     if (tlocs.empty())
     {
-        LOG_DEBUG("playerbots", "无法传送机器人 {} - 所有位置被过滤器移除", bot->GetName().c_str());
+        LOG_DEBUG("playerbots", "Cannot teleport bot {} - all locations removed by filter", bot->GetName().c_str());
         return;
     }
 
@@ -1680,9 +1677,9 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
 
         const LocaleConstant& locale = sWorld->GetDefaultDbcLocale();
         LOG_DEBUG("playerbots",
-                  "随机传送机器人 {}（等级 {}）到 地图: {} ({}) 区域: {} ({}) 子区域: {} ({}) 区域等级: {} "
-                  "子区域等级: {} {},{},{} ({}/{} "
-                  "个位置)",
+                  "Random teleporting bot {} (level {}) to Map: {} ({}) Zone: {} ({}) Area: {} ({}) ZoneLevel: {} "
+                  "AreaLevel: {} {},{},{} ({}/{} "
+                  "locations)",
                   bot->GetName().c_str(), bot->GetLevel(), map->GetId(), map->GetMapName(), zone->ID,
                   zone->area_name[locale], area->ID, area->area_name[locale], zone->area_level, area->area_level, x, y,
                   z, i + 1, tlocs.size());
@@ -1715,7 +1712,7 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
     if (pmo)
         pmo->finish();
 
-    // LOG_ERROR("playerbots", "无法传送机器人 {} - 没有可用位置 ({} locations)", bot->GetName().c_str(),
+    // LOG_ERROR("playerbots", "Cannot teleport bot {} - no locations available ({} locations)", bot->GetName().c_str(),
     //           tlocs.size());
 }
 
@@ -1751,7 +1748,7 @@ void RandomPlayerbotMgr::PrepareAddclassCache()
         }
     }
 
-    LOG_INFO("playerbots", ">> 从 {} 个 AddClass 账号收集了 {} 个角色用于 addclass 命令。", collected, addClassTypeAccounts.size());
+    LOG_INFO("playerbots", ">> {} characters collected for addclass command from {} AddClass accounts.", collected, addClassTypeAccounts.size());
 }
 
 void RandomPlayerbotMgr::Init()
@@ -1793,7 +1790,7 @@ void RandomPlayerbotMgr::RandomTeleportGrindForLevel(Player* bot)
         return;
 
     std::vector<WorldLocation> locs = sTravelMgr.GetTeleportLocations(bot);
-    LOG_DEBUG("playerbots", "为等级 {} 随机传送机器人 {}（{} 个可用位置）", bot->GetName().c_str(),
+    LOG_DEBUG("playerbots", "Random teleporting bot {} for level {} ({} locations available)", bot->GetName().c_str(),
               bot->GetLevel(), locs.size());
 
     RandomTeleport(bot, locs);
@@ -2071,7 +2068,7 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
     if (bot->InBattleground())
         return;
 
-    LOG_DEBUG("playerbots", "正在刷新机器人 {} <{}>", bot->GetGUID().ToString().c_str(), bot->GetName().c_str());
+    LOG_DEBUG("playerbots", "Refreshing bot {} <{}>", bot->GetGUID().ToString().c_str(), bot->GetName().c_str());
 
     PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "Refresh");
 
@@ -2103,7 +2100,7 @@ bool RandomPlayerbotMgr::IsRandomBot(Player* bot)
 {
     if (bot && GET_PLAYERBOT_AI(bot))
     {
-        if (GET_PLAYERBOT_AI(bot)->IsRealPlayer())
+        if (IsSelfBot(bot))
             return false;
     }
     if (bot)
@@ -2120,17 +2117,14 @@ bool RandomPlayerbotMgr::IsRandomBot(ObjectGuid::LowType bot)
     if (!sPlayerbotAIConfig.IsInRandomAccountList(sCharacterCache->GetCharacterAccountIdByGuid(guid)))
         return false;
 
-    if (std::find(currentBots.begin(), currentBots.end(), bot) != currentBots.end())
-        return true;
-
-    return false;
+    return currentBots.contains(bot);
 }
 
 bool RandomPlayerbotMgr::IsAddclassBot(Player* bot)
 {
     if (bot && GET_PLAYERBOT_AI(bot))
     {
-        if (GET_PLAYERBOT_AI(bot)->IsRealPlayer())
+        if (IsSelfBot(bot))
             return false;
     }
     if (bot)
@@ -2188,7 +2182,7 @@ void RandomPlayerbotMgr::GetBots()
             Field* fields = result->Fetch();
             uint32 bot = fields[0].Get<uint32>();
             if (GetEventValue(bot, "add"))
-                currentBots.push_back(bot);
+                currentBots.insert(bot);
 
             if (currentBots.size() >= maxAllowedBotCount)
                 break;
@@ -2368,13 +2362,13 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
 {
     if (!sPlayerbotAIConfig.enabled)
     {
-        LOG_ERROR("playerbots", "玩家机器人系统当前已禁用！");
+        LOG_ERROR("playerbots", "Playerbots system is currently disabled!");
         return false;
     }
 
     if (!args || !*args)
     {
-        LOG_ERROR("playerbots", "用法: rndbot stats/update/reset/init/refresh/add/remove");
+        LOG_ERROR("playerbots", "Usage: rndbot stats/update/reset/init/refresh/add/remove");
         return false;
     }
 
@@ -2384,7 +2378,7 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
     {
         PlayerbotsDatabase.Execute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_RANDOM_BOTS));
         sRandomPlayerbotMgr.eventCache.clear();
-        LOG_INFO("playerbots", "所有玩家的随机机器人已重置，请重启服务器。");
+        LOG_INFO("playerbots", "Random bots were reset for all players. Please restart the Server.");
         return true;
     }
 
@@ -2456,7 +2450,7 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
 
         if (botIds.empty())
         {
-            LOG_INFO("playerbots", "无需操作");
+            LOG_INFO("playerbots", "Nothing to do");
             return false;
         }
 
@@ -2468,7 +2462,7 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
             if (!bot)
                 continue;
 
-            LOG_INFO("playerbots", "[{}/{}] 正在为机器人 {} 处理命令 {}", processed++, botIds.size(), cmd.c_str(),
+            LOG_INFO("playerbots", "[{}/{}] Processing command {} for bot {}", processed++, botIds.size(), cmd.c_str(),
                      bot->GetName().c_str());
 
             ConsoleCommandHandler handler = j->second;
@@ -2535,7 +2529,7 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
 {
     if (_isBotLogging)
     {
-        LOG_INFO("playerbots", "{}/{} 机器人 {} 已登录", playerBots.size(),
+        LOG_INFO("playerbots", "{}/{} Bot {} logged in", playerBots.size(),
                  sRandomPlayerbotMgr.GetMaxAllowedBotCount(), bot->GetName().c_str());
 
         if (playerBots.size() == sRandomPlayerbotMgr.GetMaxAllowedBotCount())
@@ -2592,7 +2586,7 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
                     botAI->SetMaster(player);
                     botAI->ResetStrategies();
                     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "hello", "你好", {}));
+                        "hello", "Hello", {}));
                 }
 
                 break;
@@ -2650,14 +2644,14 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
     else
     {
         players.push_back(player);
-        LOG_DEBUG("playerbots", "将非随机机器人玩家 {} 纳入随机机器人更新", player->GetName().c_str());
+        LOG_DEBUG("playerbots", "Including non-random bot player {} into random bot update", player->GetName().c_str());
     }
 }
 
 void RandomPlayerbotMgr::OnPlayerLoginError(uint32 bot)
 {
     SetEventValue(bot, "add", 0, 0);
-    currentBots.remove(bot);
+    currentBots.erase(bot);
 }
 
 Player* RandomPlayerbotMgr::GetRandomPlayer()
@@ -2672,7 +2666,7 @@ Player* RandomPlayerbotMgr::GetRandomPlayer()
 void RandomPlayerbotMgr::PrintStats()
 {
     printStatsTimer = time(nullptr);
-    LOG_INFO("playerbots", "随机机器人统计：{} 在线", playerBots.size());
+    LOG_INFO("playerbots", "Random Bots Stats: {} online", playerBots.size());
 
     std::map<uint8, uint32> alliance, horde;
     for (uint32 i = 0; i < 10; ++i)
@@ -2739,11 +2733,11 @@ void RandomPlayerbotMgr::PrintStats()
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
         if (!botAI)
         {
-            LOG_ERROR("playerbots", "玩家/机器人 {} 已在 sRandomPlayerbotMgr playerBots 中注册但没有机器人 AI！", bot->GetName().c_str());
+            LOG_ERROR("playerbots", "Player/Bot {} is registered in sRandomPlayerbotMgr playerBots and has no bot AI!", bot->GetName().c_str());
             continue;
         }
 
-        if (botAI->AllowActivity())
+        if (botAI->IsActivityAllowedCached())
             ++active;
         /* TODO: Review statistics on rpg merge
         if (botAI->GetAiObjectContext()->GetValue<bool>("random bot update")->Get())
@@ -2792,10 +2786,10 @@ void RandomPlayerbotMgr::PrintStats()
         else
             ++engine_dead;
 
-        if (botAI->IsHeal(bot, true))
+        if (botAI->IsHeal(bot, false))
             ++heal;
 
-        else if (botAI->IsTank(bot, true))
+        else if (botAI->IsTank(bot, false))
             ++tank;
 
         else
@@ -2811,7 +2805,7 @@ void RandomPlayerbotMgr::PrintStats()
         }
     }
 
-    LOG_INFO("playerbots", "机器人等级：");
+    LOG_INFO("playerbots", "Bots level:");
     // uint32 maxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
     uint32_t currentAlliance = 0, currentHorde = 0;
     uint32_t step = std::max(1, static_cast<int>((maxBotLevel + 4) / 8));
@@ -2825,43 +2819,43 @@ void RandomPlayerbotMgr::PrintStats()
         if (((i + 1) % step == 0) || i == maxBotLevel)
         {
             if (currentAlliance || currentHorde)
-                LOG_INFO("playerbots", "    {}..{}: {} 联盟, {} 部落", from, i, currentAlliance, currentHorde);
+                LOG_INFO("playerbots", "    {}..{}: {} alliance, {} horde", from, i, currentAlliance, currentHorde);
             currentAlliance = 0;
             currentHorde = 0;
             from = i + 1;
         }
     }
 
-    LOG_INFO("playerbots", "机器人种族：");
+    LOG_INFO("playerbots", "Bots race:");
     for (uint8 race = RACE_HUMAN; race < sRaceMgr->GetMaxRaces(); ++race)
     {
         if (perRace[race])
         {
             uint32 lvl = lvlPerRace[race] * 10 / perRace[race];
             float flvl = lvl / 10.0f;
-            LOG_INFO("playerbots", "    {}: {}, 平均等级: {}", ChatHelper::FormatRaceLog(race).c_str(), perRace[race],
+            LOG_INFO("playerbots", "    {}: {}, avg lvl: {}", ChatHelper::FormatRace(race).c_str(), perRace[race],
                      flvl);
         }
     }
 
-    LOG_INFO("playerbots", "机器人职业：");
+    LOG_INFO("playerbots", "Bots class:");
     for (uint8 cls = CLASS_WARRIOR; cls < MAX_CLASSES; ++cls)
     {
         if (perClass[cls])
         {
             uint32 lvl = lvlPerClass[cls] * 10 / perClass[cls];
             float flvl = lvl / 10.0f;
-            LOG_INFO("playerbots", "    {}: {}, 平均等级: {}", ChatHelper::FormatClassLog(cls).c_str(), perClass[cls],
+            LOG_INFO("playerbots", "    {}: {}, avg lvl: {}", ChatHelper::FormatClass(cls).c_str(), perClass[cls],
                      flvl);
         }
     }
 
-    LOG_INFO("playerbots", "机器人职责：");
-    LOG_INFO("playerbots", "    坦克: {}, 治疗: {}, 输出: {}", tank, heal, dps);
+    LOG_INFO("playerbots", "Bots role:");
+    LOG_INFO("playerbots", "    tank: {}, heal: {}, dps: {}", tank, heal, dps);
 
-    LOG_INFO("playerbots", "机器人状态：");
-    LOG_INFO("playerbots", "    活跃: {}", active);
-    LOG_INFO("playerbots", "    移动中: {}", moving);
+    LOG_INFO("playerbots", "Bots status:");
+    LOG_INFO("playerbots", "    Active: {}", active);
+    LOG_INFO("playerbots", "    Moving: {}", moving);
 
     // LOG_INFO("playerbots", "Bots to:");
     // LOG_INFO("playerbots", "    update: {}", update);
@@ -2870,16 +2864,16 @@ void RandomPlayerbotMgr::PrintStats()
     // LOG_INFO("playerbots", "    change_strategy: {}", changeStrategy);
     // LOG_INFO("playerbots", "    revive: {}", revive);
 
-    LOG_INFO("playerbots", "    飞行中: {}", inFlight);
-    LOG_INFO("playerbots", "    骑乘中: {}", mounted);
-    LOG_INFO("playerbots", "    战斗中: {}", combat);
-    LOG_INFO("playerbots", "    战场中: {}", inBg);
-    LOG_INFO("playerbots", "    休息中: {}", rest);
-    LOG_INFO("playerbots", "    死亡: {}", dead);
+    LOG_INFO("playerbots", "    In flight: {}", inFlight);
+    LOG_INFO("playerbots", "    On mount: {}", mounted);
+    LOG_INFO("playerbots", "    In combat: {}", combat);
+    LOG_INFO("playerbots", "    In BG: {}", inBg);
+    LOG_INFO("playerbots", "    In Rest: {}", rest);
+    LOG_INFO("playerbots", "    Dead: {}", dead);
 
     if (sPlayerbotAIConfig.enableNewRpgStrategy)
     {
-        LOG_INFO("playerbots", "机器人 RPG 状态：");
+        LOG_INFO("playerbots", "Bots rpg status:");
         LOG_INFO("playerbots",
                  "    Idle: {}, Rest: {}, GoGrind: {}, GoCamp: {}, MoveRandom: {}, MoveNpc: {}, DoQuest: {}, "
                  "TravelFlight: {}, OutdoorPvP: {}",
@@ -2887,13 +2881,13 @@ void RandomPlayerbotMgr::PrintStats()
                  rpgStatusCount[RPG_GO_CAMP], rpgStatusCount[RPG_WANDER_RANDOM], rpgStatusCount[RPG_WANDER_NPC],
                  rpgStatusCount[RPG_DO_QUEST], rpgStatusCount[RPG_TRAVEL_FLIGHT], rpgStatusCount[RPG_OUTDOOR_PVP]);
 
-        LOG_INFO("playerbots", "机器人任务总数：");
-        LOG_INFO("playerbots", "    已接受: {}, 已奖励: {}, 已放弃: {}", rpgStasticTotal.questAccepted,
+        LOG_INFO("playerbots", "Bots total quests:");
+        LOG_INFO("playerbots", "    Accepted: {}, Rewarded: {}, Dropped: {}", rpgStasticTotal.questAccepted,
                  rpgStasticTotal.questRewarded, rpgStasticTotal.questDropped);
     }
 
-    LOG_INFO("playerbots", "机器人引擎：", dead);
-    LOG_INFO("playerbots", "    非战斗: {}, 战斗: {}, 死亡: {}", engine_noncombat, engine_combat, engine_dead);
+    LOG_INFO("playerbots", "Bots engine:", dead);
+    LOG_INFO("playerbots", "    Non-combat: {}, Combat: {}, Dead: {}", engine_noncombat, engine_combat, engine_dead);
 }
 
 double RandomPlayerbotMgr::GetBuyMultiplier(Player* bot)
@@ -2970,7 +2964,7 @@ std::string const RandomPlayerbotMgr::HandleRemoteCommand(std::string const requ
     if (pos == request.end())
     {
         std::ostringstream out;
-        out << "无效请求: " << request;
+        out << "invalid request: " << request;
         return out.str();
     }
 
@@ -2978,11 +2972,11 @@ std::string const RandomPlayerbotMgr::HandleRemoteCommand(std::string const requ
     ObjectGuid guid = ObjectGuid::Create<HighGuid::Player>(atoi(std::string(pos + 1, request.end()).c_str()));
     Player* bot = GetPlayerBot(guid);
     if (!bot)
-        return "无效的 GUID";
+        return "invalid guid";
 
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     if (!botAI)
-        return "无效的 GUID";
+        return "invalid guid";
 
     return botAI->HandleRemoteCommand(command);
 }
@@ -2993,13 +2987,13 @@ void RandomPlayerbotMgr::ChangeStrategy(Player* player)
 
     if (frand(0.f, 100.f) > sPlayerbotAIConfig.randomBotRpgChance)
     {
-        LOG_INFO("playerbots", "机器人 #{} <{}>: 已送往刷怪点", bot, player->GetName().c_str());
+        LOG_INFO("playerbots", "Bot #{} <{}>: sent to grind spot", bot, player->GetName().c_str());
         ScheduleTeleport(bot, 30);
     }
     else
     {
-        LOG_INFO("playerbots", "正在将机器人 #{} <{}> 的策略改为 RPG", bot, player->GetName().c_str());
-        LOG_INFO("playerbots", "机器人 #{} <{}>: 已送往旅店", bot, player->GetName().c_str());
+        LOG_INFO("playerbots", "Changing strategy for bot #{} <{}> to RPG", bot, player->GetName().c_str());
+        LOG_INFO("playerbots", "Bot #{} <{}>: sent to inn", bot, player->GetName().c_str());
         RandomTeleportForLevel(player);
         SetEventValue(bot, "teleport", 1, sPlayerbotAIConfig.maxRandomBotInWorldTime);
     }
@@ -3013,13 +3007,13 @@ void RandomPlayerbotMgr::ChangeStrategyOnce(Player* player)
 
     if (frand(0.f, 100.f) > sPlayerbotAIConfig.randomBotRpgChance)  // select grind / pvp
     {
-        LOG_INFO("playerbots", "机器人 #{} <{}>: 已送往刷怪点", bot, player->GetName().c_str());
+        LOG_INFO("playerbots", "Bot #{} <{}>: sent to grind spot", bot, player->GetName().c_str());
         RandomTeleportForLevel(player);
         Refresh(player);
     }
     else
     {
-        LOG_INFO("playerbots", "机器人 #{} <{}>: 已送往旅店", bot, player->GetName().c_str());
+        LOG_INFO("playerbots", "Bot #{} <{}>: sent to inn", bot, player->GetName().c_str());
         RandomTeleportForLevel(player);
     }
 }
@@ -3028,7 +3022,7 @@ void RandomPlayerbotMgr::RandomTeleportForRpg(Player* bot)
 {
     uint32 race = bot->getRace();
     uint32 level = bot->GetLevel();
-    LOG_DEBUG("playerbots", "为 RPG 随机传送机器人 {}（{} 个可用位置）", bot->GetName().c_str(),
+    LOG_DEBUG("playerbots", "Random teleporting bot {} for RPG ({} locations available)", bot->GetName().c_str(),
               rpgLocsCacheLevel[race].size());
     RandomTeleport(bot, rpgLocsCacheLevel[race][level], true);
 }

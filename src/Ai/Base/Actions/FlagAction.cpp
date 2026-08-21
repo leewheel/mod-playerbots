@@ -5,13 +5,12 @@
  */
 
 #include "FlagAction.h"
-
 #include "Event.h"
 #include "Playerbots.h"
 
 bool FlagAction::TellUsage()
 {
-    botAI->TellError("用法: flag cloak/helm/pvp on/set/off/clear/toggle/?");
+    botAI->TellError("Usage: flag cloak/helm/pvp on/set/off/clear/toggle/?");
     return false;
 }
 

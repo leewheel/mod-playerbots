@@ -4,20 +4,18 @@
  */
 
 #include "FollowActions.h"
-
-#include <algorithm>
-#include <cmath>
-#include <array>
-
 #include "Event.h"
 #include "Formations.h"
 #include "LastMovementValue.h"
+#include "Map.h"
 #include "MotionMaster.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
 #include "Transport.h"
-#include "Map.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
 
 namespace
 {
@@ -177,11 +175,7 @@ bool FollowAction::Execute(Event /*event*/)
                     if (bot->IsSitState())
                         bot->SetStandState(UNIT_STAND_STATE_STAND);
 
-                    if (bot->IsNonMeleeSpellCast(true))
-                    {
-                        bot->CastStop();
-                        botAI->InterruptSpell();
-                    }
+                    bot->CastStop();
 
                     if (MotionMaster* mm = bot->GetMotionMaster())
                     {
@@ -325,15 +319,15 @@ bool FleeToGroupLeaderAction::Execute(Event /*event*/)
     if (distance < sPlayerbotAIConfig.reactDistance * 3)
     {
         if (!urand(0, 3))
-            botAI->TellMaster("我很近了，等我一下！");
+            botAI->TellMaster("I am close, wait for me!");
     }
     else if (distance < 1000)
     {
         if (!urand(0, 10))
-            botAI->TellMaster("我正在前往你的位置。");
+            botAI->TellMaster("I heading to your position.");
     }
     else if (!urand(0, 20))
-        botAI->TellMaster("我正在前往你的位置。");
+        botAI->TellMaster("I am traveling to your position.");
 
     botAI->SetNextCheckDelay(3000);
 

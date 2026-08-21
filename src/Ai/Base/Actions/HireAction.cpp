@@ -5,10 +5,9 @@
  */
 
 #include "HireAction.h"
-
 #include "Event.h"
-#include "RandomPlayerbotMgr.h"
 #include "PlayerbotAI.h"
+#include "RandomPlayerbotMgr.h"
 
 bool HireAction::Execute(Event /*event*/)
 {
@@ -31,13 +30,13 @@ bool HireAction::Execute(Event /*event*/)
 
     if (charCount >= 10)
     {
-        botAI->TellMaster("你已达到角色数量上限");
+        botAI->TellMaster("You already have the maximum number of characters");
         return false;
     }
 
     if (bot->GetLevel() > master->GetLevel())
     {
-        botAI->TellMaster("你无法雇佣等级高于你的角色");
+        botAI->TellMaster("You cannot hire higher level characters than you");
         return false;
     }
 
@@ -47,12 +46,13 @@ bool HireAction::Execute(Event /*event*/)
     if (discount < moneyReq)
     {
         std::ostringstream out;
-        out << "你还不能雇佣我——我们还不够熟。请确保交易折扣至少达到 " << chat->formatMoney(moneyReq);
+        out << "You cannot hire me - I barely know you. Make sure you have at least " << chat->formatMoney(moneyReq)
+            << " as a trade discount";
         botAI->TellMaster(out.str());
         return false;
     }
 
-    botAI->TellMaster("我将在你下次登录时加入");
+    botAI->TellMaster("I will join you at your next relogin");
 
     bot->SetMoney(moneyReq);
     RandomPlayerbotMgr::instance().Remove(bot);

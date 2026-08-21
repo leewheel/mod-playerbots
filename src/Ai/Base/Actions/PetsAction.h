@@ -7,9 +7,8 @@
 #ifndef PLAYERBOTS_PETSACTION_H
 #define PLAYERBOTS_PETSACTION_H
 
-#include <string>
-
 #include "Action.h"
+#include <string>
 
 class PlayerbotAI;
 
@@ -22,6 +21,28 @@ public:
 
 private:
     std::string defaultCmd;
+};
+
+class TogglePetSpellAutoCastAction : public Action
+{
+public:
+    TogglePetSpellAutoCastAction(PlayerbotAI* ai) : Action(ai, "toggle pet spell") {}
+    virtual bool Execute(Event event) override;
+};
+
+class PetAttackAction : public Action
+{
+public:
+    PetAttackAction(PlayerbotAI* ai) : Action(ai, "pet attack") {}
+    virtual bool Execute(Event event) override;
+};
+
+class SetPetStanceAction : public Action
+{
+public:
+    SetPetStanceAction(PlayerbotAI* botAI) : Action(botAI, "set pet stance") {}
+
+    bool Execute(Event event) override;
 };
 
 #endif

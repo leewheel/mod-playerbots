@@ -1,9 +1,13 @@
-#include "NewRpgBaseAction.h"
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
 
+#include "NewRpgBaseAction.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
 #include "Creature.h"
-#include "G3D/Vector2.h"
 #include "GameObject.h"
 #include "GossipDef.h"
 #include "GridTerrainData.h"
@@ -12,13 +16,14 @@
 #include "NewRpgStrategy.h"
 #include "Object.h"
 #include "ObjectAccessor.h"
-#include "OutdoorPvPMgr.h"
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
 #include "ObjectMgr.h"
+#include "OutdoorPvPMgr.h"
 #include "PathGenerator.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
+#include "QuestPackets.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
@@ -31,6 +36,7 @@
 #include "StatsWeightCalculator.h"
 #include "Timer.h"
 #include "TravelMgr.h"
+#include "G3D/Vector2.h"
 
 bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {
@@ -314,7 +320,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
             if (botAI->GetMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "new_rpg_quest_accepted",
-                    "已接受任务 %quest",
+                    "Quest accepted %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             BroadcastHelper::BroadcastQuestAccepted(botAI, bot, quest);
             botAI->rpgStatistic.questAccepted++;
@@ -326,7 +332,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
             if (botAI->GetMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "new_rpg_quest_rewarded",
-                    "已交付任务 %quest",
+                    "Quest rewarded %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             BroadcastHelper::BroadcastQuestTurnedIn(botAI, bot, quest);
             botAI->rpgStatistic.questRewarded++;
@@ -611,7 +617,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             if (botAI->GetMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "new_rpg_quest_dropped",
-                    "已放弃任务 %quest",
+                    "Quest dropped %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             botAI->rpgStatistic.questDropped++;
             dropped++;
@@ -643,7 +649,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             if (botAI->GetMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "new_rpg_quest_dropped",
-                    "已放弃任务 %quest",
+                    "Quest dropped %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             botAI->rpgStatistic.questDropped++;
             dropped++;
@@ -670,7 +676,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
         if (botAI->GetMaster())
             botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "new_rpg_quest_dropped",
-                "已放弃任务 %quest",
+                "Quest dropped %quest",
                 {{"%quest", ChatHelper::FormatQuest(quest)}}));
         botAI->rpgStatistic.questDropped++;
     }

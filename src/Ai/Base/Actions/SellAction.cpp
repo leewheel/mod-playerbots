@@ -5,12 +5,11 @@
  */
 
 #include "SellAction.h"
-
 #include "Event.h"
+#include "ItemPackets.h"
 #include "ItemUsageValue.h"
 #include "ItemVisitors.h"
 #include "Playerbots.h"
-#include "ItemPackets.h"
 
 class SellItemsVisitor : public IterateItemsVisitor
 {
@@ -85,7 +84,7 @@ bool SellAction::Execute(Event event)
         return true;
     }
 
-    botAI->TellError("用法: s gray/*/vendor/[物品链接]");
+    botAI->TellError("Usage: s gray/*/vendor/[item link]");
     return false;
 }
 
@@ -128,7 +127,7 @@ void SellAction::Sell(Item* item)
             bot->SetMoney(botMoney);
         }
 
-        out << "正在出售 " << chat->FormatItem(item->GetTemplate());
+        out << "Selling " << chat->FormatItem(item->GetTemplate());
         botAI->TellMaster(out);
 
         bot->PlayDistanceSound(120);

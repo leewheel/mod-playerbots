@@ -5,13 +5,12 @@
  */
 
 #include "TeleportAction.h"
-
+#include "AiObjectContext.h"
 #include "Event.h"
 #include "LastMovementValue.h"
-#include "AiObjectContext.h"
 #include "PlayerbotAI.h"
-#include "SpellMgr.h"
 #include "Spell.h"
+#include "SpellMgr.h"
 
 bool TeleportAction::Execute(Event /*event*/)
 {
@@ -55,7 +54,7 @@ bool TeleportAction::Execute(Event /*event*/)
     if (closestPortal && bot->IsWithinDistInMap(closestPortal, INTERACTION_DISTANCE))
     {
         std::ostringstream out;
-        out << "使用传送门：" << closestPortal->GetName();
+        out << "Using portal: " << closestPortal->GetName();
         botAI->TellMasterNoFacing(out.str());
 
         WorldPacket data(CMSG_GAMEOBJ_USE);
@@ -83,7 +82,7 @@ bool TeleportAction::Execute(Event /*event*/)
             continue;
 
         std::ostringstream out;
-        out << "正在传送，使用 " << goInfo->name;
+        out << "Teleporting using " << goInfo->name;
         botAI->TellMasterNoFacing(out.str());
 
         botAI->ChangeStrategy("-follow,+stay", BOT_STATE_NON_COMBAT);
@@ -110,6 +109,6 @@ bool TeleportAction::Execute(Event /*event*/)
     }
 
     // If no teleport option is found
-    botAI->TellError("找不到可传送的传送门");
+    botAI->TellError("Cannot find any portal to teleport");
     return false;
 }

@@ -1,7 +1,13 @@
-#include "Playerbots.h"
-#include "AiFactory.h"
-#include "ACTriggers.h"
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "ACActions.h"
+#include "ACTriggers.h"
+#include "AiFactory.h"
+#include "Playerbots.h"
 
 // Shirrak the Dead Watcher
 
@@ -105,7 +111,6 @@ bool ShirrakRangedKeepDistanceAction::Execute(Event /*event*/)
     {
         float dX = targetX - bot->GetPositionX();
         float dY = targetY - bot->GetPositionY();
-
         float moveDist = std::min(2.0f, distToSpot);
         float moveX = bot->GetPositionX() + (dX / distToSpot) * moveDist;
         float moveY = bot->GetPositionY() + (dY / distToSpot) * moveDist;

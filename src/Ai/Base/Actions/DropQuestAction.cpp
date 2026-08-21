@@ -5,7 +5,6 @@
  */
 
 #include "DropQuestAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "PlayerbotTextMgr.h"
@@ -55,18 +54,21 @@ bool DropQuestAction::Execute(Event event)
         LOG_INFO("playerbots", "{} => Quest [ {} ] removed", bot->GetName(), pQuest->GetTitle());
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "quest_removed_debug",
-            "任务 [%quest] 已移除",
+            "Quest [%quest] removed",
             {{"%quest", text_quest}});
         bot->Say(text, LANG_UNIVERSAL);
     }
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "quest_remove", "任务已移除", {}));
+        "quest_remove", "Quest removed", {}));
     return true;
 }
 
 bool CleanQuestLogAction::Execute(Event event)
 {
+    if (botAI->IsAltBot())
+        return false;
+
     Player* requester = event.getOwner() ? event.getOwner() : GetMaster();
     if (!requester)
         return false;
@@ -78,7 +80,7 @@ bool CleanQuestLogAction::Execute(Event event)
     if (botAI->HasStrategy("debug rpg", BotState::BOT_STATE_COMBAT))
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "clean_quest_log_started",
-            "收到清理任务日志命令，正在移除灰色/低等级任务...",
+            "Clean Quest Log command received, removing grey/trivial quests...",
             {}));
 
     uint8 botLevel = bot->GetLevel();  // Get bot's level
@@ -115,7 +117,7 @@ bool CleanQuestLogAction::Execute(Event event)
             if (botAI->HasStrategy("debug rpg", BotState::BOT_STATE_COMBAT))
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "quest_trivial_will_remove",
-                    "任务 [%title] 为低等级（灰色）任务，将被移除。",
+                    "Quest [%title] will be removed because it is trivial (grey).",
                     {{"%title", quest->GetTitle()}}));
 
             // Remove quest
@@ -131,7 +133,7 @@ bool CleanQuestLogAction::Execute(Event event)
                 LOG_INFO("playerbots", "{} => Quest [ {} ] removed", bot->GetName(), quest->GetTitle());
                 std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "quest_removed_debug",
-                    "任务 [%quest] 已移除",
+                    "Quest [%quest] removed",
                     {{"%quest", text_quest}});
                 bot->Say(text, LANG_UNIVERSAL);
             }
@@ -139,7 +141,7 @@ bool CleanQuestLogAction::Execute(Event event)
             if (botAI->HasStrategy("debug rpg", BotState::BOT_STATE_COMBAT))
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "quest_has_been_removed",
-                    "任务 [%title] 已移除。",
+                    "Quest [%title] has been removed.",
                     {{"%title", quest->GetTitle()}}));
         }
         else
@@ -148,7 +150,7 @@ bool CleanQuestLogAction::Execute(Event event)
             if (botAI->HasStrategy("debug rpg", BotState::BOT_STATE_COMBAT))
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "quest_not_trivial_kept",
-                    "任务 [%title] 不是低等级任务，将保留。",
+                    "Quest [%title] is not trivial and will be kept.",
                     {{"%title", quest->GetTitle()}}));
         }
     }
@@ -229,13 +231,13 @@ void CleanQuestLogAction::DropQuestType(uint8& numQuest, uint8 wantNum, bool isG
             LOG_INFO("playerbots", "{} => Quest [ {} ] removed", bot->GetName(), quest->GetTitle());
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "quest_removed_debug",
-                "任务 [%quest] 已移除",
+                "Quest [%quest] removed",
                 {{"%quest", text_quest}});
             bot->Say(text, LANG_UNIVERSAL);
         }
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "quest_removed_with_name",
-            "任务已移除 %quest",
+            "Quest removed %quest",
             {{"%quest", chat->FormatQuest(quest)}}));
     }
 }

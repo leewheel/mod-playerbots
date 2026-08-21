@@ -5,15 +5,14 @@
  */
 
 #include "EquipAction.h"
-#include <utility>
-
 #include "Event.h"
 #include "ItemCountValue.h"
+#include "ItemPackets.h"
 #include "ItemUsageValue.h"
 #include "ItemVisitors.h"
 #include "Playerbots.h"
 #include "StatsWeightCalculator.h"
-#include "ItemPackets.h"
+#include <utility>
 
 bool EquipAction::Execute(Event event)
 {
@@ -76,7 +75,7 @@ void EquipAction::EquipItem(Item* item)
     {
         bot->SetAmmo(itemId);
         std::ostringstream out;
-        out << "正在装备 " << chat->FormatItem(itemProto);
+        out << "equipping " << chat->FormatItem(itemProto);
         botAI->TellMaster(out);
         return;
     }
@@ -113,7 +112,7 @@ void EquipAction::EquipItem(Item* item)
             bot->GetSession()->HandleAutoEquipItemSlotOpcode(nicePacket);
 
             std::ostringstream out;
-            out << "正在装备 " << chat->FormatItem(itemProto) << " 到远程栏位";
+            out << "Equipping " << chat->FormatItem(itemProto) << " in ranged slot";
             botAI->TellMaster(out);
             return;
         }
@@ -230,7 +229,7 @@ void EquipAction::EquipItem(Item* item)
                 }
 
                 std::ostringstream out;
-                out << "正在装备 " << chat->FormatItem(itemProto) << " 到主手";
+                out << "Equipping " << chat->FormatItem(itemProto) << " in main hand";
                 botAI->TellMaster(out);
                 return;
             }
@@ -247,7 +246,7 @@ void EquipAction::EquipItem(Item* item)
                 bot->GetSession()->HandleAutoEquipItemSlotOpcode(nicePacket);
 
                 std::ostringstream out;
-                out << "正在装备 " << chat->FormatItem(itemProto) << " 到副手";
+                out << "Equipping " << chat->FormatItem(itemProto) << " in offhand";
                 botAI->TellMaster(out);
                 return;
             }
@@ -327,7 +326,7 @@ void EquipAction::EquipItem(Item* item)
     }
 
     std::ostringstream out;
-    out << "正在装备 " << chat->FormatItem(itemProto);
+    out << "Equipping " << chat->FormatItem(itemProto);
     botAI->TellMaster(out);
 }
 

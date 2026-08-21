@@ -5,7 +5,6 @@
  */
 
 #include "RandomItemMgr.h"
-
 #include "DBCStores.h"
 #include "ItemTemplate.h"
 #include "Playerbots.h"
@@ -133,7 +132,7 @@ bool RandomItemMgr::HandleConsoleCommand(ChatHandler* /*handler*/, char const* a
 {
     if (!args || !*args)
     {
-        LOG_ERROR("playerbots", "用法: rnditem");
+        LOG_ERROR("playerbots", "Usage: rnditem");
         return false;
     }
 
@@ -196,9 +195,9 @@ uint32 RandomItemMgr::GetUpgrade(Player* player, std::string spec, uint8 slot, u
         oldStatWeight = itemInfoCache[itemId].weights[specId];
 
         if (oldStatWeight)
-            LOG_INFO("playerbots", "旧物品: {}, 权重: {}", itemId, oldStatWeight);
+            LOG_INFO("playerbots", "Old Item: {}, weight: {}", itemId, oldStatWeight);
         else
-            LOG_INFO("playerbots", "旧物品没有属性权重");
+            LOG_INFO("playerbots", "Old item has no stat weight");
     }
 
     for (std::unordered_map<uint32, ItemInfoEntry>::iterator i = itemInfoCache.begin(); i != itemInfoCache.end(); ++i)
@@ -280,7 +279,7 @@ uint32 RandomItemMgr::GetUpgrade(Player* player, std::string spec, uint8 slot, u
     }
 
     if (closestUpgrade)
-        LOG_INFO("playerbots", "新物品: {}, 权重: {}", closestUpgrade, closestUpgradeWeight);
+        LOG_INFO("playerbots", "New Item: {}, weight: {}", closestUpgrade, closestUpgradeWeight);
 
     return closestUpgrade;
 }
@@ -317,9 +316,9 @@ std::vector<uint32> RandomItemMgr::GetUpgradeList(Player* player, std::string sp
         oldStatWeight = itemInfoCache[itemId].weights[specId];
 
         if (oldStatWeight)
-            LOG_INFO("playerbots", "旧物品: {}, 权重: {}", itemId, oldStatWeight);
+            LOG_INFO("playerbots", "Old Item: {}, weight: {}", itemId, oldStatWeight);
         else
-            LOG_INFO("playerbots", "旧物品没有属性权重");
+            LOG_INFO("playerbots", "Old item has no stat weight");
     }
 
     for (std::unordered_map<uint32, ItemInfoEntry>::iterator i = itemInfoCache.begin(); i != itemInfoCache.end(); ++i)
@@ -400,7 +399,7 @@ std::vector<uint32> RandomItemMgr::GetUpgradeList(Player* player, std::string sp
     }
 
     if (listItems.size())
-        LOG_INFO("playerbots", "新物品: {}, 旧物品:%d, 新物品最大: {}", listItems.size(), oldStatWeight,
+        LOG_INFO("playerbots", "New Items: {}, Old item:%d, New items max: {}", listItems.size(), oldStatWeight,
                  closestUpgradeWeight);
 
     return listItems;
@@ -1695,14 +1694,14 @@ bool RandomItemMgr::LoadCacheEquip()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在加载装备缓存...");
+    LOG_INFO("server.loading", "Loading equipment cache...");
 
     PreparedQueryResult result =
         PlayerbotsDatabase.Query(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_EQUIP_CACHE));
 
     if (!result)
     {
-        LOG_WARN("server.loading", ">> 已加载 0 个装备物品。数据库表 `playerbots_equip_cache` 为空!");
+        LOG_WARN("server.loading", ">> Loaded 0 equipment items. DB table `playerbots_equip_cache` is empty!");
         LOG_INFO("server.loading", " ");
         return false;
     }
@@ -1723,7 +1722,7 @@ bool RandomItemMgr::LoadCacheEquip()
         ++count;
     } while (result->NextRow());
 
-    LOG_INFO("server.loading", ">> 已从 {} 条装备记录加载，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Loaded {} equipment records in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 
     return true;
@@ -1733,14 +1732,14 @@ bool RandomItemMgr::LoadCacheRandomItem()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在加载随机物品缓存...");
+    LOG_INFO("server.loading", "Loading random item cache...");
 
     PreparedQueryResult result =
         PlayerbotsDatabase.Query(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_RNDITEM_CACHE));
 
     if (!result)
     {
-        LOG_WARN("server.loading", ">> 已加载 0 个随机物品。数据库表 `playerbots_rnditem_cache` 为空!");
+        LOG_WARN("server.loading", ">> Loaded 0 random items. DB table `playerbots_rnditem_cache` is empty!");
         LOG_INFO("server.loading", " ");
         return false;
     }
@@ -1760,7 +1759,7 @@ bool RandomItemMgr::LoadCacheRandomItem()
         ++count;
     } while (result->NextRow());
 
-    LOG_INFO("server.loading", ">> 已从 {} 条随机物品记录加载，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Loaded {} random item records in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 
     return true;
@@ -1770,14 +1769,14 @@ bool RandomItemMgr::LoadCacheRarity()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在加载物品稀有度缓存...");
+    LOG_INFO("server.loading", "Loading items rarity cache...");
 
     PreparedQueryResult result =
         PlayerbotsDatabase.Query(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_RARITY_CACHE));
 
     if (!result)
     {
-        LOG_WARN("server.loading", ">> 已加载 0 个稀有物品。数据库表 `playerbots_rarity_cache` 为空!");
+        LOG_WARN("server.loading", ">> Loaded 0 rarity items. DB table `playerbots_rarity_cache` is empty!");
         LOG_INFO("server.loading", " ");
         return false;
     }
@@ -1791,7 +1790,7 @@ bool RandomItemMgr::LoadCacheRarity()
         rarityCache[itemId] = rarity;
     } while (result->NextRow());
 
-    LOG_INFO("server.loading", ">> 已从 {} 条物品稀有度记录加载，耗时 {} 毫秒", rarityCache.size(),
+    LOG_INFO("server.loading", ">> Loaded {} items rarity records in {} ms", rarityCache.size(),
              GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 
@@ -1805,7 +1804,7 @@ void RandomItemMgr::LoadEnchantmentPool()
     QueryResult result = WorldDatabase.Query("SELECT entry, ench FROM item_enchantment_template");
     if (!result)
     {
-        LOG_WARN("playerbots", "item_enchantment_template 为空；机器人自动装备无法评估随机后缀");
+        LOG_WARN("playerbots", "item_enchantment_template empty; bot autogear cannot evaluate random suffixes");
         return;
     }
 
@@ -1819,7 +1818,7 @@ void RandomItemMgr::LoadEnchantmentPool()
         ++count;
     } while (result->NextRow());
 
-    LOG_INFO("playerbots", "已为机器人自动装备加载 {} 条物品附魔池记录", count);
+    LOG_INFO("playerbots", "Loaded {} item enchantment pool rows for bot autogear", count);
 }
 
 void RandomItemMgr::BuildCacheRandomItem()
@@ -1827,7 +1826,7 @@ void RandomItemMgr::BuildCacheRandomItem()
     uint32 const oldMSTime = getMSTime();
 
     ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();
-    LOG_INFO("server.loading", "正在从 {} 个物品构建随机物品缓存", itemTemplates->size());
+    LOG_INFO("server.loading", "Building random item cache from {} items", itemTemplates->size());
 
     PlayerbotsDatabaseTransaction trans = PlayerbotsDatabase.BeginTransaction();
 
@@ -1867,7 +1866,7 @@ void RandomItemMgr::BuildCacheRandomItem()
 
     PlayerbotsDatabase.CommitTransaction(trans);
 
-    LOG_INFO("server.loading", ">> 已缓存 {} 个随机物品，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Cached total {} random items in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
 
@@ -1875,7 +1874,7 @@ void RandomItemMgr::BuildCacheEquip()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在为 {} 个等级构建装备缓存...", DEFAULT_MAX_LEVEL);
+    LOG_INFO("server.loading", "Building equipment cache for {} levels...", DEFAULT_MAX_LEVEL);
 
     ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();
 
@@ -1961,7 +1960,7 @@ void RandomItemMgr::BuildCacheEquip()
 
     PlayerbotsDatabase.CommitTransaction(trans);
 
-    LOG_INFO("server.loading", ">> 已缓存 {} 个装备条目，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Cached total {} equipment entries in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
 
@@ -1969,7 +1968,7 @@ void RandomItemMgr::BuildCacheEquipNew()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在为 {} 个等级构建装备缓存(新)...", DEFAULT_MAX_LEVEL);
+    LOG_INFO("server.loading", "Building equipment cache (new) for {} levels...", DEFAULT_MAX_LEVEL);
 
     std::unordered_set<uint32> questItemIds;
     uint32 count = 0;
@@ -2061,14 +2060,14 @@ void RandomItemMgr::BuildCacheEquipNew()
         ++count;
     }
 
-    LOG_INFO("server.loading", ">> 已缓存 {} 个装备条目，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Cached total {} equipment entries in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
 
 void RandomItemMgr::BuildCacheItemInfo()
 {
     // load weightscales
-    LOG_INFO("playerbots", "正在加载权重表信息");
+    LOG_INFO("playerbots", "Loading weightscales info");
 
     uint32 counter = 1;
     uint32 totalcount = 0;
@@ -2100,7 +2099,7 @@ void RandomItemMgr::BuildCacheItemInfo()
 
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", "已加载 {} 个权重表职业专精", totalcount);
+        LOG_INFO("playerbots", "Loaded {} weightscale class specs", totalcount);
     }
 
     stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_WEIGHTSCALE_DATA);
@@ -2129,12 +2128,12 @@ void RandomItemMgr::BuildCacheItemInfo()
 
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", "已加载 {} 个权重表属性权重", statcount);
+        LOG_INFO("playerbots", "Loaded {} weightscale stat weights", statcount);
     }
 
     if (m_weightScales[1].empty())
     {
-        LOG_ERROR("playerbots", "加载物品权重表出错");
+        LOG_ERROR("playerbots", "Error loading item weight scales");
         return;
     }
 
@@ -2161,7 +2160,7 @@ void RandomItemMgr::BuildCacheItemInfo()
     //     } while (result->NextRow());
     // }
 
-    // LOG_INFO("playerbots", "已加载 {} 个商人物品...", vendorItems.size());
+    // LOG_INFO("playerbots", "Loaded {} vendor items...", vendorItems.size());
 
     // // calculate drop source
     // LOG_INFO("playerbots", "Loading loot templates...");
@@ -2486,7 +2485,7 @@ void RandomItemMgr::BuildCacheAmmo()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在为 {} 个等级构建弹药缓存...", DEFAULT_MAX_LEVEL);
+    LOG_INFO("server.loading", "Building ammo cache for {} levels...", DEFAULT_MAX_LEVEL);
 
     struct AmmoEntry
     {
@@ -2554,7 +2553,7 @@ void RandomItemMgr::BuildCacheAmmo()
         }
     }
 
-    LOG_INFO("server.loading", ">> 已缓存 {} 个弹药条目，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Cached total {} ammo entries in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
 
@@ -2562,7 +2561,7 @@ void RandomItemMgr::BuildCacheFood()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在为 {} 个等级构建食物缓存...", DEFAULT_MAX_LEVEL);
+    LOG_INFO("server.loading", "Building food cache for {} levels...", DEFAULT_MAX_LEVEL);
 
     constexpr uint32 MAX_FOOD_LEVEL_DELTA = 10;
 
@@ -2625,7 +2624,7 @@ void RandomItemMgr::BuildCacheFood()
         }
     }
 
-    LOG_INFO("server.loading", ">> 已缓存 {} 个食物条目，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Cached total {} food entries in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
 
@@ -2633,7 +2632,7 @@ void RandomItemMgr::BuildCachePotion()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在为 {} 个等级构建药水缓存...", DEFAULT_MAX_LEVEL);
+    LOG_INFO("server.loading", "Building potion cache for {} levels...", DEFAULT_MAX_LEVEL);
 
     constexpr uint32 MAX_POTION_LEVEL_DELTA = 13;
 
@@ -2701,7 +2700,7 @@ void RandomItemMgr::BuildCachePotion()
         }
     }
 
-    LOG_INFO("server.loading", ">> 已缓存 {} 个药水条目，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Cached total {} potion entries in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
 
@@ -2709,7 +2708,7 @@ void RandomItemMgr::BuildCacheTrade()
 {
     uint32 const oldMSTime = getMSTime();
 
-    LOG_INFO("server.loading", "正在为 {} 个等级构建商品缓存...", DEFAULT_MAX_LEVEL);
+    LOG_INFO("server.loading", "Building trade cache for {} levels...", DEFAULT_MAX_LEVEL);
 
     constexpr uint32 MAX_TRADE_LEVEL_DELTA = 10;
 
@@ -2758,7 +2757,7 @@ void RandomItemMgr::BuildCacheTrade()
         }
     }
 
-    LOG_INFO("server.loading", ">> 已缓存 {} 个商品条目，耗时 {} 毫秒", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Cached total {} trade entries in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
 
@@ -2783,7 +2782,7 @@ void RandomItemMgr::BuildCacheRarity()
         "        SUM(CASE WHEN Chance = 0 THEN 1 ELSE 0 END)      OVER (PARTITION BY entry, GroupId) AS group_zero "
         "    FROM creature_loot_template WHERE item != 0) lt "
         "JOIN creature_template ct ON ct.LootId = lt.entry "
-        "JOIN creature c ON c.id1 = ct.entry "
+        "JOIN creature c ON c.id = ct.entry "
         "GROUP BY lt.item "
         "UNION ALL "
         // <-- gameobject
@@ -2840,12 +2839,12 @@ void RandomItemMgr::BuildCacheRarity()
         "       SUM(CASE WHEN Chance = 0 THEN 1 ELSE 0 END)      OVER (PARTITION BY entry, GroupId) AS group_zero "
         "   FROM skinning_loot_template WHERE item != 0) lt "
         "JOIN creature_template ct ON ct.skinloot = lt.entry "
-        "JOIN creature c ON c.id1 = ct.entry "
+        "JOIN creature c ON c.id = ct.entry "
         "GROUP BY lt.item) q GROUP BY item HAVING max_chance > 0.01 ORDER BY item");
 
     if (!result)
     {
-        LOG_WARN("server.loading", ">> 已缓存 0 个稀有条目。SQL 查询结果为空!");
+        LOG_WARN("server.loading", ">> Cached 0 rarity entries. SQL query result is empty!");
         LOG_INFO("server.loading", " ");
         return;
     }

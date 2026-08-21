@@ -5,7 +5,6 @@
  */
 
 #include "ChangeChatAction.h"
-
 #include "Event.h"
 #include "Playerbots.h"
 
@@ -16,7 +15,7 @@ bool ChangeChatAction::Execute(Event event)
     if (parsed == CHAT_MSG_SYSTEM)
     {
         std::ostringstream out;
-        out << "当前聊天频道 " << chat->FormatChat(*context->GetValue<ChatMsg>("chat"));
+        out << "Current chat is " << chat->FormatChat(*context->GetValue<ChatMsg>("chat"));
         botAI->TellMaster(out);
     }
     else
@@ -24,7 +23,7 @@ bool ChangeChatAction::Execute(Event event)
         context->GetValue<ChatMsg>("chat")->Set(parsed);
 
         std::ostringstream out;
-        out << "聊天频道已设为 " << chat->FormatChat(parsed);
+        out << "Chat set to " << chat->FormatChat(parsed);
         botAI->TellMaster(out);
     }
 

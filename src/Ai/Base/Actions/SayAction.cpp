@@ -4,15 +4,13 @@
  * or (at your option) any later version.
  */
 
-#include "AiFactory.h"
 #include "SayAction.h"
-
-#include <regex>
-#include <string>
-
+#include "AiFactory.h"
 #include "Event.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
+#include <regex>
+#include <string>
 
 static const std::unordered_set<std::string> noReplyMsgs = {
     "join",
@@ -66,7 +64,7 @@ bool SayAction::Execute(Event /*event*/)
     // set replace strings
     if (target)
         placeholders["<target>"] = target->GetName();
-    placeholders["<randomfaction>"] = IsAlliance(bot->getRace()) ? "联盟" : "部落";
+    placeholders["<randomfaction>"] = IsAlliance(bot->getRace()) ? "Alliance" : "Horde";
     if (qualifier == "low ammo" || qualifier == "no ammo")
     {
         if (Item* const pItem = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED))
@@ -74,11 +72,11 @@ bool SayAction::Execute(Event /*event*/)
             switch (pItem->GetTemplate()->SubClass)
             {
                 case ITEM_SUBCLASS_WEAPON_GUN:
-                    placeholders["<ammo>"] = "子弹";
+                    placeholders["<ammo>"] = "bullets";
                     break;
                 case ITEM_SUBCLASS_WEAPON_BOW:
                 case ITEM_SUBCLASS_WEAPON_CROSSBOW:
-                    placeholders["<ammo>"] = "箭矢";
+                    placeholders["<ammo>"] = "arrows";
                     break;
             }
         }
@@ -164,7 +162,7 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32& type, uint32& guid1, std:
     if (noReplyMsgs.find(msg) != noReplyMsgs.end())
     {
         /*std::ostringstream out;
-        out << "调试：聊天回复忽略完全匹配黑名单 " << msg;
+        out << "DEBUG ChatReplyDo decided to ignore exact blocklist match" << msg;
         bot->Say(out.str(), LANG_UNIVERSAL);*/
         return;
     }
@@ -174,7 +172,7 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32& type, uint32& guid1, std:
                     [&msg](const std::string& part) { return msg.find(part) != std::string::npos; }))
     {
         /*std::ostringstream out;
-        out << "调试：聊天回复忽略部分匹配黑名单 " << msg;
+        out << "DEBUG ChatReplyDo decided to ignore partial blocklist match" << msg;
         bot->Say(out.str(), LANG_UNIVERSAL);*/
         return;
     }
@@ -186,7 +184,7 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32& type, uint32& guid1, std:
                     }))
     {
         /*std::ostringstream out;
-        out << "调试：聊天回复忽略开头匹配黑名单 " << msg;
+        out << "DEBUG ChatReplyDo decided to ignore start blocklist match" << msg;
         bot->Say(out.str(), LANG_UNIVERSAL);*/
         return;
     }
@@ -658,11 +656,11 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
                     uint32 rnd = urand(0, 2);
                     std::string msg = "";
                     if (rnd == 0)
-                        msg = "对不起 %s，我不说了";
+                        msg = "sorry %s, ill shut up now";
                     if (rnd == 1)
-                        msg = "好啦好啦 %s";
+                        msg = "ok ok %s";
                     if (rnd == 2)
-                        msg = "行吧，以后不跟你说了 %s";
+                        msg = "fine, i wont talk to you anymore %s";
 
                     msg = std::regex_replace(msg, std::regex("%s"), name);
                     respondsText = msg;
@@ -690,16 +688,16 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
             switch (rnd)
             {
             case 0:
-                msg = "我不知道是什么";
+                msg = "i dont know what";
                 break;
             case 1:
-                msg = "我不知道 %s";
+                msg = "i dont know %s";
                 break;
             case 2:
-                msg = "谁在乎";
+                msg = "who cares";
                 break;
             case 3:
-                msg = "那会儿我不在，也没注意";
+                msg = "afraid that was before i was around or paying attention";
                 break;
             }
 
@@ -716,19 +714,19 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
             switch (rnd)
             {
             case 0:
-                msg = "没人";
+                msg = "nobody";
                 break;
             case 1:
-                msg = "谁都一样";
+                msg = "we all do";
                 break;
             case 2:
-                msg = "也许是你吧，%s";
+                msg = "perhaps its you, %s";
                 break;
             case 3:
-                msg = "不知道 %s";
+                msg = "dunno %s";
                 break;
             case 4:
-                msg = "是我吗？";
+                msg = "is it me?";
                 break;
             }
 
@@ -745,25 +743,25 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
             switch (rnd)
             {
             case 0:
-                msg = "也许很快吧 %s";
+                msg = "soon perhaps %s";
                 break;
             case 1:
-                msg = "大概晚点吧";
+                msg = "probably later";
                 break;
             case 2:
-                msg = "永远不会";
+                msg = "never";
                 break;
             case 3:
-                msg = "我看起来像算命的吗？";
+                msg = "what do i look like, a psychic?";
                 break;
             case 4:
-                msg = "几分钟？一小时？……几年？";
+                msg = "a few minutes, maybe an hour ... years?";
                 break;
             case 5:
-                msg = "什么时候？好问题 %s";
+                msg = "when? good question %s";
                 break;
             case 6:
-                msg = "不知道 %s";
+                msg = "dunno %s";
                 break;
             }
 
@@ -780,25 +778,25 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
             switch (rnd)
             {
             case 0:
-                msg = "你真想让我回答这个？";
+                msg = "really want me to answer that?";
                 break;
             case 1:
-                msg = "在地图上？";
+                msg = "on the map?";
                 break;
             case 2:
-                msg = "谁在乎";
+                msg = "who cares";
                 break;
             case 3:
-                msg = "暂离？";
+                msg = "afk?";
                 break;
             case 4:
-                msg = "不关你事";
+                msg = "none of your buisiness where";
                 break;
             case 5:
-                msg = "是啊，在哪？";
+                msg = "yeah, where?";
                 break;
             case 6:
-                msg = "不知道 %s";
+                msg = "dunno %s";
                 break;
             }
 
@@ -815,25 +813,25 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
             switch (rnd)
             {
             case 0:
-                msg = "不知道 %s";
+                msg = "dunno %s";
                 break;
             case 1:
-                msg = "为什么？就因为 %s";
+                msg = "why? just because %s";
                 break;
             case 2:
-                msg = "天空为什么是蓝的？";
+                msg = "why is the sky blue?";
                 break;
             case 3:
-                msg = "别问我 %s，我只是个机器人";
+                msg = "dont ask me %s, im just a bot";
                 break;
             case 4:
-                msg = "你问错人了";
+                msg = "your asking the wrong person";
                 break;
             case 5:
-                msg = "谁知道呢？";
+                msg = "who knows?";
                 break;
             case 6:
-                msg = "不知道 %s";
+                msg = "dunno %s";
                 break;
             }
             msg = std::regex_replace(msg, std::regex("%s"), name);
@@ -853,16 +851,16 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
                 switch (rnd)
                 {
                 case 0:
-                    msg = "没错，" + word[verb_pos + 1] + " " + word[verb_pos] + " " + word[verb_pos + 2] + " " + word[verb_pos + 3] + " " + word[verb_pos + 4] + " " + word[verb_pos + 4];
+                    msg = "its true, " + word[verb_pos + 1] + " " + word[verb_pos] + " " + word[verb_pos + 2] + " " + word[verb_pos + 3] + " " + word[verb_pos + 4] + " " + word[verb_pos + 4];
                     break;
                 case 1:
-                    msg = "是啊 %s，但那都过去了";
+                    msg = "ya %s but thats in the past";
                     break;
                 case 2:
-                    msg = "不，但 " + word[verb_pos + 1] + " 还会 " + word[verb_pos + 3] + " 吧 %s";
+                    msg = "nah, but " + word[verb_pos + 1] + " will " + word[verb_pos + 3] + " again though %s";
                     break;
                 case 3:
-                    msg = "那会儿我不在，也没注意";
+                    msg = "afraid that was before i was around or paying attention";
                     break;
                 }
                 msg = std::regex_replace(msg, std::regex("%s"), name);
@@ -878,25 +876,25 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
                 switch (rnd)
                 {
                 case 0:
-                    msg = "没错，" + word[verb_pos + 1] + " " + word[verb_pos] + " " + word[verb_pos + 2] + " " + word[verb_pos + 3] + " " + word[verb_pos + 4] + " " + word[verb_pos + 5];
+                    msg = "its true, " + word[verb_pos + 1] + " " + word[verb_pos] + " " + word[verb_pos + 2] + " " + word[verb_pos + 3] + " " + word[verb_pos + 4] + " " + word[verb_pos + 5];
                     break;
                 case 1:
-                    msg = "是啊 %s，没错";
+                    msg = "ya %s thats true";
                     break;
                 case 2:
-                    msg = "也许 " + word[verb_pos + 1] + " " + word[verb_pos] + " " + word[verb_pos + 2] + " " + word[verb_pos + 3] + " " + word[verb_pos + 4] + " " + word[verb_pos + 5];
+                    msg = "maybe " + word[verb_pos + 1] + " " + word[verb_pos] + " " + word[verb_pos + 2] + " " + word[verb_pos + 3] + " " + word[verb_pos + 4] + " " + word[verb_pos + 5];
                     break;
                 case 3:
-                    msg = "不知道 %s";
+                    msg = "dunno %s";
                     break;
                 case 4:
-                    msg = "我不这么认为 %s";
+                    msg = "i dont think so %s";
                     break;
                 case 5:
-                    msg = "是";
+                    msg = "yes";
                     break;
                 case 6:
-                    msg = "不";
+                    msg = "no";
                     break;
                 }
                 msg = std::regex_replace(msg, std::regex("%s"), name);
@@ -912,31 +910,31 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
                 switch (rnd)
                 {
                 case 0:
-                    msg = "不知道 %s";
+                    msg = "dunno %s";
                     break;
                 case 1:
-                    msg = "问倒我了 %s";
+                    msg = "beats me %s";
                     break;
                 case 2:
-                    msg = "我哪知道 %s";
+                    msg = "how should i know %s";
                     break;
                 case 3:
-                    msg = "别问我 %s，我只是个机器人";
+                    msg = "dont ask me %s, im just a bot";
                     break;
                 case 4:
-                    msg = "你问错人了";
+                    msg = "your asking the wrong person";
                     break;
                 case 5:
-                    msg = "我看起来像算命的吗？";
+                    msg = "what do i look like, a psychic?";
                     break;
                 case 6:
-                    msg = "好吧 %s";
+                    msg = "sure %s";
                     break;
                 case 7:
-                    msg = "我不这么认为 %s";
+                    msg = "i dont think so %s";
                     break;
                 case 8:
-                    msg = "也许";
+                    msg = "maybe";
                     break;
                 }
                 msg = std::regex_replace(msg, std::regex("%s"), name);
@@ -960,13 +958,13 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
             switch (rnd)
             {
             case 0:
-                msg = "是啊 %s，关键词是 " + word[verb_pos] + " " + word[verb_pos + 1];
+                msg = "yeah %s, the key word being " + word[verb_pos] + " " + word[verb_pos + 1];
                 break;
             case 1:
-                msg = "是啊 %s，但那都过去了";
+                msg = "ya %s but thats in the past";
                 break;
             case 2:
-                msg = word[verb_pos ? verb_pos - 1 : verb_pos + 1] + " 还会 " + word[verb_pos + 1] + " 吧 %s";
+                msg = word[verb_pos ? verb_pos - 1 : verb_pos + 1] + " will " + word[verb_pos + 1] + " again though %s";
                 break;
             }
             msg = std::regex_replace(msg, std::regex("%s"), name);
@@ -982,13 +980,13 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
             switch (rnd)
             {
             case 0:
-                msg = "%s，你说的 " + word[verb_pos + 1] + " 是什么意思？";
+                msg = "%s, what do you mean " + word[verb_pos + 1] + "?";
                 break;
             case 1:
-                msg = "%s，" + word[verb_pos + 1] + " 是什么？";
+                msg = "%s, what is a " + word[verb_pos + 1] + "?";
                 break;
             case 2:
-                msg = "是啊我知道 " + word[verb_pos ? verb_pos - 1 : verb_pos + 1] + " 是 " + word[verb_pos + 1];
+                msg = "yeah i know " + word[verb_pos ? verb_pos - 1 : verb_pos + 1] + " is a " + word[verb_pos + 1];
                 break;
             }
             msg = std::regex_replace(msg, std::regex("%s"), name);
@@ -1004,13 +1002,13 @@ std::string ChatReplyAction::GenerateReplyMessage(Player* bot, std::string& inco
             switch (rnd)
             {
             case 0:
-                msg = "你确定会发生吗 %s？";
+                msg = "are you sure thats going to happen %s?";
                 break;
             case 1:
-                msg = "%s，会发生什么 %s？";
+                msg = "%s, what will happen %s?";
                 break;
             case 2:
-                msg = "你是说 " + word[verb_pos ? verb_pos - 1 : verb_pos + 1] + " 会 " + word[verb_pos + 1] + " " + word[verb_pos + 2] + " %s？";
+                msg = "are you saying " + word[verb_pos ? verb_pos - 1 : verb_pos + 1] + " will " + word[verb_pos + 1] + " " + word[verb_pos + 2] + " %s?";
                 break;
             }
             msg = std::regex_replace(msg, std::regex("%s"), name);

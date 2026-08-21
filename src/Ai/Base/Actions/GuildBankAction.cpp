@@ -5,10 +5,9 @@
  */
 
 #include "GuildBankAction.h"
-
+#include "AiObjectContext.h"
 #include "GuildMgr.h"
 #include "PlayerbotAI.h"
-#include "AiObjectContext.h"
 
 bool GuildBankAction::Execute(Event event)
 {
@@ -18,7 +17,7 @@ bool GuildBankAction::Execute(Event event)
 
     if (!bot->GetGuildId() || (GetMaster() && GetMaster()->GetGuildId() != bot->GetGuildId()))
     {
-        botAI->TellMaster("我不在你的公会里！");
+        botAI->TellMaster("I'm not in your guild!");
         return false;
     }
 
@@ -32,7 +31,7 @@ bool GuildBankAction::Execute(Event event)
         return Execute(text, go);
     }
 
-    botAI->TellMaster("附近找不到公会银行");
+    botAI->TellMaster("Cannot find the guild bank nearby");
     return false;
 }
 
@@ -66,7 +65,7 @@ bool GuildBankAction::MoveFromCharToBank(Item* item, GameObject* /*bank*/)
 
     // check source pos rights (item moved to bank)
     if (!guild->MemberHasTabRights(bot->GetGUID(), 0, GUILD_BANK_RIGHT_DEPOSIT_ITEM))
-        out << "我无法放入 " << chat->FormatItem(item->GetTemplate())
+        out << "I can't put " << chat->FormatItem(item->GetTemplate())
             << " to guild bank. I have no rights to put items in the first guild bank tab";
     else
     {

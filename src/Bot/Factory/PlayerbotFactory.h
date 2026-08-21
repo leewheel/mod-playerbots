@@ -7,12 +7,11 @@
 #ifndef PLAYERBOTS_PLAYERBOTFACTORY_H
 #define PLAYERBOTS_PLAYERBOTFACTORY_H
 
-#include <string>
-#include <utility>
-
 #include "InventoryAction.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
+#include <string>
+#include <utility>
 
 class Item;
 
@@ -74,6 +73,9 @@ public:
     void InitPet();
     void InitAmmo();
     static uint32 CalcMixedGearScore(uint32 gs, uint32 quality);
+    static void DestroyEquippedGear(Player* bot);
+    static void AutoGear(Player* bot, uint32 itemQuality, uint32 ilvl, bool incremental, bool secondChance = false,
+                        bool applyFinishers = true);
     void InitPetTalents();
     void CleanupConsumables();
     void InitReagents();
@@ -83,7 +85,6 @@ public:
     void InitFood();
     void InitMounts();
     void InitBags(bool destroyOld = true);
-    void SetExcludeHeirloom(bool exclude) { excludeHeirloom = exclude; }
     void ApplyEnchantAndGemsNew(bool destroyOld = true);
     void InitInstanceQuests();
     void UnbindInstance();
@@ -220,9 +221,9 @@ private:
     uint32 level;
     uint32 itemQuality;
     uint32 gearScoreLimit;
-    bool excludeHeirloom = false;
     static std::list<uint32> specialQuestIds;
-    static std::unordered_map<uint32, std::vector<uint32>> trainerIdCache;
+    static std::unordered_map<uint32, std::vector<uint32>> classTrainerIdCache;
+    static std::unordered_map<uint32, std::vector<uint32>> tradeskillTrainerIdCache;
     static std::vector<uint32> enchantSpellIdCache;
     static std::vector<uint32> enchantGemIdCache;
     static std::vector<uint32> ccBreakTrinketCache;

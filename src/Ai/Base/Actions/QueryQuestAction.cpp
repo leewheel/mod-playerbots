@@ -5,7 +5,6 @@
  */
 
 #include "QueryQuestAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "PlayerbotAI.h"
@@ -117,7 +116,7 @@ void QueryQuestAction::TellObjectives(uint32 questId)
     // Checks if the questTemplate is valid
     if (!questTemplate)
     {
-        botAI->TellMaster("未找到任务模板。");
+        botAI->TellMaster("Quest template not found.");
         return;
     }
 

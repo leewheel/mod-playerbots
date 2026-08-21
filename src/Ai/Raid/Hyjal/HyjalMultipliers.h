@@ -9,12 +9,12 @@
 
 #include "Multiplier.h"
 
-class HyjalSummitTimeBloodlustAndHeroismMultiplier : public Multiplier
+class HyjalSummitDelayDpsCooldownsMultiplier : public Multiplier
 {
 public:
-    HyjalSummitTimeBloodlustAndHeroismMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "hyjal summit time bloodlust and heroism multiplier") {}
-    virtual float GetValue(Action* action);
+    HyjalSummitDelayDpsCooldownsMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "hyjal summit delay dps cooldowns") {}
+    float GetValue(Action* action) override;
 };
 
 // Rage Winterchill
@@ -22,95 +22,127 @@ public:
 class RageWinterchillDisableCombatFormationMoveMultiplier : public Multiplier
 {
 public:
-    RageWinterchillDisableCombatFormationMoveMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "rage winterchill disable combat formation move multiplier") {}
-    virtual float GetValue(Action* action);
+    RageWinterchillDisableCombatFormationMoveMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "rage winterchill disable combat formation move") {}
+    float GetValue(Action* action) override;
 };
 
 class RageWinterchillMeleeControlAvoidanceMultiplier : public Multiplier
 {
 public:
-    RageWinterchillMeleeControlAvoidanceMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "rage winterchill melee control avoidance multiplier") {}
-    virtual float GetValue(Action* action);
+    RageWinterchillMeleeControlAvoidanceMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "rage winterchill melee control avoidance") {}
+    float GetValue(Action* action) override;
+};
+
+class RageWinterchillRangedControlAvoidanceMultiplier : public Multiplier
+{
+public:
+    RageWinterchillRangedControlAvoidanceMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "rage winterchill ranged control avoidance") {}
+    float GetValue(Action* action) override;
 };
 
 // Anetheron
 
-class AnetheronDisableTankActionsMultiplier : public Multiplier
+class AnetheronDisableAssistTargetingMultiplier : public Multiplier
 {
 public:
-    AnetheronDisableTankActionsMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "anetheron disable tank actions multiplier") {}
-    virtual float GetValue(Action* action);
+    AnetheronDisableAssistTargetingMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "anetheron disable assist targeting") {}
+    float GetValue(Action* action) override;
 };
 
-class AnetheronDisableCombatFormationMoveMultiplier : public Multiplier
+class AnetheronAvoidAccidentalInfernalAggroMultiplier : public Multiplier
 {
 public:
-    AnetheronDisableCombatFormationMoveMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "anetheron disable combat formation move multiplier") {}
-    virtual float GetValue(Action* action);
+    AnetheronAvoidAccidentalInfernalAggroMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "anetheron avoid accidental infernal aggro") {}
+    float GetValue(Action* action) override;
+};
+
+class AnetheronInfernalTargetRunToPositionMultiplier : public Multiplier
+{
+public:
+    AnetheronInfernalTargetRunToPositionMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "anetheron infernal target run to position") {}
+    float GetValue(Action* action) override;
+};
+
+class AnetheronControlMovementMultiplier : public Multiplier
+{
+public:
+    AnetheronControlMovementMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "anetheron control movement") {}
+    float GetValue(Action* action) override;
 };
 
 class AnetheronControlMisdirectionMultiplier : public Multiplier
 {
 public:
-    AnetheronControlMisdirectionMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "anetheron control misdirection multiplier") {}
-    virtual float GetValue(Action* action);
+    AnetheronControlMisdirectionMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "anetheron control misdirection") {}
+    float GetValue(Action* action) override;
 };
 
 // Kaz'rogal
 
-class KazrogalLowManaBotStayAwayFromGroupMultiplier : public Multiplier
+class KazrogalDisableDisperseAndTankFaceMultiplier : public Multiplier
 {
 public:
-    KazrogalLowManaBotStayAwayFromGroupMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kaz'rogal low mana bot stay away from group multiplier") {}
-    virtual float GetValue(Action* action);
+    KazrogalDisableDisperseAndTankFaceMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "kaz'rogal disable disperse and tank face") {}
+    float GetValue(Action* action) override;
+};
+
+class KazrogalControlLowManaMovementMultiplier : public Multiplier
+{
+public:
+    KazrogalControlLowManaMovementMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "kaz'rogal control low mana movement") {}
+    float GetValue(Action* action) override;
 };
 
 class KazrogalKeepAspectOfTheViperActiveMultiplier : public Multiplier
 {
 public:
-    KazrogalKeepAspectOfTheViperActiveMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kaz'rogal keep aspect of the viper active multiplier") {}
-    virtual float GetValue(Action* action);
-};
-
-class KazrogalControlMovementMultiplier : public Multiplier
-{
-public:
-    KazrogalControlMovementMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "kaz'rogal control movement multiplier") {}
-    virtual float GetValue(Action* action);
+    KazrogalKeepAspectOfTheViperActiveMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "kaz'rogal keep aspect of the viper active") {}
+    float GetValue(Action* action) override;
 };
 
 // Azgalor
 
-class AzgalorDisableTankActionsMultiplier : public Multiplier
+class AzgalorDisableAutoTargetingAndPositioningMultiplier : public Multiplier
 {
 public:
-    AzgalorDisableTankActionsMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "azgalor disable tank actions multiplier") {}
-    virtual float GetValue(Action* action);
+    AzgalorDisableAutoTargetingAndPositioningMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "azgalor disable auto targeting and positioning") {}
+    float GetValue(Action* action) override;
 };
 
 class AzgalorDoomedBotPrioritizePositioningMultiplier : public Multiplier
 {
 public:
-    AzgalorDoomedBotPrioritizePositioningMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "azgalor doomed bot prioritize positioning multiplier") {}
-    virtual float GetValue(Action* action);
+    AzgalorDoomedBotPrioritizePositioningMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "azgalor doomed bot prioritize positioning") {}
+    float GetValue(Action* action) override;
 };
 
 class AzgalorMeleeDpsControlAvoidanceMultiplier : public Multiplier
 {
 public:
-    AzgalorMeleeDpsControlAvoidanceMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "azgalor melee dps control avoidance multiplier") {}
-    virtual float GetValue(Action* action);
+    AzgalorMeleeDpsControlAvoidanceMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "azgalor melee dps control avoidance") {}
+    float GetValue(Action* action) override;
+};
+
+class AzgalorRangedControlAvoidanceMultiplier : public Multiplier
+{
+public:
+    AzgalorRangedControlAvoidanceMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "azgalor ranged control avoidance") {}
+    float GetValue(Action* action) override;
 };
 
 // Archimonde
@@ -118,9 +150,25 @@ public:
 class ArchimondeDisableCombatFormationMoveMultiplier : public Multiplier
 {
 public:
-    ArchimondeDisableCombatFormationMoveMultiplier(
-        PlayerbotAI* botAI) : Multiplier(botAI, "archimonde disable combat formation move multiplier") {}
-    virtual float GetValue(Action* action);
+    ArchimondeDisableCombatFormationMoveMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "archimonde disable combat formation move") {}
+    float GetValue(Action* action) override;
+};
+
+class ArchimondeSetTremorTotemMultiplier : public Multiplier
+{
+public:
+    ArchimondeSetTremorTotemMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "archimonde set tremor totem") {}
+    float GetValue(Action* action) override;
+};
+
+class ArchimondeControlDoomfireAvoidanceMultiplier : public Multiplier
+{
+public:
+    ArchimondeControlDoomfireAvoidanceMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "archimonde control doomfire avoidance") {}
+    float GetValue(Action* action) override;
 };
 
 #endif

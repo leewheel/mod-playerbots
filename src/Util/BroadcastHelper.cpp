@@ -1,9 +1,14 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
 
-#include "Playerbots.h"
 #include "BroadcastHelper.h"
-#include "ServerFacade.h"
-#include "Channel.h"
 #include "AiFactory.h"
+#include "Channel.h"
+#include "Playerbots.h"
+#include "ServerFacade.h"
 
 BroadcastHelper::BroadcastHelper() {}
 
@@ -658,13 +663,11 @@ bool BroadcastHelper::BroadcastGuildGroupOrRaidInvite(PlayerbotAI* ai, Player* /
     {
         if (urand(0, 3))
         {
-            return ai->SayToGuild(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "suggest_raid_guild", "有人在 %zone_name 打团本吗？", placeholders));
+            return ai->SayToGuild(PlayerbotTextMgr::instance().GetBotText("Hey anyone want to raid in %zone_name", placeholders));
         }
         else
         {
-            return ai->SayToGuild(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "suggest_raid_guild_whisper", "嘿 %name，我在 %zone_name 打团，要一起吗？", placeholders));
+            return ai->SayToGuild(PlayerbotTextMgr::instance().GetBotText("Hey %name I'm raiding in %zone_name do you wan to join me?", placeholders));
         }
     }
     else
@@ -672,13 +675,11 @@ bool BroadcastHelper::BroadcastGuildGroupOrRaidInvite(PlayerbotAI* ai, Player* /
         //(bot->GetTeam() == ALLIANCE ? LANG_COMMON : LANG_ORCISH)
         if (urand(0, 3))
         {
-            return ai->SayToGuild(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "suggest_group_guild", "有人在 %zone_name 组队吗？", placeholders));
+            return ai->SayToGuild(PlayerbotTextMgr::instance().GetBotText("Hey anyone wanna group up in %zone_name?", placeholders));
         }
         else
         {
-            return ai->SayToGuild(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "suggest_group_guild_whisper", "嘿 %name，要进组吗？我要去 %zone_name", placeholders));
+            return ai->SayToGuild(PlayerbotTextMgr::instance().GetBotText("Hey %name do you want join my group? I'm heading for %zone_name", placeholders));
         }
     }
 

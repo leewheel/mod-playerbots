@@ -5,7 +5,6 @@
  */
 
 #include "RewardAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "Playerbots.h"
@@ -40,7 +39,7 @@ bool RewardAction::Execute(Event event)
     if (groupLeaderUnit && Reward(itemId, groupLeaderUnit))
         return true;
 
-    botAI->TellError("无法与任务发布者对话");
+    botAI->TellError("Cannot talk to quest giver");
     return false;
 }
 

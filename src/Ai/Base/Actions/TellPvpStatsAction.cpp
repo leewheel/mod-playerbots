@@ -5,18 +5,16 @@
  */
 
 #include "TellPvpStatsAction.h"
-
-#include <map>
-
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
 #include "Event.h"
+#include "Language.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "SharedDefines.h"
-#include "Language.h"
+#include <map>
 
 namespace
 {
@@ -57,7 +55,7 @@ bool TellPvpStatsAction::Execute(Event event)
 
     std::string const currencyText = PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "pvp_currency",
-        "[PVP] 竞技场点数: %arena_points | 荣誉点数: %honor_points",
+        "[PVP] Arena points: %arena_points | Honor Points: %honor_points",
         currencyPlaceholders);
 
     bot->Whisper(currencyText, LANG_UNIVERSAL, requester);
@@ -80,7 +78,7 @@ bool TellPvpStatsAction::Execute(Event event)
 
             std::string const teamText = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "pvp_arena_team",
-                "[PVP] %bracket: <%team_name>（等级 %team_rating）",
+                "[PVP] %bracket: <%team_name> (rating %team_rating)",
                 placeholders);
 
             bot->Whisper(teamText, LANG_UNIVERSAL, requester);
@@ -91,7 +89,7 @@ bool TellPvpStatsAction::Execute(Event event)
     {
         std::string const noTeamText = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "pvp_no_arena_team",
-            "[PVP] 我没有竞技场队伍。",
+            "[PVP] I have no Arena Team.",
             std::map<std::string, std::string>());
 
         bot->Whisper(noTeamText, LANG_UNIVERSAL, requester);

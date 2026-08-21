@@ -5,7 +5,7 @@
  */
 
 #include "ReviveFromCorpseAction.h"
-
+#include "Corpse.h"
 #include "Event.h"
 #include "FleeManager.h"
 #include "GameGraveyard.h"
@@ -14,7 +14,6 @@
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "ServerFacade.h"
-#include "Corpse.h"
 
 bool ReviveFromCorpseAction::Execute(Event event)
 {
@@ -30,7 +29,7 @@ bool ReviveFromCorpseAction::Execute(Event event)
         {
             if (!botAI->HasStrategy("follow", BOT_STATE_NON_COMBAT))
             {
-                botAI->TellMasterNoFacing("欢迎回来！");
+                botAI->TellMasterNoFacing("Welcome back!");
                 botAI->ChangeStrategy("+follow,-stay", BOT_STATE_NON_COMBAT);
                 return true;
             }
@@ -52,14 +51,12 @@ bool ReviveFromCorpseAction::Execute(Event event)
             return false;
     }
 
-    if (!botAI->HasRealPlayerMaster())
+    if (!botAI->HasGameClientMaster())
     {
         uint32 dCount = AI_VALUE(uint32, "death count");
 
         if (dCount >= 5)
-        {
             return botAI->DoSpecificAction("spirit healer");
-        }
     }
 
     LOG_DEBUG("playerbots", "Bot {} {}:{} <{}> revives at body", bot->GetGUID().ToString().c_str(),
@@ -94,7 +91,7 @@ bool FindCorpseAction::Execute(Event /*event*/)
 
     uint32 dCount = AI_VALUE(uint32, "death count");
 
-    if (!botAI->HasRealPlayerMaster())
+    if (!botAI->HasGameClientMaster())
     {
         if (dCount >= 5)
         {
@@ -299,7 +296,7 @@ bool SpiritHealerAction::Execute(Event /*event*/)
     Corpse* corpse = bot->GetCorpse();
     if (!corpse)
     {
-        botAI->TellError("我不是灵魂状态");
+        botAI->TellError("I am not a spirit");
         return false;
     }
 
@@ -324,7 +321,7 @@ bool SpiritHealerAction::Execute(Event /*event*/)
                 bot->SpawnCorpseBones();
                 context->GetValue<Unit*>("current target")->Set(nullptr);
                 bot->SetTarget();
-                botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "你好", {}));
+                botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "Hello", {}));
 
                 if (dCount > 20)
                     context->GetValue<uint32>("death count")->Set(0);
@@ -349,7 +346,7 @@ bool SpiritHealerAction::Execute(Event /*event*/)
     if (moved)
         return true;
 
-    // if (!botAI->HasActivePlayerMaster())
+    // if (!IsRealPlayer(botAI->GetMaster()))
     // {
     context->GetValue<uint32>("death count")->Set(dCount + 1);
     bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);

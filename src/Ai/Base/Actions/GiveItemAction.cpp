@@ -5,7 +5,6 @@
  */
 
 #include "GiveItemAction.h"
-
 #include "Event.h"
 #include "ItemCountValue.h"
 #include "Playerbots.h"
@@ -44,14 +43,14 @@ bool GiveItemAction::Execute(Event /*event*/)
             receiver->MoveItemToInventory(dest, item, true);
 
             std::ostringstream out;
-            out << "从 " << bot->GetName() << " 获得 " << chat->FormatItem(item->GetTemplate(), item->GetCount());
+            out << "Got " << chat->FormatItem(item->GetTemplate(), item->GetCount()) << " from " << bot->GetName();
             receiverAi->TellMasterNoFacing(out.str());
         }
         else
         {
             std::ostringstream out;
-            out << "无法从 " << bot->GetName() << " 获得 " << chat->FormatItem(item->GetTemplate(), item->GetCount())
-                << "——背包已满";
+            out << "Cannot get " << chat->FormatItem(item->GetTemplate(), item->GetCount()) << " from "
+                << bot->GetName() << "- my bags are full";
             receiverAi->TellError(out.str());
         }
     }

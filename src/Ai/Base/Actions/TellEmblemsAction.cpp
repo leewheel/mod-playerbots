@@ -5,11 +5,9 @@
  */
 
 #include "TellEmblemsAction.h"
-
-#include <array>
-
 #include "Event.h"
 #include "Playerbots.h"
+#include <array>
 
 bool TellEmblemsAction::Execute(Event /*event*/)
 {
@@ -22,7 +20,7 @@ bool TellEmblemsAction::Execute(Event /*event*/)
         49426  // Emblem of Frost
     };
 
-    botAI->TellMaster("=== 纹章 ===");
+    botAI->TellMaster("=== Emblems ===");
 
     for (uint32 itemId : emblemIds)
     {

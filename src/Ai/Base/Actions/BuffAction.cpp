@@ -5,7 +5,6 @@
  */
 
 #include "BuffAction.h"
-
 #include "Event.h"
 #include "ItemCountValue.h"
 #include "Playerbots.h"
@@ -65,19 +64,19 @@ void BuffAction::TellHeader(uint32 subClass)
     switch (subClass)
     {
         case ITEM_SUBCLASS_ELIXIR:
-            botAI->TellMaster("--- 药剂 ---");
+            botAI->TellMaster("--- Elixir ---");
             return;
         case ITEM_SUBCLASS_FLASK:
-            botAI->TellMaster("--- 合剂 ---");
+            botAI->TellMaster("--- Flask ---");
             return;
         case ITEM_SUBCLASS_SCROLL:
-            botAI->TellMaster("--- 卷轴 ---");
+            botAI->TellMaster("--- Scroll ---");
             return;
         case ITEM_SUBCLASS_FOOD:
-            botAI->TellMaster("--- 食物 ---");
+            botAI->TellMaster("--- Food ---");
             return;
         case ITEM_SUBCLASS_ITEM_ENHANCEMENT:
-            botAI->TellMaster("--- 附魔 ---");
+            botAI->TellMaster("--- Enchant ---");
             return;
     }
 }

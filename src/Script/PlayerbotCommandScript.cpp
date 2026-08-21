@@ -1,16 +1,7 @@
 /*
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program. If not, see <http://www.gnu.org/licenses/>.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "BattleGroundTactics.h"
@@ -52,8 +43,6 @@ public:
 
         static ChatCommandTable commandTable = {
             {"playerbots", playerbotsCommandTable},
-            {"playerbot", playerbotsCommandTable},
-            {"bot", HandlePlayerbotCommand, SEC_PLAYER, Console::No},
         };
 
         return commandTable;
@@ -98,9 +87,9 @@ public:
         {
             sPlayerbotAIConfig.perfMonEnabled = !sPlayerbotAIConfig.perfMonEnabled;
             if (sPlayerbotAIConfig.perfMonEnabled)
-                LOG_INFO("playerbots", "性能监控已启用");
+                LOG_INFO("playerbots", "Performance monitor enabled");
             else
-                LOG_INFO("playerbots", "性能监控已禁用");
+                LOG_INFO("playerbots", "Performance monitor disabled");
             return true;
         }
 
@@ -117,7 +106,7 @@ public:
     {
         if (!args || !*args)
         {
-            handler->PSendSysMessage("用法: .playerbots account setKey <安全密钥>");
+            handler->PSendSysMessage("Usage: .playerbots account setKey <securityKey>");
             return false;
         }
 
@@ -132,7 +121,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("未找到 PlayerbotMgr 实例。");
+            handler->PSendSysMessage("PlayerbotMgr instance not found.");
             return false;
         }
     }
@@ -147,7 +136,7 @@ public:
 
         if (!accountName || !key)
         {
-            handler->PSendSysMessage("用法: .playerbots account link <账号名> <安全密钥>");
+            handler->PSendSysMessage("Usage: .playerbots account link <accountName> <securityKey>");
             return false;
         }
 
@@ -161,7 +150,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("未找到 PlayerbotMgr 实例。");
+            handler->PSendSysMessage("PlayerbotMgr instance not found.");
             return false;
         }
     }
@@ -178,7 +167,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("未找到 PlayerbotMgr 实例。");
+            handler->PSendSysMessage("PlayerbotMgr instance not found.");
             return false;
         }
     }
@@ -191,7 +180,7 @@ public:
         char* accountName = strtok((char*)args, " ");
         if (!accountName)
         {
-            handler->PSendSysMessage("用法: .playerbots account unlink <账号名>");
+            handler->PSendSysMessage("Usage: .playerbots account unlink <accountName>");
             return false;
         }
 
@@ -205,7 +194,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("未找到 PlayerbotMgr 实例。");
+            handler->PSendSysMessage("PlayerbotMgr instance not found.");
             return false;
         }
     }

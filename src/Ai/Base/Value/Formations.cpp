@@ -5,7 +5,6 @@
  */
 
 #include "Formations.h"
-
 #include "Arrow.h"
 #include "Event.h"
 #include "Map.h"
@@ -599,7 +598,7 @@ bool SetFormationAction::Execute(Event event)
     if (formation == "?" || formation.empty())
     {
         std::ostringstream str;
-        str << "阵型：|cff00ff00" << value->Get()->getName();
+        str << "Formation: |cff00ff00" << value->Get()->getName();
         botAI->TellMaster(str);
         return true;
     }
@@ -616,15 +615,15 @@ bool SetFormationAction::Execute(Event event)
     if (!value->Load(formation))
     {
         std::ostringstream str;
-        str << "无效阵型：|cffff0000" << formation;
+        str << "Invalid formation: |cffff0000" << formation;
         botAI->TellMaster(str);
         botAI->TellMaster(
-            "请设为以下之一：|cffffffff chaos（默认）、near、queue、circle、line、shield、arrow、melee、far");
+            "Please set to any of:|cffffffff chaos (default), near, queue, circle, line, shield, arrow, melee, far");
         return false;
     }
 
     std::ostringstream str;
-    str << "阵型已设为：" << formation;
+    str << "Formation set to: " << formation;
     botAI->TellMaster(str);
     return true;
 }

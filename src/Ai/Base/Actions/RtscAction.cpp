@@ -5,7 +5,6 @@
  */
 
 #include "RtscAction.h"
-
 #include "Playerbots.h"
 #include "RTSCValues.h"
 
@@ -21,15 +20,15 @@ bool RTSCAction::Execute(Event event)
     if (command != "reset" && !master->HasSpell(RTSC_MOVE_SPELL))
     {
         master->learnSpell(RTSC_MOVE_SPELL, false);
-        botAI->TellMasterNoFacing("RTS 控制已启用。");
-        botAI->TellMasterNoFacing("已学会 Aedm（移动控制）法术。");
+        botAI->TellMasterNoFacing("RTS control enabled.");
+        botAI->TellMasterNoFacing("Aedm (Awesome energetic do move) spell trained.");
     }
     else if (command == "reset")
     {
         if (master->HasSpell(RTSC_MOVE_SPELL))
         {
             master->removeSpell(RTSC_MOVE_SPELL, SPEC_MASK_ALL, false);
-            botAI->TellMasterNoFacing("RTS 控制法术已移除。");
+            botAI->TellMasterNoFacing("RTS control spell removed.");
         }
 
         RESET_AI_VALUE(bool, "RTSC selected");
@@ -124,7 +123,7 @@ bool RTSCAction::Execute(Event event)
     if (command.find("show") != std::string::npos)
     {
         std::ostringstream out;
-        out << "已保存：";
+        out << "saved: ";
 
         for (auto value : botAI->GetAiObjectContext()->GetValues())
             if (value.find("RTSC saved location::") != std::string::npos)

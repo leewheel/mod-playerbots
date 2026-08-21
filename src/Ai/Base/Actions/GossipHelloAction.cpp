@@ -5,7 +5,6 @@
  */
 
 #include "GossipHelloAction.h"
-
 #include "Event.h"
 #include "GossipDef.h"
 #include "Playerbots.h"
@@ -84,7 +83,7 @@ bool GossipHelloAction::ProcessGossip(int32 menuToSelect, bool silent)
     if (menuToSelect != -1 && !menu.GetItem(menuToSelect))
     {
         if (!silent)
-            botAI->TellError("未知的对话选项");
+            botAI->TellError("Unknown gossip option");
         return false;
     }
 
@@ -139,7 +138,7 @@ bool GossipHelloAction::Execute(ObjectGuid guid, int32 menuToSelect, bool silent
     else if (!bot->PlayerTalkClass)
     {
         if (!silent)
-            botAI->TellError("我需要先对话");
+            botAI->TellError("I need to talk first");
         return false;
     }
     else

@@ -5,9 +5,7 @@
  */
 
 #include "QuestAction.h"
-#include <sstream>
-#include <algorithm>
-
+#include "BroadcastHelper.h"
 #include "Chat.h"
 #include "ChatHelper.h"
 #include "Event.h"
@@ -17,7 +15,8 @@
 #include "Playerbots.h"
 #include "ReputationMgr.h"
 #include "ServerFacade.h"
-#include "BroadcastHelper.h"
+#include <algorithm>
+#include <sstream>
 
 bool QuestAction::Execute(Event event)
 {
@@ -159,9 +158,9 @@ bool QuestAction::CompleteQuest(Player* player, uint32 entry)
     if (botAI->HasStrategy("debug quest", BotState::BOT_STATE_NON_COMBAT) || botAI->HasStrategy("debug rpg", BotState::BOT_STATE_COMBAT))
     {
         LOG_INFO("playerbots", "{} => Quest [ {} ] completed", bot->GetName(), pQuest->GetTitle());
-        bot->Say("任务 [ " + text_quest + " ] 已完成", LANG_UNIVERSAL);
+        bot->Say("Quest [ " + text_quest + " ] completed", LANG_UNIVERSAL);
     }
-    botAI->TellMasterNoFacing("任务完成：" + text_quest);
+    botAI->TellMasterNoFacing("Quest completed " + text_quest);
 
     player->CompleteQuest(entry);
 
@@ -189,7 +188,7 @@ bool QuestAction::ProcessQuests(WorldObject* questGiver)
     {
         //if (botAI->HasStrategy("debug", BotState::BOT_STATE_COMBAT) || botAI->HasStrategy("debug", BotState::BOT_STATE_NON_COMBAT))
 
-        botAI->TellError("无法与任务发布者对话");
+        botAI->TellError("Cannot talk to quest giver");
         return false;
     }
 
@@ -221,18 +220,18 @@ bool QuestAction::AcceptQuest(Quest const* quest, ObjectGuid questGiver)
     uint32 questId = quest->GetQuestId();
 
     if (bot->GetQuestStatus(questId) == QUEST_STATUS_COMPLETE)
-        out << "已完成";
-    else if (!bot->CanTakeQuest(quest, false))
+        out << "Already completed";
+    else if (!botAI->IsAltBot() && !bot->CanTakeQuest(quest, false))
     {
         if (!bot->SatisfyQuestStatus(quest, false))
-            out << "已接取";
+            out << "Already on";
         else
-            out << "无法接取";
+            out << "Can't take";
     }
     else if (!bot->SatisfyQuestLog(false))
-        out << "任务日志已满";
+        out << "Quest log is full";
     else if (!bot->CanAddQuest(quest, false))
-        out << "背包已满";
+        out << "Bags are full";
     else
     {
         WorldPacket p(CMSG_QUESTGIVER_ACCEPT_QUEST);
@@ -251,11 +250,11 @@ bool QuestAction::AcceptQuest(Quest const* quest, ObjectGuid questGiver)
         if (bot->GetQuestStatus(questId) != QUEST_STATUS_NONE && bot->GetQuestStatus(questId) != QUEST_STATUS_REWARDED)
         {
             BroadcastHelper::BroadcastQuestAccepted(botAI, bot, quest);
-            out << "已接受 " << chat->FormatQuest(quest);
+            out << "Accepted " << chat->FormatQuest(quest);
             botAI->TellMaster(out);
             return true;
         }
-        out << "无法接受";
+        out << "Cannot accept";
     }
 
     out << " " << chat->FormatQuest(quest);
@@ -289,7 +288,7 @@ bool QuestUpdateCompleteAction::Execute(Event event)
             // }
         const auto format = ChatHelper::FormatQuest(qInfo);
         if (botAI->GetMaster())
-            botAI->TellMasterNoFacing("任务完成：" + format);
+            botAI->TellMasterNoFacing("Quest completed " + format);
         BroadcastHelper::BroadcastQuestUpdateComplete(botAI, bot, qInfo);
         botAI->rpgStatistic.questCompleted++;
         // LOG_DEBUG("playerbots", "[New rpg] {} complete quest {}", bot->GetName(), qInfo->GetQuestId());
@@ -452,13 +451,12 @@ bool QuestUpdateFailedTimerAction::Execute(Event event)
     {
         std::map<std::string, std::string> placeholders;
         placeholders["%quest_link"] = botAI->GetChatHelper()->FormatQuest(qInfo);
-        botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "quest_timer_failed_abandon", "计时器失败，放弃任务 %quest_link", placeholders));
+        botAI->TellMaster(PlayerbotTextMgr::instance().GetBotText("Failed timer for %quest_link, abandoning", placeholders));
         BroadcastHelper::BroadcastQuestUpdateFailedTimer(botAI, bot, qInfo);
     }
     else
     {
-        botAI->TellMaster("计时器失败，任务 " + std::to_string(questId));
+        botAI->TellMaster("Failed timer for " + std::to_string(questId));
     }
 
     //drop quest

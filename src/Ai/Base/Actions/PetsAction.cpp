@@ -5,14 +5,46 @@
  */
 
 #include "PetsAction.h"
-
 #include "CharmInfo.h"
 #include "Creature.h"
 #include "CreatureAI.h"
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
-#include "SharedDefines.h"
+#include "PlayerbotAIConfig.h"
+#include "PlayerbotTextMgr.h"
+#include "Playerbots.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
+#include <algorithm>
+#include <vector>
+
+enum PetSpells
+{
+    PET_PROWL_1 = 24450,
+    PET_PROWL_2 = 24452,
+    PET_PROWL_3 = 24453,
+    PET_COWER = 1742,
+    PET_LEAP = 47482,
+    PET_SPELL_LOCK_1 = 19244,
+    PET_SPELL_LOCK_2 = 19647,
+    PET_DEVOUR_MAGIC_1 = 19505,
+    PET_DEVOUR_MAGIC_2 = 19731,
+    PET_DEVOUR_MAGIC_3 = 19734,
+    PET_DEVOUR_MAGIC_4 = 19736,
+    PET_DEVOUR_MAGIC_5 = 27276,
+    PET_DEVOUR_MAGIC_6 = 27277,
+    PET_DEVOUR_MAGIC_7 = 48011,
+    PET_SPIRIT_WOLF_LEAP = 58867
+};
+
+static std::vector<uint32> disabledPetSpells = {
+    PET_PROWL_1, PET_PROWL_2, PET_PROWL_3,
+    PET_COWER, PET_LEAP,
+    PET_SPELL_LOCK_1, PET_SPELL_LOCK_2,
+    PET_DEVOUR_MAGIC_1, PET_DEVOUR_MAGIC_2, PET_DEVOUR_MAGIC_3,
+    PET_DEVOUR_MAGIC_4, PET_DEVOUR_MAGIC_5, PET_DEVOUR_MAGIC_6, PET_DEVOUR_MAGIC_7, PET_SPIRIT_WOLF_LEAP
+};
 
 bool PetsAction::Execute(Event event)
 {
@@ -25,7 +57,7 @@ bool PetsAction::Execute(Event event)
     {
         // If no parameter is provided, show usage instructions and return.
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_usage_error", "用法: 宠物 <主动|防御|被动|stance|attack|follow|stay>", {});
+            "pet_usage_error", "Usage: pet <aggressive|defensive|passive|stance|attack|follow|stay>", {});
         botAI->TellError(text);
         return false;
     }
@@ -54,7 +86,7 @@ bool PetsAction::Execute(Event event)
     if (targets.empty())
     {
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_no_pet_error", "你没有宠物或守卫宠物。", {});
+            "pet_no_pet_error", "You have no pet or guardian pet.", {});
         botAI->TellError(text);
         return false;
     }
@@ -67,19 +99,19 @@ bool PetsAction::Execute(Event event)
     {
         react = REACT_AGGRESSIVE;
         stanceText = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_stance_aggressive", "主动", {});
+            "pet_stance_aggressive", "aggressive", {});
     }
     else if (param == "defensive")
     {
         react = REACT_DEFENSIVE;
         stanceText = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_stance_defensive", "防御", {});
+            "pet_stance_defensive", "defensive", {});
     }
     else if (param == "passive")
     {
         react = REACT_PASSIVE;
         stanceText = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_stance_passive", "被动", {});
+            "pet_stance_passive", "passive", {});
     }
     // The "stance" command simply reports the current stance of each pet/guardian.
     else if (param == "stance")
@@ -87,31 +119,31 @@ bool PetsAction::Execute(Event event)
         for (Creature* target : targets)
         {
             std::string type = target->IsPet() ?
-                PlayerbotTextMgr::instance().GetBotTextOrDefault("pet_type_pet", "宠物", {}) :
-                PlayerbotTextMgr::instance().GetBotTextOrDefault("pet_type_guardian", "守卫", {});
+                PlayerbotTextMgr::instance().GetBotTextOrDefault("pet_type_pet", "pet", {}) :
+                PlayerbotTextMgr::instance().GetBotTextOrDefault("pet_type_guardian", "guardian", {});
             std::string name = target->GetName();
             std::string stance;
             switch (target->GetReactState())
             {
                 case REACT_AGGRESSIVE:
                     stance = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "pet_stance_aggressive", "主动", {});
+                        "pet_stance_aggressive", "aggressive", {});
                     break;
                 case REACT_DEFENSIVE:
                     stance = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "pet_stance_defensive", "防御", {});
+                        "pet_stance_defensive", "defensive", {});
                     break;
                 case REACT_PASSIVE:
                     stance = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "pet_stance_passive", "被动", {});
+                        "pet_stance_passive", "passive", {});
                     break;
                 default:
                     stance = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                        "pet_stance_unknown", "未知", {});
+                        "pet_stance_unknown", "unknown", {});
                     break;
             }
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_stance_report", "当前 %type \"%name\" 的姿态: %stance。",
+                "pet_stance_report", "Current stance of %type \"%name\": %stance.",
                 {{"type", type}, {"name", name}, {"stance", stance}});
             botAI->TellMaster(text);
         }
@@ -135,21 +167,21 @@ bool PetsAction::Execute(Event event)
         if (!targetUnit)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_no_target_error", "主控未选择有效目标。", {});
+                "pet_no_target_error", "No valid target selected by master.", {});
             botAI->TellError(text);
             return false;
         }
         if (!targetUnit->IsAlive())
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_target_dead_error", "目标未存活。", {});
+                "pet_target_dead_error", "Target is not alive.", {});
             botAI->TellError(text);
             return false;
         }
         if (!bot->IsValidAttackTarget(targetUnit))
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_invalid_target_error", "目标不是机器人的有效攻击目标。", {});
+                "pet_invalid_target_error", "Target is not a valid attack target for the bot.", {});
             botAI->TellError(text);
             return false;
         }
@@ -158,13 +190,13 @@ bool PetsAction::Execute(Event event)
             (!bot->duel || bot->duel->Opponent != targetUnit))
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_pvp_prohibited_error", "在禁止 PvP 的区域无法命令宠物攻击玩家。", {});
+                "pet_pvp_prohibited_error", "I cannot command my pet to attack players in PvP prohibited areas.", {});
             botAI->TellError(text);
             return false;
         }
 
         bool didAttack = false;
-        // For each controlled 宠物/守卫, command them to attack the selected target.
+        // For each controlled pet/guardian, command them to attack the selected target.
         for (Creature* petCreature : targets)
         {
             CharmInfo* charmInfo = petCreature->GetCharmInfo();
@@ -181,7 +213,7 @@ bool PetsAction::Execute(Event event)
 
                 if (!petCreature->IsPlayer() && petCreature->ToCreature()->IsAIEnabled)
                 {
-                    // For AI-enabled creatures (NPC 宠物s/守卫s): issue attack command and set flags.
+                    // For AI-enabled creatures (NPC pets/guardians): issue attack command and set flags.
                     charmInfo->SetIsCommandAttack(true);
                     charmInfo->SetIsAtStay(false);
                     charmInfo->SetIsFollowing(false);
@@ -192,7 +224,7 @@ bool PetsAction::Execute(Event event)
 
                     didAttack = true;
                 }
-                else  // For charmed player 宠物s/守卫s
+                else  // For charmed player pets/guardians
                 {
                     if (petCreature->GetVictim() && petCreature->GetVictim() != targetUnit)
                         petCreature->AttackStop();
@@ -212,30 +244,30 @@ bool PetsAction::Execute(Event event)
         if (didAttack && sPlayerbotAIConfig.petChatCommandDebug == 1)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_attack_success", "已命令宠物攻击你的目标。", {});
+                "pet_attack_success", "Pet commanded to attack your target.", {});
             botAI->TellMaster(text);
         }
         else if (!didAttack)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_attack_failed", "宠物未攻击。（已在攻击或无法攻击目标）", {});
+                "pet_attack_failed", "Pet did not attack. (Already attacking or unable to attack target)", {});
             botAI->TellError(text);
         }
         return didAttack;
     }
-    // The "follow" command makes all 宠物s/守卫s follow the bot.
+    // The "follow" command makes all pets/guardians follow the bot.
     else if (param == "follow")
     {
         botAI->PetFollow();
         if (sPlayerbotAIConfig.petChatCommandDebug == 1)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_follow_success", "已命令宠物跟随。", {});
+                "pet_follow_success", "Pet commanded to follow.", {});
             botAI->TellMaster(text);
         }
         return true;
     }
-    // The "stay" command causes all 宠物s/守卫s to stop and stay in place.
+    // The "stay" command causes all pets/guardians to stop and stay in place.
     else if (param == "stay")
     {
         for (Creature* target : targets)
@@ -253,7 +285,7 @@ bool PetsAction::Execute(Event event)
             CharmInfo* charmInfo = target->GetCharmInfo();
             if (charmInfo)
             {
-                // Set charm/宠物 state flags for "stay".
+                // Set charm/pet state flags for "stay".
                 charmInfo->SetCommandState(COMMAND_STAY);
                 charmInfo->SetIsCommandAttack(false);
                 charmInfo->SetIsCommandFollow(false);
@@ -271,7 +303,7 @@ bool PetsAction::Execute(Event event)
         if (sPlayerbotAIConfig.petChatCommandDebug == 1)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "pet_stay_success", "已命令宠物停留。", {});
+                "pet_stay_success", "Pet commanded to stay.", {});
             botAI->TellMaster(text);
         }
         return true;
@@ -280,7 +312,7 @@ bool PetsAction::Execute(Event event)
     else
     {
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_unknown_command_error", "未知宠物命令: %param。用法: 宠物 <主动|防御|被动|stance|attack|follow|stay>",
+            "pet_unknown_command_error", "Unknown pet command: %param. Use: pet <aggressive|defensive|passive|stance|attack|follow|stay>",
             {{"param", param}});
         botAI->TellError(text);
         return false;
@@ -299,10 +331,184 @@ bool PetsAction::Execute(Event event)
     if (sPlayerbotAIConfig.petChatCommandDebug == 1)
     {
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_stance_set_success", "宠物姿态已设为 %stance.",
+            "pet_stance_set_success", "Pet stance set to %stance.",
             {{"stance", stanceText}});
         botAI->TellMaster(text);
     }
+
+    return true;
+}
+
+bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
+{
+    Pet* pet = bot->GetPet();
+    if (!pet)
+    {
+        return false;
+    }
+    // hack on high level spell after low level initialization
+    std::vector<unsigned int> shouldRemove;
+    for (unsigned int& m_autospell : pet->m_autospells)
+    {
+        if (!pet->HasSpell(m_autospell))
+        {
+            shouldRemove.push_back(m_autospell);
+        }
+    }
+    for (unsigned int spellId : shouldRemove)
+    {
+        auto autospellItr = std::find(pet->m_autospells.begin(), pet->m_autospells.end(), spellId);
+        if (autospellItr != pet->m_autospells.end())
+            pet->m_autospells.erase(autospellItr);
+    }
+    bool toggled = false;
+    for (PetSpellMap::const_iterator itr = pet->m_spells.begin(); itr != pet->m_spells.end(); ++itr)
+    {
+        if (itr->second.state == PETSPELL_REMOVED)
+            continue;
+
+        uint32 spellId = itr->first;
+        const SpellInfo* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+        if (!spellInfo || !spellInfo->IsAutocastable())
+            continue;
+
+        bool shouldApply = true;
+        for (uint32 disabledSpell : disabledPetSpells)
+        {
+            if (spellId == disabledSpell)
+            {
+                shouldApply = false;
+                break;
+            }
+        }
+        bool isAutoCast = false;
+        for (unsigned int& m_autospell : pet->m_autospells)
+        {
+            if (m_autospell == spellId)
+            {
+                isAutoCast = true;
+                break;
+            }
+        }
+        if (shouldApply != isAutoCast)
+        {
+            pet->ToggleAutocast(spellInfo, shouldApply);
+            toggled = true;
+        }
+    }
+
+    // Debug message if pet spells have been toggled and debug is enabled
+    if (toggled && sPlayerbotAIConfig.petChatCommandDebug == 1)
+        botAI->TellMaster("Pet autocast spells have been toggled.");
+
+    return toggled;
+}
+
+bool PetAttackAction::Execute(Event /*event*/)
+{
+    Guardian* pet = bot->GetGuardianPet();
+    if (!pet)
+        return false;
+
+    // Do not attack if the pet's stance is set to "passive".
+    if (pet->GetReactState() == REACT_PASSIVE)
+        return false;
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target)
+        return false;
+
+    if (!bot->IsValidAttackTarget(target))
+        return false;
+
+    // This section has been commented because it was overriding the
+    // pet's stance to "passive" every time the attack action was executed.
+    // pet->SetReactState(REACT_PASSIVE);
+
+    pet->ClearUnitState(UNIT_STATE_FOLLOW);
+    pet->AttackStop();
+    pet->SetTarget(target->GetGUID());
+
+    pet->GetCharmInfo()->SetIsCommandAttack(true);
+    pet->GetCharmInfo()->SetIsAtStay(false);
+    pet->GetCharmInfo()->SetIsFollowing(false);
+    pet->GetCharmInfo()->SetIsCommandFollow(false);
+    pet->GetCharmInfo()->SetIsReturning(false);
+
+    pet->ToCreature()->AI()->AttackStart(target);
+    return true;
+}
+
+bool SetPetStanceAction::Execute(Event /*event*/)
+{
+    // Prepare a list to hold all controlled pet and guardian creatures
+    std::vector<Creature*> targets;
+
+    // Add the bot's main pet (if it exists) to the target list
+    Pet* pet = bot->GetPet();
+    if (pet)
+        targets.push_back(pet);
+
+    // Loop through all units controlled by the bot (could be pets, guardians, etc.)
+    for (Unit::ControlSet::const_iterator itr = bot->m_Controlled.begin(); itr != bot->m_Controlled.end(); ++itr)
+    {
+        // Only add creatures (skip players, vehicles, etc.)
+        Creature* creature = dynamic_cast<Creature*>(*itr);
+        if (!creature)
+            continue;
+        // Avoid adding the main pet twice
+        if (pet && creature == pet)
+            continue;
+        targets.push_back(creature);
+    }
+
+    // If there are no controlled pets or guardians, notify the player and exit
+    if (targets.empty())
+    {
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "pet_no_pet_error", "You have no pet or guardian pet.", {}));
+        return false;
+    }
+
+    // Get the default pet stance from the configuration
+    int32 stance = sPlayerbotAIConfig.defaultPetStance;
+    ReactStates react = REACT_DEFENSIVE;
+    std::string stanceText = "defensive (from config, fallback)";
+
+    // Map the config stance integer to a ReactStates value and a message
+    switch (stance)
+    {
+        case 0:
+            react = REACT_PASSIVE;
+            stanceText = "passive (from config)";
+            break;
+        case 1:
+            react = REACT_DEFENSIVE;
+            stanceText = "defensive (from config)";
+            break;
+        case 2:
+            react = REACT_AGGRESSIVE;
+            stanceText = "aggressive (from config)";
+            break;
+        default:
+            react = REACT_DEFENSIVE;
+            stanceText = "defensive (from config, fallback)";
+            break;
+    }
+
+    // Apply the stance to all target creatures (pets/guardians)
+    for (Creature* target : targets)
+    {
+        target->SetReactState(react);
+        CharmInfo* charmInfo = target->GetCharmInfo();
+        // If the creature has a CharmInfo, set the player-visible stance as well
+        if (charmInfo)
+            charmInfo->SetPlayerReactState(react);
+    }
+
+    // If debug is enabled in config, inform the master of the new stance
+    if (sPlayerbotAIConfig.petChatCommandDebug == 1)
+        botAI->TellMaster("Pet stance set to " + stanceText + " (applied to all pets/guardians).");
 
     return true;
 }

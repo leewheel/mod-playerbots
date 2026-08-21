@@ -1,8 +1,12 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "NewRpgInfo.h"
-
-#include <cmath>
-
 #include "Timer.h"
+#include <cmath>
 
 void NewRpgInfo::ChangeToGoGrind(WorldPosition pos)
 {
@@ -87,6 +91,20 @@ void NewRpgInfo::SetMoveFarTo(WorldPosition pos)
     moveFarPos = pos;
 }
 
+NewRpgStatus NewRpgInfo::StatusFromString(std::string const& name)
+{
+    if (name == "idle")           return RPG_IDLE;
+    if (name == "rest")           return RPG_REST;
+    if (name == "wander random")  return RPG_WANDER_RANDOM;
+    if (name == "wander npc")     return RPG_WANDER_NPC;
+    if (name == "go grind")       return RPG_GO_GRIND;
+    if (name == "go camp")        return RPG_GO_CAMP;
+    if (name == "do quest")       return RPG_DO_QUEST;
+    if (name == "travel flight")  return RPG_TRAVEL_FLIGHT;
+    if (name == "outdoor pvp")    return RPG_OUTDOOR_PVP;
+    return RPG_STATUS_END;
+}
+
 NewRpgStatus NewRpgInfo::GetStatus()
 {
     return std::visit([](auto&& arg) -> NewRpgStatus {
@@ -107,72 +125,72 @@ NewRpgStatus NewRpgInfo::GetStatus()
 std::string NewRpgInfo::ToString()
 {
     std::stringstream out;
-    out << "状态：";
+    out << "Status: ";
     std::visit([&out, this](auto&& arg)
     {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, GoGrind>)
         {
-            out << "前往刷怪";
-            out << "\n刷怪坐标: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
+            out << "GO_GRIND";
+            out << "\nGrindPos: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
                 << arg.pos.GetPositionY() << " " << arg.pos.GetPositionZ();
-            out << "\n上次刷怪: " << startT;
+            out << "\nlastGoGrind: " << startT;
         }
         else if constexpr (std::is_same_v<T, GoCamp>)
         {
-            out << "扎营";
-            out << "\n营地坐标: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
+            out << "GO_CAMP";
+            out << "\nCampPos: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
                 << arg.pos.GetPositionY() << " " << arg.pos.GetPositionZ();
-            out << "\n上次扎营: " << startT;
+            out << "\nlastGoCamp: " << startT;
         }
         else if constexpr (std::is_same_v<T, WanderNpc>)
         {
-            out << "游荡NPC";
-            out << "\nNPC/对象ID: " << arg.npcOrGo.GetCounter();
-            out << "\n上次游荡: " << startT;
-            out << "\n上次到达: " << arg.lastReach;
+            out << "WANDER_NPC";
+            out << "\nnpcOrGoEntry: " << arg.npcOrGo.GetCounter();
+            out << "\nlastWanderNpc: " << startT;
+            out << "\nlastReachNpcOrGo: " << arg.lastReach;
         }
         else if constexpr (std::is_same_v<T, WanderRandom>)
         {
-            out << "随机游荡";
-            out << "\n上次随机游荡: " << startT;
+            out << "WANDER_RANDOM";
+            out << "\nlastWanderRandom: " << startT;
         }
         else if constexpr (std::is_same_v<T, Idle>)
         {
-            out << "空闲";
+            out << "IDLE";
         }
         else if constexpr (std::is_same_v<T, Rest>)
         {
-            out << "休息";
-            out << "\n上次休息: " << startT;
+            out << "REST";
+            out << "\nlastRest: " << startT;
         }
         else if constexpr (std::is_same_v<T, DoQuest>)
         {
-            out << "做任务";
-            out << "\n任务ID: " << arg.questId;
-            out << "\n目标索引: " << arg.objectiveIdx;
-            out << "\n坐标: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
+            out << "DO_QUEST";
+            out << "\nquestId: " << arg.questId;
+            out << "\nobjectiveIdx: " << arg.objectiveIdx;
+            out << "\npoiPos: " << arg.pos.GetMapId() << " " << arg.pos.GetPositionX() << " "
                 << arg.pos.GetPositionY() << " " << arg.pos.GetPositionZ();
-            out << "\n上次到达坐标: " << (arg.lastReachPOI ? GetMSTimeDiffToNow(arg.lastReachPOI) : 0);
+            out << "\nlastReachPOI: " << (arg.lastReachPOI ? GetMSTimeDiffToNow(arg.lastReachPOI) : 0);
         }
         else if constexpr (std::is_same_v<T, TravelFlight>)
         {
-            out << "飞行旅行";
-            out << "\n飞行管理员: " << arg.flightMasterEntry;
-            out << "\n起点: " << arg.path[0];
-            out << "\n终点: " << arg.path[arg.path.size() - 1];
-            out << "\n飞行中: " << arg.inFlight;
+            out << "TRAVEL_FLIGHT";
+            out << "\nflightMasterEntry: " << arg.flightMasterEntry;
+            out << "\nfromNode: " << arg.path[0];
+            out << "\ntoNode: " << arg.path[arg.path.size() - 1];
+            out << "\ninFlight: " << arg.inFlight;
         }
         else if constexpr (std::is_same_v<T, OutdoorPvP>)
         {
-            out << "户外PvP";
+            out << "OUTDOOR_PVP";
             if (!arg.capturePointSpawnId)
-                out << "\n未分配占领点。";
+                out << "\nNo capture point assigned.";
             else
-                out << "\n占领点ID: " << arg.capturePointSpawnId;
+                out << "\ncapturePointSpawnId: " << arg.capturePointSpawnId;
         }
         else
-            out << "未知";
+            out << "UNKNOWN";
     }, data);
     return out.str();
 }

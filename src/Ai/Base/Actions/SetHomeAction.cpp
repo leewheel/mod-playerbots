@@ -5,7 +5,6 @@
  */
 
 #include "SetHomeAction.h"
-
 #include "Event.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
@@ -31,7 +30,7 @@ bool SetHomeAction::Execute(Event /*event*/)
             Creature* creature = botAI->GetCreature(selection);
             bot->GetSession()->SendBindPoint(creature);
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "set_home_success", "此旅店是我的新炉石点", {}));
+                "set_home_success", "This inn is my new home", {}));
             return true;
         }
 
@@ -44,11 +43,11 @@ bool SetHomeAction::Execute(Event /*event*/)
 
         bot->GetSession()->SendBindPoint(unit);
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "set_home_success", "此旅店是我的新炉石点", {}));
+            "set_home_success", "This inn is my new home", {}));
         return true;
     }
 
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "set_home_no_innkeeper_error", "附近找不到旅店老板", {}));
+        "set_home_no_innkeeper_error", "Can't find any innkeeper around", {}));
     return false;
 }

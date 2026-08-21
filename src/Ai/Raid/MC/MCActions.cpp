@@ -1,8 +1,13 @@
-#include "MCActions.h"
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
 
+#include "MCActions.h"
+#include "MCHelpers.h"
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
-#include "MCHelpers.h"
 
 static constexpr float LIVING_BOMB_DISTANCE = 20.0f;
 static constexpr float INFERNO_DISTANCE = 20.0f;
@@ -31,9 +36,9 @@ bool McMoveFromBaronGeddonAction::Execute(Event /*event*/)
         float distToTravel = INFERNO_DISTANCE - bot->GetDistance2d(boss);
         if (distToTravel > 0)
         {
-            // Stop current spell first
+            // Stop channeling spell first
             bot->AttackStop();
-            bot->InterruptNonMeleeSpells(false);
+            bot->CastStop();
 
             return MoveAway(boss, distToTravel);
         }

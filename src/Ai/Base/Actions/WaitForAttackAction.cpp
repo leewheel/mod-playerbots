@@ -4,11 +4,16 @@
  * or (at your option) any later version.
  */
 
+/*
+ * Ported from the CMaNGOS playerbots project (https://github.com/cmangos/playerbots), GPL v2,
+ * with modifications for AzerothCore.
+ * Original authors:
+ *   David Parra Ausina (davidonete/Flekz) <davidparraausina@gmail.com> - original author
+ *   Sebastiaan Keek (mostlikely4r) <sebastiaan.keek@gmail.com>
+ *   Cyberium <cyberium@users.noreply.github.com>
+ */
+
 #include "WaitForAttackAction.h"
-
-#include <algorithm>
-#include <cctype>
-
 #include "ObjectAccessor.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotTextMgr.h"
@@ -16,6 +21,8 @@
 #include "ServerFacade.h"
 #include "TravelMgr.h"
 #include "WaitForAttackStrategy.h"
+#include <algorithm>
+#include <cctype>
 
 namespace
 {
@@ -135,7 +142,7 @@ bool SetWaitForAttackTimeAction::Execute(Event event)
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "wait_for_attack_provide_time",
-            "请提供要设置的时间（秒）",
+            "Please provide a time to set (in seconds)",
             std::map<std::string, std::string>());
         botAI->TellMaster(text);
         return false;
@@ -145,7 +152,7 @@ bool SetWaitForAttackTimeAction::Execute(Event event)
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "wait_for_attack_invalid_time",
-            "请提供 0 到 99 之间的有效时间（秒）",
+            "Please provide valid time to set (in seconds) between 0 and 99",
             std::map<std::string, std::string>());
         botAI->TellMaster(text);
         return false;
@@ -156,7 +163,7 @@ bool SetWaitForAttackTimeAction::Execute(Event event)
     {
         std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "wait_for_attack_invalid_time",
-            "请提供 0 到 99 之间的有效时间（秒）",
+            "Please provide valid time to set (in seconds) between 0 and 99",
             std::map<std::string, std::string>());
         botAI->TellMaster(text);
         return false;
@@ -168,7 +175,7 @@ bool SetWaitForAttackTimeAction::Execute(Event event)
     placeholders["%new_time"] = std::to_string(newTime);
     std::string const text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
         "wait_for_attack_time_set",
-        "等待攻击时间已设为 %new_time 秒",
+        "Wait for attack time set to %new_time seconds",
         placeholders);
     botAI->TellMaster(text);
     return true;

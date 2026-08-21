@@ -5,7 +5,6 @@
  */
 
 #include "BankAction.h"
-
 #include "Event.h"
 #include "ItemCountValue.h"
 #include "PlayerbotTextMgr.h"
@@ -26,7 +25,7 @@ bool BankAction::Execute(Event event)
     }
 
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "bank_no_banker_nearby_error", "附近找不到银行职员", {}));
+        "bank_no_banker_nearby_error", "Cannot find banker nearby", {}));
     return false;
 }
 
@@ -85,7 +84,7 @@ bool BankAction::Withdraw(uint32 itemid)
     bot->StoreItem(dest, pItem, true);
 
     std::ostringstream out;
-    out << "从银行取出 " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount());
+    out << "got " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount()) << " from bank";
     botAI->TellMaster(out.str());
     return true;
 }
@@ -105,14 +104,14 @@ bool BankAction::Deposit(Item* pItem)
     bot->RemoveItem(pItem->GetBagSlot(), pItem->GetSlot(), true);
     bot->BankItem(dest, pItem, true);
 
-    out << "存入银行 " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount());
+    out << "put " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount()) << " to bank";
     botAI->TellMaster(out.str());
     return true;
 }
 
 void BankAction::ListItems()
 {
-    botAI->TellMaster("=== 银行 ===");
+    botAI->TellMaster("=== Bank ===");
 
     std::map<uint32, uint32> items;
     std::map<uint32, bool> soulbound;

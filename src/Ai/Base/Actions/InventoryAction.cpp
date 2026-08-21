@@ -5,7 +5,6 @@
  */
 
 #include "InventoryAction.h"
-
 #include "Event.h"
 #include "ItemCountValue.h"
 #include "ItemVisitors.h"
@@ -15,7 +14,7 @@ namespace
 {
 bool isReservedQualifier(std::string const& text)
 {
-    static std::array<std::string_view, 13> const exactQualifiers = {
+    static std::array<std::string_view, 14> const exactQualifiers = {
         "ammo",
         "conjured drink",
         "conjured food",
@@ -23,9 +22,10 @@ bool isReservedQualifier(std::string const& text)
         "drink",
         "food",
         "healing potion",
+        "materials",
         "mount",
         "mana potion",
-        "宠物",
+        "pet",
         "quest",
         "recipe",
         "water"
@@ -156,40 +156,40 @@ void InventoryAction::TellItems(std::map<uint32, uint32> itemMap, std::map<uint3
             switch (proto->Class)
             {
                 case ITEM_CLASS_CONSUMABLE:
-                    botAI->TellMaster("--- 消耗品 ---");
+                    botAI->TellMaster("--- consumable ---");
                     break;
                 case ITEM_CLASS_CONTAINER:
-                    botAI->TellMaster("--- 容器 ---");
+                    botAI->TellMaster("--- container ---");
                     break;
                 case ITEM_CLASS_WEAPON:
-                    botAI->TellMaster("--- 武器 ---");
+                    botAI->TellMaster("--- weapon ---");
                     break;
                 case ITEM_CLASS_ARMOR:
-                    botAI->TellMaster("--- 护甲 ---");
+                    botAI->TellMaster("--- armor ---");
                     break;
                 case ITEM_CLASS_REAGENT:
-                    botAI->TellMaster("--- 材料 ---");
+                    botAI->TellMaster("--- reagent ---");
                     break;
                 case ITEM_CLASS_PROJECTILE:
-                    botAI->TellMaster("--- 弹药 ---");
+                    botAI->TellMaster("--- projectile ---");
                     break;
                 case ITEM_CLASS_TRADE_GOODS:
-                    botAI->TellMaster("--- 商品 ---");
+                    botAI->TellMaster("--- trade goods ---");
                     break;
                 case ITEM_CLASS_RECIPE:
-                    botAI->TellMaster("--- 配方 ---");
+                    botAI->TellMaster("--- recipe ---");
                     break;
                 case ITEM_CLASS_QUIVER:
-                    botAI->TellMaster("--- 箭袋 ---");
+                    botAI->TellMaster("--- quiver ---");
                     break;
                 case ITEM_CLASS_QUEST:
-                    botAI->TellMaster("--- 任务物品 ---");
+                    botAI->TellMaster("--- quest items ---");
                     break;
                 case ITEM_CLASS_KEY:
-                    botAI->TellMaster("--- 钥匙 ---");
+                    botAI->TellMaster("--- keys ---");
                     break;
                 case ITEM_CLASS_MISC:
-                    botAI->TellMaster("--- 其他 ---");
+                    botAI->TellMaster("--- other ---");
                     break;
             }
         }
@@ -280,7 +280,7 @@ std::vector<Item*> InventoryAction::parseItems(std::string const text, IterateIt
         found.insert(visitor.GetResult().begin(), visitor.GetResult().end());
     }
 
-    if (text == "宠物")
+    if (text == "pet")
     {
         FindPetVisitor visitor(bot);
         IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
@@ -304,10 +304,26 @@ std::vector<Item*> InventoryAction::parseItems(std::string const text, IterateIt
         found.insert(visitor.GetResult().begin(), visitor.GetResult().end());
     }
 
+    // "recipe" keeps the usable-only filter (used by the bot's own recipe-learning);
+    // "recipe all" matches every recipe in the bags, for moving/trading them in bulk.
+    if (text == "recipe all")
+    {
+        FindAnyRecipeVisitor visitor;
+        IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
+        found.insert(visitor.GetResult().begin(), visitor.GetResult().end());
+    }
+
     if (text == "quest")
     {
         FindQuestItemVisitor visitor(bot);
         IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
+        found.insert(visitor.GetResult().begin(), visitor.GetResult().end());
+    }
+
+    if (text == "materials")
+    {
+        FindTradeMaterialsVisitor visitor(count);
+        IterateItems(&visitor, mask);
         found.insert(visitor.GetResult().begin(), visitor.GetResult().end());
     }
 

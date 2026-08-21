@@ -5,14 +5,13 @@
  */
 
 #include "SeeSpellAction.h"
-
+#include "ByteBuffer.h"
 #include "Event.h"
 #include "Formations.h"
 #include "Playerbots.h"
+#include "PositionValue.h"
 #include "RTSCValues.h"
 #include "RtscAction.h"
-#include "PositionValue.h"
-#include "ByteBuffer.h"
 
 std::set<uint32> const FISHING_SPELLS = {7620, 7731, 7732, 18248, 33095, 51294};
 
@@ -72,7 +71,7 @@ bool SeeSpellAction::Execute(Event event)
     if (spellId != RTSC_MOVE_SPELL)
         return false;
 
-    // should not throw exception,just 防御 measure to prevent any crashes when core function breaks.
+    // should not throw exception,just defensive measure to prevent any crashes when core function breaks.
     SpellCastTargets targets;
     try
     {

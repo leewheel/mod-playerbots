@@ -5,10 +5,9 @@
  */
 
 #include "HelpAction.h"
-
+#include "AiObjectContext.h"
 #include "ChatActionContext.h"
 #include "Event.h"
-#include "AiObjectContext.h"
 
 HelpAction::HelpAction(PlayerbotAI* botAI) : Action(botAI, "help") { chatContext = new ChatActionContext(); }
 
@@ -24,16 +23,16 @@ bool HelpAction::Execute(Event /*event*/)
 void HelpAction::TellChatCommands()
 {
     std::ostringstream out;
-    out << "可密语以下命令（支持中文别名）: ";
+    out << "Whisper any of: ";
     out << CombineSupported(chatContext->supports());
-    out << "，或发送 [物品]、[任务]、[物体] 链接";
+    out << ", [item], [quest] or [object] link";
     botAI->TellError(out.str());
 }
 
 void HelpAction::TellStrategies()
 {
     std::ostringstream out;
-    out << "可用策略（co/战斗/nc/非战斗/de/死亡 命令）: ";
+    out << "Possible strategies (co/nc/dead commands): ";
     out << CombineSupported(botAI->GetAiObjectContext()->GetSupportedStrategies());
     botAI->TellError(out.str());
 }

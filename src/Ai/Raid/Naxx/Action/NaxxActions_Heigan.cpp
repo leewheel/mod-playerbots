@@ -1,6 +1,12 @@
-#include "Playerbots.h"
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "NaxxActions.h"
 #include "NaxxSpellIds.h"
+#include "Playerbots.h"
 #include "Spell.h"
 #include "Timer.h"
 
@@ -71,7 +77,7 @@
 //        return MoveInside(bot->GetMapId(), platform.first, platform.second, 276.54f, 2.0f,
 //                          MovementPriority::MOVEMENT_COMBAT);
 //    }
-//    botAI->InterruptSpell();
+//    bot->CastStop();;
 //    return MoveInside(bot->GetMapId(), waypoints[curr_safe].first, waypoints[curr_safe].second, bot->GetPositionZ(), 0,
 //                      MovementPriority::MOVEMENT_COMBAT);
 //}

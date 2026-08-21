@@ -5,14 +5,11 @@
  */
 
 #include "TellReputationAction.h"
-
-#include <algorithm>
-
 #include "Event.h"
 #include "PlayerbotAI.h"
 #include "ReputationMgr.h"
-
 #include "SharedDefines.h"
+#include <algorithm>
 
 std::string TellReputationAction::BuildReputationLine(FactionEntry const* entry)
 {
@@ -26,31 +23,31 @@ std::string TellReputationAction::BuildReputationLine(FactionEntry const* entry)
     switch (rank)
     {
         case REP_HATED:
-            out << "cc2222憎恨";
+            out << "cc2222hated";
             break;
         case REP_HOSTILE:
-            out << "ff0000敌对";
+            out << "ff0000hostile";
             break;
         case REP_UNFRIENDLY:
-            out << "ee6622冷淡";
+            out << "ee6622unfriendly";
             break;
         case REP_NEUTRAL:
-            out << "ffff00中立";
+            out << "ffff00neutral";
             break;
         case REP_FRIENDLY:
-            out << "00ff00友善";
+            out << "00ff00friendly";
             break;
         case REP_HONORED:
-            out << "00ff88尊敬";
+            out << "00ff88honored";
             break;
         case REP_REVERED:
-            out << "00ffcc崇敬";
+            out << "00ffccrevered";
             break;
         case REP_EXALTED:
-            out << "00ffff崇拜";
+            out << "00ffffexalted";
             break;
         default:
-            out << "808080未知";
+            out << "808080unknown";
             break;
     }
 
@@ -94,7 +91,7 @@ bool TellReputationAction::Execute(Event event)
 
         std::sort(lines.begin(), lines.end());
 
-        botAI->TellMaster("=== 声望 ===");
+        botAI->TellMaster("=== Reputations ===");
         for (auto const& line : lines)
             botAI->TellMaster(line);
 

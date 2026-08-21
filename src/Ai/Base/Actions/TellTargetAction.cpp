@@ -5,12 +5,11 @@
  */
 
 #include "TellTargetAction.h"
-
-#include "Event.h"
-#include "CombatManager.h"
-#include "ThreatManager.h"
 #include "AiObjectContext.h"
+#include "CombatManager.h"
+#include "Event.h"
 #include "PlayerbotAI.h"
+#include "ThreatManager.h"
 
 bool TellTargetAction::Execute(Event /*event*/)
 {
@@ -18,7 +17,7 @@ bool TellTargetAction::Execute(Event /*event*/)
     if (target)
     {
         std::ostringstream out;
-        out << "攻击中 " << target->GetName();
+        out << "Attacking " << target->GetName();
         botAI->TellMaster(out);
 
         context->GetValue<Unit*>("old target")->Set(target);
@@ -29,7 +28,7 @@ bool TellTargetAction::Execute(Event /*event*/)
 
 bool TellAttackersAction::Execute(Event /*event*/)
 {
-    botAI->TellMaster("--- 攻击者 ---");
+    botAI->TellMaster("--- Attackers ---");
 
     GuidVector attackers = context->GetValue<GuidVector>("attackers")->Get();
     int32 count = 0;
@@ -42,7 +41,7 @@ bool TellAttackersAction::Execute(Event /*event*/)
         botAI->TellMaster(std::to_string(++count) + std::string(".") + unit->GetName());
     }
 
-    botAI->TellMaster("--- 威胁 ---");
+    botAI->TellMaster("--- Threat ---");
 
     auto const& threatenedByMe = bot->GetThreatMgr().GetThreatenedByMeList();
     if (threatenedByMe.empty())

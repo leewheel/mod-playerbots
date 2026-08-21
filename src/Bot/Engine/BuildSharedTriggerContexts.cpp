@@ -1,28 +1,35 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "AiObjectContext.h"
-#include "TriggerContext.h"
-#include "ChatTriggerContext.h"
-#include "WorldPacketTriggerContext.h"
 #include "Aq20TriggerContext.h"
-#include "MCTriggerContext.h"
+#include "BTTriggerContext.h"
 #include "BWLTriggerContext.h"
-#include "KaraTriggerContext.h"
+#include "ChatTriggerContext.h"
+#include "EoETriggerContext.h"
 #include "GruulTriggerContext.h"
+#include "HyjalTriggerContext.h"
+#include "ICCTriggerContext.h"
+#include "KaraTriggerContext.h"
+#include "MCTriggerContext.h"
 #include "MagTriggerContext.h"
 #include "NaxxTriggerContext.h"
-#include "SSCTriggerContext.h"
-#include "TKTriggerContext.h"
-#include "HyjalTriggerContext.h"
-#include "BTTriggerContext.h"
-#include "ZATriggerContext.h"
 #include "OSTriggerContext.h"
-#include "EoETriggerContext.h"
-#include "VoATriggerContext.h"
-#include "UldTriggerContext.h"
 #include "OnyTriggerContext.h"
-#include "ICCTriggerContext.h"
 #include "RSTriggerContext.h"
-#include "Ai/Dungeon/TbcDungeonTriggerContext.h"
-#include "Ai/Dungeon/WotlkDungeonTriggerContext.h"
+#include "SSCTriggerContext.h"
+#include "SWPTriggerContext.h"
+#include "TKTriggerContext.h"
+#include "TbcDungeonTriggerContext.h"
+#include "TriggerContext.h"
+#include "UldTriggerContext.h"
+#include "VoATriggerContext.h"
+#include "WorldPacketTriggerContext.h"
+#include "WotlkDungeonTriggerContext.h"
+#include "ZATriggerContext.h"
 
 void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
 {
@@ -35,12 +42,13 @@ void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Tr
     triggerContexts.Add(new RaidKarazhanTriggerContext());
     triggerContexts.Add(new RaidGruulsLairTriggerContext());
     triggerContexts.Add(new RaidMagtheridonTriggerContext());
-    triggerContexts.Add(new RaidNaxxTriggerContext());
     triggerContexts.Add(new RaidSSCTriggerContext());
     triggerContexts.Add(new RaidTempestKeepTriggerContext());
     triggerContexts.Add(new RaidHyjalSummitTriggerContext());
     triggerContexts.Add(new RaidBlackTempleTriggerContext());
     triggerContexts.Add(new RaidZulAmanTriggerContext());
+    triggerContexts.Add(new RaidSunwellTriggerContext());
+    triggerContexts.Add(new RaidNaxxTriggerContext());
     triggerContexts.Add(new RaidOsTriggerContext());
     triggerContexts.Add(new RaidEoETriggerContext());
     triggerContexts.Add(new RaidVoATriggerContext());
@@ -48,7 +56,11 @@ void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Tr
     triggerContexts.Add(new RaidOnyxiaTriggerContext());
     triggerContexts.Add(new RaidIccTriggerContext());
     triggerContexts.Add(new RaidRsTriggerContext());
+    triggerContexts.Add(new TbcDungeonHellfireRampartsTriggerContext());
+    triggerContexts.Add(new TbcDungeonUnderbogTriggerContext());
     triggerContexts.Add(new TbcDungeonAuchenaiCryptsTriggerContext());
+    triggerContexts.Add(new TbcDungeonSethekkHallsTriggerContext());
+    triggerContexts.Add(new TbcDungeonMechanarTriggerContext());
     triggerContexts.Add(new WotlkDungeonUKTriggerContext());
     triggerContexts.Add(new WotlkDungeonNexTriggerContext());
     triggerContexts.Add(new WotlkDungeonANTriggerContext());

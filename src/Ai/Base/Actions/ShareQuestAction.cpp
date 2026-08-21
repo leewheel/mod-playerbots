@@ -5,7 +5,6 @@
  */
 
 #include "ShareQuestAction.h"
-
 #include "Event.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
@@ -38,7 +37,7 @@ bool ShareQuestAction::Execute(Event event)
             pushQuest.Read();
             bot->GetSession()->HandlePushQuestToParty(pushQuest);
             botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "quest_shared", "任务已分享", {}));
+                "quest_shared", "Quest shared", {}));
             return true;
         }
     }
@@ -107,7 +106,7 @@ bool AutoShareQuestAction::Execute(Event /*event*/)
         pushQuest.Read();
         bot->GetSession()->HandlePushQuestToParty(pushQuest);
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "quest_shared", "任务已分享", {}));
+            "quest_shared", "Quest shared", {}));
         shared = true;
     }
 
@@ -116,5 +115,5 @@ bool AutoShareQuestAction::Execute(Event /*event*/)
 
 bool AutoShareQuestAction::isUseful()
 {
-    return bot->GetGroup() && !botAI->HasActivePlayerMaster();
+    return bot->GetGroup() && !IsRealPlayer(botAI->GetMaster());
 }

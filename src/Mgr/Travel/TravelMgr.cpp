@@ -5,28 +5,26 @@
  */
 
 #include "TravelMgr.h"
-
-#include <iomanip>
-#include <numeric>
-
 #include "AreaDefines.h"
+#include "CellImpl.h"
+#include "ChatHelper.h"
+#include "Corpse.h"
 #include "Creature.h"
 #include "Log.h"
-#include "ObjectAccessor.h"
-#include "TravelNode.h"
-#include "Talentspec.h"
-#include "ChatHelper.h"
+#include "Map.h"
 #include "MapCollisionData.h"
 #include "MapMgr.h"
+#include "ObjectAccessor.h"
 #include "PathGenerator.h"
 #include "Playerbots.h"
 #include "RaceMgr.h"
+#include "Talentspec.h"
 #include "TransportMgr.h"
+#include "TravelNode.h"
 #include "VMapFactory.h"
 #include "VMapMgr2.h"
-#include "Map.h"
-#include "Corpse.h"
-#include "CellImpl.h"
+#include <iomanip>
+#include <numeric>
 
 // Navigation data
 
@@ -1068,7 +1066,7 @@ GuidPosition::GuidPosition(CreatureData const& creData)
 }
 
 GuidPosition::GuidPosition(GameObjectData const& goData)
-    : ObjectGuid(HighGuid::GameObject, goData.id),
+    : ObjectGuid(HighGuid::GameObject, goData.id, goData.spawnId),
       WorldPosition(goData.mapid, goData.posX, goData.posY, goData.posZ, goData.orientation)
 {
     loadedFromDB = true;
@@ -1208,9 +1206,9 @@ std::string const QuestRelationTravelDestination::getTitle()
     std::ostringstream out;
 
     if (relation == 0)
-        out << "任务发放者";
+        out << "questgiver";
     else
-        out << "任务交付者";
+        out << "questtaker";
 
     out << " " << ChatHelper::FormatWorldEntry(entry);
     return out.str();
@@ -1273,7 +1271,7 @@ std::string const QuestObjectiveTravelDestination::getTitle()
 {
     std::ostringstream out;
 
-    out << "目标 " << objective;
+    out << "objective " << objective;
 
     if (itemId)
         out << " loot " << ChatHelper::FormatItem(sObjectMgr->GetItemTemplate(itemId), 0, 0) << " from";
@@ -1329,7 +1327,7 @@ std::string const RpgTravelDestination::getTitle()
     std::ostringstream out;
 
     if (entry > 0)
-        out << "RPG NPC ";
+        out << "rpg npc ";
 
     out << " " << ChatHelper::FormatWorldEntry(entry);
 
@@ -1406,7 +1404,7 @@ std::string const GrindTravelDestination::getTitle()
 {
     std::ostringstream out;
 
-    out << "刷怪 ";
+    out << "grind mob ";
 
     out << " " << ChatHelper::FormatWorldEntry(entry);
 
@@ -1474,7 +1472,7 @@ CreatureTemplate const* BossTravelDestination::getCreatureTemplate() { return sO
 std::string const BossTravelDestination::getTitle()
 {
     std::ostringstream out;
-    out << "首领 ";
+    out << "boss mob ";
     out << " " << ChatHelper::FormatWorldEntry(entry);
 
     return out.str();
@@ -1756,7 +1754,7 @@ void TravelMgr::logQuestError(uint32 errorNr, Quest* quest, uint32 objective, ui
     if (!logQuestErrors)
         return;
 
-    std::string unitName = "<未知>";
+    std::string unitName = "<unknown>";
     CreatureTemplate const* cInfo = nullptr;
     GameObjectTemplate const* gInfo = nullptr;
 
@@ -1774,18 +1772,18 @@ void TravelMgr::logQuestError(uint32 errorNr, Quest* quest, uint32 objective, ui
 
     if (errorNr == 1)
     {
-        LOG_ERROR("playerbots", "任务 {} [{}] 需要 {} {} [{}] 但在世界中未找到。",
+        LOG_ERROR("playerbots", "Quest {} [{}] has {} {} [{}] but none is found in the world.",
                   quest->GetTitle().c_str(), quest->GetQuestId(), objective == 0 ? "quest giver" : "quest taker",
                   unitName.c_str(), unitId);
     }
     else if (errorNr == 2)
     {
-        LOG_ERROR("playerbots", "任务 {} [{}] 的目标 {} 需要 {} [{}] 但在世界中未找到。",
+        LOG_ERROR("playerbots", "Quest {} [{}] needs {} [{}] for objective {} but none is found in the world.",
                   quest->GetTitle().c_str(), quest->GetQuestId(), unitName.c_str(), unitId, objective);
     }
     else if (errorNr == 3)
     {
-        LOG_ERROR("playerbots", "任务 {} [{}] 需要物品 ID {} 但该物品不存在。", quest->GetTitle().c_str(),
+        LOG_ERROR("playerbots", "Quest {} [{}] needs itemId {} but no such item exists.", quest->GetTitle().c_str(),
                   quest->GetQuestId(), itemId);
     }
     else if (errorNr == 4)
@@ -1798,20 +1796,20 @@ void TravelMgr::logQuestError(uint32 errorNr, Quest* quest, uint32 objective, ui
     }
     else if (errorNr == 5)
     {
-        LOG_ERROR("playerbots", "任务 {} [{}] 的目标 {} 需要物品 {} [{}] 但在世界中未找到。",
+        LOG_ERROR("playerbots", "Quest {} [{}] needs item {} [{}] for objective {} but none is found in the world.",
                   quest->GetTitle().c_str(), quest->GetQuestId(), proto->Name1.c_str(), itemId, objective);
     }
     else if (errorNr == 6)
     {
-        LOG_ERROR("playerbots", "任务 {} [{}] 没有任务发布者。", quest->GetTitle().c_str(), quest->GetQuestId());
+        LOG_ERROR("playerbots", "Quest {} [{}] has no quest giver.", quest->GetTitle().c_str(), quest->GetQuestId());
     }
     else if (errorNr == 7)
     {
-        LOG_ERROR("playerbots", "任务 {} [{}] 没有任务交付者。", quest->GetTitle().c_str(), quest->GetQuestId());
+        LOG_ERROR("playerbots", "Quest {} [{}] has no quest taker.", quest->GetTitle().c_str(), quest->GetQuestId());
     }
     else if (errorNr == 8)
     {
-        LOG_ERROR("playerbots", "任务 {} [{}] 没有有效的任务目标。", quest->GetTitle().c_str(),
+        LOG_ERROR("playerbots", "Quest {} [{}] has no quest viable quest objective.", quest->GetTitle().c_str(),
                   quest->GetQuestId());
     }
 }
@@ -1829,11 +1827,11 @@ void TravelMgr::LoadQuestTravelTable()
 
     for (auto cQuest : cQuestMap)
     {
-        LOG_INFO("playerbots", "[任务 ID: {}]", cQuest.first);
+        LOG_INFO("playerbots", "[Quest id: {}]", cQuest.first);
 
         for (auto cObj : cQuest.second)
         {
-            LOG_INFO("playerbots", " [Objective 类型: {}]", cObj.first);
+            LOG_INFO("playerbots", " [Objective type: {}]", cObj.first);
 
             for (auto cCre : cObj.second)
             {
@@ -1882,7 +1880,7 @@ void TravelMgr::LoadQuestTravelTable()
 
     sort(questIds.begin(), questIds.end());
 
-    LOG_INFO("playerbots", "正在加载单位位置。");
+    LOG_INFO("playerbots", "Loading units locations.");
     for (auto& creatureData : WorldPosition().getCreaturesNear())
     {
         t_unit.type = 0;
@@ -1903,7 +1901,7 @@ void TravelMgr::LoadQuestTravelTable()
         unit.c = entryCount[unit.entry];
     }
 
-    LOG_INFO("playerbots", "正在加载游戏对象位置。");
+    LOG_INFO("playerbots", "Loading game object locations.");
     for (auto& gameobjectData : WorldPosition().getGameObjectsNear())
     {
         t_unit.type = 1;
@@ -1946,11 +1944,11 @@ void TravelMgr::LoadQuestTravelTable()
 
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", ">> 已加载 {} 个单位位置。", units.size());
+        LOG_INFO("playerbots", ">> Loaded {} units locations.", units.size());
     }
     else
     {
-        LOG_ERROR("playerbots", ">> 加载单位位置出错。");
+        LOG_ERROR("playerbots", ">> Error loading units locations.");
     }
 
     query = "SELECT 0, 0, id, quest FROM creature_queststarter UNION ALL SELECT 0, 1, id, quest FROM creature_questender
@@ -1972,11 +1970,11 @@ void TravelMgr::LoadQuestTravelTable()
 
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", ">> 已加载 {} 条关系。", relations.size());
+        LOG_INFO("playerbots", ">> Loaded {} relations.", relations.size());
     }
     else
     {
-        LOG_ERROR("playerbots", ">> 加载关系出错。");
+        LOG_ERROR("playerbots", ">> Error loading relations.");
     }
 
     query = "SELECT 0, ct.entry, item FROM creature_template ct JOIN creature_loot_template clt ON (ct.lootid =
@@ -1998,15 +1996,15 @@ void TravelMgr::LoadQuestTravelTable()
 
         } while (result->NextRow());
 
-        LOG_INFO("playerbots", ">> 已加载 {} 个掉落列表。", loots.size());
+        LOG_INFO("playerbots", ">> Loaded {} loot lists.", loots.size());
     }
     else
     {
-        LOG_ERROR("playerbots", ">> 加载掉落列表出错。");
+        LOG_ERROR("playerbots", ">> Error loading loot lists.");
     }
     */
 
-    LOG_INFO("playerbots", "正在加载任务数据。");
+    LOG_INFO("playerbots", "Loading quest data.");
 
     bool loadQuestData = true;
     if (loadQuestData)
@@ -2245,13 +2243,13 @@ void TravelMgr::LoadQuestTravelTable()
             }
         }
 
-        LOG_INFO("playerbots", ">> 已加载 {} 条任务详情。", questIds.size());
+        LOG_INFO("playerbots", ">> Loaded {} quest details.", questIds.size());
     }
     */
 
     WorldPosition point;
 
-    LOG_INFO("playerbots", "正在加载 RPG、刷怪和 Boss 位置。");
+    LOG_INFO("playerbots", "Loading Rpg, Grind and Boss locations.");
 
     // Rpg locations
     for (auto& u : units)
@@ -2326,7 +2324,7 @@ void TravelMgr::LoadQuestTravelTable()
         }
     }
 
-    LOG_INFO("playerbots", "正在加载探索位置。");
+    LOG_INFO("playerbots", "Loading Explore locations.");
 
     // Explore points
     for (auto& u : units)
@@ -2402,7 +2400,7 @@ void TravelMgr::LoadQuestTravelTable()
 
     if (reloadNavigationPoints)
     {
-        LOG_INFO("playerbots", "正在加载导航点");
+        LOG_INFO("playerbots", "Loading navigation points");
 
         //Npc nodes
 
@@ -2721,7 +2719,7 @@ void TravelMgr::LoadQuestTravelTable()
             TravelNode* node = TravelNodeMap::instance().addNode(&pos, pos.getAreaName(), true, true, false);
         }
 
-        LOG_INFO("playerbots", ">> 已加载 {} 个导航点。", TravelNodeMap::instance().getNodes().size());
+        LOG_INFO("playerbots", ">> Loaded {} navigation points.", TravelNodeMap::instance().getNodes().size());
     }
 
     TravelNodeMap::instance().calcMapOffset();
@@ -2796,7 +2794,7 @@ void TravelMgr::LoadQuestTravelTable()
             TravelNodeMap::instance().printMap();
         }
 
-        LOG_INFO("playerbots", ">> 已加载 {} 个节点的路径。", TravelNodeMap::instance().getNodes().size());
+        LOG_INFO("playerbots", ">> Loaded paths for {} nodes.", TravelNodeMap::instance().getNodes().size());
     }
 
     bool removeLowLinkNodes = false || fullNavPointReload || storeNavPointReload;
@@ -2827,7 +2825,7 @@ void TravelMgr::LoadQuestTravelTable()
         for (auto& node : remNodes)
             TravelNodeMap::instance().removeNode(node);
 
-        LOG_INFO("playerbots", ">> 已检查 {} 个节点。", TravelNodeMap::instance().getNodes().size());
+        LOG_INFO("playerbots", ">> Checked {} nodes.", TravelNodeMap::instance().getNodes().size());
     }
 
     bool cleanUpNodeLinks = false || fullNavPointReload || storeNavPointReload;
@@ -2852,7 +2850,7 @@ void TravelMgr::LoadQuestTravelTable()
              }
         }
 
-        LOG_INFO("playerbots", ">> 已清理 {} 个节点的路径。", TravelNodeMap::instance().getNodes().size());
+        LOG_INFO("playerbots", ">> Cleaned paths for {} nodes.", TravelNodeMap::instance().getNodes().size());
     }
 
     bool reCalculateCost = false || fullNavPointReload || storeNavPointReload;
@@ -2876,7 +2874,7 @@ void TravelMgr::LoadQuestTravelTable()
             }
         }
 
-        LOG_INFO("playerbots", ">> 已计算 {} 个节点的路径代价。", TravelNodeMap::instance().getNodes().size());
+        LOG_INFO("playerbots", ">> Calculated pathcost for {} nodes.", TravelNodeMap::instance().getNodes().size());
     }
 
     bool mirrorMissingPaths = true || fullNavPointReload || storeNavPointReload;
@@ -2906,7 +2904,7 @@ void TravelMgr::LoadQuestTravelTable()
             }
         }
 
-        LOG_INFO("playerbots", ">> 已为 {} 个节点补全反向路径。", TravelNodeMap::instance().getNodes().size());
+        LOG_INFO("playerbots", ">> Reversed missing paths for {} nodes.", TravelNodeMap::instance().getNodes().size());
     }
     */
 
@@ -3651,7 +3649,7 @@ void TravelMgr::LoadQuestTravelTable()
                         }
                     }
                     else
-                        out << "全部";
+                        out << "all";
 
                     out << "\n";
                 }
@@ -4361,7 +4359,7 @@ void TravelMgr::Init()
         PrepareDestinationCache();
     }
     sTravelNodeMap.InitTaxiGraph();
-    LOG_INFO("playerbots", "玩家机器人飞行路线图和目的地缓存已构建。");
+    LOG_INFO("playerbots", "Playerbots Taxi graph and destination cache built.");
 }
 
 TravelMgr::FlightMasterInfo const* TravelMgr::GetNearestFlightMasterInfo(Player* bot) const
@@ -4643,7 +4641,7 @@ void TravelMgr::PrepareDestinationCache()
     uint32 innkeepersCount = 0;
     uint32 bankerCount = 0;
 
-    LOG_INFO("playerbots", "正在为 {} 个等级准备目的地缓存...", maxLevel);
+    LOG_INFO("playerbots", "Preparing destination caches for {} levels...", maxLevel);
     // Temporary map to group creatures by entry and area
     std::map<std::tuple<uint16, int32, int32, int32>, std::vector<CreatureData>> tempLocsCache;
     std::map<uint32, std::map<uint32, std::vector<WorldLocation>>> tempCreatureCache;
@@ -4871,5 +4869,5 @@ void TravelMgr::PrepareDestinationCache()
             break;
         }
     }
-    LOG_INFO("playerbots", ">> 已收集 {} 个飞行管理员、{} 个旅店老板和 {} 个银行职员位置。", flightMastersCount, innkeepersCount, bankerCount);
+    LOG_INFO("playerbots", ">> {} flight masters and {} innkeepers and {} banker locations for level collected.", flightMastersCount, innkeepersCount, bankerCount);
 }

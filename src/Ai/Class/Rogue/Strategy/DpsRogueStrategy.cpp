@@ -5,7 +5,6 @@
  */
 
 #include "DpsRogueStrategy.h"
-
 #include "Playerbots.h"
 
 class DpsRogueStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
@@ -102,7 +101,7 @@ void DpsRogueStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         new TriggerNode(
             "slice and dice",
             {
-                NextAction("slice and dice", ACTION_HIGH + 2)
+                NextAction("slice and dice", ACTION_HIGH + 5)
             }
         )
     );
@@ -168,24 +167,6 @@ void DpsRogueStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             "kick on enemy healer",
             {
                 NextAction("kick on enemy healer", ACTION_INTERRUPT + 1)
-            }
-        )
-    );
-
-    triggers.push_back(
-        new TriggerNode(
-            "light aoe",
-            {
-                NextAction("blade flurry", ACTION_HIGH + 3)
-            }
-        )
-    );
-
-    triggers.push_back(
-        new TriggerNode(
-            "blade flurry",
-                {
-                NextAction("blade flurry", ACTION_HIGH + 2)
             }
         )
     );
@@ -362,7 +343,7 @@ void RogueAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         new TriggerNode(
             "light aoe",
             {
-                NextAction("blade flurry", ACTION_HIGH)
+                NextAction("blade flurry", ACTION_HIGH + 4)
             }
         )
     );
@@ -383,6 +364,15 @@ void RogueBoostStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             "adrenaline rush",
             {
                 NextAction("adrenaline rush", ACTION_HIGH + 2)
+            }
+        )
+    );
+
+    triggers.push_back(
+        new TriggerNode(
+            "blade flurry",
+            {
+                NextAction("blade flurry", ACTION_HIGH + 4)
             }
         )
     );

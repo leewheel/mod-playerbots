@@ -5,7 +5,6 @@
  */
 
 #include "LootStrategyAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "LootAction.h"
@@ -24,14 +23,14 @@ bool LootStrategyAction::Execute(Event event)
     {
         {
             std::ostringstream out;
-            out << "拾取策略：";
+            out << "Loot strategy: ";
             out << lootStrategy->Get()->GetName();
             botAI->TellMaster(out);
         }
 
         {
             std::ostringstream out;
-            out << "始终拾取物品：";
+            out << "Always loot items: ";
 
             for (uint32 itemId : alwaysLootItems)
             {
@@ -54,7 +53,7 @@ bool LootStrategyAction::Execute(Event event)
             lootStrategy->Set(LootStrategyValue::instance(strategy));
 
             std::ostringstream out;
-            out << "拾取策略已设为 " << lootStrategy->Get()->GetName();
+            out << "Loot strategy set to " << lootStrategy->Get()->GetName();
             botAI->TellMaster(out);
             return true;
         }
@@ -68,8 +67,8 @@ bool LootStrategyAction::Execute(Event event)
                 if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemid))
                 {
                     std::ostringstream out;
-                    out << (StoreLootAction::IsLootAllowed(itemid, botAI) ? "|cFF000000将拾取 "
-                                                                          : "|c00FF0000不拾取 ")
+                    out << (StoreLootAction::IsLootAllowed(itemid, botAI) ? "|cFF000000Will loot "
+                                                                          : "|c00FF0000Won't loot ")
                         << ChatHelper::FormatItem(proto);
                     botAI->TellMaster(out.str());
                 }
@@ -80,12 +79,12 @@ bool LootStrategyAction::Execute(Event event)
                 if (j != alwaysLootItems.end())
                     alwaysLootItems.erase(j);
 
-                botAI->TellMaster("已从始终拾取列表中移除物品");
+                botAI->TellMaster("Item(s) removed from always loot list");
             }
             else
             {
                 alwaysLootItems.insert(itemid);
-                botAI->TellMaster("已添加物品到始终拾取列表");
+                botAI->TellMaster("Item(s) added to always loot list");
             }
         }
     }

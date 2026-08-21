@@ -5,7 +5,6 @@
  */
 
 #include "SendMailAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "ItemVisitors.h"
@@ -47,7 +46,7 @@ bool SendMailAction::Execute(Event event)
     if (!sPlayerbotAIConfig.botSendMailEnabled)
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "send_mail_disabled", "我无法发送邮件", {}),
+                         "send_mail_disabled", "I cannot send mail", {}),
                      LANG_UNIVERSAL, tellTo);
         return false;
     }
@@ -55,7 +54,7 @@ bool SendMailAction::Execute(Event event)
     if (!mailboxFound && !randomBot)
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "send_mail_no_mailbox_nearby", "附近没有邮箱", {}),
+                         "send_mail_no_mailbox_nearby", "There is no mailbox nearby", {}),
                      LANG_UNIVERSAL, tellTo);
         return false;
     }
@@ -64,7 +63,7 @@ bool SendMailAction::Execute(Event event)
     if (ids.size() > 1)
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "send_mail_one_item_only", "你不能请求超过一件物品", {}),
+                         "send_mail_one_item_only", "You can not request more than one item", {}),
                      LANG_UNIVERSAL, tellTo);
         return false;
     }
@@ -78,7 +77,7 @@ bool SendMailAction::Execute(Event event)
         if (randomBot)
         {
             bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                             "send_mail_cannot_send_money", "我无法发送金币", {}),
+                             "send_mail_cannot_send_money", "I cannot send money", {}),
                          LANG_UNIVERSAL, tellTo);
             return false;
         }
@@ -86,21 +85,21 @@ bool SendMailAction::Execute(Event event)
         if (bot->GetMoney() < money)
         {
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "send_mail_not_enough_money", "我的金币不足", {}));
+                "send_mail_not_enough_money", "I don't have enough money", {}));
             return false;
         }
 
         std::ostringstream body;
-        body << "你好，" << receiver->GetName() << "，\n";
+        body << "Hello, " << receiver->GetName() << ",\n";
         body << "\n";
-        body << "这是你需要的金币。\n";
+        body << "Here is the money you asked for";
         body << "\n";
-        body << "谢谢，\n";
+        body << "Thanks,\n";
         body << bot->GetName() << "\n";
 
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
-        MailDraft draft("你需要的金币", body.str());
+        MailDraft draft("Money you asked for", body.str());
         draft.AddMoney(money);
         bot->SetMoney(bot->GetMoney() - money);
         draft.SendMailTo(trans, MailReceiver(receiver), MailSender(bot));
@@ -110,20 +109,20 @@ bool SendMailAction::Execute(Event event)
         std::ostringstream out;
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "send_mail_sending_to",
-            "正在发送邮件给 %receiver",
+            "Sending mail to %receiver",
             {{"%receiver", receiver->GetName()}}));
         return true;
     }
 
     std::ostringstream body;
-    body << "你好，" << receiver->GetName() << "，\n";
+    body << "Hello, " << receiver->GetName() << ",\n";
     body << "\n";
-    body << "这是你需要的物品。\n";
+    body << "Here are the item(s) you asked for";
     body << "\n";
-    body << "谢谢，\n";
+    body << "Thanks,\n";
     body << bot->GetName() << "\n";
 
-    MailDraft draft("你需要的物品", body.str());
+    MailDraft draft("Item(s) you asked for", body.str());
     for (ItemIds::iterator i = ids.begin(); i != ids.end(); i++)
     {
         FindItemByIdVisitor visitor(*i);
@@ -137,7 +136,7 @@ bool SendMailAction::Execute(Event event)
                 std::ostringstream out;
                 out << PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "send_mail_cannot_send_item",
-                    "无法发送 %item",
+                    "Cannot send %item",
                     {{"%item", ChatHelper::FormatItem(item->GetTemplate())}});
                 bot->Whisper(out.str(), LANG_UNIVERSAL, tellTo);
                 continue;
@@ -155,7 +154,7 @@ bool SendMailAction::Execute(Event event)
                     std::ostringstream out;
                     out << PlayerbotTextMgr::instance().GetBotTextOrDefault(
                         "send_mail_item_not_for_sale",
-                        "%item：此物品不可出售",
+                        "%item: it is not for sale",
                         {{"%item", ChatHelper::FormatItem(item->GetTemplate())}});
                     bot->Whisper(out.str(), LANG_UNIVERSAL, tellTo);
                     return false;
@@ -178,7 +177,7 @@ bool SendMailAction::Execute(Event event)
             std::ostringstream out;
             out << PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "send_mail_sent_to",
-                "已发送邮件给 %receiver",
+                "Sent mail to %receiver",
                 {{"%receiver", receiver->GetName()}});
             bot->Whisper(out.str(), LANG_UNIVERSAL, tellTo);
             return true;

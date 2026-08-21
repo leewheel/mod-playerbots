@@ -5,7 +5,6 @@
  */
 
 #include "LogLevelAction.h"
-
 #include "Event.h"
 #include "Playerbots.h"
 
@@ -18,11 +17,11 @@ bool LogLevelAction::Execute(Event event)
     if (param != "?")
     {
         value->Set(string2logLevel(param));
-        out << "我的日志等级已设为 " << logLevel2string(value->Get());
+        out << "My log level set to " << logLevel2string(value->Get());
     }
     else
     {
-        out << "我的日志等级为 " << logLevel2string(value->Get());
+        out << "My log level is " << logLevel2string(value->Get());
     }
 
     botAI->TellMaster(out);

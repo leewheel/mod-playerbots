@@ -5,7 +5,6 @@
  */
 
 #include "WhoAction.h"
-
 #include "AiFactory.h"
 #include "Event.h"
 #include "ItemVisitors.h"
@@ -55,7 +54,7 @@ bool WhoAction::Execute(Event event)
         if (!out.str().empty())
             out << ", ";
 
-        out << "与 " << botAI->GetMaster()->GetName() << " 同玩";
+        out << "playing with " << botAI->GetMaster()->GetName();
     }
 
     std::string const tell = out.str();
@@ -79,7 +78,7 @@ std::string const WhoAction::QueryTrade(std::string const text)
         if (!sellPrice)
             continue;
 
-        out << "出售 " << chat->FormatItem(sell->GetTemplate(), sell->GetCount()) << "，价格 "
+        out << "Selling " << chat->FormatItem(sell->GetTemplate(), sell->GetCount()) << " for "
             << chat->formatMoney(sellPrice);
         return out.str();
     }

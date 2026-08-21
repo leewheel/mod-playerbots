@@ -5,7 +5,6 @@
  */
 
 #include "ChangeStrategyAction.h"
-
 #include "Event.h"
 #include "PlayerbotRepository.h"
 #include "Playerbots.h"
@@ -54,7 +53,7 @@ bool ChangeNonCombatStrategyAction::Execute(Event event)
     {
         if (text.find("loot") != std::string::npos)
         {
-            botAI->TellError("除拾取和采集外，你可以更改任何策略");
+            botAI->TellError("You can change any strategy except loot");
             return false;
         }
     }

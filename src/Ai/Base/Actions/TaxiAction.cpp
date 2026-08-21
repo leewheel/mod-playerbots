@@ -4,13 +4,12 @@
  */
 
 #include "TaxiAction.h"
-
+#include "Config.h"
 #include "Event.h"
 #include "LastMovementValue.h"
+#include "PlayerbotAIConfig.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
-#include "PlayerbotAIConfig.h"
-#include "Config.h"
 
 bool TaxiAction::Execute(Event event)
 {
@@ -26,7 +25,7 @@ bool TaxiAction::Execute(Event event)
         movement.taxiNodes.clear();
         movement.Set(nullptr);
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "taxi_ready_next_flight", "我已准备好搭乘下一班飞行", {}));
+            "taxi_ready_next_flight", "I am ready for the next flight", {}));
         return true;
     }
 
@@ -60,7 +59,7 @@ bool TaxiAction::Execute(Event event)
         }
 
         // Only for follower bots
-        if (botAI->HasRealPlayerMaster())
+        if (botAI->HasGameClientMaster())
         {
             uint32 index = botAI->GetGroupSlotIndex(bot);
             uint32 delay = sPlayerbotAIConfig.botTaxiDelayMin +
@@ -87,7 +86,7 @@ bool TaxiAction::Execute(Event event)
 
         if (param == "?")
         {
-            botAI->TellMasterNoFacing("=== 飞行路线 ===");
+            botAI->TellMasterNoFacing("=== Taxi ===");
 
             uint32 index = 1;
             for (uint32 node : nodes)
@@ -124,7 +123,7 @@ bool TaxiAction::Execute(Event event)
             movement.taxiNodes.clear();
             movement.Set(nullptr);
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "taxi_cant_fly_with_you", "我无法与你一起飞行", {}));
+                "taxi_cant_fly_with_you", "I can't fly with you", {}));
             return false;
         }
 
@@ -132,6 +131,6 @@ bool TaxiAction::Execute(Event event)
     }
 
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-        "taxi_no_flightmaster_nearby", "找不到可对话的飞行管理员", {}));
+        "taxi_no_flightmaster_nearby", "Cannot find any flightmaster to talk", {}));
     return false;
 }

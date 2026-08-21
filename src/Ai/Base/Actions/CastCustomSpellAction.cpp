@@ -5,7 +5,6 @@
  */
 
 #include "CastCustomSpellAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "ItemUsageValue.h"
@@ -118,7 +117,7 @@ bool CastCustomSpellAction::Execute(Event event)
     std::ostringstream msg;
     if (!spell)
     {
-        msg << "未知法术 " << text;
+        msg << "Unknown spell " << text;
         botAI->TellError(msg.str());
         return false;
     }
@@ -126,7 +125,7 @@ bool CastCustomSpellAction::Execute(Event event)
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spell);
     if (!spellInfo)
     {
-        msg << "未知法术 " << text;
+        msg << "Unknown spell " << text;
         botAI->TellError(msg.str());
         return false;
     }
@@ -142,23 +141,23 @@ bool CastCustomSpellAction::Execute(Event event)
     }
 
     std::ostringstream spellName;
-    spellName << ChatHelper::FormatSpell(spellInfo) << " 于 ";
+    spellName << ChatHelper::FormatSpell(spellInfo) << " on ";
 
     bool const hasItemTarget = itemTarget &&
         (spellInfo->Targets & TARGET_FLAG_ITEM || spellInfo->Targets & TARGET_FLAG_GAMEOBJECT_ITEM);
 
     if (bot->GetTrader())
-        spellName << "交易物品";
+        spellName << "trade item";
     else if (hasItemTarget)
         spellName << chat->FormatItem(itemTarget->GetTemplate());
     else if (target != bot)
         spellName << target->GetName();
     else
-        spellName << "自身";
+        spellName << "self";
 
     if (!bot->GetTrader() && !botAI->CanCastSpell(spell, target, true, itemTarget))
     {
-        msg << "无法施放 " << spellName.str();
+        msg << "Cannot cast " << spellName.str();
         botAI->TellError(msg.str());
         return false;
     }
@@ -166,21 +165,21 @@ bool CastCustomSpellAction::Execute(Event event)
     bool result = spell ? botAI->CastSpell(spell, target, itemTarget) : botAI->CastSpell(text, target, itemTarget);
     if (result)
     {
-        msg << "正在施放 " << spellName.str();
+        msg << "Casting " << spellName.str();
 
         if (castCount > 1)
         {
             std::ostringstream cmd;
             cmd << castString(target) << " " << text << " " << (castCount - 1);
             botAI->HandleCommand(CHAT_MSG_WHISPER, cmd.str(), master);
-            msg << "|cffffff00（剩余 x" << (castCount - 1) << "）|r";
+            msg << "|cffffff00(x" << (castCount - 1) << " left)|r";
         }
 
         botAI->TellMasterNoFacing(msg.str());
     }
     else
     {
-        msg << "施放 " << spellName.str() << " 失败";
+        msg << "Cast " << spellName.str() << " is failed";
         botAI->TellError(msg.str());
     }
 
@@ -346,8 +345,8 @@ bool DisEnchantRandomItemAction::Execute(Event /*event*/)
 
     for (auto& item : items)
     {
-        // don't touch rare+ items if with real player/guild
-        if ((botAI->HasRealPlayerMaster() || botAI->IsInRealGuild()) &&
+        // Don't touch rare+ items if with real player/guild
+        if ((botAI->HasGameClientMaster() || botAI->IsInRealGuild()) &&
             item->GetTemplate()->Quality > ITEM_QUALITY_UNCOMMON)
             return false;
 

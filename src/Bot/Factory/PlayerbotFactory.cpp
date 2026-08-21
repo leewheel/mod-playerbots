@@ -4,12 +4,9 @@
  */
 
 #include "PlayerbotFactory.h"
-
-#include <array>
-#include <utility>
-
 #include "AccountMgr.h"
 #include "AiFactory.h"
+#include "AiObjectContext.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
 #include "DBCStores.h"
@@ -17,6 +14,7 @@
 #include "GuildMgr.h"
 #include "InventoryAction.h"
 #include "Item.h"
+#include "ItemPackets.h"
 #include "ItemTemplate.h"
 #include "ItemVisitors.h"
 #include "Log.h"
@@ -27,8 +25,8 @@
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
-#include "PlayerbotRepository.h"
 #include "PlayerbotGuildMgr.h"
+#include "PlayerbotRepository.h"
 #include "Playerbots.h"
 #include "QuestDef.h"
 #include "RandomItemMgr.h"
@@ -37,8 +35,8 @@
 #include "SharedDefines.h"
 #include "StatsWeightCalculator.h"
 #include "World.h"
-#include "AiObjectContext.h"
-#include "ItemPackets.h"
+#include <array>
+#include <utility>
 
 const uint64 diveMask = (1LL << 7) | (1LL << 44) | (1LL << 37) | (1LL << 38) | (1LL << 26) | (1LL << 30) | (1LL << 27) |
                         (1LL << 33) | (1LL << 24) | (1LL << 34);
@@ -58,7 +56,8 @@ std::list<uint32> PlayerbotFactory::classQuestIds;
 std::list<uint32> PlayerbotFactory::specialQuestIds;
 std::vector<uint32> PlayerbotFactory::enchantSpellIdCache;
 std::vector<uint32> PlayerbotFactory::enchantGemIdCache;
-std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::trainerIdCache;
+std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::classTrainerIdCache;
+std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::tradeskillTrainerIdCache;
 std::vector<uint32> PlayerbotFactory::ccBreakTrinketCache;
 
 namespace
@@ -618,6 +617,7 @@ void PlayerbotFactory::Randomize(bool incremental)
     LOG_DEBUG("playerbots", "{} randomizing {} (level {} class = {})...", (incremental ? "Incremental" : "Full"),
              bot->GetName().c_str(), level, bot->getClass());
     // LOG_DEBUG("playerbots", "Preparing to {} randomize...", (incremental ? "incremental" : "full"));
+    uint32 oldLevel = bot->GetLevel();
     Prepare();
     LOG_DEBUG("playerbots", "Resetting player...");
     PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Reset");
@@ -633,8 +633,9 @@ void PlayerbotFactory::Randomize(bool incremental)
         ClearSkills();
         ClearSpells();
         ResetQuests();
+
         if (!sPlayerbotAIConfig.equipAndSpecPersistence ||
-            level < uint32(sPlayerbotAIConfig.equipAndSpecPersistenceLevel))
+            level < uint32(sPlayerbotAIConfig.equipAndSpecPersistenceLevel) || level < oldLevel)
         {
             ClearAllItems();
         }
@@ -1135,7 +1136,7 @@ void PlayerbotFactory::InitPetTalents()
     Pet* pet = bot->GetPet();
     if (!pet)
     {
-        // LOG_INFO("playerbots", "{} init pet talents failed with no 宠物", bot->GetName().c_str());
+        // LOG_INFO("playerbots", "{} init pet talents failed with no pet", bot->GetName().c_str());
         return;
     }
     CreatureTemplate const* ci = pet->GetCreatureTemplate();
@@ -1314,7 +1315,7 @@ void PlayerbotFactory::InitPet()
             if (onlyWolf && itr->second.family != CREATURE_FAMILY_WOLF)
                 continue;
 
-            // Exclude configured 宠物 families
+            // Exclude configured pet families
             if (std::find(sPlayerbotAIConfig.excludedHunterPetFamilies.begin(),
                           sPlayerbotAIConfig.excludedHunterPetFamilies.end(),
                           itr->second.family) != sPlayerbotAIConfig.excludedHunterPetFamilies.end())
@@ -1367,7 +1368,7 @@ void PlayerbotFactory::InitPet()
             // visual effect for levelup
             pet->SetUInt32Value(UNIT_FIELD_LEVEL, bot->GetLevel());
 
-            // caster have 宠物 now
+            // caster have pet now
             bot->SetMinion(pet, true);
 
             pet->InitTalentForLevel();
@@ -2263,9 +2264,6 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
                         if (!proto)
                             continue;
 
-                        if (excludeHeirloom && proto->Quality == ITEM_QUALITY_HEIRLOOM)
-                            continue;
-
                         bool shouldCheckGS = desiredQuality > ITEM_QUALITY_NORMAL;
 
                         if (shouldCheckGS && gearScoreLimit != 0 &&
@@ -2423,7 +2421,7 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
             bool isTrinketSlot = (slot == EQUIPMENT_SLOT_TRINKET1 || slot == EQUIPMENT_SLOT_TRINKET2);
             calculator.SetExcludeResilience(isTrinketSlot);
 
-            if (Item* oldItem = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            if (bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
                 bot->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
 
             std::vector<std::pair<uint32, int32>>& ids = items[slot];
@@ -3042,9 +3040,6 @@ void PlayerbotFactory::UpdateTradeSkills()
 
 void PlayerbotFactory::InitSkills()
 {
-    //uint32 maxValue = level * 5; //not used, line marked for removal.
-    bot->UpdateSkillsForLevel();
-
     bot->SetSkill(SKILL_RIDING, 0, 0, 0);
     if (bot->GetLevel() >= sPlayerbotAIConfig.useGroundMountAtMinLevel)
         bot->learnSpell(33388);
@@ -3212,7 +3207,12 @@ void PlayerbotFactory::SetRandomSkill(uint16 id)
 
 void PlayerbotFactory::InitAvailableSpells()
 {
-    if (trainerIdCache[bot->getClass()].empty())
+    bool const includeTradeskills = sRandomPlayerbotMgr.IsRandomBot(bot);
+    std::unordered_map<uint32, std::vector<uint32>>& trainerIdCache =
+        includeTradeskills ? tradeskillTrainerIdCache : classTrainerIdCache;
+    std::vector<uint32>& trainerIds = trainerIdCache[bot->getClass()];
+
+    if (trainerIds.empty())
     {
         CreatureTemplateContainer const* creatureTemplateContainer = sObjectMgr->GetCreatureTemplates();
         for (CreatureTemplateContainer::const_iterator i = creatureTemplateContainer->begin();
@@ -3223,18 +3223,19 @@ void PlayerbotFactory::InitAvailableSpells()
             if (!trainer)
                 continue;
 
-            if (trainer->GetTrainerType() != Trainer::Type::Tradeskill &&
-                trainer->GetTrainerType() != Trainer::Type::Class)
+            Trainer::Type const trainerType = trainer->GetTrainerType();
+            if (trainerType != Trainer::Type::Class &&
+                !(includeTradeskills && trainerType == Trainer::Type::Tradeskill))
                 continue;
 
-            if (trainer->GetTrainerType() == Trainer::Type::Class &&
-                !trainer->IsTrainerValidForPlayer(bot))
+            if (trainerType == Trainer::Type::Class && !trainer->IsTrainerValidForPlayer(bot))
                 continue;
 
-            trainerIdCache[bot->getClass()].push_back(i->first);
+            trainerIds.push_back(i->first);
         }
     }
-    for (uint32 trainerId : trainerIdCache[bot->getClass()])
+
+    for (uint32 trainerId : trainerIds)
     {
         Trainer::Trainer* trainer = sObjectMgr->GetTrainer(trainerId);
 
@@ -3677,6 +3678,33 @@ void PlayerbotFactory::InitAmmo()
 uint32 PlayerbotFactory::CalcMixedGearScore(uint32 gs, uint32 quality)
 {
     return gs * PlayerbotAI::GetItemScoreMultiplier(ItemQualities(quality));
+}
+
+void PlayerbotFactory::DestroyEquippedGear(Player* bot)
+{
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+    {
+        if (slot == EQUIPMENT_SLOT_TABARD || slot == EQUIPMENT_SLOT_BODY)
+            continue;
+        if (bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            bot->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+    }
+}
+
+void PlayerbotFactory::AutoGear(Player* bot, uint32 itemQuality, uint32 ilvl, bool incremental, bool secondChance,
+                                bool applyFinishers)
+{
+    uint32 gs = ilvl == 0 ? 0 : CalcMixedGearScore(ilvl, itemQuality);
+    PlayerbotFactory factory(bot, bot->GetLevel(), itemQuality, gs);
+    factory.InitEquipment(incremental, secondChance);
+
+    if (!applyFinishers)
+        return;
+
+    factory.InitAmmo();
+    if (bot->GetLevel() >= sPlayerbotAIConfig.minEnchantingBotLevel)
+        factory.ApplyEnchantAndGemsNew();
+    bot->DurabilityRepairAll(false, 1.0f, false);
 }
 
 void PlayerbotFactory::InitMounts()
@@ -4742,7 +4770,6 @@ void PlayerbotFactory::InitImmersive()
 
 void PlayerbotFactory::InitArenaTeam()
 {
-
     if (!sPlayerbotAIConfig.IsInRandomAccountList(bot->GetSession()->GetAccountId()))
         return;
 
@@ -4762,14 +4789,10 @@ void PlayerbotFactory::InitArenaTeam()
                 {
                     Player* bot = ObjectAccessor::FindPlayer(arenateam->GetCaptain());
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-                    if (!botAI || botAI->IsRealPlayer())
-                    {
+                    if (!botAI || IsSelfBot(bot))
                         continue;
-                    }
                     else
-                    {
                         arenateam->Disband(nullptr);
-                    }
                 }
             }
 
@@ -4784,83 +4807,94 @@ void PlayerbotFactory::InitArenaTeam()
     std::vector<uint32> arenateams;
     for (std::vector<uint32>::iterator i = sPlayerbotAIConfig.randomBotArenaTeams.begin();
          i != sPlayerbotAIConfig.randomBotArenaTeams.end(); ++i)
-        arenateams.push_back(*i);
+         {
+             arenateams.push_back(*i);
+         }
 
-    if (arenateams.empty())
-    {
-        LOG_ERROR("playerbots", "No random arena team available");
-        return;
-    }
+         if (arenateams.empty())
+         {
+             LOG_ERROR("playerbots", "No random arena team available");
+             return;
+         }
 
-    while (!arenateams.empty())
-    {
-        int index = urand(0, arenateams.size() - 1);
-        uint32 arenateamID = arenateams[index];
-        ArenaTeam* arenateam = sArenaTeamMgr->GetArenaTeamById(arenateamID);
-        if (!arenateam)
-        {
-            LOG_ERROR("playerbots", "Invalid arena team {}", arenateamID);
-            arenateams.erase(arenateams.begin() + index);
-            continue;
-        }
+         while (!arenateams.empty())
+         {
+             int index = urand(0, arenateams.size() - 1);
+             uint32 arenateamID = arenateams[index];
+             ArenaTeam* arenateam = sArenaTeamMgr->GetArenaTeamById(arenateamID);
+             if (!arenateam)
+             {
+                 LOG_ERROR("playerbots", "Invalid arena team {}", arenateamID);
+                 arenateams.erase(arenateams.begin() + index);
+                 continue;
+             }
 
-        if (arenateam->GetMembersSize() < ((uint32)arenateam->GetType()) && bot->GetLevel() >= 70)
-        {
-            ObjectGuid capt = arenateam->GetCaptain();
-            Player* botcaptain = ObjectAccessor::FindPlayer(capt);
+             if (arenateam->GetMembersSize() < ((uint32)arenateam->GetType()) && bot->GetLevel() >= 70)
+             {
+                 ObjectGuid capt = arenateam->GetCaptain();
+                 Player* botcaptain = ObjectAccessor::FindPlayer(capt);
 
-            // To avoid bots removing each other from groups when queueing, force them to only be in one team
-            for (uint32 arena_slot = 0; arena_slot < MAX_ARENA_SLOT; ++arena_slot)
-            {
-                uint32 arenaTeamId = bot->GetArenaTeamId(arena_slot);
-                if (!arenaTeamId)
-                    continue;
+                 // To avoid bots removing each other from groups when queueing, force them to only be in one team
+                 for (uint32 arena_slot = 0; arena_slot < MAX_ARENA_SLOT; ++arena_slot)
+                 {
+                     uint32 arenaTeamId = bot->GetArenaTeamId(arena_slot);
+                     if (!arenaTeamId)
+                         continue;
 
-                ArenaTeam* team = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
-                if (team)
-                {
-                    if (sCharacterCache->GetCharacterArenaTeamIdByGuid(bot->GetGUID(), team->GetSlot()) != 0)
-                    {
-                        return;
-                    }
-                    return;
-                }
-            }
+                     ArenaTeam* team = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
+                     if (team)
+                     {
+                         if (sCharacterCache->GetCharacterArenaTeamIdByGuid(bot->GetGUID(), team->GetSlot()) != 0)
+                         {
+                             return;
+                         }
+                         return;
+                     }
+                 }
 
-            if (botcaptain && botcaptain->GetTeamId() == bot->GetTeamId())  // need?
-            {
-                // Add bot to arena team
-                arenateam->AddMember(bot->GetGUID());
+                 if (botcaptain && botcaptain->GetTeamId() == bot->GetTeamId())  // need?
+                 {
+                     // Skip if already a member
+                     for (ArenaTeamMember const& member : arenateam->GetMembers())
+                     {
+                         if (member.Guid == bot->GetGUID())
+                         {
+                             return;
+                         }
+                     }
 
-                // Only synchronize ratings once the team is full (avoid redundant work)
-                // The captain was added with incorrect ratings when the team was created,
-                // so we fix everyone's ratings once the roster is complete
-                if (arenateam->GetMembersSize() >= (uint32)arenateam->GetType())
-                {
-                    uint32 teamRating = arenateam->GetRating();
+                     // Add bot to arena team
+                     arenateam->AddMember(bot->GetGUID());
 
-                    // Use SetRatingForAll to align all members with team rating
-                    arenateam->SetRatingForAll(teamRating);
+                     // Only synchronize ratings once the team is full (avoid redundant work)
+                     // The captain was added with incorrect ratings when the team was created,
+                     // so we fix everyone's ratings once the roster is complete
+                     if (arenateam->GetMembersSize() >= (uint32)arenateam->GetType())
+                     {
+                         uint32 teamRating = arenateam->GetRating();
 
-                    // For bot-only teams, keep MMR synchronized with team rating
-                    // This ensures matchmaking reflects the artificial team strength (1000-2000 range)
-                    // instead of being influenced by the global CONFIG_ARENA_START_MATCHMAKER_RATING
-                    for (auto& member : arenateam->GetMembers())
-                    {
-                        // Set MMR to match personal rating (which already matches team rating)
-                        member.MatchMakerRating = member.PersonalRating;
-                        member.MaxMMR = std::max(member.MaxMMR, member.PersonalRating);
-                    }
-                    // Force save all member data to database
-                    arenateam->SaveToDB(true);
-                }
-            }
-        }
+                         // Use SetRatingForAll to align all members with team rating
+                         arenateam->SetRatingForAll(teamRating);
 
-        arenateams.erase(arenateams.begin() + index);
-    }
+                         // For bot-only teams, keep MMR synchronized with team rating
+                         // This ensures matchmaking reflects the artificial team strength (1000-2000 range)
+                         // instead of being influenced by the global CONFIG_ARENA_START_MATCHMAKER_RATING
+                         for (auto& member : arenateam->GetMembers())
+                         {
+                             // Set MMR to match personal rating (which already matches team rating)
+                             member.MatchMakerRating = member.PersonalRating;
+                             member.MaxMMR = std::max(member.MaxMMR, member.PersonalRating);
+                         }
+                         // Force save all member data to database
+                         arenateam->SaveToDB(true);
+                     }
+                 }
+             }
 
-    // bot->SaveToDB(false, false);
+             arenateams.erase(arenateams.begin() + index);
+         }
+
+         // bot->SaveToDB(false, false);
 }
 
 void PlayerbotFactory::ApplyEnchantTemplate()

@@ -5,18 +5,18 @@
  */
 
 #include "GenericActions.h"
-#include "PlayerbotAI.h"
-#include "Player.h"
+#include "CharmInfo.h"
+#include "CreatureAI.h"
 #include "Pet.h"
+#include "Player.h"
+#include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotTextMgr.h"
-#include "CreatureAI.h"
 #include "Playerbots.h"
-#include "CharmInfo.h"
-#include "SpellMgr.h"
 #include "SpellInfo.h"
-#include <vector>
+#include "SpellMgr.h"
 #include <algorithm>
+#include <vector>
 
 enum PetSpells
 {
@@ -115,9 +115,9 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
         }
     }
 
-    // Debug message if 宠物 spells have been toggled and debug is enabled
+    // Debug message if pet spells have been toggled and debug is enabled
     if (toggled && sPlayerbotAIConfig.petChatCommandDebug == 1)
-        botAI->TellMaster("宠物自动施法已切换。");
+        botAI->TellMaster("Pet autocast spells have been toggled.");
 
     return toggled;
 }
@@ -128,7 +128,7 @@ bool PetAttackAction::Execute(Event /*event*/)
     if (!pet)
         return false;
 
-    // Do not attack if the pet's stance is set to "被动".
+    // Do not attack if the pet's stance is set to "passive".
     if (pet->GetReactState() == REACT_PASSIVE)
         return false;
 
@@ -140,7 +140,7 @@ bool PetAttackAction::Execute(Event /*event*/)
         return false;
 
     // This section has been commented because it was overriding the
-    // 宠物's stance to "被动" every time the attack action was executed.
+    // pet's stance to "passive" every time the attack action was executed.
     // pet->SetReactState(REACT_PASSIVE);
 
     pet->ClearUnitState(UNIT_STATE_FOLLOW);
@@ -159,62 +159,62 @@ bool PetAttackAction::Execute(Event /*event*/)
 
 bool SetPetStanceAction::Execute(Event /*event*/)
 {
-    // Prepare a list to hold all controlled 宠物 and 守卫 creatures
+    // Prepare a list to hold all controlled pet and guardian creatures
     std::vector<Creature*> targets;
 
-    // Add the bot's main 宠物 (if it exists) to the target list
+    // Add the bot's main pet (if it exists) to the target list
     Pet* pet = bot->GetPet();
     if (pet)
         targets.push_back(pet);
 
-    // Loop through all units controlled by the bot (could be 宠物s, 守卫s, etc.)
+    // Loop through all units controlled by the bot (could be pets, guardians, etc.)
     for (Unit::ControlSet::const_iterator itr = bot->m_Controlled.begin(); itr != bot->m_Controlled.end(); ++itr)
     {
         // Only add creatures (skip players, vehicles, etc.)
         Creature* creature = dynamic_cast<Creature*>(*itr);
         if (!creature)
             continue;
-        // Avoid adding the main 宠物 twice
+        // Avoid adding the main pet twice
         if (pet && creature == pet)
             continue;
         targets.push_back(creature);
     }
 
-    // If there are no controlled 宠物s or 守卫s, notify the player and exit
+    // If there are no controlled pets or guardians, notify the player and exit
     if (targets.empty())
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_no_pet_error", "你没有宠物或守卫宠物。", {}));
+            "pet_no_pet_error", "You have no pet or guardian pet.", {}));
         return false;
     }
 
-    // Get the default 宠物 stance from the configuration
+    // Get the default pet stance from the configuration
     int32 stance = sPlayerbotAIConfig.defaultPetStance;
     ReactStates react = REACT_DEFENSIVE;
-    std::string stanceText = "防御（来自配置，回退）";
+    std::string stanceText = "defensive (from config, fallback)";
 
     // Map the config stance integer to a ReactStates value and a message
     switch (stance)
     {
         case 0:
             react = REACT_PASSIVE;
-            stanceText = "被动（来自配置）";
+            stanceText = "passive (from config)";
             break;
         case 1:
             react = REACT_DEFENSIVE;
-            stanceText = "防御（来自配置）";
+            stanceText = "defensive (from config)";
             break;
         case 2:
             react = REACT_AGGRESSIVE;
-            stanceText = "主动（来自配置）";
+            stanceText = "aggressive (from config)";
             break;
         default:
             react = REACT_DEFENSIVE;
-            stanceText = "防御（来自配置，回退）";
+            stanceText = "defensive (from config, fallback)";
             break;
     }
 
-    // Apply the stance to all target creatures (宠物s/守卫s)
+    // Apply the stance to all target creatures (pets/guardians)
     for (Creature* target : targets)
     {
         target->SetReactState(react);
@@ -226,7 +226,7 @@ bool SetPetStanceAction::Execute(Event /*event*/)
 
     // If debug is enabled in config, inform the master of the new stance
     if (sPlayerbotAIConfig.petChatCommandDebug == 1)
-        botAI->TellMaster("宠物姿态已设为 " + stanceText + "（已应用于所有宠物/守卫）。");
+        botAI->TellMaster("Pet stance set to " + stanceText + " (applied to all pets/guardians).");
 
     return true;
 }

@@ -1,9 +1,15 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "TradeStatusExtendedAction.h"
 #include "Event.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
-#include "WorldPacket.h"
 #include "TradeData.h"
+#include "WorldPacket.h"
 
 bool TradeStatusExtendedAction::Execute(Event event)
 {
@@ -19,9 +25,9 @@ bool TradeStatusExtendedAction::Execute(Event event)
     p.rpos(0);
 
     uint8 isTraderData;
-    uint32 未知1, slotCount1, slotCount2, tradeGold, spellCast;
+    uint32 unknown1, slotCount1, slotCount2, tradeGold, spellCast;
     p >> isTraderData;
-    p >> 未知1;
+    p >> unknown1;
     p >> slotCount1;
     p >> slotCount2;
     p >> tradeGold;
@@ -76,7 +82,7 @@ bool TradeStatusExtendedAction::Execute(Event event)
             }
             else
             {
-                botAI->TellMaster("我无法解锁此物品。");
+                botAI->TellMaster("I can't unlock this item.");
             }
         }
     }

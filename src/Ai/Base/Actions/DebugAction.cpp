@@ -5,14 +5,13 @@
  */
 
 #include "DebugAction.h"
-
 #include "ChooseTravelTargetAction.h"
 #include "MapMgr.h"
-#include "TravelMgr.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
-#include "SpellMgr.h"
 #include "Spell.h"
+#include "SpellMgr.h"
+#include "TravelMgr.h"
 
 bool DebugAction::Execute(Event event)
 {
@@ -80,7 +79,7 @@ bool DebugAction::Execute(Event event)
             TravelNodeRoute route = TravelNodeMap::instance().getRoute(botPos, *points.front(), beginPath, bot);
 
             std::ostringstream out;
-            out << "正在前往 " << dest->getTitle() << ": ";
+            out << "Traveling to " << dest->getTitle() << ": ";
 
             for (auto node : route.getNodes())
             {
@@ -93,7 +92,7 @@ bool DebugAction::Execute(Event event)
         }
         else
         {
-            botAI->TellMasterNoFacing("未找到目的地 " + destination);
+            botAI->TellMasterNoFacing("Destination " + destination + " not found.");
             return true;
         }
     }
@@ -105,7 +104,7 @@ bool DebugAction::Execute(Event event)
 
         if (!quest)
         {
-            botAI->TellMasterNoFacing("未找到任务 " + text.substr(6));
+            botAI->TellMasterNoFacing("Quest " + text.substr(6) + " not found.");
             return false;
         }
 
@@ -165,7 +164,7 @@ bool DebugAction::Execute(Event event)
     else if (text.find("bquest") != std::string::npos)
     {
         std::ostringstream out;
-        out << "异常任务：";
+        out << "bad quests:";
 
         // uint32 noT = 0, noG = 0, noO = 0; //not used, line marked for removal.
 
@@ -206,7 +205,7 @@ bool DebugAction::Execute(Event event)
             endNode->setLinked(false);
         }
 
-        botAI->TellMasterNoFacing("节点 " + name + " 已创建。");
+        botAI->TellMasterNoFacing("Node " + name + " created.");
 
         TravelNodeMap::instance().setHasToGen();
 
@@ -223,12 +222,12 @@ bool DebugAction::Execute(Event event)
 
         if (startNode->isImportant())
         {
-            botAI->TellMasterNoFacing("节点无法移除。");
+            botAI->TellMasterNoFacing("Node can not be removed.");
         }
 
         TravelNodeMap::instance().m_nMapMtx.lock();
         TravelNodeMap::instance().removeNode(startNode);
-        botAI->TellMasterNoFacing("节点已移除。");
+        botAI->TellMasterNoFacing("Node removed.");
         TravelNodeMap::instance().m_nMapMtx.unlock();
 
         TravelNodeMap::instance().setHasToGen();
@@ -496,7 +495,7 @@ bool DebugAction::Execute(Event event)
                 if (wpCreature)
                 {
                     std::ostringstream out;
-                    out << "效果 ";
+                    out << "effect ";
                     out << effect;
 
                     const std::string& Cname = out.str();

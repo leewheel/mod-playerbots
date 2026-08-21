@@ -5,10 +5,9 @@
  */
 
 #include "ListSpellsAction.h"
-
 #include "Event.h"
-#include "Playerbots.h"
 #include "PlayerbotSpellRepository.h"
+#include "Playerbots.h"
 
 using SpellListEntry = std::pair<uint32, std::string>;
 
@@ -285,11 +284,11 @@ bool ListSpellsAction::Execute(Event event)
     if (spells.empty())
     {
         // CHANGE: Give early feedback when no spells match the filter.
-        botAI->TellMaster("未找到法术。");
+        botAI->TellMaster("No spells found.");
         return true;
     }
 
-    botAI->TellMaster("=== 法术 ===");
+    botAI->TellMaster("=== Spells ===");
 
     std::sort(spells.begin(), spells.end(), CompareSpells);
 

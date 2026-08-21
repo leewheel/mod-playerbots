@@ -5,7 +5,6 @@
  */
 
 #include "ListQuestsActions.h"
-
 #include "Event.h"
 #include "Playerbots.h"
 
@@ -45,19 +44,19 @@ void ListQuestsAction::ListQuests(QuestListFilter filter, QuestTravelDetail trav
     bool showCompleted = filter & QUEST_LIST_FILTER_COMPLETED;
 
     if (showIncompleted)
-        botAI->TellMaster("--- 未完成任务 ---");
+        botAI->TellMaster("--- Incompleted quests ---");
 
     uint32 incompleteCount = ListQuests(false, !showIncompleted, travelDetail);
 
     if (showCompleted)
-        botAI->TellMaster("--- 已完成任务 ---");
+        botAI->TellMaster("--- Completed quests ---");
 
     uint32 completeCount = ListQuests(true, !showCompleted, travelDetail);
 
-    botAI->TellMaster("--- 摘要 ---");
+    botAI->TellMaster("--- Summary ---");
 
     std::ostringstream out;
-    out << "总计：" << (completeCount + incompleteCount) << " / 25（未完成：" << incompleteCount
+    out << "Total: " << (completeCount + incompleteCount) << " / 25 (incompleted: " << incompleteCount
         << ", completed: " << completeCount << ")";
     botAI->TellMaster(out);
 }

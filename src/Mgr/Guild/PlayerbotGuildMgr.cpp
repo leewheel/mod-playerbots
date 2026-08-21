@@ -1,9 +1,15 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "PlayerbotGuildMgr.h"
-#include "Player.h"
-#include "PlayerbotAIConfig.h"
 #include "DatabaseEnv.h"
 #include "Guild.h"
 #include "GuildMgr.h"
+#include "Player.h"
+#include "PlayerbotAIConfig.h"
 #include "ScriptMgr.h"
 
 void PlayerbotGuildMgr::Init()
@@ -21,14 +27,14 @@ bool PlayerbotGuildMgr::CreateGuild(Player* player, std::string guildName)
     Guild* guild = new Guild();
     if (!guild->Create(player, guildName))
     {
-        LOG_ERROR("playerbots", "创建公会 [ {} ] 失败，会长 [ {} ]", guildName,
+        LOG_ERROR("playerbots", "Error creating guild [ {} ] with leader [ {} ]", guildName,
             player->GetName());
         delete guild;
         return false;
     }
     sGuildMgr->AddGuild(guild);
 
-    LOG_DEBUG("playerbots", "公会已创建: id={} name='{}'", guild->GetId(), guildName);
+    LOG_DEBUG("playerbots", "Guild created: id={} name='{}'", guild->GetId(), guildName);
     SetGuildEmblem(guild->GetId());
 
     GuildCache entry;
@@ -116,11 +122,11 @@ std::string PlayerbotGuildMgr::AssignToGuild(Player* player)
         {
             if (_guildNames[key])
             {
-                LOG_INFO("playerbots","正在将玩家 [{}] 分配到公会 [{}]", player->GetName(), key);
+                LOG_INFO("playerbots","Assigning player [{}] to guild [{}]", player->GetName(), key);
                 return key;
             }
         }
-        LOG_ERROR("playerbots","没有可用的公会名称了。");
+        LOG_ERROR("playerbots","No available guild names left.");
     }
     return "";
 }
@@ -158,13 +164,13 @@ void PlayerbotGuildMgr::ResetGuildCache()
 
 void PlayerbotGuildMgr::LoadGuildNames()
 {
-    LOG_INFO("playerbots", "正在从 playerbots_guild_names 加载公会名称...");
+    LOG_INFO("playerbots", "Loading guild names from playerbots_guild_names...");
 
     QueryResult result = CharacterDatabase.Query("SELECT name_id, name FROM playerbots_guild_names");
 
     if (!result)
     {
-        LOG_ERROR("playerbots", "playerbots_guild_names 中没有记录，列表为空。");
+        LOG_ERROR("playerbots", "No entries found in playerbots_guild_names. List is empty.");
         return;
     }
 
@@ -181,7 +187,7 @@ void PlayerbotGuildMgr::LoadGuildNames()
     std::mt19937 g(rd());
 
     std::shuffle(_shuffled_guild_keys.begin(), _shuffled_guild_keys.end(), g);
-    LOG_INFO("playerbots", "已从 playerbots_guild_names 表加载 {} 条公会记录。", _guildNames.size());
+    LOG_INFO("playerbots", "Loaded {} guild entries from playerbots_guild_names table.", _guildNames.size());
 }
 
 void PlayerbotGuildMgr::ValidateGuildCache()
@@ -189,7 +195,7 @@ void PlayerbotGuildMgr::ValidateGuildCache()
     QueryResult result = CharacterDatabase.Query("SELECT guildid, name FROM guild");
     if (!result)
     {
-        LOG_ERROR("playerbots", "数据库中未找到公会，正在重置公会缓存");
+        LOG_ERROR("playerbots", "No guilds found in database, resetting guild cache");
         ResetGuildCache();
         return;
     }
@@ -241,7 +247,7 @@ void PlayerbotGuildMgr::ValidateGuildCache()
 
 void PlayerbotGuildMgr::DeleteBotGuilds()
 {
-    LOG_INFO("playerbots", "正在删除随机机器人公会...");
+    LOG_INFO("playerbots", "Deleting random bot guilds...");
     std::vector<uint32> randomBots;
 
     PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_RANDOM_BOTS_BOT);
@@ -261,7 +267,7 @@ void PlayerbotGuildMgr::DeleteBotGuilds()
         if (Guild* guild = sGuildMgr->GetGuildByLeader(ObjectGuid::Create<HighGuid::Player>(*i)))
             guild->Disband();
     }
-    LOG_INFO("playerbots", "随机机器人公会已删除");
+    LOG_INFO("playerbots", "Random bot guilds deleted");
 }
 
 bool PlayerbotGuildMgr::IsRealGuild(Player* bot)
@@ -284,6 +290,8 @@ bool PlayerbotGuildMgr::IsRealGuild(uint32 guildId)
     if (it == _guildCache.end())
         return false;
 
+    // A "real guild" is one whose leader's account is not in the bot accounts list.
+    // Guild membership by real players does not affect this, only the leader's account type does.
     return it->second.hasRealPlayer;
 }
 
@@ -301,7 +309,7 @@ class BotGuildCacheWorldScript : public WorldScript
             {
                 _validateTimer = 0;
                 PlayerbotGuildMgr::instance().ValidateGuildCache();
-                LOG_INFO("playerbots", "已计划公会缓存验证");
+                LOG_INFO("playerbots", "Scheduled guild cache validation");
             }
         }
 

@@ -5,7 +5,6 @@
  */
 
 #include "RepairAllAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "Playerbots.h"
@@ -46,7 +45,7 @@ bool RepairAllAction::Execute(Event /*event*/)
         if (totalCost > 0)
         {
             std::ostringstream out;
-            out << "修理：" << chat->formatMoney(totalCost) << "（" << unit->GetName() << "）";
+            out << "Repair: " << chat->formatMoney(totalCost) << " (" << unit->GetName() << ")";
             botAI->TellMasterNoFacing(out.str());
 
             bot->PlayDistanceSound(1116);
@@ -57,6 +56,6 @@ bool RepairAllAction::Execute(Event /*event*/)
         return true;
     }
 
-    botAI->TellError("找不到可修理的 NPC");
+    botAI->TellError("Cannot find any npc to repair at");
     return false;
 }

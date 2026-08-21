@@ -5,7 +5,6 @@
  */
 
 #include "CustomStrategyEditAction.h"
-
 #include "CustomStrategy.h"
 #include "Event.h"
 #include "Playerbots.h"
@@ -32,7 +31,7 @@ bool CustomStrategyEditAction::Execute(Event event)
 
 bool CustomStrategyEditAction::PrintHelp()
 {
-    botAI->TellMaster("=== 自定义策略 ===");
+    botAI->TellMaster("=== Custom strategies ===");
 
     uint32 owner = botAI->GetBot()->GetGUID().GetCounter();
 
@@ -49,7 +48,7 @@ bool CustomStrategyEditAction::PrintHelp()
         } while (result->NextRow());
     }
 
-    botAI->TellMaster("用法: cs <名称> <索引> <命令>");
+    botAI->TellMaster("Usage: cs <name> <idx> <command>");
     return false;
 }
 

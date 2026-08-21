@@ -5,7 +5,6 @@
  */
 
 #include "TellItemCountAction.h"
-
 #include "Event.h"
 #include "ItemCountValue.h"
 #include "Playerbots.h"
@@ -24,7 +23,7 @@ bool TellItemCountAction::Execute(Event event)
         soulbound[proto->ItemId] = item->IsSoulBound();
     }
 
-    botAI->TellMaster("=== 背包 ===");
+    botAI->TellMaster("=== Inventory ===");
     for (std::map<uint32, uint32>::iterator i = itemMap.begin(); i != itemMap.end(); ++i)
     {
         ItemTemplate const* proto = sObjectMgr->GetItemTemplate(i->first);

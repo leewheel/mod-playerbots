@@ -5,7 +5,6 @@
  */
 
 #include "TellMasterAction.h"
-
 #include "Event.h"
 #include "Playerbots.h"
 
@@ -17,7 +16,7 @@ bool TellMasterAction::Execute(Event /*event*/)
 
 bool OutOfReactRangeAction::Execute(Event /*event*/)
 {
-    botAI->TellMaster("等等我！");
+    botAI->TellMaster("Wait for me!");
     return true;
 }
 

@@ -5,16 +5,13 @@
  */
 
 #include "TellGlyphsAction.h"
-
 #include "Event.h"
-#include "Playerbots.h"
-
 #include "ObjectMgr.h"
+#include "Playerbots.h"
 #include "SpellMgr.h"
 #include "World.h"
-
-#include <unordered_map>
 #include <sstream>
+#include <unordered_map>
 
 namespace
 {
@@ -106,9 +103,9 @@ bool TellGlyphsAction::Execute(Event event)
     // 4. Send chat messages
     //-----------------------------------------------------------------
     if (first)                                       // no glyphs
-        botAI->TellMaster("未装备雕文");
+        botAI->TellMaster("No glyphs equipped");
     else
-        botAI->TellMaster(std::string("雕文: ") + list.str());
+        botAI->TellMaster(std::string("Glyphs: ") + list.str());
 
     return true;
 }

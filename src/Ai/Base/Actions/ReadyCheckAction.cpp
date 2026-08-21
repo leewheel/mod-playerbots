@@ -4,13 +4,12 @@
  * or (at your option) any later version.
  */
 
-#include <memory>
-#include <mutex>
-#include <vector>
-
 #include "ReadyCheckAction.h"
 #include "Event.h"
 #include "Playerbots.h"
+#include <memory>
+#include <mutex>
+#include <vector>
 
 std::string const formatPercent(std::string const name, uint8 value, float percent)
 {
@@ -98,19 +97,19 @@ public:
         {
             if (!bot->GetUInt32Value(PLAYER_AMMO_ID))
             {
-                botAI->TellError("弹药不足！");
+                botAI->TellError("Out of ammo!");
                 return false;
             }
 
             if (!bot->GetPet())
             {
-                botAI->TellError("没有宠物！");
+                botAI->TellError("No pet!");
                 return false;
             }
 
             if (bot->GetPet()->GetHappinessState() == UNHAPPY)
             {
-                botAI->TellError("宠物心情不佳！");
+                botAI->TellError("Pet is unhappy!");
                 return false;
             }
         }
