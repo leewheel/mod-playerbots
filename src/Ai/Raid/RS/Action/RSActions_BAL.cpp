@@ -23,7 +23,7 @@ namespace
     {
         std::vector<Unit*> casters;
 
-        if (Unit* boss = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "baltharus the warborn")->Get())
+        if (Unit* boss = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "39751")->Get())
             casters.push_back(boss);
 
         RsCollectTargets(botAI, casters,

@@ -90,7 +90,7 @@ float RsSavianaMeleeSpreadMultiplier::GetValue(Action* action)
     if (bot->HasAura(SPELL_FLAME_BEACON))
         return 1.0f;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "saviana ragefire");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39747");
     if (!boss || !boss->IsLevitating())
         return 1.0f;
 
@@ -105,7 +105,7 @@ float RsZarithrianAddsMultiplier::GetValue(Action* action)
     if (botAI->IsTank(bot) || botAI->IsHeal(bot))
         return 1.0f;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general zarithrian");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39746");
     if (!boss)
         return 1.0f;
 
@@ -123,7 +123,7 @@ float RsZarithrianTankSwapMultiplier::GetValue(Action* action)
     if (!botAI->IsTank(bot))
         return 1.0f;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general zarithrian");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39746");
     if (!boss)
         return 1.0f;
 

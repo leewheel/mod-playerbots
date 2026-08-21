@@ -40,7 +40,7 @@ static bool IsDpsBotWithAoeAction(Player* bot, Action* action)
 
 float GarrDisableDpsAoeMultiplier::GetValue(Action* action)
 {
-    if (AI_VALUE2(Unit*, "find target", "garr"))
+    if (AI_VALUE2(Unit*, "find target", "12057"))
     {
         if (IsDpsBotWithAoeAction(bot, action))
             return 0.0f;
@@ -63,7 +63,7 @@ static bool IsAllowedGeddonMovementAction(Action* action)
 
 float BaronGeddonAbilityMultiplier::GetValue(Action* action)
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "baron geddon"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "12056"))
     {
         if (boss->HasAura(SPELL_INFERNO))
         {
@@ -100,7 +100,7 @@ static bool IsSingleLivingTankInGroup(Player* bot)
 
 float GolemaggMultiplier::GetValue(Action* action)
 {
-    if (AI_VALUE2(Unit*, "find target", "golemagg the incinerator"))
+    if (AI_VALUE2(Unit*, "find target", "11988"))
     {
         if (PlayerbotAI::IsTank(bot) && IsSingleLivingTankInGroup(bot))
         {

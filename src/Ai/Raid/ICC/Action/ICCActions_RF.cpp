@@ -22,11 +22,11 @@
 // Rotface
 bool IccRotfaceTankPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "rotface");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36627");
     if (!boss)
         return false;
 
-    Unit* smallOoze = AI_VALUE2(Unit*, "find target", "little ooze");
+    Unit* smallOoze = AI_VALUE2(Unit*, "find target", "36897");
 
     MarkBossWithSkull(boss);
 
@@ -317,14 +317,14 @@ bool IccRotfaceTankPositionAction::HandleBigOozeKiting(Unit* bigOoze)
 
 bool IccRotfaceGroupPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "rotface");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36627");
     if (!boss)
         return false;
 
     GuidVector const npcs = AI_VALUE(GuidVector, "nearest hostile npcs");
 
     bool const hasOozeFlood = botAI->HasAura("Ooze Flood", bot);
-    Unit* smallOoze = AI_VALUE2(Unit*, "find target", "little ooze");
+    Unit* smallOoze = AI_VALUE2(Unit*, "find target", "36897");
 
     if (!botAI->IsTank(bot) && HandlePuddleAvoidance(boss))
         return true;

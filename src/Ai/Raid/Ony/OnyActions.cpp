@@ -13,7 +13,7 @@
 
 bool RaidOnyxiaMoveToSideAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "onyxia");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
     if (!boss)
         return false;
 
@@ -44,7 +44,7 @@ bool RaidOnyxiaMoveToSideAction::Execute(Event /*event*/)
 
 bool RaidOnyxiaSpreadOutAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "onyxia");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
 
     if (!boss)
         return false;
@@ -70,7 +70,7 @@ bool RaidOnyxiaSpreadOutAction::Execute(Event /*event*/)
 
 bool RaidOnyxiaMoveToSafeZoneAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "onyxia");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
     if (!boss)
         return false;
 

@@ -15,7 +15,7 @@ using namespace SwpHelpers;
 
 bool EredarTwinsMeleeJumpDownFromBalconyAction::Execute(Event /*event*/)
 {
-    Unit* alythess = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
+    Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
     Position const& jumpPosition = EREDAR_TWINS_P1_RANGED_POSITION;
     Position const landingPosition = GetEredarTwinsP2MeleePosition(alythess);
 
@@ -71,17 +71,17 @@ bool EredarTwinsMisdirectBossesToTanksAction::Execute(Event /*event*/)
     Player* tankTarget = nullptr;
     if (hunterIndex == 0)
     {
-        bossTarget = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
+        bossTarget = AI_VALUE2(Unit*, "find target", "25166");
         tankTarget = GetGroupAssistTank(botAI, bot, 0);
     }
     else if (hunterIndex == 1)
     {
-        bossTarget = AI_VALUE2(Unit*, "find target", "lady sacrolash");
+        bossTarget = AI_VALUE2(Unit*, "find target", "25165");
         tankTarget = GetGroupMainTank(botAI, bot);
     }
     else if (hunterIndex == 2)
     {
-        bossTarget = AI_VALUE2(Unit*, "find target", "lady sacrolash");
+        bossTarget = AI_VALUE2(Unit*, "find target", "25165");
         tankTarget = GetGroupAssistTank(botAI, bot, 1);
     }
 
@@ -102,7 +102,7 @@ bool EredarTwinsMisdirectBossesToTanksAction::Execute(Event /*event*/)
 
 bool EredarTwinsMainAndSecondAssistTanksPositionSacrolashAction::Execute(Event /*event*/)
 {
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
+    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
     if (!sacrolash)
         return false;
 
@@ -140,7 +140,7 @@ bool EredarTwinsMainAndSecondAssistTanksPositionSacrolashAction::Execute(Event /
 
 bool EredarTwinsFirstAssistTankMoveOutOfBlazeAction::Execute(Event /*event*/)
 {
-    Unit* alythess = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
+    Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
     if (!alythess)
         return false;
 
@@ -214,7 +214,7 @@ bool EredarTwinsFirstAssistTankMoveOutOfBlazeAction::Execute(Event /*event*/)
 
 bool EredarTwinsPositionRangedAction::Execute(Event /*event*/)
 {
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
+    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
     if (sacrolash && sacrolash->GetVictim() != bot && GetEredarTwinsBlazeTarget(bot) != bot)
     {
         Position const& position = EREDAR_TWINS_P1_RANGED_POSITION;
@@ -228,7 +228,7 @@ bool EredarTwinsPositionRangedAction::Execute(Event /*event*/)
     // Jump down during Phase 2 or if the bot pulls aggro on Sacrolash
     else if (bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z)
     {
-        Unit* alythess = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
+        Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
         Position const& jumpPosition = EREDAR_TWINS_P1_RANGED_POSITION;
         Position const landingPosition = GetEredarTwinsP2RangedPosition(alythess);
 
@@ -253,7 +253,7 @@ bool EredarTwinsPositionRangedAction::Execute(Event /*event*/)
 
 bool EredarTwinsStackInRoomCenterAction::Execute(Event /*event*/)
 {
-    Unit* alythess = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
+    Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
     if (!alythess)
         return false;
 
@@ -292,13 +292,13 @@ bool EredarTwinsRemoveFlameSearAction::Execute(Event /*event*/)
 
 bool EredarTwinsDpsPrioritizeLadySacrolashAction::Execute(Event /*event*/)
 {
-    Unit* twinTarget = AI_VALUE2(Unit*, "find target", "lady sacrolash");
+    Unit* twinTarget = AI_VALUE2(Unit*, "find target", "25165");
     float threatHoldRatio = 0.8f;
     bool (*isTwinTank)(Player*) = IsAnySacrolashTank;
 
     if (!twinTarget)
     {
-        twinTarget = AI_VALUE2(Unit*, "find target", "grand warlock alythess");
+        twinTarget = AI_VALUE2(Unit*, "find target", "25166");
         threatHoldRatio = 0.9f;
         isTwinTank = IsAlythessTank;
     }
@@ -330,7 +330,7 @@ bool EredarTwinsConflagratedBotMoveFromGroupAction::Execute(Event /*event*/)
         return true;
     }
 
-    if (AI_VALUE2(Unit*, "find target", "lady sacrolash"))
+    if (AI_VALUE2(Unit*, "find target", "25165"))
     {
         Position const& position = PlayerbotAI::IsRanged(bot) ?
             EREDAR_TWINS_RANGED_CONFLAG_POSITION : EREDAR_TWINS_MELEE_CONFLAG_POSITION;
@@ -358,7 +358,7 @@ bool EredarTwinsConflagratedBotMoveFromGroupAction::Execute(Event /*event*/)
 
 bool EredarTwinsMoveFromConflagSacrolashVictimAction::Execute(Event /*event*/)
 {
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
+    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
     if (!sacrolash)
         return false;
 

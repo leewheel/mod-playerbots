@@ -97,7 +97,7 @@ void RequestInterruptForBotsNeedingFelmystFogMovement(Unit* contextUnit, Player*
         if (!botAI || !botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
             continue;
 
-        Unit* felmyst = PAI_VALUE2(Unit*, "find target", "felmyst");
+        Unit* felmyst = PAI_VALUE2(Unit*, "find target", "25038");
         if (!felmyst || !felmyst->IsFlying())
             continue;
 
@@ -353,7 +353,7 @@ public:
             if (!botAI || !botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
                 continue;
 
-            if (PAI_VALUE2(Unit*, "find target", "kil'jaeden") != caster)
+            if (PAI_VALUE2(Unit*, "find target", "25315") != caster)
                 continue;
 
             botAI->RequestSpellInterrupt();

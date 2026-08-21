@@ -25,11 +25,11 @@ float GruulsLairDelayDpsCooldownsMultiplier::GetValue(Action* action)
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
+    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
     if (gruul && gruul->GetHealthPct() > 95.0f)
         return 0.0f;
 
-    Unit* blindeye = AI_VALUE2(Unit*, "find target", "blindeye the seer");
+    Unit* blindeye = AI_VALUE2(Unit*, "find target", "18836");
     if (!blindeye)
         return 1.0f;
 
@@ -50,7 +50,7 @@ float HighKingMaulgarControlTankActionsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    return AI_VALUE2(Unit*, "find target", "high king maulgar") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "18831") ? 0.0f : 1.0f;
 }
 
 float HighKingMaulgarDontTauntKigglerMultiplier::GetValue(Action* action)
@@ -66,7 +66,7 @@ float HighKingMaulgarDontTauntKigglerMultiplier::GetValue(Action* action)
     if (!IsTauntAction(bot, action) && !isAoeThreat)
         return 1.0f;
 
-    Unit* kiggler = AI_VALUE2(Unit*, "find target", "kiggler the crazed");
+    Unit* kiggler = AI_VALUE2(Unit*, "find target", "18835");
     if (!kiggler)
         return 1.0f;
 
@@ -91,7 +91,7 @@ float HighKingMaulgarDisableDpsAssistMultiplier::GetValue(Action* action)
     if (!dynamic_cast<DpsAssistAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "high king maulgar") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "18831") ? 0.0f : 1.0f;
 }
 
 float HighKingMaulgarAvoidWhirlwindMultiplier::GetValue(Action* action)
@@ -105,7 +105,7 @@ float HighKingMaulgarAvoidWhirlwindMultiplier::GetValue(Action* action)
     if (dynamic_cast<HighKingMaulgarRunAwayFromWhirlwindAction*>(action))
         return 1.0f;
 
-    Unit* maulgar = AI_VALUE2(Unit*, "find target", "high king maulgar");
+    Unit* maulgar = AI_VALUE2(Unit*, "find target", "18831");
     if (!maulgar || !maulgar->HasAura(Id(GruulSpells::SPELL_WHIRLWIND)))
         return 1.0f;
 
@@ -130,14 +130,14 @@ float HighKingMaulgarControlHunterActionsMultiplier::GetValue(Action* action)
     // Krosh/Kiggler will be the last to die before Maulgar
     // When only Maulgar is left, the standard Misdirection strategy is fine
     if (isMainTankMisdirect &&
-        ((AI_VALUE2(Unit*, "find target", "krosh firehand")) ||
-         (AI_VALUE2(Unit*, "find target", "kiggler the crazed"))))
+        ((AI_VALUE2(Unit*, "find target", "18832")) ||
+         (AI_VALUE2(Unit*, "find target", "18835"))))
     {
         return 0.0f;
     }
 
     // Arcane Shot removes Spell Shield, which the mage tank needs to survive
-    Unit* krosh = AI_VALUE2(Unit*, "find target", "krosh firehand");
+    Unit* krosh = AI_VALUE2(Unit*, "find target", "18832");
     if (!krosh)
         return 1.0f;
 
@@ -163,7 +163,7 @@ float HighKingMaulgarControlMageTankActionsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "krosh firehand"))
+    if (!AI_VALUE2(Unit*, "find target", "18832"))
         return 1.0f;
 
     return GetKroshMageTank(bot) == bot ? 0.0f : 1.0f;
@@ -183,7 +183,7 @@ float GruulTheDragonkillerControlTankMovementMultiplier::GetValue(Action* action
         return 1.0f;
     }
 
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
+    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
     if (!gruul)
         return 1.0f;
 

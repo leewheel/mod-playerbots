@@ -26,7 +26,7 @@ bool SerpentShrineCavernEraseTimersAndTrackersAction::Execute(Event /*event*/)
 
     bool erased = false;
 
-    if (!AI_VALUE2(Unit*, "find target", "hydross the unstable"))
+    if (!AI_VALUE2(Unit*, "find target", "21216"))
     {
         if (hydrossChangeToNaturePhaseTimer.erase(instanceId) > 0)
             erased = true;
@@ -41,7 +41,7 @@ bool SerpentShrineCavernEraseTimersAndTrackersAction::Execute(Event /*event*/)
             erased = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "the lurker below"))
+    if (!AI_VALUE2(Unit*, "find target", "21217"))
     {
         if (lurkerRangedPositions.erase(guid) > 0)
             erased = true;
@@ -50,13 +50,13 @@ bool SerpentShrineCavernEraseTimersAndTrackersAction::Execute(Event /*event*/)
             erased = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "fathom-lord karathress") &&
+    if (!AI_VALUE2(Unit*, "find target", "21214") &&
         karathressDpsWaitTimer.erase(instanceId) > 0)
     {
         erased = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "morogrim tidewalker"))
+    if (!AI_VALUE2(Unit*, "find target", "21213"))
     {
         if (tidewalkerTankStep.erase(guid) > 0)
             erased = true;
@@ -65,7 +65,7 @@ bool SerpentShrineCavernEraseTimersAndTrackersAction::Execute(Event /*event*/)
             erased = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "lady vashj"))
+    if (!AI_VALUE2(Unit*, "find target", "21212"))
     {
         if (hasReachedVashjRangedPosition.erase(guid) > 0)
             erased = true;
@@ -165,7 +165,7 @@ bool GreyheartTidecallerMarkWaterElementalTotemAction::Execute(Event /*event*/)
 // (3) When Hydross is in nature form, move back to frost tank spot and wait for transition
 bool HydrossTheUnstablePositionFrostTankAction::Execute(Event /*event*/)
 {
-    Unit* hydross = AI_VALUE2(Unit*, "find target", "hydross the unstable");
+    Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
     if (!hydross)
         return false;
 
@@ -247,7 +247,7 @@ bool HydrossTheUnstablePositionFrostTankAction::Execute(Event /*event*/)
 // (3) When Hydross is in frost form, move back to nature tank spot and wait for transition
 bool HydrossTheUnstablePositionNatureTankAction::Execute(Event /*event*/)
 {
-    Unit* hydross = AI_VALUE2(Unit*, "find target", "hydross the unstable");
+    Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
     if (!hydross)
         return false;
 
@@ -353,7 +353,7 @@ bool HydrossTheUnstablePrioritizeElementalAddsAction::Execute(Event /*event*/)
 // To mitigate the effect of Water Tomb
 bool HydrossTheUnstableFrostPhaseSpreadOutAction::Execute(Event /*event*/)
 {
-    if (!AI_VALUE2(Unit*, "find target", "hydross the unstable"))
+    if (!AI_VALUE2(Unit*, "find target", "21216"))
         return false;
 
     constexpr float safeDistance = 6.0f;
@@ -366,7 +366,7 @@ bool HydrossTheUnstableFrostPhaseSpreadOutAction::Execute(Event /*event*/)
 
 bool HydrossTheUnstableMisdirectBossToTankAction::Execute(Event /*event*/)
 {
-    Unit* hydross = AI_VALUE2(Unit*, "find target", "hydross the unstable");
+    Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
     if (!hydross)
         return false;
 
@@ -413,7 +413,7 @@ bool HydrossTheUnstableMisdirectBossToTankAction::TryMisdirectToNatureTank(
 
 bool HydrossTheUnstableStopDpsUponPhaseChangeAction::Execute(Event /*event*/)
 {
-    Unit* hydross = AI_VALUE2(Unit*, "find target", "hydross the unstable");
+    Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
     if (!hydross)
         return false;
 
@@ -460,7 +460,7 @@ bool HydrossTheUnstableStopDpsUponPhaseChangeAction::Execute(Event /*event*/)
 
 bool HydrossTheUnstableManageTimersAction::Execute(Event /*event*/)
 {
-    Unit* hydross = AI_VALUE2(Unit*, "find target", "hydross the unstable");
+    Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
     if (!hydross)
         return false;
 
@@ -500,7 +500,7 @@ bool HydrossTheUnstableManageTimersAction::Execute(Event /*event*/)
 // Run around behind Lurker during Spout
 bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
 {
-    Unit* lurker = AI_VALUE2(Unit*, "find target", "the lurker below");
+    Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
     if (!lurker)
         return false;
 
@@ -540,7 +540,7 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
 
 bool TheLurkerBelowPositionMainTankAction::Execute(Event /*event*/)
 {
-    Unit* lurker = AI_VALUE2(Unit*, "find target", "the lurker below");
+    Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
     if (!lurker)
         return false;
 
@@ -561,7 +561,7 @@ bool TheLurkerBelowPositionMainTankAction::Execute(Event /*event*/)
 // Assign ranged positions within a 120-degree arc behind Lurker
 bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
 {
-    Unit* lurker = AI_VALUE2(Unit*, "find target", "the lurker below");
+    Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
     if (!lurker)
         return false;
 
@@ -677,7 +677,7 @@ bool TheLurkerBelowTanksPickUpAddsAction::Execute(Event /*event*/)
 
 bool TheLurkerBelowManageSpoutTimerAction::Execute(Event /*event*/)
 {
-    Unit* lurker = AI_VALUE2(Unit*, "find target", "the lurker below");
+    Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
     if (!lurker)
         return false;
 
@@ -1066,7 +1066,7 @@ bool LeotherasTheBlindMisdirectBossToDemonFormTankAction::Execute(Event /*event*
 // This does not pause DPS after a Whirlwind, which is also an aggro wipe
 bool LeotherasTheBlindManageDpsWaitTimersAction::Execute(Event /*event*/)
 {
-    Unit* leotheras = AI_VALUE2(Unit*, "find target", "leotheras the blind");
+    Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215");
     if (!leotheras)
         return false;
 
@@ -1118,7 +1118,7 @@ bool LeotherasTheBlindManageDpsWaitTimersAction::Execute(Event /*event*/)
 // Karathress is tanked near his starting position
 bool FathomLordKarathressMainTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* karathress = AI_VALUE2(Unit*, "find target", "fathom-lord karathress");
+    Unit* karathress = AI_VALUE2(Unit*, "find target", "21214");
     if (!karathress)
         return false;
 
@@ -1156,7 +1156,7 @@ bool FathomLordKarathressMainTankPositionBossAction::Execute(Event /*event*/)
 // Best to use a Warrior or Druid tank for interrupts
 bool FathomLordKarathressFirstAssistTankPositionCaribdisAction::Execute(Event /*event*/)
 {
-    Unit* caribdis = AI_VALUE2(Unit*, "find target", "fathom-guard caribdis");
+    Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
     if (!caribdis)
         return false;
 
@@ -1193,7 +1193,7 @@ bool FathomLordKarathressFirstAssistTankPositionCaribdisAction::Execute(Event /*
 // Sharkkis is pulled North to the other side of the ramp
 bool FathomLordKarathressSecondAssistTankPositionSharkkisAction::Execute(Event /*event*/)
 {
-    Unit* sharkkis = AI_VALUE2(Unit*, "find target", "fathom-guard sharkkis");
+    Unit* sharkkis = AI_VALUE2(Unit*, "find target", "21966");
     if (!sharkkis)
         return false;
 
@@ -1230,7 +1230,7 @@ bool FathomLordKarathressSecondAssistTankPositionSharkkisAction::Execute(Event /
 // Tidalvess is pulled Northwest near the pillar
 bool FathomLordKarathressThirdAssistTankPositionTidalvessAction::Execute(Event /*event*/)
 {
-    Unit* tidalvess = AI_VALUE2(Unit*, "find target", "fathom-guard tidalvess");
+    Unit* tidalvess = AI_VALUE2(Unit*, "find target", "21965");
     if (!tidalvess)
         return false;
 
@@ -1268,7 +1268,7 @@ bool FathomLordKarathressThirdAssistTankPositionTidalvessAction::Execute(Event /
 // Use the assistant flag to select the healer
 bool FathomLordKarathressPositionCaribdisTankHealerAction::Execute(Event /*event*/)
 {
-    Unit* caribdis = AI_VALUE2(Unit*, "find target", "fathom-guard caribdis");
+    Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
     if (!caribdis)
         return false;
 
@@ -1326,17 +1326,17 @@ bool FathomLordKarathressMisdirectBossesToTanksAction::Execute(Event /*event*/)
     Player* tankTarget = nullptr;
     if (hunterIndex == 0)
     {
-        bossTarget = AI_VALUE2(Unit*, "find target", "fathom-guard caribdis");
+        bossTarget = AI_VALUE2(Unit*, "find target", "21964");
         tankTarget = GetGroupAssistTank(botAI, bot, 0);
     }
     else if (hunterIndex == 1)
     {
-        bossTarget = AI_VALUE2(Unit*, "find target", "fathom-guard tidalvess");
+        bossTarget = AI_VALUE2(Unit*, "find target", "21965");
         tankTarget = GetGroupAssistTank(botAI, bot, 2);
     }
     else if (hunterIndex == 2)
     {
-        bossTarget = AI_VALUE2(Unit*, "find target", "fathom-guard sharkkis");
+        bossTarget = AI_VALUE2(Unit*, "find target", "21966");
         tankTarget = GetGroupAssistTank(botAI, bot, 1);
     }
 
@@ -1380,7 +1380,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 2: Tidalvess for all dps
-    Unit* tidalvess = AI_VALUE2(Unit*, "find target", "fathom-guard tidalvess");
+    Unit* tidalvess = AI_VALUE2(Unit*, "find target", "21965");
     if (tidalvess)
     {
         if (MarkTargetWithCircle(bot, tidalvess))
@@ -1395,7 +1395,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 3: Caribdis for ranged dps
-    Unit* caribdis = AI_VALUE2(Unit*, "find target", "fathom-guard caribdis");
+    Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
     if (botAI->IsRangedDps(bot) && caribdis)
     {
         if (MarkTargetWithDiamond(bot, caribdis))
@@ -1417,7 +1417,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 4: Sharkkis for melee dps and, after Caribdis is down, ranged dps also
-    Unit* sharkkis = AI_VALUE2(Unit*, "find target", "fathom-guard sharkkis");
+    Unit* sharkkis = AI_VALUE2(Unit*, "find target", "21966");
     if (sharkkis)
     {
         if (MarkTargetWithStar(bot, sharkkis))
@@ -1432,7 +1432,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 5: Sharkkis pets for all dps
-    Unit* fathomSporebat = AI_VALUE2(Unit*, "find target", "fathom sporebat");
+    Unit* fathomSporebat = AI_VALUE2(Unit*, "find target", "22120");
     if (fathomSporebat && botAI->IsMelee(bot))
     {
         if (MarkTargetWithCross(bot, fathomSporebat))
@@ -1446,7 +1446,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
         return false;
     }
 
-    Unit* fathomLurker = AI_VALUE2(Unit*, "find target", "fathom lurker");
+    Unit* fathomLurker = AI_VALUE2(Unit*, "find target", "21863");
     if (fathomLurker && botAI->IsMelee(bot))
     {
         if (MarkTargetWithSquare(bot, fathomLurker))
@@ -1461,7 +1461,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 6: Karathress for all dps
-    Unit* karathress = AI_VALUE2(Unit*, "find target", "fathom-lord karathress");
+    Unit* karathress = AI_VALUE2(Unit*, "find target", "21214");
     if (karathress)
     {
         if (MarkTargetWithTriangle(bot, karathress))
@@ -1478,7 +1478,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
 
 bool FathomLordKarathressManageDpsTimerAction::Execute(Event /*event*/)
 {
-    Unit* karathress = AI_VALUE2(Unit*, "find target", "fathom-lord karathress");
+    Unit* karathress = AI_VALUE2(Unit*, "find target", "21214");
     if (karathress && karathressDpsWaitTimer.try_emplace(
         karathress->GetMap()->GetInstanceId(), std::time(nullptr)).second)
         return true;
@@ -1490,7 +1490,7 @@ bool FathomLordKarathressManageDpsTimerAction::Execute(Event /*event*/)
 
 bool MorogrimTidewalkerMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "morogrim tidewalker");
+    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
     if (!tidewalker)
         return false;
 
@@ -1511,7 +1511,7 @@ bool MorogrimTidewalkerMisdirectBossToMainTankAction::Execute(Event /*event*/)
 // Water Globule mechanic in phase 2
 bool MorogrimTidewalkerMoveBossToTankPositionAction::Execute(Event /*event*/)
 {
-    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "morogrim tidewalker");
+    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
     if (!tidewalker)
         return false;
 
@@ -1603,7 +1603,7 @@ bool MorogrimTidewalkerMoveBossToTankPositionAction::MoveToPhase2TankPosition()
 // No corresponding method for melee since they will do so anyway
 bool MorogrimTidewalkerPhase2RepositionRangedAction::Execute(Event /*event*/)
 {
-    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "morogrim tidewalker");
+    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
     if (!tidewalker)
         return false;
 
@@ -1661,7 +1661,7 @@ bool MorogrimTidewalkerPhase2RepositionRangedAction::Execute(Event /*event*/)
 
 bool LadyVashjMainTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
 
@@ -1692,7 +1692,7 @@ bool LadyVashjMainTankPositionBossAction::Execute(Event /*event*/)
         // Phase 3: No fixed position, but move Vashj away from Enchanted Elementals
         else if (IsLadyVashjInPhase3(botAI))
         {
-            if (Unit* enchanted = AI_VALUE2(Unit*, "find target", "enchanted elemental"))
+            if (Unit* enchanted = AI_VALUE2(Unit*, "find target", "21958"))
             {
                 float currentDistance = bot->GetExactDist2d(enchanted);
                 constexpr float safeDistance = 10.0f;
@@ -1780,7 +1780,7 @@ bool LadyVashjSetGroundingTotemInMainTankGroupAction::Execute(Event /*event*/)
 
 bool LadyVashjMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
 
@@ -1834,7 +1834,7 @@ bool LadyVashjStaticChargeMoveAwayFromGroupAction::Execute(Event /*event*/)
 
 bool LadyVashjAssignPhase2AndPhase3DpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
 
@@ -2007,7 +2007,7 @@ bool LadyVashjMisdirectStriderToFirstAssistTankAction::Execute(Event /*event*/)
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* strider = AI_VALUE2(Unit*, "find target", "coilfang strider");
+    Unit* strider = AI_VALUE2(Unit*, "find target", "22056");
     if (!strider)
         return false;
 
@@ -2026,11 +2026,11 @@ bool LadyVashjMisdirectStriderToFirstAssistTankAction::Execute(Event /*event*/)
 
 bool LadyVashjTankAttackAndMoveAwayStriderAction::Execute(Event /*event*/)
 {
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
 
-    Unit* strider = AI_VALUE2(Unit*, "find target", "coilfang strider");
+    Unit* strider = AI_VALUE2(Unit*, "find target", "22056");
     if (!strider)
         return false;
 
@@ -2087,7 +2087,7 @@ bool LadyVashjTankAttackAndMoveAwayStriderAction::Execute(Event /*event*/)
 // Such bot will recover HP and remove the Poison Bolt debuff while attacking the elemental
 bool LadyVashjTeleportToTaintedElementalAction::Execute(Event /*event*/)
 {
-    Unit* tainted = AI_VALUE2(Unit*, "find target", "tainted elemental");
+    Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
     if (!tainted)
         return false;
 
@@ -2124,7 +2124,7 @@ bool LadyVashjTeleportToTaintedElementalAction::Execute(Event /*event*/)
 
 bool LadyVashjLootTaintedCoreAction::Execute(Event /*event*/)
 {
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
 
@@ -2175,7 +2175,7 @@ bool LadyVashjLootTaintedCoreAction::Execute(Event /*event*/)
 
 bool LadyVashjPassTheTaintedCoreAction::Execute(Event /*event*/)
 {
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
 
@@ -2188,7 +2188,7 @@ bool LadyVashjPassTheTaintedCoreAction::Execute(Event /*event*/)
     const uint32 instanceId = vashj->GetMap()->GetInstanceId();
 
     Unit* closestTrigger = nullptr;
-    if (Unit* tainted = AI_VALUE2(Unit*, "find target", "tainted elemental");
+    if (Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
         (closestTrigger = GetNearestActiveShieldGeneratorTriggerByEntry(tainted)))
     {
         nearestTriggerGuid.try_emplace(instanceId, closestTrigger->GetGUID());
@@ -2747,7 +2747,7 @@ bool LadyVashjAvoidToxicSporesAction::Execute(Event /*event*/)
     if (!inDanger)
         return false;
 
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
 

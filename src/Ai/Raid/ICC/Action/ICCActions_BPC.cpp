@@ -18,7 +18,7 @@ static float const BPC_FLOOR_Z = 361.18222f;
 
 bool IccBpcKelesethTankAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "prince keleseth");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37972");
     if (!boss)
         return false;
 
@@ -128,8 +128,8 @@ bool IccBpcMainTankAction::Execute(Event /*event*/)
         return false;
     }
 
-    Unit* valanar = AI_VALUE2(Unit*, "find target", "prince valanar");
-    Unit* taldaram = AI_VALUE2(Unit*, "find target", "prince taldaram");
+    Unit* valanar = AI_VALUE2(Unit*, "find target", "37970");
+    Unit* taldaram = AI_VALUE2(Unit*, "find target", "37973");
 
     bool const isVictimOfValanar = valanar && valanar->GetVictim() == bot;
     bool const isVictimOfTaldaram = taldaram && taldaram->GetVictim() == bot;
@@ -235,7 +235,7 @@ bool IccBpcMainTankAction::MarkEmpoweredPrince()
 
 bool IccBpcEmpoweredVortexAction::Execute(Event /*event*/)
 {
-    Unit* valanar = AI_VALUE2(Unit*, "find target", "prince valanar");
+    Unit* valanar = AI_VALUE2(Unit*, "find target", "37970");
     if (!valanar)
         return false;
 
@@ -264,7 +264,7 @@ bool IccBpcEmpoweredVortexAction::MaintainRangedSpacing()
     if (!isRanged)
         return false;
 
-    Unit* valanar = AI_VALUE2(Unit*, "find target", "prince valanar");
+    Unit* valanar = AI_VALUE2(Unit*, "find target", "37970");
     if (!valanar)
         return false;
 
@@ -398,7 +398,7 @@ bool IccBpcEmpoweredVortexAction::HandleEmpoweredVortexSpread()
     if (botAI->IsTank(bot))
         return false;
 
-    Unit* valanar = AI_VALUE2(Unit*, "find target", "prince valanar");
+    Unit* valanar = AI_VALUE2(Unit*, "find target", "37970");
     if (!valanar)
         return false;
 
@@ -682,7 +682,7 @@ Unit* IccBpcKineticBombAction::FindNearestBomb()
 
 bool IccBpcBallOfFlameAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "prince taldaram");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37973");
     if (!boss)
         return false;
 

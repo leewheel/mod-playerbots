@@ -12,9 +12,9 @@
 
 bool IccDogsTankPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "stinky");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37025");
     if (!boss)
-        boss = AI_VALUE2(Unit*, "find target", "precious");
+        boss = AI_VALUE2(Unit*, "find target", "37217");
     if (!boss)
         return false;
 

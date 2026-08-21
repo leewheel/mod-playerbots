@@ -19,7 +19,7 @@
 //Lord Marrogwar
 bool IccLmTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "lord marrowgar");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36612");
     if (!boss)
         return false;
 
@@ -39,7 +39,7 @@ bool IccDarkReckoningTrigger::IsActive()
 
 bool IccLadyDeathwhisperTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "lady deathwhisper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36855");
     if (!boss)
         return false;
 
@@ -49,7 +49,7 @@ bool IccLadyDeathwhisperTrigger::IsActive()
 //Gunship Battle
 bool IccRottingFrostGiantTankPositionTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "rotting frost giant");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "38494");
     if (!boss)
         return false;
 
@@ -134,7 +134,7 @@ bool IccGunshipRocketPackSetupTrigger::IsActive()
 //DBS
 bool IccDbsTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "deathbringer saurfang");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37813");
     if (!boss)
         return false;
 
@@ -145,7 +145,7 @@ bool IccDbsTrigger::IsActive()
 
 bool IccDbsMainTankRuneOfBloodTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "deathbringer saurfang");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37813");
 
     if (!boss)
         return false;
@@ -166,7 +166,7 @@ bool IccDbsMainTankRuneOfBloodTrigger::IsActive()
 
 bool IccDogsTrigger::IsActive()
 {
-    if (AI_VALUE2(Unit*, "find target", "stinky") || AI_VALUE2(Unit*, "find target", "precious"))
+    if (AI_VALUE2(Unit*, "find target", "37025") || AI_VALUE2(Unit*, "find target", "37217"))
         return true;
 
     return false;
@@ -175,7 +175,7 @@ bool IccDogsTrigger::IsActive()
 //FESTERGUT
 bool IccFestergutGroupPositionTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "festergut");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36626");
     if (!boss)
         return false;
 
@@ -186,7 +186,7 @@ bool IccFestergutGroupPositionTrigger::IsActive()
 
 bool IccFestergutSporeTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "festergut");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36626");
     if (!boss || botAI->IsTank(bot))
         return false;
 
@@ -195,7 +195,7 @@ bool IccFestergutSporeTrigger::IsActive()
 
 bool IccFestergutAvoidMalleableGooTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "festergut");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36626");
     if (!boss)
         return false;
 
@@ -249,7 +249,7 @@ bool IccFestergutAvoidMalleableGooTrigger::IsActive()
 //ROTFACE
 bool IccRotfaceTankPositionTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "rotface");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36627");
     if (!boss || !(botAI->IsTank(bot) || botAI->IsMelee(bot)))
         return false;
 
@@ -260,7 +260,7 @@ bool IccRotfaceTankPositionTrigger::IsActive()
 
 bool IccRotfaceGroupPositionTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "rotface");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36627");
     if (!boss)
         return false;
 
@@ -298,7 +298,7 @@ bool IccRotfaceMoveAwayFromExplosionTrigger::IsActive()
 
 bool IccRotfaceAvoidVileGasTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "rotface");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36627");
     if (!boss)
         return false;
 
@@ -327,7 +327,7 @@ bool IccRotfaceAvoidVileGasTrigger::IsActive()
 bool IccPutricideGrowingOozePuddleTrigger::IsActive()
 {
     // Early return if boss doesn't exist
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     if (!boss)
         return false;
 
@@ -347,7 +347,7 @@ bool IccPutricideGrowingOozePuddleTrigger::IsActive()
 
 bool IccPutricideVolatileOozeTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "volatile ooze");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37697");
     if (!boss)
         return false;
 
@@ -359,11 +359,11 @@ bool IccPutricideVolatileOozeTrigger::IsActive()
 
 bool IccPutricideGasCloudTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "gas cloud");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37562");
     if (!boss)
         return false;
 
-    Unit* boss1 = AI_VALUE2(Unit*, "find target", "volatile ooze");
+    Unit* boss1 = AI_VALUE2(Unit*, "find target", "37697");
 
     bool hasGaseousBloat = botAI->HasAura("Gaseous Bloat", bot);
 
@@ -378,12 +378,12 @@ bool IccPutricideGasCloudTrigger::IsActive()
 
 bool IccPutricideMutatedPlagueTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "professor putricide") != nullptr;
+    return AI_VALUE2(Unit*, "find target", "36678") != nullptr;
 }
 
 bool IccPutricideMalleableGooTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     if (!boss)
         return false;
 
@@ -415,7 +415,7 @@ bool IccPutricideMalleableGooTrigger::IsActive()
 
 bool IccPutricideAbominationTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     if (!boss)
         return false;
 
@@ -466,7 +466,7 @@ bool IccPutricideAbominationTrigger::IsActive()
 //BPC
 bool IccBpcKelesethTankTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "prince keleseth");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37972");
     if (!boss)
         return false;
 
@@ -502,7 +502,7 @@ bool IccBpcEmpoweredVortexTrigger::IsActive()
     if (botAI->IsMainTank(bot) || botAI->IsAssistTank(bot))
         return false;
 
-    Unit* valanar = AI_VALUE2(Unit*, "find target", "prince valanar");
+    Unit* valanar = AI_VALUE2(Unit*, "find target", "37970");
     if (!valanar)
         return false;
 
@@ -568,9 +568,9 @@ bool IccBpcBallOfFlameTrigger::IsActive()
     if (botAI->IsTank(bot))
         return false;
 
-    Unit* valanar = AI_VALUE2(Unit*, "find target", "prince valanar");
-    Unit* taldaram = AI_VALUE2(Unit*, "find target", "prince taldaram");
-    Unit* keleseth = AI_VALUE2(Unit*, "find target", "prince keleseth");
+    Unit* valanar = AI_VALUE2(Unit*, "find target", "37970");
+    Unit* taldaram = AI_VALUE2(Unit*, "find target", "37973");
+    Unit* keleseth = AI_VALUE2(Unit*, "find target", "37972");
 
     if (!(valanar || taldaram || keleseth))
         return false;
@@ -585,7 +585,7 @@ bool IccBpcBallOfFlameTrigger::IsActive()
 // BQL
 bool IccBqlGroupPositionTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "blood-queen lana'thel");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37955");
     if (!boss)
         return false;
 
@@ -599,7 +599,7 @@ bool IccBqlGroupPositionTrigger::IsActive()
 
 bool IccBqlPactOfDarkfallenTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "blood-queen lana'thel");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37955");
     if (!boss)
         return false;
 
@@ -615,7 +615,7 @@ bool IccBqlPactOfDarkfallenTrigger::IsActive()
 
 bool IccBqlVampiricBiteTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "blood-queen lana'thel");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37955");
     if (!boss)
         return false;
 
@@ -641,7 +641,7 @@ bool IccValkyreSpearTrigger::IsActive()
 
 bool IccSisterSvalnaTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sister svalna");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37126");
     if (!boss)
         return false;
 
@@ -900,7 +900,7 @@ bool IccSindragosaHotTrigger::IsActive()
 
 bool IccSindragosaBlisteringColdTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
     if (!boss)
         return false;
 
@@ -928,7 +928,7 @@ bool IccSindragosaBlisteringColdTrigger::IsActive()
 
 bool IccSindragosaUnchainedMagicTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
     if (!boss)
         return false;
 
@@ -946,7 +946,7 @@ bool IccSindragosaUnchainedMagicTrigger::IsActive()
 
 bool IccSindragosaChilledToTheBoneTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
     if (!boss)
         return false;
 
@@ -964,7 +964,7 @@ bool IccSindragosaChilledToTheBoneTrigger::IsActive()
 
 bool IccSindragosaMysticBuffetTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
     if (!boss)
         return false;
 
@@ -1017,7 +1017,7 @@ bool IccLichKingShadowTrapTrigger::IsActive()
     if (vdw)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     if (!boss)
         return false;
 
@@ -1054,7 +1054,7 @@ bool IccLichKingNecroticPlagueTrigger::IsActive()
     if (vdw)
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "the lich king"))
+    if (!AI_VALUE2(Unit*, "find target", "36597"))
         return false;
 
     return botAI->HasAura("Necrotic Plague", bot);
@@ -1066,7 +1066,7 @@ bool IccLichKingWinterTrigger::IsActive()
     if (vdw)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     if (!boss)
         return false;
 

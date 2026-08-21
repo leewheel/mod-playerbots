@@ -166,7 +166,7 @@ static bool CastAoeTaunt(PlayerbotAI* botAI, Player* bot)
 
 bool IccLichKingShadowTrapAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     if (!boss || !botAI->IsTank(bot))
         return false;
 
@@ -316,7 +316,7 @@ bool IccLichKingNecroticPlagueAction::Execute(Event /*event*/)
 
     // During winter (boss <= 71% HP) approach from behind the shambling to
     // avoid its frontal Shockwave.
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     bool const duringWinter = boss && !boss->HealthAbovePct(71);
 
     if (duringWinter)
@@ -363,7 +363,7 @@ bool IccLichKingNecroticPlagueAction::Execute(Event /*event*/)
 
 bool IccLichKingWinterAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     if (!boss)
         return false;
 
@@ -673,7 +673,7 @@ bool IccLichKingWinterAction::ClearInvalidTarget()
     if (!currentTarget)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     bool doClear = false;
 
     // Bots must not fight the boss during Remorseless Winter
@@ -950,7 +950,7 @@ bool IccLichKingWinterAction::IsValidCollectibleAdd(Unit* unit) const
 
 bool IccLichKingWinterAction::HandleTankPositioning()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     if (!boss)
         return false;
 
@@ -1803,7 +1803,7 @@ bool IccLichKingAddsAction::Execute(Event /*event*/)
     if (bot->HasAura(SPELL_HARVEST_SOUL_VALKYR))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     Difficulty const diff = bot->GetRaidDifficulty();
     bool const hasPlague = botAI->HasAura("Necrotic Plague", bot);
     Unit* const terenas = bot->FindNearestCreature(NPC_TERENAS_MENETHIL_HC, 55.0f);
@@ -3670,7 +3670,7 @@ bool IccLichKingAddsAction::HandleDefileMechanics(Unit* boss, Difficulty diff)
 
 bool IccLichKingAddsAction::HandleValkyrMechanics(Difficulty diff)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     Group* group = bot->GetGroup();
     if (!group)
         return false;
@@ -3784,7 +3784,7 @@ bool IccLichKingAddsAction::HandleValkyrAssignment(std::vector<Unit*> const& gra
     if (!group)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
     if (boss && boss->HealthBelowPct(40))
         return false;
 
@@ -4143,7 +4143,7 @@ bool IccLichKingAddsAction::HandleVileSpiritMechanics()
     // Skip the spirit-flee logic entirely if boss is casting Harvest Soul(s).
     // The harvested player must stay alive — flee movement breaks range for
     // healers and gets the soul victim killed, buffing LK and wiping raid.
-    Unit* Boss = AI_VALUE2(Unit*, "find target", "the lich king");
+    Unit* Boss = AI_VALUE2(Unit*, "find target", "36597");
     bool const bossCastingHarvest = Boss && Boss->HasUnitState(UNIT_STATE_CASTING) &&
         (Boss->FindCurrentSpellBySpellId(SPELL_HARVEST_SOUL_LK) ||
          Boss->FindCurrentSpellBySpellId(SPELL_HARVEST_SOULS_LK_25) ||

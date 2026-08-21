@@ -280,7 +280,7 @@ bool KiljaedenStunHandsOfTheDeceiverAction::CastSilenceOnHand(Unit* hand)
 
 bool KiljaedenPositionTanksAction::Execute(Event /*event*/)
 {
-    if (AI_VALUE2(Unit*, "find target", "sinister reflection") && !PlayerbotAI::IsMainTank(bot))
+    if (AI_VALUE2(Unit*, "find target", "25708") && !PlayerbotAI::IsMainTank(bot))
         return PickUpSinisterReflections();
 
     Position const& position = KILJAEDEN_TANK_POSITION;
@@ -391,7 +391,7 @@ bool KiljaedenPositionMeleeAction::TryAdjustForArmageddon(Position& position)
         return true;
     }
 
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
     if (!kiljaeden || IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden) ||
         HasKiljaedenDragonAura(bot))
     {
@@ -516,7 +516,7 @@ bool KiljaedenStackForShieldOfTheBlueAction::Execute(Event /*event*/)
     // is about to finish (4.5s, same threshold for the bot dragon to cast Shield of the Blue).
     if (bot->HasAura(Id(SwpSpells::SPELL_FIRE_BLOOM)))
     {
-        Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+        Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
         if (!kiljaeden)
             return false;
 
@@ -624,7 +624,7 @@ bool KiljaedenReleaseStaleRootAction::Execute(Event /*event*/)
 
 bool KiljaedenControlDragonAction::Execute(Event /*event*/)
 {
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
     if (!kiljaeden)
         return false;
 

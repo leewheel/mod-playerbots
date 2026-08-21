@@ -19,7 +19,7 @@ using namespace SwpHelpers;
 
 bool FelmystMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst)
         return false;
 
@@ -43,7 +43,7 @@ bool FelmystMainTankPositionBossOnGroundAction::Execute(Event /*event*/)
 {
     ClearFelmystDemonicVaporKiteState(bot);
 
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst)
         return false;
 
@@ -86,7 +86,7 @@ bool FelmystRangedStackInThreeGroupsAction::Execute(Event /*event*/)
 {
     ClearFelmystDemonicVaporKiteState(bot);
 
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst)
         return false;
 
@@ -103,7 +103,7 @@ bool FelmystMeleeStackBehindBossAction::Execute(Event /*event*/)
 {
     ClearFelmystDemonicVaporKiteState(bot);
 
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst)
         return false;
 
@@ -137,7 +137,7 @@ bool FelmystRunAwayFromEncapsulatedPlayerAction::Execute(Event /*event*/)
     if (!encapsulateTarget || encapsulateTarget == bot)
         return false;
 
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst)
         return false;
 
@@ -400,7 +400,7 @@ bool FelmystKiteDemonicVaporAction::Execute(Event /*event*/)
 
 bool FelmystMoveToSafeFogLaneAction::Execute(Event /*event*/)
 {
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst)
     {
         _fogCrateStuckSampleMs = 0;
@@ -520,7 +520,7 @@ bool FelmystMeleeClearTargetAction::Execute(Event /*event*/)
 
 bool FelmystKillCharmedPlayerAction::Execute(Event /*event*/)
 {
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst)
         return false;
 
@@ -533,7 +533,7 @@ bool FelmystKillCharmedPlayerAction::Execute(Event /*event*/)
 
 bool FelmystManageLandingDpsTimerAction::Execute(Event /*event*/)
 {
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst)
         return false;
 

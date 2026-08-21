@@ -18,7 +18,7 @@ using namespace SwpHelpers;
 
 bool KalecgosAnnounceBossHealthAction::Execute(Event /*event*/)
 {
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "24850");
     if (!kalecgos)
         return false;
 
@@ -46,7 +46,7 @@ bool KalecgosAnnounceBossHealthAction::Execute(Event /*event*/)
         if (state.spectralHealthAnnounced)
             return false;
 
-        Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor");
+        Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "24892");
         if (!sathrovarr)
             return false;
 
@@ -68,7 +68,7 @@ bool KalecgosAnnounceBossHealthAction::Execute(Event /*event*/)
 
 bool KalecgosSurfaceTankPositionDragonAction::Execute(Event event)
 {
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "24850");
     if (!kalecgos)
         return false;
 
@@ -138,7 +138,7 @@ bool KalecgosEnterSpectralRiftAction::Execute(Event /*event*/)
 
 bool KalecgosEnterSpectralRiftAction::ShouldTankEnter()
 {
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "24850");
     if (!kalecgos)
         return false;
 
@@ -176,7 +176,7 @@ bool KalecgosDisperseRangedAction::Execute(Event /*event*/)
             initialPos.GetPositionZ(), initialRangedRadius, MovementPriority::MOVEMENT_COMBAT);
     }
 
-    if (Unit* kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos"))
+    if (Unit* kalecgos = AI_VALUE2(Unit*, "find target", "24850"))
     {
         constexpr float safeDistFromDragon = 20.0f;
         constexpr uint32 minInterval = 0;
@@ -215,7 +215,7 @@ bool KalecgosRemoveArcaneBuffetAction::Execute(Event /*event*/)
 
 bool KalecgosSathrovarrTankStandWithKalecAction::Execute(Event /*event*/)
 {
-    Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor");
+    Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "24892");
     if (!sathrovarr)
         return false;
 

@@ -186,7 +186,7 @@ void RaidKarazhanStrategy::AppendTargetExclusions(
     GuidSet& exclusions, TargetValueExclusionType /*type*/)
 {
     AiObjectContext* context = botAI->GetAiObjectContext();
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
     if (nightbane && nightbane->GetPositionZ() > KaraHelpers::NIGHTBANE_FLIGHT_Z)
         exclusions.insert(nightbane->GetGUID());
 }

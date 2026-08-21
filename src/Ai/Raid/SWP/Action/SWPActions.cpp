@@ -27,8 +27,8 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
 
     bool didSomething = false;
 
-    if (!AI_VALUE2(Unit*, "find target", "kalecgos") &&
-        !AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor"))
+    if (!AI_VALUE2(Unit*, "find target", "24850") &&
+        !AI_VALUE2(Unit*, "find target", "24892"))
     {
         if (isMechanicTracker && kalecgosEncounterStates.erase(instanceId) > 0)
             didSomething = true;
@@ -44,7 +44,7 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "brutallus"))
+    if (!AI_VALUE2(Unit*, "find target", "24882"))
     {
         if (bot->HasAura(Id(SwpSpells::SPELL_BURN)))
         {
@@ -78,13 +78,13 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "felmyst") &&
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25038") &&
         felmystEncounterStates.erase(instanceId) > 0)
     {
         didSomething = true;
     }
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25166"))
     {
         if (eredarTwinsIncomingConflagrationStates.erase(instanceId) > 0)
             didSomething = true;
@@ -93,7 +93,7 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
             didSomething = true;
     }
 
-    if (PlayerbotAI::IsTank(bot) && !AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
+    if (PlayerbotAI::IsTank(bot) && !AI_VALUE2(Unit*, "find target", "25166"))
     {
         Action* twinsAction = context->GetAction(
             "eredar twins first assist tank move out of blaze");
@@ -104,7 +104,7 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "m'uru"))
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25741"))
     {
         if (muruDarknessStates.erase(instanceId) > 0)
             didSomething = true;
@@ -113,13 +113,13 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
             didSomething = true;
     }
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "kil'jaeden") &&
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25315") &&
         kiljaedenEncounterStates.erase(instanceId) > 0)
     {
         didSomething = true;
     }
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "hand of the deceiver"))
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25588"))
     {
         if (ResetKiljaedenDragonOrbUserAnnouncement(instanceId))
             didSomething = true;

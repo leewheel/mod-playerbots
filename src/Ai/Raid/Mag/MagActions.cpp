@@ -231,7 +231,7 @@ bool MagtheridonWarlockCcBurningAbyssalAction::Execute(Event /*event*/)
 // Main tank will back up to the Eastern point of the room
 bool MagtheridonMainTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon)
         return false;
 
@@ -273,7 +273,7 @@ bool MagtheridonMainTankPositionBossAction::Execute(Event /*event*/)
 // Magtheridon's CombatReach is 12 yards and BoundingRadius is 4 yards
 bool MagtheridonSpreadRangedAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon)
         return false;
 
@@ -301,7 +301,7 @@ bool MagtheridonSpreadRangedAction::Execute(Event /*event*/)
 // Magtheridon casts Blast Nova every 54.35 to 55.40s, with a 2s cast time
 bool MagtheridonUseManticronCubeAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon)
         return false;
 
@@ -493,7 +493,7 @@ bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
 
 bool MagtheridonManageTimersAndAssignmentsAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon)
         return false;
 

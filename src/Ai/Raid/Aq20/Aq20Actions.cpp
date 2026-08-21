@@ -9,7 +9,7 @@
 
 bool Aq20UseCrystalAction::Execute(Event /*event*/)
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "ossirian the unscarred"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "15339"))
     {
         if (GameObject* crystal = RaidAq20Utils::GetNearestCrystal(boss))
         {

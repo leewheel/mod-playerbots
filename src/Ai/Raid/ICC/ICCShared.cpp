@@ -232,9 +232,9 @@ bool IccAnyGroupMemberHasAura(Player* bot, uint32 spellId)
 bool IccAnyBloodPrincePresent(PlayerbotAI* botAI)
 {
     auto* context = botAI->GetAiObjectContext();
-    return AI_VALUE2(Unit*, "find target", "prince valanar") ||
-           AI_VALUE2(Unit*, "find target", "prince taldaram") ||
-           AI_VALUE2(Unit*, "find target", "prince keleseth");
+    return AI_VALUE2(Unit*, "find target", "37970") ||
+           AI_VALUE2(Unit*, "find target", "37973") ||
+           AI_VALUE2(Unit*, "find target", "37972");
 }
 
 std::optional<bool> IccValithriaShouldHealRaid(Player* bot, PlayerbotAI* botAI)

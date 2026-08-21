@@ -27,7 +27,7 @@ Unit* RsZarithrianAddsAction::FindPriorityAdd()
     if (!group)
         return nullptr;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general zarithrian");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39746");
 
     Unit* current = botAI->GetUnit(group->GetTargetIcon(RtiTargetValue::skullIndex));
     if (current && current->IsAlive() && current->GetEntry() == NPC_ONYX_FLAMECALLER)

@@ -17,7 +17,7 @@ bool RsBaltharusBrandTrigger::IsActive()
     if (!bot->HasAura(SPELL_ENERVATING_BRAND))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "baltharus the warborn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39751");
     return boss != nullptr;
 }
 
@@ -26,7 +26,7 @@ bool RsBaltharusTankPositionTrigger::IsActive()
     if (!botAI->IsTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "baltharus the warborn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39751");
     return boss != nullptr;
 }
 
@@ -35,7 +35,7 @@ bool RsBaltharusHealerPositionTrigger::IsActive()
     if (!botAI->IsHeal(bot) || botAI->IsTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "baltharus the warborn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39751");
     return boss != nullptr;
 }
 
@@ -44,7 +44,7 @@ bool RsBaltharusAvoidFrontTrigger::IsActive()
     if (botAI->IsTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "baltharus the warborn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39751");
     return boss != nullptr;
 }
 
@@ -53,7 +53,7 @@ bool RsSavianaConflagrationTrigger::IsActive()
     if (!bot->HasAura(SPELL_FLAME_BEACON))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "saviana ragefire");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39747");
     return boss != nullptr;
 }
 
@@ -62,7 +62,7 @@ bool RsSavianaTankPositionTrigger::IsActive()
     if (!botAI->IsMainTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "saviana ragefire");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39747");
     return boss != nullptr;
 }
 
@@ -71,7 +71,7 @@ bool RsSavianaAvoidFrontTrigger::IsActive()
     if (botAI->IsTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "saviana ragefire");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39747");
     if (!boss)
         return false;
 
@@ -86,7 +86,7 @@ bool RsSavianaMeleeSpreadTrigger::IsActive()
     if (bot->HasAura(SPELL_FLAME_BEACON))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "saviana ragefire");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39747");
     if (!boss)
         return false;
 
@@ -98,7 +98,7 @@ bool RsZarithrianAddsTrigger::IsActive()
     if (botAI->IsTank(bot) || botAI->IsHeal(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general zarithrian");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39746");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -110,7 +110,7 @@ bool RsZarithrianTankTrigger::IsActive()
     if (!botAI->IsTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general zarithrian");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39746");
     return boss != nullptr;
 }
 

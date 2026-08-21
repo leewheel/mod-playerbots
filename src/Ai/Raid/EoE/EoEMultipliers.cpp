@@ -21,7 +21,7 @@
 
 float MalygosMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28859");
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase == 0) { return 1.0f; }

@@ -32,7 +32,7 @@ bool IccDarkReckoningAction::Execute(Event /*event*/)
 
 bool IccRangedPositionLadyDeathwhisperAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "lady deathwhisper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36855");
     if (!boss)
         return false;
 
@@ -120,7 +120,7 @@ bool IccRangedPositionLadyDeathwhisperAction::MaintainRangedSpacing()
 
 bool IccAddsLadyDeathwhisperAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "lady deathwhisper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36855");
     if (!boss)
         return false;
 
@@ -424,7 +424,7 @@ bool IccAddsLadyDeathwhisperAction::HandleNonTankAddEvasion()
     if (!targetedByAdd)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "lady deathwhisper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36855");
     if (!boss)
         return false;
 
@@ -520,7 +520,7 @@ bool IccAddsLadyDeathwhisperAction::IsAddsAlive()
 
 bool IccAddsLadyDeathwhisperAction::EngageBoss()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "lady deathwhisper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36855");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -760,7 +760,7 @@ bool IccShadeLadyDeathwhisperAction::Execute(Event /*event*/)
 // Rotting Giant WiP (waiting for core fix)
 bool IccRottingFrostGiantTankPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "rotting frost giant");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "38494");
     if (!boss)
         return false;
 

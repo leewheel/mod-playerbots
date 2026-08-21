@@ -19,7 +19,7 @@
 // Festergut
 bool IccFestergutGroupPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "festergut");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36626");
     if (!boss)
         return false;
 
@@ -385,7 +385,7 @@ bool IccFestergutSporeAction::CheckMainTankSpore()
 
 bool IccFestergutAvoidMalleableGooAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "festergut");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36626");
     if (!boss)
         return false;
 

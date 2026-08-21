@@ -21,7 +21,7 @@
 // Professor Putricide
 bool IccPutricideMutatedPlagueAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     if (!boss)
         return false;
 
@@ -92,7 +92,7 @@ bool IccPutricideGrowingOozePuddleAction::Execute(Event /*event*/)
     // they don't scatter when a puddle drops on the stack.
     if (!botAI->IsMainTank(bot))
     {
-        Unit* bossP3 = AI_VALUE2(Unit*, "find target", "professor putricide");
+        Unit* bossP3 = AI_VALUE2(Unit*, "find target", "36678");
         if (bossP3 && bossP3->HealthBelowPct(35))
             return false;
     }
@@ -106,7 +106,7 @@ bool IccPutricideGrowingOozePuddleAction::Execute(Event /*event*/)
     // MT steps out of puddles.
     if (botAI->IsMainTank(bot))
     {
-        Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+        Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
         if (boss && boss->IsAlive() && boss->GetVictim() == bot && !boss->HealthBelowPct(35))
         {
             constexpr float puddleNearBossRange = 8.0f;
@@ -228,7 +228,7 @@ Unit* IccPutricideGrowingOozePuddleAction::FindClosestThreateningPuddle()
         return nullptr;
 
     // Phase 3: MT no longer kites, treat as regular bot for puddle avoidance.
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     bool const isMainTank = botAI->IsMainTank(bot) && !(boss && boss->HealthBelowPct(35));
 
     Unit* closestPuddle = nullptr;
@@ -269,7 +269,7 @@ Position IccPutricideGrowingOozePuddleAction::CalculateSafeMovePosition(Unit* cl
     constexpr int numAnglesToTest = 8;
     constexpr float tankShoveDistance = 6.0f;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     bool const isMainTank = botAI->IsMainTank(bot) && !(boss && boss->HealthBelowPct(35));
     bool const isP3Tank = botAI->IsMainTank(bot) && boss && boss->HealthBelowPct(35);
 
@@ -490,11 +490,11 @@ bool IccPutricideVolatileOozeAction::Execute(Event /*event*/)
 {
     constexpr float stackDistance = 7.0f;
 
-    Unit* ooze = AI_VALUE2(Unit*, "find target", "volatile ooze");
+    Unit* ooze = AI_VALUE2(Unit*, "find target", "37697");
     if (!ooze)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     if (!boss)
         return false;
 
@@ -646,11 +646,11 @@ Unit* IccPutricideVolatileOozeAction::FindAuraTarget()
 
 bool IccPutricideGasCloudAction::Execute(Event /*event*/)
 {
-    Unit* gasCloud = AI_VALUE2(Unit*, "find target", "gas cloud");
+    Unit* gasCloud = AI_VALUE2(Unit*, "find target", "37562");
     if (!gasCloud)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     if (!boss)
         return false;
 
@@ -666,7 +666,7 @@ bool IccPutricideGasCloudAction::Execute(Event /*event*/)
         return false;
 
     bool hasGaseousBloat = botAI->HasAura("Gaseous Bloat", bot);
-    Unit* volatileOoze = AI_VALUE2(Unit*, "find target", "volatile ooze");
+    Unit* volatileOoze = AI_VALUE2(Unit*, "find target", "37697");
 
     std::vector<Unit*> aliveGasCloud;
     GuidVector const npcs = AI_VALUE(GuidVector, "nearest hostile npcs");
@@ -1063,7 +1063,7 @@ bool IccPutricideGasCloudAction::HandleGroupAuraSituation(Unit* gasCloud)
     constexpr float rangeMinSafeDistance = 15.0f;
     constexpr uint8 skullIconId = RtiTargetValue::skullIndex;
 
-    Unit* volatileOoze = AI_VALUE2(Unit*, "find target", "volatile ooze");
+    Unit* volatileOoze = AI_VALUE2(Unit*, "find target", "37697");
     if ((!volatileOoze || !volatileOoze->IsAlive()) && gasCloud && gasCloud->IsAlive())
     {
         ObjectGuid currentSkull = group->GetTargetIcon(skullIconId);
@@ -1103,7 +1103,7 @@ bool IccPutricideGasCloudAction::GroupHasGaseousBloat(Group* group)
 
 bool IccPutricideAvoidMalleableGooAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     if (!boss)
         return false;
 
@@ -1246,7 +1246,7 @@ bool IccPutricideAvoidMalleableGooAction::Execute(Event /*event*/)
     if (HandleTankPositioning(boss))
         return false;
 
-    if (AI_VALUE2(Unit*, "find target", "volatile ooze") || AI_VALUE2(Unit*, "find target", "gas cloud"))
+    if (AI_VALUE2(Unit*, "find target", "37697") || AI_VALUE2(Unit*, "find target", "37562"))
         return false;
 
     if (HandleUnboundPlague(boss))
@@ -1266,7 +1266,7 @@ bool IccPutricideAvoidMalleableGooAction::HandleTankPositioning(Unit* boss)
         return false;
 
     if (boss && boss->IsAlive() &&
-        !AI_VALUE2(Unit*, "find target", "volatile ooze") && !AI_VALUE2(Unit*, "find target", "gas cloud"))
+        !AI_VALUE2(Unit*, "find target", "37697") && !AI_VALUE2(Unit*, "find target", "37562"))
     {
         if (Group* group = bot->GetGroup())
         {
@@ -1513,11 +1513,11 @@ bool IccPutricideAbominationAction::BecomeAbomination()
 
 Unit* IccPutricideAbominationAction::PickSlashTarget(Unit* boss)
 {
-    Unit* volatileOoze = AI_VALUE2(Unit*, "find target", "volatile ooze");
+    Unit* volatileOoze = AI_VALUE2(Unit*, "find target", "37697");
     if (volatileOoze && volatileOoze->IsAlive())
         return volatileOoze;
 
-    Unit* gasCloud = AI_VALUE2(Unit*, "find target", "gas cloud");
+    Unit* gasCloud = AI_VALUE2(Unit*, "find target", "37562");
     if (gasCloud && gasCloud->IsAlive())
         return gasCloud;
 
@@ -1592,7 +1592,7 @@ bool IccPutricideAbominationAction::Execute(Event /*event*/)
     if (!botAI->IsAssistTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
     if (!boss)
         return false;
 
@@ -1612,8 +1612,8 @@ bool IccPutricideAbominationAction::Execute(Event /*event*/)
         return BecomeAbomination();
     }
 
-    Unit* volatileOoze = AI_VALUE2(Unit*, "find target", "volatile ooze");
-    Unit* gasCloud = AI_VALUE2(Unit*, "find target", "gas cloud");
+    Unit* volatileOoze = AI_VALUE2(Unit*, "find target", "37697");
+    Unit* gasCloud = AI_VALUE2(Unit*, "find target", "37562");
     Unit* puddle = FindClosestPuddle(100.0f);
 
     // Priority 1: Regurgitated Ooze on volatile ooze (aura-gated, energy bypassed)

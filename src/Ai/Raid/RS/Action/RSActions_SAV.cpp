@@ -137,7 +137,7 @@ bool RsSavianaTankPositionAction::Execute(Event )
     if (!botAI->IsMainTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "saviana ragefire");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39747");
     if (!boss)
         return false;
 
@@ -165,7 +165,7 @@ bool RsSavianaAvoidFrontAction::Execute(Event )
     if (botAI->IsTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "saviana ragefire");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39747");
     if (!boss || boss->IsLevitating())
         return false;
 
@@ -233,7 +233,7 @@ bool RsSavianaMeleeSpreadAction::Execute(Event )
     uint32 const instanceId = bot->GetInstanceId();
     auto const myKey = std::make_pair(instanceId, bot->GetGUID());
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "saviana ragefire");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "39747");
     if (!boss || !boss->IsLevitating())
     {
         g_savianaMeleeSlot.erase(myKey);

@@ -15,7 +15,7 @@ OnyxiaDeepBreathTrigger::OnyxiaDeepBreathTrigger(PlayerbotAI* botAI) : Trigger(b
 
 bool OnyxiaDeepBreathTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "onyxia");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
     if (!boss || !boss->HasUnitState(UNIT_STATE_CASTING))
         return false;
 
@@ -47,7 +47,7 @@ OnyxiaNearTailTrigger::OnyxiaNearTailTrigger(PlayerbotAI* botAI) : Trigger(botAI
 
 bool OnyxiaNearTailTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "onyxia");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
     if (!boss || botAI->IsTank(bot))
         return false;
 
@@ -64,7 +64,7 @@ RaidOnyxiaFireballSplashTrigger::RaidOnyxiaFireballSplashTrigger(PlayerbotAI* bo
 
 bool RaidOnyxiaFireballSplashTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "onyxia");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
     if (!boss || !boss->HasUnitState(UNIT_STATE_CASTING))
         return false;
 
@@ -92,7 +92,7 @@ RaidOnyxiaWhelpsSpawnTrigger::RaidOnyxiaWhelpsSpawnTrigger(PlayerbotAI* botAI) :
 
 bool RaidOnyxiaWhelpsSpawnTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "onyxia");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
     if (!boss)
         return false;
 

@@ -33,7 +33,7 @@ bool BwlSuppressionDeviceTrigger::IsActive()
 
 bool BwlRazorgoreNotMindControlledTrigger::IsActive()
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "razorgore the untamed"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "12435"))
         return !boss->HasAura(static_cast<uint32>(BlackwingLairSpells::SPELL_MINDCONTROL));
     return false;
 }
@@ -43,7 +43,7 @@ bool BwlRazorgoreNotMindControlledTrigger::IsActive()
 bool BwlVaelastraszPositioningTrigger::IsActive()
 {
     // Prevent non-tanks from rotating the boss while the tanks gain thread.
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "vaelastrasz the corrupt"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "13020"))
         return boss->GetVictim() != bot;
     return false;
 }
@@ -74,7 +74,7 @@ bool BwlNefarianFearWardTrigger::IsActive()
     if (bot->getClass() != CLASS_PRIEST)
         return false;
 
-    Unit* nefarian = AI_VALUE2(Unit*, "find target", "nefarian");
+    Unit* nefarian = AI_VALUE2(Unit*, "find target", "11583");
     if (!nefarian || !nefarian->IsInCombat())
         return false;
 
@@ -89,12 +89,12 @@ bool BwlNefarianFearWardTrigger::IsActive()
 
 bool BwlDeathTalonWyrmguardTankTrigger::IsActive()
 {
-    return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "death talon wyrmguard");
+    return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "12460");
 }
 
 bool BwlDeathTalonWyrmguardRangedTrigger::IsActive()
 {
-    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "death talon wyrmguard");
+    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "12460");
 }
 
 //By leewheel 2026年7月12日

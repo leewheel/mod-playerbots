@@ -23,8 +23,8 @@ bool BlackTempleEraseTimersAndTrackersAction::Execute(Event /*event*/)
     if (botAI->IsTank(bot))
     {
         bool erased = false;
-        if (!AI_VALUE2(Unit*, "find target", "illidan stormrage") &&
-            !AI_VALUE2(Unit*, "find target", "flame of azzinoth"))
+        if (!AI_VALUE2(Unit*, "find target", "22917") &&
+            !AI_VALUE2(Unit*, "find target", "22997"))
         {
             if (illidanBossDpsWaitTimer.erase(instanceId) > 0)
                 erased = true;
@@ -43,14 +43,14 @@ bool BlackTempleEraseTimersAndTrackersAction::Execute(Event /*event*/)
             if (eastFlameGuid.erase(instanceId) > 0)
                 erased = true;
         }
-        if (!AI_VALUE2(Unit*, "find target", "gathios the shatterer"))
+        if (!AI_VALUE2(Unit*, "find target", "22949"))
         {
             if (councilDpsWaitTimer.erase(instanceId) > 0)
                 erased = true;
             if (gathiosTankStep.erase(guid) > 0)
                 erased = true;
         }
-        if (!AI_VALUE2(Unit*, "find target", "mother shahraz") &&
+        if (!AI_VALUE2(Unit*, "find target", "22947") &&
             shahrazTankStep.erase(guid) > 0)
         {
             erased = true;
@@ -67,17 +67,17 @@ bool BlackTempleEraseTimersAndTrackersAction::Execute(Event /*event*/)
     else
     {
         bool erased = false;
-        if (!AI_VALUE2(Unit*, "find target", "supremus") &&
+        if (!AI_VALUE2(Unit*, "find target", "22898") &&
             supremusPhaseTimer.erase(instanceId) > 0)
         {
             erased = true;
         }
-        if (!AI_VALUE2(Unit*, "find target", "ashtongue channeler") &&
+        if (!AI_VALUE2(Unit*, "find target", "23421") &&
             hasReachedAkamaChannelerPosition.erase(guid) > 0)
         {
             erased = true;
         }
-        if (!AI_VALUE2(Unit*, "find target", "gurtogg bloodboil") &&
+        if (!AI_VALUE2(Unit*, "find target", "22948") &&
             gurtoggPhaseTimer.erase(instanceId) > 0)
         {
             erased = true;
@@ -90,7 +90,7 @@ bool BlackTempleEraseTimersAndTrackersAction::Execute(Event /*event*/)
 
 bool HighWarlordNajentusMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* najentus = AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
+    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
     if (!najentus)
         return false;
 
@@ -112,7 +112,7 @@ bool HighWarlordNajentusMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool HighWarlordNajentusTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* najentus = AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
+    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
     if (!najentus)
         return false;
 
@@ -142,7 +142,7 @@ bool HighWarlordNajentusTanksPositionBossAction::Execute(Event /*event*/)
 
 bool HighWarlordNajentusDisperseRangedAction::Execute(Event /*event*/)
 {
-    Unit* najentus = AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
+    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
     if (!najentus)
         return false;
 
@@ -231,7 +231,7 @@ bool HighWarlordNajentusRemoveImpalingSpineAction::Execute(Event /*event*/)
 
 bool HighWarlordNajentusThrowImpalingSpineAction::Execute(Event /*event*/)
 {
-    Unit* najentus = AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
+    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
     if (!najentus)
         return false;
 
@@ -273,7 +273,7 @@ bool HighWarlordNajentusThrowImpalingSpineAction::Execute(Event /*event*/)
 
 bool SupremusMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "supremus");
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
     if (!supremus)
         return false;
 
@@ -331,7 +331,7 @@ bool SupremusDisperseRangedAction::Execute(Event /*event*/)
 
 bool SupremusKiteBossAction::Execute(Event /*event*/)
 {
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "supremus");
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
     if (!supremus)
         return false;
 
@@ -475,7 +475,7 @@ std::vector<Unit*> SupremusMoveAwayFromVolcanosAction::GetAllSupremusVolcanos()
 
 bool SupremusManagePhaseTimerAction::Execute(Event /*event*/)
 {
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "supremus");
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
     if (!supremus)
         return false;
 
@@ -537,7 +537,7 @@ bool ShadeOfAkamaMeleeDpsPrioritizeChannelersAction::Execute(Event /*event*/)
 
 bool TeronGorefiendMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "teron gorefiend");
+    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "22871");
     if (!gorefiend)
         return false;
 
@@ -559,7 +559,7 @@ bool TeronGorefiendMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool TeronGorefiendTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "teron gorefiend");
+    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "22871");
     if (!gorefiend)
         return false;
 
@@ -675,7 +675,7 @@ bool TeronGorefiendMoveToCornerToDieAction::Execute(Event /*event*/)
 
 bool TeronGorefiendControlAndDestroyShadowyConstructsAction::Execute(Event /*event*/)
 {
-    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "teron gorefiend");
+    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "22871");
     if (!gorefiend)
         return false;
 
@@ -808,7 +808,7 @@ bool TeronGorefiendControlAndDestroyShadowyConstructsAction::Execute(Event /*eve
 
 bool GurtoggBloodboilMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
     if (!gurtogg)
         return false;
 
@@ -834,7 +834,7 @@ bool GurtoggBloodboilMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool GurtoggBloodboilTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
     if (!gurtogg)
         return false;
 
@@ -866,7 +866,7 @@ bool GurtoggBloodboilTanksPositionBossAction::Execute(Event /*event*/)
 
 bool GurtoggBloodboilRotateRangedGroupsAction::Execute(Event /*event*/)
 {
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
     if (!gurtogg)
         return false;
 
@@ -928,7 +928,7 @@ bool GurtoggBloodboilRangedMoveAwayFromEnragedPlayerAction::Execute(Event /*even
 
 bool GurtoggBloodboilManagePhaseTimerAction::Execute(Event /*event*/)
 {
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
     if (!gurtogg)
         return false;
 
@@ -950,8 +950,8 @@ bool GurtoggBloodboilManagePhaseTimerAction::Execute(Event /*event*/)
 
 bool ReliquaryOfSoulsMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* desire = AI_VALUE2(Unit*, "find target", "essence of desire");
-    Unit* anger = AI_VALUE2(Unit*, "find target", "essence of anger");
+    Unit* desire = AI_VALUE2(Unit*, "find target", "23419");
+    Unit* anger = AI_VALUE2(Unit*, "find target", "23420");
 
     if (!desire && !anger)
         return false;
@@ -979,7 +979,7 @@ bool ReliquaryOfSoulsMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool ReliquaryOfSoulsAdjustDistanceFromSufferingAction::Execute(Event /*event*/)
 {
-    Unit* suffering = AI_VALUE2(Unit*, "find target", "essence of suffering");
+    Unit* suffering = AI_VALUE2(Unit*, "find target", "23418");
     if (!suffering)
         return false;
 
@@ -1038,7 +1038,7 @@ bool ReliquaryOfSoulsAdjustDistanceFromSufferingAction::RangedMoveAwayFromBoss(U
 
 bool ReliquaryOfSoulsHealersDpsSufferingAction::Execute(Event /*event*/)
 {
-    Unit* suffering = AI_VALUE2(Unit*, "find target", "essence of suffering");
+    Unit* suffering = AI_VALUE2(Unit*, "find target", "23418");
     if (!suffering)
         return false;
 
@@ -1118,7 +1118,7 @@ bool ReliquaryOfSoulsHealersDpsSufferingAction::Execute(Event /*event*/)
 
 bool ReliquaryOfSoulsSpellstealRuneShieldAction::Execute(Event /*event*/)
 {
-    if (Unit* desire = AI_VALUE2(Unit*, "find target", "essence of desire");
+    if (Unit* desire = AI_VALUE2(Unit*, "find target", "23419");
         desire && botAI->CanCastSpell("spellsteal", desire))
     {
         return botAI->CastSpell("spellsteal", desire);
@@ -1139,7 +1139,7 @@ bool ReliquaryOfSoulsSpellReflectDeadenAction::Execute(Event /*event*/)
 
 bool MotherShahrazMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* shahraz = AI_VALUE2(Unit*, "find target", "mother shahraz");
+    Unit* shahraz = AI_VALUE2(Unit*, "find target", "22947");
     if (!shahraz)
         return false;
 
@@ -1161,7 +1161,7 @@ bool MotherShahrazMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool MotherShahrazTanksPositionBossUnderPillarAction::Execute(Event /*event*/)
 {
-    Unit* shahraz = AI_VALUE2(Unit*, "find target", "mother shahraz");
+    Unit* shahraz = AI_VALUE2(Unit*, "find target", "22947");
     if (!shahraz)
         return false;
 
@@ -1360,12 +1360,12 @@ bool IllidariCouncilMisdirectBossesToTanksAction::Execute(Event /*event*/)
     Player* tankTarget = nullptr;
     if (hunterIndex == 0)
     {
-        councilTarget = AI_VALUE2(Unit*, "find target", "high nethermancer zerevor");
+        councilTarget = AI_VALUE2(Unit*, "find target", "22950");
         tankTarget = GetZerevorMageTank(bot);
     }
     else if (hunterIndex == 1)
     {
-        councilTarget = AI_VALUE2(Unit*, "find target", "lady malande");
+        councilTarget = AI_VALUE2(Unit*, "find target", "22951");
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             if (Player* member = GetGroupAssistTank(botAI, bot, 0))
@@ -1377,7 +1377,7 @@ bool IllidariCouncilMisdirectBossesToTanksAction::Execute(Event /*event*/)
     }
     else if (hunterIndex == 2)
     {
-        councilTarget = AI_VALUE2(Unit*, "find target", "gathios the shatterer");
+        councilTarget = AI_VALUE2(Unit*, "find target", "22949");
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             if (Player* member = GetGroupMainTank(botAI, bot))
@@ -1389,7 +1389,7 @@ bool IllidariCouncilMisdirectBossesToTanksAction::Execute(Event /*event*/)
     }
     else if (hunterIndex == 3)
     {
-        councilTarget = AI_VALUE2(Unit*, "find target", "veras darkshadow");
+        councilTarget = AI_VALUE2(Unit*, "find target", "22952");
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             if (Player* member = GetGroupAssistTank(botAI, bot, 1))
@@ -1417,7 +1417,7 @@ bool IllidariCouncilMisdirectBossesToTanksAction::Execute(Event /*event*/)
 
 bool IllidariCouncilMainTankPositionGathiosAction::Execute(Event /*event*/)
 {
-    Unit* gathios = AI_VALUE2(Unit*, "find target", "gathios the shatterer");
+    Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
     if (!gathios)
         return false;
 
@@ -1490,7 +1490,7 @@ bool IllidariCouncilMainTankReflectJudgementOfCommandAction::Execute(Event /*eve
 
 bool IllidariCouncilFirstAssistTankFocusMalandeAction::Execute(Event /*event*/)
 {
-    Unit* malande = AI_VALUE2(Unit*, "find target", "lady malande");
+    Unit* malande = AI_VALUE2(Unit*, "find target", "22951");
     if (!malande)
         return false;
 
@@ -1514,7 +1514,7 @@ bool IllidariCouncilFirstAssistTankFocusMalandeAction::Execute(Event /*event*/)
 
 bool IllidariCouncilSecondAssistTankPositionDarkshadowAction::Execute(Event /*event*/)
 {
-    Unit* darkshadow = AI_VALUE2(Unit*, "find target", "veras darkshadow");
+    Unit* darkshadow = AI_VALUE2(Unit*, "find target", "22952");
     if (!darkshadow)
         return false;
 
@@ -1560,7 +1560,7 @@ bool IllidariCouncilSecondAssistTankPositionDarkshadowAction::Execute(Event /*ev
 
 bool IllidariCouncilMageTankPositionZerevorAction::Execute(Event /*event*/)
 {
-    Unit* zerevor = AI_VALUE2(Unit*, "find target", "high nethermancer zerevor");
+    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
     if (!zerevor)
         return false;
 
@@ -1605,7 +1605,7 @@ bool IllidariCouncilPositionMageTankHealerAction::Execute(Event /*event*/)
     if (!mageTank)
         return false;
 
-    Unit* zerevor = AI_VALUE2(Unit*, "find target", "high nethermancer zerevor");
+    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
     if (!zerevor || zerevor->GetVictim() != mageTank)
         return false;
 
@@ -1658,7 +1658,7 @@ bool IllidariCouncilDisperseRangedAction::Execute(Event /*event*/)
 
 bool IllidariCouncilCommandPetsToAttackGathiosAction::Execute(Event /*event*/)
 {
-    Unit* gathios = AI_VALUE2(Unit*, "find target", "gathios the shatterer");
+    Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
     if (!gathios)
         return false;
 
@@ -1687,12 +1687,12 @@ bool IllidariCouncilCommandPetsToAttackGathiosAction::Execute(Event /*event*/)
 
 bool IllidariCouncilAssignDpsTargetsAction::Execute(Event /*event*/)
 {
-    Unit* malande = AI_VALUE2(Unit*, "find target", "lady malande");
+    Unit* malande = AI_VALUE2(Unit*, "find target", "22951");
     if (!malande)
         return false;
 
     bool shouldAttackMalande = false;
-    Unit* zerevor = AI_VALUE2(Unit*, "find target", "high nethermancer zerevor");
+    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
     if (zerevor && zerevor->GetExactDist2d(malande) < 15.0f)
     {
         shouldAttackMalande = false;
@@ -1716,7 +1716,7 @@ bool IllidariCouncilAssignDpsTargetsAction::Execute(Event /*event*/)
         if (AI_VALUE(Unit*, "current target") != malande)
             return Attack(malande);
     }
-    else if (Unit* darkshadow = AI_VALUE2(Unit*, "find target", "veras darkshadow");
+    else if (Unit* darkshadow = AI_VALUE2(Unit*, "find target", "22952");
              darkshadow && !darkshadow->HasAura(
                 static_cast<uint32>(BlackTempleSpells::SPELL_VANISH)))
     {
@@ -1725,7 +1725,7 @@ bool IllidariCouncilAssignDpsTargetsAction::Execute(Event /*event*/)
         if (AI_VALUE(Unit*, "current target") != darkshadow)
             return Attack(darkshadow);
     }
-    else if (Unit* gathios = AI_VALUE2(Unit*, "find target", "gathios the shatterer"))
+    else if (Unit* gathios = AI_VALUE2(Unit*, "find target", "22949"))
     {
         SetRtiTarget(botAI, "square", gathios);
 
@@ -1738,7 +1738,7 @@ bool IllidariCouncilAssignDpsTargetsAction::Execute(Event /*event*/)
 
 bool IllidariCouncilManageDpsTimerAction::Execute(Event /*event*/)
 {
-    if (Unit* gathios = AI_VALUE2(Unit*, "find target", "gathios the shatterer"))
+    if (Unit* gathios = AI_VALUE2(Unit*, "find target", "22949"))
     {
         return councilDpsWaitTimer.try_emplace(
             gathios->GetMap()->GetInstanceId(), std::time(nullptr)).second;
@@ -1751,7 +1751,7 @@ bool IllidariCouncilManageDpsTimerAction::Execute(Event /*event*/)
 
 bool IllidanStormrageMisdirectToTankAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -1872,7 +1872,7 @@ bool IllidanStormrageMisdirectToTankAction::TryMisdirectToWarlockTank(Unit* illi
 
 bool IllidanStormrageMainTankRepositionBossAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2078,7 +2078,7 @@ bool IllidanStormrageMainTankRepositionBossAction::IsPathSafeFromFlameCrashes(
 
 bool IllidanStormrageIsolateBotWithParasiteAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2253,7 +2253,7 @@ bool IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction::Execute(Event /*ev
         }
     }
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2413,7 +2413,7 @@ bool IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction::RepositionToAvoidB
 // Just like players, pets cannot melee Illidan during Phase 4
 bool IllidanStormrageControlPetAggressionAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2502,7 +2502,7 @@ bool IllidanStormrageRemoveDarkBarrageAction::Execute(Event /*event*/)
 
 bool IllidanStormrageMoveAwayFromLandingPointAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2517,7 +2517,7 @@ bool IllidanStormrageMoveAwayFromLandingPointAction::Execute(Event /*event*/)
 // NOTE: Illidan's bounding radius is 0.459f, and combatreach is 7.5f
 bool IllidanStormrageDisperseRangedAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2685,7 +2685,7 @@ bool IllidanStormrageDisperseRangedAction::SpreadInCircleInDemonPhase(
 // Melee cannot attack Demon Form Illidan
 bool IllidanStormrageMeleeGoSomewhereToNotDieAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2739,7 +2739,7 @@ bool IllidanStormrageMeleeGoSomewhereToNotDieAction::Execute(Event /*event*/)
 
 bool IllidanStormrageWarlockTankHandleDemonBossAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2765,7 +2765,7 @@ bool IllidanStormrageWarlockTankHandleDemonBossAction::Execute(Event /*event*/)
 
 bool IllidanStormrageDpsPrioritizeAddsAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2854,7 +2854,7 @@ bool IllidanStormrageDpsPrioritizeAddsAction::Execute(Event /*event*/)
 
 bool IllidanStormrageUseShadowTrapAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2879,7 +2879,7 @@ bool IllidanStormrageUseShadowTrapAction::Execute(Event /*event*/)
 
 bool IllidanStormrageManageDpsTimerAndRtiAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -2965,7 +2965,7 @@ bool IllidanStormrageManageDpsTimerAndRtiAction::Execute(Event /*event*/)
 
 bool IllidanStormrageDestroyHazardsAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
@@ -3012,7 +3012,7 @@ bool IllidanStormrageDestroyHazardsAction::Execute(Event /*event*/)
 // Reduce Shadow Demon to 25% health and kill residual Shadowfiends in Phase 2
 bool IllidanStormrageHandleAddsCheatAction::Execute(Event /*event*/)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 

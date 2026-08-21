@@ -52,7 +52,7 @@ bool IsFlameWreathActive(Player* bot)
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     AiObjectContext* context = botAI->GetAiObjectContext();
 
-    Unit* aran = AI_VALUE2(Unit*, "find target", "shade of aran");
+    Unit* aran = AI_VALUE2(Unit*, "find target", "16524");
     if (!aran)
         return false;
 

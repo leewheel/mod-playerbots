@@ -34,7 +34,7 @@ bool AmanishiMedicineManMarkWardAction::Execute(Event /*event*/)
 
 bool AkilzonMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* akilzon = AI_VALUE2(Unit*, "find target", "akil'zon");
+    Unit* akilzon = AI_VALUE2(Unit*, "find target", "23574");
     if (!akilzon)
         return false;
 
@@ -54,7 +54,7 @@ bool AkilzonMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool AkilzonTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* akilzon = AI_VALUE2(Unit*, "find target", "akil'zon");
+    Unit* akilzon = AI_VALUE2(Unit*, "find target", "23574");
     if (!akilzon)
         return false;
 
@@ -115,7 +115,7 @@ bool AkilzonManageElectricalStormTimerAction::Execute(Event /*event*/)
     const time_t now = std::time(nullptr);
     const uint32 instanceId = bot->GetMap()->GetInstanceId();
 
-    Unit* akilzon = AI_VALUE2(Unit*, "find target", "akil'zon");
+    Unit* akilzon = AI_VALUE2(Unit*, "find target", "23574");
     if (akilzon)
     {
         auto [it, inserted] = akilzonStormTimer.try_emplace(instanceId, now);
@@ -133,7 +133,7 @@ bool AkilzonManageElectricalStormTimerAction::Execute(Event /*event*/)
 
 bool NalorakkMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* nalorakk = AI_VALUE2(Unit*, "find target", "nalorakk");
+    Unit* nalorakk = AI_VALUE2(Unit*, "find target", "23576");
     if (!nalorakk)
         return false;
 
@@ -156,7 +156,7 @@ bool NalorakkTanksPositionBossAction::Execute(Event /*event*/)
     if (!botAI->IsMainTank(bot) && !botAI->IsAssistTankOfIndex(bot, 0, true))
         return false;
 
-    Unit* nalorakk = AI_VALUE2(Unit*, "find target", "nalorakk");
+    Unit* nalorakk = AI_VALUE2(Unit*, "find target", "23576");
     if (!nalorakk)
         return false;
 
@@ -240,7 +240,7 @@ bool NalorakkSpreadRangedAction::Execute(Event /*event*/)
 
 bool JanalaiMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* janalai = AI_VALUE2(Unit*, "find target", "jan'alai");
+    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
     if (!janalai)
         return false;
 
@@ -260,7 +260,7 @@ bool JanalaiMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool JanalaiTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* janalai = AI_VALUE2(Unit*, "find target", "jan'alai");
+    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
     if (!janalai)
         return false;
 
@@ -383,7 +383,7 @@ bool JanalaiMarkAmanishiHatchersAction::Execute(Event /*event*/)
 
 bool HalazziMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* halazzi = AI_VALUE2(Unit*, "find target", "halazzi");
+    Unit* halazzi = AI_VALUE2(Unit*, "find target", "23577");
     if (!halazzi)
         return false;
 
@@ -403,7 +403,7 @@ bool HalazziMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool HalazziMainTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* halazzi = AI_VALUE2(Unit*, "find target", "halazzi");
+    Unit* halazzi = AI_VALUE2(Unit*, "find target", "23577");
     if (!halazzi)
         return false;
 
@@ -441,7 +441,7 @@ bool HalazziFirstAssistTankAttackSpiritLynxAction::Execute(Event /*event*/)
 {
     bool targetFound = false;
 
-    if (Unit* lynx = AI_VALUE2(Unit*, "find target", "spirit of the lynx"))
+    if (Unit* lynx = AI_VALUE2(Unit*, "find target", "24143"))
     {
         if (MarkTargetWithCircle(bot, lynx))
             return true;
@@ -456,7 +456,7 @@ bool HalazziFirstAssistTankAttackSpiritLynxAction::Execute(Event /*event*/)
 
         targetFound = true;
     }
-    else if (Unit* halazzi = AI_VALUE2(Unit*, "find target", "halazzi"))
+    else if (Unit* halazzi = AI_VALUE2(Unit*, "find target", "23577"))
     {
         SetRtiTarget(botAI, "star", halazzi);
 
@@ -506,7 +506,7 @@ bool HalazziAssignDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 2: Halazzi
-    if (Unit* halazzi = AI_VALUE2(Unit*, "find target", "halazzi"))
+    if (Unit* halazzi = AI_VALUE2(Unit*, "find target", "23577"))
     {
         SetRtiTarget(botAI, "star", halazzi);
 
@@ -522,7 +522,7 @@ bool HalazziAssignDpsPriorityAction::Execute(Event /*event*/)
 
 bool HexLordMalacrassMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* malacrass = AI_VALUE2(Unit*, "find target", "hex lord malacrass");
+    Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
     if (!malacrass)
         return false;
 
@@ -589,7 +589,7 @@ bool HexLordMalacrassAssignDpsPriorityAction::Execute(Event /*event*/)
 
 bool HexLordMalacrassRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 {
-    if (Unit* malacrass = AI_VALUE2(Unit*, "find target", "hex lord malacrass"))
+    if (Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239"))
     {
         float currentDistance = bot->GetDistance2d(malacrass);
         constexpr float safeDistance = 9.0f;
@@ -606,7 +606,7 @@ bool HexLordMalacrassRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 
 bool HexLordMalacrassCastersStopAttackingAction::Execute(Event /*event*/)
 {
-    Unit* malacrass = AI_VALUE2(Unit*, "find target", "hex lord malacrass");
+    Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
     if (!malacrass ||
         !malacrass->HasAura(static_cast<uint32>(ZulAmanSpells::SPELL_HEX_LORD_SPELL_REFLECTION)))
         return false;
@@ -642,7 +642,7 @@ bool HexLordMalacrassMoveAwayFromFreezingTrapAction::Execute(Event /*event*/)
 
 bool ZuljinMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin");
+    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
     if (!zuljin)
         return false;
 
@@ -662,7 +662,7 @@ bool ZuljinMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool ZuljinTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin");
+    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
     if (!zuljin)
         return false;
 
@@ -693,7 +693,7 @@ bool ZuljinTanksPositionBossAction::Execute(Event /*event*/)
 
 bool ZuljinRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 {
-    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin"))
+    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863"))
     {
         float currentDistance = bot->GetExactDist2d(zuljin);
         constexpr float safeDistance = 10.0f;

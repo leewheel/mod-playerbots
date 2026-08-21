@@ -316,6 +316,13 @@ bool EnsureBotCanEnterMap(Player* bot, uint32 mapId, Player* master)
     if (!entry->IsDungeon())
         return true;
 
+    // 机器人已经就在目标副本地图内 → 无需进入，直接放行。
+    // 若不拦截，PlayerCannotEnter 会对"已在本副本地图"的玩家返回 ALREADY_IN_MAP，
+    // 导致每次进出内场(同图近程传送触发 OnPlayerBeforeTeleport)时全员刷屏 already in map。
+    // By leewheel 20260820 //End By leewheel
+    if (bot->GetMapId() == mapId)
+        return true;
+
     // 第一步：检查并修复 DungeonProgressionRequirements（钥匙/任务/成就/等级）
     FixProgressionRequirements(bot, mapId, master);
 

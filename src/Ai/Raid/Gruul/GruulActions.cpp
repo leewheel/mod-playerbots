@@ -22,13 +22,13 @@ bool GruulsLairResetEncounterStatesAction::Execute(Event /*event*/)
 {
     bool reset = false;
 
-    if (!AI_VALUE2(Unit*, "find target", "high king maulgar") &&
+    if (!AI_VALUE2(Unit*, "find target", "18831") &&
         ClearTargetIcon(bot, RtiTargetValue::skullIndex))
     {
         reset = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "gruul the dragonkiller"))
+    if (!AI_VALUE2(Unit*, "find target", "19044"))
     {
         Action* action = context->GetAction("gruul the dragonkiller spread ranged");
         if (action &&
@@ -49,17 +49,17 @@ bool HighKingMaulgarMeleeTanksPositionBossesAction::Execute(Event /*event*/)
     Position position;
     if (IsMaulgarTank(bot))
     {
-        target = AI_VALUE2(Unit*, "find target", "high king maulgar");
+        target = AI_VALUE2(Unit*, "find target", "18831");
         position = MAULGAR_TANK_POSITION;
     }
     else if (IsOlmTank(bot))
     {
-        target = AI_VALUE2(Unit*, "find target", "olm the summoner");
+        target = AI_VALUE2(Unit*, "find target", "18834");
         position = OLM_TANK_POSITION;
     }
     else if (IsBlindeyeTank(bot))
     {
-        target = AI_VALUE2(Unit*, "find target", "blindeye the seer");
+        target = AI_VALUE2(Unit*, "find target", "18836");
         position = BLINDEYE_TANK_POSITION;
     }
 
@@ -97,7 +97,7 @@ bool HighKingMaulgarMeleeTanksPositionBossesAction::Execute(Event /*event*/)
 
 bool HighKingMaulgarMageTankAttackKroshAction::Execute(Event /*event*/)
 {
-    Unit* krosh = AI_VALUE2(Unit*, "find target", "krosh firehand");
+    Unit* krosh = AI_VALUE2(Unit*, "find target", "18832");
     if (!krosh)
         return false;
 
@@ -162,7 +162,7 @@ bool HighKingMaulgarMageTankAttackKroshAction::MoveToDesiredDistance(Unit* krosh
 // remain close to where he starts.
 bool HighKingMaulgarMoonkinTankAttackKigglerAction::Execute(Event /*event*/)
 {
-    Unit* kiggler = AI_VALUE2(Unit*, "find target", "kiggler the crazed");
+    Unit* kiggler = AI_VALUE2(Unit*, "find target", "18835");
     if (!kiggler)
         return false;
 
@@ -184,22 +184,22 @@ bool HighKingMaulgarMoonkinTankAttackKigglerAction::Execute(Event /*event*/)
 // Priority: (1) Blindeye, (2) Olm, (3) Krosh (ranged only), (4) Kiggler, and (5) Maulgar
 bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* target = AI_VALUE2(Unit*, "find target", "blindeye the seer");
+    Unit* target = AI_VALUE2(Unit*, "find target", "18836");
     Unit* krosh = nullptr;
-    if (Unit* olm = AI_VALUE2(Unit*, "find target", "olm the summoner"))
+    if (Unit* olm = AI_VALUE2(Unit*, "find target", "18834"))
     {
         target = olm;
     }
-    else if ((krosh = AI_VALUE2(Unit*, "find target", "krosh firehand")) &&
+    else if ((krosh = AI_VALUE2(Unit*, "find target", "18832")) &&
         PlayerbotAI::IsRanged(bot))
     {
         target = krosh;
     }
-    else if (Unit* kiggler = AI_VALUE2(Unit*, "find target", "kiggler the crazed"))
+    else if (Unit* kiggler = AI_VALUE2(Unit*, "find target", "18835"))
     {
         target = kiggler;
     }
-    else if (Unit* maulgar = AI_VALUE2(Unit*, "find target", "high king maulgar"))
+    else if (Unit* maulgar = AI_VALUE2(Unit*, "find target", "18831"))
     {
         target = maulgar;
     }
@@ -222,7 +222,7 @@ bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
 
 bool HighKingMaulgarRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 {
-    Unit* maulgar = AI_VALUE2(Unit*, "find target", "high king maulgar");
+    Unit* maulgar = AI_VALUE2(Unit*, "find target", "18831");
     if (!maulgar)
         return false;
 
@@ -236,7 +236,7 @@ bool HighKingMaulgarRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 
 bool HighKingMaulgarFleeFromBlastNovaDangerAction::Execute(Event /*event*/)
 {
-    Unit* krosh = AI_VALUE2(Unit*, "find target", "krosh firehand");
+    Unit* krosh = AI_VALUE2(Unit*, "find target", "18832");
     if (!krosh)
         return false;
 
@@ -340,12 +340,12 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     Player* tankTarget = nullptr;
     if (hunterIndex == 0)
     {
-        ogreTarget = AI_VALUE2(Unit*, "find target", "blindeye the seer");
+        ogreTarget = AI_VALUE2(Unit*, "find target", "18836");
         tankTarget = GetGroupAssistTank(botAI, bot, 1);
     }
     else if (hunterIndex == 1)
     {
-        ogreTarget = AI_VALUE2(Unit*, "find target", "olm the summoner");
+        ogreTarget = AI_VALUE2(Unit*, "find target", "18834");
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             if (Player* member = GetGroupAssistTank(botAI, bot, 0))
@@ -357,7 +357,7 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     }
     else if (hunterIndex == 2)
     {
-        ogreTarget = AI_VALUE2(Unit*, "find target", "kiggler the crazed");
+        ogreTarget = AI_VALUE2(Unit*, "find target", "18835");
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             if (Player* member = GetKigglerMoonkinTank(bot))
@@ -369,7 +369,7 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     }
     else if (hunterIndex == 3)
     {
-        ogreTarget = AI_VALUE2(Unit*, "find target", "krosh firehand");
+        ogreTarget = AI_VALUE2(Unit*, "find target", "18832");
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             if (Player* member = GetKroshMageTank(bot))
@@ -399,7 +399,7 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
 
 bool GruulTheDragonkillerTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
+    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
     if (!gruul)
         return false;
 
@@ -438,7 +438,7 @@ bool GruulTheDragonkillerTanksPositionBossAction::Execute(Event /*event*/)
 // Thereafter, ranged should spread out 10 yards from each other
 bool GruulTheDragonkillerSpreadRangedAction::Execute(Event /*event*/)
 {
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
+    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
     if (!gruul)
         return false;
 

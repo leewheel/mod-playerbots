@@ -31,12 +31,12 @@ uint8 MalygosTrigger::getPhase(Player* bot, Unit* boss)
 
 bool MalygosTrigger::IsActive()
 {
-    return bool(AI_VALUE2(Unit*, "find target", "malygos"));
+    return bool(AI_VALUE2(Unit*, "find target", "28859"));
 }
 
 bool PowerSparkTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28859");
     if (!boss) { return false; }
 
     if (bot->getClass() != CLASS_DEATH_KNIGHT)

@@ -30,7 +30,7 @@ bool HyjalSummitResetEncounterStatesAction::Execute(Event /*event*/)
     ObjectGuid const guid = bot->GetGUID();
 
     bool erased = false;
-    if (!AI_VALUE2(Unit*, "find target", "rage winterchill"))
+    if (!AI_VALUE2(Unit*, "find target", "17767"))
     {
         Action* action = context->GetAction("rage winterchill spread ranged in circle");
         if (action && static_cast<RageWinterchillSpreadRangedInCircleAction*>(
@@ -40,7 +40,7 @@ bool HyjalSummitResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "anetheron"))
+    if (!AI_VALUE2(Unit*, "find target", "17808"))
     {
         Action* action = context->GetAction("anetheron spread ranged in circle");
         if (action && static_cast<AnetheronSpreadRangedInCircleAction*>(
@@ -50,7 +50,7 @@ bool HyjalSummitResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "kaz'rogal") &&
+    if (!AI_VALUE2(Unit*, "find target", "17888") &&
         botsBelowManaThreshold.erase(guid))
     {
         erased = true;
@@ -195,7 +195,7 @@ bool RageWinterchillSpreadRangedInCircleAction::Execute(Event /*event*/)
 // only thing that can walk the bot back onto Winterchill's ring
 bool RageWinterchillMeleeManeuverThroughDeathAndDecayAction::Execute(Event /*event*/)
 {
-    Unit* winterchill = AI_VALUE2(Unit*, "find target", "rage winterchill");
+    Unit* winterchill = AI_VALUE2(Unit*, "find target", "17767");
     if (!winterchill)
         return false;
 
@@ -264,7 +264,7 @@ bool RageWinterchillMeleeManeuverThroughDeathAndDecayAction::Execute(Event /*eve
 
 bool AnetheronMisdirectBossAndInfernalsToTanksAction::Execute(Event /*event*/)
 {
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron)
         return false;
 
@@ -354,7 +354,7 @@ bool AnetheronSpreadRangedInCircleAction::Execute(Event /*event*/)
 // starts the bot clear of the immolation aura the Infernal carries afterwards
 bool AnetheronMoveAwayFromInfernoTargetAction::Execute(Event /*event*/)
 {
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron)
         return false;
 
@@ -429,7 +429,7 @@ bool AnetheronInfernalTankTakePositionAction::Execute(Event /*event*/)
 // Melee stay on Anetheron throughout. Ranged attack Infernals if they are reasonably nearby.
 bool AnetheronAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron)
         return false;
 
@@ -506,7 +506,7 @@ bool KazrogalAssistTanksMoveInFrontOfBossAction::Execute(Event /*event*/)
 
 bool KazrogalSpreadRangedInArcAction::Execute(Event /*event*/)
 {
-    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "kaz'rogal");
+    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
     if (!kazrogal)
         return false;
 
@@ -583,7 +583,7 @@ bool KazrogalMoveAwayFromGroupAction::Execute(Event /*event*/)
     // into the raid. There Kaz'rogal is the reference instead: radially out is at least progress,
     // and it can never be inward. Both branches are MoveAway, which fans nine headings against
     // collision before giving up--worth having where fences and war machines flank every approach
-    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "kaz'rogal");
+    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
     if (kazrogal && nearestPlayer->GetExactDist2d(kazrogal) > bot->GetExactDist2d(kazrogal))
         return MoveAway(kazrogal, step);
 
@@ -631,7 +631,7 @@ bool KazrogalWarlockManageManaAction::Execute(Event /*event*/)
 
 bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
 {
-    Unit* azgalor = AI_VALUE2(Unit*, "find target", "azgalor");
+    Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
     if (!azgalor)
         return false;
 
@@ -644,7 +644,7 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
         return true;
     }
 
-    Unit* doomguard = AI_VALUE2(Unit*, "find target", "lesser doomguard");
+    Unit* doomguard = AI_VALUE2(Unit*, "find target", "17864");
     constexpr float safeDistFromDoomguard = 10.0f; // War Stomp is 10 yards center-to-center
 
     if (doomguard && bot->GetExactDist2d(doomguard) < safeDistFromDoomguard)
@@ -664,7 +664,7 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
 // standing in fire--fire ticks, cleave kills
 bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
 {
-    Unit* azgalor = AI_VALUE2(Unit*, "find target", "azgalor");
+    Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
     if (!azgalor)
         return false;
 
@@ -808,7 +808,7 @@ bool AzgalorFirstAssistTankPositionDoomguardAction::Execute(Event /*event*/)
     bool shouldMove = false;
     bool backwards = false;
 
-    if (Unit* doomguard = AI_VALUE2(Unit*, "find target", "lesser doomguard"))
+    if (Unit* doomguard = AI_VALUE2(Unit*, "find target", "17864"))
     {
         if (AI_VALUE(Unit*, "current target") != doomguard)
             return Attack(doomguard);
@@ -852,7 +852,7 @@ bool AzgalorFirstAssistTankPositionDoomguardAction::Execute(Event /*event*/)
 // side of Azgalor but not bring in any ranged standing in front
 bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* azgalor = AI_VALUE2(Unit*, "find target", "azgalor");
+    Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
     if (!azgalor)
         return false;
 
@@ -870,7 +870,7 @@ bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
     }
     else
     {
-        Unit* doomguard = AI_VALUE2(Unit*, "find target", "lesser doomguard");
+        Unit* doomguard = AI_VALUE2(Unit*, "find target", "17864");
         if (doomguard && bot->GetExactDist2d(doomguard) < 70.0f)
             target = doomguard;
         else
@@ -964,7 +964,7 @@ bool ArchimondeSpreadRangedAction::Execute(Event /*event*/)
 // burns out
 bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
 {
-    Unit* archimonde = AI_VALUE2(Unit*, "find target", "archimonde");
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
     if (!archimonde)
         return false;
 

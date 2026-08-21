@@ -22,7 +22,7 @@ float RazorgoreTankMultiplier::GetValue(Action* action)
     if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorgore the untamed");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "12435");
     if (!boss)
         return 1.0f;
 
@@ -45,7 +45,7 @@ float VaelastraszTankMultiplier::GetValue(Action* action)
     if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "vaelastrasz the corrupt");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "13020");
     if (!boss)
         return 1.0f;
 
@@ -70,7 +70,7 @@ float VaelastraszBurningAdrenalineMultiplier::GetValue(Action* action)
             if (dynamic_cast<BwlVaelastraszMoveAwayAction*>(action))
             {
                 // Allow movement when boss is dead or bot was knocked away
-                Unit* boss = AI_VALUE2(Unit*, "find target", "vaelastrasz the corrupt");
+                Unit* boss = AI_VALUE2(Unit*, "find target", "13020");
                 if (!boss || !boss->IsAlive() || bot->GetDistance2d(boss) > VAELASTRASZ_BA_BOSS_DISTANCE)
                     return 1.0f;
             }

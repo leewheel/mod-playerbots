@@ -125,14 +125,14 @@ inline float RsHalionBeamSignedDist(float px, float py, Unit* a, Unit* b)
 
 inline bool RsHalionEngaged(PlayerbotAI* botAI)
 {
-    Unit* boss = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "halion")->Get();
+    Unit* boss = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "39863")->Get();
     return boss && boss->IsAlive() && boss->IsInCombat() &&
            (boss->GetEntry() == NPC_HALION || boss->GetEntry() == NPC_TWILIGHT_HALION);
 }
 
 inline Unit* RsHalionPhase1Boss(PlayerbotAI* botAI)
 {
-    Unit* boss = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "halion")->Get();
+    Unit* boss = botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "39863")->Get();
     if (!boss || !boss->IsAlive() || boss->GetEntry() != NPC_HALION)
         return nullptr;
 
@@ -167,7 +167,7 @@ inline Unit* RsHalionTwilightBoss(PlayerbotAI* botAI)
         if (Unit* boss = botAI->GetUnit(guid); boss && boss->IsAlive() && boss->GetEntry() == NPC_TWILIGHT_HALION)
             return boss;
 
-    return RsHalionFindBoss(botAI, "twilight halion", NPC_TWILIGHT_HALION);
+    return RsHalionFindBoss(botAI, "40142", NPC_TWILIGHT_HALION);
 }
 
 inline Unit* RsHalionPhase2Boss(PlayerbotAI* botAI)
@@ -188,7 +188,7 @@ inline Unit* RsHalionAnyPhysicalBoss(PlayerbotAI* botAI)
         if (Unit* boss = botAI->GetUnit(guid); boss && boss->IsAlive() && boss->GetEntry() == NPC_HALION)
             return boss;
 
-    return RsHalionFindBoss(botAI, "halion", NPC_HALION);
+    return RsHalionFindBoss(botAI, "39863", NPC_HALION);
 }
 
 inline bool RsHalionIsPhase3(PlayerbotAI* botAI)

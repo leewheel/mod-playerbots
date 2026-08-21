@@ -171,7 +171,7 @@ void RaidHyjalSummitStrategy::AppendTargetExclusions(
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron)
         return;
 
