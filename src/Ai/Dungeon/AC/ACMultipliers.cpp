@@ -18,7 +18,7 @@
 // Flee from Focus Fire and dont run back in
 float ShirrakFleeFocusFireMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "shirrak the dead watcher"))
+    if (!AI_VALUE2(Unit*, "find target", "18371"))
         return 1.0f;
 
     std::list<Creature*> creatureList;

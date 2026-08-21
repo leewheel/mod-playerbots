@@ -16,7 +16,7 @@
 
 float OmorTreacheryAuraFleeFromPlayersMultiplier::GetValue(Action* action)
 {
-    Unit* omor = AI_VALUE2(Unit*, "find target", "omor the unscarred");
+    Unit* omor = AI_VALUE2(Unit*, "find target", "17308");
     if (!omor)
         return 1.0f;
 
@@ -34,7 +34,7 @@ float OmorTreacheryAuraFleeFromPlayersMultiplier::GetValue(Action* action)
 
 float OmorTreacheryAuraFleeFromTankMultiplier::GetValue(Action* action)
 {
-    Unit* omor = AI_VALUE2(Unit*, "find target", "omor the unscarred");
+    Unit* omor = AI_VALUE2(Unit*, "find target", "17308");
     if (!omor)
         return 1.0f;
 
@@ -59,10 +59,10 @@ float OmorTreacheryAuraFleeFromTankMultiplier::GetValue(Action* action)
 float VazrudenDisableTankAssistMultiplier::GetValue(Action* action)
 {
     if (!botAI->IsTank(bot) ||
-        !AI_VALUE2(Unit*, "find target", "vazruden"))
+        !AI_VALUE2(Unit*, "find target", "17537"))
         return 1.0f;
 
-    if (Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan"))
+    if (Unit* nazan = AI_VALUE2(Unit*, "find target", "17536"))
     {
         if (Creature* nazanCreature = nazan->ToCreature())
         {

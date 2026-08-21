@@ -25,12 +25,12 @@ bool VanillaFourHorsemenAttackInOrderAction::Execute(Event /*event*/)
         return false;
 
     Unit* target = nullptr;
-    Unit* thane = AI_VALUE2(Unit*, "find target", "thane korth'azz");
-    Unit* lady = AI_VALUE2(Unit*, "find target", "lady blaumeux");
-    Unit* sir = AI_VALUE2(Unit*, "find target", "sir zeliek");
-    Unit* fourth = AI_VALUE2(Unit*, "find target", "baron rivendare");
+    Unit* thane = AI_VALUE2(Unit*, "find target", "16064");
+    Unit* lady = AI_VALUE2(Unit*, "find target", "16065");
+    Unit* sir = AI_VALUE2(Unit*, "find target", "16063");
+    Unit* fourth = AI_VALUE2(Unit*, "find target", "30549");
     if (!fourth)
-        fourth = AI_VALUE2(Unit*, "find target", "highlord mograine");
+        fourth = AI_VALUE2(Unit*, "find target", "16062");
 
     std::vector<Unit*> attack_order;
     if (botAI->IsAssistTank(bot))

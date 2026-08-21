@@ -38,7 +38,7 @@ float AlarMoveBetweenPlatformsMultiplier::GetValue(Action* action)
     if (!isBlockedMovement && !dynamic_cast<CastReachTargetSpellAction*>(action))
         return 1.0f;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar || IsAlarInPhase2(alar->GetMap()->GetInstanceId()))
         return 1.0f;
 
@@ -67,7 +67,7 @@ float AlarControlMovementMultiplier::GetValue(Action* action)
     if (dynamic_cast<TankFaceAction*>(action) || dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return 1.0f;
 
@@ -92,7 +92,7 @@ float AlarDisableAutomaticTargetingMultiplier::GetValue(Action* action)
     if (!dynamic_cast<TankAssistAction*>(action) && !dynamic_cast<DpsAssistAction*>(action))
         return 1.0f;
 
-    if (AI_VALUE2(Unit*, "find target", "al'ar"))
+    if (AI_VALUE2(Unit*, "find target", "19514"))
         return 0.0f;
 
     return 1.0f;
@@ -113,7 +113,7 @@ float AlarStayAwayFromRebirthMultiplier::GetValue(Action* action)
     if (dynamic_cast<AlarJumpFromPlatformAction*>(action))
         return 1.0f;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar || IsAlarInPhase2(alar->GetMap()->GetInstanceId()))
         return 1.0f;
 
@@ -140,7 +140,7 @@ float AlarControlTauntingMultiplier::GetValue(Action* action)
     if (!isFirstAlarTank && !IsSecondAlarTank(bot))
         return 1.0f;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return 1.0f;
 
@@ -178,7 +178,7 @@ float VoidReaverMaintainPositionsMultiplier::GetValue(Action* action)
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    if (AI_VALUE2(Unit*, "find target", "void reaver"))
+    if (AI_VALUE2(Unit*, "find target", "19516"))
         return 0.0f;
 
     return 1.0f;
@@ -200,7 +200,7 @@ float HighAstromancerSolarianWrathStayAwayMultiplier::GetValue(Action* action)
     if (dynamic_cast<HighAstromancerSolarianMoveAwayFromGroupAction*>(action))
         return 1.0f;
 
-    Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
+    Unit* astromancer = AI_VALUE2(Unit*, "find target", "18805");
     if (!astromancer || astromancer->HasAura(Id(TkSpells::SPELL_SOLARIAN_TRANSFORM)))
         return 1.0f;
 
@@ -221,7 +221,7 @@ float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValue(Action* a
     if (!dynamic_cast<TankAssistAction*>(action) && !dynamic_cast<DpsAssistAction*>(action))
         return 1.0f;
 
-    Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
+    Unit* astromancer = AI_VALUE2(Unit*, "find target", "18805");
     if (!astromancer)
         return 1.0f;
 
@@ -231,7 +231,7 @@ float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValue(Action* a
         if (astromancerCreature && astromancerCreature->GetReactState() != REACT_PASSIVE)
             return 0.0f;
     }
-    else if (AI_VALUE2(Unit*, "find target", "solarium priest"))
+    else if (AI_VALUE2(Unit*, "find target", "18806"))
     {
         return 0.0f;
     }
@@ -252,7 +252,7 @@ float KaelthasSunstriderWaitForDpsMultiplier::GetValue(Action* action)
     if (dynamic_cast<KaelthasSunstriderMisdirectAdvisorsToTanksAction*>(action))
         return 1.0f;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return 1.0f;
 
@@ -269,9 +269,9 @@ float KaelthasSunstriderWaitForDpsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* sanguinar = AI_VALUE2(Unit*, "find target", "lord sanguinar");
-    Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
-    Unit* telonicus = AI_VALUE2(Unit*, "find target", "master engineer telonicus");
+    Unit* sanguinar = AI_VALUE2(Unit*, "find target", "20060");
+    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
+    Unit* telonicus = AI_VALUE2(Unit*, "find target", "20063");
 
     auto isAdvisorActive = [](Unit* advisor)
     {
@@ -312,7 +312,7 @@ float KaelthasSunstriderKiteThaladredMultiplier::GetValue(Action* action)
     if (dynamic_cast<KaelthasSunstriderKiteThaladredAction*>(action))
         return 1.0f;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return 1.0f;
 
@@ -323,7 +323,7 @@ float KaelthasSunstriderKiteThaladredMultiplier::GetValue(Action* action)
     if (PlayerbotAI::IsTank(bot) && phase == PHASE_ALL_ADVISORS)
         return 1.0f;
 
-    Unit* thaladred = AI_VALUE2(Unit*, "find target", "thaladred the darkener");
+    Unit* thaladred = AI_VALUE2(Unit*, "find target", "20064");
     if (thaladred && thaladred->GetVictim() == bot)
         return 0.0f;
 
@@ -341,7 +341,7 @@ float KaelthasSunstriderControlMisdirectionMultiplier::GetValue(Action* action)
     if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
         return 1.0f;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return 1.0f;
 
@@ -366,14 +366,14 @@ float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValue(Action* ac
     if (dynamic_cast<KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction*>(action))
         return 1.0f;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return 1.0f;
 
     if (GetKaelthasPhase(kaelthas) != PHASE_SINGLE_ADVISOR)
         return 1.0f;
 
-    Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
+    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
     if (capernian && !capernian->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
         !IsFeigningDeath(capernian))
     {
@@ -395,7 +395,7 @@ float KaelthasSunstriderManageWeaponTankingMultiplier::GetValue(Action* action)
     if (!PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return 1.0f;
 
@@ -413,7 +413,7 @@ float KaelthasSunstriderSuppressEquipUpgradeMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (AI_VALUE2(Unit*, "find target", "kael'thas sunstrider"))
+    if (AI_VALUE2(Unit*, "find target", "19622"))
         return 0.0f;
 
     return 1.0f;
@@ -429,7 +429,7 @@ float KaelthasSunstriderManageAutomaticTargetingMultiplier::GetValue(Action* act
     if (!isDpsAssist && !dynamic_cast<TankAssistAction*>(action))
         return 1.0f;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return 1.0f;
 
@@ -463,7 +463,7 @@ float KaelthasSunstriderDisableDisperseMultiplier::GetValue(Action* action)
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    if (AI_VALUE2(Unit*, "find target", "kael'thas sunstrider"))
+    if (AI_VALUE2(Unit*, "find target", "19622"))
         return 0.0f;
 
     return 1.0f;
@@ -477,7 +477,7 @@ float KaelthasSunstriderPrepareForPhase3Multiplier::GetValue(Action* action)
     if (dynamic_cast<KaelthasSunstriderHandleAdvisorRolesInPhase3Action*>(action))
         return 1.0f;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return 1.0f;
 
@@ -485,7 +485,7 @@ float KaelthasSunstriderPrepareForPhase3Multiplier::GetValue(Action* action)
         return 1.0f;
 
     // Proxy for revival/Kael talk phase (could pick any advisor here)
-    Unit* thaladred = AI_VALUE2(Unit*, "find target", "thaladred the darkener");
+    Unit* thaladred = AI_VALUE2(Unit*, "find target", "20064");
     if (!thaladred || !thaladred->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         return 1.0f;
 
@@ -509,7 +509,7 @@ float KaelthasSunstriderDelayCooldownsMultiplier::GetValue(Action* action)
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return 1.0f;
 

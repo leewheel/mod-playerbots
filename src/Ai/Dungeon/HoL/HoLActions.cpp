@@ -42,7 +42,7 @@ bool BjarngrimTargetAction::Execute(Event /*event*/)
 
 bool AvoidWhirlwindAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general bjarngrim");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28586");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());
@@ -59,7 +59,7 @@ bool AvoidWhirlwindAction::Execute(Event /*event*/)
 
 bool VolkhanTargetAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "volkhan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28587");
     if (!boss || AI_VALUE(Unit*, "current target") == boss)
     {
         return false;
@@ -140,7 +140,7 @@ bool LokenStackAction::isUseful()
 }
 bool LokenStackAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "loken");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28923");
     if (!boss) { return false; }
 
     float maxMovement = 10.0f;
@@ -159,7 +159,7 @@ bool LokenStackAction::Execute(Event /*event*/)
 
 bool AvoidLightningNovaAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "loken");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28923");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());

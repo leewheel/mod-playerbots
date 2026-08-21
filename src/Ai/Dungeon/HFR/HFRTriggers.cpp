@@ -14,7 +14,7 @@
 bool GargolmarHellfireWatchersAreActiveTrigger::IsActive()
 {
     return botAI->IsDps(bot) &&
-           AI_VALUE2(Unit*, "find target", "hellfire watcher");
+           AI_VALUE2(Unit*, "find target", "17309");
 }
 
 // Omor the Unscarred
@@ -29,13 +29,13 @@ bool OmorTreacheryAuraTrigger::IsActive()
 bool OmorRangedSpreadTrigger::IsActive()
 {
     return botAI->IsRanged(bot) &&
-           AI_VALUE2(Unit*, "find target", "omor the unscarred");
+           AI_VALUE2(Unit*, "find target", "17308");
 }
 
 bool OmorFiendishHoundIsActiveTrigger::IsActive()
 {
     return botAI->IsDps(bot) &&
-           AI_VALUE2(Unit*, "find target", "fiendish hound");
+           AI_VALUE2(Unit*, "find target", "17280");
 }
 
 bool OmorTankHasTreacheryAuraTrigger::IsActive()
@@ -61,11 +61,11 @@ bool OmorTankHasTreacheryAuraTrigger::IsActive()
 bool VazrudenTankPositionBossTrigger::IsActive()
 {
     return botAI->IsTank(bot) &&
-           AI_VALUE2(Unit*, "find target", "vazruden");
+           AI_VALUE2(Unit*, "find target", "17537");
 }
 
 bool VazrudenBossIsActiveTrigger::IsActive()
 {
     return botAI->IsDps(bot) &&
-           AI_VALUE2(Unit*, "find target", "vazruden");
+           AI_VALUE2(Unit*, "find target", "17537");
 }

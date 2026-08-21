@@ -35,7 +35,7 @@ bool AttackFrostTombAction::Execute(Event /*event*/)
 // TODO: Possibly add player stacking behaviour close to tank, to prevent Skarvald charging ranged
 bool AttackDalronnAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "dalronn the controller");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27389");
     if (!boss) { return false; }
 
     if (AI_VALUE(Unit*, "current target") == boss)
@@ -48,7 +48,7 @@ bool AttackDalronnAction::Execute(Event /*event*/)
 bool IngvarDodgeSmashAction::isUseful() { return !AI_VALUE2(bool, "behind", "current target"); }
 bool IngvarDodgeSmashAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ingvar the plunderer");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "23954");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());
@@ -62,7 +62,7 @@ bool IngvarDodgeSmashAction::Execute(Event /*event*/)
 bool IngvarSmashReturnAction::isUseful() { return AI_VALUE2(bool, "behind", "current target"); }
 bool IngvarSmashReturnAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ingvar the plunderer");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "23954");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());

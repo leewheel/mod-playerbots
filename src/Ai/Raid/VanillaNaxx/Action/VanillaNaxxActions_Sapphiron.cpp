@@ -87,7 +87,7 @@ bool VanillaSapphironFlightPositionAction::MoveToNearestIcebolt()
     }
     if (playerWithIcebolt)
     {
-        Unit* boss = AI_VALUE2(Unit*, "find target", "sapphiron");
+        Unit* boss = AI_VALUE2(Unit*, "find target", "15989");
         if (boss)
         {
             float angle = boss->GetAngle(playerWithIcebolt);

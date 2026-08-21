@@ -12,15 +12,15 @@ bool NadoxGuardianTrigger::IsActive()
 {
     if (botAI->IsHeal(bot)) { return false; }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "elder nadox");
-    Unit* guardian = AI_VALUE2(Unit*, "find target", "ahn'kahar guardian");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29309");
+    Unit* guardian = AI_VALUE2(Unit*, "find target", "30176");
 
     return boss && guardian;
 }
 
 bool JedogaVolunteerTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "jedoga shadowseeker");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29310");
     if (!boss) { return false; }
 
     // Volunteer is not findable from threat table using AI_VALUE2(),
@@ -40,7 +40,7 @@ bool JedogaVolunteerTrigger::IsActive()
 
 bool ShadowCrashTrigger::IsActive()
 {
-    Unit* unit = AI_VALUE2(Unit*, "find target", "forgotten one");
+    Unit* unit = AI_VALUE2(Unit*, "find target", "30414");
     if (!unit) { return false; }
 
     return !botAI->IsMelee(bot);

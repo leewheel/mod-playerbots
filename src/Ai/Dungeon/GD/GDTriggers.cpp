@@ -10,7 +10,7 @@
 
 bool SladranPoisonNovaTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "slad'ran");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29304");
     if (!boss) { return false; }
 
     return bool(boss->FindCurrentSpellBySpellId(SPELL_POISON_NOVA));
@@ -37,6 +37,6 @@ bool SladranSnakeWrapTrigger::IsActive()
 
 bool GaldarahWhirlingSlashTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "gal'darah");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29306");
     return boss && boss->HasAura(SPELL_WHIRLING_SLASH);
 }

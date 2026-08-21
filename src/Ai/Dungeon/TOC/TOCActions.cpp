@@ -242,7 +242,7 @@ bool ToCMountAction::EnterVehicle(Unit* vehicleBase, bool moveIfFar)
 
 bool ToCEadricAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "eadric the pure");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "35119");
     if (!boss)
         return false;
 

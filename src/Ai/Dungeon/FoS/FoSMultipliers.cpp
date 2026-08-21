@@ -12,7 +12,7 @@
 #include "MovementActions.h"
 
 float BronjahmMultiplier::GetValue(Action* action) {
-    Unit* boss = AI_VALUE2(Unit *, "find target", "bronjahm");
+    Unit* boss = AI_VALUE2(Unit *, "find target", "36497");
     if (!boss)
         return 1.0f;
 

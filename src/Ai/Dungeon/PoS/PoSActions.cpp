@@ -9,7 +9,7 @@
 
 bool IckAndKrickAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "Ick");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36476");
     if (!boss)
         return false;
 
@@ -274,7 +274,7 @@ bool IckAndKrickAction::ExplosiveBarrage(bool /*explosiveBarrage*/, Unit* boss)
 
 bool TyrannusAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "scourgelord tyrannus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36658");
     if (!boss)
         return false;
 

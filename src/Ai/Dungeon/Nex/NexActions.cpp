@@ -17,18 +17,18 @@ bool MoveFromWhirlwindAction::Execute(Event /*event*/)
     {
         case DUNGEON_DIFFICULTY_NORMAL:
             if (faction == TEAM_ALLIANCE)
-                boss = AI_VALUE2(Unit*, "find target", "horde commander");
+                boss = AI_VALUE2(Unit*, "find target", "27947");
 
             else // TEAM_HORDE
-                boss = AI_VALUE2(Unit*, "find target", "alliance commander");
+                boss = AI_VALUE2(Unit*, "find target", "27949");
 
             break;
         case DUNGEON_DIFFICULTY_HEROIC:
             if (faction == TEAM_ALLIANCE)
-                boss = AI_VALUE2(Unit*, "find target", "commander kolurg");
+                boss = AI_VALUE2(Unit*, "find target", "26798");
 
             else // TEAM_HORDE
-                boss = AI_VALUE2(Unit*, "find target", "commander stoutbeard");
+                boss = AI_VALUE2(Unit*, "find target", "26796");
 
             break;
         default:
@@ -51,7 +51,7 @@ bool MoveFromWhirlwindAction::Execute(Event /*event*/)
 
 bool FirebombSpreadAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grand magus telestra");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26731");
     float radius = 5.0f;
     float targetDist = radius + 1.0f;
     if (!boss) { return false; }
@@ -127,7 +127,7 @@ bool ChaoticRiftTargetAction::Execute(Event /*event*/)
     for (auto i = targets.begin(); i != targets.end(); ++i)
     {
         Unit* unit = botAI->GetUnit(*i);
-        if (unit && unit->GetName() == "Chaotic Rift")
+        if (unit && (unit->GetName() == "Chaotic Rift" || unit->GetEntry() == 26918))
         {
             chaoticRift = unit;
             break;
@@ -141,14 +141,14 @@ bool ChaoticRiftTargetAction::Execute(Event /*event*/)
 
 bool DodgeSpikesAction::isUseful()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ormorok the tree-shaper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26794");
     if (!boss) { return false; }
 
     return bot->GetExactDist2d(boss) > 0.5f;
 }
 bool DodgeSpikesAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ormorok the tree-shaper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26794");
     if (!boss) { return false; }
 
     return Move(bot->GetAngle(boss), bot->GetExactDist2d(boss) - 0.3f);

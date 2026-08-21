@@ -26,7 +26,7 @@ void TbcDungeonUnderbogStrategy::InitMultipliers(std::vector<Multiplier*>& multi
 void TbcDungeonUnderbogStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExclusionType /*type*/)
 {
     AiObjectContext* context = botAI->GetAiObjectContext();
-    if (!AI_VALUE2(Unit*, "find target", "hungarfen"))
+    if (!AI_VALUE2(Unit*, "find target", "17770"))
         return;
 
     GuidVector const& mushrooms = AI_VALUE_REF(GuidVector, "ub mushrooms");

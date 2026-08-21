@@ -10,7 +10,7 @@
 
 bool SkadiFreezingCloudTrigger::IsActive()
 {
-    Unit* bossMount = AI_VALUE2(Unit*, "find target", "grauf");
+    Unit* bossMount = AI_VALUE2(Unit*, "find target", "26893");
     if (!bossMount) { return false; }
 
     // Need to check two conditions here - the persistent ground effect doesn't
@@ -48,13 +48,13 @@ bool SkadiFreezingCloudTrigger::IsActive()
 
 bool SkadiWhirlwindTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "skadi the ruthless");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26693");
     return boss && boss->HasAura(SPELL_SKADI_WHIRLWIND);
 }
 
 bool YmironBaneTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "king ymiron");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26861");
     if (!boss) { return false; }
 
     return boss->FindCurrentSpellBySpellId(SPELL_BANE) || boss->HasAura(SPELL_BANE);

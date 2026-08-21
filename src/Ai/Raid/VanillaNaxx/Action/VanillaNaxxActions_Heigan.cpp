@@ -6,7 +6,7 @@
 
 //bool HeiganDanceAction::CalculateSafe()
 //{
-//    Unit* boss = AI_VALUE2(Unit*, "find target", "heigan the unclean");
+//    Unit* boss = AI_VALUE2(Unit*, "find target", "15936");
 //    if (!boss)
 //    {
 //        return false;

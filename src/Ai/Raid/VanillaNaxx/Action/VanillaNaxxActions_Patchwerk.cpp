@@ -5,7 +5,7 @@
 
 //bool PatchwerkRangedPositionAction::Execute(Event event)
 //{
-//    Unit* boss = AI_VALUE2(Unit*, "find target", "patchwerk");
+//    Unit* boss = AI_VALUE2(Unit*, "find target", "16028");
 //    if (!boss)
 //        return false;
 //

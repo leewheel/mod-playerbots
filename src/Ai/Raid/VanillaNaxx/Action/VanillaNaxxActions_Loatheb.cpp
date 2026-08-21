@@ -37,10 +37,10 @@ bool VanillaLoathebChooseTargetAction::Execute(Event /*event*/)
         if (!unit->IsAlive())
             continue;
 
-        if (botAI->EqualLowercaseName(unit->GetName(), "spore"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "spore") || unit->GetEntry() == 16286)
             target_spore = unit;
 
-        if (botAI->EqualLowercaseName(unit->GetName(), "loatheb"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "loatheb") || unit->GetEntry() == 16011)
             target_boss = unit;
     }
     if (target_spore && bot->GetDistance2d(target_spore) <= 1.0f)

@@ -102,7 +102,7 @@ bool WatchersTargetAction::Execute(Event /*event*/)
 bool AnubarakDodgePoundAction::isUseful() { return !AI_VALUE2(bool, "behind", "current target"); }
 bool AnubarakDodgePoundAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "anub'arak");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29120");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());

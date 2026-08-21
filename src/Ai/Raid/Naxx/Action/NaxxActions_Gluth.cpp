@@ -27,10 +27,10 @@ bool GluthChooseTargetAction::Execute(Event /*event*/)
         if (!unit->IsAlive())
             continue;
 
-        if (botAI->EqualLowercaseName(unit->GetName(), "zombie chow"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "zombie chow") || unit->GetEntry() == 16360)
             target_zombies.push_back(unit);
 
-        if (botAI->EqualLowercaseName(unit->GetName(), "gluth"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "gluth") || unit->GetEntry() == 15932)
             target_boss = unit;
     }
     if (botAI->IsMainTank(bot) || botAI->IsAssistTankOfIndex(bot, 0))

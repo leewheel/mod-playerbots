@@ -12,7 +12,7 @@
 
 bool MutatingInjectionMeleeTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return false;
 
@@ -21,7 +21,7 @@ bool MutatingInjectionMeleeTrigger::IsActive()
 
 bool MutatingInjectionRangedTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return false;
 
@@ -41,7 +41,7 @@ bool AuraRemovedTrigger::IsActive()
 
 bool MutatingInjectionRemovedTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return false;
 
@@ -50,7 +50,7 @@ bool MutatingInjectionRemovedTrigger::IsActive()
 
 bool GrobbulusCloudTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return false;
 
@@ -83,7 +83,7 @@ bool GrobbulusCloudTrigger::IsActive()
 
 //bool HeiganMeleeTrigger::IsActive()
 //{
-//    Unit* heigan = AI_VALUE2(Unit*, "find target", "heigan the unclean");
+//    Unit* heigan = AI_VALUE2(Unit*, "find target", "15936");
 //    if (!heigan)
 //    {
 //        return false;
@@ -93,7 +93,7 @@ bool GrobbulusCloudTrigger::IsActive()
 //
 //bool HeiganRangedTrigger::IsActive()
 //{
-//    Unit* heigan = AI_VALUE2(Unit*, "find target", "heigan the unclean");
+//    Unit* heigan = AI_VALUE2(Unit*, "find target", "15936");
 //    if (!heigan)
 //    {
 //        return false;
@@ -180,7 +180,7 @@ bool GluthMainTankMortalWoundTrigger::IsActive()
 bool KelthuzadTrigger::IsActive() { return helper.UpdateBossAI(); }
 
 bool AnubrekhanTrigger::IsActive() {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "anub'rekhan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15956");
     if (!boss)
         return false;
 
@@ -189,7 +189,7 @@ bool AnubrekhanTrigger::IsActive() {
 
 bool FaerlinaTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grand widow faerlina");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15953");
     if (!boss)
         return false;
 
@@ -198,7 +198,7 @@ bool FaerlinaTrigger::IsActive()
 
 bool MaexxnaTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "maexxna");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15952");
     if (!boss)
         return false;
 
@@ -207,7 +207,7 @@ bool MaexxnaTrigger::IsActive()
 
 //bool PatchwerkTankTrigger::IsActive()
 //{
-//    Unit* boss = AI_VALUE2(Unit*, "find target", "patchwerk");
+//    Unit* boss = AI_VALUE2(Unit*, "find target", "16028");
 //    if (!boss)
 //    {
 //        return false;
@@ -217,7 +217,7 @@ bool MaexxnaTrigger::IsActive()
 //
 //bool PatchwerkRangedTrigger::IsActive()
 //{
-//    Unit* boss = AI_VALUE2(Unit*, "find target", "patchwerk");
+//    Unit* boss = AI_VALUE2(Unit*, "find target", "16028");
 //    if (!boss)
 //    {
 //        return false;
@@ -227,7 +227,7 @@ bool MaexxnaTrigger::IsActive()
 //
 //bool PatchwerkNonTankTrigger::IsActive()
 //{
-//    Unit* boss = AI_VALUE2(Unit*, "find target", "patchwerk");
+//    Unit* boss = AI_VALUE2(Unit*, "find target", "16028");
 //    if (!boss)
 //    {
 //        return false;

@@ -9,7 +9,7 @@
 
 bool MoveFromBronjahmAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "bronjahm");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36497");
     if (!boss)
         return false;
 
@@ -53,7 +53,7 @@ bool AttackCorruptedSoulFragmentAction::Execute(Event /*event*/)
 
 bool BronjahmGroupPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "bronjahm");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36497");
     if (!boss)
         return false;
 
@@ -143,7 +143,7 @@ bool BronjahmGroupPositionAction::isUseful() { return true; }
 
 bool DevourerOfSoulsAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "devourer of souls");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36502");
     if (!boss)
         return false;
 

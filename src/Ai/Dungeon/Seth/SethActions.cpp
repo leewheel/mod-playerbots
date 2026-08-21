@@ -49,7 +49,7 @@ bool DarkweaverSythMarkElementalsWithSkullAction::Execute(Event /*event*/)
 
 bool AnzuAlternateMarksOnBossAction::Execute(Event /*event*/)
 {
-    Unit* anzu = AI_VALUE2(Unit*, "find target", "anzu");
+    Unit* anzu = AI_VALUE2(Unit*, "find target", "23035");
     if (!anzu)
         return false;
 
@@ -93,7 +93,7 @@ bool AnzuCastHealOverTimeSpellOnBirdSpiritAction::Execute(Event /*event*/)
 
 bool TalonKingIkissTankMoveBossToPillarPositionAction::Execute(Event /*event*/)
 {
-    Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
+    Unit* ikiss = AI_VALUE2(Unit*, "find target", "18473");
     if (!ikiss)
         return false;
 
@@ -135,7 +135,7 @@ bool TalonKingIkissTankMoveBossToPillarPositionAction::Execute(Event /*event*/)
 
 bool TalonKingIkissRangedStayNearVictimOfBossAction::Execute(Event /*event*/)
 {
-    Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
+    Unit* ikiss = AI_VALUE2(Unit*, "find target", "18473");
     if (!ikiss || !ikiss->GetVictim())
         return false;
 
@@ -190,7 +190,7 @@ bool TalonKingIkissLosArcaneExplosionAction::MoveToPillar(
 bool TalonKingIkissLosArcaneExplosionAction::MoveAroundPillar(
     Position const& pillarCenter, float distToPillar)
 {
-    Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
+    Unit* ikiss = AI_VALUE2(Unit*, "find target", "18473");
     if (!ikiss)
         return false;
 
@@ -220,7 +220,7 @@ bool TalonKingIkissLosArcaneExplosionAction::MoveAroundPillar(
 
 bool TalonKingIkissMoveToWithinLosAction::Execute(Event /*event*/)
 {
-    Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
+    Unit* ikiss = AI_VALUE2(Unit*, "find target", "18473");
     if (!ikiss)
         return false;
 

@@ -10,7 +10,7 @@
 
 bool CorpseExplodeTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "trollgore");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26630");
     if (!boss) { return false; }
 
     float distance = 6.0f;  // 5 unit radius, 1 unit added as buffer
@@ -31,7 +31,7 @@ bool CorpseExplodeTrigger::IsActive()
 
 bool ArcaneFieldTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "novos the summoner");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26631");
     if (boss)
     {
         return boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_ARCANE_FIELD);
@@ -41,7 +41,7 @@ bool ArcaneFieldTrigger::IsActive()
 
 // bool CrystalHandlerTrigger::IsActive()
 // {
-//     Unit* boss = AI_VALUE2(Unit*, "find target", "novos the summoner");
+//     Unit* boss = AI_VALUE2(Unit*, "find target", "26631");
 //     if (!boss) { return false; }
 
 //     // Target is not findable from threat table using AI_VALUE2(),

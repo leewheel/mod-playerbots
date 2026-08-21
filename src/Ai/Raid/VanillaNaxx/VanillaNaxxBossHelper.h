@@ -91,7 +91,7 @@ public:
             Reset();
 
         if (!_unit)
-            _unit = AI_VALUE2(Unit*, "find target", "kel'thuzad");
+            _unit = AI_VALUE2(Unit*, "find target", "15990");
 
         return _unit != nullptr;
     }
@@ -131,7 +131,7 @@ public:
             Reset();
 
         if (!_unit)
-            _unit = AI_VALUE2(Unit*, "find target", "instructor razuvious");
+            _unit = AI_VALUE2(Unit*, "find target", "16061");
 
         return _unit != nullptr;
     }
@@ -159,7 +159,7 @@ public:
 
         if (!_unit)
         {
-            _unit = AI_VALUE2(Unit*, "find target", "sapphiron");
+            _unit = AI_VALUE2(Unit*, "find target", "15989");
             if (!_unit)
                 return false;
         }
@@ -285,7 +285,7 @@ public:
 
         if (!_unit)
         {
-            _unit = AI_VALUE2(Unit*, "find target", "gluth");
+            _unit = AI_VALUE2(Unit*, "find target", "15932");
             if (!_unit)
                 return false;
         }
@@ -321,7 +321,7 @@ public:
         return info->SpellName[LOCALE_enUS] && botAI->EqualLowercaseName(info->SpellName[LOCALE_enUS], "decimate");
     }
     bool JustStartCombat() const { return _combat_start_ms != 0 && getMSTime() - _combat_start_ms < 10000; }
-    bool IsZombieChow(Unit* unit) const { return unit && botAI->EqualLowercaseName(unit->GetName(), "zombie chow"); }
+    bool IsZombieChow(Unit* unit) const { return unit && (botAI->EqualLowercaseName(unit->GetName(), "zombie chow") || unit->GetEntry() == 16360); }
 
 private:
     void Reset()
@@ -349,7 +349,7 @@ public:
             Reset();
 
         if (!_unit)
-            _unit = AI_VALUE2(Unit*, "find target", "loatheb");
+            _unit = AI_VALUE2(Unit*, "find target", "16011");
 
         return _unit != nullptr;
     }
@@ -380,11 +380,11 @@ public:
 
         if (!_sir)
         {
-            _sir = AI_VALUE2(Unit*, "find target", "sir zeliek");
+            _sir = AI_VALUE2(Unit*, "find target", "16063");
             if (!_sir)
                 return false;
         }
-        _lady = AI_VALUE2(Unit*, "find target", "lady blaumeux");
+        _lady = AI_VALUE2(Unit*, "find target", "16065");
         return true;
     }
     void Reset()
@@ -476,12 +476,12 @@ public:
 
         if (!_unit)
         {
-            _unit = AI_VALUE2(Unit*, "find target", "thaddius");
+            _unit = AI_VALUE2(Unit*, "find target", "15928");
             if (!_unit)
                 return false;
         }
-        feugen = AI_VALUE2(Unit*, "find target", "feugen");
-        stalagg = AI_VALUE2(Unit*, "find target", "stalagg");
+        feugen = AI_VALUE2(Unit*, "find target", "15930");
+        stalagg = AI_VALUE2(Unit*, "find target", "15929");
         return true;
     }
     bool IsPhasePet() { return (feugen && feugen->IsAlive()) || (stalagg && stalagg->IsAlive()); }

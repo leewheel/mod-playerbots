@@ -10,7 +10,7 @@
 bool AttackErekemAction::Execute(Event /*event*/)
 {
     // Focus boss first, adds after
-    Unit* boss = AI_VALUE2(Unit*, "find target", "erekem");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29315");
     if (!boss) { return false; }
 
     if (AI_VALUE(Unit*, "current target") != boss)
@@ -22,7 +22,7 @@ bool AttackErekemAction::Execute(Event /*event*/)
 
 bool AttackIchorGlobuleAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ichoron");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29313");
     if (!boss) { return false; }
 
     Unit* currentTarget = AI_VALUE(Unit*, "current target");
@@ -67,7 +67,7 @@ bool AttackIchorGlobuleAction::Execute(Event /*event*/)
 
 bool AttackVoidSentryAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "zuramat the obliterator");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29314");
     if (!boss) { return false; }
 
     Unit* currentTarget = AI_VALUE(Unit*, "current target");

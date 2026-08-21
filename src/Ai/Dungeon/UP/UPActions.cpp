@@ -43,7 +43,7 @@ bool AvoidFreezingCloudAction::Execute(Event /*event*/)
 
 bool AvoidSkadiWhirlwindAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "skadi the ruthless");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26693");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());

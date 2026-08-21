@@ -10,7 +10,7 @@
 
 bool MoveFromBronjahmTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "bronjahm");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36497");
     if (!boss)
         return false;
 
@@ -25,7 +25,7 @@ bool MoveFromBronjahmTrigger::IsActive()
 
 bool SwitchToSoulFragment::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "bronjahm");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36497");
     if (!boss)
         return false;
 
@@ -40,7 +40,7 @@ bool SwitchToSoulFragment::IsActive()
 
 bool BronjahmPositionTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "bronjahm");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36497");
     if (!boss)
         return false;
 
@@ -52,7 +52,7 @@ bool BronjahmPositionTrigger::IsActive()
 
 bool DevourerOfSoulsTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "devourer of souls");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36502");
     if (!boss)
         return false;
 

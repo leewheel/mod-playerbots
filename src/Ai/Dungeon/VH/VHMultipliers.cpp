@@ -14,7 +14,7 @@
 
 float ErekemMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "erekem");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29315");
     if (!boss || !botAI->IsDps(bot)) { return 1.0f; }
 
     if (dynamic_cast<DpsAssistAction*>(action))
@@ -30,7 +30,7 @@ float ErekemMultiplier::GetValue(Action* action)
 
 float IchoronMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ichoron");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29313");
     if (!boss) { return 1.0f; }
 
     if (dynamic_cast<DpsAssistAction*>(action)
@@ -44,7 +44,7 @@ float IchoronMultiplier::GetValue(Action* action)
 
 float ZuramatMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "zuramat the obliterator");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29314");
     if (!boss) { return 1.0f; }
 
     if (bot->HasAura(SPELL_VOID_SHIFTED))

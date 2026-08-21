@@ -16,7 +16,7 @@ constexpr uint32 HFR_MAP_ID = 543;
 
 bool GargolmarMarkHellfireWatchersAction::Execute(Event /*event*/)
 {
-    Unit* watcher = AI_VALUE2(Unit*, "find target", "hellfire watcher");
+    Unit* watcher = AI_VALUE2(Unit*, "find target", "17309");
     if (!watcher)
         return false;
 
@@ -55,7 +55,7 @@ bool OmorRangedSpreadAction::Execute(Event /*event*/)
 // Mark Fiendish Hound with skull
 bool OmorMarkFiendishHoundAction::Execute(Event /*event*/)
 {
-    Unit* hound = AI_VALUE2(Unit*, "find target", "fiendish hound");
+    Unit* hound = AI_VALUE2(Unit*, "find target", "17280");
     if (!hound)
         return false;
 
@@ -91,7 +91,7 @@ static const Position VAZRUDEN_TANK_POSITION = { -1407.405, 1744.521, 81.075 };
 // Tank positions Vazruden on the middle of the platform (for some reason bots try to grab the dragon flying around the platform. This is to help prevent that.)
 bool VazrudenTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* vazruden = AI_VALUE2(Unit*, "find target", "vazruden");
+    Unit* vazruden = AI_VALUE2(Unit*, "find target", "17537");
     if (!vazruden)
         return false;
 
@@ -122,7 +122,7 @@ bool VazrudenTankPositionBossAction::Execute(Event /*event*/)
 
 bool VazrudenMarkBossAction::Execute(Event /*event*/)
 {
-    Unit* vaz = AI_VALUE2(Unit*, "find target", "vazruden");
+    Unit* vaz = AI_VALUE2(Unit*, "find target", "17537");
     if (!vaz)
         return false;
 

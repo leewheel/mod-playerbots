@@ -7,7 +7,7 @@
 
 bool VanillaMutatingInjectionMeleeTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return false;
 
@@ -16,7 +16,7 @@ bool VanillaMutatingInjectionMeleeTrigger::IsActive()
 
 bool VanillaMutatingInjectionRangedTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return false;
 
@@ -36,7 +36,7 @@ bool VanillaAuraRemovedTrigger::IsActive()
 
 bool VanillaMutatingInjectionRemovedTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return false;
 
@@ -45,7 +45,7 @@ bool VanillaMutatingInjectionRemovedTrigger::IsActive()
 
 bool VanillaGrobbulusCloudTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return false;
 
@@ -160,7 +160,7 @@ bool VanillaGluthMainTankMortalWoundTrigger::IsActive()
 bool VanillaKelthuzadTrigger::IsActive() { return helper.UpdateBossAI(); }
 
 bool VanillaAnubrekhanTrigger::IsActive() {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "anub'rekhan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15956");
     if (!boss)
         return false;
 
@@ -169,7 +169,7 @@ bool VanillaAnubrekhanTrigger::IsActive() {
 
 bool VanillaFaerlinaTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grand widow faerlina");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15953");
     if (!boss)
         return false;
 
@@ -178,7 +178,7 @@ bool VanillaFaerlinaTrigger::IsActive()
 
 bool VanillaMaexxnaTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "maexxna");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15952");
     if (!boss)
         return false;
 

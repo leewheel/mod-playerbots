@@ -23,7 +23,7 @@ bool KelthuzadChooseTargetAction::Execute(Event /*event*/)
         if (!unit)
             continue;
 
-        if (botAI->EqualLowercaseName(unit->GetName(), "guardian of icecrown"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "guardian of icecrown") || unit->GetEntry() == 16441)
         {
             if (!target_guardian)
                 target_guardian = unit;
@@ -49,7 +49,7 @@ bool KelthuzadChooseTargetAction::Execute(Event /*event*/)
         if (bot->GetDistance2d(unit) > sPlayerbotAIConfig.spellDistance)
             continue;
 
-        if (botAI->EqualLowercaseName(unit->GetName(), "unstoppable abomination"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "unstoppable abomination") || unit->GetEntry() == 16428)
         {
             if (target_abomination == nullptr ||
                 target_abomination->GetDistance2d(helper.center.first, helper.center.second) >
@@ -58,7 +58,7 @@ bool KelthuzadChooseTargetAction::Execute(Event /*event*/)
                 target_abomination = unit;
             }
         }
-        if (botAI->EqualLowercaseName(unit->GetName(), "soldier of the frozen wastes"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "soldier of the frozen wastes") || unit->GetEntry() == 16427)
         {
             if (target_soldier == nullptr ||
                 target_soldier->GetDistance2d(helper.center.first, helper.center.second) >
@@ -67,14 +67,14 @@ bool KelthuzadChooseTargetAction::Execute(Event /*event*/)
                 target_soldier = unit;
             }
         }
-        if (botAI->EqualLowercaseName(unit->GetName(), "soul weaver"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "soul weaver") || unit->GetEntry() == 16429)
         {
             if (target_weaver == nullptr || target_weaver->GetDistance2d(helper.center.first, helper.center.second) >
                                                 unit->GetDistance2d(helper.center.first, helper.center.second))
                 target_weaver = unit;
         }
 
-        if (botAI->EqualLowercaseName(unit->GetName(), "kel'thuzad"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "kel'thuzad") || unit->GetEntry() == 15990)
             target_kelthuzad = unit;
     }
     std::vector<Unit*> targets;
@@ -154,7 +154,7 @@ bool KelthuzadPositionAction::Execute(Event /*event*/)
             {
                 Unit* cur_tar = AI_VALUE(Unit*, "current target");
                 if (cur_tar && cur_tar->GetVictim() && cur_tar->GetVictim()->ToPlayer() &&
-                    botAI->EqualLowercaseName(cur_tar->GetName(), "guardian of icecrown") &&
+                    (botAI->EqualLowercaseName(cur_tar->GetName(), "guardian of icecrown") || cur_tar->GetEntry() == 16441) &&
                     botAI->IsAssistTank(cur_tar->GetVictim()->ToPlayer()))
                 {
                     return MoveTo(NAXX_MAP_ID, helper.assist_tank_pos.first, helper.assist_tank_pos.second, bot->GetPositionZ(),

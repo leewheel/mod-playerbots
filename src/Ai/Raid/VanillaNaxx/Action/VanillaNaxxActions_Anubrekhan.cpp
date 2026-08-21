@@ -13,10 +13,10 @@ bool VanillaAnubrekhanChooseTargetAction::Execute(Event /*event*/)
         Unit* unit = botAI->GetUnit(guid);
         if (!unit)
             continue;
-        if (botAI->EqualLowercaseName(unit->GetName(), "crypt guard"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "crypt guard") || unit->GetEntry() == 16573)
             target_guards.push_back(unit);
 
-        if (botAI->EqualLowercaseName(unit->GetName(), "anub'rekhan"))
+        if (botAI->EqualLowercaseName(unit->GetName(), "anub'rekhan") || unit->GetEntry() == 15956)
             target_boss = unit;
     }
     if (botAI->IsMainTank(bot))
@@ -54,7 +54,7 @@ bool VanillaAnubrekhanChooseTargetAction::Execute(Event /*event*/)
 
 bool VanillaAnubrekhanPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "anub'rekhan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15956");
     if (!boss)
         return false;
 

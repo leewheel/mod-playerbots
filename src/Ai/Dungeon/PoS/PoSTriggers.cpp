@@ -10,7 +10,7 @@
 
 bool IckAndKrickTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "Ick");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36476");
     if (!boss)
         return false;
 
@@ -19,7 +19,7 @@ bool IckAndKrickTrigger::IsActive()
 
 bool TyrannusTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "scourgelord tyrannus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36658");
     if (!boss)
         return false;
 

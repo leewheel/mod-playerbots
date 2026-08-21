@@ -25,7 +25,7 @@ bool RazuviousUseObedienceCrystalAction::Execute(Event /*event*/)
     // bot->GetCharm
     if (Unit* charm = bot->GetCharm())
     {
-        Unit* target = AI_VALUE2(Unit*, "find target", "instructor razuvious");
+        Unit* target = AI_VALUE2(Unit*, "find target", "16061");
         if (!target)
             return false;
 
@@ -122,7 +122,7 @@ bool RazuviousUseObedienceCrystalAction::Execute(Event /*event*/)
                 Unit* unit = botAI->GetUnit(*i);
                 if (!unit)
                     continue;
-                if (botAI->EqualLowercaseName(unit->GetName(), "death knight understudy"))
+                if (botAI->EqualLowercaseName(unit->GetName(), "death knight understudy") || unit->GetEntry() == 16803)
                 {
                     target = unit;
                     break;
@@ -145,8 +145,8 @@ bool RazuviousTargetAction::Execute(Event /*event*/)
     if (!helper.UpdateBossAI())
         return false;
 
-    Unit* razuvious = AI_VALUE2(Unit*, "find target", "instructor razuvious");
-    Unit* understudy = AI_VALUE2(Unit*, "find target", "death knight understudy");
+    Unit* razuvious = AI_VALUE2(Unit*, "find target", "16061");
+    Unit* understudy = AI_VALUE2(Unit*, "find target", "16803");
     Unit* target = nullptr;
     if (botAI->IsTank(bot))
         target = understudy;
