@@ -38,7 +38,7 @@ float MagtheridonUseManticronCubeMultiplier::GetValue(Action* action)
         return 1.0;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "magtheridon"))
+    if (!AI_VALUE2(Unit*, "find target", "17257"))
         return 1.0f;
 
     if (!IsCubeClicker(bot))
@@ -66,7 +66,7 @@ float MagtheridonWaitToAttackMultiplier::GetValue(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return 1.0f;
 
@@ -101,7 +101,7 @@ float MagtheridonControlTankActionsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon)
         return 1.0f;
 
@@ -128,7 +128,7 @@ float MagtheridonDebrisDangerMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "magtheridon"))
+    if (!AI_VALUE2(Unit*, "find target", "17257"))
         return 1.0f;
 
     constexpr float debrisSuppressionZone = 15.0f;

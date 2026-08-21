@@ -27,8 +27,8 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
 
     bool didSomething = false;
 
-    if (!AI_VALUE2(Unit*, "find target", "kalecgos") &&
-        !AI_VALUE2(Unit*, "find target", "sathrovarr the corruptor"))
+    if (!AI_VALUE2(Unit*, "find target", "24850") &&
+        !AI_VALUE2(Unit*, "find target", "24892"))
     {
         didSomething |= isMechanicTracker && kalecgosEncounterStates.erase(instanceId) > 0;
 
@@ -40,7 +40,7 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "brutallus"))
+    if (!AI_VALUE2(Unit*, "find target", "24882"))
     {
         if (bot->HasAura(Id(SwpSpells::SPELL_BURN)))
         {
@@ -66,10 +66,10 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "felmyst"))
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25038"))
         didSomething |= felmystEncounterStates.erase(instanceId) > 0;
 
-    if (!AI_VALUE2(Unit*, "find target", "grand warlock alythess"))
+    if (!AI_VALUE2(Unit*, "find target", "25166"))
     {
         if (isMechanicTracker)
         {
@@ -86,16 +86,16 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "m'uru"))
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25741"))
     {
         didSomething |= muruDarknessStates.erase(instanceId) > 0;
         didSomething |= muruVoidSentinelTankAssignments.erase(instanceId) > 0;
     }
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "kil'jaeden"))
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25315"))
         didSomething |= kiljaedenEncounterStates.erase(instanceId) > 0;
 
-    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "hand of the deceiver"))
+    if (isMechanicTracker && !AI_VALUE2(Unit*, "find target", "25588"))
     {
         didSomething |= ResetKiljaedenDragonOrbUserAnnouncement(instanceId);
         didSomething |= kiljaedenHandTankAssignments.erase(instanceId) > 0;

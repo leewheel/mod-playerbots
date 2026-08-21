@@ -17,7 +17,7 @@ using namespace UnderbogHungarfen;
 
 float HungarfenFoulSporesMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "hungarfen");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "17770");
     if (!boss || !boss->HasAura(SPELL_FOUL_SPORES))
         return 1.0f;
 
@@ -42,7 +42,7 @@ float HungarfenMushroomIgnoreMultiplier::GetValue(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "hungarfen"))
+    if (!AI_VALUE2(Unit*, "find target", "17770"))
         return 1.0f;
 
     return 0.0f;

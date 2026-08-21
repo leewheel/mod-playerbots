@@ -61,7 +61,7 @@ bool DrakeCombatTrigger::IsActive()
 
 bool VarosCloudstriderTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "varos cloudstrider");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27447");
     if (!boss) { return false; }
 
     return true;
@@ -69,7 +69,7 @@ bool VarosCloudstriderTrigger::IsActive()
 
 bool UromArcaneExplosionTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "mage-lord urom");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27655");
     if (!boss) { return false; }
 
     return bool(boss->FindCurrentSpellBySpellId(SPELL_EMPOWERED_ARCANE_EXPLOSION));

@@ -34,7 +34,7 @@ float SethekkProphetSetTremorTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    return AI_VALUE2(Unit*, "find target", "sethekk prophet") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "18328") ? 0.0f : 1.0f;
 }
 
 float AnzuControlSpellCastingWithSpellBombMultiplier::GetValue(Action* action)
@@ -73,7 +73,7 @@ float TalonKingIkissDelayBloodlustAndHeroismMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
+    Unit* ikiss = AI_VALUE2(Unit*, "find target", "18473");
     if (!ikiss)
         return 1.0f;
 
@@ -102,7 +102,7 @@ float TalonKingIkissControlMovementMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
+    Unit* ikiss = AI_VALUE2(Unit*, "find target", "18473");
     if (!ikiss)
         return 1.0f;
 

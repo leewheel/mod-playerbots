@@ -92,6 +92,7 @@ public:
     void InitReputation();
     void InitAttunementQuests();
     void InitGuild();
+    void SetExcludeHeirloom(bool exclude) { m_excludeHeirloom = exclude; }
 
 private:
     enum class ProfessionSpecializationSpell : uint32
@@ -232,6 +233,7 @@ protected:
     EnchantContainer m_EnchantContainer;
     Player* bot;
     PlayerbotAI* botAI;
+    bool m_excludeHeirloom = false;
 };
 
 #endif

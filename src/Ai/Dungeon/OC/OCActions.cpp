@@ -11,7 +11,7 @@
 
 bool AvoidUnstableSphereAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "drakos the interrogator");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27654");
     if (!boss) { return false; }
 
     float radius = 12.0f;
@@ -134,7 +134,7 @@ bool OccFlyDrakeAction::Execute(Event /*event*/)
     if (!vehicleBase || !masterVehicle) { return false; }
 
     MotionMaster* mm = vehicleBase->GetMotionMaster();
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ley-guardian eregos");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27656");
     if (boss && !boss->HasAura(SPELL_PLANAR_SHIFT))
     {
         // Handle as boss encounter instead of formation flight
@@ -327,7 +327,7 @@ bool OccDrakeAttackAction::RubyDrakeAction(Unit* target)
 
 bool AvoidArcaneExplosionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "mage-lord urom");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27655");
     if (!boss) { return false; }
 
     const Position* closestPos = nullptr;

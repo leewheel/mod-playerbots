@@ -69,7 +69,7 @@ float RageWinterchillDisableCombatFormationMoveMultiplier::GetValue(Action* acti
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "rage winterchill") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "17767") ? 0.0f : 1.0f;
 }
 
 float RageWinterchillMeleeControlAvoidanceMultiplier::GetValue(Action* action)
@@ -87,7 +87,7 @@ float RageWinterchillMeleeControlAvoidanceMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* winterchill = AI_VALUE2(Unit*, "find target", "rage winterchill");
+    Unit* winterchill = AI_VALUE2(Unit*, "find target", "17767");
     if (!winterchill)
         return 1.0f;
 
@@ -117,7 +117,7 @@ float RageWinterchillRangedControlAvoidanceMultiplier::GetValue(Action* action)
     if (dynamic_cast<AttackAction*>(action))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "rage winterchill"))
+    if (!AI_VALUE2(Unit*, "find target", "17767"))
         return 1.0f;
 
     if (dynamic_cast<AvoidAoeAction*>(action))
@@ -140,7 +140,7 @@ float AnetheronDisableAssistTargetingMultiplier::GetValue(Action* action)
     if (isTankAssist && IsInfernalTank(bot))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "anetheron") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "17808") ? 0.0f : 1.0f;
 }
 
 // Keep non-Infernal tanks from inadvertesntly grabbing aggro with Consecration, Thunder Clap, etc.
@@ -171,7 +171,7 @@ float AnetheronInfernalTargetRunToPositionMultiplier::GetValue(Action* action)
     if (dynamic_cast<AnetheronBringInfernalToInfernalTankAction*>(action))
         return 1.0f;
 
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron || anetheron->GetVictim() == bot)
         return 1.0f;
 
@@ -195,7 +195,7 @@ float AnetheronControlMovementMultiplier::GetValue(Action* action)
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "anetheron") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "17808") ? 0.0f : 1.0f;
 }
 
 float AnetheronControlMisdirectionMultiplier::GetValue(Action* action)
@@ -209,7 +209,7 @@ float AnetheronControlMisdirectionMultiplier::GetValue(Action* action)
     if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "anetheron") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "17808") ? 0.0f : 1.0f;
 }
 
 // Kaz'rogal
@@ -225,7 +225,7 @@ float KazrogalDisableDisperseAndTankFaceMultiplier::GetValue(Action* action)
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "kaz'rogal") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "17888") ? 0.0f : 1.0f;
 }
 
 float KazrogalControlLowManaMovementMultiplier::GetValue(Action* action)
@@ -245,7 +245,7 @@ float KazrogalControlLowManaMovementMultiplier::GetValue(Action* action)
     if (dynamic_cast<KazrogalMoveAwayFromGroupAction*>(action))
         return 1.0f;
 
-    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "kaz'rogal");
+    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
     if (!kazrogal || kazrogal->GetVictim() == bot)
         return 1.0f;
 
@@ -270,7 +270,7 @@ float KazrogalKeepAspectOfTheViperActiveMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "kaz'rogal"))
+    if (!AI_VALUE2(Unit*, "find target", "17888"))
         return 1.0f;
 
     return bot->GetPower(POWER_MANA) <= MARK_DANGER_MANA ? 0.0f : 1.0f;
@@ -295,7 +295,7 @@ float AzgalorDisableAutoTargetingAndPositioningMultiplier::GetValue(Action* acti
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "azgalor") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "17842") ? 0.0f : 1.0f;
 }
 
 float AzgalorDoomedBotPrioritizePositioningMultiplier::GetValue(Action* action)
@@ -332,7 +332,7 @@ float AzgalorMeleeDpsControlAvoidanceMultiplier::GetValue(Action* action)
     if (dynamic_cast<AzgalorDetermineDpsPriorityAction*>(action))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "azgalor"))
+    if (!AI_VALUE2(Unit*, "find target", "17842"))
         return 1.0f;
 
     return IsNearRainOfFire(botAI, RAIN_OF_FIRE_MELEE_CONTROL_RADIUS) ? 0.0f : 1.0f;
@@ -355,7 +355,7 @@ float AzgalorRangedControlAvoidanceMultiplier::GetValue(Action* action)
     if (dynamic_cast<AzgalorDetermineDpsPriorityAction*>(action))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "azgalor"))
+    if (!AI_VALUE2(Unit*, "find target", "17842"))
         return 1.0f;
 
     return IsNearRainOfFire(botAI, RAIN_OF_FIRE_RANGED_CONTROL_RADIUS) ? 0.0f : 1.0f;
@@ -374,7 +374,7 @@ float ArchimondeDisableCombatFormationMoveMultiplier::GetValue(Action* action)
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "archimonde"))
+    if (!AI_VALUE2(Unit*, "find target", "17968"))
         return 1.0f;
 
     return !HasProtectionOfElune(bot) ? 0.0f : 1.0f;
@@ -394,7 +394,7 @@ float ArchimondeControlDoomfireAvoidanceMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "archimonde"))
+    if (!AI_VALUE2(Unit*, "find target", "17968"))
         return 1.0f;
 
     if (dynamic_cast<AvoidAoeAction*>(action))
@@ -422,7 +422,7 @@ float ArchimondeSetTremorTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* archimonde = AI_VALUE2(Unit*, "find target", "archimonde");
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
     if (!archimonde || archimonde->GetHealthPct() > 90.0f)
         return 1.0f;
 

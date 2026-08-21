@@ -60,7 +60,7 @@ const std::time_t RazorscaleBossHelper::_roleSwapCooldown;
 
 bool RazorscaleBossHelper::UpdateBossAI()
 {
-    _boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    _boss = AI_VALUE2(Unit*, "find target", "33186");
     if (_boss)
     {
         Group* group = bot->GetGroup();

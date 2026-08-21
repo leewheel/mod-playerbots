@@ -49,7 +49,7 @@ bool KrikthirWatchersTrigger::IsActive()
 
 // bool AnubarakImpaleTrigger::IsActive()
 // {
-//     Unit* boss = AI_VALUE2(Unit*, "find target", "anub'arak");
+//     Unit* boss = AI_VALUE2(Unit*, "find target", "29120");
 //     if (!boss) { return false; }
 //     GuidVector triggers = AI_VALUE(GuidVector, "possible triggers");
 //     for (auto i = triggers.begin(); i != triggers.end(); i++)
@@ -66,7 +66,7 @@ bool KrikthirWatchersTrigger::IsActive()
 
 bool AnubarakPoundTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "anub'arak");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29120");
     if (!boss) { return false; }
 
     return boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_POUND);

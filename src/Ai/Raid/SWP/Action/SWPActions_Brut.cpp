@@ -17,7 +17,7 @@ using namespace SwpHelpers;
 
 bool BrutallusMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
+    Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
     if (!brutallus)
         return false;
 
@@ -39,7 +39,7 @@ bool BrutallusMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool BrutallusTanksPositionAndSwapAction::Execute(Event event)
 {
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
+    Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
     if (!brutallus)
         return false;
 
@@ -120,7 +120,7 @@ bool BrutallusTanksPositionAndSwapAction::Execute(Event event)
 
 bool BrutallusPositionMeleeAtRearCenterAction::Execute(Event /*event*/)
 {
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
+    Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
     if (!brutallus)
         return false;
 
@@ -211,7 +211,7 @@ bool BrutallusPositionMeleeAtRearCenterAction::TryGetBrutallusMeleePosition(
 
 bool BrutallusPositionRangedInTwoGroupsAction::Execute(Event /*event*/)
 {
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
+    Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
     if (!brutallus)
         return false;
 
@@ -337,7 +337,7 @@ bool BrutallusPositionRangedInTwoGroupsAction::Execute(Event /*event*/)
 
 bool BrutallusHandleBurnAction::Execute(Event /*event*/)
 {
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
+    Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
     if (!brutallus)
         return false;
 

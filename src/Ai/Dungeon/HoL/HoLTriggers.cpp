@@ -30,7 +30,7 @@ bool StormforgedLieutenantTrigger::IsActive()
 
 bool BjarngrimWhirlwindTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general bjarngrim");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28586");
     if (!boss) { return false; }
 
     return boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_WHIRLWIND_BJARNGRIM);
@@ -38,7 +38,7 @@ bool BjarngrimWhirlwindTrigger::IsActive()
 
 bool VolkhanTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "volkhan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28587");
     return boss && !botAI->IsTank(bot) && !botAI->IsHeal(bot);
 }
 
@@ -60,7 +60,7 @@ bool IonarBallLightningTrigger::IsActive()
 {
     if (botAI->IsMelee(bot)) { return false; }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ionar");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28546");
     if (!boss) { return false; }
 
     return boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_BALL_LIGHTNING);
@@ -70,7 +70,7 @@ bool IonarTankAggroTrigger::IsActive()
 {
     if (!botAI->IsTank(bot)) { return false; }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ionar");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28546");
     if (!boss) { return false; }
 
     return AI_VALUE2(bool, "has aggro", "current target");
@@ -78,7 +78,7 @@ bool IonarTankAggroTrigger::IsActive()
 
 bool IonarDisperseTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ionar");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28546");
     if (!boss) { return false; }
 
     return !bot->CanSeeOrDetect(boss) || boss->FindCurrentSpellBySpellId(SPELL_DISPERSE);
@@ -86,12 +86,12 @@ bool IonarDisperseTrigger::IsActive()
 
 bool LokenRangedTrigger::IsActive()
 {
-    return !botAI->IsMelee(bot) && AI_VALUE2(Unit*, "find target", "loken");
+    return !botAI->IsMelee(bot) && AI_VALUE2(Unit*, "find target", "28923");
 }
 
 bool LokenLightningNovaTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "loken");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28923");
     if (!boss) { return false; }
 
     return boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_LIGHTNING_NOVA);

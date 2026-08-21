@@ -16,7 +16,7 @@
 
 bool IccDbsTankPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "deathbringer saurfang");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37813");
     if (!boss)
         return false;
 
@@ -335,7 +335,7 @@ bool IccDbsTankPositionAction::PositionInRangedFormation()
 
 bool IccAddsDbsAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "deathbringer saurfang");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37813");
     if (!boss)
         return false;
 

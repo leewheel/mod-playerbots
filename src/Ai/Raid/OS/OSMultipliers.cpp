@@ -21,7 +21,7 @@
 
 float SartharionMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss) { return 1.0f; }
 
     Unit* target = action->GetTarget();

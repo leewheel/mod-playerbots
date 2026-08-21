@@ -9,7 +9,7 @@
 
 bool AvoidPoisonNovaAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "slad'ran");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29304");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());
@@ -26,7 +26,7 @@ bool AvoidPoisonNovaAction::Execute(Event /*event*/)
 
 bool AttackSnakeWrapAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "slad'ran");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29304");
     if (!boss) { return false; }
 
     // Target is not findable from threat table using AI_VALUE2(),
@@ -51,7 +51,7 @@ bool AttackSnakeWrapAction::Execute(Event /*event*/)
 
 bool AvoidWhirlingSlashAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "gal'darah");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29306");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());

@@ -9,7 +9,7 @@
 
 bool Aq20MoveToCrystalTrigger::IsActive()
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "ossirian the unscarred"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "15339"))
     {
         if (boss->IsInCombat())
         {

@@ -31,7 +31,7 @@ bool McMoveFromGroupAction::Execute(Event /*event*/)
 
 bool McMoveFromBaronGeddonAction::Execute(Event /*event*/)
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "baron geddon"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "12056"))
     {
         float distToTravel = INFERNO_DISTANCE - bot->GetDistance2d(boss);
         if (distToTravel > 0)
@@ -48,7 +48,7 @@ bool McMoveFromBaronGeddonAction::Execute(Event /*event*/)
 
 bool McShazzrahMoveAwayAction::Execute(Event /*event*/)
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "shazzrah"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "12264"))
     {
         float distToTravel = ARCANE_EXPLOSION_DISTANCE - bot->GetDistance2d(boss);
         if (distToTravel > 0)
@@ -59,7 +59,7 @@ bool McShazzrahMoveAwayAction::Execute(Event /*event*/)
 
 bool McGolemaggMarkBossAction::Execute(Event /*event*/)
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "golemagg the incinerator"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "11988"))
     {
         if (Group* group = bot->GetGroup())
         {
@@ -122,7 +122,7 @@ bool McGolemaggTankAction::FindCoreRagers(Unit*& coreRager1, Unit*& coreRager2) 
 bool McGolemaggMainTankAttackGolemaggAction::Execute(Event /*event*/)
 {
     // At this point, we know we are not the last living tank in the group.
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "golemagg the incinerator"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "11988"))
     {
         Unit* coreRager1;
         Unit* coreRager2;
@@ -138,7 +138,7 @@ bool McGolemaggMainTankAttackGolemaggAction::Execute(Event /*event*/)
 
 bool McGolemaggAssistTankAttackCoreRagerAction::Execute(Event event)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "golemagg the incinerator");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "11988");
     if (!boss)
         return false;
 

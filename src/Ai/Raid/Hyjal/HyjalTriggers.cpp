@@ -41,7 +41,7 @@ bool HyjalBossEngagedByMainTankTrigger::IsActive()
 
 bool RageWinterchillRangedShouldSpreadTrigger::IsActive()
 {
-    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "rage winterchill");
+    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "17767");
 }
 
 bool RageWinterchillMeleeNearDeathAndDecayTrigger::IsActive()
@@ -49,7 +49,7 @@ bool RageWinterchillMeleeNearDeathAndDecayTrigger::IsActive()
     if (!PlayerbotAI::IsMelee(bot))
         return false;
 
-    Unit* winterchill = AI_VALUE2(Unit*, "find target", "rage winterchill");
+    Unit* winterchill = AI_VALUE2(Unit*, "find target", "17767");
     if (!winterchill || winterchill->GetVictim() == bot)
         return false;
 
@@ -64,7 +64,7 @@ bool RageWinterchillRangedIsStandingInDeathAndDecayTrigger::IsActive()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "rage winterchill"))
+    if (!AI_VALUE2(Unit*, "find target", "17767"))
         return false;
 
     return IsInDeathAndDecay(botAI);
@@ -74,7 +74,7 @@ bool RageWinterchillRangedIsStandingInDeathAndDecayTrigger::IsActive()
 
 bool AnetheronPullingBossOrInfernalTrigger::IsActive()
 {
-    return bot->getClass() == CLASS_HUNTER && AI_VALUE2(Unit*, "find target", "anetheron");
+    return bot->getClass() == CLASS_HUNTER && AI_VALUE2(Unit*, "find target", "17808");
 }
 
 bool AnetheronRangedShouldSpreadTrigger::IsActive()
@@ -82,7 +82,7 @@ bool AnetheronRangedShouldSpreadTrigger::IsActive()
     if (PlayerbotAI::IsMelee(bot))
         return false;
 
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron)
         return false;
 
@@ -98,7 +98,7 @@ bool AnetheronRangedShouldSpreadTrigger::IsActive()
 
 bool AnetheronBotIsNearInfernoTargetTrigger::IsActive()
 {
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron || anetheron->GetVictim() == bot)
         return false;
 
@@ -111,7 +111,7 @@ bool AnetheronBotIsNearInfernoTargetTrigger::IsActive()
 
 bool AnetheronBotIsTargetedByInfernalTrigger::IsActive()
 {
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron || anetheron->GetVictim() == bot)
         return false;
 
@@ -129,7 +129,7 @@ bool AnetheronInfernalsShouldBeKeptAwayTrigger::IsActive()
     if (!IsInfernalTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "anetheron"))
+    if (!AI_VALUE2(Unit*, "find target", "17808"))
         return false;
 
     Unit* infernal = GetInfernalTargetingBot(bot);
@@ -138,7 +138,7 @@ bool AnetheronInfernalsShouldBeKeptAwayTrigger::IsActive()
 
 bool AnetheronShouldDetermineDpsPriorityTrigger::IsActive()
 {
-    return !PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "anetheron");
+    return !PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "17808");
 }
 
 // Kaz'rogal
@@ -148,7 +148,7 @@ bool KazrogalMalevolentCleaveSplitsDamageTrigger::IsActive()
     if (!PlayerbotAI::IsAssistTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "kaz'rogal"))
+    if (!AI_VALUE2(Unit*, "find target", "17888"))
         return false;
 
     if (bot->getClass() != CLASS_PALADIN)
@@ -165,7 +165,7 @@ bool KazrogalLowManaBotsNeedEscapePathTrigger::IsActive()
     if (!IsKazrogalManaUser(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "kaz'rogal"))
+    if (!AI_VALUE2(Unit*, "find target", "17888"))
         return false;
 
     return !botsBelowManaThreshold.contains(bot->GetGUID());
@@ -180,7 +180,7 @@ bool KazrogalBotIsLowOnManaTrigger::IsActive()
     if (bot->getClass() == CLASS_HUNTER)
         return false;
 
-    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "kaz'rogal");
+    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
     if (!kazrogal || kazrogal->GetVictim() == bot)
         return false;
 
@@ -198,7 +198,7 @@ bool KazrogalHunterShouldPreserveManaTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "kaz'rogal"))
+    if (!AI_VALUE2(Unit*, "find target", "17888"))
         return false;
 
     if (bot->HasAura(Id(HyjalSpells::SPELL_ASPECT_OF_THE_VIPER)))
@@ -213,7 +213,7 @@ bool KazrogalMarkOnMageOrPaladinTrigger::IsActive()
     if (bot->getClass() != CLASS_MAGE && bot->getClass() != CLASS_PALADIN)
         return false;
 
-    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "kaz'rogal");
+    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
     if (!kazrogal || kazrogal->GetVictim() == bot)
         return false;
 
@@ -241,7 +241,7 @@ bool KazrogalWarlockShouldManageManaTrigger::IsActive()
     if (bot->getClass() != CLASS_WARLOCK)
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "kaz'rogal"))
+    if (!AI_VALUE2(Unit*, "find target", "17888"))
         return false;
 
     if (bot->GetPower(POWER_MANA) <= MARK_LIFE_TAP_MANA &&
@@ -263,7 +263,7 @@ bool AzgalorBossEngagedByRangedTrigger::IsActive()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    Unit* azgalor = AI_VALUE2(Unit*, "find target", "azgalor");
+    Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
     if (!azgalor || azgalor->GetVictim() == bot)
         return false;
 
@@ -278,7 +278,7 @@ bool AzgalorMeleeNearRainOfFireTrigger::IsActive()
     if (!PlayerbotAI::IsMelee(bot))
         return false;
 
-    Unit* azgalor = AI_VALUE2(Unit*, "find target", "azgalor");
+    Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
     if (!azgalor || azgalor->GetVictim() == bot)
         return false;
 
@@ -299,7 +299,7 @@ bool AzgalorRangedIsStandingInRainOfFireTrigger::IsActive()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "azgalor"))
+    if (!AI_VALUE2(Unit*, "find target", "17842"))
         return false;
 
     if (IsDoomed(bot))
@@ -318,18 +318,18 @@ bool AzgalorDoomguardsMustBeControlledTrigger::IsActive()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "azgalor"))
+    if (!AI_VALUE2(Unit*, "find target", "17842"))
         return false;
 
     if (!IsDoomguardTank(bot))
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "lesser doomguard") || AnyGroupMemberHasDoom(bot);
+    return AI_VALUE2(Unit*, "find target", "17864") || AnyGroupMemberHasDoom(bot);
 }
 
 bool AzgalorShouldDivideDpsTrigger::IsActive()
 {
-    return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "azgalor");
+    return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "17842");
 }
 
 // Archimonde
@@ -339,7 +339,7 @@ bool ArchimondeBossCastsFearTrigger::IsActive()
     if (bot->getClass() != CLASS_PRIEST && bot->getClass() != CLASS_SHAMAN)
         return false;
 
-    Unit* archimonde = AI_VALUE2(Unit*, "find target", "archimonde");
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
     if (!archimonde || archimonde->GetHealthPct() > 90.0f) // Wait for initial positioning
         return false;
 
@@ -348,7 +348,7 @@ bool ArchimondeBossCastsFearTrigger::IsActive()
 
 bool ArchimondeBossCastingAirBurstTrigger::IsActive()
 {
-    Unit* archimonde = AI_VALUE2(Unit*, "find target", "archimonde");
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
     if (!archimonde || archimonde->GetVictim() == bot)
         return false;
 
@@ -363,7 +363,7 @@ bool ArchimondeRangedShouldSpreadTrigger::IsActive()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "archimonde"))
+    if (!AI_VALUE2(Unit*, "find target", "17968"))
         return false;
 
     return !HasProtectionOfElune(bot);
@@ -371,7 +371,7 @@ bool ArchimondeRangedShouldSpreadTrigger::IsActive()
 
 bool ArchimondeBotIsNearDoomfireTrigger::IsActive()
 {
-    Unit* archimonde = AI_VALUE2(Unit*, "find target", "archimonde");
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
     if (!archimonde)
         return false;
 

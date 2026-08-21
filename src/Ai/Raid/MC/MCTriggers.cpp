@@ -18,33 +18,33 @@ bool McLivingBombDebuffTrigger::IsActive()
 
 bool McBaronGeddonInfernoTrigger::IsActive()
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "baron geddon"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "12056"))
         return boss->HasAura(SPELL_INFERNO);
     return false;
 }
 
 bool McShazzrahRangedTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "shazzrah") && PlayerbotAI::IsRanged(bot);
+    return AI_VALUE2(Unit*, "find target", "12264") && PlayerbotAI::IsRanged(bot);
 }
 
 bool McGolemaggMarkBossTrigger::IsActive()
 {
     // any tank may mark the boss
-    return AI_VALUE2(Unit*, "find target", "golemagg the incinerator") && PlayerbotAI::IsTank(bot);
+    return AI_VALUE2(Unit*, "find target", "11988") && PlayerbotAI::IsTank(bot);
 }
 
 bool McGolemaggIsMainTankTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "golemagg the incinerator") && PlayerbotAI::IsMainTank(bot);
+    return AI_VALUE2(Unit*, "find target", "11988") && PlayerbotAI::IsMainTank(bot);
 }
 
 bool McGolemaggIsAssistTankTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "golemagg the incinerator") && PlayerbotAI::IsAssistTank(bot);
+    return AI_VALUE2(Unit*, "find target", "11988") && PlayerbotAI::IsAssistTank(bot);
 }
 
 bool McCoreHoundMarkTrigger::IsActive()
 {
-    return PlayerbotAI::IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "core hound");
+    return PlayerbotAI::IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "11671");
 }

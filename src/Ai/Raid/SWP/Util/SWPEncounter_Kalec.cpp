@@ -251,7 +251,7 @@ Player* GetKalecgosCurrentVictimTank(
     if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(player))
     {
         AiObjectContext* context = botAI->GetAiObjectContext();
-        kalecgos = AI_VALUE2(Unit*, "find target", "kalecgos");
+        kalecgos = AI_VALUE2(Unit*, "find target", "24850");
     }
 
     constexpr float searchRadius = 200.0f;

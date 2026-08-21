@@ -24,13 +24,13 @@ bool MuruMisdirectEnemiesToTanksAction::Execute(Event /*event*/)
     Unit* targetEnemy = nullptr;
     Unit* targetTank = nullptr;
 
-    if (Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "void sentinel"))
+    if (Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772"))
     {
         targetEnemy = voidSentinel;
         if (Player* firstAssistTank = GetGroupAssistTank(botAI, bot, 0))
             targetTank = firstAssistTank;
     }
-    else if (Unit* entropius = AI_VALUE2(Unit*, "find target", "entropius"))
+    else if (Unit* entropius = AI_VALUE2(Unit*, "find target", "25840"))
     {
         targetEnemy = entropius;
         if (Player* mainTank = GetGroupMainTank(botAI, bot))
@@ -54,7 +54,7 @@ bool MuruMisdirectEnemiesToTanksAction::Execute(Event /*event*/)
 
 bool MuruMainTankPickUpEntropiusAction::Execute(Event /*event*/)
 {
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "entropius");
+    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
     if (!entropius || AI_VALUE(Unit*, "current target") == entropius)
         return false;
 
@@ -63,7 +63,7 @@ bool MuruMainTankPickUpEntropiusAction::Execute(Event /*event*/)
 
 bool MuruPositionRangedAction::Execute(Event /*event*/)
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
+    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
     if (muru && muru->GetHealth() > 1)
     {
         _entropiusRangedPositionReached = false;
@@ -75,7 +75,7 @@ bool MuruPositionRangedAction::Execute(Event /*event*/)
             position.GetPositionZ(), rangedGroupRadius, MovementPriority::MOVEMENT_COMBAT);
     }
 
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "entropius");
+    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
     MuruEncounterTargets targets;
     targets.muru = muru;
     targets.entropius = entropius;
@@ -372,8 +372,8 @@ Unit* MuruAssignDpsPriorityAction::SelectMuruEncounterTarget(
 
 bool MuruKillDarkFiendsWithDispelAction::Execute(Event /*event*/)
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "entropius");
+    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
+    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
     if (!muru && !entropius)
         return false;
 
@@ -435,7 +435,7 @@ bool MuruKillDarkFiendsWithDispelAction::Execute(Event /*event*/)
 
 bool MuruDontTouchTheDarkFiendAction::Execute(Event /*event*/)
 {
-    Unit* hazard = AI_VALUE2(Unit*, "find target", "dark fiend");
+    Unit* hazard = AI_VALUE2(Unit*, "find target", "25744");
     if (!hazard)
     {
         constexpr float searchRadius = 20.0f;
@@ -459,7 +459,7 @@ bool MuruDontTouchTheDarkFiendAction::Execute(Event /*event*/)
 
 bool MuruTanksMoveSentinelToSafePositionAction::Execute(Event /*event*/)
 {
-    Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "void sentinel");
+    Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
     Position const& waitPosition = MURU_STACK_POSITION;
     if (!voidSentinel && bot->GetExactDist2d(waitPosition) > 3.0f)
     {
@@ -542,7 +542,7 @@ bool MuruSecondAssistTankGuardRangedAction::Execute(Event /*event*/)
 
 bool MuruMeleeFleeTheDarknessAction::Execute(Event /*event*/)
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
+    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
     if (!muru)
         return false;
 
@@ -598,7 +598,7 @@ bool MuruMeleeFleeTheDarknessAction::Execute(Event /*event*/)
 
 bool MuruFleeFromSingularityAction::Execute(Event /*event*/)
 {
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "entropius");
+    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
     if (!entropius)
         return false;
 
@@ -618,7 +618,7 @@ bool MuruFleeFromSingularityAction::Execute(Event /*event*/)
 
 bool MuruCastStunOnShadowswordBerserkerAction::Execute(Event /*event*/)
 {
-    Unit* berserker = AI_VALUE2(Unit*, "find target", "shadowsword berserker");
+    Unit* berserker = AI_VALUE2(Unit*, "find target", "25798");
     if (!berserker || berserker->HasUnitState(UNIT_STATE_STUNNED))
         return false;
 
@@ -651,7 +651,7 @@ bool MuruCastStunOnShadowswordBerserkerAction::Execute(Event /*event*/)
 
 bool MuruInterruptFelFireballAction::Execute(Event /*event*/)
 {
-    Unit* furyMage = AI_VALUE2(Unit*, "find target", "shadowsword fury mage");
+    Unit* furyMage = AI_VALUE2(Unit*, "find target", "25799");
     if (!furyMage)
         return false;
 
@@ -687,7 +687,7 @@ bool MuruInterruptFelFireballAction::Execute(Event /*event*/)
 
 bool MuruCastSpellStealOnSpellFuryAction::Execute(Event /*event*/)
 {
-    Unit* furyMage = AI_VALUE2(Unit*, "find target", "shadowsword fury mage");
+    Unit* furyMage = AI_VALUE2(Unit*, "find target", "25799");
     return furyMage &&
         botAI->CanCastSpell(Id(SwpSpells::SPELL_SPELLSTEAL), furyMage) &&
         botAI->CastSpell(Id(SwpSpells::SPELL_SPELLSTEAL), furyMage);

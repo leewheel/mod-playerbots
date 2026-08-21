@@ -14,10 +14,10 @@
 
 float ElderNadoxMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "elder nadox");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29309");
     if (!boss) { return 1.0f; }
 
-    Unit* guardian = AI_VALUE2(Unit*, "find target", "ahn'kahar guardian");
+    Unit* guardian = AI_VALUE2(Unit*, "find target", "29309");
     if (guardian)
     {
         if (dynamic_cast<DpsAssistAction*>(action))
@@ -30,7 +30,7 @@ float ElderNadoxMultiplier::GetValue(Action* action)
 
 float JedogaShadowseekerMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "jedoga shadowseeker");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29310");
     if (!boss) { return 1.0f; }
 
     Unit* volunteer = nullptr;
@@ -60,7 +60,7 @@ float JedogaShadowseekerMultiplier::GetValue(Action* action)
 
 float ForgottenOneMultiplier::GetValue(Action* action)
 {
-    Unit* unit = AI_VALUE2(Unit*, "find target", "forgotten one");
+    Unit* unit = AI_VALUE2(Unit*, "find target", "30414");
     if (!unit) { return 1.0f; }
 
     if (bot->isMoving())

@@ -9,7 +9,7 @@
 
 bool ExplodeGhoulSpreadAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "salramm the fleshcrafter");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26530");
     if (!boss) { return false; }
 
     float distance = 10.0f;
@@ -45,7 +45,7 @@ bool EpochStackAction::isUseful()
 }
 bool EpochStackAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "chrono-lord epoch");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26532");
     if (!boss) { return false; }
 
     float maxMovement = 10.0f;

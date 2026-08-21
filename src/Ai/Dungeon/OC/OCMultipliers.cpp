@@ -53,7 +53,7 @@ float UromMultiplier::GetValue(Action* action)
             return 0.0f;
     }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "mage-lord urom");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27655");
     if (!boss) { return 1.0f; }
 
     // REAL BOSS FIGHT
@@ -96,7 +96,7 @@ uint8 UromMultiplier::GetPhaseByCurrentPosition(Unit* unit)
 
 float EregosMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ley-guardian eregos");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27656");
     if (!boss) { return 1.0f; }
 
     if (boss->HasAura(SPELL_PLANAR_SHIFT) && dynamic_cast<OccDrakeAttackAction*>(action))

@@ -57,7 +57,7 @@ bool BwlTurnOffSuppressionDeviceAction::Execute(Event /*event*/)
 
 bool BwlRazorgoreAvoidAoeAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorgore the untamed");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "12435");
     if (!boss)
         return false;
 
@@ -106,7 +106,7 @@ bool BwlRazorgoreAvoidAoeAction::Execute(Event /*event*/)
 
 bool BwlRazorgoreMarkBossAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorgore the untamed");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "12435");
     if (!boss)
         return false;
 
@@ -140,7 +140,7 @@ bool BwlRazorgoreMarkBossAction::isUseful()
 
 bool BwlVaelastraszMoveAwayAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "vaelastrasz the corrupt");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "13020");
 
     // Current target with Burning Adrenaline stays put when Vaelastrasz is alive.
     if (boss && boss->IsAlive() && boss->GetVictim() == bot)
@@ -272,7 +272,7 @@ bool BwlUseHourglassSandAction::Execute(Event /*event*/)
 
 bool BwlNefarianFearWardAction::Execute(Event /*event*/)
 {
-    Unit* nefarian = AI_VALUE2(Unit*, "find target", "nefarian");
+    Unit* nefarian = AI_VALUE2(Unit*, "find target", "11583");
     if (!nefarian)
         return false;
 

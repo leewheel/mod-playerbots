@@ -279,7 +279,7 @@ void AppendFelmystVaporPhaseMeleeExclusions(
     if (!PlayerbotAI::IsMelee(botAI->GetBot()))
         return;
 
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "felmyst");
+    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (IsFelmystAirPhaseTargetSuppressed(felmyst))
         exclusions.insert(felmyst->GetGUID());
 }
@@ -287,7 +287,7 @@ void AppendFelmystVaporPhaseMeleeExclusions(
 void AppendMuruDarkFiendExclusions(
     PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
-    if (!AI_VALUE2(Unit*, "find target", "m'uru"))
+    if (!AI_VALUE2(Unit*, "find target", "25741"))
         return;
 
     for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
@@ -304,7 +304,7 @@ void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, Guid
     if (!PlayerbotAI::IsTank(bot))
         return;
 
-    Unit* muru = AI_VALUE2(Unit*, "find target", "m'uru");
+    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
     if (!muru || muru->GetHealth() <= 1)
         return;
 
@@ -339,7 +339,7 @@ void AppendKiljaedenShieldOrbExclusions(
     if (!PlayerbotAI::IsMelee(botAI->GetBot()))
         return;
 
-    if (!AI_VALUE2(Unit*, "find target", "kil'jaeden"))
+    if (!AI_VALUE2(Unit*, "find target", "25315"))
         return;
 
     for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
@@ -358,7 +358,7 @@ void AppendKiljaedenShieldOrbExclusions(
     if (PlayerbotAI::IsTank(botAI->GetBot()))
         return;
 
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "kil'jaeden");
+    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
     if (!kiljaeden || kiljaeden->GetHealthPct() > 85.0f)
         return;
 

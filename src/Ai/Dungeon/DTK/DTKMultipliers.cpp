@@ -14,7 +14,7 @@
 
 float NovosMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "novos the summoner");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26631");
     if (!boss) { return 1.0f; }
 
     if (boss->FindCurrentSpellBySpellId(SPELL_ARCANE_FIELD) && bot->GetTarget())

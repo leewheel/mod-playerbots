@@ -10,7 +10,7 @@
 
 bool KrystallusGroundSlamTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "krystallus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27977");
     if (!boss) { return false; }
 
     // Check both of these... the spell is applied first, debuff later.
@@ -20,7 +20,7 @@ bool KrystallusGroundSlamTrigger::IsActive()
 
 bool SjonnirLightningRingTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sjonnir the ironshaper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27978");
     if (!boss) { return false; }
 
     return boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_LIGHTNING_RING);

@@ -21,21 +21,21 @@ float FactionCommanderMultiplier::GetValue(Action* action)
         case DUNGEON_DIFFICULTY_NORMAL:
             if (faction == TEAM_ALLIANCE)
             {
-                boss = AI_VALUE2(Unit*, "find target", "horde commander");
+                boss = AI_VALUE2(Unit*, "find target", "27947");
             }
             else //if (faction == TEAM_HORDE)
             {
-                boss = AI_VALUE2(Unit*, "find target", "alliance commander");
+                boss = AI_VALUE2(Unit*, "find target", "27949");
             }
             break;
         case DUNGEON_DIFFICULTY_HEROIC:
             if (faction == TEAM_ALLIANCE)
             {
-                boss = AI_VALUE2(Unit*, "find target", "commander kolurg");
+                boss = AI_VALUE2(Unit*, "find target", "26798");
             }
             else //if (faction == TEAM_HORDE)
             {
-                boss = AI_VALUE2(Unit*, "find target", "commander stoutbeard");
+                boss = AI_VALUE2(Unit*, "find target", "26796");
             }
             break;
         default:
@@ -55,7 +55,7 @@ float FactionCommanderMultiplier::GetValue(Action* action)
 
 float TelestraMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grand magus telestra");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26731");
     if (boss && boss->GetEntry() != NPC_TELESTRA)
     {
         // boss is split into clones, do not auto acquire target
@@ -69,7 +69,7 @@ float TelestraMultiplier::GetValue(Action* action)
 
 float AnomalusMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "anomalus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26763");
     if (boss && boss->HasAura(BUFF_RIFT_SHIELD))
     {
         if (dynamic_cast<DpsAssistAction*>(action))
@@ -82,7 +82,7 @@ float AnomalusMultiplier::GetValue(Action* action)
 
 float OrmorokMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ormorok the tree-shaper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26794");
     if (!boss) { return 1.0f; }
 
     // These are used for auto ranged repositioning, need to suppress so ranged dps don't ping-pong

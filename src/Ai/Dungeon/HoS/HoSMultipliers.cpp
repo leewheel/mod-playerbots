@@ -14,7 +14,7 @@
 
 float KrystallusMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "krystallus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27977");
     if (!boss) { return 1.0f; }
 
     // Check both of these... the spell is applied first, debuff later.
@@ -31,7 +31,7 @@ float KrystallusMultiplier::GetValue(Action* action)
 
 float SjonnirMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sjonnir the ironshaper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27978");
     if (!boss) { return 1.0f; }
 
     if (boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_LIGHTNING_RING))

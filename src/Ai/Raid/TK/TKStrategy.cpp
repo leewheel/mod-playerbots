@@ -169,7 +169,7 @@ using namespace TkHelpers;
 void AppendKaelthasDevastationExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
     AiObjectContext* context = botAI->GetAiObjectContext();
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return;
 

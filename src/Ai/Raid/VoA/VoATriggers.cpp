@@ -19,7 +19,7 @@ bool EmalonMarkBossTrigger::IsActive()
     }
 
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "emalon the storm watcher");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33993");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -61,7 +61,7 @@ bool EmalonMarkBossTrigger::IsActive()
 bool EmalonLightingNovaTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "emalon the storm watcher");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33993");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -89,7 +89,7 @@ bool EmalonOverchargeTrigger::IsActive()
     }
 
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "emalon the storm watcher");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33993");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -131,7 +131,7 @@ bool EmalonOverchargeTrigger::IsActive()
 bool EmalonFallFromFloorTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "emalon the storm watcher");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33993");
     if (!boss || !boss->IsAlive())
     {
         return false;

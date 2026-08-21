@@ -16,7 +16,7 @@
 
 bool IccBqlGroupPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "blood-queen lana'thel");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "37955");
     if (!boss)
         return false;
 

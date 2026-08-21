@@ -34,16 +34,16 @@ bool TempestKeepResetEncounterStatesAction::Execute(Event /*event*/)
     uint32 const instanceId = bot->GetMap()->GetInstanceId();
     bool reset = false;
 
-    if (!AI_VALUE2(Unit*, "find target", "alar"))
+    if (!AI_VALUE2(Unit*, "find target", "19514"))
     {
         reset |= isAlarInPhase2.erase(instanceId) > 0;
         reset |= lastRebirthState.erase(instanceId) > 0;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "void reaver"))
+    if (!AI_VALUE2(Unit*, "find target", "19516"))
         reset |= voidReaverArcaneOrbs.erase(instanceId) > 0;
 
-    if (!AI_VALUE2(Unit*, "find target", "kael'thas sunstrider"))
+    if (!AI_VALUE2(Unit*, "find target", "19622"))
     {
         reset |= advisorDpsWaitTimer.erase(instanceId) > 0;
 
@@ -101,7 +101,7 @@ bool CrimsonHandCenturionCastPolymorphAction::Execute(Event /*event*/)
 
 bool AlarMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return false;
 
@@ -127,7 +127,7 @@ bool AlarBossTanksMoveBetweenPlatformsAction::Execute(Event event)
     if (!isFirstAlarTank && !IsSecondAlarTank(bot))
         return false;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return false;
 
@@ -171,7 +171,7 @@ bool AlarMeleeDpsMoveBetweenPlatformsAction::Execute(Event /*event*/)
         return false;
     }
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar || alar->GetHealthPct() <= 5.0f)
         return false;
 
@@ -199,7 +199,7 @@ bool AlarRangedAndEmberTankMoveUnderPlatformsAction::Execute(Event /*event*/)
     if (!isRanged && !isEmberTank)
         return false;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return false;
 
@@ -212,7 +212,7 @@ bool AlarRangedAndEmberTankMoveUnderPlatformsAction::Execute(Event /*event*/)
     float distFromTarget = 0.0f;
     if (isRanged)
         distFromTarget = 8.0f;
-    else if (isEmberTank && !AI_VALUE2(Unit*, "find target", "ember of al'ar"))
+    else if (isEmberTank && !AI_VALUE2(Unit*, "find target", "19551"))
         distFromTarget = 20.0f;
     else
         return false;
@@ -227,7 +227,7 @@ bool AlarRangedAndEmberTankMoveUnderPlatformsAction::Execute(Event /*event*/)
 
 bool AlarAssistTanksPickUpEmbersAction::Execute(Event event)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return false;
 
@@ -243,7 +243,7 @@ bool AlarAssistTanksPickUpEmbersAction::HandlePhase1Embers(Unit* alar)
     if (!IsPrimaryEmberTank(bot))
         return false;
 
-    Unit* ember = AI_VALUE2(Unit*, "find target", "ember of al'ar");
+    Unit* ember = AI_VALUE2(Unit*, "find target", "19551");
     if (!ember)
         return false;
 
@@ -335,7 +335,7 @@ bool AlarRangedDpsPrioritizeEmbersAction::Execute(Event /*event*/)
 
     if (!target)
     {
-        if (Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar"))
+        if (Unit* alar = AI_VALUE2(Unit*, "find target", "19514"))
             target = alar;
     }
 
@@ -411,7 +411,7 @@ bool AlarJumpFromPlatformAction::Execute(Event /*event*/)
 
 bool AlarMoveAwayFromRebirthAction::Execute(Event /*event*/)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return false;
 
@@ -450,7 +450,7 @@ bool AlarSwapTanksOnBossAction::Execute(Event event)
     if (!IsFirstAlarTank(bot) && !IsSecondAlarTank(bot))
         return false;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return false;
 
@@ -468,7 +468,7 @@ bool AlarSwapTanksOnBossAction::Execute(Event event)
 
 bool AlarAvoidFlamePatchesAndDiveBombsAction::Execute(Event /*event*/)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return false;
 
@@ -532,7 +532,7 @@ bool AlarAvoidFlamePatchesAndDiveBombsAction::HandleDiveBomb(Unit* alar)
 
 bool AlarManagePhaseTrackerAction::Execute(Event /*event*/)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar");
+    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar)
         return false;
 
@@ -555,7 +555,7 @@ bool AlarManagePhaseTrackerAction::Execute(Event /*event*/)
 
 bool VoidReaverTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
+    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "19516");
     if (!voidReaver)
         return false;
 
@@ -614,7 +614,7 @@ bool VoidReaverUseAggroDumpAbilityAction::Execute(Event /*event*/)
 
 bool VoidReaverKeepRangedInGoldilocksZoneAction::Execute(Event /*event*/)
 {
-    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
+    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "19516");
     if (!voidReaver)
         return false;
 
@@ -634,7 +634,7 @@ bool VoidReaverKeepRangedInGoldilocksZoneAction::Execute(Event /*event*/)
 
 bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
 {
-    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
+    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "19516");
     if (!voidReaver)
         return false;
 
@@ -735,7 +735,7 @@ bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
 
 bool HighAstromancerSolarianMainTankPickUpBossAction::Execute(Event /*event*/)
 {
-    Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
+    Unit* astromancer = AI_VALUE2(Unit*, "find target", "18805");
     if (!astromancer)
         return false;
 
@@ -758,7 +758,7 @@ bool HighAstromancerSolarianTargetSolariumPriestsAction::Execute(Event /*event*/
     if (!priestsPair.first || !priestsPair.second)
         return false;
 
-    if (PlayerbotAI::IsRanged(bot) && !AI_VALUE2(Unit*, "find target", "solarium agent"))
+    if (PlayerbotAI::IsRanged(bot) && !AI_VALUE2(Unit*, "find target", "18925"))
     {
         return AI_VALUE(Unit*, "current target") != priestsPair.first &&
             Attack(priestsPair.first);
@@ -832,7 +832,7 @@ bool HighAstromancerSolarianCastFearWardOnMainTankAction::Execute(Event /*event*
 
 bool KaelthasSunstriderKiteThaladredAction::Execute(Event /*event*/)
 {
-    Unit* thaladred = AI_VALUE2(Unit*, "find target", "thaladred the darkener");
+    Unit* thaladred = AI_VALUE2(Unit*, "find target", "20064");
     if (!thaladred)
         return false;
 
@@ -882,12 +882,12 @@ bool KaelthasSunstriderMisdirectAdvisorsToTanksAction::Execute(Event /*event*/)
     Player* tankTarget = nullptr;
     if (hunterIndex == 0 || hunterIndex == 2)
     {
-        advisorTarget = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
+        advisorTarget = AI_VALUE2(Unit*, "find target", "20062");
         tankTarget = GetCapernianTank(bot);
     }
     else if (hunterIndex == 1)
     {
-        advisorTarget = AI_VALUE2(Unit*, "find target", "master engineer telonicus");
+        advisorTarget = AI_VALUE2(Unit*, "find target", "20063");
         tankTarget = GetGroupAssistTank(botAI, bot, 0);
     }
 
@@ -918,12 +918,12 @@ bool KaelthasSunstriderMeleeTanksPositionAdvisorsAction::Execute(Event /*event*/
     Position position;
     if (PlayerbotAI::IsMainTank(bot))
     {
-        advisor = AI_VALUE2(Unit*, "find target", "lord sanguinar");
+        advisor = AI_VALUE2(Unit*, "find target", "20060");
         position = SANGUINAR_TANK_POSITION;
     }
     else // PlayerbotAI::IsAssistTankOfIndex(bot, 0, false)
     {
-        advisor = AI_VALUE2(Unit*, "find target", "master engineer telonicus");
+        advisor = AI_VALUE2(Unit*, "find target", "20063");
         position = TELONICUS_TANK_POSITION;
     }
 
@@ -975,7 +975,7 @@ bool KaelthasSunstriderCastFearWardOnSanguinarTankAction::Execute(Event /*event*
 
 bool KaelthasSunstriderWarlockTankPositionCapernianAction::Execute(Event /*event*/)
 {
-    Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
+    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
     if (!capernian)
         return false;
 
@@ -1002,11 +1002,11 @@ bool KaelthasSunstriderWarlockTankPositionCapernianAction::Execute(Event /*event
 
 bool KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction::Execute(Event /*event*/)
 {
-    Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
+    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
     if (!capernian)
         return false;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return false;
 
@@ -1028,7 +1028,7 @@ bool KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction::RangedBotsDisperse(
 {
     if (phase == PHASE_ALL_ADVISORS)
     {
-        if (AI_VALUE2(Unit*, "find target", "thaladred the darkener"))
+        if (AI_VALUE2(Unit*, "find target", "20064"))
             return false;
 
         constexpr float safeDistance = 6.0f;
@@ -1163,7 +1163,7 @@ bool KaelthasSunstriderReequipGearAction::Execute(Event event)
 
 bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return false;
 
@@ -1178,7 +1178,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
     Unit* target = nullptr;
 
     // Target priority 1: Thaladred, except Capernian tank during all advisors phase
-    Unit* thaladred = AI_VALUE2(Unit*, "find target", "thaladred the darkener");
+    Unit* thaladred = AI_VALUE2(Unit*, "find target", "20064");
     if (!isActiveCapernianTank && thaladred && !thaladred->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
         !IsFeigningDeath(thaladred))
     {
@@ -1188,7 +1188,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 2: Capernian for ranged only (excluding debuff hunter)
-    Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
+    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
     if (!target && capernian && !capernian->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
         !IsFeigningDeath(capernian) && PlayerbotAI::IsRangedDps(bot) &&
         !IsSanguinarDebuffHunter(bot))
@@ -1199,7 +1199,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 3: Sanguinar (debuff hunter and melee move here after Thaladred)
-    Unit* sanguinar = AI_VALUE2(Unit*, "find target", "lord sanguinar");
+    Unit* sanguinar = AI_VALUE2(Unit*, "find target", "20060");
     if (!target && sanguinar && !sanguinar->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
         !IsFeigningDeath(sanguinar))
     {
@@ -1209,7 +1209,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
     }
 
     // Target priority 4: Telonicus
-    Unit* telonicus = AI_VALUE2(Unit*, "find target", "master engineer telonicus");
+    Unit* telonicus = AI_VALUE2(Unit*, "find target", "20063");
     if (!target && telonicus && !telonicus->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
         !IsFeigningDeath(telonicus))
     {
@@ -1270,7 +1270,7 @@ bool KaelthasSunstriderManageAdvisorDpsTimerAction::Execute(Event /*event*/)
         }
     }
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return false;
 
@@ -1292,10 +1292,10 @@ bool KaelthasSunstriderManageAdvisorDpsTimerAction::Execute(Event /*event*/)
 
 bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* axe = AI_VALUE2(Unit*, "find target", "devastation");
-    Unit* mace = AI_VALUE2(Unit*, "find target", "cosmic infuser");
-    Unit* dagger = AI_VALUE2(Unit*, "find target", "infinity blades");
-    Unit* sword = AI_VALUE2(Unit*, "find target", "warp slicer");
+    Unit* axe = AI_VALUE2(Unit*, "find target", "21269");
+    Unit* mace = AI_VALUE2(Unit*, "find target", "21270");
+    Unit* dagger = AI_VALUE2(Unit*, "find target", "21271");
+    Unit* sword = AI_VALUE2(Unit*, "find target", "21269");
 
     bool const isTank = PlayerbotAI::IsTank(bot);
     bool const isRangedDps = PlayerbotAI::IsRangedDps(bot);
@@ -1317,7 +1317,7 @@ bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::Execute(Event /*e
         target->GetDistance2d(axe) <= safeDistance;
 
     // Priority 1: Staff of Disintegration
-    if (Unit* staff = AI_VALUE2(Unit*, "find target", "staff of disintegration"))
+    if (Unit* staff = AI_VALUE2(Unit*, "find target", "21274"))
     {
         target = staff;
         if (MarkTargetWithSkull(bot, staff))
@@ -1337,7 +1337,7 @@ bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::Execute(Event /*e
             target = nullptr;
     }
     // Priority 3: Netherstrand Longbow
-    if (Unit* longbow = AI_VALUE2(Unit*, "find target", "netherstrand longbow");
+    if (Unit* longbow = AI_VALUE2(Unit*, "find target", "21268");
         longbow && !target)
     {
         target = longbow;
@@ -1375,7 +1375,7 @@ bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::Execute(Event /*e
             target = nullptr;
     }
     // Priority 7: Phaseshift Bulwark
-    if (Unit* shield = AI_VALUE2(Unit*, "find target", "phaseshift bulwark");
+    if (Unit* shield = AI_VALUE2(Unit*, "find target", "21273");
         shield && !target)
     {
         target = shield;
@@ -1426,7 +1426,7 @@ bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::HandleDevastation
 
 bool KaelthasSunstriderMoveDevastationAwayAction::Execute(Event /*event*/)
 {
-    Unit* axe = AI_VALUE2(Unit*, "find target", "devastation");
+    Unit* axe = AI_VALUE2(Unit*, "find target", "21269");
     if (!axe)
         return false;
 
@@ -1782,7 +1782,7 @@ bool KaelthasSunstriderUseLegendaryWeaponsAction::Execute(Event /*event*/)
 
 bool KaelthasSunstriderUseLegendaryWeaponsAction::UsePhaseshiftBulwark()
 {
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas || !kaelthas->HasAura(Id(TkSpells::SPELL_SHOCK_BARRIER)))
         return false;
 
@@ -1870,7 +1870,7 @@ bool KaelthasSunstriderMainTankPositionBossAction::Execute(Event /*event*/)
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return false;
 
@@ -1986,7 +1986,7 @@ bool KaelthasSunstriderHandlePhoenixesAndEggsAction::AssistTanksPickUpPhoenixes(
 
 bool KaelthasSunstriderHandlePhoenixesAndEggsAction::NonTanksDestroyEggsAndAvoidPhoenixes()
 {
-    if (Unit* phoenix = AI_VALUE2(Unit*, "find target", "phoenix"))
+    if (Unit* phoenix = AI_VALUE2(Unit*, "find target", "21362"))
     {
         constexpr float safeDistance = 10.0f;
         float const currentDistance = bot->GetDistance2d(phoenix);
@@ -1994,7 +1994,7 @@ bool KaelthasSunstriderHandlePhoenixesAndEggsAction::NonTanksDestroyEggsAndAvoid
             return MoveAway(phoenix, safeDistance - currentDistance);
     }
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return false;
 
@@ -2231,7 +2231,7 @@ bool KaelthasSunstriderSpreadOutInMidairAction::HoverAndSpread()
     constexpr float heightPull = 0.35f;
     pushZ += (desiredHeight - (botZ - floorZ)) * heightPull;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
         return false;
 

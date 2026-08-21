@@ -14,7 +14,7 @@ using namespace UnderbogHungarfen;
 
 bool UBRetreatFromFoulSporesAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "hungarfen");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "17770");
     if (!boss)
         return false;
 
@@ -58,7 +58,7 @@ bool UBVacateSporeCloudAction::Execute(Event /*event*/)
     if (!mushroom)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "hungarfen");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "17770");
     if (botAI->IsTank(bot) && boss && boss->GetVictim() == bot)
     {
         float const currentDistance = bot->GetDistance2d(mushroom);

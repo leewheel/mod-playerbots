@@ -23,7 +23,7 @@ bool HyjalSummitResetEncounterStatesAction::Execute(Event /*event*/)
     ObjectGuid const guid = bot->GetGUID();
 
     bool erased = false;
-    if (!AI_VALUE2(Unit*, "find target", "rage winterchill"))
+    if (!AI_VALUE2(Unit*, "find target", "17767"))
     {
         Action* action = context->GetAction("rage winterchill spread ranged in circle");
         if (action && static_cast<RageWinterchillSpreadRangedInCircleAction*>(
@@ -33,7 +33,7 @@ bool HyjalSummitResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "anetheron"))
+    if (!AI_VALUE2(Unit*, "find target", "17808"))
     {
         Action* action = context->GetAction("anetheron spread ranged in circle");
         if (action && static_cast<AnetheronSpreadRangedInCircleAction*>(
@@ -43,7 +43,7 @@ bool HyjalSummitResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "kaz'rogal") &&
+    if (!AI_VALUE2(Unit*, "find target", "17888") &&
         botsBelowManaThreshold.erase(guid))
     {
         erased = true;
@@ -173,7 +173,7 @@ bool RageWinterchillSpreadRangedInCircleAction::Execute(Event /*event*/)
 // the hazard and waits it out.
 bool RageWinterchillMeleeManeuverThroughDeathAndDecayAction::Execute(Event /*event*/)
 {
-    Unit* winterchill = AI_VALUE2(Unit*, "find target", "rage winterchill");
+    Unit* winterchill = AI_VALUE2(Unit*, "find target", "17767");
     if (!winterchill)
         return false;
 
@@ -238,7 +238,7 @@ bool RageWinterchillMeleeManeuverThroughDeathAndDecayAction::Execute(Event /*eve
 
 bool AnetheronMisdirectBossAndInfernalsToTanksAction::Execute(Event /*event*/)
 {
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron)
         return false;
 
@@ -326,7 +326,7 @@ bool AnetheronSpreadRangedInCircleAction::Execute(Event /*event*/)
 // starts the bot clear of the immolation aura the Infernal carries afterwards
 bool AnetheronMoveAwayFromInfernoTargetAction::Execute(Event /*event*/)
 {
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron)
         return false;
 
@@ -393,7 +393,7 @@ bool AnetheronInfernalTankTakePositionAction::Execute(Event /*event*/)
 // Melee stay on Anetheron throughout. Ranged attack Infernals if they are reasonably nearby (50y).
 bool AnetheronAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "anetheron");
+    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron)
         return false;
 
@@ -465,7 +465,7 @@ bool KazrogalAssistTanksMoveInFrontOfBossAction::Execute(Event /*event*/)
 
 bool KazrogalSpreadRangedInArcAction::Execute(Event /*event*/)
 {
-    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "kaz'rogal");
+    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
     if (!kazrogal)
         return false;
 
@@ -533,7 +533,7 @@ bool KazrogalMoveAwayFromGroupAction::Execute(Event /*event*/)
     // Away from whoever is nearest. I don't like MoveFromGroup because its constant recalculation
     // makes it less reliable. This combination of away from Kaz'rogal and away from nearest player
     // gets the bots a distance away from the boss before spreading sideways.
-    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "kaz'rogal");
+    Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
     if (kazrogal && nearestPlayer->GetExactDist2d(kazrogal) > bot->GetExactDist2d(kazrogal))
         return MoveAway(kazrogal, step);
 
@@ -579,7 +579,7 @@ bool KazrogalWarlockManageManaAction::Execute(Event /*event*/)
 
 bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
 {
-    Unit* azgalor = AI_VALUE2(Unit*, "find target", "azgalor");
+    Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
     if (!azgalor)
         return false;
 
@@ -592,7 +592,7 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
         return true;
     }
 
-    Unit* doomguard = AI_VALUE2(Unit*, "find target", "lesser doomguard");
+    Unit* doomguard = AI_VALUE2(Unit*, "find target", "17864");
     constexpr float safeDistFromDoomguard = 10.0f; // War Stomp is 10 yards center-to-center
 
     if (doomguard && bot->GetExactDist2d(doomguard) < safeDistFromDoomguard)
@@ -612,7 +612,7 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
 // active at a time, and escape cannot take the bot iinto Azgalor's frontal arc due to the Cleave.
 bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
 {
-    Unit* azgalor = AI_VALUE2(Unit*, "find target", "azgalor");
+    Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
     if (!azgalor)
         return false;
 
@@ -746,7 +746,7 @@ bool AzgalorFirstAssistTankPositionDoomguardAction::Execute(Event /*event*/)
     bool shouldMove = false;
     bool backwards = false;
 
-    if (Unit* doomguard = AI_VALUE2(Unit*, "find target", "lesser doomguard"))
+    if (Unit* doomguard = AI_VALUE2(Unit*, "find target", "17864"))
     {
         if (AI_VALUE(Unit*, "current target") != doomguard)
             return Attack(doomguard);
@@ -791,7 +791,7 @@ bool AzgalorFirstAssistTankPositionDoomguardAction::Execute(Event /*event*/)
 // to get to the Doomguard or just wasting time).
 bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* azgalor = AI_VALUE2(Unit*, "find target", "azgalor");
+    Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
     if (!azgalor)
         return false;
 
@@ -809,7 +809,7 @@ bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
     }
     else
     {
-        Unit* doomguard = AI_VALUE2(Unit*, "find target", "lesser doomguard");
+        Unit* doomguard = AI_VALUE2(Unit*, "find target", "17864");
         if (doomguard && bot->GetExactDist2d(doomguard) < 70.0f)
             target = doomguard;
         else
@@ -860,7 +860,7 @@ bool ArchimondeCastFearImmunitySpellAction::SetTremorTotem()
 // melee range. Thus, the avoidance is to get away from the tank.
 bool ArchimondeSpreadToAvoidAirBurstAction::Execute(Event /*event*/)
 {
-    Unit* archimonde = AI_VALUE2(Unit*, "find target", "archimonde");
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
     if (!archimonde)
         return false;
 
@@ -974,7 +974,7 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
         moveDist = norm;
     }
 
-    Unit* archimonde = AI_VALUE2(Unit*, "find target", "archimonde");
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
     if (!archimonde)
         return false;
 

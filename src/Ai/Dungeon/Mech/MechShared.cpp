@@ -255,6 +255,6 @@ namespace MechanarFlames
     Unit* GetSepethrea(Player* bot)
     {
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-        return botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "nethermancer sepethrea")->Get();
+        return botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "19221")->Get();
     }
 }

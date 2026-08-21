@@ -10,7 +10,7 @@
 
 bool MalygosPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28859");
     if (!boss) { return false; }
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
@@ -73,7 +73,7 @@ bool MalygosPositionAction::Execute(Event /*event*/)
 
 bool MalygosTargetAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28859");
     if (!boss) { return false; }
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
@@ -244,7 +244,7 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
     if (!vehicleBase || !masterVehicle) { return false; }
 
     MotionMaster* mm = vehicleBase->GetMotionMaster();
-    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28859");
     if (boss && false)
     {
         // Handle as boss encounter instead of formation flight
@@ -294,7 +294,7 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
     }
 
     // Unit* target = AI_VALUE(Unit*, "current target");
-    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28859");
     // if (!boss) { return false; }
 
     if (!boss)

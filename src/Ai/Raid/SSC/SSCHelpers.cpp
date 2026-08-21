@@ -210,7 +210,7 @@ bool IsMainTankInSameSubgroup(PlayerbotAI* botAI, Player* bot)
 bool IsLadyVashjInPhase1(PlayerbotAI* botAI)
 {
     Unit* vashj =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "lady vashj")->Get();
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "21212")->Get();
 
     return vashj && vashj->GetHealthPct() > 70.0f;
 }
@@ -218,7 +218,7 @@ bool IsLadyVashjInPhase1(PlayerbotAI* botAI)
 bool IsLadyVashjInPhase2(PlayerbotAI* botAI)
 {
     Unit* vashj =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "lady vashj")->Get();
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "21212")->Get();
 
     return vashj && vashj->GetHealthPct() <= 70.0f && vashj->HasAura(SPELL_MAGIC_BARRIER);
 }
@@ -226,7 +226,7 @@ bool IsLadyVashjInPhase2(PlayerbotAI* botAI)
 bool IsLadyVashjInPhase3(PlayerbotAI* botAI)
 {
     Unit* vashj =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "lady vashj")->Get();
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "21212")->Get();
 
     return vashj && vashj->GetHealthPct() <= 70.0f && !vashj->HasAura(SPELL_MAGIC_BARRIER);
 }
@@ -457,7 +457,7 @@ std::array<Player*, 5> GetCoreHandlers(PlayerbotAI* botAI, Player* bot)
 bool AnyRecentCoreInInventory(PlayerbotAI* botAI, Player* bot)
 {
     Unit* vashj =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "lady vashj")->Get();
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "21212")->Get();
     if (!vashj)
         return false;
 

@@ -42,7 +42,7 @@ bool IccValkyreSpearAction::Execute(Event /*event*/)
 
 bool IccSisterSvalnaAction::Execute(Event /*event*/)
 {
-    Unit* svalna = AI_VALUE2(Unit*, "find target", "sister svalna");
+    Unit* svalna = AI_VALUE2(Unit*, "find target", "37126");
     if (!svalna || !svalna->HasAura(SPELL_AETHER_SHIELD))
         return false;
 

@@ -10,7 +10,7 @@
 
 bool SartharionTankPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss) { return false; }
 
     Unit* shadron = nullptr;
@@ -159,11 +159,11 @@ bool AvoidFlameTsunamiAction::Execute(Event /*event*/)
 
 bool SartharionAttackPriorityAction::Execute(Event /*event*/)
 {
-    Unit* sartharion = AI_VALUE2(Unit*, "find target", "sartharion");
-    Unit* shadron = AI_VALUE2(Unit*, "find target", "shadron");
-    Unit* tenebron = AI_VALUE2(Unit*, "find target", "tenebron");
-    Unit* vesperon = AI_VALUE2(Unit*, "find target", "vesperon");
-    Unit* acolyte = AI_VALUE2(Unit*, "find target", "acolyte of shadron");
+    Unit* sartharion = AI_VALUE2(Unit*, "find target", "28860");
+    Unit* shadron = AI_VALUE2(Unit*, "find target", "30452");
+    Unit* tenebron = AI_VALUE2(Unit*, "find target", "30449");
+    Unit* vesperon = AI_VALUE2(Unit*, "find target", "30451");
+    Unit* acolyte = AI_VALUE2(Unit*, "find target", "28860");
 
     Unit* target = nullptr;
 
@@ -186,7 +186,7 @@ bool SartharionAttackPriorityAction::Execute(Event /*event*/)
 
 bool EnterTwilightPortalAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss || !boss->HasAura(SPELL_GIFT_OF_TWILIGHT_FIRE)) { return false; }
 
     GameObject* portal = bot->FindNearestGameObject(GO_TWILIGHT_PORTAL, 100.0f);

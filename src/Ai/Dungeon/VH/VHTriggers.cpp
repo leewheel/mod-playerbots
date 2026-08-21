@@ -10,7 +10,7 @@
 
 bool ErekemTargetTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "erekem");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29315");
     if (!boss) { return false; }
 
     return botAI->IsDps(bot);
@@ -18,7 +18,7 @@ bool ErekemTargetTrigger::IsActive()
 
 bool IchoronTargetTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ichoron");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29313");
     if (!boss) { return false; }
 
     return !botAI->IsHeal(bot);
@@ -26,7 +26,7 @@ bool IchoronTargetTrigger::IsActive()
 
 bool VoidShiftTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "zuramat the obliterator");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29312");
     if (!boss) { return false; }
 
     return bot->HasAura(SPELL_VOID_SHIFTED) && !botAI->IsHeal(bot);
@@ -34,7 +34,7 @@ bool VoidShiftTrigger::IsActive()
 
 bool ShroudOfDarknessTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "zuramat the obliterator");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "29312");
     if (!boss) { return false; }
 
     return boss->HasAura(SPELL_SHROUD_OF_DARKNESS);
@@ -42,7 +42,7 @@ bool ShroudOfDarknessTrigger::IsActive()
 
 bool CyanigosaPositioningTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "cyanigosa");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "31134");
     if (!boss) { return false; }
 
     // Include healers here for now, otherwise they stand in things

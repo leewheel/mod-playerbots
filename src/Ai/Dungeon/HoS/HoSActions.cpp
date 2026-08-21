@@ -9,7 +9,7 @@
 
 bool ShatterSpreadAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "krystallus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27977");
     if (!boss) { return false; }
 
     float radius = 40.0f;
@@ -42,7 +42,7 @@ bool ShatterSpreadAction::Execute(Event /*event*/)
 
 bool AvoidLightningRingAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sjonnir the ironshaper");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "27978");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());

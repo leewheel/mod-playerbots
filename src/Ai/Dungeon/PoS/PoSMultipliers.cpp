@@ -13,7 +13,7 @@
 
 float IckAndKrickMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "ick");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36476");
     if (!boss)
         return 1.0f;
 
@@ -35,7 +35,7 @@ float IckAndKrickMultiplier::GetValue(Action* action)
 
 float GarfrostMultiplier::GetValue(Action* /*action*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "garfrost");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36494");
     if (!boss)
         return 1.0f;
 

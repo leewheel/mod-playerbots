@@ -18,7 +18,7 @@ static const Position SHIRRAK_TANK_POSITION = { -65.171f, -162.920f, 26.504f };
 
 bool ShirrakTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* shirrak = AI_VALUE2(Unit*, "find target", "shirrak the dead watcher");
+    Unit* shirrak = AI_VALUE2(Unit*, "find target", "18371");
     if (!shirrak)
         return false;
 

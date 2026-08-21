@@ -18,7 +18,7 @@ const Position VOA_EMALON_RESTORE_POSITION = Position(-221.8f, -243.8f, 96.8f, 4
 
 bool EmalonMarkBossAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "emalon the storm watcher");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33993");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -82,7 +82,7 @@ bool EmalonLightingNovaAction::Execute(Event /*event*/)
 {
     const float radius = 25.0f;  // 20 yards + 5 yard for safety for 10 man. For 25man there is no maximum range but 25 yards should be ok
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "emalon the storm watcher");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33993");
     if (!boss)
         return false;
 

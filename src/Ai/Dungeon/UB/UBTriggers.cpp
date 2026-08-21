@@ -12,13 +12,13 @@ using namespace UnderbogHungarfen;
 
 bool UBFoulSporesTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "hungarfen");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "17770");
     return boss && boss->HasAura(SPELL_FOUL_SPORES);
 }
 
 bool UBSporeCloudDangerTrigger::IsActive()
 {
-    if (!AI_VALUE2(Unit*, "find target", "hungarfen"))
+    if (!AI_VALUE2(Unit*, "find target", "17770"))
         return false;
 
     GuidVector const& mushrooms = AI_VALUE_REF(GuidVector, "ub mushrooms");

@@ -9,7 +9,7 @@
 
 bool SartharionTankTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss) { return false; }
 
     return botAI->IsTank(bot);
@@ -19,7 +19,7 @@ bool FlameTsunamiTrigger::IsActive()
 {
     if (botAI->IsTank(bot)) { return false; }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss) { return false; }
 
     GuidVector npcs = AI_VALUE(GuidVector, "nearest hostile npcs");
@@ -40,7 +40,7 @@ bool FlameTsunamiTrigger::IsActive()
 
 bool TwilightFissureTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss) { return false; }
 
     GuidVector npcs = AI_VALUE(GuidVector, "nearest hostile npcs");
@@ -61,7 +61,7 @@ bool TwilightFissureTrigger::IsActive()
 
 bool SartharionDpsTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss) { return false; }
 
     return botAI->IsDps(bot);
@@ -71,12 +71,12 @@ bool SartharionMeleePositioningTrigger::IsActive()
 {
     if (!botAI->IsMelee(bot) || !botAI->IsDps(bot)) { return false; }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss) { return false; }
 
-    Unit* shadron = AI_VALUE2(Unit*, "find target", "shadron");
-    Unit* tenebron = AI_VALUE2(Unit*, "find target", "tenebron");
-    Unit* vesperon = AI_VALUE2(Unit*, "find target", "vesperon");
+    Unit* shadron = AI_VALUE2(Unit*, "find target", "30452");
+    Unit* tenebron = AI_VALUE2(Unit*, "find target", "30449");
+    Unit* vesperon = AI_VALUE2(Unit*, "find target", "30451");
 
     return !(shadron || tenebron || vesperon);
 }
@@ -109,7 +109,7 @@ bool TwilightPortalEnterTrigger::IsActive()
         return false;
     }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sartharion");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "28860");
     if (!boss) { return false; }
 
     // GuidVector objects = AI_VALUE(GuidVector, "nearest game objects no los");
@@ -126,5 +126,5 @@ bool TwilightPortalEnterTrigger::IsActive()
 
 bool TwilightPortalExitTrigger::IsActive()
 {
-    return bot->HasAura(SPELL_TWILIGHT_SHIFT) && !AI_VALUE2(Unit*, "find target", "acolyte of shadron");
+    return bot->HasAura(SPELL_TWILIGHT_SHIFT) && !AI_VALUE2(Unit*, "find target", "30688");
 }

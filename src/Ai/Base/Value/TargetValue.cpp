@@ -5,6 +5,8 @@
  */
 
 #include "TargetValue.h"
+#include <algorithm>
+#include <cstdlib>
 #include "CombatManager.h"
 #include "LastMovementValue.h"
 #include "ObjectGuid.h"
@@ -167,11 +169,34 @@ Unit* FindTargetValue::Calculate()
     {
         return nullptr;
     }
+
+    // By leewheel 2026-08-21
+    // 支持按生物 Entry 匹配目标（qualifier 为纯数字，如 "24850"）。
+    // 原因：服务器生物名是中文（如"卡雷苟斯"），旧实现用英文名 qualifier（如"kalecgos"）
+    // 与中文名做长度+子串匹配永远失败，导致 find target <英文名> 恒为 nullptr，
+    // 所有 raid 专属机制（点门/换坦/分散等）全部失效。
+    // 改为：qualifier 若为纯数字，则按 unit->GetEntry() 精确匹配；否则保留原名字匹配。
+    uint32 entry = 0;
+    if (!qualifier.empty() && std::all_of(qualifier.begin(), qualifier.end(), ::isdigit))
+    {
+        entry = static_cast<uint32>(atoi(qualifier.c_str()));
+    }
+    // End By leewheel
+
     for (auto const& [guid, ref] : bot->GetThreatMgr().GetThreatenedByMeList())
     {
         Unit* unit = ref->GetOwner();
         if (!unit)
             continue;
+
+        // By leewheel 2026-08-21 优先按生物 Entry 匹配
+        if (entry != 0)
+        {
+            if (unit->GetEntry() == entry)
+                return unit;
+            continue;
+        }
+        // End By leewheel
 
         std::wstring wnamepart;
         Utf8toWStr(unit->GetName(), wnamepart);

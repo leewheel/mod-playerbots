@@ -44,14 +44,14 @@ float KarazhanSetTremorTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
     if (nightbane && nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
         return 0.0f;
 
-    if (AI_VALUE2(Unit*, "find target", "spectral charger"))
+    if (AI_VALUE2(Unit*, "find target", "15547"))
         return 0.0f;
 
-    return AI_VALUE2(Unit*, "find target", "the big bad wolf") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "17521") ? 0.0f : 1.0f;
 }
 
 // Attumen the Huntsman
@@ -67,7 +67,7 @@ float AttumenTheHuntsmanDisableAutomaticTargetingMultiplier::GetValue(Action* ac
         return 1.0f;
     }
 
-    return AI_VALUE2(Unit*, "find target", "midnight") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "16151") ? 0.0f : 1.0f;
 }
 
 float AttumenTheHuntsmanStayStackedMultiplier::GetValue(Action* action)
@@ -92,7 +92,7 @@ float AttumenTheHuntsmanStayStackedMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "midnight"))
+    if (!AI_VALUE2(Unit*, "find target", "16151"))
         return 1.0f;
 
     return GetAttumenMounted(bot) ? 0.0f : 1.0f;
@@ -110,7 +110,7 @@ float AttumenTheHuntsmanWaitForDpsMultiplier::GetValue(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "midnight"))
+    if (!AI_VALUE2(Unit*, "find target", "16151"))
         return 1.0f;
 
     Unit* attumen = GetAttumenMounted(bot);
@@ -142,7 +142,7 @@ float MaidenOfVirtueDisableCombatFormationMoveMultiplier::GetValue(Action* actio
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "maiden of virtue") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "16457") ? 0.0f : 1.0f;
 }
 
 float MaidenOfVirtueSetGroundingTotemMultiplier::GetValue(Action* action)
@@ -157,7 +157,7 @@ float MaidenOfVirtueSetGroundingTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    return AI_VALUE2(Unit*, "find target", "maiden of virtue") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "16457") ? 0.0f : 1.0f;
 }
 
 // The Curator
@@ -170,7 +170,7 @@ float TheCuratorDisableTankAssistMultiplier::GetValue(Action* action)
     if (!dynamic_cast<TankAssistAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "the curator") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "15691") ? 0.0f : 1.0f;
 }
 
 float TheCuratorDisableCombatFormationMoveMultiplier::GetValue(Action* action)
@@ -184,7 +184,7 @@ float TheCuratorDisableCombatFormationMoveMultiplier::GetValue(Action* action)
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "the curator") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "15691") ? 0.0f : 1.0f;
 }
 
 // Save Bloodlust/Heroism for Evocation (100% increased damage)
@@ -202,7 +202,7 @@ float TheCuratorDelayBloodlustAndHeroismMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* curator = AI_VALUE2(Unit*, "find target", "the curator");
+    Unit* curator = AI_VALUE2(Unit*, "find target", "15691");
     if (!curator)
         return 1.0f;
 
@@ -219,7 +219,7 @@ float TerestianIllhoofDontDotFiendishImpsMultiplier::GetValue(Action* action)
     if (!dynamic_cast<CastDebuffSpellOnAttackerAction*>(action))
         return 1.0f;
 
-    Unit* imp = AI_VALUE2(Unit*, "find target", "fiendish imp");
+    Unit* imp = AI_VALUE2(Unit*, "find target", "17267");
     if (!imp)
         return 1.0f;
 
@@ -247,7 +247,7 @@ float ShadeOfAranArcaneExplosionRunAwayMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* aran = AI_VALUE2(Unit*, "find target", "shade of aran");
+    Unit* aran = AI_VALUE2(Unit*, "find target", "16524");
     if (!aran)
         return 1.0f;
 
@@ -275,7 +275,7 @@ float ShadeOfAranFlameWreathDisableMovementMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "shade of aran"))
+    if (!AI_VALUE2(Unit*, "find target", "16524"))
         return 1.0f;
 
     return IsFlameWreathActive(bot) ? 0.0f : 1.0f;
@@ -303,7 +303,7 @@ float NetherspiteKeepBlockingBeamMultiplier::GetValue(Action* action)
     if (!isBlockedAction)
         return 1.0f;
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
+    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
     if (!netherspite || IsBanishPhase(netherspite))
         return 1.0f;
 
@@ -330,7 +330,7 @@ float NetherspiteWaitForDpsMultiplier::GetValue(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
+    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
     if (!netherspite || IsBanishPhase(netherspite))
         return 1.0f;
 
@@ -411,7 +411,7 @@ float PrinceMalchezaarDelayBloodlustAndHeroismMultiplier::GetValue(Action* actio
         return 1.0f;
     }
 
-    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "prince malchezaar");
+    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "15690");
     if (!malchezaar)
         return 1.0f;
 
@@ -438,7 +438,7 @@ float NightbaneDisablePetsMultiplier::GetValue(Action* action)
     if (!isTemporarySummonSpell && !dynamic_cast<PetAttackAction*>(action))
         return 1.0f;
 
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
     if (!nightbane)
         return 1.0f;
 
@@ -461,7 +461,7 @@ float NightbaneWaitForDpsMultiplier::GetValue(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
     if (!nightbane || nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
         return 1.0f;
 
@@ -485,7 +485,7 @@ float NightbaneDisableAvoidAoeMultiplier::GetValue(Action* action)
     if (!dynamic_cast<AvoidAoeAction*>(action))
         return 1.0f;
 
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
     if (!nightbane || nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
         return 1.0f;
 
@@ -510,7 +510,7 @@ float NightbaneDisableMovementMultiplier::GetValue(Action* action)
     if (!isReachAction && !isBlockedMovement && !dynamic_cast<FollowAction*>(action))
         return 1.0f;
 
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
     if (!nightbane)
         return 1.0f;
 

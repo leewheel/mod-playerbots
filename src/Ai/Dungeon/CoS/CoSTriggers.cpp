@@ -10,7 +10,7 @@
 
 bool ExplodeGhoulTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "salramm the fleshcrafter");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26530");
     if (!boss) { return false; }
 
     float distance = 10.0f;
@@ -32,5 +32,5 @@ bool ExplodeGhoulTrigger::IsActive()
 
 bool EpochRangedTrigger::IsActive()
 {
-    return !botAI->IsMelee(bot) && AI_VALUE2(Unit*, "find target", "chrono-lord epoch");
+    return !botAI->IsMelee(bot) && AI_VALUE2(Unit*, "find target", "26532");
 }

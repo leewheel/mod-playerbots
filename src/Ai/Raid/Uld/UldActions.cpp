@@ -429,7 +429,7 @@ bool RazorscaleAvoidDevouringFlameAction::Execute(Event /*event*/)
     const float safeDistance = flameRadius * safeDistanceMultiplier;
 
     // Get the boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss)
         return false;
 
@@ -649,7 +649,7 @@ bool RazorscaleAvoidWhirlwindAction::isUseful()
 
 bool RazorscaleIgnoreBossAction::isUseful()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss)
     {
         return false;
@@ -706,7 +706,7 @@ bool RazorscaleIgnoreBossAction::Execute(Event /*event*/)
     if (!bot)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss)
         return false;
 
@@ -764,7 +764,7 @@ bool RazorscaleIgnoreBossAction::Execute(Event /*event*/)
 
 bool RazorscaleGroundedAction::isUseful()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss || !boss->IsAlive() || boss->GetPositionZ() > RazorscaleBossHelper::RAZORSCALE_FLYING_Z_THRESHOLD)
         return false;
 
@@ -846,7 +846,7 @@ bool RazorscaleGroundedAction::isUseful()
 
 bool RazorscaleGroundedAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss || !boss->IsAlive() || boss->GetPositionZ() > RazorscaleBossHelper::RAZORSCALE_FLYING_Z_THRESHOLD)
         return false;
 
@@ -1116,7 +1116,7 @@ bool IronAssemblyLightningTendrilsAction::Execute(Event /*event*/)
 {
     const float radius = 18.0f + 10.0f;  // 18 yards + 10 yards for safety
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "stormcaller brundir");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32857");
     if (!boss)
         return false;
 
@@ -1138,7 +1138,7 @@ bool IronAssemblyOverloadAction::Execute(Event /*event*/)
 {
     const float radius = 20.0f + 5.0f;  // 20 yards + 5 yards for safety
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "stormcaller brundir");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32857");
     if (!boss)
         return false;
 
@@ -1180,7 +1180,7 @@ bool KologarnMarkDpsTargetAction::Execute(Event /*event*/)
     int8 crossIndex = 6;  // Cross
     int8 moonIndex = 4;   // Moon
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -1202,7 +1202,7 @@ bool KologarnMarkDpsTargetAction::Execute(Event /*event*/)
 
     if (!targetToMark)
     {
-        Unit* rightArm = AI_VALUE2(Unit*, "find target", "right arm");
+        Unit* rightArm = AI_VALUE2(Unit*, "find target", "32934");
         if (rightArm && rightArm->IsAlive())
         {
             targetToMark = rightArm;
@@ -1212,7 +1212,7 @@ bool KologarnMarkDpsTargetAction::Execute(Event /*event*/)
 
     if (!targetToMark)
     {
-        Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+        Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
         if (boss && boss->IsAlive())
             targetToMark = boss;
     }
@@ -1220,7 +1220,7 @@ bool KologarnMarkDpsTargetAction::Execute(Event /*event*/)
     if (!targetToMark)
         return false;  // No target to mark
 
-    Unit* leftArm = AI_VALUE2(Unit*, "find target", "left arm");
+    Unit* leftArm = AI_VALUE2(Unit*, "find target", "32933");
     if (leftArm && leftArm->IsAlive())
         targetToCcMark = leftArm;
 
@@ -1419,7 +1419,7 @@ bool AuriayaFallFromFloorAction::isUseful()
 bool HodirMoveSnowpackedIcicleAction::isUseful()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "hodir");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32845");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -1491,7 +1491,7 @@ bool HodirBitingColdJumpAction::isUseful()
 bool FreyaMoveAwayNatureBombAction::isUseful()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "freya");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32906");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -1522,7 +1522,7 @@ bool FreyaMarkDpsTargetAction::isUseful()
 
 bool FreyaMarkDpsTargetAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "freya");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32906");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -1718,7 +1718,7 @@ bool ThorimMarkDpsTargetAction::Execute(Event /*event*/)
 
     ObjectGuid currentMoonTarget = group->GetTargetIcon(RtiTargetValue::moonIndex);
     Unit* currentMoonUnit = botAI->GetUnit(currentMoonTarget);
-    Unit* boss = AI_VALUE2(Unit*, "find target", "thorim");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32865");
     if (!currentMoonUnit && boss && boss->IsAlive() && boss->GetPositionZ() > ULDUAR_THORIM_AXIS_Z_FLOOR_THRESHOLD)
     {
         group->SetTargetIcon(RtiTargetValue::moonIndex, bot->GetGUID(), boss->GetGUID());
@@ -1740,8 +1740,8 @@ bool ThorimMarkDpsTargetAction::Execute(Event /*event*/)
             currentSkullUnit = nullptr;
         }
 
-        Unit* acolyte = AI_VALUE2(Unit*, "find target", "dark rune acolyte");
-        Unit* evoker = AI_VALUE2(Unit*, "find target", "dark rune evoker");
+        Unit* acolyte = AI_VALUE2(Unit*, "find target", "32886");
+        Unit* evoker = AI_VALUE2(Unit*, "find target", "32886");
 
         if (acolyte && acolyte->IsAlive() && bot->GetDistance(acolyte) < 50.0f &&
             (!currentSkullUnit || currentSkullUnit->GetEntry() != acolyte->GetEntry()))
@@ -1761,11 +1761,11 @@ bool ThorimMarkDpsTargetAction::Execute(Event /*event*/)
             currentCrossUnit = nullptr;
         }
 
-        Unit* acolyte = AI_VALUE2(Unit*, "find target", "dark rune acolyte");
-        Unit* runicColossus = AI_VALUE2(Unit*, "find target", "runic colossus");
-        Unit* ancientRuneGiant = AI_VALUE2(Unit*, "find target", "ancient rune giant");
-        Unit* ironHonorGuard = AI_VALUE2(Unit*, "find target", "iron ring guard");
-        Unit* ironRingGuard = AI_VALUE2(Unit*, "find target", "iron honor guard");
+        Unit* acolyte = AI_VALUE2(Unit*, "find target", "32886");
+        Unit* runicColossus = AI_VALUE2(Unit*, "find target", "32874");
+        Unit* ancientRuneGiant = AI_VALUE2(Unit*, "find target", "32872");
+        Unit* ironHonorGuard = AI_VALUE2(Unit*, "find target", "32886");
+        Unit* ironRingGuard = AI_VALUE2(Unit*, "find target", "32886");
 
         if (acolyte && acolyte->IsAlive() && (!currentCrossUnit || currentCrossUnit->GetEntry() != acolyte->GetEntry()))
             targetToMark = acolyte;
@@ -1986,7 +1986,7 @@ bool ThorimGauntletPositioningAction::Execute(Event /*event*/)
             return false;
     }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "thorim");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32865");
     if (boss && boss->IsAlive() && bot->GetPositionZ() > ULDUAR_THORIM_AXIS_Z_FLOOR_THRESHOLD &&
         boss->GetPositionZ() < ULDUAR_THORIM_AXIS_Z_FLOOR_THRESHOLD)
     {
@@ -2490,7 +2490,7 @@ bool VezaxCheatAction::Execute(Event /*event*/)
 bool VezaxShadowCrashAction::Execute(Event /*event*/)
 {
     // Find General Vezax boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general vezax");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33271");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -2662,7 +2662,7 @@ bool YoggSaronMarkTargetAction::Execute(Event /*event*/)
 
         if (!currentSkullUnit || currentSkullUnit->GetEntry() != NPC_YOGG_SARON)
         {
-            Unit* yoggsaron = AI_VALUE2(Unit*, "find target", "yogg-saron");
+            Unit* yoggsaron = AI_VALUE2(Unit*, "find target", "33288");
             if (yoggsaron && yoggsaron->IsAlive())
             {
                 group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), yoggsaron->GetGUID());
@@ -2958,7 +2958,7 @@ bool YoggSaronMoveToExitPortalAction::Execute(Event /*event*/)
 
 bool YoggSaronLunaticGazeAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "yogg-saron");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33288");
     if (!boss || !boss->IsAlive())
         return false;
 

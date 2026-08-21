@@ -76,7 +76,7 @@ bool FlameLeviathanVehicleNearTrigger::IsActive()
 
 bool RazorscaleFlyingAloneTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss)
     {
         return false;
@@ -121,7 +121,7 @@ bool RazorscaleFlyingAloneTrigger::IsActive()
 
 bool RazorscaleDevouringFlamesTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss)
         return false;
 
@@ -140,7 +140,7 @@ bool RazorscaleDevouringFlamesTrigger::IsActive()
 
 bool RazorscaleAvoidSentinelTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss)
         return false;
 
@@ -159,7 +159,7 @@ bool RazorscaleAvoidSentinelTrigger::IsActive()
 
 bool RazorscaleAvoidWhirlwindTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss)
         return false;
 
@@ -180,7 +180,7 @@ bool RazorscaleAvoidWhirlwindTrigger::IsActive()
 
 bool RazorscaleGroundedTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss)
     {
         return false;
@@ -200,7 +200,7 @@ bool RazorscaleHarpoonAvailableTrigger::IsActive()
     const std::vector<RazorscaleBossHelper::HarpoonData>& harpoonData = RazorscaleBossHelper::GetHarpoonData();
 
     // Get the boss entity
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -240,7 +240,7 @@ bool RazorscaleHarpoonAvailableTrigger::IsActive()
 bool RazorscaleFuseArmorTrigger::IsActive()
 {
     // Get the boss entity
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorscale");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33186");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -272,7 +272,7 @@ bool RazorscaleFuseArmorTrigger::IsActive()
 bool IronAssemblyLightningTendrilsTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "stormcaller brundir");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32857");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -291,7 +291,7 @@ bool IronAssemblyOverloadTrigger::IsActive()
         return false;
 
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "stormcaller brundir");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32857");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -322,7 +322,7 @@ bool IronAssemblyRuneOfPowerTrigger::IsActive()
 bool KologarnMarkDpsTargetTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -367,7 +367,7 @@ bool KologarnMarkDpsTargetTrigger::IsActive()
     }
 
     // Check that there is right arm to mark
-    Unit* rightArm = AI_VALUE2(Unit*, "find target", "right arm");
+    Unit* rightArm = AI_VALUE2(Unit*, "find target", "32934");
     if (rightArm && rightArm->IsAlive())
     {
         return true;  // Found a right arm to mark
@@ -386,7 +386,7 @@ bool KologarnMarkDpsTargetTrigger::IsActive()
 bool KologarnFallFromFloorTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -398,7 +398,7 @@ bool KologarnFallFromFloorTrigger::IsActive()
 
 bool KologarnRubbleSlowdownTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -427,7 +427,7 @@ bool KologarnRubbleSlowdownTrigger::IsActive()
 
 bool KologarnEyebeamTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -457,7 +457,7 @@ bool KologarnEyebeamTrigger::IsActive()
 
 bool KologarnAttackDpsTargetTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -488,7 +488,7 @@ bool KologarnAttackDpsTargetTrigger::IsActive()
 
 bool KologarnRtiTargetTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -504,7 +504,7 @@ bool KologarnRtiTargetTrigger::IsActive()
 
 bool KologarnCrunchArmorTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "kologarn");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32930");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -516,7 +516,7 @@ bool KologarnCrunchArmorTrigger::IsActive()
 bool AuriayaFallFromFloorTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "auriaya");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33515");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -526,7 +526,7 @@ bool AuriayaFallFromFloorTrigger::IsActive()
 
 bool HodirBitingColdTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "hodir");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32845");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -546,7 +546,7 @@ bool HodirBitingColdTrigger::IsActive()
 bool HodirNearSnowpackedIcicleTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "hodir");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32845");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -575,7 +575,7 @@ bool HodirNearSnowpackedIcicleTrigger::IsActive()
 bool FreyaNearNatureBombTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "freya");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32906");
     if (!boss || !boss->IsAlive())
     {
         return false;
@@ -589,7 +589,7 @@ bool FreyaNearNatureBombTrigger::IsActive()
 bool FreyaMarkDpsTargetTrigger::IsActive()
 {
     // Check boss and it is alive
-    Unit* boss = AI_VALUE2(Unit*, "find target", "freya");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32906");
     if (!boss || !boss->IsAlive())
         return false;
 
@@ -723,14 +723,14 @@ bool FreyaMarkDpsTargetTrigger::IsActive()
 bool FreyaMoveToHealingSporeTrigger::IsActive()
 {
     // Check for the Freya boss
-    Unit* boss = AI_VALUE2(Unit*, "find target", "freya");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32906");
     if (!boss || !boss->IsAlive())
         return false;
 
     if (!botAI->IsRanged(bot))
         return false;
 
-    Unit* conservatory = AI_VALUE2(Unit*, "find target", "ancient conservator");
+    Unit* conservatory = AI_VALUE2(Unit*, "find target", "33203");
     if (!conservatory || !conservatory->IsAlive())
         return false;
 
@@ -767,7 +767,7 @@ bool FreyaMoveToHealingSporeTrigger::IsActive()
 
 bool ThorimUnbalancingStrikeTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "thorim");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32865");
     if (!boss || !boss->IsInWorld() || boss->IsDuringRemoveFromWorld())
         return false;
 
@@ -798,8 +798,8 @@ bool ThorimMarkDpsTargetTrigger::IsActive()
             currentSkullUnit = nullptr;
         }
 
-        Unit* acolyte = AI_VALUE2(Unit*, "find target", "dark rune acolyte");
-        Unit* evoker = AI_VALUE2(Unit*, "find target", "dark rune evoker");
+        Unit* acolyte = AI_VALUE2(Unit*, "find target", "32886");
+        Unit* evoker = AI_VALUE2(Unit*, "find target", "32886");
 
         if (acolyte && acolyte->IsAlive() && bot->GetDistance(acolyte) < 50.0f &&
             (!currentSkullUnit || currentSkullUnit->GetEntry() != acolyte->GetEntry()))
@@ -809,7 +809,7 @@ bool ThorimMarkDpsTargetTrigger::IsActive()
             (!currentSkullUnit || currentSkullUnit->GetEntry() != evoker->GetEntry()))
             return true;
 
-        Unit* boss = AI_VALUE2(Unit*, "find target", "thorim");
+        Unit* boss = AI_VALUE2(Unit*, "find target", "32865");
 
         if (!boss || !boss->IsInWorld() || boss->IsDuringRemoveFromWorld())
             return false;
@@ -851,12 +851,12 @@ bool ThorimMarkDpsTargetTrigger::IsActive()
             currentCrossUnit = nullptr;
         }
 
-        Unit* acolyte = AI_VALUE2(Unit*, "find target", "dark rune acolyte");
+        Unit* acolyte = AI_VALUE2(Unit*, "find target", "32886");
         if (currentCrossUnit && currentCrossUnit->GetEntry() == NPC_DARK_RUNE_ACOLYTE_I)
             return false;
 
-        Unit* runicColossus = AI_VALUE2(Unit*, "find target", "runic colossus");
-        Unit* ancientRuneGiant = AI_VALUE2(Unit*, "find target", "ancient rune giant");
+        Unit* runicColossus = AI_VALUE2(Unit*, "find target", "32874");
+        Unit* ancientRuneGiant = AI_VALUE2(Unit*, "find target", "32872");
 
         if (acolyte && acolyte->IsAlive() && (!currentCrossUnit || currentCrossUnit->GetEntry() != acolyte->GetEntry()))
             return true;
@@ -979,7 +979,7 @@ bool ThorimGauntletPositioningTrigger::IsActive()
         return true;
     }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "thorim");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32865");
     if (boss && boss->IsAlive() && bot->GetPositionZ() > ULDUAR_THORIM_AXIS_Z_FLOOR_THRESHOLD &&
         boss->GetPositionZ() < ULDUAR_THORIM_AXIS_Z_FLOOR_THRESHOLD)
     {
@@ -991,7 +991,7 @@ bool ThorimGauntletPositioningTrigger::IsActive()
 
 bool ThorimArenaPositioningTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "thorim");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32865");
     if (!boss || !boss->IsInWorld() || boss->IsDuringRemoveFromWorld())
         return false;
 
@@ -1093,7 +1093,7 @@ bool ThorimPhase2PositioningTrigger::IsActive()
     if (!botAI->IsRanged(bot) && !botAI->IsMainTank(bot))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "thorim");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "32865");
     if (!boss || !boss->IsInWorld() || boss->IsDuringRemoveFromWorld())
         return false;
 
@@ -1151,7 +1151,7 @@ bool ThorimPhase2PositioningTrigger::IsActive()
 
 bool MimironShockBlastTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "leviathan mk ii");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33113");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -1207,7 +1207,7 @@ bool MimironPhase1PositioningTrigger::IsActive()
 
 bool MimironP3Wx2LaserBarrageTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "vx-001");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33651");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -1414,7 +1414,7 @@ bool MimironAerialCommandUnitTrigger::IsActive()
 
 bool MimironRocketStrikeTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "vx-001");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33651");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -1516,7 +1516,7 @@ bool VezaxCheatTrigger::IsActive()
     if (!botAI->HasCheat(BotCheatMask::raid))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general vezax");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33271");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -1530,7 +1530,7 @@ bool VezaxCheatTrigger::IsActive()
 
 bool VezaxShadowCrashTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general vezax");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33271");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -1541,7 +1541,7 @@ bool VezaxShadowCrashTrigger::IsActive()
 
 bool VezaxMarkOfTheFacelessTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "general vezax");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "33271");
 
     // Check boss and it is alive
     if (!boss || !boss->IsAlive())
@@ -1558,7 +1558,7 @@ bool VezaxMarkOfTheFacelessTrigger::IsActive()
 
 Unit* YoggSaronTrigger::GetSaraIfAlive()
 {
-    Unit* sara = AI_VALUE2(Unit*, "find target", "sara");
+    Unit* sara = AI_VALUE2(Unit*, "find target", "33134");
     if (!sara || !sara->IsAlive())
         return nullptr;
 
@@ -1587,8 +1587,8 @@ bool YoggSaronTrigger::IsInBrainLevel()
 
 bool YoggSaronTrigger::IsYoggSaronFight()
 {
-    Unit* sara = AI_VALUE2(Unit*, "find target", "sara");
-    Unit* yoggsaron = AI_VALUE2(Unit*, "find target", "yogg-saron");
+    Unit* sara = AI_VALUE2(Unit*, "find target", "33134");
+    Unit* yoggsaron = AI_VALUE2(Unit*, "find target", "33134");
 
     if ((sara && sara->IsAlive()) || (yoggsaron && yoggsaron->IsAlive()))
         return true;
@@ -2080,7 +2080,7 @@ bool YoggSaronMoveToExitPortalTrigger::IsActive()
 
 bool YoggSaronLunaticGazeTrigger::IsActive()
 {
-    Unit* yoggsaron = AI_VALUE2(Unit*, "find target", "yogg-saron");
+    Unit* yoggsaron = AI_VALUE2(Unit*, "find target", "33134");
 
     if (yoggsaron && yoggsaron->IsAlive() && yoggsaron->HasUnitState(UNIT_STATE_CASTING))
     {

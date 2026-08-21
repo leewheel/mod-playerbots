@@ -9,7 +9,7 @@
 
 bool CorpseExplodeSpreadAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "trollgore");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26630");
     if (!boss) { return false; }
 
     float distance = 5.0f;
@@ -30,7 +30,7 @@ bool CorpseExplodeSpreadAction::Execute(Event /*event*/)
 
 bool AvoidArcaneFieldAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "novos the summoner");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "26631");
     if (!boss) { return false; }
 
     float distance = 12.0f;  // 11 unit radius, 1 unit added as buffer

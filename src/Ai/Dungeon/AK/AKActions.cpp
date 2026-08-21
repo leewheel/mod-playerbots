@@ -9,7 +9,7 @@
 
 bool AttackNadoxGuardianAction::Execute(Event /*event*/)
 {
-    Unit* target = AI_VALUE2(Unit*, "find target", "ahn'kahar guardian");
+    Unit* target = AI_VALUE2(Unit*, "find target", "29309");
     if (!target || AI_VALUE(Unit*, "current target") == target)
     {
         return false;
@@ -49,7 +49,7 @@ bool AvoidShadowCrashAction::Execute(Event /*event*/)
 {
     // Could check all enemy units in range as it's possible to pull multiple of these mobs.
     // They should really be killed 1 by 1, multipulls are messy so we just handle singles for now
-    Unit* unit = AI_VALUE2(Unit*, "find target", "forgotten one");
+    Unit* unit = AI_VALUE2(Unit*, "find target", "30414");
     if (!unit) { return false; }
 
     Unit* victim = nullptr;

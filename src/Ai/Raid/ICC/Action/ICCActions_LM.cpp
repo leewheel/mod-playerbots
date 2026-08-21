@@ -95,7 +95,7 @@ static bool ColdflameNearAnchor(Player* bot, Position const& anchor, float leash
 
 bool IccLmTankPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "lord marrowgar");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36612");
     if (!boss)
         return false;
 
@@ -258,7 +258,7 @@ bool IccSpikeAction::Execute(Event /*event*/)
     if (bot->HasAura(SPELL_LM_IMPALED))
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "lord marrowgar");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "36612");
     if (!boss)
         return false;
 

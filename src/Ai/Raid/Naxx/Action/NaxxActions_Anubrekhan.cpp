@@ -60,7 +60,7 @@ bool AnubrekhanChooseTargetAction::Execute(Event /*event*/)
 
 bool AnubrekhanPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "anub'rekhan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15956");
     if (!boss)
         return false;
 

@@ -29,7 +29,7 @@
 
 float GrobbulusMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
     if (!boss)
         return 1.0f;
 
@@ -44,7 +44,7 @@ float GrobbulusMultiplier::GetValue(Action* action)
 
 //float HeiganDanceMultiplier::GetValue(Action* action)
 //{
-//    Unit* boss = AI_VALUE2(Unit*, "find target", "heigan the unclean");
+//    Unit* boss = AI_VALUE2(Unit*, "find target", "15936");
 //    if (!boss)
 //    {
 //        return 1.0f;
@@ -107,7 +107,7 @@ float GrobbulusMultiplier::GetValue(Action* action)
 
 float LoathebGenericMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "loatheb");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "16011");
     if (!boss)
         return 1.0f;
 
@@ -151,8 +151,8 @@ float ThaddiusGenericMultiplier::GetValue(Action* action)
     }
     // die at the same time
     Unit* target = AI_VALUE(Unit*, "current target");
-    Unit* feugen = AI_VALUE2(Unit*, "find target", "feugen");
-    Unit* stalagg = AI_VALUE2(Unit*, "find target", "stalagg");
+    Unit* feugen = AI_VALUE2(Unit*, "find target", "15929");
+    Unit* stalagg = AI_VALUE2(Unit*, "find target", "15930");
     if (helper.IsPhasePet() && target && feugen && stalagg && target->GetHealthPct() <= 40 &&
         (feugen->GetHealthPct() >= target->GetHealthPct() + 3 || stalagg->GetHealthPct() >= target->GetHealthPct() + 3))
     {
@@ -236,7 +236,7 @@ float KelthuzadGenericMultiplier::GetValue(Action* action)
 
 float AnubrekhanGenericMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "anub'rekhan");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "15956");
     if (!boss)
         return 1.0f;
 
@@ -252,7 +252,7 @@ float AnubrekhanGenericMultiplier::GetValue(Action* action)
 
 float FourHorsemenGenericMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "sir zeliek");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "16063");
     if (!boss)
         return 1.0f;
 
@@ -265,7 +265,7 @@ float FourHorsemenGenericMultiplier::GetValue(Action* action)
 
 // float GothikGenericMultiplier::GetValue(Action* action)
 // {
-//     Unit* boss = AI_VALUE2(Unit*, "find target", "gothik the harvester");
+//     Unit* boss = AI_VALUE2(Unit*, "find target", "16060");
 //     if (!boss)
 //     {
 //         return 1.0f;
