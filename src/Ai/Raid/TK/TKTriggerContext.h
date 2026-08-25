@@ -3,8 +3,6 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
 
 #ifndef PLAYERBOTS_TKTRIGGERCONTEXT_H
 #define PLAYERBOTS_TKTRIGGERCONTEXT_H

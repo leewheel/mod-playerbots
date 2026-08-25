@@ -33,6 +33,9 @@ public:
         creators["kalecgos announce boss health"] =
             &RaidSunwellActionContext::kalecgos_announce_boss_health;
 
+        creators["kalecgos misdirect boss to main tank"] =
+            &RaidSunwellActionContext::kalecgos_misdirect_boss_to_main_tank;
+
         creators["kalecgos surface tank position dragon"] =
             &RaidSunwellActionContext::kalecgos_surface_tank_position_dragon;
 
@@ -169,10 +172,8 @@ public:
         creators["m'uru flee from singularity"] =
             &RaidSunwellActionContext::muru_flee_from_singularity;
 
-        // By leewheel 2026-08-18 - 修正拼写错误：berseker -> berserker，与 SWPStrategy.cpp:174 引用的动作名及 SWPActions.h 中 Action 名保持一致，否则 m'uru 战斗中 bot 无法对被控制的暗影守卫施放眩晕（功能失效）
         creators["m'uru cast stun on shadowsword berserker"] =
             &RaidSunwellActionContext::muru_cast_stun_on_shadowsword_berserker;
-        // End By leewheel
 
         creators["m'uru interrupt fel fireball"] =
             &RaidSunwellActionContext::muru_interrupt_fel_fireball;
@@ -239,6 +240,10 @@ private:
     }
 
     // Kalecgos
+    static Action* kalecgos_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new SunwellPlateauMisdirectBossToMainTankAction(
+            botAI, "kalecgos misdirect boss to main tank", "kalecgos");
+    }
     static Action* kalecgos_announce_boss_health(PlayerbotAI* botAI) {
         return new KalecgosAnnounceBossHealthAction(botAI);
     }
@@ -263,7 +268,8 @@ private:
 
     // Brutallus
     static Action* brutallus_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
-        return new BrutallusMisdirectBossToMainTankAction(botAI);
+        return new SunwellPlateauMisdirectBossToMainTankAction(
+            botAI, "brutallus misdirect boss to main tank", "brutallus");
     }
     static Action* brutallus_tanks_position_and_swap(PlayerbotAI* botAI) {
         return new BrutallusTanksPositionAndSwapAction(botAI);
@@ -280,7 +286,8 @@ private:
 
     // Felmyst
     static Action* felmyst_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
-        return new FelmystMisdirectBossToMainTankAction(botAI);
+        return new SunwellPlateauMisdirectBossToMainTankAction(
+            botAI, "felmyst misdirect boss to main tank", "felmyst");
     }
     static Action* felmyst_main_tank_position_boss_on_ground(PlayerbotAI* botAI) {
         return new FelmystMainTankPositionBossOnGroundAction(botAI);

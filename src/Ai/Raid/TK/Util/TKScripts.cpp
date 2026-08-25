@@ -3,8 +3,6 @@
  * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
  * or (at your option) any later version.
  */
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
 
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -15,10 +13,11 @@
 
 using namespace TkHelpers;
 
-class VoidReaverSpellListenerScript : public AllSpellScript
+class VoidReaverArcaneOrbSpellListenerScript : public AllSpellScript
 {
 public:
-    VoidReaverSpellListenerScript() : AllSpellScript("VoidReaverSpellListenerScript") {}
+    VoidReaverArcaneOrbSpellListenerScript()
+        : AllSpellScript("VoidReaverArcaneOrbSpellListenerScript") {}
 
     void OnSpellCast(
         Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
@@ -34,7 +33,7 @@ public:
         if (!target)
             return;
 
-        auto& orbs = voidReaverArcaneOrbs[caster->GetMap()->GetInstanceId()];
+        auto& orbs = voidReaverArcaneOrbs[caster->GetInstanceId()];
         uint32 const now = getMSTime();
 
         ArcaneOrbData orbData;
@@ -52,5 +51,5 @@ public:
 
 void AddSC_TempestKeepBotScripts()
 {
-    new VoidReaverSpellListenerScript();
+    new VoidReaverArcaneOrbSpellListenerScript();
 }

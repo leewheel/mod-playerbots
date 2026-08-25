@@ -13,6 +13,7 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include <limits>
+#include <string>
 #include <vector>
 
 class Creature;
@@ -58,6 +59,18 @@ public:
     ApocalypseGuardAttackWithHolyMagicAction(PlayerbotAI* botAI)
         : Action(botAI, "apocalypse guard attack with holy magic") {}
     bool Execute(Event event) override;
+};
+
+class SunwellPlateauMisdirectBossToMainTankAction : public Action
+{
+public:
+    SunwellPlateauMisdirectBossToMainTankAction(
+        PlayerbotAI* botAI, std::string const& name, std::string const& bossName)
+        : Action(botAI, name), _bossName(bossName) {}
+    bool Execute(Event event) override;
+
+private:
+    std::string const _bossName;
 };
 
 // Kalecgos
@@ -133,14 +146,6 @@ public:
 
 // Brutallus
 
-class BrutallusMisdirectBossToMainTankAction : public Action
-{
-public:
-    BrutallusMisdirectBossToMainTankAction(PlayerbotAI* botAI)
-        : Action(botAI, "brutallus misdirect boss to main tank") {}
-    bool Execute(Event event) override;
-};
-
 class BrutallusTanksPositionAndSwapAction : public AttackAction
 {
 public:
@@ -192,14 +197,6 @@ private:
 };
 
 // Felmyst
-
-class FelmystMisdirectBossToMainTankAction : public Action
-{
-public:
-    FelmystMisdirectBossToMainTankAction(PlayerbotAI* botAI)
-        : Action(botAI, "felmyst misdirect boss to main tank") {}
-    bool Execute(Event event) override;
-};
 
 class FelmystMainTankPositionBossOnGroundAction : public AttackAction
 {
@@ -653,8 +650,7 @@ public:
 class KiljaedenControlDragonAction : public Action
 {
 public:
-    KiljaedenControlDragonAction(PlayerbotAI* botAI)
-        : Action(botAI, "kil'jaeden control dragon") {}
+    KiljaedenControlDragonAction(PlayerbotAI* botAI) : Action(botAI, "kil'jaeden control dragon") {}
     bool Execute(Event event) override;
 
 private:

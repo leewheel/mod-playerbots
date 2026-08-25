@@ -47,8 +47,7 @@ public:
 class AlarPullingBossTrigger : public Trigger
 {
 public:
-    AlarPullingBossTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "al'ar pulling boss") {}
+    AlarPullingBossTrigger(PlayerbotAI* botAI) : Trigger(botAI, "al'ar pulling boss") {}
     bool IsActive() override;
 };
 
