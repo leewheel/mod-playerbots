@@ -7,11 +7,12 @@
 //End By leewheel
 
 #include "SethTriggers.h"
+#include "EncounterHelpers.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
-#include "SethData.h"
+#include "SethShared.h"
 
-using namespace SethData;
+using namespace SethShared;
+using namespace EncounterHelpers;
 
 bool TimeLostControllerDropsCharmingTotemTrigger::IsActive()
 {

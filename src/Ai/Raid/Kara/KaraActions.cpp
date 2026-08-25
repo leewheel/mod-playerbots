@@ -8,10 +8,10 @@
 //End By leewheel
 
 #include "KaraActions.h"
+#include "EncounterHelpers.h"
 #include "KaraHelpers.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -22,6 +22,7 @@
 #include <string>
 
 using namespace KaraHelpers;
+using namespace EncounterHelpers;
 
 // General
 
@@ -108,8 +109,9 @@ bool KarazhanCastFearProtectionSpellAction::Execute(Event /*event*/)
 
 bool KarazhanCastFearProtectionSpellAction::CastFearWardOnMainTank()
 {
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (!mainTank || mainTank->HasAura(Id(KaraSpells::SPELL_FEAR_WARD)))
+    constexpr uint32 fearWard = Id(KaraSpells::SPELL_FEAR_WARD);
+    Player* mainTank = GetGroupMainTank(bot);
+    if (!mainTank || mainTank->HasAura(fearWard))
         return false;
 
     if (!botAI->CanCastSpell(Id(KaraSpells::SPELL_FEAR_WARD), mainTank))

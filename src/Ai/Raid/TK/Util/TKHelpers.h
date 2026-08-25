@@ -11,13 +11,13 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include <array>
-#include <ctime>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 class Creature;
+class Item;
 class Player;
 class PlayerbotAI;
 class Unit;
@@ -37,7 +37,7 @@ enum class TkSpells : uint32
     SPELL_ARCANE_FLURRY             = 37268,
 
     // Al'ar
-    SPELL_MODEL_INVISIBILITY        = 24401, // "Test Pet Passive" spell (AC hack used for Al'ar)
+    SPELL_MODEL_INVISIBILITY        = 24401, // "Test Pet Passive" (AC hack? used for Al'ar)
     SPELL_REBIRTH_PHASE2            = 34342,
     SPELL_REBIRTH_DIVE              = 35369,
     SPELL_MELT_ARMOR                = 35410,
@@ -100,6 +100,7 @@ enum class TkItems : uint32
     ITEM_INFINITY_BLADE             = 30312,
     ITEM_STAFF_OF_DISINTEGRATION    = 30313,
     ITEM_PHASESHIFT_BULWARK         = 30314,
+    // ITEM_DRAENETHYST_MINE_CRYSTAL= 30315, // Noting that the ids are not all contiguous
     ITEM_DEVASTATION                = 30316,
     ITEM_COSMIC_INFUSER             = 30317,
     ITEM_NETHERSTRAND_LONGBOW       = 30318,
@@ -112,27 +113,23 @@ inline constexpr uint32 TK_MAP_ID = 550;
 
 std::pair<Unit*, Unit*> GetTargetUnitPair(PlayerbotAI* botAI, uint32 entry);
 Player* GetNearestNonTankPlayerInRadius(Player* bot, float radius);
-std::vector<Unit*> GetAllHazardTriggers(Player* bot, uint32 npcEntry, float searchRadius);
-Position FindSafestNearbyPosition(
-    Player* bot, std::vector<Unit*> const& hazards,
-    float hazardRadius, Position const* center = nullptr);
-bool IsPathSafeFromHazards(
-    Position const start, Position const end, std::vector<Unit*> const& hazards,
-    float hazardRadius);
 
 // Al'ar <Phoenix God>
+// CombatReach is 15 yards
 
 enum AlarLocationIndex
 {
-    PLATFORM_0_IDX,
-    PLATFORM_1_IDX,
-    PLATFORM_2_IDX,
-    PLATFORM_3_IDX,
+    PLATFORM_0_IDX, // West
+    PLATFORM_1_IDX, // Northwest
+    PLATFORM_2_IDX, // Northeast
+    PLATFORM_3_IDX, // East
     POINT_QUILL_OR_DIVE_IDX,
     POINT_MIDDLE_IDX,
     LOCATION_NONE = -1
 };
 
+// 17.0f is intentionally a little lower than the actual balcony positions to capture melee that
+// may be slightly down the ramps to Platform 0 or 3
 inline constexpr float ALAR_BALCONY_Z = 17.0f;
 inline constexpr uint8 TOTAL_ALAR_LOCATIONS = 6;
 
@@ -190,13 +187,15 @@ bool IsAlarInPhase2(uint32 instanceId);
 int8 GetAlarDestinationLocationIndex(Unit* alar);
 int8 GetAlarCurrentLocationIndex(Unit* alar);
 int8 GetAlarPlatformIndex(Unit* alar);
-void GetClosestPlatformAndGround(Position const botPos, int8& closestPlatform, Position& ground);
+// The spot on the floor under the nearest landing platform, for jumping down off the balcony
+Position const& GetClosestGroundPosition(Position const& botPos);
 bool IsPrimaryEmberTank(Player* bot);
 bool IsFirstAlarTank(Player* bot);
 bool IsSecondAlarTank(Player* bot);
-Player* GetPhase2SecondEmberTank(Player* bot);
+Player* GetSecondaryEmberTank(Player* bot);
 
 // Void Reaver
+// CombatReach is 15 yards
 
 struct ArcaneOrbData
 {
@@ -212,16 +211,18 @@ inline Position const VOID_REAVER_TANK_POSITION = { 423.845f, 371.733f, 14.897f 
 
 extern std::unordered_map<uint32, std::vector<ArcaneOrbData>> voidReaverArcaneOrbs;
 
+std::vector<Position> GetActiveArcaneOrbs(uint32 instanceId);
+bool IsNearArcaneOrb(Player* bot, std::vector<Position> const& orbs, float radius);
+bool IsNearActiveArcaneOrb(Player* bot, float radius);
+
 // High Astromancer Solarian
 
 bool HasWrathOfTheAstromancer(Player* bot);
 
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
-// Mirrors the phase enum of the core's boss_kaelthas. Reading the phase means casting the boss AI
-// to a hand-written mirror of that class (TKKaelthasBossAI.h), which is only correct for as long as
-// the two agree--so GetKaelthasPhase is the one place that does the cast, and the one place to fix
-// if the core's class ever changes. A missing boss or a failed cast both report PHASE_NONE.
+// Matches the phase enum of the core's boss_kaelthas.cpp. Reading the phase means casting the
+// boss AI to a mirror of that class (TKKaelthasBossAI.h).
 enum KTPhases
 {
     PHASE_NONE           = 0,
@@ -231,11 +232,9 @@ enum KTPhases
     PHASE_ALL_ADVISORS   = 4,
     PHASE_FINAL          = 5
 };
-uint32 GetKaelthasPhase(Unit* kaelthas);
 
-inline constexpr uint32 ITEM_LEGENDARY_WEAPON_MIN = 30311;
-inline constexpr uint32 ITEM_LEGENDARY_WEAPON_MAX = 30318;
-inline constexpr float LEGENDARY_WEAPON_SEARCH_RADIUS = 150.0f;
+// About the exact distance from Kael to the entrances to his room
+inline constexpr float KAELTHAS_ROOM_SEARCH_DISTANCE = 125.0f;
 
 inline Position const SANGUINAR_TANK_POSITION    = { 775.478f,  39.888f, 46.780f };
 inline Position const SANGUINAR_WAITING_POSITION = { 761.850f,  27.459f, 46.779f };
@@ -245,16 +244,22 @@ inline Position const CAPERNIAN_WAITING_POSITION = { 743.897f, -11.575f, 46.779f
 inline Position const ADVISOR_HEAL_POSITION      = { 752.171f,  19.494f, 46.779f };
 inline Position const KAELTHAS_TANK_POSITION     = { 774.008f,  -0.631f, 48.729f };
 
-extern std::unordered_map<uint32, time_t> advisorDpsWaitTimer;
+inline constexpr uint32 ADVISOR_DPS_WAIT_NOT_STARTED = 0;
+extern std::unordered_map<uint32, uint32> advisorDpsWaitTimer;
 
+uint32 GetKaelthasPhase(Unit* kaelthas);
+bool IsAdvisorActive(Unit* advisor);
 Player* GetCapernianTank(Player* bot);
 bool IsSanguinarDebuffHunter(Player* bot);
+Unit* GetLegendaryWeapon(Player* bot, uint32 weaponEntry);
 GuidVector FindDeadLegendaryWeaponGuids(Player* bot);
 GuidVector const& GetDeadLegendaryWeaponGuids(PlayerbotAI* botAI);
-bool IsAnyLegendaryWeaponDead(PlayerbotAI* botAI);
 Creature* GetDeadLegendaryWeapon(PlayerbotAI* botAI, uint32 weaponEntry);
-bool IsFeigningDeath(Unit* advisor);
+bool IsLegendaryWeaponItem(uint32 itemId);
 bool HasEquippableItemForSlot(Player* bot, uint8 slot);
+Item* GetEquippedItemInSlot(Player* bot, uint8 slot, uint32 itemId);
+Creature* GetNearestFlameStrikeInRadius(Player* bot, float radius);
+Creature* GetPhoenixEgg(Player* bot);
 
 }
 

@@ -34,6 +34,10 @@ public:
         creators["mc majordomo shadow resistance"] = &RaidMcActionContext::majordomo_shadow_resistance;
         creators["mc ragnaros fire resistance"] = &RaidMcActionContext::ragnaros_fire_resistance;
         creators["mc core hound mark"] = &RaidMcActionContext::core_hound_mark;
+        //By leewheel 2026-08-26 合并：保留自定义BOSS注册，纳入对侧新增官方BOSS动作
+        creators["mc move from lava"] = &RaidMcActionContext::move_from_lava;
+        creators["mc golemagg back off"] = &RaidMcActionContext::golemagg_back_off;
+        creators["mc golemagg healer position"] = &RaidMcActionContext::golemagg_healer_position;
 
         //By leewheel 2026年7月12日
         // 自定义Boss: Smolder
@@ -64,6 +68,10 @@ private:
     static Action* majordomo_shadow_resistance(PlayerbotAI* botAI) { return new BossShadowResistanceAction(botAI, "majordomo executus"); }
     static Action* ragnaros_fire_resistance(PlayerbotAI* botAI) { return new BossFireResistanceAction(botAI, "ragnaros"); }
     static Action* core_hound_mark(PlayerbotAI* botAI) { return new McCoreHoundMarkAction(botAI); }
+    //By leewheel 2026-08-26 合并：同上，双方工厂函数共存
+    static Action* move_from_lava(PlayerbotAI* botAI) { return new McMoveFromLavaAction(botAI); }
+    static Action* golemagg_back_off(PlayerbotAI* botAI) { return new McGolemaggBackOffAction(botAI); }
+    static Action* golemagg_healer_position(PlayerbotAI* botAI) { return new McGolemaggHealerPositionAction(botAI); }
 
     //By leewheel 2026年7月12日
     // 自定义Boss: Smolder

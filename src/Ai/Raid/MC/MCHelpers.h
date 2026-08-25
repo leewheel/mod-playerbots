@@ -14,6 +14,9 @@ enum MoltenCoreNPCs
     // Golemagg
     NPC_CORE_RAGER = 11672,
 
+    // Majordomo Executus
+    NPC_MAJORDOMO_EXECUTUS = 12018,
+
     // Core Hound (trash)
     NPC_CORE_HOUND = 11671,
 
@@ -36,6 +39,8 @@ enum MoltenCoreSpells
 
     // Golemagg
     SPELL_GOLEMAGGS_TRUST = 20553,
+    //By leewheel 2026-08-26 合并：纳入对侧新增Golemagg岩浆叠层与Shazzrah常量，同时保留自定义BOSS法术
+    SPELL_MAGMA_SPLASH = 13880,
 
     // 自定义Boss: Smolder
     SPELL_SMOLDER_BELLOWING_ROAR = 22686,  // AOE恐惧，33s间隔
@@ -50,6 +55,12 @@ enum MoltenCoreSpells
     SPELL_HAZZRASH_ARCANE_BLAST = 30451,    // 奥术冲击
     SPELL_HAZZRASH_CHAIN_BURN = 8211,       // 连锁燃烧
 };
+
+constexpr uint32 MAGMA_SPLASH_BACK_OFF_STACKS = 20;
+constexpr float MAGMA_SPLASH_BACK_OFF_DISTANCE = 12.0f;
+
+// Shazzrah's Arcane Explosion radius
+constexpr float ARCANE_EXPLOSION_DISTANCE = 26.0f;
 
 // 自定义Boss名字（数据库中的creature_template.name）
 static constexpr const char* BOSS_NAME_SMOLDER = "阴燃";

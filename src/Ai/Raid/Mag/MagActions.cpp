@@ -6,17 +6,18 @@
 
 #include "MagActions.h"
 #include "Creature.h"
+#include "EncounterHelpers.h"
 #include "MagHelpers.h"
 #include "ObjectAccessor.h"
 #include "ObjectGuid.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include <algorithm>
 #include <limits>
 #include <list>
 #include <vector>
 
 using namespace MagHelpers;
+using namespace EncounterHelpers;
 
 bool MagtheridonMainTankAttackFirstThreeChannelersAction::Execute(Event /*event*/)
 {
@@ -114,8 +115,9 @@ bool MagtheridonMisdirectHellfireChannelersToMainTankAction::Execute(Event /*eve
         }
     }
 
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (!mainTank)
+    //By leewheel 2026-08-26 合并：采用对侧新增的存活校验
+    Player* mainTank = GetGroupMainTank(bot);
+    if (!mainTank || !mainTank->IsAlive())
         return false;
 
     Creature* targetChanneler = nullptr;

@@ -138,6 +138,7 @@ public:
     Player* GetRandomPlayer();
     std::vector<Player*> GetPlayers() { return players; };
     PlayerBotMap GetAllBots() { return playerBots; };
+    void InitArenaTeams();
     void PrintStats();
     double GetBuyMultiplier(Player* bot);
     double GetSellMultiplier(Player* bot);

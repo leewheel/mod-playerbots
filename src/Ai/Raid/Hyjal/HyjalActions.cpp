@@ -6,8 +6,8 @@
 
 #include "HyjalActions.h"
 #include "HyjalHelpers.h"
+#include "EncounterHelpers.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include "Timer.h"
 #include <algorithm>
 #include <cmath>
@@ -15,6 +15,7 @@
 #include <vector>
 
 using namespace HyjalHelpers;
+using namespace EncounterHelpers;
 
 // Every mover here walks in short steps rather than handing MoveTo a far destination, and the Z it
 // seeds MoveTo with is always the bot's own. That is not a detail: MoveTo seeds SearchForBestPath
@@ -65,8 +66,9 @@ bool HyjalMisdirectBossToMainTankAction::Execute(Event /*event*/)
     if (!boss)
         return false;
 
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (!mainTank)
+    //By leewheel 2026-08-26 合并：采用对侧1参数签名+存活校验，变量名随本文件上下文
+    Player* mainTank = GetGroupMainTank(bot);
+    if (!mainTank || !mainTank->IsAlive())
         return false;
 
     if (botAI->CanCastSpell("misdirection", mainTank))
@@ -124,7 +126,7 @@ bool HyjalMainTankPositionBossAction::Execute(Event /*event*/)
 // Rage Winterchill
 
 // This is essentially a forced "avoid aoe" due to the default AiPlayerbot.MaxAoeAvoidRadius in the
-// config being 15 yards; avoidance works fine without this strategy if it is set to 20+ yards.
+// config being 15 yards; avoid aoe works fine without this strategy if it is set to 20+ yards.
 bool RageWinterchillRangedGetOutOfDeathAndDecayAction::Execute(Event /*event*/)
 {
     Position pool;
@@ -272,7 +274,8 @@ bool AnetheronMisdirectBossAndInfernalsToTanksAction::Execute(Event /*event*/)
     Unit* enemyTarget = nullptr;
     if (anetheron->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
     {
-        tankTarget = GetGroupMainTank(botAI, bot);
+        //By leewheel 2026-08-26 合并：保留本文件变量命名，采用对侧1参数签名
+        tankTarget = GetGroupMainTank(bot);
         enemyTarget = anetheron;
     }
     else if (Unit* infernal = GetLooseInfernal(bot))
@@ -482,7 +485,7 @@ bool AnetheronAssignDpsPriorityAction::Execute(Event /*event*/)
 
 bool KazrogalAssistTanksMoveInFrontOfBossAction::Execute(Event /*event*/)
 {
-    Player* mainTank = GetGroupMainTank(botAI, bot);
+    Player* mainTank = GetGroupMainTank(bot);
     if (!mainTank)
         return false;
 
@@ -895,8 +898,9 @@ bool ArchimondeCastFearImmunitySpellAction::Execute(Event /*event*/)
 
 bool ArchimondeCastFearImmunitySpellAction::CastFearWardOnMainTank()
 {
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (!mainTank || mainTank->HasAura(Id(HyjalSpells::SPELL_FEAR_WARD)))
+    constexpr uint32 fearWard = Id(HyjalSpells::SPELL_FEAR_WARD);
+    Player* mainTank = GetGroupMainTank(bot);
+    if (!mainTank || mainTank->HasAura(fearWard))
         return false;
 
     if (!botAI->CanCastSpell(Id(HyjalSpells::SPELL_FEAR_WARD), mainTank))

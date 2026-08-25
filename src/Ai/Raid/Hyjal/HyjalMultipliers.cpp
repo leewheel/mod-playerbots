@@ -9,16 +9,17 @@
 #include "ChooseTargetActions.h"
 #include "DKActions.h"
 #include "DruidBearActions.h"
+#include "EncounterHelpers.h"
 #include "HunterActions.h"
 #include "HyjalActions.h"
 #include "HyjalHelpers.h"
 #include "PaladinActions.h"
-#include "RaidBossHelpers.h"
 #include "ReachTargetActions.h"
 #include "ShamanActions.h"
 #include "WarriorActions.h"
 
 using namespace HyjalHelpers;
+using namespace EncounterHelpers;
 
 float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
 {

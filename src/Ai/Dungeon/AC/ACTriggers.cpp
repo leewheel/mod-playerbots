@@ -5,8 +5,6 @@
  */
 
 #include "ACTriggers.h"
-#include "AiObject.h"
-#include "AiObjectContext.h"
 #include "Playerbots.h"
 
 // Shirrak the Dead Watcher
@@ -22,15 +20,7 @@ bool ShirrakFleeFocusFireTrigger::IsActive()
     if (!AI_VALUE2(Unit*, "find target", "18371"))
         return false;
 
-    std::list<Creature*> creatureList;
-    bot->GetCreatureListWithEntryInGrid(creatureList, static_cast<uint32>(AuchenaiCryptsIDs::NPC_FOCUS_FIRE), 20.0f);
-
-    for (Creature* flare : creatureList)
-    {
-        if (flare && flare->IsAlive())
-            return true;
-    }
-    return false;
+    return bot->FindNearestCreature(NPC_FOCUS_FIRE, FLARE_SEARCH_RADIUS, true);
 }
 
 bool ShirrakRangedKeepDistanceTrigger::IsActive()

@@ -4,12 +4,13 @@
  * or (at your option) any later version.
  */
 
-#include "RaidBossHelpers.h"
+#include "EncounterHelpers.h"
 #include "CellImpl.h"
 #include "DKActions.h"
 #include "DruidActions.h"
 #include "DruidBearActions.h"
 #include "DruidCatActions.h"
+#include "GenericSpellActions.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "HunterActions.h"
@@ -24,6 +25,9 @@
 #include <algorithm>
 #include <cmath>
 #include <list>
+
+namespace EncounterHelpers
+{
 
 // Asks whether a short step towards a destination is one the bot can actually take, and returns
 // where it lands. This is a verdict, not a movement helper: a caller that simply wants to walk
@@ -172,15 +176,14 @@ bool ClearTargetIcon(Player* bot, uint8 iconId)
     return false;
 }
 
-// Set raid target icon to the specified icon on the specified target
-void SetRtiTarget(PlayerbotAI* botAI, std::string const& rtiName, Unit* target)
+// For bots to set their raid target icon to the specified icon
+void SetRtiTarget(PlayerbotAI* botAI, std::string const& rtiName)
 {
-    if (!target)
-        return;
+    Value<std::string>* rtiValue =
+        botAI->GetAiObjectContext()->GetValue<std::string>("rti");
 
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    context->GetValue<std::string>("rti")->Set(rtiName);
-    context->GetValue<Unit*>("rti target")->Set(target);
+    if (rtiValue->Get() != rtiName)
+        rtiValue->Set(rtiName);
 }
 
 // Return the first alive DPS bot in the specified instance map, excluding any specified bot
@@ -233,14 +236,14 @@ bool IsMechanicTrackerBot(Player* bot, uint32 mapId)
 }
 
 // Requires the main tank to be alive
-// Note that IsMainTank() will return the player with the main tank flag, even if dead
-Player* GetGroupMainTank(PlayerbotAI* botAI, Player* bot)
+//By leewheel 2026-08-26 合并采用brighton简洁签名(本分支旧botAI参数为无用残留,函数体一致)
+Player* GetGroupMainTank(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return nullptr;
 
-    ObjectGuid const mainTankGuid = botAI->GetMainTankGuid(group);
+    ObjectGuid const mainTankGuid = PlayerbotAI::GetMainTankGuid(group);
     if (mainTankGuid.IsEmpty())
         return nullptr;
 
@@ -254,15 +257,21 @@ Player* GetGroupMainTank(PlayerbotAI* botAI, Player* bot)
     return nullptr;
 }
 
+//By leewheel 2026-08-26 兼容包装：本分支存量策略代码仍使用botAI签名，转发到brighton新实现，避免大面积改动调用点
+Player* GetGroupMainTank(PlayerbotAI* /*botAI*/, Player* bot)
+{
+    return GetGroupMainTank(bot);
+}
+//End By leewheel 2026-08-26
+
 // Returns the alive assist tank of the specified index (0 = first, 1 = second, etc.)
-// Priority: Assistants first, then Non-Assistants.
-Player* GetGroupAssistTank(PlayerbotAI* botAI, Player* bot, uint8 index)
+Player* GetGroupAssistTank(Player* bot, uint8 index)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return nullptr;
 
-    ObjectGuid const mainTankGuid = botAI->GetMainTankGuid(group);
+    ObjectGuid const mainTankGuid = PlayerbotAI::GetMainTankGuid(group);
     if (mainTankGuid.IsEmpty())
         return nullptr;
 
@@ -272,7 +281,7 @@ Player* GetGroupAssistTank(PlayerbotAI* botAI, Player* bot, uint8 index)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || !member->IsAlive() || !botAI->IsTank(member) ||
+        if (!member || !member->IsAlive() || !PlayerbotAI::IsTank(member) ||
             member->GetGUID() == mainTankGuid)
         {
             continue;
@@ -298,6 +307,13 @@ Player* GetGroupAssistTank(PlayerbotAI* botAI, Player* bot, uint8 index)
 
     return nullptr;
 }
+
+//By leewheel 2026-08-26 兼容包装：同上，转发到brighton新签名实现
+Player* GetGroupAssistTank(PlayerbotAI* /*botAI*/, Player* bot, uint8 index)
+{
+    return GetGroupAssistTank(bot, index);
+}
+//End By leewheel 2026-08-26
 
 // Return the first matching alive unit from PossibleTargetsValue within sightDistance from config
 // Note that PossibleTargetsValue picks up only hostile units
@@ -496,7 +512,7 @@ bool IsTauntAction(Player* bot, Action* action)
     }
 }
 
-// These abilities can be particularly problematic on the pull for a council boss
+// These abilities can be particularly problematic on the pull for a council-type boss
 bool IsAoeThreatAction(Player* bot, Action* action)
 {
     if (!PlayerbotAI::IsTank(bot))
@@ -524,4 +540,6 @@ bool IsAoeThreatAction(Player* bot, Action* action)
         default:
             return false;
     }
+}
+
 }

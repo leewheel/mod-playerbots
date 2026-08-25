@@ -6,15 +6,16 @@
 
 #include "AllCreatureScript.h"
 #include "DynamicObjectScript.h"
+#include "EncounterHelpers.h"
 #include "HyjalHelpers.h"
 #include "Player.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "Timer.h"
 
 using namespace HyjalHelpers;
+using namespace EncounterHelpers;
 
 // The explicitly cast-at target, which is all that exists when a cast begins: Spell::prepare only
 // resolves a target list for item casts, so for a creature's cast GetUniqueTargetInfo stays empty

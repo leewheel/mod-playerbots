@@ -33,6 +33,10 @@ public:
         creators["mc majordomo shadow resistance"] = &RaidMcTriggerContext::majordomo_shadow_resistance;
         creators["mc ragnaros fire resistance"] = &RaidMcTriggerContext::ragnaros_fire_resistance;
         creators["mc core hound mark"] = &RaidMcTriggerContext::core_hound_mark;
+        //By leewheel 2026-08-26 合并：纳入对侧新增触发器注册，保留自定义BOSS注册
+        creators["mc in lava"] = &RaidMcTriggerContext::in_lava;
+        creators["mc golemagg magma splash"] = &RaidMcTriggerContext::golemagg_magma_splash;
+        creators["mc golemagg is healer"] = &RaidMcTriggerContext::golemagg_is_healer;
 
         //By leewheel 2026年7月12日
         // 自定义Boss: Smolder
@@ -63,6 +67,10 @@ private:
     static Trigger* majordomo_shadow_resistance(PlayerbotAI* botAI) { return new BossShadowResistanceTrigger(botAI, "majordomo executus"); }
     static Trigger* ragnaros_fire_resistance(PlayerbotAI* botAI) { return new BossFireResistanceTrigger(botAI, "ragnaros"); }
     static Trigger* core_hound_mark(PlayerbotAI* botAI) { return new McCoreHoundMarkTrigger(botAI); }
+    //By leewheel 2026-08-26 合并：双方工厂函数共存
+    static Trigger* in_lava(PlayerbotAI* botAI) { return new McInLavaTrigger(botAI); }
+    static Trigger* golemagg_magma_splash(PlayerbotAI* botAI) { return new McGolemaggMagmaSplashTrigger(botAI); }
+    static Trigger* golemagg_is_healer(PlayerbotAI* botAI) { return new McGolemaggIsHealerTrigger(botAI); }
 
     //By leewheel 2026年7月12日
     // 自定义Boss: Smolder

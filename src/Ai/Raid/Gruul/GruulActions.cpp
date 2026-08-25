@@ -6,15 +6,16 @@
 
 #include "GruulActions.h"
 #include "CreatureAI.h"
+#include "EncounterHelpers.h"
 #include "GruulHelpers.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include "RtiTargetValue.h"
 #include <algorithm>
 #include <limits>
 #include <vector>
 
 using namespace GruulHelpers;
+using namespace EncounterHelpers;
 
 // General
 
@@ -340,15 +341,16 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     Player* tankTarget = nullptr;
     if (hunterIndex == 0)
     {
+        //By leewheel 2026-08-26 合并：保留entry规则查找，采用对侧1参数助手坦克签名，变量名随周边上下文
         ogreTarget = AI_VALUE2(Unit*, "find target", "18836");
-        tankTarget = GetGroupAssistTank(botAI, bot, 1);
+        tankTarget = GetGroupAssistTank(bot, 1);
     }
     else if (hunterIndex == 1)
     {
         ogreTarget = AI_VALUE2(Unit*, "find target", "18834");
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
-            if (Player* member = GetGroupAssistTank(botAI, bot, 0))
+            if (Player* member = GetGroupAssistTank(bot, 0))
             {
                 tankTarget = member;
                 break;

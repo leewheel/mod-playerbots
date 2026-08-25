@@ -5,10 +5,8 @@
  */
 
 #include "SWPStrategy.h"
-#include "AiObjectContext.h"
-#include "PlayerbotAI.h"
 #include "Playerbots.h"
-#include "SWPData.h"
+#include "SWPSharedConstants.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
@@ -17,7 +15,7 @@
 void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     // General
-    triggers.push_back(new TriggerNode("sunwell plateau bot is not in combat", {
+    triggers.push_back(new TriggerNode("sunwell plateau no encounter in progress", {
         NextAction("sunwell plateau reset encounter states", ACTION_EMERGENCY + 10) }));
 
     triggers.push_back(new TriggerNode("sunwell plateau bot has protective aura", {
@@ -33,6 +31,9 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     // Kalecgos
     triggers.push_back(new TriggerNode("kalecgos should communicate boss health", {
         NextAction("kalecgos announce boss health", ACTION_RAID + 1) }));
+
+    triggers.push_back(new TriggerNode("kalecgos pulling boss", {
+        NextAction("kalecgos misdirect boss to main tank", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("kalecgos boss requires tank rotation", {
         NextAction("kalecgos surface tank position dragon", ACTION_RAID) }));
@@ -105,10 +106,8 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player is charmed by fog", {
         NextAction("felmyst kill charmed player", ACTION_EMERGENCY + 9) }));
 
-    // By leewheel 2026-08-18 - 修正 TriggerNode 名与 NextAction 名写反的问题：trigger 应使用 trigger context 注册名(felmyst should hold dps while landing)，action 应使用 action context 注册名(felmyst manage landing dps timer)；修正前两处均无法在对应 context 中找到，导致 Felmyst 战斗落地暂停 DPS 策略完全失效
     triggers.push_back(new TriggerNode("felmyst should hold dps while landing", {
         NextAction("felmyst manage landing dps timer", ACTION_EMERGENCY + 8) }));
-    // End By leewheel
 
     // Eredar Twins
     triggers.push_back(new TriggerNode("eredar twins melee is at balcony", {
@@ -307,10 +306,13 @@ void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, Guid
         return;
 
     Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
-    if (!muru || muru->GetHealth() <= 1)
+    if (!IsMuruPhaseActive(muru))
         return;
 
-    constexpr float maxTargetDistFromStack = 25.0f;
+    // Even during Darkness, the Sentinel Tank has full freedom to pick up Sentinels
+    bool const distanceUnrestricted = PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
+        TryGetMuruDarknessActiveState(bot, muru);
+    ObjectGuid const muruGuid = muru->GetGUID();
 
     for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
     {
@@ -318,19 +320,16 @@ void AppendMuruTankExclusions(PlayerbotAI* botAI, AiObjectContext* context, Guid
         if (!attacker || attacker->GetEntry() == Id(SwpNpcs::NPC_VOID_SENTINEL))
             continue;
 
-        if (guid == muru->GetGUID())
+        if (guid == muruGuid)
         {
             exclusions.insert(guid);
             continue;
         }
 
-        if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
-            TryGetMuruDarknessActiveState(bot, muru))
-        {
+        if (distanceUnrestricted)
             continue;
-        }
 
-        if (attacker->GetExactDist2d(MURU_STACK_POSITION) > maxTargetDistFromStack)
+        if (attacker->GetExactDist2d(MURU_STACK_POSITION) > MURU_MAX_TARGET_DIST_FROM_STACK)
             exclusions.insert(guid);
     }
 }

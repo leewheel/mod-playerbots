@@ -5,12 +5,14 @@
  */
 
 #include "HyjalHelpers.h"
+#include "EncounterHelpers.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include "Timer.h"
 #include <algorithm>
 #include <cmath>
 #include <list>
+
+using namespace EncounterHelpers;
 
 namespace HyjalHelpers
 {
@@ -499,9 +501,9 @@ bool IsDoomguardTank(PlayerbotAI* botAI, Player* bot)
     if (!PlayerbotAI::IsAssistTankOfIndex(bot, 1, true))
         return false;
 
-    // The second assist tank takes over only once the first is Doomed. A first tank that has died
-    // needs no handover: the indices compact, so the second has already become index 0 above
-    Player* firstAssistTank = GetGroupAssistTank(botAI, bot, 0);
+    // The second assist tank takes over if the first assist tank is Doomed. GetGroupAssistTank()
+    // requires a live tank, so if the first dies, the second becomes the Doomguard tank.
+    Player* firstAssistTank = GetGroupAssistTank(bot, 0);
     return !firstAssistTank || IsDoomed(firstAssistTank);
 }
 

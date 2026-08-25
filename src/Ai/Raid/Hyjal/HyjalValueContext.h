@@ -8,11 +8,12 @@
 #define PLAYERBOTS_HYJALVALUECONTEXT_H
 
 #include "HyjalHelpers.h"
+#include "EncounterHelpers.h"
 #include "NamedObjectContext.h"
-#include "RaidBossHelpers.h"
 #include "Value.h"
 
 using HyjalHelpers::HyjalSpells;
+using namespace EncounterHelpers;
 
 // Anetheron's Infernals, oldest first. Cached because the grid search behind it is not something
 // every trigger and multiplier should be repeating each tick for every bot in the raid

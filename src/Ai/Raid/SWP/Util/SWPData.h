@@ -57,6 +57,7 @@ enum class SwpSpells : uint32
     // M'uru
     SPELL_DARKNESS                     = 45996,
     SPELL_DARKNESS_PRE_EFFECT          = 45999,
+    SPELL_ENTROPIUS_DARKNESS           = 46269,
     SPELL_SHADOW_BOLT_VOLLEY           = 46082,
     SPELL_FEL_FIREBALL                 = 46101,
     SPELL_SPELL_FURY                   = 46102,
@@ -149,6 +150,12 @@ enum class SwpObjects : uint32
 };
 
 inline constexpr uint32 SWP_MAP_ID = 580;
+
+// Shared by the trigger and the action so the two cannot drift apart
+inline constexpr float SWP_VOLATILE_FIEND_SEARCH_RADIUS = 25.0f;
+
+// Feeds the "swp volatile fiend" value
+inline constexpr uint32 SWP_VOLATILE_FIEND_CACHE_INTERVAL_MS = 200;
 
 }
 

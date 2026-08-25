@@ -9,14 +9,12 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
-#include "SWPData.h"
-#include "SWPEncounter_Brut.h"
+#include "SWPSharedConstants.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Kalec.h"
 #include "SWPEncounter_KJ.h"
-#include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
-#include <unordered_set>
+#include <list>
 #include <vector>
 
 using namespace SwpHelpers;
@@ -182,31 +180,15 @@ void RequestInterruptForEredarTwinsAlythessTargets(Creature* alythess)
 
 }
 
-class KalecgosSpellListenerScript : public AllSpellScript
+class KalecgosPortalSpellListenerScript : public AllSpellScript
 {
 public:
-    KalecgosSpellListenerScript() : AllSpellScript("KalecgosSpellListenerScript") {}
+    KalecgosPortalSpellListenerScript() : AllSpellScript("KalecgosPortalSpellListenerScript") {}
 
-    // Note: Kalecgos' "Spectral Blast" (44866) is a boss-cast spell (caster is the
-    // Kalecgos Dragon, a Creature), and "Teleport: Spectral Realm" (46019) is usually
-    // force-cast by the Spectral Rift GameObject onto the player who clicked it. In both
-    // cases caster->ToPlayer() is null, so the target player must be resolved from the
-    // spell targets instead. This is what enables bots to enter the Spectral Realm at all.
-    // By leewheel 20260820 //End By leewheel
     void OnSpellCast(
-        Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
+        Spell* /*spell*/, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
     {
-        // Resolve the affected player: for boss/GO-cast spells the affected player is the
-        // spell target, not the caster.
-        // By leewheel 20260820 //End By leewheel
-        Player* player = GetFirstPlayerSpellTarget(spell, caster);
-        if (!player)
-        {
-            // Fallback for spells whose only evaluatable target is the caster itself.
-            // By leewheel 20260820 //End By leewheel
-            player = caster->ToPlayer();
-        }
-
+        Player* player = caster->ToPlayer();
         if (!player)
             return;
 
@@ -331,10 +313,11 @@ public:
     }
 };
 
-class KiljaedenSpellListenerScript : public AllSpellScript
+class KiljaedenDarknessSpellListenerScript : public AllSpellScript
 {
 public:
-    KiljaedenSpellListenerScript() : AllSpellScript("KiljaedenSpellListenerScript") {}
+    KiljaedenDarknessSpellListenerScript()
+        : AllSpellScript("KiljaedenDarknessSpellListenerScript") {}
 
     void OnSpellCast(
         Spell* /*spell*/, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
@@ -358,6 +341,27 @@ public:
 
             botAI->RequestSpellInterrupt();
         }
+    }
+};
+
+class MuruVoidZoneSpellListenerScript : public AllSpellScript
+{
+public:
+    MuruVoidZoneSpellListenerScript() : AllSpellScript("MuruVoidZoneSpellListenerScript") {}
+
+    void OnSpellCast(
+        Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
+    {
+        if (spellInfo->Id != Id(SwpSpells::SPELL_ENTROPIUS_DARKNESS))
+            return;
+
+        Player* target = GetFirstPlayerSpellTarget(spell, caster);
+        if (!target)
+            return;
+
+        PlayerbotAI* botAI = GET_PLAYERBOT_AI(target);
+        if (botAI && botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
+            botAI->RequestSpellInterrupt();
     }
 };
 
@@ -388,15 +392,18 @@ public:
     }
 };
 
-class KiljaedenArmageddonTargetTrackerScript : public AllCreatureScript
+class KiljaedenArmageddonTargetCreatureScript : public AllCreatureScript
 {
 public:
-    KiljaedenArmageddonTargetTrackerScript()
-        : AllCreatureScript("KiljaedenArmageddonTargetTrackerScript") {}
+    KiljaedenArmageddonTargetCreatureScript()
+        : AllCreatureScript("KiljaedenArmageddonTargetCreatureScript") {}
 
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
     {
         if (!creature || creature->GetEntry() != Id(SwpNpcs::NPC_ARMAGEDDON_TARGET))
+            return;
+
+        if (kiljaedenTrackedArmageddonTargets.count(creature->GetGUID()))
             return;
 
         bool hasSunwellStrategy = false;
@@ -420,11 +427,10 @@ public:
             }
         }
 
-        if (!hasSunwellStrategy ||
-            !kiljaedenTrackedArmageddonTargets.insert(creature->GetGUID()).second)
-        {
+        if (!hasSunwellStrategy)
             return;
-        }
+
+        kiljaedenTrackedArmageddonTargets.insert(creature->GetGUID());
 
         AddKiljaedenArmageddon(
             creature->GetInstanceId(), creature->GetPosition(),
@@ -445,10 +451,11 @@ public:
 
 void AddSC_SunwellPlateauBotScripts()
 {
-    new KalecgosSpellListenerScript();
+    new KalecgosPortalSpellListenerScript();
     new FelmystSpellListenerScript();
     new EredarTwinsSpellListenerScript();
-    new KiljaedenSpellListenerScript();
+    new MuruVoidZoneSpellListenerScript();
+    new KiljaedenDarknessSpellListenerScript();
     new SunwellBossUpdateScript();
-    new KiljaedenArmageddonTargetTrackerScript();
+    new KiljaedenArmageddonTargetCreatureScript();
 }

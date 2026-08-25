@@ -121,6 +121,8 @@ public:
     AutoPartyBuffMode autoPartyBuffs;
     bool tellWhenMissingBuffReagents;
     uint32 missingBuffReagentMessageCooldown;
+    bool forceRebuffOnReadyCheck;
+    uint32 forceRebuffMarginSecs;
     bool autoAvoidAoe;
     float maxAoeAvoidRadius;
     std::set<uint32> aoeAvoidSpellWhitelist;
@@ -420,14 +422,12 @@ public:
     bool enableWarlockTradeStones;  // 交易时术士机器人自动给玩家治疗石/灵魂石 --By leewheel 2026-08-05
     uint32 tweakValue;  // Debugging config
 
-    uint32 randomBotArenaTeamCount;
     uint32 randomBotArenaTeamMaxRating;
     uint32 randomBotArenaTeamMinRating;
     uint32 randomBotArenaTeam2v2Count;
     uint32 randomBotArenaTeam3v3Count;
     uint32 randomBotArenaTeam5v5Count;
     bool deleteRandomBotArenaTeams;
-    std::vector<uint32> randomBotArenaTeams;
 
     uint32 selfBotLevel;
     bool downgradeMaxLevelBot;

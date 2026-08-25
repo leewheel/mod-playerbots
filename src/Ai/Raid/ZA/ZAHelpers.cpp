@@ -7,6 +7,9 @@
 #include "ZAHelpers.h"
 #include "Group.h"
 #include "Playerbots.h"
+#include <cmath>
+#include <limits>
+#include <list>
 
 namespace ZulAmanHelpers
 {
@@ -186,6 +189,9 @@ std::pair<Unit*, Unit*> GetAmanishiHatcherPair(PlayerbotAI* botAI)
 
 // Halazzi <Lynx Avatar>
 const Position HALAZZI_TANK_POSITION = { 370.733f, 1131.202f, 6.516f };
+
+// Hex Lord Malacrass
+// N/A
 
 // Zul'jin
 const Position ZULJIN_TANK_POSITION = { 120.210f, 705.564f, 45.111f };

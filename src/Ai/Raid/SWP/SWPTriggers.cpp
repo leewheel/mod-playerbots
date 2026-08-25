@@ -5,9 +5,10 @@
  */
 
 #include "SWPTriggers.h"
+#include "EncounterHelpers.h"
+#include "InstanceScript.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
-#include "SWPData.h"
+#include "SWPSharedConstants.h"
 #include "SWPEncounter_Brut.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Kalec.h"
@@ -16,12 +17,18 @@
 #include "SWPEncounter_Twins.h"
 
 using namespace SwpHelpers;
+using namespace EncounterHelpers;
 
 // General
 
-bool SunwellPlateauBotIsNotInCombatTrigger::IsActive()
+bool SunwellPlateauNoEncounterInProgressTrigger::IsActive()
 {
-    return bot->GetMapId() == SWP_MAP_ID && !AI_VALUE2(bool, "combat", "self target");
+    if (bot->GetMapId() != SWP_MAP_ID)
+        return false;
+
+    // InstanceScript reports IN_PROGRESS for every SWP boss from JustEngagedWith until kill/evade.
+    InstanceScript* instance = bot->GetInstanceScript();
+    return instance && !instance->IsEncounterInProgress();
 }
 
 bool SunwellPlateauBotHasProtectiveAuraTrigger::IsActive()
@@ -44,13 +51,12 @@ bool SunwellPlateauBotHasProtectiveAuraTrigger::IsActive()
 
 bool VolatileFiendSelfDestructsWhenNearTrigger::IsActive()
 {
-    constexpr float searchRadius = 25.0f;
-    Unit* fiend = bot->FindNearestCreature(Id(SwpNpcs::NPC_VOLATILE_FIEND), searchRadius, true);
-    if (!fiend)
+    Unit* fiend = botAI->GetCreature(AI_VALUE(ObjectGuid, "swp volatile fiend"));
+    if (!fiend || !fiend->IsAlive())
         return false;
 
     // Z-position comparison is so bots will go up the ramp to M'uru without getting stuck
-    // due to proximity to the volatile fiends below, if you decide to try to skip them
+    // due to proximity to the volatile fiends below, in case the player decides to skip them.
     constexpr float verticalOffset = 10.0f;
     return std::abs(bot->GetPositionZ() - fiend->GetPositionZ()) < verticalOffset;
 }
@@ -97,6 +103,15 @@ bool KalecgosShouldCommunicateBossHealthTrigger::IsActive()
     return bot == spectralBot || bot == surfaceBot;
 }
 
+bool KalecgosPullingBossTrigger::IsActive()
+{
+    if (bot->getClass() != CLASS_HUNTER)
+        return false;
+
+    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "24850");
+    return kalecgos && kalecgos->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT;
+}
+
 bool KalecgosBossRequiresTankRotationTrigger::IsActive()
 {
     if (!PlayerbotAI::IsTank(bot))
@@ -118,8 +133,7 @@ bool KalecgosSpectralRiftIsOpenTrigger::IsActive()
     if (!ShouldEnterKalecgosPortal(bot))
         return false;
 
-    constexpr float searchRadius = 75.0f;
-    return bot->FindNearestGameObject(Id(SwpObjects::GO_SPECTRAL_RIFT), searchRadius, true);
+    return botAI->GetGameObject(AI_VALUE(ObjectGuid, "kalecgos spectral rift"));
 }
 
 bool KalecgosBotsTakeSplashDamageTrigger::IsActive()
@@ -179,7 +193,7 @@ bool BrutallusPullingBossTrigger::IsActive()
         return false;
 
     Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
-    return brutallus && brutallus->GetHealthPct() > 95.0f;
+    return brutallus && brutallus->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT;
 }
 
 bool BrutallusBossEngagedByTanksTrigger::IsActive()
@@ -193,19 +207,19 @@ bool BrutallusBossEngagedByTanksTrigger::IsActive()
     return PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 }
 
-bool BrutallusMeleeShouldStayInPlaceTrigger::IsActive()
+bool BrutallusMeleeShouldStandInPlaceTrigger::IsActive()
 {
-    if (!PlayerbotAI::IsMelee(bot) || PlayerbotAI::IsMainTank(bot) ||
-        PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
-    {
+    if (!PlayerbotAI::IsMelee(bot))
         return false;
-    }
 
     Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
-    return brutallus && brutallus->GetVictim() != bot;
+    if (!brutallus || brutallus->GetVictim() == bot)
+        return false;
+
+    return !PlayerbotAI::IsMainTank(bot) && !PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 }
 
-bool BrutallusBossEngagedByRangedTrigger::IsActive()
+bool BrutallusRangedShouldSoakMeteorSlashTrigger::IsActive()
 {
     if (!PlayerbotAI::IsRanged(bot))
         return false;
@@ -236,13 +250,13 @@ bool FelmystPullingBossTrigger::IsActive()
     if (!felmyst)
         return false;
 
-    if (felmyst->GetHealthPct() > 90.0f)
+    if (felmyst->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT)
         return true;
 
     if (felmyst->IsFlying())
         return false;
 
-    Player* mainTank = GetGroupMainTank(botAI, bot);
+    Player* mainTank = GetGroupMainTank(bot);
     return mainTank && felmyst->GetVictim() != mainTank;
 }
 
@@ -288,10 +302,13 @@ bool FelmystRangedShouldSplitInThreeTrigger::IsActive()
     if (felmyst->GetVictim() == bot)
         return false;
 
-    // On initial landing, let MT get aggro before assuming positions
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (mainTank && felmyst->GetVictim() != mainTank && felmyst->GetHealthPct() > 90.0f)
+    // On initial landing, let the MT get aggro before assuming positions
+    Player* mainTank = GetGroupMainTank(bot);
+    if (mainTank && felmyst->GetVictim() != mainTank &&
+        felmyst->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT)
+    {
         return false;
+    }
 
     return !GetFelmystEncapsulateTarget(bot) && !DidEncapsulateOccurThisGroundPhase(bot);
 }
@@ -454,7 +471,7 @@ bool EredarTwinsPullingBossesTrigger::IsActive()
         return false;
 
     Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
-    return alythess && alythess->GetHealthPct() > 90.0f;
+    return alythess && alythess->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT;
 }
 
 bool EredarTwinsSacrolashEngagedByTwoTanksTrigger::IsActive()
@@ -525,11 +542,11 @@ bool EredarTwinsBotHasTooManyFlameTouchedStacksTrigger::IsActive()
         return false;
 
     Aura* flameSear = bot->GetAura(Id(SwpSpells::SPELL_FLAME_SEAR));
-    if (!flameSear || flameSear->GetDuration() > 2000)  // 2 seconds
+    if (!flameSear || flameSear->GetDuration() > FLAME_SEAR_PROTECT_WINDOW_MS)
         return false;
 
     Aura* flameTouched = bot->GetAura(Id(SwpSpells::SPELL_FLAME_TOUCHED));
-    return flameTouched && flameTouched->GetStackAmount() >= 5;
+    return flameTouched && flameTouched->GetStackAmount() >= FLAME_TOUCHED_PROTECT_STACKS;
 }
 
 bool EredarTwinsDeterminingDpsPriorityTrigger::IsActive()
@@ -537,7 +554,11 @@ bool EredarTwinsDeterminingDpsPriorityTrigger::IsActive()
     if (!AI_VALUE2(Unit*, "find target", "25166"))
         return false;
 
-    return !IsAnySacrolashTank(bot) && !IsAlythessTank(bot);
+    if (IsAnySacrolashTank(bot) || IsAlythessTank(bot))
+        return false;
+
+    RecordEredarTwinsDpsHoldStart(bot);
+    return true;
 }
 
 bool EredarTwinsBotHasConflagrationTrigger::IsActive()
@@ -566,12 +587,12 @@ bool MuruVoidSentinelOrEntropiusHasAppearedTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
-    if (entropius && entropius->GetHealthPct() > 80.0f)
+    Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
+    if (voidSentinel && voidSentinel->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT)
         return true;
 
-    Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
-    return voidSentinel && voidSentinel->GetHealthPct() > 80.0f;
+    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+    return entropius && entropius->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT;
 }
 
 bool MuruBossTransformedIntoEntropiusTrigger::IsActive()
@@ -601,13 +622,13 @@ bool MuruVoidSentinelPulsesShadowTrigger::IsActive()
         return false;
 
     Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
-    return muru && muru->GetHealth() > 1;
+    return IsMuruPhaseActive(muru);
 }
 
 bool MuruAddsSpawnAtEntranceTrigger::IsActive()
 {
     Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
-    if (!muru || muru->GetHealth() == 1)
+    if (!IsMuruPhaseActive(muru))
         return false;
 
     if (!PlayerbotAI::IsAssistTankOfIndex(bot, 1, true))
@@ -634,11 +655,11 @@ bool MuruEntropiusSpawnsDarknessPoolsTrigger::IsActive()
     if (!AI_VALUE2(Unit*, "find target", "25840"))
         return false;
 
-    if (AI_VALUE2(Unit*, "find target", "25744"))
+    if (FindMuruVoidZoneToAvoid(botAI))
         return true;
 
-    constexpr float searchRadius = 20.0f;
-    return bot->FindNearestCreature(Id(SwpNpcs::NPC_DARKNESS), searchRadius, true);
+    Unit* darkFiend = AI_VALUE2(Unit*, "find target", "25744");
+    return darkFiend && darkFiend->GetVictim() == bot;
 }
 
 bool MuruDarknessIsComingTrigger::IsActive()
@@ -647,7 +668,7 @@ bool MuruDarknessIsComingTrigger::IsActive()
         return false;
 
     Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
-    if (!muru || muru->GetHealth() == 1)
+    if (!IsMuruPhaseActive(muru))
         return false;
 
     return TryGetMuruDarknessActiveState(bot, muru);
@@ -659,43 +680,23 @@ bool MuruTheSingularityIsNearTrigger::IsActive()
     if (!entropius)
         return false;
 
-    constexpr float searchRadius = 30.0f;
-    return bot->FindNearestCreature(Id(SwpNpcs::NPC_SINGULARITY), searchRadius, true);
+    Creature* singularity = botAI->GetCreature(AI_VALUE(ObjectGuid, "muru singularity"));
+    return singularity && singularity->IsAlive();
 }
 
 bool MuruBerserkerIsBuffedWithFlurryTrigger::IsActive()
 {
-    if (bot->getClass() != CLASS_DRUID && bot->getClass() != CLASS_PALADIN &&
-        bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_WARLOCK &&
-        bot->getClass() != CLASS_WARRIOR)
-    {
-        return false;
-    }
-
-    Unit* berserker = AI_VALUE2(Unit*, "find target", "25798");
-    return berserker && berserker->HasAura(Id(SwpSpells::SPELL_FLURRY));
+    return FindMuruBerserkerToStun(botAI);
 }
 
 bool MuruFuryMageCastingFelFireballTrigger::IsActive()
 {
-    if (bot->getClass() == CLASS_DRUID || bot->getClass() == CLASS_PALADIN ||
-        bot->getClass() == CLASS_PRIEST || bot->getClass() == CLASS_WARLOCK)
-    {
-        return false;
-    }
-
-    Unit* furyMage = AI_VALUE2(Unit*, "find target", "25799");
-    return furyMage && furyMage->HasUnitState(UNIT_STATE_CASTING) &&
-        furyMage->FindCurrentSpellBySpellId(Id(SwpSpells::SPELL_FEL_FIREBALL));
+    return FindMuruFuryMageToInterrupt(botAI);
 }
 
 bool MuruFuryMageIsBuffedWithSpellFuryTrigger::IsActive()
 {
-    if (bot->getClass() != CLASS_MAGE)
-        return false;
-
-    Unit* furyMage = AI_VALUE2(Unit*, "find target", "25799");
-    return furyMage && furyMage->HasAura(Id(SwpSpells::SPELL_SPELL_FURY));
+    return FindMuruFuryMageToSpellsteal(botAI);
 }
 
 bool MuruVoidSpawnAvailableForEnslaveTrigger::IsActive()
@@ -709,7 +710,7 @@ bool MuruVoidSpawnAvailableForEnslaveTrigger::IsActive()
     if (bot->GetCharm())
         return false;
 
-    return FindAvailableVoidSpawnForEnslave(bot);
+    return FindAvailableVoidSpawnForEnslave(botAI);
 }
 
 bool MuruWarlockHasEnslavedVoidSpawnTrigger::IsActive()
@@ -782,9 +783,9 @@ bool KiljaedenBossEngagedByRangedTrigger::IsActive()
     if (IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
         return false;
 
-    // Allow Demo Lock to AoE the Reflections
+    // Allow Demo Locks to AoE the Reflections
     if (bot->getClass() == CLASS_WARLOCK && bot->HasAura(Id(SwpSpells::SPELL_METAMORPHOSIS)))
-        return AI_VALUE2(Unit*, "find target", "25708");
+        return !AI_VALUE2(Unit*, "find target", "25708");
 
     return true;
 }
@@ -804,7 +805,7 @@ bool KiljaedenBotHasFireBloomTrigger::IsActive()
         return false;
 
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
-    return kiljaeden && kiljaeden->GetHealthPct() < 55.0f;
+    return kiljaeden && kiljaeden->GetHealthPct() < KILJAEDEN_PHASE4_HP_THRESHOLD;
 }
 
 bool KiljaedenSaysChaosDestructionOblivionTrigger::IsActive()
@@ -822,7 +823,7 @@ bool KiljaedenSaysChaosDestructionOblivionTrigger::IsActive()
 bool KiljaedenDragonOrbIsActiveTrigger::IsActive()
 {
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
-    if (!kiljaeden || kiljaeden->GetHealthPct() > 85.0f)
+    if (!kiljaeden || kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD)
         return false;
 
     if (GetKiljaedenDragonOrbUser(bot) != bot)
@@ -834,10 +835,9 @@ bool KiljaedenDragonOrbIsActiveTrigger::IsActive()
     bool orbInUse = false;
     bool result = false;
 
-    for (uint32 const orbEntry : KILJAEDEN_DRAGON_ORB_ENTRIES)
+    for (ObjectGuid const& orbGuid : AI_VALUE(GuidVector, "kiljaeden dragon orbs"))
     {
-        constexpr float searchRadius = 200.0f;
-        GameObject* orb = bot->FindNearestGameObject(orbEntry, searchRadius, true);
+        GameObject* orb = botAI->GetGameObject(orbGuid);
         if (!orb)
             continue;
 
@@ -859,7 +859,7 @@ bool KiljaedenDragonOrbIsActiveTrigger::IsActive()
 bool KiljaedenBotHasStaleRootAfterDragonTrigger::IsActive()
 {
     Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
-    if (!kiljaeden || kiljaeden->GetHealthPct() > 85.0f)
+    if (!kiljaeden || kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD)
         return false;
 
     if (GetKiljaedenDragonOrbUser(bot) != bot)
@@ -868,9 +868,11 @@ bool KiljaedenBotHasStaleRootAfterDragonTrigger::IsActive()
     if (!bot->IsRooted() || bot->HasUnitState(UNIT_STATE_LOST_CONTROL))
         return false;
 
-    constexpr uint32 orbUseGraceMs = 2000;
-    if (HasKiljaedenDragonAura(bot) || HasRecentKiljaedenDragonOrbUse(bot, orbUseGraceMs))
+    if (HasKiljaedenDragonAura(bot) ||
+        HasRecentKiljaedenDragonOrbUse(bot, KILJAEDEN_ORB_USE_GRACE_MS))
+    {
         return false;
+    }
 
     return bot->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == NULL_MOTION_TYPE;
 }

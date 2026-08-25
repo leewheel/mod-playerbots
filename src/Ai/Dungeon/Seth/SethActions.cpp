@@ -8,13 +8,14 @@
 //End By leewheel
 
 #include "SethActions.h"
+#include "EncounterHelpers.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
-#include "SethData.h"
+#include "SethShared.h"
 #include <array>
 #include <cmath>
 
-using namespace SethData;
+using namespace SethShared;
+using namespace EncounterHelpers;
 
 bool TimeLostControllerMarkCharmingTotemWithSkullAction::Execute(Event /*event*/)
 {
