@@ -36,6 +36,29 @@ struct EredarTwinsBlazeTargetState
 inline constexpr float EREDAR_TWINS_BALCONY_Z = 50.0f;
 inline constexpr uint8 ALYTHESS_TANK_POSITION_COUNT = 5;
 
+// 坦克建立仇恨的宽限期，之后团队其他成员才开始输出
+inline constexpr uint32 EREDAR_TWINS_DPS_HOLD_MS = 8000;
+
+// 法术45246，由烈焰陷阱GO触发，3码半径内造成伤害；额外的1.5是一般回避留量。陷阱本身只在2.5码内激活。
+inline constexpr float EREDAR_TWINS_BLAZE_DANGER_RADIUS = 4.5f;
+inline constexpr float EREDAR_TWINS_BLAZE_SEARCH_RADIUS = 30.0f;
+
+// 比危险半径更宽：这里问的是"我身边是否出现了新的烈焰"，所以不能漏掉坦克移动中落下的
+inline constexpr float EREDAR_TWINS_BLAZE_UNDERFOOT_RADIUS = 5.0f;
+
+inline constexpr float SACROLASH_THREAT_HOLD_RATIO = 0.8f;
+inline constexpr float ALYTHESS_THREAT_HOLD_RATIO = 0.9f;
+
+inline constexpr float EREDAR_TWINS_CONFLAGRATION_SAFE_DISTANCE = 10.0f;
+
+// 燃烧在准备阶段记录，所以延迟覆盖了光环落地前的施法
+inline constexpr uint32 EREDAR_TWINS_CONFLAGRATION_DELAY_MS = 300;
+inline constexpr uint32 EREDAR_TWINS_CONFLAGRATION_WINDOW_MS = 2000;
+inline constexpr uint32 EREDAR_TWINS_BLAZE_TARGET_WINDOW_MS = 2000;
+
+inline constexpr uint8 FLAME_TOUCHED_PROTECT_STACKS = 5;
+inline constexpr int32 FLAME_SEAR_PROTECT_WINDOW_MS = 2000;
+
 inline Position const ALYTHESS_START_POSITION = { 1819.180f, 625.539f, 33.4038f };
 inline std::array const ALYTHESS_TANK_POSITIONS = {
     Position{ 1816.830f, 620.792f, 33.404f },

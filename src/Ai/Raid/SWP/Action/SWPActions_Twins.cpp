@@ -225,7 +225,7 @@ bool EredarTwinsPositionRangedAction::Execute(Event /*event*/)
             SWP_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
             false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
     }
-    // Jump down during Phase 2 or if the bot pulls aggro on Sacrolash
+    // 第二阶段或机器人对 Alythess 或 Sacrolash 产生仇恨时跳下平台
     else if (bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z)
     {
         Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
@@ -293,13 +293,13 @@ bool EredarTwinsRemoveFlameSearAction::Execute(Event /*event*/)
 bool EredarTwinsDpsPrioritizeLadySacrolashAction::Execute(Event /*event*/)
 {
     Unit* twinTarget = AI_VALUE2(Unit*, "find target", "25165");
-    float threatHoldRatio = 0.8f;
+    float threatHoldRatio = SACROLASH_THREAT_HOLD_RATIO;
     bool (*isTwinTank)(Player*) = IsAnySacrolashTank;
 
     if (!twinTarget)
     {
         twinTarget = AI_VALUE2(Unit*, "find target", "25166");
-        threatHoldRatio = 0.9f;
+        threatHoldRatio = ALYTHESS_THREAT_HOLD_RATIO;
         isTwinTank = IsAlythessTank;
     }
 
@@ -343,17 +343,17 @@ bool EredarTwinsConflagratedBotMoveFromGroupAction::Execute(Event /*event*/)
             false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
     }
 
-    constexpr float safeDistance = 10.0f;
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistance);
+    Player* nearestPlayer = GetNearestPlayerInRadius(
+        bot, EREDAR_TWINS_CONFLAGRATION_SAFE_DISTANCE);
     if (!nearestPlayer)
         return false;
 
     float const distanceToPlayer = bot->GetExactDist2d(nearestPlayer);
-    if (distanceToPlayer >= safeDistance)
+    if (distanceToPlayer >= EREDAR_TWINS_CONFLAGRATION_SAFE_DISTANCE)
         return false;
 
     bot->CastStop();
-    return MoveAway(nearestPlayer, safeDistance - distanceToPlayer);
+    return MoveAway(nearestPlayer, EREDAR_TWINS_CONFLAGRATION_SAFE_DISTANCE - distanceToPlayer);
 }
 
 bool EredarTwinsMoveFromConflagSacrolashVictimAction::Execute(Event /*event*/)
@@ -366,10 +366,9 @@ bool EredarTwinsMoveFromConflagSacrolashVictimAction::Execute(Event /*event*/)
     if (!victim)
         return false;
 
-    constexpr float safeDistance = 10.0f;
-    if (bot->GetDistance2d(victim) >= safeDistance)
+    if (bot->GetDistance2d(victim) >= EREDAR_TWINS_CONFLAGRATION_SAFE_DISTANCE)
         return false;
 
     bot->CastStop();
-    return MoveFromGroup(safeDistance);
+    return MoveFromGroup(EREDAR_TWINS_CONFLAGRATION_SAFE_DISTANCE);
 }

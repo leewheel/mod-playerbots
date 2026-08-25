@@ -97,14 +97,14 @@ private:
     static Trigger* razorscale_grounded(PlayerbotAI* ai) { return new RazorscaleGroundedTrigger(ai); }
     static Trigger* razorscale_harpoon_trigger(PlayerbotAI* ai) { return new RazorscaleHarpoonAvailableTrigger(ai); }
     static Trigger* razorscale_fuse_armor_trigger(PlayerbotAI* ai) { return new RazorscaleFuseArmorTrigger(ai); }
-    static Trigger* razorscale_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "razorscale"); }
-    static Trigger* ignis_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "ignis the furnace master"); }
+    static Trigger* razorscale_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "33186"); }
+    static Trigger* ignis_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "33118"); }
     static Trigger* iron_assembly_lightning_tendrils_trigger(PlayerbotAI* ai) { return new IronAssemblyLightningTendrilsTrigger(ai); }
     static Trigger* iron_assembly_overload_trigger(PlayerbotAI* ai) { return new IronAssemblyOverloadTrigger(ai); }
     static Trigger* iron_assembly_rune_of_power_trigger(PlayerbotAI* ai) { return new IronAssemblyRuneOfPowerTrigger(ai); }
     static Trigger* kologarn_mark_dps_target_trigger(PlayerbotAI* ai) { return new KologarnMarkDpsTargetTrigger(ai); }
     static Trigger* kologarn_fall_from_floor_trigger(PlayerbotAI* ai) { return new KologarnFallFromFloorTrigger(ai); }
-    static Trigger* kologarn_nature_resistance_trigger(PlayerbotAI* ai) { return new BossNatureResistanceTrigger(ai, "kologarn"); }
+    static Trigger* kologarn_nature_resistance_trigger(PlayerbotAI* ai) { return new BossNatureResistanceTrigger(ai, "32930"); }
     static Trigger* kologarn_rubble_slowdown_trigger(PlayerbotAI* ai) { return new KologarnRubbleSlowdownTrigger(ai); }
     static Trigger* kologarn_eyebeam_trigger(PlayerbotAI* ai) { return new KologarnEyebeamTrigger(ai); }
     static Trigger* kologarn_rti_target_trigger(PlayerbotAI* ai) { return new KologarnRtiTargetTrigger(ai); }
@@ -113,21 +113,21 @@ private:
     static Trigger* auriaya_fall_from_floor_trigger(PlayerbotAI* ai) { return new AuriayaFallFromFloorTrigger(ai); }
     static Trigger* hodir_biting_cold(PlayerbotAI* ai) { return new HodirBitingColdTrigger(ai); }
     static Trigger* hodir_near_snowpacked_icicle(PlayerbotAI* ai) { return new HodirNearSnowpackedIcicleTrigger(ai); }
-    static Trigger* hodir_frost_resistance_trigger(PlayerbotAI* ai) { return new BossFrostResistanceTrigger(ai, "hodir"); }
+    static Trigger* hodir_frost_resistance_trigger(PlayerbotAI* ai) { return new BossFrostResistanceTrigger(ai, "32845"); }
     static Trigger* freya_near_nature_bomb(PlayerbotAI* ai) { return new FreyaNearNatureBombTrigger(ai); }
-    static Trigger* freya_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "freya"); }
-    static Trigger* freya_nature_resistance_trigger(PlayerbotAI* ai) { return new BossNatureResistanceTrigger(ai, "freya"); }
+    static Trigger* freya_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "32906"); }
+    static Trigger* freya_nature_resistance_trigger(PlayerbotAI* ai) { return new BossNatureResistanceTrigger(ai, "32906"); }
     static Trigger* freya_mark_dps_target_trigger(PlayerbotAI* ai) { return new FreyaMarkDpsTargetTrigger(ai); }
     static Trigger* freya_move_to_healing_spore_trigger(PlayerbotAI* ai) { return new FreyaMoveToHealingSporeTrigger(ai); }
-    static Trigger* thorim_frost_resistance_trigger(PlayerbotAI* ai) { return new BossFrostResistanceTrigger(ai, "thorim"); }
-    static Trigger* thorim_nature_resistance_trigger(PlayerbotAI* ai) { return new BossNatureResistanceTrigger(ai, "thorim"); }
+    static Trigger* thorim_frost_resistance_trigger(PlayerbotAI* ai) { return new BossFrostResistanceTrigger(ai, "32865"); }
+    static Trigger* thorim_nature_resistance_trigger(PlayerbotAI* ai) { return new BossNatureResistanceTrigger(ai, "32865"); }
     static Trigger* thorim_unbalancing_strike_trigger(PlayerbotAI* ai) { return new ThorimUnbalancingStrikeTrigger(ai); }
     static Trigger* thorim_mark_dps_target_trigger(PlayerbotAI* ai) { return new ThorimMarkDpsTargetTrigger(ai); }
     static Trigger* thorim_arena_positioning_trigger(PlayerbotAI* ai) { return new ThorimArenaPositioningTrigger(ai); }
     static Trigger* thorim_gauntlet_positioning_trigger(PlayerbotAI* ai) { return new ThorimGauntletPositioningTrigger(ai); }
     static Trigger* thorim_fall_from_floor_trigger(PlayerbotAI* ai) { return new ThorimFallFromFloorTrigger(ai); }
     static Trigger* thorim_phase2_positioning_trigger(PlayerbotAI* ai) { return new ThorimPhase2PositioningTrigger(ai); }
-    static Trigger* mimiron_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "mimiron"); }
+    static Trigger* mimiron_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "33350"); }
     static Trigger* mimiron_shock_blast_trigger(PlayerbotAI* ai) { return new MimironShockBlastTrigger(ai); }
     static Trigger* mimiron_phase_1_positioning_trigger(PlayerbotAI* ai) { return new MimironPhase1PositioningTrigger(ai); }
     static Trigger* mimiron_p3wx2_laser_barrage_trigger(PlayerbotAI* ai) { return new MimironP3Wx2LaserBarrageTrigger(ai); }
@@ -138,9 +138,9 @@ private:
     static Trigger* mimiron_cheat_trigger(PlayerbotAI* ai) { return new MimironCheatTrigger(ai); }
     static Trigger* vezax_cheat_trigger(PlayerbotAI* ai) { return new VezaxCheatTrigger(ai); }
     static Trigger* vezax_shadow_crash_trigger(PlayerbotAI* ai) { return new VezaxShadowCrashTrigger(ai); }
-    static Trigger* vezax_shadow_resistance_trigger(PlayerbotAI* ai) { return new BossShadowResistanceTrigger(ai, "general vezax"); }
-    static Trigger* sara_shadow_resistance_trigger(PlayerbotAI* ai) { return new BossShadowResistanceTrigger(ai, "sara"); }
-    static Trigger* yogg_saron_shadow_resistance_trigger(PlayerbotAI* ai) { return new BossShadowResistanceTrigger(ai, "yogg-saron"); }
+    static Trigger* vezax_shadow_resistance_trigger(PlayerbotAI* ai) { return new BossShadowResistanceTrigger(ai, "33271"); }
+    static Trigger* sara_shadow_resistance_trigger(PlayerbotAI* ai) { return new BossShadowResistanceTrigger(ai, "33134"); }
+    static Trigger* yogg_saron_shadow_resistance_trigger(PlayerbotAI* ai) { return new BossShadowResistanceTrigger(ai, "33288"); }
     static Trigger* vezax_mark_of_the_faceless_trigger(PlayerbotAI* ai) { return new VezaxMarkOfTheFacelessTrigger(ai); }
     static Trigger* yogg_saron_ominous_cloud_cheat_trigger(PlayerbotAI* ai) { return new YoggSaronOminousCloudCheatTrigger(ai); }
     static Trigger* yogg_saron_guardian_positioning_trigger(PlayerbotAI* ai) { return new YoggSaronGuardianPositioningTrigger(ai); }

@@ -29,10 +29,10 @@ bool SethekkProphetSetTremorTotemAction::Execute(Event /*event*/)
 bool DarkweaverSythMarkElementalsWithSkullAction::Execute(Event /*event*/)
 {
     static constexpr std::array elementals = {
-        "syth frost elemental",
-        "syth shadow elemental",
-        "syth arcane elemental",
-        "syth fire elemental",
+        "19290",
+        "19291",
+        "19292",
+        "19293",
     };
 
     for (auto const& name : elementals)

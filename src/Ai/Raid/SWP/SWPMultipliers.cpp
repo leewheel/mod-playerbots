@@ -488,13 +488,10 @@ float EredarTwinsControlThreatMultiplier::GetValue(Action* action)
     Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
 
-    constexpr float alythessThreatRatio = 0.9f;
-    constexpr float sacrolashThreatRatio = 0.8f;
-
     bool const shouldHoldSacrolashThreat = sacrolash && ShouldHoldTwinThreat(
-        bot, sacrolash, sacrolashThreatRatio, IsAnySacrolashTank);
+        bot, sacrolash, SACROLASH_THREAT_HOLD_RATIO, IsAnySacrolashTank);
     bool const shouldHoldAlythessThreat = alythess && ShouldHoldTwinThreat(
-        bot, alythess, alythessThreatRatio, IsAlythessTank);
+        bot, alythess, ALYTHESS_THREAT_HOLD_RATIO, IsAlythessTank);
 
     if (!shouldHoldSacrolashThreat && !shouldHoldAlythessThreat)
         return 1.0f;

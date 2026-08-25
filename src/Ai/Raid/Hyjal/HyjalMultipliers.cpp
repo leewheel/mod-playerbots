@@ -37,7 +37,7 @@ float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
 
     Unit* boss = nullptr;
     for (char const* name : // In reverse instance order
-         { "archimonde", "azgalor", "kaz'rogal", "anetheron", "rage winterchill" })
+         { "17968", "17842", "17888", "17808", "17711" })
     {
         boss = AI_VALUE2(Unit*, "find target", name);
         if (boss)

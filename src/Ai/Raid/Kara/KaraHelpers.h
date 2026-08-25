@@ -124,11 +124,11 @@ inline std::array const BIG_BAD_WOLF_RUN_POSITIONS = {
 
 // Wizard of Oz
 inline std::array const OZ_TARGETS = {
-    "dorothee",
-    "tito",
-    "roar",
-    "strawman",
-    "tinhead",
+    "17535",
+    "17545",
+    "17546",
+    "17547",
+    "17548",
 };
 
 // The Curator

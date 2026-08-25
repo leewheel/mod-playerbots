@@ -1253,7 +1253,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::MeleeDpsPositionOutsideBo
 bool KaelthasSunstriderManageAdvisorDpsTimerAction::Execute(Event /*event*/)
 {
     static constexpr std::array advisorNames = {
-        "grand astromancer capernian", "master engineer telonicus", "lord sanguinar", };
+        "20062", "20063", "20060", };
 
     bool advisorAtFullHp = false;
     for (char const* name : advisorNames)

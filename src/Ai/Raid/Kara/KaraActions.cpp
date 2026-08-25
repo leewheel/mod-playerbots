@@ -283,12 +283,12 @@ bool AttumenTheHuntsmanSetDpsTimerAction::Execute(Event /*event*/)
 bool MoroesMarkTargetAction::Execute(Event /*event*/)
 {
     static constexpr std::array moroesGuests = {
-        "baroness dorothea millstipe",
-        "lady catriona von'indi",
-        "lady keira berrybuck",
-        "baron rafe dreuger",
-        "lord robin daris",
-        "lord crispin ference",
+        "19874",
+        "19875",
+        "19876",
+        "19877",
+        "19878",
+        "19879",
     };
 
     for (const char* name : moroesGuests)
@@ -590,7 +590,7 @@ bool TheCuratorSpreadRangedAction::Execute(Event /*event*/)
 bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
 {
     static constexpr std::array illhoofTargets = {
-        "demon chains", "kil'rek", "terestian illhoof", };
+        "17256", "17229", "15688", };
 
     for (const char* name : illhoofTargets)
     {

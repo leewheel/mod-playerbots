@@ -37,8 +37,8 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValue(Action* action)
         return 1.0f;
 
     static constexpr std::array BlackTempleBosses = {
-        "gathios the shatterer", "mother shahraz", "essence of suffering", "gurtogg bloodboil",
-        "teron gorefiend", "supremus", "high warlord naj'entus" };
+        "22949", "22947", "22889", "22948",
+        "22871", "22898", "22939" };
 
     Unit* boss = nullptr;
     for (const char* name : BlackTempleBosses)

@@ -322,9 +322,10 @@ Unit* MuruAssignDpsPriorityAction::ResolveMuruDpsTarget(Unit*& currentTarget)
 
     if (stickyTarget)
     {
+        // 不允许的粘性目标索引会越过末尾，否则它会与同样不存在的期望目标平手并赢得比较
         size_t const currentPriority = getPriorityIndex(stickyTarget);
         size_t const desiredPriority = getPriorityIndex(target);
-        if (currentPriority <= desiredPriority)
+        if (currentPriority < priorityTargets.size() && currentPriority <= desiredPriority)
             target = stickyTarget;
     }
 

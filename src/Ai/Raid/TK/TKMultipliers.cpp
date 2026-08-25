@@ -17,6 +17,7 @@
 #include "ShamanActions.h"
 #include "TKActions.h"
 #include "TKHelpers.h"
+#include "WarlockActions.h"
 #include <ctime>
 
 using namespace TkHelpers;
@@ -350,6 +351,30 @@ float KaelthasSunstriderControlMisdirectionMultiplier::GetValue(Action* action)
         return 0.0f;
 
     return 1.0f;
+}
+
+// 此乘法器目前不需要，因为灵魂碎裂只在有多个敌人时施放。这可能不是正确的做法，应该被修复，
+// 所以这个乘法器保留以备将来修正灵魂碎裂的使用。
+float KaelthasSunstriderDisableWarlockTankSoulshatterMultiplier::GetValue(Action* action)
+{
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (bot->getClass() != CLASS_WARLOCK)
+        return 1.0f;
+
+    if (!dynamic_cast<CastSoulshatterAction*>(action))
+        return 1.0f;
+
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    if (!kaelthas)
+        return 1.0f;
+
+    uint32 const phase = GetKaelthasPhase(kaelthas);
+    if (phase != PHASE_SINGLE_ADVISOR && phase != PHASE_ALL_ADVISORS)
+        return 1.0f;
+
+    return GetCapernianTank(bot) == bot ? 0.0f : 1.0f;
 }
 
 float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValue(Action* action)
