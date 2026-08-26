@@ -95,7 +95,7 @@ float KalecgosControlMovementMultiplier::GetValue(Action* action)
     return kalecgos && !kalecgos->IsFriendlyTo(bot) ? 0.0f : 1.0f;
 }
 
-// Separate paths to avoid dueling taunts in the surface and spectral realms
+// Avoid dueling taunts in the surface and spectral realms
 float KalecgosRestrictTauntMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -140,6 +140,29 @@ float KalecgosSuppressAssistTankPullThreatMultiplier::GetValue(Action* action)
 
     return getMSTimeDiff(stateItr->second.encounterStartMs, getMSTime()) <
         KALECGOS_PULL_THREAT_SUPPRESSION_MS ? 0.0f : 1.0f;
+}
+
+float KalecgosEnterSpectralRiftMultiplier::GetValue(Action* action)
+{
+    if (!dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    if (dynamic_cast<AttackAction*>(action))
+        return 1.0f;
+
+    if (dynamic_cast<KalecgosEnterSpectralRiftAction*>(action))
+        return 1.0f;
+
+    if (!AI_VALUE2(Unit*, "find target", "24850"))
+        return 1.0f;
+
+    if (!ShouldEnterKalecgosPortal(bot))
+        return 1.0f;
+
+    return botAI->GetGameObject(AI_VALUE(ObjectGuid, "kalecgos spectral rift")) ? 0.0f : 1.0f;
 }
 
 float KalecgosDelayCooldownsForSathrovarrMultiplier::GetValue(Action* action)
@@ -473,7 +496,7 @@ float EredarTwinsHoldDpsAtStartMultiplier::GetValue(Action* action)
     if (!AI_VALUE2(Unit*, "find target", "25165"))
         return 1.0f;
 
-    // Read only: the window is opened by EredarTwinsDeterminingDpsPriorityTrigger
+    // Read only: the window is opened by EredarTwinsShouldFocusDpsTrigger
     auto const it = eredarTwinsDpsHoldStartMs.find(bot->GetInstanceId());
     if (it == eredarTwinsDpsHoldStartMs.end())
         return 1.0f;
@@ -489,7 +512,7 @@ float EredarTwinsControlThreatMultiplier::GetValue(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    if (dynamic_cast<EredarTwinsDpsPrioritizeLadySacrolashAction*>(action))
+    if (dynamic_cast<EredarTwinsDpsPrioritizeSacrolashAction*>(action))
         return 1.0f;
 
     Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
@@ -541,15 +564,15 @@ float EredarTwinsControlMovementMultiplier::GetValue(Action* action)
     return PlayerbotAI::IsRanged(bot) || IsAlythessTank(bot) ? 0.0f : 1.0f;
 }
 
-float EredarTwinsNoMovingIntoConflagrationMultiplier::GetValue(Action* action)
+float EredarTwinsIsolateConflagrationMultiplier::GetValue(Action* action)
 {
     bool const isReachSpell = dynamic_cast<CastReachTargetSpellAction*>(action);
 
     if (!isReachSpell && !dynamic_cast<MovementAction*>(action))
         return 1.0f;
 
-    if (dynamic_cast<EredarTwinsConflagratedBotMoveFromGroupAction*>(action) ||
-        dynamic_cast<EredarTwinsMoveFromConflagSacrolashVictimAction*>(action))
+    if (dynamic_cast<EredarTwinsConflagrationTargetMoveFromGroupAction*>(action) ||
+        dynamic_cast<EredarTwinsMoveAwayFromSacrolashVictimAction*>(action))
     {
         return 1.0f;
     }
@@ -578,7 +601,7 @@ float EredarTwinsNoMovingIntoConflagrationMultiplier::GetValue(Action* action)
         return 0.0f;
 
     // Block movement actions generally when too close to the Conflagration target
-    return bot->GetExactDist2d(victim) < EREDAR_TWINS_CONFLAGRATION_SAFE_DISTANCE ? 0.0f : 1.0f;
+    return bot->GetExactDist2d(victim) < CONFLAGRATION_SAFE_DISTANCE ? 0.0f : 1.0f;
 }
 
 float EredarTwinsDelayCooldownsMultiplier::GetValue(Action* action)
@@ -597,7 +620,7 @@ float EredarTwinsDelayCooldownsMultiplier::GetValue(Action* action)
     if (!sacrolash)
         return 1.0f;
 
-    return sacrolash->GetHealthPct() > EREDAR_TWINS_MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
+    return sacrolash->GetHealthPct() > MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
 }
 
 // M'uru
@@ -698,7 +721,7 @@ float MuruControlMovementMultiplier::GetValue(Action* action)
             MURU_ENTRANCE_POSITION : MURU_STACK_POSITION;
         float const targetDistFromRef = actionTarget->GetExactDist2d(refPosition);
 
-        return targetDistFromMuru > MURU_DARKNESS_SAFE_DISTANCE &&
+        return targetDistFromMuru > DARKNESS_SAFE_DISTANCE &&
             targetDistFromRef < MURU_HOLDING_POSITION_RADIUS;
     };
 
@@ -830,7 +853,7 @@ float KiljaedenControlDragonMultiplier::GetValue(Action* action)
     if (!AI_VALUE2(Unit*, "find target", "25315"))
         return 1.0f;
 
-    if (dynamic_cast<KiljaedenControlDragonAction*>(action))
+    if (dynamic_cast<KiljaedenDragonBuffAndProtectRaidAction*>(action))
         return 1.0f;
 
     if (dynamic_cast<WipeAction*>(action))
