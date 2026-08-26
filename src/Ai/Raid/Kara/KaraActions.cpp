@@ -28,75 +28,53 @@ using namespace EncounterHelpers;
 
 bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
 {
-    uint32 const instanceId = bot->GetMap()->GetInstanceId();
-    bool const isMechanicTracker = IsMechanicTrackerBot(botAI, bot, KARA_MAP_ID);
+    // 合并brighton 2026-08-26: 统一重置三色光束/大灰狼run状态与blocker, 机械追踪器额外清DPS等待计时
+    //By leewheel 2026年8月26日
+    uint32 const instanceId = bot->GetInstanceId();
     bool reset = false;
 
-    if (isMechanicTracker)
+    Action* redAction = context->GetAction("netherspite block red beam");
+    if (redAction &&
+        static_cast<NetherspiteBlockRedBeamAction*>(redAction)->ResetRedBeamState())
     {
-        if (!AI_VALUE2(Unit*, "find target", "16151") &&
-            attumenDpsWaitTimer.erase(instanceId) > 0)
-        {
-            reset = true;
-        }
-
-        if (!AI_VALUE2(Unit*, "find target", "17225"))
-        {
-            if (nightbaneDpsWaitTimer.erase(instanceId) > 0)
-                reset = true;
-
-            if (nightbaneFlightPhaseStartTimer.erase(instanceId) > 0)
-                reset = true;
-        }
+        reset = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "17521"))
+    Action* blueAction = context->GetAction("netherspite block blue beam");
+    if (blueAction &&
+        static_cast<NetherspiteBlockBlueBeamAction*>(blueAction)->ResetBlueBeamState())
     {
-        Action* wolfAction = context->GetAction("big bad wolf little red riding hood run away");
-        if (wolfAction &&
-            static_cast<BigBadWolfLittleRedRidingHoodRunAwayAction*>(wolfAction)->ResetRunIndex())
-        {
-            reset = true;
-        }
+        reset = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "15689"))
+    Action* greenAction = context->GetAction("netherspite block green beam");
+    if (greenAction &&
+        static_cast<NetherspiteBlockGreenBeamAction*>(greenAction)->ResetGreenBeamState())
     {
-        if (isMechanicTracker && netherspiteDpsWaitTimer.erase(instanceId) > 0)
-            reset = true;
-
-        Action* redAction = context->GetAction("netherspite block red beam");
-        if (redAction &&
-            static_cast<NetherspiteBlockRedBeamAction*>(redAction)->ResetRedBeamState())
-        {
-            reset = true;
-        }
-
-        Action* blueAction = context->GetAction("netherspite block blue beam");
-        if (blueAction &&
-            static_cast<NetherspiteBlockBlueBeamAction*>(blueAction)->ResetBlueBeamState())
-        {
-            reset = true;
-        }
-
-        Action* greenAction = context->GetAction("netherspite block green beam");
-        if (greenAction &&
-            static_cast<NetherspiteBlockGreenBeamAction*>(greenAction)->ResetGreenBeamState())
-        {
-            reset = true;
-        }
-
-        if (currentRedBlocker.erase(instanceId) > 0)
-            reset = true;
-
-        if (currentGreenBlocker.erase(instanceId) > 0)
-            reset = true;
-
-        if (currentBlueBlocker.erase(instanceId) > 0)
-            reset = true;
+        reset = true;
     }
+
+    reset |= currentRedBlocker.erase(instanceId) > 0;
+    reset |= currentGreenBlocker.erase(instanceId) > 0;
+    reset |= currentBlueBlocker.erase(instanceId) > 0;
+
+    Action* wolfAction = context->GetAction("big bad wolf little red riding hood run away");
+    if (wolfAction &&
+        static_cast<BigBadWolfLittleRedRidingHoodRunAwayAction*>(wolfAction)->ResetRunIndex())
+    {
+        reset = true;
+    }
+
+    if (!IsMechanicTrackerBot(bot, KARA_MAP_ID))
+        return reset;
+
+    reset |= attumenDpsWaitTimer.erase(instanceId) > 0;
+    reset |= netherspiteDpsWaitTimer.erase(instanceId) > 0;
+    reset |= nightbaneDpsWaitTimer.erase(instanceId) > 0;
+    reset |= nightbaneFlightPhaseStartTimer.erase(instanceId) > 0;
 
     return reset;
+    //End By leewheel
 }
 
 bool KarazhanCastFearProtectionSpellAction::Execute(Event /*event*/)

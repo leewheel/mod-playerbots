@@ -6,15 +6,20 @@
 
 #include "GruulTriggers.h"
 #include "GruulHelpers.h"
+#include "InstanceScript.h"
 #include "Playerbots.h"
 
 using namespace GruulHelpers;
 
 // General
 
-bool GruulsLairBotIsNotInCombatTrigger::IsActive()
+bool GruulsLairNoEncounterInProgress::IsActive()
 {
-    return bot->GetMapId() == GRUUL_MAP_ID && !AI_VALUE2(bool, "combat", "self target");
+    if (bot->GetMapId() != GRUUL_MAP_ID)
+        return false;
+
+    InstanceScript* instance = bot->GetInstanceScript();
+    return instance && !instance->IsEncounterInProgress();
 }
 
 // High King Maulgar

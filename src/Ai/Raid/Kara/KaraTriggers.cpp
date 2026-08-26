@@ -9,6 +9,7 @@
 
 #include "KaraTriggers.h"
 #include "EncounterHelpers.h"
+#include "InstanceScript.h"
 #include "KaraActions.h"
 #include "KaraHelpers.h"
 #include "Playerbots.h"
@@ -18,9 +19,13 @@ using namespace EncounterHelpers;
 
 // General
 
-bool KarazhanBotIsNotInCombatTrigger::IsActive()
+bool KarazhanNoEncounterInProgressTrigger::IsActive()
 {
-    return bot->GetMapId() == KARA_MAP_ID && !AI_VALUE2(bool, "combat", "self target");
+    if (bot->GetMapId() != KARA_MAP_ID)
+        return false;
+
+    InstanceScript* instance = bot->GetInstanceScript();
+    return instance && !instance->IsEncounterInProgress();
 }
 
 bool KarazhanEnemiesCastFearTrigger::IsActive()

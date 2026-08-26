@@ -17,8 +17,8 @@ public:
     RaidHyjalSummitTriggerContext()
     {
         // General
-        creators["hyjal summit bot is not in combat"] =
-            &RaidHyjalSummitTriggerContext::hyjal_summit_bot_is_not_in_combat;
+        creators["hyjal summit no encounter in progress"] =
+            &RaidHyjalSummitTriggerContext::hyjal_summit_no_encounter_in_progress;
 
         // Rage Winterchill
         creators["rage winterchill pulling boss"] =
@@ -133,8 +133,8 @@ public:
 
 private:
     // General
-    static Trigger* hyjal_summit_bot_is_not_in_combat(PlayerbotAI* botAI) {
-        return new HyjalSummitBotIsNotInCombatTrigger(botAI);
+    static Trigger* hyjal_summit_no_encounter_in_progress(PlayerbotAI* botAI) {
+        return new HyjalSummitNoEncounterInProgress(botAI);
     }
 
     // Rage Winterchill
@@ -143,7 +143,7 @@ private:
             botAI, "rage winterchill pulling boss", "rage winterchill");
     }
     static Trigger* rage_winterchill_boss_engaged_by_main_tank(PlayerbotAI* botAI) {
-        return new HyjalBossEngagedByMainTankTrigger(
+        return new HyjalBossShouldBeTankedTrigger(
             botAI, "rage winterchill boss engaged by main tank", "rage winterchill");
     }
     static Trigger* rage_winterchill_ranged_should_spread(PlayerbotAI* botAI) {
@@ -161,7 +161,7 @@ private:
         return new AnetheronPullingBossOrInfernalTrigger(botAI);
     }
     static Trigger* anetheron_boss_engaged_by_main_tank(PlayerbotAI* botAI) {
-        return new HyjalBossEngagedByMainTankTrigger(
+        return new HyjalBossShouldBeTankedTrigger(
             botAI, "anetheron boss engaged by main tank", "anetheron");
     }
     static Trigger* anetheron_ranged_should_spread(PlayerbotAI* botAI) {
@@ -185,7 +185,7 @@ private:
         return new HyjalPullingBossTrigger(botAI, "kaz'rogal pulling boss", "kaz'rogal");
     }
     static Trigger* kazrogal_boss_engaged_by_main_tank(PlayerbotAI* botAI) {
-        return new HyjalBossEngagedByMainTankTrigger(
+        return new HyjalBossShouldBeTankedTrigger(
             botAI, "kaz'rogal boss engaged by main tank", "kaz'rogal");
     }
     static Trigger* kazrogal_malevolent_cleave_splits_damage(PlayerbotAI* botAI) {
@@ -212,7 +212,7 @@ private:
         return new HyjalPullingBossTrigger(botAI, "azgalor pulling boss", "azgalor");
     }
     static Trigger* azgalor_boss_engaged_by_main_tank(PlayerbotAI* botAI) {
-        return new HyjalBossEngagedByMainTankTrigger(
+        return new HyjalBossShouldBeTankedTrigger(
             botAI, "azgalor boss engaged by main tank", "azgalor");
     }
     static Trigger* azgalor_boss_engaged_by_ranged(PlayerbotAI* botAI) {
@@ -239,7 +239,7 @@ private:
         return new HyjalPullingBossTrigger(botAI, "archimonde pulling boss", "archimonde");
     }
     static Trigger* archimonde_boss_engaged_by_main_tank(PlayerbotAI* botAI) {
-        return new HyjalBossEngagedByMainTankTrigger(
+        return new HyjalBossShouldBeTankedTrigger(
             botAI, "archimonde boss engaged by main tank", "archimonde",
             HyjalHelpers::BOSS_ENGAGED_HEALTH_PCT);
     }

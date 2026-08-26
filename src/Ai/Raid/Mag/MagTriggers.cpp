@@ -6,11 +6,21 @@
 
 #include "MagTriggers.h"
 #include "EncounterHelpers.h"
+#include "InstanceScript.h"
 #include "MagHelpers.h"
 #include "Playerbots.h"
 
 using namespace MagHelpers;
 using namespace EncounterHelpers;
+
+bool MagtheridonNoEncounterInProgressTrigger::IsActive()
+{
+    if (bot->GetMapId() != MAG_MAP_ID)
+        return false;
+
+    InstanceScript* instance = bot->GetInstanceScript();
+    return instance && !instance->IsEncounterInProgress();
+}
 
 bool MagtheridonFirstThreeChannelersEngagedByMainTankTrigger::IsActive()
 {
@@ -122,10 +132,4 @@ bool MagtheridonNeedToManageTimersAndAssignmentsTrigger::IsActive()
     return IsMechanicTrackerBot(bot, MAG_MAP_ID) &&
         AI_VALUE2(Unit*, "find target", "17257");
 }
-
-bool MagtheridonBotIsNotInCombatTrigger::IsActive()
-{
-    return bot->GetMapId() == MAG_MAP_ID && !AI_VALUE2(bool, "combat", "self target") &&
-        !AI_VALUE2(Unit*, "find target", "17257") &&
-        !AI_VALUE2(Unit*, "find target", "17256");
-}
+// 合并brighton 2026-08-26: 移除无声明无引用的孤立MagtheridonBotIsNotInCombatTrigger --By leewheel 2026年8月26日

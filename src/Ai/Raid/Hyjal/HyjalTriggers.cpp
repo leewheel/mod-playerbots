@@ -8,6 +8,7 @@
 #include "EncounterHelpers.h"
 #include "HyjalActions.h"
 #include "HyjalHelpers.h"
+#include "InstanceScript.h"
 #include "Playerbots.h"
 
 using namespace HyjalHelpers;
@@ -15,9 +16,13 @@ using namespace EncounterHelpers;
 
 // General
 
-bool HyjalSummitBotIsNotInCombatTrigger::IsActive()
+bool HyjalSummitNoEncounterInProgress::IsActive()
 {
-    return bot->GetMapId() == HYJAL_MAP_ID && !AI_VALUE2(bool, "combat", "self target");
+    if (bot->GetMapId() != HYJAL_MAP_ID)
+        return false;
+
+    InstanceScript* instance = bot->GetInstanceScript();
+    return instance && !instance->IsEncounterInProgress();
 }
 
 bool HyjalPullingBossTrigger::IsActive()
@@ -29,7 +34,7 @@ bool HyjalPullingBossTrigger::IsActive()
     return boss && boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
 }
 
-bool HyjalBossEngagedByMainTankTrigger::IsActive()
+bool HyjalBossShouldBeTankedTrigger::IsActive()
 {
     if (!PlayerbotAI::IsMainTank(bot))
         return false;

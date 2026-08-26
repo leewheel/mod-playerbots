@@ -6,11 +6,26 @@
 
 #include "ZATriggers.h"
 #include "EncounterHelpers.h"
+#include "InstanceScript.h"
 #include "Playerbots.h"
 #include "ZAHelpers.h"
 
 using namespace ZaHelpers;
 using namespace EncounterHelpers;
+
+// General
+
+bool ZulAmanNoEncounterInProgressTrigger::IsActive()
+{
+    if (bot->GetMapId() != ZA_MAP_ID)
+        return false;
+
+    InstanceScript* instance = bot->GetInstanceScript();
+    if (!instance || instance->IsEncounterInProgress())
+        return false;
+
+    return IsMechanicTrackerBot(bot, ZA_MAP_ID);
+}
 
 // Trash
 
@@ -71,7 +86,11 @@ bool AkilzonElectricalStormIncomingTrigger::IsActive()
 
 bool AkilzonBotsNeedToPrepareForElectricalStormTrigger::IsActive()
 {
-    return IsMechanicTrackerBot(bot, ZA_MAP_ID);
+    if (!IsMechanicTrackerBot(bot, ZA_MAP_ID))
+        return false;
+
+    // 合并brighton 2026-08-26: akil'zon按entry规则转23574 --By leewheel 2026年8月26日
+    return AI_VALUE2(Unit*, "find target", "23574");
 }
 
 // Nalorakk <Bear Avatar>
@@ -147,6 +166,7 @@ bool JanalaiAmanishiHatchersSpawnedTrigger::IsActive()
     if (!AI_VALUE2(Unit*, "find target", "23578"))
         return false;
 
+    // Just need to find one Hatcher to fire the trigger
     constexpr float searchRadius = 40.0f;
     return bot->FindNearestCreature(Id(ZaNpcs::NPC_AMANISHI_HATCHER), searchRadius);
 }
@@ -162,18 +182,18 @@ bool HalazziPullingBossTrigger::IsActive()
     return halazzi && halazzi->GetHealthPct() > ZA_PULL_COMPLETE_HP_PERCENT;
 }
 
-bool HalazziBossEngagedByMainTankTrigger::IsActive()
+bool HalazziShouldBeTankedTrigger::IsActive()
 {
     return PlayerbotAI::IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "23577");
 }
 
-bool HalazziBossSummonsSpiritLynxTrigger::IsActive()
+bool HalazziSpiritLynxHasAppearedTrigger::IsActive()
 {
     return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
         AI_VALUE2(Unit*, "find target", "23577");
 }
 
-bool HalazziDeterminingDpsTargetTrigger::IsActive()
+bool HalazziShouldFocusDpsTrigger::IsActive()
 {
     return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "23577");
 }
@@ -189,27 +209,19 @@ bool HexLordMalacrassPullingBossTrigger::IsActive()
     return malacrass && malacrass->GetHealthPct() > ZA_PULL_COMPLETE_HP_PERCENT;
 }
 
-bool HexLordMalacrassDeterminingKillOrderTrigger::IsActive()
+bool HexLordMalacrassShouldPrioritizeAddsTrigger::IsActive()
 {
     return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "24239");
 }
 
 bool HexLordMalacrassBossIsChannelingWhirlwindTrigger::IsActive()
 {
+    // 合并brighton 2026-08-26: hex lord malacrass按entry规则转24239; 攻击者为bot时视为安全(非通道旋风目标); 移除孤立的BossHasSpellReflectionTrigger(无声明) --By leewheel 2026年8月26日
     Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
-    if (!malacrass || !malacrass->HasAura(Id(ZaSpells::SPELL_HEX_LORD_WHIRLWIND)))
+    if (!malacrass || malacrass->GetVictim() == bot)
         return false;
 
-    return !(PlayerbotAI::IsTank(bot) && malacrass->GetVictim() == bot);
-}
-
-bool HexLordMalacrassBossHasSpellReflectionTrigger::IsActive()
-{
-    if (!PlayerbotAI::IsCaster(bot))
-        return false;
-
-    Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
-    return malacrass && malacrass->HasAura(Id(ZaSpells::SPELL_HEX_LORD_SPELL_REFLECTION));
+    return malacrass->HasAura(Id(ZaSpells::SPELL_HEX_LORD_WHIRLWIND));
 }
 
 bool HexLordMalacrassBossPlacedFreezingTrapTrigger::IsActive()

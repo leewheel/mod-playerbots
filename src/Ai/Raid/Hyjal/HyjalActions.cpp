@@ -28,36 +28,29 @@ using namespace EncounterHelpers;
 
 bool HyjalSummitResetEncounterStatesAction::Execute(Event /*event*/)
 {
-    ObjectGuid const guid = bot->GetGUID();
+    bool reset = false;
 
-    bool erased = false;
-    if (!AI_VALUE2(Unit*, "find target", "17767"))
+    // 合并brighton 2026-08-26: 直接重置各行动初始位置状态, 不再依赖find target守卫(17808/17767/17888)
+    //By leewheel 2026年8月26日
+    Action* winterchillAction = context->GetAction("rage winterchill spread ranged in circle");
+    if (winterchillAction && static_cast<RageWinterchillSpreadRangedInCircleAction*>(
+            winterchillAction)->ResetWinterchillPositionReached())
     {
-        Action* action = context->GetAction("rage winterchill spread ranged in circle");
-        if (action && static_cast<RageWinterchillSpreadRangedInCircleAction*>(
-                action)->ResetWinterchillPositionReached())
-        {
-            erased = true;
-        }
+        reset = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "17808"))
+    Action* anetheronAction = context->GetAction("anetheron spread ranged in circle");
+    if (anetheronAction && static_cast<AnetheronSpreadRangedInCircleAction*>(
+            anetheronAction)->ResetAnetheronPositionReached())
     {
-        Action* action = context->GetAction("anetheron spread ranged in circle");
-        if (action && static_cast<AnetheronSpreadRangedInCircleAction*>(
-                action)->ResetAnetheronPositionReached())
-        {
-            erased = true;
-        }
+        reset = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "17888") &&
-        botsBelowManaThreshold.erase(guid))
-    {
-        erased = true;
-    }
+    reset |= botsBelowManaThreshold.erase(bot->GetGUID()) > 0;
+    reset |= archimondeAirBurstTargets.erase(bot->GetInstanceId()) > 0;
 
-    return erased;
+    return reset;
+    //End By leewheel
 }
 
 bool HyjalMisdirectBossToMainTankAction::Execute(Event /*event*/)
@@ -99,7 +92,7 @@ bool HyjalMainTankPositionBossAction::Execute(Event /*event*/)
         return false;
 
     float const distToPosition = bot->GetExactDist2d(_position);
-    if (distToPosition <= _arrivalDistance)
+    if (distToPosition <= 4.0f)
         return false;
 
     float const botX = bot->GetPositionX();

@@ -8,6 +8,7 @@
 #include "AiFactory.h"
 #include "Corpse.h"
 #include "EncounterHelpers.h"
+#include "InstanceScript.h"
 #include "LootObjectStack.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
@@ -18,9 +19,13 @@ using namespace SerpentShrineCavernHelpers;
 using namespace EncounterHelpers;
 
 // General
-bool SerpentShrineCavernBotIsNotInCombatTrigger::IsActive()
+bool SerpentShrineCavernNoEncounterInProgressTrigger::IsActive()
 {
-    return bot->GetMapId() == SSC_MAP_ID && !AI_VALUE2(bool, "combat", "self target");
+    if (bot->GetMapId() != SSC_MAP_ID)
+        return false;
+
+    InstanceScript* instance = bot->GetInstanceScript();
+    return instance && !instance->IsEncounterInProgress();
 }
 
 // Trash Mobs
@@ -32,34 +37,43 @@ bool UnderbogColossusSpawnedToxicPoolAfterDeathTrigger::IsActive()
 
 bool GreyheartTidecallerWaterElementalTotemSpawnedTrigger::IsActive()
 {
-    return botAI->IsDps(bot) &&
+// 合并brighton 2026-08-26: greyheart tidecaller -> 21229, 使用静态方法
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsDps(bot) &&
            AI_VALUE2(Unit*, "find target", "21229");
+    //End By leewheel
 }
 
 // Hydross the Unstable <Duke of Currents>
 
 bool HydrossTheUnstableBotIsFrostTankTrigger::IsActive()
 {
-    return botAI->IsMainTank(bot) &&
+// 合并brighton 2026-08-26: hydross the unstable -> 21216
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsMainTank(bot) &&
            AI_VALUE2(Unit*, "find target", "21216");
+    //End By leewheel
 }
 
 bool HydrossTheUnstableBotIsNatureTankTrigger::IsActive()
 {
-    return botAI->IsAssistTankOfIndex(bot, 0, true) &&
+// 合并brighton 2026-08-26: hydross the unstable -> 21216
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
            AI_VALUE2(Unit*, "find target", "21216");
+    //End By leewheel
 }
 
 bool HydrossTheUnstableElementalsSpawnedTrigger::IsActive()
 {
-    if (botAI->IsHeal(bot))
+    if (PlayerbotAI::IsHeal(bot))
         return false;
 
     Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
     if (!hydross || hydross->GetHealthPct() < 10.0f)
         return false;
 
-    if (botAI->IsMainTank(bot) || botAI->IsAssistTankOfIndex(bot, 0, true))
+    if (PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
         return false;
 
     return AI_VALUE2(Unit*, "find target", "22035") ||
@@ -68,8 +82,11 @@ bool HydrossTheUnstableElementalsSpawnedTrigger::IsActive()
 
 bool HydrossTheUnstableDangerFromWaterTombsTrigger::IsActive()
 {
-    return botAI->IsRanged(bot) &&
+// 合并brighton 2026-08-26: hydross the unstable -> 21216
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsRanged(bot) &&
            AI_VALUE2(Unit*, "find target", "21216");
+    //End By leewheel
 }
 
 bool HydrossTheUnstableTankNeedsAggroUponPhaseChangeTrigger::IsActive()
@@ -81,9 +98,9 @@ bool HydrossTheUnstableTankNeedsAggroUponPhaseChangeTrigger::IsActive()
 bool HydrossTheUnstableAggroResetsUponPhaseChangeTrigger::IsActive()
 {
     if (bot->getClass() == CLASS_HUNTER ||
-        botAI->IsHeal(bot) ||
-        botAI->IsMainTank(bot) ||
-        botAI->IsAssistTankOfIndex(bot, 0, true))
+        PlayerbotAI::IsHeal(bot) ||
+        PlayerbotAI::IsMainTank(bot) ||
+        PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
         return false;
 
     return AI_VALUE2(Unit*, "find target", "21216");
@@ -111,7 +128,7 @@ bool TheLurkerBelowSpoutIsActiveTrigger::IsActive()
 
 bool TheLurkerBelowBossIsActiveForMainTankTrigger::IsActive()
 {
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return false;
 
     Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
@@ -127,7 +144,7 @@ bool TheLurkerBelowBossIsActiveForMainTankTrigger::IsActive()
 
 bool TheLurkerBelowBossCastsGeyserTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
@@ -144,7 +161,7 @@ bool TheLurkerBelowBossCastsGeyserTrigger::IsActive()
 // Trigger will be active only if there are at least 3 tanks in the raid
 bool TheLurkerBelowBossIsSubmergedTrigger::IsActive()
 {
-    if (!botAI->IsTank(bot))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
@@ -191,7 +208,7 @@ bool LeotherasTheBlindBossTransformedIntoDemonFormTrigger::IsActive()
 
 bool LeotherasTheBlindOnlyWarlockShouldTankDemonFormTrigger::IsActive()
 {
-    if (!botAI->IsTank(bot))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
     if (bot->HasAura(SPELL_INSIDIOUS_WHISPER))
@@ -208,7 +225,7 @@ bool LeotherasTheBlindOnlyWarlockShouldTankDemonFormTrigger::IsActive()
 
 bool LeotherasTheBlindBossEngagedByRangedTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     if (bot->HasAura(SPELL_INSIDIOUS_WHISPER))
@@ -225,7 +242,7 @@ bool LeotherasTheBlindBossEngagedByRangedTrigger::IsActive()
 
 bool LeotherasTheBlindBossChannelingWhirlwindTrigger::IsActive()
 {
-    if (botAI->IsTank(bot))
+    if (PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215");
@@ -241,7 +258,7 @@ bool LeotherasTheBlindBossChannelingWhirlwindTrigger::IsActive()
 
 bool LeotherasTheBlindBotHasTooManyChaosBlastStacksTrigger::IsActive()
 {
-    if (botAI->IsRanged(bot))
+    if (PlayerbotAI::IsRanged(bot))
         return false;
 
     if (!AI_VALUE2(Unit*, "find target", "21215"))
@@ -254,7 +271,7 @@ bool LeotherasTheBlindBotHasTooManyChaosBlastStacksTrigger::IsActive()
     if (!chaosBlast || chaosBlast->GetStackAmount() < 5)
         return false;
 
-    if (!GetLeotherasDemonFormTank(bot) && botAI->IsMainTank(bot))
+    if (!GetLeotherasDemonFormTank(bot) && PlayerbotAI::IsMainTank(bot))
         return false;
 
     return GetPhase2LeotherasDemon(bot);
@@ -268,7 +285,7 @@ bool LeotherasTheBlindInnerDemonHasAwakenedTrigger::IsActive()
 
 bool LeotherasTheBlindEnteredFinalPhaseTrigger::IsActive()
 {
-    if (botAI->IsHeal(bot))
+    if (PlayerbotAI::IsHeal(bot))
         return false;
 
     if (!AI_VALUE2(Unit*, "find target", "21215"))
@@ -304,32 +321,47 @@ bool LeotherasTheBlindBossWipesAggroUponPhaseChangeTrigger::IsActive()
 
 bool FathomLordKarathressBossEngagedByMainTankTrigger::IsActive()
 {
-    return botAI->IsMainTank(bot) &&
+// 合并brighton 2026-08-26: fathom-lord karathress -> 21214
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsMainTank(bot) &&
            AI_VALUE2(Unit*, "find target", "21214");
+    //End By leewheel
 }
 
 bool FathomLordKarathressCaribdisEngagedByFirstAssistTankTrigger::IsActive()
 {
-    return botAI->IsAssistTankOfIndex(bot, 0, false) &&
+// 合并brighton 2026-08-26: fathom-guard caribdis -> 21964
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, false) &&
            AI_VALUE2(Unit*, "find target", "21964");
+    //End By leewheel
 }
 
 bool FathomLordKarathressSharkkisEngagedBySecondAssistTankTrigger::IsActive()
 {
-    return botAI->IsAssistTankOfIndex(bot, 1, false) &&
+// 合并brighton 2026-08-26: fathom-guard sharkkis -> 21966
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 1, false) &&
            AI_VALUE2(Unit*, "find target", "21966");
+    //End By leewheel
 }
 
 bool FathomLordKarathressTidalvessEngagedByThirdAssistTankTrigger::IsActive()
 {
-    return botAI->IsAssistTankOfIndex(bot, 2, false) &&
+// 合并brighton 2026-08-26: fathom-guard tidalvess -> 21965, 第三副坦允许死人(true)
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 2, true) &&
            AI_VALUE2(Unit*, "find target", "21965");
+    //End By leewheel
 }
 
 bool FathomLordKarathressCaribdisTankNeedsDedicatedHealerTrigger::IsActive()
 {
-    return botAI->IsAssistHealOfIndex(bot, 0, true) &&
+// 合并brighton 2026-08-26: fathom-guard caribdis -> 21964
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsAssistHealOfIndex(bot, 0, true) &&
            AI_VALUE2(Unit*, "find target", "21964");
+    //End By leewheel
 }
 
 bool FathomLordKarathressPullingBossesTrigger::IsActive()
@@ -343,20 +375,23 @@ bool FathomLordKarathressPullingBossesTrigger::IsActive()
 
 bool FathomLordKarathressDeterminingKillOrderTrigger::IsActive()
 {
-    if (botAI->IsHeal(bot))
+    if (PlayerbotAI::IsHeal(bot))
         return false;
 
     if (!AI_VALUE2(Unit*, "find target", "21214"))
         return false;
 
-    if (botAI->IsDps(bot))
+    if (PlayerbotAI::IsDps(bot))
         return true;
-    else if (botAI->IsAssistTankOfIndex(bot, 0, false))
+    // 合并brighton 2026-08-26: 使用静态方法, 副坦用entry(fathom-guard caribdis/sharkkis/tidalvess -> 21964/21966/21965), 第三副坦允许死人(true)
+    //By leewheel 2026年8月26日
+    else if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, false))
         return !AI_VALUE2(Unit*, "find target", "21964");
-    else if (botAI->IsAssistTankOfIndex(bot, 1, false))
+    else if (PlayerbotAI::IsAssistTankOfIndex(bot, 1, false))
         return !AI_VALUE2(Unit*, "find target", "21966");
-    else if (botAI->IsAssistTankOfIndex(bot, 2, false))
+    else if (PlayerbotAI::IsAssistTankOfIndex(bot, 2, true))
         return !AI_VALUE2(Unit*, "find target", "21965");
+    //End By leewheel
     else
         return false;
 }
@@ -380,13 +415,16 @@ bool MorogrimTidewalkerPullingBossTrigger::IsActive()
 
 bool MorogrimTidewalkerBossEngagedByMainTankTrigger::IsActive()
 {
-    return botAI->IsMainTank(bot) &&
+// 合并brighton 2026-08-26: morogrim tidewalker -> 21213
+    //By leewheel 2026年8月26日
+    return PlayerbotAI::IsMainTank(bot) &&
            AI_VALUE2(Unit*, "find target", "21213");
+    //End By leewheel
 }
 
 bool MorogrimTidewalkerWaterGlobulesAreIncomingTrigger::IsActive()
 {
-    if (!botAI->IsRanged(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
@@ -397,7 +435,7 @@ bool MorogrimTidewalkerWaterGlobulesAreIncomingTrigger::IsActive()
 
 bool LadyVashjBossEngagedByMainTankTrigger::IsActive()
 {
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return false;
 
     return AI_VALUE2(Unit*, "find target", "21212") &&
@@ -406,7 +444,7 @@ bool LadyVashjBossEngagedByMainTankTrigger::IsActive()
 
 bool LadyVashjBossEngagedByRangedInPhase1Trigger::IsActive()
 {
-    return botAI->IsRanged(bot) && IsLadyVashjInPhase1(botAI);
+    return PlayerbotAI::IsRanged(bot) && IsLadyVashjInPhase1(botAI);
 }
 
 bool LadyVashjCastsShockBlastOnHighestAggroTrigger::IsActive()
@@ -418,7 +456,7 @@ bool LadyVashjCastsShockBlastOnHighestAggroTrigger::IsActive()
         IsLadyVashjInPhase2(botAI))
         return false;
 
-    return IsMainTankInSameSubgroup(botAI, bot);
+    return IsMainTankInSameSubgroup(bot);
 }
 
 bool LadyVashjBotHasStaticChargeTrigger::IsActive()
@@ -456,7 +494,7 @@ bool LadyVashjPullingBossInPhase1AndPhase3Trigger::IsActive()
 
 bool LadyVashjAddsSpawnInPhase2AndPhase3Trigger::IsActive()
 {
-    if (botAI->IsHeal(bot))
+    if (PlayerbotAI::IsHeal(bot))
         return false;
 
     return AI_VALUE2(Unit*, "find target", "21212") &&
@@ -532,30 +570,7 @@ bool LadyVashjTaintedCoreWasLootedTrigger::IsActive()
     return AnyRecentCoreInInventory(botAI, bot);
 }
 
-bool LadyVashjTaintedCoreIsUnusableTrigger::IsActive()
-{
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    if (!vashj)
-        return false;
-
-    if (!IsLadyVashjInPhase2(botAI))
-        return bot->HasItemCount(ITEM_TAINTED_CORE, 1, false);
-
-    auto coreHandlers = GetCoreHandlers(botAI, bot);
-
-    if (bot->HasItemCount(ITEM_TAINTED_CORE, 1, false))
-    {
-        for (Player* coreHandler : coreHandlers)
-        {
-            if (coreHandler && bot == coreHandler)
-                return false;
-        }
-        return true;
-    }
-
-    return false;
-}
-
+// 合并brighton 2026-08-26: 移除无声明无注册的孤立LadyVashjTaintedCoreIsUnusableTrigger --By leewheel 2026年8月26日
 bool LadyVashjToxicSporebatsAreSpewingPoisonCloudsTrigger::IsActive()
 {
     return IsLadyVashjInPhase3(botAI);
@@ -576,7 +591,7 @@ bool LadyVashjBotIsEntangledInToxicSporesOrStaticChargeTrigger::IsActive()
         if (!member || !member->HasAura(SPELL_ENTANGLE))
             continue;
 
-        if (botAI->IsMelee(member))
+        if (PlayerbotAI::IsMelee(member))
             return true;
     }
 

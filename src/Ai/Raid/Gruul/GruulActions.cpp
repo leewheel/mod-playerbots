@@ -21,25 +21,21 @@ using namespace EncounterHelpers;
 
 bool GruulsLairResetEncounterStatesAction::Execute(Event /*event*/)
 {
+    // 合并brighton 2026-08-26: 不再依赖find target守卫, 直接统一重置图标与分散走位初始位置
+    //By leewheel 2026年8月26日
     bool reset = false;
 
-    if (!AI_VALUE2(Unit*, "find target", "18831") &&
-        ClearTargetIcon(bot, RtiTargetValue::skullIndex))
+    reset |= ClearTargetIcon(bot, RtiTargetValue::skullIndex);
+
+    Action* action = context->GetAction("gruul the dragonkiller spread ranged");
+    if (action &&
+        static_cast<GruulTheDragonkillerSpreadRangedAction*>(action)->ResetInitialPosition())
     {
         reset = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "19044"))
-    {
-        Action* action = context->GetAction("gruul the dragonkiller spread ranged");
-        if (action &&
-            static_cast<GruulTheDragonkillerSpreadRangedAction*>(action)->ResetInitialPosition())
-        {
-            reset = true;
-        }
-    }
-
     return reset;
+    //End By leewheel
 }
 
 // High King Maulgar

@@ -95,9 +95,13 @@ float KalecgosControlMovementMultiplier::GetValue(Action* action)
     return kalecgos && !kalecgos->IsFriendlyTo(bot) ? 0.0f : 1.0f;
 }
 
+// Separate paths to avoid dueling taunts in the surface and spectral realms
 float KalecgosRestrictTauntMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
     if (!IsTauntAction(bot, action))
@@ -106,10 +110,17 @@ float KalecgosRestrictTauntMultiplier::GetValue(Action* action)
     if (!AI_VALUE2(Unit*, "find target", "24850"))
         return 1.0f;
 
-    if (IsInSpectralRealm(bot))
+    if (!IsInSpectralRealm(bot))
+        return FindKalecgosDesignatedTank(bot) == bot ? 1.0f : 0.0f;
+
+    // 合并brighton 2026-08-26: sathrovarr the corruptor按entry规则转24892 --By leewheel 2026年8月26日
+    Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "24892");
+    if (!sathrovarr)
         return 1.0f;
 
-    return FindKalecgosDesignatedTank(bot) == bot ? 1.0f : 0.0f;
+    Unit* victim = sathrovarr->GetVictim();
+    Player* victimPlayer = victim ? victim->ToPlayer() : nullptr;
+    return victimPlayer && PlayerbotAI::IsTank(victimPlayer) ? 0.0f : 1.0f;
 }
 
 float KalecgosSuppressAssistTankPullThreatMultiplier::GetValue(Action* action)

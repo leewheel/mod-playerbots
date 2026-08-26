@@ -19,6 +19,20 @@
 using namespace MagHelpers;
 using namespace EncounterHelpers;
 
+bool MagtheridonResetEncounterStatesAction::Execute(Event /*event*/)
+{
+    uint32 const instanceId = bot->GetInstanceId();
+
+    bool reset = false;
+    reset |= blastNovaTimer.erase(instanceId) > 0;
+    reset |= dpsWaitTimer.erase(instanceId) > 0;
+    reset |= ceilingCollapseApplied.erase(instanceId) > 0;
+    reset |= lastBlastNovaState.erase(instanceId) > 0;
+    reset |= botToCubeAssignments.erase(instanceId) > 0;
+
+    return reset;
+}
+
 bool MagtheridonMainTankAttackFirstThreeChannelersAction::Execute(Event /*event*/)
 {
     Creature* channeler = GetChanneler(bot, SOUTH_CHANNELER);
@@ -636,17 +650,4 @@ bool MagtheridonManageTimersAndAssignmentsAction::NeedsCubeReassignment(uint32 i
 
     return false;
 }
-
-bool MagtheridonEraseTimersAndTrackersAction::Execute(Event /*event*/)
-{
-    uint32 const instanceId = bot->GetMap()->GetInstanceId();
-
-    bool erased = false;
-    erased |= blastNovaTimer.erase(instanceId) > 0;
-    erased |= dpsWaitTimer.erase(instanceId) > 0;
-    erased |= ceilingCollapseApplied.erase(instanceId) > 0;
-    erased |= lastBlastNovaState.erase(instanceId) > 0;
-    erased |= botToCubeAssignments.erase(instanceId) > 0;
-
-    return erased;
-}
+// 合并brighton 2026-08-26: 移除已并入MagtheridonResetEncounterStatesAction的旧EraseTimersAndTrackers函数 --By leewheel 2026年8月26日

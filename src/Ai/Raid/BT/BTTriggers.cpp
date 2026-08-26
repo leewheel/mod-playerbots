@@ -6,9 +6,9 @@
 
 #include "BTTriggers.h"
 #include "AiFactory.h"
-#include "BTActions.h"
 #include "BTHelpers.h"
 #include "EncounterHelpers.h"
+#include "InstanceScript.h"
 #include "Playerbots.h"
 #include "SharedDefines.h"
 
@@ -17,10 +17,13 @@ using namespace EncounterHelpers;
 
 // General
 
-bool BlackTempleBotIsNotInCombatTrigger::IsActive()
+bool BlackTempleNoEncounterInProgressTrigger::IsActive()
 {
-    return bot->GetMapId() == BLACK_TEMPLE_MAP_ID &&
-           !AI_VALUE2(bool, "combat", "self target");
+    if (bot->GetMapId() != BLACK_TEMPLE_MAP_ID)
+        return false;
+
+    InstanceScript* instance = bot->GetInstanceScript();
+    return instance && !instance->IsEncounterInProgress();
 }
 
 // High Warlord Naj'entus

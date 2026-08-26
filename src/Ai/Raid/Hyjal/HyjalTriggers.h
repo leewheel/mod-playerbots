@@ -11,11 +11,11 @@
 
 // General
 
-class HyjalSummitBotIsNotInCombatTrigger : public Trigger
+class HyjalSummitNoEncounterInProgress : public Trigger
 {
 public:
-    HyjalSummitBotIsNotInCombatTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "hyjal summit bot is not in combat") {}
+    HyjalSummitNoEncounterInProgress(PlayerbotAI* botAI)
+        : Trigger(botAI, "hyjal summit no encounter in progress") {}
     bool IsActive() override;
 };
 
@@ -35,13 +35,13 @@ private:
     std::string const _bossName;
 };
 
-// The main tank should be holding this boss where it wants him. activeAboveHealthPct exists for
-// Archimonde alone, whose tank only walks him at the opening and then leaves him be; the default
-// needs no special case, since a boss that is alive at all is above zero health
-class HyjalBossEngagedByMainTankTrigger : public Trigger
+// 合并brighton 2026-08-26: 类名重构为HyjalBossShouldBeTankedTrigger, 覆盖全部5个MT行动, activeAboveHealthPct仅用于阿克蒙德
+    //By leewheel 2026年8月26日
+    class HyjalBossShouldBeTankedTrigger : public Trigger
+    //End By leewheel
 {
 public:
-    HyjalBossEngagedByMainTankTrigger(
+    HyjalBossShouldBeTankedTrigger(
         PlayerbotAI* botAI, std::string const& name, std::string const& bossName,
         float activeAboveHealthPct = 0.0f)
         : Trigger(botAI, name), _bossName(bossName),

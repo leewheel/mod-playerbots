@@ -350,8 +350,6 @@ Unit* MuruAssignDpsPriorityAction::ResolveMuruDpsTarget(Unit* currentTarget)
 
     if (stickyTarget)
     {
-        // A disallowed sticky target indexes past the end, where it would otherwise tie with an
-        // equally absent desired target and win the comparison
         size_t const currentPriority = getPriorityIndex(stickyTarget);
         size_t const desiredPriority = getPriorityIndex(target);
         if (currentPriority < priorityTargets.size() && currentPriority <= desiredPriority)
@@ -427,31 +425,8 @@ bool MuruKillDarkFiendsWithDispelAction::Execute(Event /*event*/)
     return false;
 }
 
-bool MuruDontTouchTheDarkFiendAction::Execute(Event /*event*/)
-{
-    // Whatever the bot was casting matters less than being somewhere else; the core would cancel it
-    // once the move takes hold anyway, this just makes it immediate
-    bot->CastStop();
-
-    if (Creature* voidZone = FindMuruVoidZoneToAvoid(botAI))
-    {
-        float const distFromVoidZone = bot->GetDistance2d(voidZone);
-        return MoveAway(voidZone, MURU_VOID_ZONE_SAFE_DISTANCE - distFromVoidZone);
-    }
-
-    // Only the fiend's own victim gains anything by moving, so anyone else it happens to threaten
-    // is left alone
-    Unit* darkFiend = AI_VALUE2(Unit*, "find target", "25744");
-    if (!darkFiend || darkFiend->GetVictim() != bot)
-        return false;
-
-    float const distFromFiend = bot->GetDistance2d(darkFiend);
-    if (distFromFiend > MURU_DARK_FIEND_SAFE_DISTANCE)
-        return false;
-
-    return MoveAway(darkFiend, MURU_DARK_FIEND_SAFE_DISTANCE - distFromFiend);
-}
-
+// 合并brighton 2026-08-26: MuruDontTouchTheDarkFiendAction/MuruFleeFromSingularityAction重复定义已删除,
+// 保留文件后部brighton版本(dark fiend/entropius已转entry 25744/25840) --By leewheel 2026年8月26日
 bool MuruTanksMoveSentinelToSafePositionAction::Execute(Event /*event*/)
 {
     Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
@@ -584,24 +559,7 @@ bool MuruMeleeFleeTheDarknessAction::Execute(Event /*event*/)
         stackPosition.GetPositionZ(), stackArrivalDistance, MovementPriority::MOVEMENT_FORCED);
 }
 
-bool MuruFleeFromSingularityAction::Execute(Event /*event*/)
-{
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
-    if (!entropius)
-        return false;
-
-    Creature* singularity = botAI->GetCreature(AI_VALUE(ObjectGuid, "muru singularity"));
-    if (!singularity || !singularity->IsAlive())
-        return false;
-
-    float const safeDistance = entropius->GetVictim() == bot ? 20.0f : 15.0f;
-    float const currentDistance = bot->GetExactDist2d(singularity);
-    if (currentDistance >= safeDistance)
-        return false;
-
-    return FleePosition(singularity->GetPosition(), safeDistance);
-}
-
+// 合并brighton 2026-08-26: MuruFleeFromSingularityAction重复定义已删除, 文件后部已有brighton版本(entropius已转entry 25840) --By leewheel 2026年8月26日
 bool MuruCastStunOnShadowswordBerserkerAction::Execute(Event /*event*/)
 {
     Unit* berserker = FindMuruBerserkerToStun(botAI);
@@ -631,8 +589,7 @@ bool MuruCastStunOnShadowswordBerserkerAction::Execute(Event /*event*/)
             return castStun("concussion blow") || castStun("shockwave");
 
         default:
-            // Selection only yields a berserker here for tauren, the one race outside the cases
-            // above that brings a stun
+            // Tauren
             return castStun("war stomp");
     }
 }
@@ -766,13 +723,12 @@ bool MuruEnslavedVoidSpawnCastShadowBoltVolleyAction::Execute(Event /*event*/)
     voidSpawn->AddSpellCooldown(volleySpellId, 0, globalCooldown);
     return true;
 }
+
 Unit* MuruEnslavedVoidSpawnAttackAction::GetVoidSpawnVolleyPriorityTarget(Unit* voidSpawn) const
 {
     MuruEncounterTargets targets;
     GatherMuruEncounterTargets(botAI, targets);
 
-    // Measured from the spawn, not from the warlock: Shadow Bolt Volley is centred on its caster,
-    // so a target the warlock is closest to is not necessarily one the spawn can cover
     Position const& origin = voidSpawn->GetPosition();
     Unit* currentTarget = AI_VALUE(Unit*, "current target");
 
@@ -797,4 +753,45 @@ Unit* MuruEnslavedVoidSpawnAttackAction::GetVoidSpawnVolleyPriorityTarget(Unit* 
     }
 
     return nullptr;
+}
+
+bool MuruDontTouchTheDarkFiendAction::Execute(Event /*event*/)
+{
+    bot->CastStop();
+
+    if (Creature* voidZone = FindMuruVoidZoneToAvoid(botAI))
+    {
+        float const distFromVoidZone = bot->GetDistance2d(voidZone);
+        return MoveAway(voidZone, MURU_VOID_ZONE_SAFE_DISTANCE - distFromVoidZone);
+    }
+
+    // 合并brighton 2026-08-26: dark fiend按entry规则转25744 --By leewheel 2026年8月26日
+    Unit* darkFiend = AI_VALUE2(Unit*, "find target", "25744");
+    if (!darkFiend || darkFiend->GetVictim() != bot)
+        return false;
+
+    float const distFromFiend = bot->GetDistance2d(darkFiend);
+    if (distFromFiend > MURU_DARK_FIEND_SAFE_DISTANCE)
+        return false;
+
+    return MoveAway(darkFiend, MURU_DARK_FIEND_SAFE_DISTANCE - distFromFiend);
+}
+
+bool MuruFleeFromSingularityAction::Execute(Event /*event*/)
+{
+    // 合并brighton 2026-08-26: entropius按entry规则转25840 --By leewheel 2026年8月26日
+    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+    if (!entropius)
+        return false;
+
+    Creature* singularity = botAI->GetCreature(AI_VALUE(ObjectGuid, "muru singularity"));
+    if (!singularity || !singularity->IsAlive())
+        return false;
+
+    float const safeDistance = entropius->GetVictim() == bot ? 20.0f : 15.0f;
+    float const currentDistance = bot->GetExactDist2d(singularity);
+    if (currentDistance >= safeDistance)
+        return false;
+
+    return FleePosition(singularity->GetPosition(), safeDistance);
 }

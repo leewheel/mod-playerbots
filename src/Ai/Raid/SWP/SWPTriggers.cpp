@@ -650,18 +650,7 @@ bool MuruDarkFiendsSpawnedTrigger::IsActive()
     return AI_VALUE2(Unit*, "find target", "25744");
 }
 
-bool MuruEntropiusSpawnsDarknessPoolsTrigger::IsActive()
-{
-    if (!AI_VALUE2(Unit*, "find target", "25840"))
-        return false;
-
-    if (FindMuruVoidZoneToAvoid(botAI))
-        return true;
-
-    Unit* darkFiend = AI_VALUE2(Unit*, "find target", "25744");
-    return darkFiend && darkFiend->GetVictim() == bot;
-}
-
+// 合并brighton 2026-08-26: MuruEntropiusSpawnsDarknessPoolsTrigger重复定义已删除, 文件后部有brighton版本(已转entry) --By leewheel 2026年8月26日
 bool MuruDarknessIsComingTrigger::IsActive()
 {
     if (!PlayerbotAI::IsMelee(bot))
@@ -674,28 +663,42 @@ bool MuruDarknessIsComingTrigger::IsActive()
     return TryGetMuruDarknessActiveState(bot, muru);
 }
 
-bool MuruTheSingularityIsNearTrigger::IsActive()
-{
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
-    if (!entropius)
-        return false;
-
-    Creature* singularity = botAI->GetCreature(AI_VALUE(ObjectGuid, "muru singularity"));
-    return singularity && singularity->IsAlive();
-}
-
+// 合并brighton 2026-08-26: MuruTheSingularityIsNearTrigger重复定义已删除, 文件后部有brighton版本(已转entry) --By leewheel 2026年8月26日
 bool MuruBerserkerIsBuffedWithFlurryTrigger::IsActive()
 {
+    // No stuns and can't be a Tauren. Too bad.
+    if (bot->getClass() == CLASS_MAGE || bot->getClass() == CLASS_PRIEST ||
+        bot->getClass() == CLASS_WARLOCK)
+    {
+        return false;
+    }
+
+    if (!AI_VALUE2(Unit*, "find target", "25741"))
+        return false;
+
     return FindMuruBerserkerToStun(botAI);
 }
 
 bool MuruFuryMageCastingFelFireballTrigger::IsActive()
 {
+    // Do Druids have no interrupts...?
+    if (bot->getClass() == CLASS_DRUID)
+        return false;
+
+    if (!AI_VALUE2(Unit*, "find target", "25741"))
+        return false;
+
     return FindMuruFuryMageToInterrupt(botAI);
 }
 
 bool MuruFuryMageIsBuffedWithSpellFuryTrigger::IsActive()
 {
+    if (bot->getClass() != CLASS_MAGE)
+        return false;
+
+    if (!AI_VALUE2(Unit*, "find target", "25741"))
+        return false;
+
     return FindMuruFuryMageToSpellsteal(botAI);
 }
 
@@ -723,6 +726,30 @@ bool MuruWarlockHasEnslavedVoidSpawnTrigger::IsActive()
 
     Unit* charm = bot->GetCharm();
     return charm && charm->IsAlive() && charm->GetEntry() == Id(SwpNpcs::NPC_VOID_SPAWN);
+}
+
+bool MuruEntropiusSpawnsDarknessPoolsTrigger::IsActive()
+{
+    // 合并brighton 2026-08-26: entropius/dark fiend按entry规则转25840/25744 --By leewheel 2026年8月26日
+    if (!AI_VALUE2(Unit*, "find target", "25840"))
+        return false;
+
+    if (FindMuruVoidZoneToAvoid(botAI))
+        return true;
+
+    Unit* darkFiend = AI_VALUE2(Unit*, "find target", "25744");
+    return darkFiend && darkFiend->GetVictim() == bot;
+}
+
+bool MuruTheSingularityIsNearTrigger::IsActive()
+{
+    // 合并brighton 2026-08-26: entropius按entry规则转25840 --By leewheel 2026年8月26日
+    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+    if (!entropius)
+        return false;
+
+    Creature* singularity = botAI->GetCreature(AI_VALUE(ObjectGuid, "muru singularity"));
+    return singularity && singularity->IsAlive();
 }
 
 // Kil'jaeden <The Deceiver>
