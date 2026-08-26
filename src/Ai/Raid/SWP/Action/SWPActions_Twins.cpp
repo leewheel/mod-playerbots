@@ -291,6 +291,9 @@ bool EredarTwinsRemoveFlameSearAction::Execute(Event /*event*/)
 
 bool EredarTwinsDpsPrioritizeSacrolashAction::Execute(Event /*event*/)
 {
+    // 合并brighton 2026-08-27: 新增DPS仇恨保持起始记录; lady sacrolash按entry规则转25165 --By leewheel 2026年8月27日
+    RecordEredarTwinsDpsHoldStart(bot);
+
     Unit* twinTarget = AI_VALUE2(Unit*, "find target", "25165");
     float threatHoldRatio = SACROLASH_THREAT_HOLD_RATIO;
     bool (*isTwinTank)(Player*) = IsAnySacrolashTank;
@@ -305,6 +308,8 @@ bool EredarTwinsDpsPrioritizeSacrolashAction::Execute(Event /*event*/)
     if (!twinTarget)
         return false;
 
+    // Healers are excluded from ShouldHoldTwinThreat() but need this action so that they focus
+    // their "healer dps"/wanding on Sacrolash in phase 1.
     if (ShouldHoldTwinThreat(bot, twinTarget, threatHoldRatio, isTwinTank))
     {
         bot->AttackStop();

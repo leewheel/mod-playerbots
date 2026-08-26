@@ -557,17 +557,22 @@ bool EredarTwinsShouldFocusDpsTrigger::IsActive()
     if (!AI_VALUE2(Unit*, "find target", "25166"))
         return false;
 
-    if (IsAnySacrolashTank(bot) || IsAlythessTank(bot))
-        return false;
+    if (PlayerbotAI::IsDps(bot) || PlayerbotAI::IsHeal(bot))
+        return true;
 
-    RecordEredarTwinsDpsHoldStart(bot);
-    return true;
+    return !IsAnySacrolashTank(bot) && !IsAlythessTank(bot);
 }
 
 bool EredarTwinsActiveConflagrationTargetTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "25165") &&
-        GetEredarTwinsConflagrationTarget(bot) == bot;
+    // 合并brighton 2026-08-27: 新增潜行(消失)机器人排除逻辑; lady sacrolash按entry规则转25165 --By leewheel 2026年8月27日
+    if (!AI_VALUE2(Unit*, "find target", "25165"))
+        return false;
+
+    if (bot->getClass() == CLASS_ROGUE && botAI->HasAura("vanish", bot))
+        return false;
+
+    return GetEredarTwinsConflagrationTarget(bot) == bot;
 }
 
 bool EredarTwinsSacrolashVictimHasConflagrationTrigger::IsActive()
