@@ -27,9 +27,13 @@ bool SunwellPlateauNoEncounterInProgressTrigger::IsActive()
     if (bot->GetMapId() != SWP_MAP_ID)
         return false;
 
-    // InstanceScript reports IN_PROGRESS for every SWP boss from JustEngagedWith until kill/evade.
+    // InstanceScript reports IN_PROGRESS for every SWP boss from JustEngagedWith until kill/evade,
+    // except that KJ does not begin until the Hands are defeated
     InstanceScript* instance = bot->GetInstanceScript();
-    return instance && !instance->IsEncounterInProgress();
+    if (!instance || instance->IsEncounterInProgress())
+        return false;
+
+    return !AI_VALUE2(Unit*, "find target", "25588");
 }
 
 bool SunwellPlateauBotHasAuraToRemoveTrigger::IsActive()
@@ -655,7 +659,11 @@ bool MuruDarkFiendsSpawnedTrigger::IsActive()
     if (bot->getClass() != CLASS_PRIEST && bot->getClass() != CLASS_SHAMAN)
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "25744");
+// 合并brighton 2026-08-27: 增加m'uru存在判断(entry 25741)并改用FindNearestCreature搜索暗影恶魔 --By leewheel 2026年8月27日
+    if (!AI_VALUE2(Unit*, "find target", "25741"))
+        return false;
+
+    return bot->FindNearestCreature(Id(SwpNpcs::NPC_DARK_FIEND), DARK_FIEND_DISPEL_SEARCH_RADIUS);
 }
 
 // 合并brighton 2026-08-26: MuruEntropiusSpawnsDarknessPoolsTrigger重复定义已删除, 文件后部有brighton版本(已转entry) --By leewheel 2026年8月26日
@@ -745,8 +753,8 @@ bool MuruEntropiusDarknessPoolsSpawnDarkFiendsTrigger::IsActive()
     if (FindMuruVoidZoneToAvoid(botAI))
         return true;
 
-    Unit* darkFiend = AI_VALUE2(Unit*, "find target", "25744");
-    return darkFiend && darkFiend->GetVictim() == bot;
+// 合并brighton 2026-08-27: 改用FindNearestCreature搜索暗影恶魔 --By leewheel 2026年8月27日
+    return bot->FindNearestCreature(Id(SwpNpcs::NPC_DARK_FIEND), DARK_FIEND_AVOID_SEARCH_RADIUS);
 }
 
 bool MuruTheSingularityIsNearTrigger::IsActive()

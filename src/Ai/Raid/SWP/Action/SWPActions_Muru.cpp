@@ -374,10 +374,10 @@ bool MuruKillDarkFiendsWithDispelAction::Execute(Event /*event*/)
     bool const isMuruPhase = IsMuruPhaseActive(muru);
 
     Creature* darkFiendNearMuru = nullptr;
-    constexpr float searchRadius = 50.0f;
     constexpr float massDispelRange = 15.0f;
     std::list<Creature*> darkFiends;
-    bot->GetCreatureListWithEntryInGrid(darkFiends, Id(SwpNpcs::NPC_DARK_FIEND), searchRadius);
+    bot->GetCreatureListWithEntryInGrid(
+        darkFiends, Id(SwpNpcs::NPC_DARK_FIEND), DARK_FIEND_DISPEL_SEARCH_RADIUS);
 
     if (isMuruPhase)
     {
@@ -768,9 +768,10 @@ bool MuruKeepDistanceFromDarkFiendsAction::Execute(Event /*event*/)
         return MoveAway(voidZone, VOID_ZONE_SAFE_DISTANCE - distFromVoidZone);
     }
 
-    // 合并brighton 2026-08-26: dark fiend按entry规则转25744 --By leewheel 2026年8月26日
-    Unit* darkFiend = AI_VALUE2(Unit*, "find target", "25744");
-    if (!darkFiend || darkFiend->GetVictim() != bot)
+// 合并brighton 2026-08-27: 改用FindNearestCreature按NPC_DARK_FIEND搜索, 不再依赖find target --By leewheel 2026年8月27日
+    Creature* darkFiend =
+        bot->FindNearestCreature(Id(SwpNpcs::NPC_DARK_FIEND), DARK_FIEND_AVOID_SEARCH_RADIUS);
+    if (!darkFiend)
         return false;
 
     float const distFromFiend = bot->GetDistance2d(darkFiend);

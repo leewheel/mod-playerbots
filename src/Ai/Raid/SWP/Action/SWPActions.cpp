@@ -36,8 +36,6 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
     }
 
     // Brutallus
-
-
     auto const brutallusItr = brutallusEncounterStates.find(instanceId);
     if (brutallusItr != brutallusEncounterStates.end())
         reset |= brutallusItr->second.rangedBurnStates.erase(guid) > 0;
@@ -55,6 +53,14 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
     Action* twinsAction = context->GetAction("eredar twins alythess tank move out of blaze");
     if (twinsAction && static_cast<EredarTwinsAlythessTankMoveOutOfBlazeAction*>(
             twinsAction)->ResetAlythessTankStep())
+    {
+        reset = true;
+    }
+
+    // M'uru
+    Action* muruAction = context->GetAction("m'uru position ranged by phase");
+    if (muruAction && static_cast<MuruPositionRangedByPhaseAction*>(
+            muruAction)->ResetEntropiusRangedPositionReached())
     {
         reset = true;
     }

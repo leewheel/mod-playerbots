@@ -793,21 +793,44 @@ float KiljaedenTanksFocusAssignedHandOnlyMultiplier::GetValue(Action* action)
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (!dynamic_cast<DpsAssistAction*>(action) &&
-        !dynamic_cast<TankAssistAction*>(action) &&
-        !dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !IsTauntAction(bot, action) && !IsAoeThreatAction(bot, action))
+    if (!PlayerbotAI::IsTank(bot))
+        return 1.0f;
+
+    if (!dynamic_cast<TankAssistAction*>(action) &&
+        !dynamic_cast<CombatFormationMoveAction*>(action) /* &&
+        !IsTauntAction(bot, action) && !IsAoeThreatAction(bot, action) */)
     {
         return 1.0f;
     }
 
-    if (dynamic_cast<SetBehindTargetAction*>(action))
+    if (!AI_VALUE2(Unit*, "find target", "25588"))
         return 1.0f;
+
+    return GetGroupAssistTank(bot, 1) && GetGroupAssistTank(bot, 0) &&
+        GetGroupMainTank(bot) ? 0.0f : 1.0f;
+}
+
+// 合并brighton 2026-08-27: KiljaedenDpsFocusAssignedHandOnlyMultiplier重构为与Tanks版一致(GetGroupAssistTank判断),
+// 移除旧逻辑; hand of the deceiver按entry规则转25588 --By leewheel 2026年8月27日
+float KiljaedenDpsFocusAssignedHandOnlyMultiplier::GetValue(Action* action)
+{
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (!PlayerbotAI::IsDps(bot))
+        return 1.0f;
+
+    if (!dynamic_cast<DpsAssistAction*>(action) &&
+        action->getThreatType() != Action::ActionThreatType::Aoe)
+    {
+        return 1.0f;
+    }
 
     if (!AI_VALUE2(Unit*, "find target", "25588"))
         return 1.0f;
 
-    return HasAtLeastThreeBotTanks(bot) ? 0.0f : 1.0f;
+    return GetGroupAssistTank(bot, 1) && GetGroupAssistTank(bot, 0) &&
+        GetGroupMainTank(bot) ? 0.0f : 1.0f;
 }
 
 float KiljaedenControlMovementAndTargetingMultiplier::GetValue(Action* action)
