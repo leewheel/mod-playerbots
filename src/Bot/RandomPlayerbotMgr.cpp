@@ -1432,16 +1432,8 @@ static uint32 GetTankSpecPoints(Player* bot)
     return tabs[tankTab];
 }
 
-// 判断坦克职业 bot 是否为"潜在坦克"——坦克专精天赋点数≥20但当前未被 IsBotTank 判定为坦克
-// 用于修复 GetPlayerSpecTab 边缘误判导致的坦克缺位问题
-static bool IsPotentialTank(Player* bot)
-{
-    if (!ClassCanTank(bot->getClass()))
-        return false;
-    if (IsBotTank(bot))
-        return false;
-    return GetTankSpecPoints(bot) >= 20;
-}
+// By leewheel 2026-08-29 清理：IsPotentialTank 已无任何调用点（C4505未引用警告），连同注释一并移除；
+//   GetTankSpecPoints 仍被下方 ForceBotsJoinLfg 活代码使用，保留
 // End By leewheel
 
 // 获取治疗天赋页索引
