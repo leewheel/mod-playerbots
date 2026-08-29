@@ -760,6 +760,16 @@ AiPlayerbot.PreQuests = 0
 # Default: 1 (enabled)
 AiPlayerbot.RandomBotJoinLfg = 1
 
+# By leewheel 2026-08-29 氛围组机器人：少量bot在真实玩家附近转悠/杀怪/做任务/采集，控制总量时保持服务器热闹
+# 氛围组bot数量（从在线bot中周期轮换抽取）
+# Default: 15 (0 = disabled)
+AiPlayerbot.AmbienceBotCount = 15
+
+# 氛围组bot传送目的地与目标玩家的最大距离（码）；下限固定200码（避免在玩家眼前凭空出现）
+# Default: 1500
+AiPlayerbot.AmbienceBotRadius = 1500
+# End By leewheel
+
 # By leewheel 2026-07-10
 # 随机副本排队最大等待时间（秒），默认180秒（3分钟）
 # 当真实玩家排队超过此时间的2/3（默认120秒=2分钟）时，强制机器人加入LFG队列

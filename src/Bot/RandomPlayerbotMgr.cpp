@@ -394,6 +394,14 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
             sRandomPlayerbotMgr.CheckLfgQueue();
     }
 
+    // By leewheel 2026-08-29 氛围组机器人：每10分钟重抽一次贴玩家活动的名单，
+    //   让少量bot（默认15个）轮换到真实玩家附近转悠/杀怪/做任务，控制总量的同时保持服务器热闹
+    if (sPlayerbotAIConfig.ambienceBotCount > 0 && time(nullptr) > (AmbienceReshuffleTimer + 600))
+    {
+        ReshuffleAmbienceBots();
+    }
+    // End By leewheel
+
     if (sPlayerbotAIConfig.randomBotAutologin && sPlayerbotAIConfig.randomBotPrintStatsInterval &&
         time(nullptr) > (printStatsTimer + sPlayerbotAIConfig.randomBotPrintStatsInterval))
     {
@@ -2611,6 +2619,18 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
         uint32 teleport = GetEventValue(botId, "teleport");
         if (!teleport)
         {
+            // By leewheel 2026-08-29 氛围组机器人：目的地优先选真实玩家附近的hub点，
+            //   选不到（无真实玩家/无匹配等级/该玩家附近无hub点）则退回普通随机传送
+            if (IsAmbienceBot(botId) && RandomTeleportNearPlayer(bot))
+            {
+                Refresh(bot);
+                uint32 ambienceTime =
+                    urand(sPlayerbotAIConfig.minRandomBotTeleportInterval,
+                          sPlayerbotAIConfig.maxRandomBotTeleportInterval);
+                ScheduleTeleport(botId, ambienceTime);
+                return true;
+            }
+            // End By leewheel
             LOG_DEBUG("playerbots", "机器人 #{} <{}>: 传送以升级和刷新", botId, bot->GetName());
             Refresh(bot);
             RandomTeleportForLevel(bot);
@@ -2875,6 +2895,75 @@ void RandomPlayerbotMgr::RandomTeleportGrindForLevel(Player* bot)
 
     RandomTeleport(bot, locs);
 }
+
+// By leewheel 2026-08-29 氛围组机器人
+void RandomPlayerbotMgr::ReshuffleAmbienceBots()
+{
+    AmbienceReshuffleTimer = time(nullptr);
+    ambienceBots.clear();
+
+    if (sPlayerbotAIConfig.ambienceBotCount == 0 || currentBots.empty())
+        return;
+
+    // 从候选池随机抽签：氛围组名单周期轮换，让不同bot轮流"贴玩家"活动
+    std::vector<uint32> pool(currentBots.begin(), currentBots.end());
+    std::shuffle(pool.begin(), pool.end(), RandomEngine::Instance());
+
+    uint32 count = std::min<uint32>(sPlayerbotAIConfig.ambienceBotCount, pool.size());
+    for (uint32 i = 0; i < count; ++i)
+        ambienceBots.insert(pool[i]);
+
+    LOG_INFO("playerbots", "氛围组机器人已轮换：{} 个机器人将在真实玩家附近活动", ambienceBots.size());
+}
+
+bool RandomPlayerbotMgr::RandomTeleportNearPlayer(Player* bot)
+{
+    if (sPlayerbotAIConfig.ambienceBotCount == 0 || players.empty())
+        return false;
+
+    if (bot->InBattleground() || bot->InBattlegroundQueue() || bot->InBattleground())
+        return false;
+
+    // 选目标玩家：在线、与bot等级接近（±10级，保证氛围组在匹配级的区域活动、打得动那里的怪）
+    std::vector<Player*> candidates;
+    for (Player* player : players)
+    {
+        if (!player || !player->IsInWorld())
+            continue;
+
+        if (std::abs(int(player->GetLevel()) - int(bot->GetLevel())) > 10)
+            continue;
+
+        candidates.push_back(player);
+    }
+
+    if (candidates.empty())
+        return false;
+
+    Player* target = candidates[urand(0, candidates.size() - 1)];
+
+    // 从bot等级对应的目的地缓存里，挑出目标玩家ambienceBotRadius范围内、且不在其眼前(≥200码，避免凭空出现被玩家看到)的hub点
+    std::vector<WorldLocation> locs = sTravelMgr.GetTeleportLocations(bot);
+    std::vector<WorldLocation> nearLocs;
+    for (WorldLocation const& loc : locs)
+    {
+        if (loc.GetMapId() != target->GetMapId())
+            continue;
+
+        float dist = target->GetDistance2d(loc.GetPositionX(), loc.GetPositionY());
+        if (dist < 200.f || dist > sPlayerbotAIConfig.ambienceBotRadius)
+            continue;
+
+        nearLocs.push_back(loc);
+    }
+
+    if (nearLocs.empty())
+        return false;
+
+    RandomTeleport(bot, nearLocs, false);
+    return true;
+}
+// End By leewheel
 
 void RandomPlayerbotMgr::RandomTeleport(Player* bot)
 {

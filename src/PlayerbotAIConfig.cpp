@@ -272,6 +272,11 @@ bool PlayerbotAIConfig::Initialize()
         sConfigMgr->GetOption<int32>("AiPlayerbot.MaxRandomBotsPriceChangeInterval", 48 * HOUR);
     randomBotJoinLfg = sConfigMgr->GetOption<bool>("AiPlayerbot.RandomBotJoinLfg", true);
 
+    // By leewheel 2026-08-29 氛围组机器人配置：少量bot贴着真实玩家活动，控制总量时保持热闹
+    ambienceBotCount = sConfigMgr->GetOption<uint32>("AiPlayerbot.AmbienceBotCount", 15);
+    ambienceBotRadius = sConfigMgr->GetOption<float>("AiPlayerbot.AmbienceBotRadius", 1500.f);
+    // End By leewheel
+
     restrictHealerDPS = sConfigMgr->GetOption<bool>("AiPlayerbot.HealerDPSMapRestriction", false);
     LoadList<std::vector<uint32>>(
         sConfigMgr->GetOption<std::string>("AiPlayerbot.RestrictedHealerDPSMaps",

@@ -263,6 +263,9 @@ private:
         this->BgCheckTimer = 0;
         this->LfgCheckTimer = 0;
         this->PlayersCheckTimer = 0;
+        // By leewheel 2026-08-29 氛围组机器人：重抽计时器归零
+        this->AmbienceReshuffleTimer = 0;
+        // End By leewheel
         // By leewheel 2026-08-01
         // 周期性卡顿修复：初始化全服扫描限频计时器
         this->FullScanTimer = 0;
@@ -315,6 +318,11 @@ private:
     void ScheduleRandomize(uint32 bot, uint32 time);
     void RandomTeleport(Player* bot);
     void RandomTeleport(Player* bot, std::vector<WorldLocation>& locs, bool hearth = false);
+    // By leewheel 2026-08-29 氛围组机器人
+    void ReshuffleAmbienceBots();                                   // 周期重抽氛围组名单
+    bool IsAmbienceBot(uint32 bot) const { return ambienceBots.count(bot) > 0; }
+    bool RandomTeleportNearPlayer(Player* bot);                     // 传送到真实玩家附近的hub点
+    // End By leewheel
     uint32 GetZoneLevel(uint16 mapId, float teleX, float teleY, float teleZ);
     typedef void (RandomPlayerbotMgr::*ConsoleCommandHandler)(Player*);
     std::vector<Player*> players;
@@ -324,6 +332,10 @@ private:
     std::map<TeamId, std::map<BattlegroundTypeId, std::vector<uint32>>> BattleMastersCache;
     std::unordered_map<uint32, BotEventCache> eventCache;
     std::unordered_set<uint32> currentBots;
+    // By leewheel 2026-08-29 氛围组机器人：名单周期重抽，目的地偏向真实玩家附近
+    std::unordered_set<uint32> ambienceBots;
+    time_t AmbienceReshuffleTimer;
+    // End By leewheel
     uint32 playersLevel;
 
     // Account lists

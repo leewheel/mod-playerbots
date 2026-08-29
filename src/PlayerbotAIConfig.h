@@ -175,6 +175,12 @@ public:
     uint32 disabledWithoutRealPlayerLoginDelay, disabledWithoutRealPlayerLogoutDelay;
     bool randomBotJoinLfg;
 
+    // By leewheel 2026-08-29 氛围组机器人：让少量bot在真实玩家附近转悠/杀怪/做任务/采集（甚至敌对阵营遭遇战），
+    //   在控制总bot数(CPU开销)的同时保持服务器热闹感
+    uint32 ambienceBotCount;        // 氛围组bot数量（0=关闭）
+    float ambienceBotRadius;        // 氛围组目的地与目标玩家的最大距离（码）
+    // End By leewheel
+
     // Professions
     bool enableFishingWithMaster;
     uint32 classMatchingProfessionChance;
