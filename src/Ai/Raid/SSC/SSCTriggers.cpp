@@ -14,6 +14,7 @@
 #include "Playerbots.h"
 #include "SSCActions.h"
 #include "SSCHelpers.h"
+#include "Timer.h"
 
 using namespace SerpentShrineCavernHelpers;
 using namespace EncounterHelpers;
@@ -120,10 +121,11 @@ bool TheLurkerBelowSpoutIsActiveTrigger::IsActive()
     if (!lurker)
         return false;
 
-    const time_t now = std::time(nullptr);
+    const uint32 now = getMSTime();
 
     auto it = lurkerSpoutTimer.find(lurker->GetMap()->GetInstanceId());
-    return it != lurkerSpoutTimer.end() && it->second > now;
+    return it != lurkerSpoutTimer.end() &&
+           getMSTimeDiff(it->second, now) < LURKER_SPOUT_DURATION_MS;
 }
 
 bool TheLurkerBelowBossIsActiveForMainTankTrigger::IsActive()
@@ -135,11 +137,12 @@ bool TheLurkerBelowBossIsActiveForMainTankTrigger::IsActive()
     if (!lurker)
         return false;
 
-    const time_t now = std::time(nullptr);
+    const uint32 now = getMSTime();
 
     auto it = lurkerSpoutTimer.find(lurker->GetMap()->GetInstanceId());
     return lurker->getStandState() != UNIT_STAND_STATE_SUBMERGED &&
-           (it == lurkerSpoutTimer.end() || it->second <= now);
+           (it == lurkerSpoutTimer.end() ||
+            getMSTimeDiff(it->second, now) >= LURKER_SPOUT_DURATION_MS);
 }
 
 bool TheLurkerBelowBossCastsGeyserTrigger::IsActive()
@@ -151,11 +154,12 @@ bool TheLurkerBelowBossCastsGeyserTrigger::IsActive()
     if (!lurker)
         return false;
 
-    const time_t now = std::time(nullptr);
+    const uint32 now = getMSTime();
 
     auto it = lurkerSpoutTimer.find(lurker->GetMap()->GetInstanceId());
     return lurker->getStandState() != UNIT_STAND_STATE_SUBMERGED &&
-           (it == lurkerSpoutTimer.end() || it->second <= now);
+           (it == lurkerSpoutTimer.end() ||
+            getMSTimeDiff(it->second, now) >= LURKER_SPOUT_DURATION_MS);
 }
 
 // Trigger will be active only if there are at least 3 tanks in the raid

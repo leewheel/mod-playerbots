@@ -23,6 +23,7 @@
 #include "SSCActions.h"
 #include "SSCHelpers.h"
 #include "ShamanActions.h"
+#include "Timer.h"
 #include "WarlockActions.h"
 #include "WarriorActions.h"
 #include "WipeAction.h"
@@ -89,9 +90,9 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValue(Action* action)
         return 1.0f;
 
     const uint32 instanceId = hydross->GetMap()->GetInstanceId();
-    const time_t now = std::time(nullptr);
-    constexpr uint8 phaseChangeWaitSeconds = 1;
-    constexpr uint8 dpsWaitSeconds = 5;
+    const uint32 now = getMSTime();
+    constexpr uint32 phaseChangeWaitMs = 1 * IN_MILLISECONDS;
+    constexpr uint32 dpsWaitMs = 5 * IN_MILLISECONDS;
 
     if (!hydross->HasAura(SPELL_CORRUPTION) && !PlayerbotAI::IsMainTank(bot))
     {
@@ -99,9 +100,9 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValue(Action* action)
         auto itPhase = hydrossChangeToFrostPhaseTimer.find(instanceId);
 
         bool justChanged = (itDps == hydrossFrostDpsWaitTimer.end() ||
-                            (now - itDps->second) < dpsWaitSeconds);
+                            getMSTimeDiff(itDps->second, now) < dpsWaitMs);
         bool aboutToChange = (itPhase != hydrossChangeToFrostPhaseTimer.end() &&
-                              (now - itPhase->second) > phaseChangeWaitSeconds);
+                              getMSTimeDiff(itPhase->second, now) > phaseChangeWaitMs);
 
         if (!justChanged && !aboutToChange)
             return 1.0f;
@@ -118,9 +119,9 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValue(Action* action)
         auto itPhase = hydrossChangeToNaturePhaseTimer.find(instanceId);
 
         bool justChanged = (itDps == hydrossNatureDpsWaitTimer.end() ||
-                            (now - itDps->second) < dpsWaitSeconds);
+                            getMSTimeDiff(itDps->second, now) < dpsWaitMs);
         bool aboutToChange = (itPhase != hydrossChangeToNaturePhaseTimer.end() &&
-                              (now - itPhase->second) > phaseChangeWaitSeconds);
+                              getMSTimeDiff(itPhase->second, now) > phaseChangeWaitMs);
 
         if (!justChanged && !aboutToChange)
             return 1.0f;
@@ -154,10 +155,11 @@ float TheLurkerBelowStayAwayFromSpoutMultiplier::GetValue(Action* action)
     if (!lurker)
         return 1.0f;
 
-    const time_t now = std::time(nullptr);
+    const uint32 now = getMSTime();
 
     auto it = lurkerSpoutTimer.find(lurker->GetMap()->GetInstanceId());
-    if (it != lurkerSpoutTimer.end() && it->second > now)
+    if (it != lurkerSpoutTimer.end() &&
+        getMSTimeDiff(it->second, now) < LURKER_SPOUT_DURATION_MS)
     {
         if (dynamic_cast<CastReachTargetSpellAction*>(action) ||
             dynamic_cast<CastKillingSpreeAction*>(action) ||
@@ -327,9 +329,9 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
         return 1.0f;
 
     const uint32 instanceId = leotheras->GetMap()->GetInstanceId();
-    const time_t now = std::time(nullptr);
+    const uint32 now = getMSTime();
 
-    constexpr uint8 dpsWaitSecondsPhase1 = 5;
+    constexpr uint32 dpsWaitMsPhase1 = 5 * IN_MILLISECONDS;
     Unit* leotherasHuman = GetLeotherasHuman(bot);
     Unit* leotherasPhase3Demon = GetPhase3LeotherasDemon(bot);
     if (leotherasHuman && !leotherasHuman->HasAura(SPELL_LEOTHERAS_BANISHED) &&
@@ -340,7 +342,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
 
         auto it = leotherasHumanFormDpsWaitTimer.find(instanceId);
         if (it == leotherasHumanFormDpsWaitTimer.end() ||
-            (now - it->second) < dpsWaitSecondsPhase1)
+            getMSTimeDiff(it->second, now) < dpsWaitMsPhase1)
         {
             if (dynamic_cast<AttackAction*>(action) ||
                 (dynamic_cast<CastSpellAction*>(action) &&
@@ -349,7 +351,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
         }
     }
 
-    constexpr uint8 dpsWaitSecondsPhase2 = 12;
+    constexpr uint32 dpsWaitMsPhase2 = 12 * IN_MILLISECONDS;
     Unit* leotherasPhase2Demon = GetPhase2LeotherasDemon(bot);
     Player* demonFormTank = GetLeotherasDemonFormTank(bot);
     if (leotherasPhase2Demon)
@@ -362,7 +364,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
 
         auto it = leotherasDemonFormDpsWaitTimer.find(instanceId);
         if (it == leotherasDemonFormDpsWaitTimer.end() ||
-            (now - it->second) < dpsWaitSecondsPhase2)
+            getMSTimeDiff(it->second, now) < dpsWaitMsPhase2)
         {
             if (dynamic_cast<AttackAction*>(action) ||
                 (dynamic_cast<CastSpellAction*>(action) &&
@@ -371,7 +373,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
         }
     }
 
-    constexpr uint8 dpsWaitSecondsPhase3 = 8;
+    constexpr uint32 dpsWaitMsPhase3 = 8 * IN_MILLISECONDS;
     if (leotherasPhase3Demon)
     {
         if ((demonFormTank && demonFormTank == bot) || PlayerbotAI::IsTank(bot))
@@ -379,7 +381,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
 
         auto it = leotherasFinalPhaseDpsWaitTimer.find(instanceId);
         if (it == leotherasFinalPhaseDpsWaitTimer.end() ||
-            (now - it->second) < dpsWaitSecondsPhase3)
+            getMSTimeDiff(it->second, now) < dpsWaitMsPhase3)
         {
             if (dynamic_cast<AttackAction*>(action) ||
                 (dynamic_cast<CastSpellAction*>(action) &&
@@ -484,11 +486,12 @@ float FathomLordKarathressWaitForDpsMultiplier::GetValue(Action* action)
     if (dynamic_cast<FathomLordKarathressMisdirectBossesToTanksAction*>(action))
         return 1.0f;
 
-    const time_t now = std::time(nullptr);
-    constexpr uint8 dpsWaitSeconds = 12;
+    const uint32 now = getMSTime();
+    constexpr uint32 dpsWaitMs = 12 * IN_MILLISECONDS;
 
     auto it = karathressDpsWaitTimer.find(karathress->GetMap()->GetInstanceId());
-    if (it == karathressDpsWaitTimer.end() || (now - it->second) < dpsWaitSeconds)
+    if (it == karathressDpsWaitTimer.end() ||
+        getMSTimeDiff(it->second, now) < dpsWaitMs)
     {
         if (dynamic_cast<AttackAction*>(action) ||
             (dynamic_cast<CastSpellAction*>(action) &&

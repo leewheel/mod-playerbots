@@ -11,23 +11,38 @@
 #include "FollowActions.h"
 #include "GenericSpellActions.h"
 #include "HunterActions.h"
+#include "InstanceScript.h"
 #include "MageActions.h"
+#include "NonCombatActions.h"
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "ShamanActions.h"
 #include "SWPActions.h"
-#include "SWPSharedConstants.h"
-#include "SWPEncounter_Brut.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Kalec.h"
 #include "SWPEncounter_KJ.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
+#include "SWPSharedConstants.h"
 #include "Timer.h"
 #include "WipeAction.h"
 
 using namespace SwpHelpers;
 using namespace EncounterHelpers;
+
+// General
+
+float SunwellPlateauNoEncounterDrinkingMultiplier::GetValue(Action* action)
+{
+    if (bot->GetMapId() != SWP_MAP_ID)
+        return 1.0f;
+
+    InstanceScript* instance = bot->GetInstanceScript();
+    if (!instance || !instance->IsEncounterInProgress())
+        return 1.0f;
+
+    return dynamic_cast<DrinkAction*>(action) ? 0.0f : 1.0f;
+}
 
 // Kalecgos
 
@@ -277,11 +292,16 @@ float BrutallusDelayCooldownsMultiplier::GetValue(Action* action)
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
+<<<<<<< HEAD
     Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
     if (!brutallus)
         return 1.0f;
 
     return brutallus->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT ? 0.0f : 1.0f;
+=======
+    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
+    return brutallus && brutallus->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT ? 0.0f : 1.0f;
+>>>>>>> brighton-chi/the-lab
 }
 
 // Felmyst
@@ -318,8 +338,8 @@ float FelmystWaitForLandingDpsMultiplier::GetValue(Action* action)
         return 1.0f;
 
     auto const stateItr = felmystEncounterStates.find(felmyst->GetInstanceId());
-    return stateItr != felmystEncounterStates.end() && stateItr->second.landingDpsWaitStartMs ?
-        0.0f : 1.0f;
+    return stateItr != felmystEncounterStates.end() &&
+        stateItr->second.landingDpsWaitStartMs ? 0.0f : 1.0f;
 }
 
 float FelmystPrioritizeEncapsulateAvoidanceMultiplier::GetValue(Action* action)
@@ -617,11 +637,16 @@ float EredarTwinsDelayCooldownsMultiplier::GetValue(Action* action)
     if (!alythess)
         return 1.0f;
 
+<<<<<<< HEAD
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
     if (!sacrolash)
         return 1.0f;
 
     return sacrolash->GetHealthPct() > MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
+=======
+    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
+    return sacrolash && sacrolash->GetHealthPct() > MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
+>>>>>>> brighton-chi/the-lab
 }
 
 // M'uru
@@ -788,11 +813,12 @@ float KiljaedenDelayCooldownsMultiplier::GetValue(Action* action)
     return kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD ? 0.0f : 1.0f;
 }
 
-float KiljaedenTanksFocusAssignedHandOnlyMultiplier::GetValue(Action* action)
+float KiljaedenSingleTargetHandsMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
+<<<<<<< HEAD
     if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
@@ -815,22 +841,31 @@ float KiljaedenTanksFocusAssignedHandOnlyMultiplier::GetValue(Action* action)
 float KiljaedenDpsFocusAssignedHandOnlyMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+=======
+    // Shaman have no spreading DoTs, and their only spell classified as ActionThreatType::Aoe is
+    // Chain Lightning, which is a strong single-target spell in addition to providing AoE damage.
+    if (bot->getClass() == CLASS_SHAMAN)
+>>>>>>> brighton-chi/the-lab
         return 1.0f;
 
     if (!PlayerbotAI::IsDps(bot))
         return 1.0f;
 
-    if (!dynamic_cast<DpsAssistAction*>(action) &&
+    if (!dynamic_cast<CastDebuffSpellOnAttackerAction*>(action) &&
         action->getThreatType() != Action::ActionThreatType::Aoe)
     {
         return 1.0f;
     }
 
+<<<<<<< HEAD
     if (!AI_VALUE2(Unit*, "find target", "25588"))
         return 1.0f;
+=======
+    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
+        return 1.0;
+>>>>>>> brighton-chi/the-lab
 
-    return GetGroupAssistTank(bot, 1) && GetGroupAssistTank(bot, 0) &&
-        GetGroupMainTank(bot) ? 0.0f : 1.0f;
+    return AI_VALUE(GuidVector, "kiljaeden hands").empty() ? 1.0f : 0.0f;
 }
 
 float KiljaedenControlMovementAndTargetingMultiplier::GetValue(Action* action)

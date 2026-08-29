@@ -6,11 +6,11 @@
 
 #include "SWPStrategy.h"
 #include "Playerbots.h"
-#include "SWPSharedConstants.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
 #include "SWPMultipliers.h"
+#include "SWPSharedConstants.h"
 
 void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
@@ -187,12 +187,13 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("m'uru escape the singularity", ACTION_EMERGENCY + 7) }));
 
     // Kil'jaeden <The Deceiver>
-    triggers.push_back(new TriggerNode("kil'jaeden encounter has begun", {
+    triggers.push_back(new TriggerNode("kil'jaeden should coordinate orb use", {
         NextAction("kil'jaeden announce dragon orb user", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("kil'jaeden hands of the deceiver are active", {
-        NextAction("kil'jaeden stun hands of the deceiver", ACTION_EMERGENCY),
-        NextAction("kil'jaeden assign hands of the deceiver", ACTION_RAID) }));
+        NextAction("kil'jaeden control hands of the deceiver", ACTION_EMERGENCY),
+        NextAction("kil'jaeden mark hand of the deceiver", ACTION_RAID + 1),
+        NextAction("kil'jaeden move holy paladin into stun range", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("kil'jaeden tanks should hold boss and reflections", {
         NextAction("kil'jaeden position and move tanks", ACTION_RAID) }));
@@ -221,6 +222,9 @@ void RaidSunwellStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void RaidSunwellStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 {
+    // General
+    multipliers.push_back(new SunwellPlateauNoEncounterDrinkingMultiplier(botAI));
+
     // Kalecgos
     multipliers.push_back(new KalecgosControlMisdirectionMultiplier(botAI));
     multipliers.push_back(new KalecgosWaitToDecurseMultiplier(botAI));
@@ -264,8 +268,7 @@ void RaidSunwellStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 
     // Kil'jaeden <The Deceiver>
     multipliers.push_back(new KiljaedenDelayCooldownsMultiplier(botAI));
-    multipliers.push_back(new KiljaedenTanksFocusAssignedHandOnlyMultiplier(botAI));
-    multipliers.push_back(new KiljaedenDpsFocusAssignedHandOnlyMultiplier(botAI));
+    multipliers.push_back(new KiljaedenSingleTargetHandsMultiplier(botAI));
     multipliers.push_back(new KiljaedenControlMovementAndTargetingMultiplier(botAI));
     multipliers.push_back(new KiljaedenPrioritizeDarknessProtectionMultiplier(botAI));
     multipliers.push_back(new KiljaedenControlDragonMultiplier(botAI));
@@ -355,6 +358,7 @@ void AppendKiljaedenShieldOrbExclusions(
     }
 }
 
+<<<<<<< HEAD
 // This activates only after the Reflections become aggressive (after 3s or when attacked,
 // whichever is earlier); up until then, they are not on the attackers list anyway
 /* void AppendKiljaedenSinisterReflectionExclusions(
@@ -379,6 +383,8 @@ void AppendKiljaedenShieldOrbExclusions(
     }
 } */
 
+=======
+>>>>>>> brighton-chi/the-lab
 } // end anonymous namespace
 
 void RaidSunwellStrategy::AppendTargetExclusions(
@@ -389,5 +395,4 @@ void RaidSunwellStrategy::AppendTargetExclusions(
     AppendMuruTankExclusions(botAI, context, exclusions);
     AppendMuruDarkFiendExclusions(botAI, context, exclusions);
     AppendKiljaedenShieldOrbExclusions(botAI, context, exclusions);
-    // AppendKiljaedenSinisterReflectionExclusions(botAI, context, exclusions);
 }

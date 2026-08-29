@@ -46,12 +46,20 @@ VALUES
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
+<<<<<<< HEAD
     (1918, 'kiljaeden_designated_dragon_orb_user', '%bot 是第一助理，也是指定的龙珠使用者！', 0, 0, '', '', '', '', '', '', '', '');
+=======
+    (1918, 'kiljaeden_designated_dragon_orb_user', '%bot is the first assistant bot and the designated dragon orb user. If you would like only players to control dragons, please remove assistant flags from all bots.', 0, 0, '', '', '', '', '', '', '', '');
+>>>>>>> brighton-chi/the-lab
 
 INSERT INTO ai_playerbot_texts
     (id, name, text, say_type, reply_type, text_loc1, text_loc2, text_loc3, text_loc4, text_loc5, text_loc6, text_loc7, text_loc8)
 VALUES
+<<<<<<< HEAD
     (1919, 'kiljaeden_no_designated_dragon_orb_user', '没有机器人被指定为龙珠使用者，因此需要玩家来控制巨龙。如果您希望机器人使用龙珠，请为机器人设置助理标记。', 0, 0, '', '', '', '', '', '', '', '');
+=======
+    (1919, 'kiljaeden_no_designated_dragon_orb_user', 'No bot has an assistant flag, and therefore a player must control the dragons. If you would like a bot to control the dragons, please set the assistant flag for a bot.', 0, 0, '', '', '', '', '', '', '', '');
+>>>>>>> brighton-chi/the-lab
 
 INSERT INTO ai_playerbot_texts_chance (name, probability) VALUES
     ('kalecgos_tank_sent_to_spectral_realm', 100),

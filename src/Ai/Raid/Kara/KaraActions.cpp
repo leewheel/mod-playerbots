@@ -12,10 +12,10 @@
 #include "KaraHelpers.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
+#include "Timer.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <ctime>
 #include <limits>
 #include <list>
 #include <map>
@@ -256,9 +256,14 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::StackBehindAttumen(Unit* attumen)
 
 bool AttumenTheHuntsmanSetDpsTimerAction::Execute(Event /*event*/)
 {
+<<<<<<< HEAD
     uint32 const instanceId = bot->GetMap()->GetInstanceId();
     time_t const now = std::time(nullptr);
     return attumenDpsWaitTimer.try_emplace(instanceId, now).second;
+=======
+    uint32 const now = getMSTime();
+    return attumenDpsWaitTimer.try_emplace(bot->GetInstanceId(), now).second;
+>>>>>>> brighton-chi/the-lab
 }
 
 // Moroes
@@ -676,7 +681,7 @@ bool NetherspiteBlockRedBeamAction::Execute(Event /*event*/)
     {
         if (!_redBeamTimerWasSet)
         {
-            _redBeamMoveTimer = std::time(nullptr);
+            _redBeamMoveTimer = getMSTime();
             _redBeamTimerWasSet = true;
         }
     }
@@ -695,11 +700,11 @@ bool NetherspiteBlockRedBeamAction::Execute(Event /*event*/)
     }
     _wasBlockingRedBeam = true;
 
-    constexpr uint8 intervalSecs = 5;
-    if (_redBeamTimerWasSet && std::time(nullptr) - _redBeamMoveTimer >= intervalSecs)
+    constexpr uint32 intervalMs = 5 * IN_MILLISECONDS;
+    if (_redBeamTimerWasSet && GetMSTimeDiffToNow(_redBeamMoveTimer) >= intervalMs)
     {
         _lastBeamMoveSideways = !_lastBeamMoveSideways;
-        _redBeamMoveTimer = std::time(nullptr);
+        _redBeamMoveTimer = getMSTime();
     }
 
     Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
@@ -983,9 +988,15 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
     if (!netherspite)
         return false;
 
+<<<<<<< HEAD
     uint32 const instanceId = netherspite->GetMap()->GetInstanceId();
     time_t const now = std::time(nullptr);
     bool const isMechanicTracker = IsMechanicTrackerBot(botAI, bot, KARA_MAP_ID);
+=======
+    uint32 const instanceId = netherspite->GetInstanceId();
+    uint32 const now = getMSTime();
+    bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
+>>>>>>> brighton-chi/the-lab
     bool didSomething = false;
 
     if (IsBanishPhase(netherspite))
@@ -1523,9 +1534,15 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
     if (!nightbane)
         return false;
 
+<<<<<<< HEAD
     uint32 const instanceId = nightbane->GetMap()->GetInstanceId();
     time_t const now = std::time(nullptr);
     bool const isMechanicTracker = IsMechanicTrackerBot(botAI, bot, KARA_MAP_ID);
+=======
+    uint32 const instanceId = nightbane->GetInstanceId();
+    uint32 const now = getMSTime();
+    bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
+>>>>>>> brighton-chi/the-lab
     bool didSomething = false;
 
     if (nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
