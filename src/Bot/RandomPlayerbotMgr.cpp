@@ -3627,6 +3627,39 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
         factory.InitGuild();
     }
 
+    // By leewheel 2026-08-29 - 猎人宠物登录自愈：Factory只在建号时分配一次宠物(且等级<10不分配)，
+    //   低级建号后升级的猎人bot宠物栏为空且可能缺失宠物技能链，Call Pet(883)只能召唤已驯服的宠物，
+    //   导致机器人猎人不召唤出宠物并反复触发pet_no_pet_error文本缺失报错。
+    //   这里在登录时补学宠物技能链，并按Factory默认分配逻辑(InitPet)补建宠物、初始化宠物天赋；
+    //   InitPet对已有宠物的bot天然幂等(stable有CurrentPet直接返回)，不会重复分配。
+    if (bot->getClass() == CLASS_HUNTER && bot->GetLevel() >= 10)
+    {
+        // 宠物技能链与建号流程保持一致(参照PlayerbotFactory::InitClassSpells的HUNTER分支)
+        constexpr uint32 SPELL_CALL_PET_HB = 883;
+        constexpr uint32 SPELL_TAME_PET_HB = 1515;
+        constexpr uint32 SPELL_FEED_PET_HB = 6991;
+        constexpr uint32 SPELL_REVIVE_PET_HB = 982;
+        constexpr uint32 SPELL_DISMISS_PET_HB = 2641;
+        if (!bot->HasSpell(SPELL_CALL_PET_HB))
+            bot->learnSpell(SPELL_CALL_PET_HB, false);
+        if (!bot->HasSpell(SPELL_TAME_PET_HB))
+            bot->learnSpell(SPELL_TAME_PET_HB, false);
+        if (!bot->HasSpell(SPELL_FEED_PET_HB))
+            bot->learnSpell(SPELL_FEED_PET_HB, false);
+        if (!bot->HasSpell(SPELL_REVIVE_PET_HB))
+            bot->learnSpell(SPELL_REVIVE_PET_HB, false);
+        if (!bot->HasSpell(SPELL_DISMISS_PET_HB))
+            bot->learnSpell(SPELL_DISMISS_PET_HB, false);
+
+        if (!bot->GetPet())
+        {
+            PlayerbotFactory factory(bot, bot->GetLevel());
+            factory.InitPet();
+            factory.InitPetTalents();
+        }
+    }
+    // End By leewheel
+
     RandomPlayerbotFactory::AssignBotToArenaTeam(bot);
 
     if (sPlayerbotAIConfig.randomBotFixedLevel)

@@ -106,17 +106,21 @@ std::string PlayerbotTextMgr::GetBotText(std::string name, std::map<std::string,
 std::string PlayerbotTextMgr::GetBotTextOrDefault(std::string name, std::string defaultText,
     std::map<std::string, std::string> placeholders)
 {
-    std::string botText = GetBotText(name, placeholders);
-    if (botText.empty())
+    // By leewheel 2026-08-29 - 带默认值的查询属于"缺失是预期"的路径：先静默判断文本是否加载，
+    //   只有库里确实有该文本时才走GetBotText(占位符替换)，缺失时直接用默认值，不再刷"没有此名称的机器人文本"错误日志。
+    auto const itr = botTexts.find(name);
+    if (itr != botTexts.end() && !itr->second.empty())
     {
-        for (std::map<std::string, std::string>::iterator i = placeholders.begin(); i != placeholders.end(); ++i)
-        {
-            replaceAll(defaultText, i->first, i->second);
-        }
-        return defaultText;
+        std::string botText = GetBotText(name, placeholders);
+        if (!botText.empty())
+            return botText;
     }
 
-    return botText;
+    for (std::map<std::string, std::string>::iterator i = placeholders.begin(); i != placeholders.end(); ++i)
+    {
+        replaceAll(defaultText, i->first, i->second);
+    }
+    return defaultText;
 }
 
 // chat replies

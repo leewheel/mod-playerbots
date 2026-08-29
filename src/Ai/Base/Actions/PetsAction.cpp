@@ -465,8 +465,9 @@ bool SetPetStanceAction::Execute(Event /*event*/)
     // If there are no controlled pets or guardians, notify the player and exit
     if (targets.empty())
     {
+        // By leewheel 2026-08-29 - 默认文本改为中文(游戏文本必须中文)，与PetsAction中文默认值一致
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "pet_no_pet_error", "You have no pet or guardian pet.", {}));
+            "pet_no_pet_error", "你没有宠物或守卫宠物。", {}));
         return false;
     }
 
