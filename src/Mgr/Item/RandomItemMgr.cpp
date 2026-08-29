@@ -1438,6 +1438,7 @@ bool RandomItemMgr::IsValidItem(ItemTemplate const* proto)
     if ((proto->AllowableClass & CLASSMASK_ALL_PLAYABLE) == 0)
         return false;
 
+<<<<<<< ours
     constexpr uint32 ALL_PLAYABLE_RACEMASK =
         (1 << (RACE_HUMAN - 1))         |
         (1 << (RACE_ORC - 1))           |
@@ -1452,6 +1453,22 @@ bool RandomItemMgr::IsValidItem(ItemTemplate const* proto)
 
     // check race-restricted items
     if ((proto->AllowableRace & ALL_PLAYABLE_RACEMASK) == 0)
+=======
+    constexpr uint32 PB_RACEMASK_ALL_PLAYABLE =
+        (1u << (RACE_HUMAN - 1))         |
+        (1u << (RACE_ORC - 1))           |
+        (1u << (RACE_DWARF - 1))         |
+        (1u << (RACE_NIGHTELF - 1))      |
+        (1u << (RACE_UNDEAD_PLAYER - 1)) |
+        (1u << (RACE_TAUREN - 1))        |
+        (1u << (RACE_GNOME - 1))         |
+        (1u << (RACE_TROLL - 1))         |
+        (1u << (RACE_BLOODELF - 1))      |
+        (1u << (RACE_DRAENEI - 1));
+
+    // check race-restricted items
+    if ((proto->AllowableRace & PB_RACEMASK_ALL_PLAYABLE) == 0)
+>>>>>>> leewheel_fix
         return false;
 
     // check test/internal items

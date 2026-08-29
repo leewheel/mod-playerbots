@@ -48,6 +48,11 @@ Position const WS_FLAG_HIDE_ALLIANCE_1 = {1529.249f, 1456.470f, 353.04f, 1.25f};
 Position const WS_FLAG_HIDE_ALLIANCE_2 = {1540.286f, 1476.026f, 352.692f, 2.91f};
 Position const WS_FLAG_HIDE_ALLIANCE_3 = {1495.807f, 1466.774f, 352.350f, 1.50f};
 Position const WS_ROAM_POS = {1227.446f, 1476.235f, 307.484f, 1.50f};
+// By leewheel 2026-08-29 - 中场拦截岗常驻站位：坐标取自实测可通行的路径点（部落隧道出口 / 联盟侧中场），
+//   卡住两条通道的交汇处，在敌方偷旗手抵达本方旗房前将其截杀
+Position const WS_INTERCEPT_POS_HORDE = {1126.45f, 1487.4f, 314.136f, 0.0f};
+Position const WS_INTERCEPT_POS_ALLIANCE = {1329.33f, 1411.13f, 318.399f, 0.0f};
+// End By leewheel
 Position const WS_GY_CAMPING_HORDE = {1039.819, 1388.759f, 340.703f, 0.0f};
 Position const WS_GY_CAMPING_ALLIANCE = {1422.320f, 1551.978f, 342.834f, 0.0f};
 std::vector<Position> const WS_FLAG_HIDE_HORDE = {WS_FLAG_HIDE_HORDE_1, WS_FLAG_HIDE_HORDE_2, WS_FLAG_HIDE_HORDE_3};
@@ -2146,22 +2151,29 @@ bool BGTactics::selectObjective(bool reset)
             Position target;
             TeamId team = bot->GetTeamId();
 
-            // Utility to safely relocate a position with optional random radius
+            // By leewheel 2026-08-29 - 重写战歌峡谷目标选择：以夺旗为核心，击杀只是夺旗的手段。
+            //   旧逻辑的三大问题：
+            //   1) 进攻者 70% 概率追杀敌方旗手，多数时间在杀人而非抢旗；
+            //   2) 不判断敌方旗帜是否还在基地，己方旗手已拿到敌旗时仍空跑敌方旗房；
+            //   3) 守家者仅 33% 概率留在基地附近，本方旗房经常空防。
+            //   新逻辑：按 role 0-9 划分四个岗位 —— 守家 / 中场拦截 / 偷旗 / 机动，
+            //   各岗位依据双方旗帜状态（在基地 / 被携带）选择目标。
+            // End By leewheel
+
+            // 随机点安置工具（修复旧版对 GetRandomPoint 返回值的 valid/invalid 处理写反的问题）
             auto SetSafePos = [&](Position const& origin, float radius = 0.0f) -> void
             {
-                float rx, ry, rz;
                 if (radius > 0.0f)
                 {
+                    float rx, ry, rz;
                     bot->GetRandomPoint(origin, radius, rx, ry, rz);
-                    if (rz == VMAP_INVALID_HEIGHT_VALUE)
+                    if (rz != VMAP_INVALID_HEIGHT_VALUE)
                         target.Relocate(rx, ry, rz);
                     else
                         target.Relocate(origin);
                 }
                 else
-                {
                     target.Relocate(origin);
-                }
             };
 
             // Check if the bot is carrying the flag
@@ -2174,33 +2186,40 @@ bool BGTactics::selectObjective(bool reset)
             WSBotStrategy strategy = (team == TEAM_ALLIANCE) ? strategyAlliance : strategyHorde;
             WSBotStrategy enemyStrategy = (team == TEAM_ALLIANCE) ? strategyHorde : strategyAlliance;
 
-            uint8 defendersProhab = 3;  // Default balanced
-
+            // By leewheel 2026-08-29 - 岗位区间（随队伍策略调整兵力分配）：
+            //   守家 [0, defMax) / 中场拦截 [defMax, intMax) / 偷旗 [intMax, offMax) / 机动 [offMax, 10)
+            // End By leewheel
+            uint8 defMax = 2;  // 默认 Balanced：2 守家 / 3 拦截 / 3 偷旗 / 2 机动
+            uint8 intMax = 5;
+            uint8 offMax = 8;
+            // By leewheel 2026-08-29 - 按策略枚举分支。
+            //   修复旧逻辑：策略值只会是 BALANCED(0)/OFFENSIVE(1)/DEFENSIVE(2)（Playerbots.cpp OnBattlegroundStart
+            //   以 urand(0, WS_STRATEGY_MAX - 1) 初始化），但旧 switch 按 0-9 分组且 case 4-9 永远不可达，
+            //   导致 OFFENSIVE/DEFENSIVE 全部落进 case 0-3 按 Balanced 处理 —— 队伍策略从未真正生效。
+            // End By leewheel
             switch (static_cast<uint8>(strategy))
             {
-                case 0:
-                case 1:
-                case 2:
-                case 3:  // Balanced
-                    defendersProhab = 3;
+                case WS_STRATEGY_OFFENSIVE:  // 进攻：1 守家 / 3 拦截 / 4 偷旗 / 2 机动
+                    defMax = 1;
+                    intMax = 4;
+                    offMax = 8;
                     break;
-                case 4:
-                case 5:
-                case 6:
-                case 7:  // Heavy Offense
-                    defendersProhab = 1;
+                case WS_STRATEGY_DEFENSIVE:  // 防守：3 守家 / 3 拦截 / 2 偷旗 / 2 机动
+                    defMax = 3;
+                    intMax = 6;
+                    offMax = 8;
                     break;
-                case 8:
-                case 9:  // Heavy Defense
-                    defendersProhab = 6;
+                case WS_STRATEGY_BALANCED:
+                default:  // 平衡（含未知脏值兜底）：2 守家 / 3 拦截 / 3 偷旗 / 2 机动
+                    defMax = 2;
+                    intMax = 5;
+                    offMax = 8;
                     break;
             }
 
-            if (enemyStrategy == WS_STRATEGY_DEFENSIVE)
-                defendersProhab = 2;
-
-            // Role check
-            bool isDefender = role < defendersProhab;
+            // 敌方龟缩防守时我方减少守家兵力，加强中场拦截
+            if (enemyStrategy == WS_STRATEGY_DEFENSIVE && defMax > 1)
+                defMax = 1;
 
             // Retrieve flag carriers
             Unit* enemyFC = AI_VALUE(Unit*, "enemy flag carrier");
@@ -2210,22 +2229,16 @@ bool BGTactics::selectObjective(bool reset)
             uint8 allianceScore = bg->GetTeamScore(TEAM_ALLIANCE);
             uint8 hordeScore = bg->GetTeamScore(TEAM_HORDE);
 
-            // Check if both teams currently have the flag
-            bool bothFlagsTaken = enemyFC && teamFC;
-            if (!hasFlag && bothFlagsTaken)
+            if (hasFlag)
             {
-                // If both flags taken: Bots have 20% chance to support own flag carrier, otherwise attack enemy FC
-                if (urand(0, 99) < 20 && teamFC)
-                {
-                    target.Relocate(teamFC->GetPositionX(), teamFC->GetPositionY(), teamFC->GetPositionZ());
-                    if (ServerFacade::instance().GetDistance2d(bot, teamFC) < 33.0f)
-                        Follow(teamFC);
-                }
+                // 拿旗者：己方旗也在外（双方旗都被携带）→ 就近隐蔽避开交火；否则直奔本方旗房交旗
+                if (team == TEAM_ALLIANCE)
+                    SetSafePos(teamFlagTaken() ? WS_FLAG_HIDE_ALLIANCE[urand(0, 2)] : WS_FLAG_POS_ALLIANCE);
                 else
-                    target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
+                    SetSafePos(teamFlagTaken() ? WS_FLAG_HIDE_HORDE[urand(0, 2)] : WS_FLAG_POS_HORDE);
             }
             // Graveyard Camping if in lead
-            else if (!hasFlag && role < 8 &&
+            else if (role < 8 &&
                 ((team == TEAM_ALLIANCE && allianceScore == 2 && hordeScore == 0) ||
                 (team == TEAM_HORDE && hordeScore == 2 && allianceScore == 0)))
             {
@@ -2234,69 +2247,59 @@ bool BGTactics::selectObjective(bool reset)
                 else
                     SetSafePos(WS_GY_CAMPING_ALLIANCE, 10.0f);
             }
-            else if (hasFlag)
+            else if (role < defMax)
             {
-                // If carrying the flag, either hide or return to base
-                if (team == TEAM_ALLIANCE)
-                    SetSafePos(teamFlagTaken() ? WS_FLAG_HIDE_ALLIANCE[urand(0, 2)] : WS_FLAG_POS_ALLIANCE);
+                // By leewheel 2026-08-29 - 守家岗：钉在本方旗房防偷旗 / 接应回到基地的旗。
+                //   不再被敌方旗手拉出基地追杀（追杀是拦截岗的职责），
+                //   只有敌方旗手摸进旗房 25 码内才就地反击夺旗。
+                // End By leewheel
+                SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_ALLIANCE : WS_FLAG_POS_HORDE, 8.0f);
+
+                if (enemyFC && bot->GetDistance2d(enemyFC) < 25.0f)
+                    target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
+            }
+            else if (role < intMax)
+            {
+                // By leewheel 2026-08-29 - 中场拦截岗：我方旗被敌方携带 → 全图追杀敌方旗手夺回旗帜；
+                //   我方旗安全 → 卡住中场偏本方一侧的通道，在敌方偷旗手抵达我方旗房前截杀。
+                // End By leewheel
+                if (enemyFC)
+                    target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
                 else
-                    SetSafePos(teamFlagTaken() ? WS_FLAG_HIDE_HORDE[urand(0, 2)] : WS_FLAG_POS_HORDE);
+                    SetSafePos(team == TEAM_ALLIANCE ? WS_INTERCEPT_POS_ALLIANCE : WS_INTERCEPT_POS_HORDE, 30.0f);
+            }
+            else if (role < offMax)
+            {
+                // By leewheel 2026-08-29 - 偷旗岗：敌方旗在基地 → 直奔敌方旗房拿旗（僵局时主动权的来源）；
+                //   敌方旗已被我方旗手携带 → 转为护航，紧跟己方旗手清出回家的路。
+                //   旧逻辑没有这个岗位，进攻者大多在中场杀人，旗房无人问津。
+                // End By leewheel
+                if (teamFC)
+                {
+                    target.Relocate(teamFC->GetPositionX(), teamFC->GetPositionY(), teamFC->GetPositionZ());
+                    if (ServerFacade::instance().GetDistance2d(bot, teamFC) < 33.0f)
+                        Follow(teamFC);
+                }
+                else
+                    SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_HORDE : WS_FLAG_POS_ALLIANCE, 5.0f);
             }
             else
             {
-                if (isDefender)
+                // By leewheel 2026-08-29 - 机动岗：视战况补位 —— 我方旗被拿 → 协助拦截；
+                //   我方旗手运旗 → 协助护航；双旗均在基地 → 一半协攻敌旗房、一半中场游走。
+                // End By leewheel
+                if (enemyFC && !teamFC)
+                    target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
+                else if (teamFC)
                 {
-                    if (enemyFC)
-                    {
-                        // Defenders attack enemy FC if found
-                        target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
-                    }
-                    else if (urand(0, 99) < 33)
-                    {
-                        // 33% chance to roam near own base
-                        SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_HIDE_ALLIANCE[urand(0, 2)] : WS_FLAG_HIDE_HORDE[urand(0, 2)], 5.0f);
-                    }
-                    else if (teamFC)
-                    {
-                        // 70% chance to support own FC
-                        if (urand(0, 99) < 70)
-                        {
-                            target.Relocate(teamFC->GetPositionX(), teamFC->GetPositionY(), teamFC->GetPositionZ());
-                            if (ServerFacade::instance().GetDistance2d(bot, teamFC) < 33.0f)
-                                Follow(teamFC);
-                        }
-                    }
-                    else
-                    {
-                        // Roam around central area
-                        SetSafePos(WS_ROAM_POS, 75.0f);
-                    }
+                    target.Relocate(teamFC->GetPositionX(), teamFC->GetPositionY(), teamFC->GetPositionZ());
+                    if (ServerFacade::instance().GetDistance2d(bot, teamFC) < 33.0f)
+                        Follow(teamFC);
                 }
-                else  // attacker logic
-                {
-                    if (enemyFC && urand(0, 99) < 70)
-                    {
-                        // 70% chance to pursue enemy FC
-                        target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
-                    }
-                    else if (teamFC)
-                    {
-                        // Assist own FC if not pursuing enemy FC
-                        target.Relocate(teamFC->GetPositionX(), teamFC->GetPositionY(), teamFC->GetPositionZ());
-                        if (ServerFacade::instance().GetDistance2d(bot, teamFC) < 33.0f)
-                            Follow(teamFC);
-                    }
-                    else if (urand(0, 99) < 5)
-                    {
-                        // 5% chance to free roam
-                        SetSafePos(WS_ROAM_POS, 75.0f);
-                    }
-                    else
-                    {
-                        // Push toward enemy flag base
-                        SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_HORDE : WS_FLAG_POS_ALLIANCE);
-                    }
-                }
+                else if (urand(0, 99) < 50)
+                    SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_HORDE : WS_FLAG_POS_ALLIANCE, 10.0f);
+                else
+                    SetSafePos(WS_ROAM_POS, 75.0f);
             }
 
             // Save the final target position

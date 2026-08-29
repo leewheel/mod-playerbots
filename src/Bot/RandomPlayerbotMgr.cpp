@@ -703,6 +703,7 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
 
         for (uint32 accountId : accountsToUse)
         {
+<<<<<<< ours
             // By leewheel 2026-08-19
             // 崩溃修复：合并 acore 后 CHAR_SEL_CHARS_BY_ACCOUNT_ID 改为仅查 guid 单列，
             // 原代码仍按 3 列读取(guid/class/race)导致 Field::GetData 越界崩溃(ACCESS_VIOLATION)。
@@ -711,6 +712,15 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
             // End By leewheel
             CharacterDatabasePreparedStatement* stmt =
                 CharacterDatabase.GetPreparedStatement(CHAR_SEL_ACCOUNT_INFO_CHARS);
+=======
+            // By leewheel 2026-08-29 - 原语句 CHAR_SEL_CHARS_BY_ACCOUNT_ID 已改为只查 guid 单列，
+            //   但下面要读 fields[0]/[1]/[2] 三列，继续用它会越界读到野内存并在
+            //   Field::GetData<uint8>() 里解引用崩溃（worldserver 100% ACCESS_VIOLATION）。
+            //   这里改用新增的三列版专用语句，列顺序 guid / class / race 与下方读取一一对应。
+            CharacterDatabasePreparedStatement* stmt =
+                CharacterDatabase.GetPreparedStatement(CHAR_SEL_PBOT_CHARS_CLASS_RACE_BY_ACCOUNT_ID);
+            // End By leewheel
+>>>>>>> leewheel_fix
             stmt->SetData(0, accountId);
             PreparedQueryResult result = CharacterDatabase.Query(stmt);
             if (!result)
