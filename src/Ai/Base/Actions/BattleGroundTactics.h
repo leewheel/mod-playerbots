@@ -130,6 +130,9 @@ private:
     bool teamFlagTaken();
     bool protectFC();
     bool useBuff();
+    // By leewheel 2026-08-29 团队集火：统计队友正在攻击的敌方玩家，对齐目标协同输出
+    void focusTeamTarget();
+    // End By leewheel
     uint32 getPlayersInArea(TeamId teamId, Position point, float range, bool combat = true);
     bool IsLockedInsideKeep();
 };

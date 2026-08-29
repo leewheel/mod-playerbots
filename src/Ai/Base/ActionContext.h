@@ -43,6 +43,9 @@
 #include "MoveToRpgTargetAction.h"
 #include "MoveToTravelTargetAction.h"
 #include "MovementActions.h"
+// By leewheel 2026-08-29 PVP 自保动作组
+#include "PvpSurvivalActions.h"
+// End By leewheel
 #include "NewRpgAction.h"
 #include "NewRpgOutdoorPvP.h"
 #include "NonCombatActions.h"
@@ -230,6 +233,12 @@ public:
         creators["bg use buff"] = &ActionContext::bg_use_buff;
         creators["attack enemy flag carrier"] = &ActionContext::attack_enemy_fc;
         creators["bg check flag"] = &ActionContext::bg_check_flag;
+
+        // By leewheel 2026-08-29 PVP 自保动作组（低血量控制逃生 / 安全绷带 / 濒死撤退）
+        creators["pvp cast cc escape"] = &ActionContext::pvp_cast_cc_escape;
+        creators["pvp use bandage"] = &ActionContext::pvp_use_bandage;
+        creators["pvp retreat"] = &ActionContext::pvp_retreat;
+        // End By leewheel
 
         // Vehicles
         creators["enter vehicle"] = &ActionContext::enter_vehicle;
@@ -445,6 +454,12 @@ private:
     static Action* attack_enemy_fc(PlayerbotAI* botAI) { return new AttackEnemyFlagCarrierAction(botAI); }
     static Action* bg_use_buff(PlayerbotAI* botAI) { return new BGTactics(botAI, "use buff"); }
     static Action* bg_check_flag(PlayerbotAI* botAI) { return new BGTactics(botAI, "check flag"); }
+
+    // By leewheel 2026-08-29 PVP 自保动作组工厂
+    static Action* pvp_cast_cc_escape(PlayerbotAI* botAI) { return new CastCcEscapeAction(botAI); }
+    static Action* pvp_use_bandage(PlayerbotAI* botAI) { return new UseBandageInPvpAction(botAI); }
+    static Action* pvp_retreat(PlayerbotAI* botAI) { return new PvpRetreatAction(botAI); }
+    // End By leewheel
 
     // Vehicles
     static Action* enter_vehicle(PlayerbotAI* botAI) { return new EnterVehicleAction(botAI); }

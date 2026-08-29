@@ -334,3 +334,54 @@ bool AllianceNoSnowfallGY::IsActive()
 
     return false;
 }
+
+// By leewheel 2026-08-29
+// PVP 自保触发器实现。
+//   统计近身敌方玩家数量的辅助逻辑就地实现（遍历 "nearest enemy players" 值），
+//   三个触发器只在战场内生效，避免野外随机bot无谓施放自保技能。
+// End By leewheel
+namespace
+{
+// 统计 range 码内存活的敌方玩家数量
+uint8 CountNearbyEnemyPlayers(PlayerbotAI* botAI, float range)
+{
+    Player* bot = botAI->GetBot();
+    GuidVector enemies = botAI->GetAiObjectContext()->GetValue<GuidVector>("nearest enemy players")->Get();
+    uint8 count = 0;
+    for (ObjectGuid const& guid : enemies)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->IsAlive() && bot->GetDistance(unit) < range)
+            ++count;
+    }
+
+    return count;
+}
+}  // namespace
+
+bool LowHpPvpTrigger::IsActive()
+{
+    if (!bot->GetBattleground())
+        return false;
+
+    // 血<40% 且 12 码内有敌方玩家 → 触发控制逃生
+    return bot->GetHealthPct() < 40.f && CountNearbyEnemyPlayers(botAI, 12.f) >= 1;
+}
+
+bool SafeToBandageTrigger::IsActive()
+{
+    if (!bot->GetBattleground())
+        return false;
+
+    // 血<60% 且 12 码内无敌对玩家 → 安全窗口（绷带动作内部还会校验背包有绷带）
+    return bot->GetHealthPct() < 60.f && CountNearbyEnemyPlayers(botAI, 12.f) == 0;
+}
+
+bool PvpCriticalTrigger::IsActive()
+{
+    if (!bot->GetBattleground())
+        return false;
+
+    // 血<25% 且 15 码内敌方玩家 >= 2 → 被围攻，强制撤退
+    return bot->GetHealthPct() < 25.f && CountNearbyEnemyPlayers(botAI, 15.f) >= 2;
+}

@@ -1630,6 +1630,11 @@ bool BGTactics::Execute(Event /*event*/)
     if (getName() == "move to start")
         return moveToStart();
 
+    // By leewheel 2026-08-29 团队集火：战斗中把攻击目标对齐到队友集中攻击的敌方玩家，
+    //   协同输出以最快速度减员对方（杀掉一个人少打一个，比分散输出效率高得多）。
+    // End By leewheel
+    focusTeamTarget();
+
     if (getName() == "reset objective force")
     {
         bool isCarryingFlag =
@@ -2320,6 +2325,29 @@ bool BGTactics::selectObjective(bool reset)
             BattlegroundAB* ab = static_cast<BattlegroundAB*>(bg);
             TeamId team = bot->GetTeamId();
 
+            // By leewheel 2026-08-29
+            // 配额制（参考 NPCBots 战场配额思想）：统计同队队友在点位附近的数量，
+            //   人满的点位不再作为候选——杜绝无头苍蝇式扎堆，让兵力自然分布到各个支援点。
+            //   守点驻守配额 2 / 告急支援配额 3 / 攻点配额 3。
+            // End By leewheel
+            auto CountAlliesNear = [&](Position const& nodePos) -> uint8
+            {
+                uint8 count = 0;
+                GuidVector members = AI_VALUE(GuidVector, "group members");
+                for (ObjectGuid const& guid : members)
+                {
+                    if (guid == bot->GetGUID())
+                        continue;
+
+                    Unit* member = botAI->GetUnit(guid);
+                    if (member && member->IsAlive() && member->GetMapId() == bot->GetMapId() &&
+                        member->GetDistance2d(nodePos.GetPositionX(), nodePos.GetPositionY()) < 60.f)
+                        ++count;
+                }
+
+                return count;
+            };
+
             uint8 role = context->GetValue<uint32>("bg role")->Get();
             ABBotStrategy strategyHorde = static_cast<ABBotStrategy>(GetBotStrategyForTeam(bg, TEAM_HORDE));
             ABBotStrategy strategyAlliance = static_cast<ABBotStrategy>(GetBotStrategyForTeam(bg, TEAM_ALLIANCE));
@@ -2418,6 +2446,14 @@ bool BGTactics::selectObjective(bool reset)
                         continue;
 
                     float dist = bot->GetDistance(go);
+
+                    // By leewheel 2026-08-29 守点配额：被争夺的告急点（拉锯）允许 3 名队友支援，
+                    //   我方占领的常规驻守点 2 名队友即可——人满的点位不再前往，转投其他支援点。
+                    // End By leewheel
+                    uint8 allyQuota = isContested ? 3 : 2;
+                    if (CountAlliesNear(go->GetPosition()) >= allyQuota)
+                        continue;
+
                     if (dist < closestDist)
                     {
                         closestDist = dist;
@@ -2452,6 +2488,12 @@ bool BGTactics::selectObjective(bool reset)
 
                         GameObject* go = bg->GetBGObject(nodeId * BG_AB_OBJECTS_PER_NODE);
                         if (!go || std::find(objectivePool.begin(), objectivePool.end(), go) != objectivePool.end())
+                            continue;
+
+                        // By leewheel 2026-08-29 攻点配额（NPCBots：每点最多 3 人进攻）：
+                        //   该点附近队友已达 3 人则跳过，兵力转投其他点位。
+                        // End By leewheel
+                        if (CountAlliesNear(go->GetPosition()) >= 3)
                             continue;
 
                         float dist = bot->GetDistance(go);
@@ -4017,6 +4059,66 @@ bool BGTactics::protectFC()
     return false;
 }
 
+// By leewheel 2026-08-29
+// 团队集火（参考 NPCBots 的协同击杀思想）：
+//   统计 60 码内同队队友当前的攻击目标，若 >=2 名队友正在攻击同一敌方玩家，
+//   则把 bot 的攻击目标切换到该玩家，形成以多打少的集火减员。
+//   已对齐目标时静默返回，不干扰本轮动作调度。
+// End By leewheel
+void BGTactics::focusTeamTarget()
+{
+    if (!bot->IsInCombat())
+        return;
+
+    // 统计队友的攻击目标
+    std::unordered_map<ObjectGuid, uint8> targetCount;
+    GuidVector members = AI_VALUE(GuidVector, "group members");
+    for (ObjectGuid const& guid : members)
+    {
+        if (guid == bot->GetGUID())
+            continue;
+
+        Unit* member = botAI->GetUnit(guid);
+        if (!member || !member->IsAlive() || member->GetDistance(bot) > 60.f)
+            continue;
+
+        Unit* victim = member->GetVictim();
+        // 只集火敌方玩家（战场上减员敌方玩家收益最大，怪物目标不干预）
+        if (victim && victim->IsPlayer() && victim->ToPlayer()->GetTeamId() != bot->GetTeamId())
+            ++targetCount[victim->GetGUID()];
+    }
+
+    if (targetCount.empty())
+        return;
+
+    // 选被攻击最多的敌人；不足 2 人则不构成集火信号
+    ObjectGuid bestGuid = ObjectGuid::Empty;
+    uint8 bestCount = 1;
+    for (auto const& [guid, cnt] : targetCount)
+    {
+        if (cnt > bestCount)
+        {
+            bestCount = cnt;
+            bestGuid = guid;
+        }
+    }
+
+    if (bestGuid.IsEmpty())
+        return;
+
+    // 已是当前目标则无需调整
+    if (bot->GetTarget() == bestGuid)
+        return;
+
+    Unit* focusTarget = botAI->GetUnit(bestGuid);
+    if (!focusTarget || !focusTarget->IsAlive() || bot->GetDistance(focusTarget) > 60.f)
+        return;
+
+    botAI->GetAiObjectContext()->GetValue<ObjectGuid>("current target")->Set(bestGuid);
+    LOG_DEBUG("playerbots", "团队集火：机器人 {} 对齐目标到 {}（{} 名队友在攻击）", bot->GetName(),
+              focusTarget->GetName(), bestCount);
+}
+
 bool BGTactics::useBuff()
 {
     Battleground* bg = bot->GetBattleground();
@@ -4067,6 +4169,32 @@ bool BGTactics::useBuff()
 
         if (foundBuff)
         {
+            // By leewheel 2026-08-29 buff 不扎堆（NPCBots 手法）：
+            //   已有同队队友在 buff 15 码内或同样正在前往时，把这个 buff 让给队友，
+            //   继续看下一个 buff——避免半支队伍同时扑向同一个 buff 点。
+            // End By leewheel
+            bool mateGoing = false;
+            GuidVector members = AI_VALUE(GuidVector, "group members");
+            for (ObjectGuid const& guid : members)
+            {
+                if (guid == bot->GetGUID())
+                    continue;
+
+                Unit* member = botAI->GetUnit(guid);
+                if (member && member->IsAlive() && member->GetMapId() == bot->GetMapId() &&
+                    member->GetDistance2d(go->GetPositionX(), go->GetPositionY()) < 15.f)
+                {
+                    mateGoing = true;
+                    break;
+                }
+            }
+
+            if (mateGoing)
+            {
+                foundBuff = false;
+                continue;
+            }
+
             // std::ostringstream out;
             // out << "Moving to buff...";
             // bot->Say(out.str(), LANG_UNIVERSAL);

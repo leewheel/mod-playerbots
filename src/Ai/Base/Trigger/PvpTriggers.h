@@ -149,4 +149,37 @@ public:
     bool IsActive() override;
 };
 
+// By leewheel 2026-08-29
+// PVP 自保触发器组（参考 NPCBots 战场生存手法）：
+//   低血量被近身 → 控制逃生；血量偏低且无近身威胁 → 打绷带；濒死被围攻 → 撤退。
+//   挂在 BattlegroundStrategy 上，战场内全程生效。
+// End By leewheel
+
+// 低血量且近身有敌方玩家：触发控制逃生（血<40%、12码内有敌对玩家）
+class LowHpPvpTrigger : public Trigger
+{
+public:
+    LowHpPvpTrigger(PlayerbotAI* botAI) : Trigger(botAI, "low hp pvp", 2) {}
+
+    bool IsActive() override;
+};
+
+// 血量偏低且近战范围内无敌对玩家：安全窗口触发打绷带（血<60%、12码内无敌）
+class SafeToBandageTrigger : public Trigger
+{
+public:
+    SafeToBandageTrigger(PlayerbotAI* botAI) : Trigger(botAI, "safe to bandage", 5) {}
+
+    bool IsActive() override;
+};
+
+// 濒死被围攻：血<25% 且 15 码内敌方玩家 >= 2，触发强制撤退
+class PvpCriticalTrigger : public Trigger
+{
+public:
+    PvpCriticalTrigger(PlayerbotAI* botAI) : Trigger(botAI, "pvp critical", 1) {}
+
+    bool IsActive() override;
+};
+
 #endif
