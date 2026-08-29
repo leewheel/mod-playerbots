@@ -1906,6 +1906,28 @@ bool BGTactics::selectObjective(bool reset)
             bool isDefender = role < defendersProhab;
             bool isAdvanced = !isDefender && role > 8;
 
+            // By leewheel 2026-08-29
+            // 配额制（参考 NPCBots 战场配额思想）：统计同队队友在点位附近的数量，
+            //   守点驻守配额 2 / 告急支援配额 4 / 攻点配额 4——兵力不足的点位才需要人。
+            // End By leewheel
+            auto CountAlliesNear = [&](Position const& nodePos) -> uint8
+            {
+                uint8 count = 0;
+                GuidVector members = AI_VALUE(GuidVector, "group members");
+                for (ObjectGuid const& guid : members)
+                {
+                    if (guid == bot->GetGUID())
+                        continue;
+
+                    Unit* member = botAI->GetUnit(guid);
+                    if (member && member->IsAlive() && member->GetMapId() == bot->GetMapId() &&
+                        member->GetDistance2d(nodePos.GetPositionX(), nodePos.GetPositionY()) < 60.f)
+                        ++count;
+                }
+
+                return count;
+            };
+
             auto const& attackObjectives =
                 (team == TEAM_HORDE) ? AV_AttackObjectives_Horde : AV_AttackObjectives_Alliance;
             auto const& defendObjectives =
@@ -1990,6 +2012,24 @@ bool BGTactics::selectObjective(bool reset)
                 }
             }
 
+            // By leewheel 2026-08-29
+            // 守船长（NPCBots 思路）：己方船长被攻击时，部分防守 bot 优先回防船长房——
+            //   船长阵亡会丢全队增益（努sss力 buff），被敌方偷袭时必须有人回救。
+            //   仅防守 bot 回防（role 0-3，占防守兵力的前 40%），避免全员回援丢掉前线。
+            // End By leewheel
+            if (!BgObjective && isDefender && role < 4)
+            {
+                uint32 ownCaptainId = (team == TEAM_HORDE) ? AV_CREATURE_H_CAPTAIN : AV_CREATURE_A_CAPTAIN;
+                if (Creature* ownCaptain = bg->GetBGCreature(ownCaptainId))
+                {
+                    if (ownCaptain->IsAlive() && ownCaptain->IsInCombat())
+                    {
+                        BgObjective = ownCaptain;
+                        LOG_DEBUG("playerbots", "AV 守船长：机器人 {} 回防己方船长", bot->GetName());
+                    }
+                }
+            }
+
             // --- Captain ---
             if (!BgObjective && urand(0, 99) < 90)
             {
@@ -2023,9 +2063,24 @@ bool BGTactics::selectObjective(bool reset)
                         continue;
 
                     if (node.State == POINT_ASSAULTED)
+                    {
+                        // By leewheel 2026-08-29 告急支援配额：该点队友已达 4 人则不再增援，
+                        //   让兵力流向其他告急/空缺点位。
+                        // End By leewheel
+                        if (CountAlliesNear(go->GetPosition()) >= 4)
+                            continue;
+
                         contestedObjectives.push_back(go);
+                    }
                     else
+                    {
+                        // By leewheel 2026-08-29 驻守配额：该点已有 2 名队友驻守则跳过。
+                        // End By leewheel
+                        if (CountAlliesNear(go->GetPosition()) >= 2)
+                            continue;
+
                         availableObjectives.push_back(go);
+                    }
                 }
 
                 if (!contestedObjectives.empty())
@@ -2073,6 +2128,12 @@ bool BGTactics::selectObjective(bool reset)
                         continue;
 
                     if (node.State == POINT_ASSAULTED && urand(0, 99) >= 1)
+                        continue;
+
+                    // By leewheel 2026-08-29 攻点配额（NPCBots：每点最多 4 人进攻）：
+                    //   该点附近队友已满则跳过，避免全队挤在同一条战线。
+                    // End By leewheel
+                    if (CountAlliesNear(go->GetPosition()) >= 4)
                         continue;
 
                     candidates.push_back(go);

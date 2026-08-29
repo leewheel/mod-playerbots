@@ -26,8 +26,21 @@ bool AttackEnemyPlayerAction::isUseful()
 bool AttackEnemyFlagCarrierAction::isUseful()
 {
     Unit* target = context->GetValue<Unit*>("enemy flag carrier")->Get();
-    return target && ServerFacade::instance().IsDistanceLessOrEqualThan(ServerFacade::instance().GetDistance2d(bot, target), 100.0f) &&
-           PlayerHasFlag::IsCapturingFlag(bot);
+    if (!target || !PlayerHasFlag::IsCapturingFlag(bot))
+        return false;
+
+    float dist = ServerFacade::instance().GetDistance2d(bot, target);
+
+    // By leewheel 2026-08-29
+    // 追旗手速度门槛（参考 NPCBots：由速度增益持有者负责追击）：
+    //   携带移动速度增益（狂暴/加速/旗帜加速等 SPEED 类 aura）的 bot 可远距离追击（100 码内）；
+    //   无增益的 bot 只在近距离（40 码内）参与拦截——否则追不上旗手白白空跑，
+    //   还不如留在自己的岗位（守家/守旗）。
+    // End By leewheel
+    bool hasSpeedBuff = bot->HasAuraType(SPELL_AURA_MOD_INCREASE_SPEED);
+    float chaseRange = hasSpeedBuff ? 100.0f : 40.0f;
+
+    return ServerFacade::instance().IsDistanceLessOrEqualThan(dist, chaseRange);
 }
 
 bool AggressiveTargetAction::isUseful()
