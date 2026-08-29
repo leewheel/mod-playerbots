@@ -569,32 +569,34 @@ bool MuruCastStunOnBerserkerAction::Execute(Event /*event*/)
     if (!berserker)
         return false;
 
-    auto const castStun = [&](const char* spell)
+    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
+    auto const castStun = [&](uint32 spellId)
     {
-        return botAI->CanCastSpell(spell, berserker) && botAI->CastSpell(spell, berserker);
+        return botAI->CanCastSpell(spellId, berserker) && botAI->CastSpell(spellId, berserker);
     };
 
     switch (bot->getClass())
     {
         case CLASS_DRUID:
-            return castStun("bash") || castStun("maim");
+            return castStun(Id(SwpSpells::SPELL_BASH)) || castStun(Id(SwpSpells::SPELL_MAIM));
 
         case CLASS_PALADIN:
-            return castStun("hammer of justice");
+            return castStun(Id(SwpSpells::SPELL_HAMMER_OF_JUSTICE));
 
         case CLASS_ROGUE:
-            return castStun("kidney shot");
+            return castStun(Id(SwpSpells::SPELL_KIDNEY_SHOT));
 
         case CLASS_WARLOCK:
-            return castStun("shadowfury");
+            return castStun(Id(SwpSpells::SPELL_SHADOWFURY));
 
         case CLASS_WARRIOR:
-            return castStun("concussion blow") || castStun("shockwave");
+            return castStun(Id(SwpSpells::SPELL_CONCUSSION_BLOW)) || castStun(Id(SwpSpells::SPELL_SHOCKWAVE));
 
         default:
-            // Tauren
-            return castStun("war stomp");
+            // 牛头人种族技能
+            return castStun(Id(SwpSpells::SPELL_WAR_STOMP));
     }
+    // End By leewheel
 }
 
 bool MuruInterruptFelFireballAction::Execute(Event /*event*/)
@@ -603,43 +605,45 @@ bool MuruInterruptFelFireballAction::Execute(Event /*event*/)
     if (!furyMage)
         return false;
 
-    auto const castInterrupt = [&](const char* spell)
+    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
+    auto const castInterrupt = [&](uint32 spellId)
     {
-        return botAI->CanCastSpell(spell, furyMage) && botAI->CastSpell(spell, furyMage);
+        return botAI->CanCastSpell(spellId, furyMage) && botAI->CastSpell(spellId, furyMage);
     };
 
     switch (bot->getClass())
     {
         case CLASS_DEATH_KNIGHT:
-            return castInterrupt("mind freeze") || castInterrupt("strangulate");
+            return castInterrupt(Id(SwpSpells::SPELL_MIND_FREEZE)) || castInterrupt(Id(SwpSpells::SPELL_STRANGULATE));
 
         case CLASS_HUNTER:
-            return castInterrupt("silencing shot");
+            return castInterrupt(Id(SwpSpells::SPELL_SILENCING_SHOT));
 
         case CLASS_MAGE:
-            return castInterrupt("counterspell");
+            return castInterrupt(Id(SwpSpells::SPELL_COUNTERSPELL));
 
         case CLASS_PALADIN:
-            return castInterrupt("avenger's shield");
+            return castInterrupt(Id(SwpSpells::SPELL_AVENGERS_SHIELD));
 
         case CLASS_PRIEST:
-            return castInterrupt("silence");
+            return castInterrupt(Id(SwpSpells::SPELL_SILENCE));
 
         case CLASS_ROGUE:
-            return castInterrupt("kick");
+            return castInterrupt(Id(SwpSpells::SPELL_KICK));
 
         case CLASS_SHAMAN:
-            return castInterrupt("wind shear");
+            return castInterrupt(Id(SwpSpells::SPELL_WIND_SHEAR));
 
         case CLASS_WARLOCK:
-            return castInterrupt("spell lock");
+            return castInterrupt(Id(SwpSpells::SPELL_SPELL_LOCK));
 
         case CLASS_WARRIOR:
-            return castInterrupt("pummel") || castInterrupt("shield bash");
+            return castInterrupt(Id(SwpSpells::SPELL_PUMMEL)) || castInterrupt(Id(SwpSpells::SPELL_SHIELD_BASH));
 
         default:
             return false;
     }
+    // End By leewheel
 }
 
 bool MuruCastSpellStealOnSpellFuryAction::Execute(Event /*event*/)

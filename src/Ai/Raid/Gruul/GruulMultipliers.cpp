@@ -30,16 +30,10 @@ float GruulsLairDelayDpsCooldownsMultiplier::GetValue(Action* action)
     if (gruul && gruul->GetHealthPct() > 95.0f)
         return 0.0f;
 
-<<<<<<< HEAD
-    Unit* blindeye = AI_VALUE2(Unit*, "find target", "18836");
-    if (!blindeye)
-        return 1.0f;
-
-    return blindeye->GetHealthPct() > 75.0f ? 0.0f : 1.0f;
-=======
-    Unit* blindeye = AI_VALUE2(Unit*, "find target", "blindeye the seer");
+    // By leewheel 2026-08-29 合并：采用对侧新逻辑(优先杀Blindeye治疗，与AssignDpsPriority一致)，entry规则查找
+    Unit* blindeye = AI_VALUE2(Unit*, "find target", "18831");
     return blindeye && blindeye->GetHealthPct() > BLINDEYE_PULL_COMPLETE_HP_PERCENT ? 0.0f : 1.0f;
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
 }
 
 float HighKingMaulgarControlTankActionsMultiplier::GetValue(Action* action)
@@ -71,23 +65,21 @@ float HighKingMaulgarRestrictTauntingMultiplier::GetValue(Action* action)
     if (!isAoeThreat && !IsTauntAction(bot, action))
         return 1.0f;
 
-<<<<<<< HEAD
-    Unit* kiggler = AI_VALUE2(Unit*, "find target", "18835");
-=======
+    // By leewheel 2026-08-29 合并：采用对侧新增逻辑(主坦克放行/Blindeye在场禁AoE威胁)，entry规则查找
     // The main tank stays on Maulgar the whole time so it can do whatever.
     if (PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
     // Blindeye and Olm are tanked next to each other by separate tanks; until Blindeye is dead,
     // don't use AoE threat abilities.
-    if (isAoeThreat && AI_VALUE2(Unit*, "find target", "blindeye the seer"))
+    if (isAoeThreat && AI_VALUE2(Unit*, "find target", "18831"))
         return 0.0f;
 
     // Kiggler is the only ogre for which taunting is a problem because he is the only one that is
     // both (1) tanked by a non-traditional-tank and (2) directed to be attacked by traditional
     // tanks (the Blindeye and Olm tanks after both are down).
-    Unit* kiggler = AI_VALUE2(Unit*, "find target", "kiggler the crazed");
->>>>>>> brighton-chi/the-lab
+    Unit* kiggler = AI_VALUE2(Unit*, "find target", "18835");
+    // End By leewheel
     if (!kiggler)
         return 1.0f;
 
@@ -157,16 +149,8 @@ float HighKingMaulgarControlHunterActionsMultiplier::GetValue(Action* action)
     }
 
     // Arcane Shot removes Spell Shield, which the mage tank needs to survive
-<<<<<<< HEAD
     Unit* krosh = AI_VALUE2(Unit*, "find target", "18832");
-    if (!krosh)
-        return 1.0f;
-
-    return action->GetTarget() == krosh ? 0.0f : 1.0f;
-=======
-    Unit* krosh = AI_VALUE2(Unit*, "find target", "krosh firehand");
     return krosh && action->GetTarget() == krosh ? 0.0f : 1.0f;
->>>>>>> brighton-chi/the-lab
 }
 
 float HighKingMaulgarControlMageTankActionsMultiplier::GetValue(Action* action)
@@ -204,16 +188,10 @@ float GruulTheDragonkillerControlTankMovementMultiplier::GetValue(Action* action
         return 1.0f;
     }
 
-<<<<<<< HEAD
+    // By leewheel 2026-08-29 合并：采用对侧单行写法，entry规则查找
     Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
-    if (!gruul)
-        return 1.0f;
-
-    return gruul->GetVictim() == bot ? 0.0f : 1.0f;
-=======
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
     return gruul && gruul->GetVictim() == bot ? 0.0f : 1.0f;
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
 }
 
 float GruulTheDragonkillerStaySpreadForShatterMultiplier::GetValue(Action* action)
@@ -241,7 +219,8 @@ float GruulTheDragonkillerHoldWhileSnaredMultiplier::GetValue(Action* action)
     if (bot->GetSpeed(MOVE_RUN) > 0.0f)
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "gruul the dragonkiller"))
+    // By leewheel 2026-08-29 entry化修正（gruul->19044）
+    if (!AI_VALUE2(Unit*, "find target", "19044"))
         return 1.0f;
 
     return dynamic_cast<MovementAction*>(action) ? 0.0f : 1.0f;

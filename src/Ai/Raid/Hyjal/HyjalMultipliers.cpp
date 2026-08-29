@@ -33,14 +33,16 @@ float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
         return 1.0f;
 
     // Last boss first, so an instance that has progressed answers on its first lookup
+    // By leewheel 2026-08-29 entry化：海加尔boss改用entry查找(经acore原版库3309验证)
     Unit* boss = nullptr;
     for (char const* name :
-         { "archimonde", "azgalor", "kaz'rogal", "anetheron", "rage winterchill" })
+         { "17968", "17842", "17888", "17808", "17767" })
     {
         boss = AI_VALUE2(Unit*, "find target", name);
         if (boss)
             break;
     }
+    // End By leewheel
 
     // Suppress Bloodlust/Heroism when no boss is present (trash waves). Asked only on this branch,
     // since it is the only one the answer differs on--everything else here is a dps cooldown too

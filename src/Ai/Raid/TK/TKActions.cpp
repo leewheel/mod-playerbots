@@ -1235,8 +1235,13 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::MeleeDpsPositionOutsideBo
 
 bool KaelthasSunstriderManageAdvisorDpsTimerAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-08-29 entry化：凯尔萨斯三顾问改用entry查找(经acore原版库3309验证)
     static constexpr std::array advisorNames = {
-        "grand astromancer capernian", "master engineer telonicus", "lord sanguinar", };
+        "20062", // Grand Astromancer Capernian
+        "20063", // Master Engineer Telonicus
+        "20060", // Lord Sanguinar
+    };
+    // End By leewheel
 
     bool advisorAtFullHp = false;
     for (char const* name : advisorNames)

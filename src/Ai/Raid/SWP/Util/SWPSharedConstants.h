@@ -95,6 +95,39 @@ enum class SwpSpells : uint32
 
     // Warlock
     SPELL_METAMORPHOSIS                = 47241,
+
+    // By leewheel 2026-08-29 KJ欺诈者之手/穆鲁控制技（规则：技能一律用entry/spellID，不用英文名；ID均为80级可学的最高rank，已用chs_dbc.db_spell_12340_eng查证）
+    SPELL_BASH                         = 8983,   // 德鲁伊熊形态（5211→6798→8983链顶）
+    SPELL_MAIM                         = 49802,  // 德鲁伊猫形态（22570→49802链顶）
+    SPELL_DEEP_FREEZE                  = 44572,  // 法师（唯一rank）
+    SPELL_HAMMER_OF_JUSTICE            = 10308,  // 圣骑士 r4
+    SPELL_KIDNEY_SHOT                  = 8643,   // 盗贼（408→8643链顶）
+    SPELL_SHADOWFURY                   = 30283,  // 术士（唯一rank）
+    SPELL_CONCUSSION_BLOW              = 12809,  // 战士（唯一rank）
+    SPELL_SHOCKWAVE                    = 46968,  // 战士（唯一rank）
+    SPELL_WAR_STOMP                    = 20549,  // 牛头人种族（唯一rank）
+    SPELL_SILENCING_SHOT               = 34490,  // 猎人（唯一rank）
+    SPELL_SILENCE                      = 15487,  // 牧师（唯一rank）
+    SPELL_STRANGULATE                  = 49916,  // 死亡骑士（48680→49913→49914→49915→49916链顶，SpellLevel 79）
+    SPELL_ARCANE_TORRENT               = 28733,  // 血精灵种族mana版r2（DK走Strangulate分支不会用到）
+    SPELL_MIND_FREEZE                  = 49910,  // 死亡骑士（47528→49910链顶）
+    SPELL_COUNTERSPELL                 = 2139,   // 法师（唯一rank）
+    SPELL_AVENGERS_SHIELD              = 48827,  // 圣骑士（…→48827链顶r3）
+    SPELL_KICK                         = 1767,   // 盗贼（1766→1767链顶）
+    SPELL_WIND_SHEAR                   = 57994,  // 萨满（唯一rank）
+    SPELL_SPELL_LOCK                   = 19647,  // 术士法术封锁（19244→19647链顶）
+    SPELL_PUMMEL                       = 6554,   // 战士（6552→6554链顶）
+    SPELL_SHIELD_BASH                  = 1671,   // 战士盾击（72→1671链顶）
+
+    // By leewheel 2026-08-29 KJ 邪恶镜像(Sinister Reflection)拦截技（同样entry规则，80级最高rank，已查证）
+    SPELL_DEATH_AND_DECAY              = 49938,  // 死亡骑士（43265→49936→49937→49938链顶）
+    SPELL_ICY_TOUCH                    = 49909,  // 死亡骑士（45477→…→49909链顶）
+    SPELL_FERAL_CHARGE_BEAR            = 16979,  // 德鲁伊（唯一rank）
+    SPELL_CHALLENGING_ROAR             = 5209,   // 德鲁伊（唯一rank）
+    SPELL_CONSECRATION                 = 48819,  // 圣骑士（80级最高rank）
+    SPELL_CHARGE                       = 57817,  // 战士（100→6178→11578→57817链顶）
+    SPELL_CHALLENGING_SHOUT            = 1161,   // 战士（唯一rank）
+    // End By leewheel
 };
 
 enum class SwpNpcs : uint32

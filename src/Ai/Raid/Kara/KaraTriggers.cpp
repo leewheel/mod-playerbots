@@ -342,13 +342,9 @@ bool NightbaneBossIsFlyingTrigger::IsActive()
     if (!nightbane || nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
         return false;
 
-<<<<<<< HEAD
-    uint32 const instanceId = nightbane->GetMap()->GetInstanceId();
-    time_t const now = std::time(nullptr);
-    constexpr uint8 flightPhaseDurationSeconds = 35;
-=======
+    // By leewheel 2026-08-29 合并：采用对侧GetMSTimeDiff毫秒制计时(与后续逻辑配套)，entry规则不变
     constexpr uint32 flightPhaseDurationMs = 35 * IN_MILLISECONDS;
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
     // After 35s, Nightbane goes to land, and bots freely follow their master
     auto const it = nightbaneFlightPhaseStartTimer.find(nightbane->GetInstanceId());
     if (it == nightbaneFlightPhaseStartTimer.end())

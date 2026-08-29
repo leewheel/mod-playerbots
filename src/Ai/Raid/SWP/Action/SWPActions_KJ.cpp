@@ -132,68 +132,72 @@ bool KiljaedenControlHandsOfTheDeceiverAction::Execute(Event /*event*/)
 
 bool KiljaedenControlHandsOfTheDeceiverAction::CastStunOnHand(Unit* hand)
 {
-    auto const castSpell = [&](char const* spell)
+    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
+    auto const castSpell = [&](uint32 spellId)
     {
-        return botAI->CanCastSpell(spell, hand) && botAI->CastSpell(spell, hand);
+        return botAI->CanCastSpell(spellId, hand) && botAI->CastSpell(spellId, hand);
     };
 
-    auto const castSelfAoe = [&](char const* spell, float radius)
+    auto const castSelfAoe = [&](uint32 spellId, float radius)
     {
-        return bot->GetExactDist(hand) < radius && castSpell(spell);
+        return bot->GetExactDist(hand) < radius && castSpell(spellId);
     };
 
     switch (bot->getClass())
     {
         case CLASS_DRUID:
-            return (botAI->HasStrategy("bear", BOT_STATE_COMBAT) && castSpell("bash")) ||
+            return (botAI->HasStrategy("bear", BOT_STATE_COMBAT) && castSpell(Id(SwpSpells::SPELL_BASH))) ||
                 (botAI->HasStrategy("cat", BOT_STATE_COMBAT) &&
-                 bot->GetComboPoints() >= 4 && castSpell("maim"));
+                 bot->GetComboPoints() >= 4 && castSpell(Id(SwpSpells::SPELL_MAIM)));
 
         case CLASS_MAGE:
-            return castSpell("deep freeze");
+            return castSpell(Id(SwpSpells::SPELL_DEEP_FREEZE));
 
         case CLASS_PALADIN:
-            return castSpell("hammer of justice");
+            return castSpell(Id(SwpSpells::SPELL_HAMMER_OF_JUSTICE));
 
         case CLASS_ROGUE:
-            return bot->GetComboPoints() >= 4 && castSpell("kidney shot");
+            return bot->GetComboPoints() >= 4 && castSpell(Id(SwpSpells::SPELL_KIDNEY_SHOT));
 
         case CLASS_WARLOCK:
-            return castSpell("shadowfury");
+            return castSpell(Id(SwpSpells::SPELL_SHADOWFURY));
 
         case CLASS_WARRIOR:
-            return castSpell("concussion blow") ||
-                castSelfAoe("shockwave", HAND_SHOCKWAVE_RADIUS);
+            return castSpell(Id(SwpSpells::SPELL_CONCUSSION_BLOW)) ||
+                castSelfAoe(Id(SwpSpells::SPELL_SHOCKWAVE), HAND_SHOCKWAVE_RADIUS);
 
         default:
             return bot->getRace() == RACE_TAUREN &&
-                castSelfAoe("war stomp", HAND_SELF_AOE_RACIAL_RADIUS);
+                castSelfAoe(Id(SwpSpells::SPELL_WAR_STOMP), HAND_SELF_AOE_RACIAL_RADIUS);
     }
+    // End By leewheel
 }
 
 bool KiljaedenControlHandsOfTheDeceiverAction::CastSilenceOnHand(Unit* hand)
 {
-    auto const castSpell = [&](char const* spell)
+    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
+    auto const castSpell = [&](uint32 spellId)
     {
-        return botAI->CanCastSpell(spell, hand) && botAI->CastSpell(spell, hand);
+        return botAI->CanCastSpell(spellId, hand) && botAI->CastSpell(spellId, hand);
     };
 
     switch (bot->getClass())
     {
         case CLASS_HUNTER:
-            return castSpell("silencing shot");
+            return castSpell(Id(SwpSpells::SPELL_SILENCING_SHOT));
 
         case CLASS_PRIEST:
-            return castSpell("silence");
+            return castSpell(Id(SwpSpells::SPELL_SILENCE));
 
         case CLASS_DEATH_KNIGHT:
-            return castSpell("strangulate");
+            return castSpell(Id(SwpSpells::SPELL_STRANGULATE));
 
         default:
             return bot->getRace() == RACE_BLOODELF &&
                 bot->GetExactDist(hand) < HAND_SELF_AOE_RACIAL_RADIUS &&
-                castSpell("arcane torrent");
+                castSpell(Id(SwpSpells::SPELL_ARCANE_TORRENT));
     }
+    // End By leewheel
 }
 
 bool KiljaedenPositionAndMoveTanksAction::Execute(Event /*event*/)
@@ -228,33 +232,35 @@ bool KiljaedenPositionAndMoveTanksAction::PickUpSinisterReflections(Creature* re
         return Attack(reflection);
 
     float const distance = bot->GetExactDist(reflection);
-    auto const castSpell = [&](char const* spell, float reach)
+    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
+    auto const castSpell = [&](uint32 spellId, float reach)
     {
-        return distance < reach && botAI->CanCastSpell(spell, reflection) &&
-            botAI->CastSpell(spell, reflection);
+        return distance < reach && botAI->CanCastSpell(spellId, reflection) &&
+            botAI->CastSpell(spellId, reflection);
     };
 
     switch (bot->getClass())
     {
         case CLASS_DEATH_KNIGHT:
-            return castSpell("death and decay", KILJAEDEN_REFLECTION_RANGED_REACH) ||
-                castSpell("icy touch", KILJAEDEN_REFLECTION_ICY_TOUCH_REACH);
+            return castSpell(Id(SwpSpells::SPELL_DEATH_AND_DECAY), KILJAEDEN_REFLECTION_RANGED_REACH) ||
+                castSpell(Id(SwpSpells::SPELL_ICY_TOUCH), KILJAEDEN_REFLECTION_ICY_TOUCH_REACH);
 
         case CLASS_DRUID:
-            return castSpell("feral charge - bear", KILJAEDEN_REFLECTION_CHARGE_REACH) ||
-                castSpell("challenging roar", KILJAEDEN_REFLECTION_SHOUT_REACH);
+            return castSpell(Id(SwpSpells::SPELL_FERAL_CHARGE_BEAR), KILJAEDEN_REFLECTION_CHARGE_REACH) ||
+                castSpell(Id(SwpSpells::SPELL_CHALLENGING_ROAR), KILJAEDEN_REFLECTION_SHOUT_REACH);
 
         case CLASS_PALADIN:
-            return castSpell("avenger's shield", KILJAEDEN_REFLECTION_RANGED_REACH) ||
-                castSpell("consecration", KILJAEDEN_REFLECTION_CONSECRATION_REACH);
+            return castSpell(Id(SwpSpells::SPELL_AVENGERS_SHIELD), KILJAEDEN_REFLECTION_RANGED_REACH) ||
+                castSpell(Id(SwpSpells::SPELL_CONSECRATION), KILJAEDEN_REFLECTION_CONSECRATION_REACH);
 
         case CLASS_WARRIOR:
-            return castSpell("charge", KILJAEDEN_REFLECTION_CHARGE_REACH) ||
-                castSpell("challenging shout", KILJAEDEN_REFLECTION_SHOUT_REACH);
+            return castSpell(Id(SwpSpells::SPELL_CHARGE), KILJAEDEN_REFLECTION_CHARGE_REACH) ||
+                castSpell(Id(SwpSpells::SPELL_CHALLENGING_SHOUT), KILJAEDEN_REFLECTION_SHOUT_REACH);
 
         default:
             return false;
     }
+    // End By leewheel
 }
 
 bool KiljaedenPositionMeleeAction::Execute(Event /*event*/)

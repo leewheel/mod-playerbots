@@ -358,33 +358,7 @@ void AppendKiljaedenShieldOrbExclusions(
     }
 }
 
-<<<<<<< HEAD
-// This activates only after the Reflections become aggressive (after 3s or when attacked,
-// whichever is earlier); up until then, they are not on the attackers list anyway
-/* void AppendKiljaedenSinisterReflectionExclusions(
-    PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
-{
-    if (PlayerbotAI::IsTank(botAI->GetBot()))
-        return;
-
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
-    if (!kiljaeden || kiljaeden->GetHealthPct() > 85.0f)
-        return;
-
-    for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
-    {
-        Unit* attacker = botAI->GetUnit(guid);
-        if (!attacker || attacker->GetEntry() != Id(SwpNpcs::NPC_SINISTER_REFLECTION))
-            continue;
-
-        Unit* victim = attacker->GetVictim();
-        if (!victim || !victim->IsPlayer() || !PlayerbotAI::IsTank(victim->ToPlayer()))
-            exclusions.insert(guid);
-    }
-} */
-
-=======
->>>>>>> brighton-chi/the-lab
+// By leewheel 2026-08-29 合并：删除对侧已清理的被注释死代码块(SinisterReflectionExclusions残留)
 } // end anonymous namespace
 
 void RaidSunwellStrategy::AppendTargetExclusions(

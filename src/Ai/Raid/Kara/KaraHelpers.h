@@ -130,13 +130,15 @@ inline std::array const BIG_BAD_WOLF_RUN_POSITIONS = {
 };
 
 // Wizard of Oz
+// By leewheel 2026-08-29 entry化：绿野仙踪目标改用entry查找(经acore原版库3309验证)
 inline std::array const OZ_TARGETS = {
-    "dorothee",
-    "tito",
-    "roar",
-    "strawman",
-    "tinhead",
+    "17535", // Dorothee
+    "17548", // Tito
+    "17546", // Roar
+    "17543", // Strawman
+    "17547", // Tinhead
 };
+// End By leewheel
 
 // The Curator
 inline Position const THE_CURATOR_TANK_POSITION = { -11139.463f, -1884.645f, 165.765f };

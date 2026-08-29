@@ -292,16 +292,10 @@ float BrutallusDelayCooldownsMultiplier::GetValue(Action* action)
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-<<<<<<< HEAD
+    // By leewheel 2026-08-29 合并：采用对侧单行写法，entry规则查找
     Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
-    if (!brutallus)
-        return 1.0f;
-
-    return brutallus->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT ? 0.0f : 1.0f;
-=======
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "brutallus");
     return brutallus && brutallus->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT ? 0.0f : 1.0f;
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
 }
 
 // Felmyst
@@ -637,16 +631,10 @@ float EredarTwinsDelayCooldownsMultiplier::GetValue(Action* action)
     if (!alythess)
         return 1.0f;
 
-<<<<<<< HEAD
+    // By leewheel 2026-08-29 合并：采用对侧单行写法，entry规则查找(sacrolash->25165)
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
-    if (!sacrolash)
-        return 1.0f;
-
-    return sacrolash->GetHealthPct() > MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
-=======
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "lady sacrolash");
     return sacrolash && sacrolash->GetHealthPct() > MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
 }
 
 // M'uru
@@ -818,34 +806,11 @@ float KiljaedenSingleTargetHandsMultiplier::GetValue(Action* action)
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-<<<<<<< HEAD
-    if (!PlayerbotAI::IsTank(bot))
-        return 1.0f;
-
-    if (!dynamic_cast<TankAssistAction*>(action) &&
-        !dynamic_cast<CombatFormationMoveAction*>(action) /* &&
-        !IsTauntAction(bot, action) && !IsAoeThreatAction(bot, action) */)
-    {
-        return 1.0f;
-    }
-
-    if (!AI_VALUE2(Unit*, "find target", "25588"))
-        return 1.0f;
-
-    return GetGroupAssistTank(bot, 1) && GetGroupAssistTank(bot, 0) &&
-        GetGroupMainTank(bot) ? 0.0f : 1.0f;
-}
-
-// 合并brighton 2026-08-27: KiljaedenDpsFocusAssignedHandOnlyMultiplier重构为与Tanks版一致(GetGroupAssistTank判断),
-// 移除旧逻辑; hand of the deceiver按entry规则转25588 --By leewheel 2026年8月27日
-float KiljaedenDpsFocusAssignedHandOnlyMultiplier::GetValue(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-=======
+    // By leewheel 2026-08-29 合并：对侧新逻辑把Tanks版与DpsFocus版两乘数合并简化为本函数(lower complexity of hands actions)，
+    // 旧KiljaedenDpsFocusAssignedHandOnlyMultiplier实现一并移除(头文件本无声明)；手部目标控制交给新版ControlHands行动
     // Shaman have no spreading DoTs, and their only spell classified as ActionThreatType::Aoe is
     // Chain Lightning, which is a strong single-target spell in addition to providing AoE damage.
     if (bot->getClass() == CLASS_SHAMAN)
->>>>>>> brighton-chi/the-lab
         return 1.0f;
 
     if (!PlayerbotAI::IsDps(bot))
@@ -857,13 +822,10 @@ float KiljaedenDpsFocusAssignedHandOnlyMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-<<<<<<< HEAD
-    if (!AI_VALUE2(Unit*, "find target", "25588"))
-        return 1.0f;
-=======
+    // By leewheel 2026-08-29 合并：采用对侧SUNWELL中心范围判断(不在平台内的bot不受限)
     if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
         return 1.0;
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
 
     return AI_VALUE(GuidVector, "kiljaeden hands").empty() ? 1.0f : 0.0f;
 }

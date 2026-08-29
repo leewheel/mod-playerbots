@@ -32,9 +32,17 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValue(Action* action)
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
+    // By leewheel 2026-08-29 entry化：BT boss数组改用entry查找(经acore原版库3309验证；Teron取rank=3的22871)
     static constexpr std::array BlackTempleBosses = {
-        "gathios the shatterer", "mother shahraz", "essence of suffering", "gurtogg bloodboil",
-        "teron gorefiend", "supremus", "high warlord naj'entus" };
+        "22949", // Gathios the Shatterer
+        "22947", // Mother Shahraz
+        "23418", // Essence of Suffering
+        "22948", // Gurtogg Bloodboil
+        "22871", // Teron Gorefiend
+        "22898", // Supremus
+        "22887", // High Warlord Naj'entus
+    };
+    // End By leewheel
 
     Unit* boss = nullptr;
     for (const char* name : BlackTempleBosses)

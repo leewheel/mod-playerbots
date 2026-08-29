@@ -524,14 +524,11 @@ float NightbaneDisableMovementMultiplier::GetValue(Action* action)
         return 0.0f;
 
     // After 35s, Nightbane goes to land, and bots freely follow their master
-<<<<<<< HEAD
-    auto const it = nightbaneFlightPhaseStartTimer.find(nightbane->GetMap()->GetInstanceId());
-    if (it != nightbaneFlightPhaseStartTimer.end())
-=======
+    // By leewheel 2026-08-29 合并：采用对侧修正(旧代码find判断写反：找到计时器反而return 0，找不到会解引用end迭代器导致UB)
     auto const it = nightbaneFlightPhaseStartTimer.find(nightbane->GetInstanceId());
     if (it == nightbaneFlightPhaseStartTimer.end())
->>>>>>> brighton-chi/the-lab
         return 0.0f;
+    // End By leewheel
 
     constexpr uint32 flightPhaseDurationMs = 35 * IN_MILLISECONDS;
     return getMSTimeDiff(it->second, getMSTime()) < flightPhaseDurationMs ? 0.0f : 1.0f;

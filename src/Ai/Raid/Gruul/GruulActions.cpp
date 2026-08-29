@@ -185,19 +185,13 @@ bool HighKingMaulgarMoonkinTankAttackKigglerAction::Execute(Event /*event*/)
 // Priority: (1) Blindeye, (2) Olm, (3) Krosh (ranged only), (4) Kiggler, and (5) Maulgar
 bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-<<<<<<< HEAD
     Unit* target = AI_VALUE2(Unit*, "find target", "18836");
     Unit* krosh = nullptr;
-    if (Unit* olm = AI_VALUE2(Unit*, "find target", "18834"))
-=======
-    Unit* target = AI_VALUE2(Unit*, "find target", "high king maulgar");
-    Unit* krosh = nullptr;
-    if (Unit* blindeye = AI_VALUE2(Unit*, "find target", "blindeye the seer"))
+    if (Unit* blindeye = AI_VALUE2(Unit*, "find target", "18831"))
     {
         target = blindeye;
     }
-    else if (Unit* olm = AI_VALUE2(Unit*, "find target", "olm the summoner"))
->>>>>>> brighton-chi/the-lab
+    else if (Unit* olm = AI_VALUE2(Unit*, "find target", "18834"))
     {
         target = olm;
     }
@@ -210,13 +204,6 @@ bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
     {
         target = kiggler;
     }
-<<<<<<< HEAD
-    else if (Unit* maulgar = AI_VALUE2(Unit*, "find target", "18831"))
-    {
-        target = maulgar;
-    }
-=======
->>>>>>> brighton-chi/the-lab
 
     if (!target)
         return false;
@@ -236,7 +223,10 @@ bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
 
 bool HighKingMaulgarRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 {
-    Unit* maulgar = AI_VALUE2(Unit*, "find target", "18831");
+    // By leewheel 2026-08-29 修复：旋风斩是 High King Maulgar(18836) 的技能，
+    // 旧代码误用 18831(Blindeye the Seer) 导致机器人对着错误的boss躲避走位
+    Unit* maulgar = AI_VALUE2(Unit*, "find target", "18836");
+    // End By leewheel
     if (!maulgar)
         return false;
 
@@ -359,54 +349,19 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     }
     else if (hunterIndex == 1)
     {
-<<<<<<< HEAD
+        //By leewheel 2026-08-29 合并：保留entry规则与本项目变量名，采用对侧直取助手坦克的简化写法(去除冗余循环)
         ogreTarget = AI_VALUE2(Unit*, "find target", "18834");
-        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-        {
-            if (Player* member = GetGroupAssistTank(bot, 0))
-            {
-                tankTarget = member;
-                break;
-            }
-        }
+        tankTarget = GetGroupAssistTank(bot, 0);
     }
     else if (hunterIndex == 2)
     {
         ogreTarget = AI_VALUE2(Unit*, "find target", "18835");
-        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-        {
-            if (Player* member = GetKigglerMoonkinTank(bot))
-            {
-                tankTarget = member;
-                break;
-            }
-        }
+        tankTarget = GetKigglerMoonkinTank(bot);
     }
     else if (hunterIndex == 3)
     {
         ogreTarget = AI_VALUE2(Unit*, "find target", "18832");
-        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-        {
-            if (Player* member = GetKroshMageTank(bot))
-            {
-                tankTarget = member;
-                break;
-            }
-        }
-=======
-        ogre = AI_VALUE2(Unit*, "find target", "olm the summoner");
-        tank = GetGroupAssistTank(bot, 0);
-    }
-    else if (hunterIndex == 2)
-    {
-        ogre = AI_VALUE2(Unit*, "find target", "kiggler the crazed");
-        tank = GetKigglerMoonkinTank(bot);
-    }
-    else if (hunterIndex == 3)
-    {
-        ogre = AI_VALUE2(Unit*, "find target", "krosh firehand");
-        tank = GetKroshMageTank(bot);
->>>>>>> brighton-chi/the-lab
+        tankTarget = GetKroshMageTank(bot);
     }
 
     if (!ogreTarget || !tankTarget || !tankTarget->IsAlive())
@@ -475,13 +430,6 @@ bool GruulTheDragonkillerTanksPositionBossAction::Execute(Event /*event*/)
 
 bool GruulTheDragonkillerSpreadRangedAction::Execute(Event /*event*/)
 {
-<<<<<<< HEAD
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
-    if (!gruul)
-        return false;
-
-=======
->>>>>>> brighton-chi/the-lab
     Group* group = bot->GetGroup();
     if (!group)
         return false;

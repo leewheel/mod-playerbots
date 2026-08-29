@@ -33,14 +33,12 @@ bool SunwellPlateauNoEncounterInProgressTrigger::IsActive()
     if (!instance || instance->IsEncounterInProgress())
         return false;
 
-<<<<<<< HEAD
-    return !AI_VALUE2(Unit*, "find target", "25588");
-=======
+    // By leewheel 2026-08-29 合并：采用对侧增强判断(不在SUNWELL平台内视为非KJ战； hands空=未开战)，保留25588 entry语义
     if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
         return true;
 
     return AI_VALUE(GuidVector, "kiljaeden hands").empty();
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
 }
 
 bool SunwellPlateauBotHasAuraToRemoveTrigger::IsActive()
@@ -779,10 +777,7 @@ bool MuruTheSingularityIsNearTrigger::IsActive()
 
 bool KiljaedenShouldCoordinateOrbUseTrigger::IsActive()
 {
-<<<<<<< HEAD
-    return IsMechanicTrackerBot(bot, SWP_MAP_ID) &&
-        AI_VALUE2(Unit*, "find target", "25588");
-=======
+    // By leewheel 2026-08-29 合并：采用对侧龙珠公告去重状态检查(afa0e30a orb announcements)，entry规则查找
     if (!IsMechanicTrackerBot(bot, SWP_MAP_ID))
         return false;
 
@@ -790,20 +785,18 @@ bool KiljaedenShouldCoordinateOrbUseTrigger::IsActive()
     if (stateItr != kiljaedenEncounterStates.end() && stateItr->second.dragonOrbAnnouncementMs)
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "hand of the deceiver");
->>>>>>> brighton-chi/the-lab
+    return AI_VALUE2(Unit*, "find target", "25588");
+    // End By leewheel
 }
 
 bool KiljaedenHandsOfTheDeceiverAreActiveTrigger::IsActive()
 {
-<<<<<<< HEAD
-    return AI_VALUE2(Unit*, "find target", "25588");
-=======
+    // By leewheel 2026-08-29 合并：采用对侧SUNWELL平台范围判断，hands值替代单目标查找
     if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
         return false;
 
     return !AI_VALUE(GuidVector, "kiljaeden hands").empty();
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
 }
 
 bool KiljaedenTanksShouldHoldBossAndReflectionsTrigger::IsActive()

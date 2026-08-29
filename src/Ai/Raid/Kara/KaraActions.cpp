@@ -256,32 +256,31 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::StackBehindAttumen(Unit* attumen)
 
 bool AttumenTheHuntsmanSetDpsTimerAction::Execute(Event /*event*/)
 {
-<<<<<<< HEAD
-    uint32 const instanceId = bot->GetMap()->GetInstanceId();
-    time_t const now = std::time(nullptr);
-    return attumenDpsWaitTimer.try_emplace(instanceId, now).second;
-=======
+    // By leewheel 2026-08-29 合并：采用对侧GetMSTimeDiff计时重构(与BT/SSC统一)，entry规则不变
     uint32 const now = getMSTime();
     return attumenDpsWaitTimer.try_emplace(bot->GetInstanceId(), now).second;
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
 }
 
 // Moroes
 
 bool MoroesMarkTargetAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-08-29 entry化：Moroes六位宾客改用entry查找(经acore原版库3309验证)，
+    // 顺序保持原有标记优先级
     static constexpr std::array moroesGuests = {
-        "baroness dorothea millstipe",
-        "lady catriona von'indi",
-        "lady keira berrybuck",
-        "baron rafe dreuger",
-        "lord robin daris",
-        "lord crispin ference",
+        "19875", // Baroness Dorothea Millstipe
+        "19872", // Lady Catriona Von'Indi
+        "17007", // Lady Keira Berrybuck
+        "19874", // Baron Rafe Dreuger
+        "19876", // Lord Robin Daris
+        "19873", // Lord Crispin Ference
     };
+    // End By leewheel
 
-    for (const char* name : moroesGuests)
+    for (const char* entry : moroesGuests)
     {
-        if (Unit* guest = AI_VALUE2(Unit*, "find target", name))
+        if (Unit* guest = AI_VALUE2(Unit*, "find target", entry))
             return MarkTargetWithSkull(bot, guest);
     }
 
@@ -577,8 +576,13 @@ bool TheCuratorSpreadRangedAction::Execute(Event /*event*/)
 
 bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-08-29 entry化：目标改用entry查找(经acore原版库3309验证)
     static constexpr std::array illhoofTargets = {
-        "demon chains", "kil'rek", "terestian illhoof", };
+        "17248", // Demon Chains
+        "17229", // Kil'rek
+        "15688", // Terestian Illhoof
+    };
+    // End By leewheel
 
     for (const char* name : illhoofTargets)
     {
@@ -988,15 +992,11 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
     if (!netherspite)
         return false;
 
-<<<<<<< HEAD
-    uint32 const instanceId = netherspite->GetMap()->GetInstanceId();
-    time_t const now = std::time(nullptr);
-    bool const isMechanicTracker = IsMechanicTrackerBot(botAI, bot, KARA_MAP_ID);
-=======
+    // By leewheel 2026-08-29 合并：采用对侧GetMSTimeDiff计时重构与2参数IsMechanicTrackerBot重载，entry规则不变
     uint32 const instanceId = netherspite->GetInstanceId();
     uint32 const now = getMSTime();
     bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
     bool didSomething = false;
 
     if (IsBanishPhase(netherspite))
@@ -1534,15 +1534,11 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
     if (!nightbane)
         return false;
 
-<<<<<<< HEAD
-    uint32 const instanceId = nightbane->GetMap()->GetInstanceId();
-    time_t const now = std::time(nullptr);
-    bool const isMechanicTracker = IsMechanicTrackerBot(botAI, bot, KARA_MAP_ID);
-=======
+    // By leewheel 2026-08-29 合并：采用对侧GetMSTimeDiff计时重构与2参数IsMechanicTrackerBot重载，entry规则不变
     uint32 const instanceId = nightbane->GetInstanceId();
     uint32 const now = getMSTime();
     bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
->>>>>>> brighton-chi/the-lab
+    // End By leewheel
     bool didSomething = false;
 
     if (nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
