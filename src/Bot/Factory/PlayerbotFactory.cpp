@@ -1122,6 +1122,24 @@ void PlayerbotFactory::InitConsumables()
             break;
     }
 
+    // By leewheel 2026-08-29
+    // PVP 自保物资：为所有职业的 bot 补充绷带（按等级选可用最高档，存量补足到 20），
+    //   配合 PVP 自保动作组（低血量安全窗口打绷带恢复，见 PvpSurvivalActions）。
+    //   绷带 entry 从高到低：厚灵纹/灵纹/厚魔纹/魔纹/厚丝质/丝质/厚亚麻/丝线/亚麻。
+    // End By leewheel
+    {
+        std::vector<uint32> bandages = {34721, 21990, 14529, 8545, 6451, 6450, 3530, 2581, 1251};
+        for (uint32 itemId : bandages)
+        {
+            ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
+            if (!proto || proto->RequiredLevel > level)
+                continue;
+
+            items.push_back({itemId, 20});
+            break;
+        }
+    }
+
     for (std::pair<uint32, uint32> item : items)
     {
         int count = (int)item.second - (int)bot->GetItemCount(item.first);
