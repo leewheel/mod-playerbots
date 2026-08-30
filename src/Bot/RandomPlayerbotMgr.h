@@ -323,6 +323,11 @@ private:
     bool IsAmbienceBot(uint32 bot) const { return ambienceBots.count(bot) > 0; }
     bool RandomTeleportNearPlayer(Player* bot);                     // 传送到真实玩家附近的hub点
     // End By leewheel
+    // By leewheel 2026-08-30 等级分布修复（清除已删除的 mod-rndbot-sync 对数据库的等级伤害）
+    uint32 RollNativeBotLevel();                                    // 按模块原生分布掷一个等级
+    bool FixBotLevel(Player* bot);                                  // 只升不降：把被拖低的bot重随机回原生分布
+    void FixLevelDistribution();                                    // 遍历在线bot批量修复（控制台命令）
+    // End By leewheel
     uint32 GetZoneLevel(uint16 mapId, float teleX, float teleY, float teleZ);
     typedef void (RandomPlayerbotMgr::*ConsoleCommandHandler)(Player*);
     std::vector<Player*> players;

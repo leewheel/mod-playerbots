@@ -2966,6 +2966,87 @@ void RandomPlayerbotMgr::ReshuffleAmbienceBots()
     LOG_INFO("playerbots", "氛围组机器人已轮换：{} 个机器人将在真实玩家附近活动", ambienceBots.size());
 }
 
+// By leewheel 2026-08-30
+// 等级分布修复：清除已删除的 mod-rndbot-sync 对数据库造成的等级伤害。
+//   该模块曾把超限bot降级到 [1, 天花板] 全范围打散（488个bot掉到10级以下，
+//   而机器人10级以下不排战场），破坏了原生等级分布与战场等级段位供给。
+//   修复策略"只升不降"：按模块原生分布（RandomizeLevel 同款掷点：MaxLevelChance
+//   概率满级、MinLevelChance 概率最低级、其余均匀随机）掷目标等级，
+//   仅当目标等级明显更高（差值>8）才重随机化——被拖低的bot升回去，
+//   未受损的高等级bot不动，避免全量漂移与无谓开销。
+//   在线bot用控制台命令 rndbot levelfix 批量修，离线bot在登录时自愈。
+// End By leewheel
+uint32 RandomPlayerbotMgr::RollNativeBotLevel()
+{
+    uint32 minLevel = sPlayerbotAIConfig.randomBotMinLevel;
+    uint32 maxLevel = std::min<uint32>(sPlayerbotAIConfig.randomBotMaxLevel,
+        static_cast<uint32>(sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL)));
+    if (minLevel > maxLevel)
+        return 0;
+
+    // 与 RandomizeLevel（本文件）完全一致的原生分布掷点
+    uint32 roll = urand(1, 100);
+    if (roll <= 100 * sPlayerbotAIConfig.randomBotMaxLevelChance)
+        return maxLevel;
+    if (roll <= 100 * (sPlayerbotAIConfig.randomBotMaxLevelChance + sPlayerbotAIConfig.randomBotMinLevelChance))
+        return minLevel;
+    return urand(minLevel, maxLevel);
+}
+
+bool RandomPlayerbotMgr::FixBotLevel(Player* bot)
+{
+    if (sPlayerbotAIConfig.disableRandomLevels)
+        return false;
+
+    // 忙碌状态（战场/副本/排队/战斗/飞行/死亡）的bot不动，等下次登录或命令
+    if (bot->InBattleground() || bot->InBattlegroundQueue() || bot->InArena() ||
+        bot->inRandomLfgDungeon() || bot->IsInCombat() || bot->IsInFlight() || !bot->IsAlive())
+        return false;
+
+    uint32 rolledLevel = RollNativeBotLevel();
+    if (!rolledLevel)
+        return false;
+
+    // 死亡骑士不得低于英雄职业起始等级（55）
+    if (bot->getClass() == CLASS_DEATH_KNIGHT)
+        rolledLevel = std::max(rolledLevel, static_cast<uint32>(sWorld->getIntConfig(CONFIG_START_HEROIC_PLAYER_LEVEL)));
+
+    // 只升不降：目标等级比当前高 8 级以上才重随机化（精准打击被拖低的bot）
+    if (static_cast<int>(rolledLevel) - static_cast<int>(bot->GetLevel()) <= 8)
+        return false;
+
+    if (bot->IsMounted())
+        bot->Dismount();
+
+    PlayerbotFactory factory(bot, rolledLevel);
+    factory.Randomize(false);
+    return true;
+}
+
+void RandomPlayerbotMgr::FixLevelDistribution()
+{
+    if (sPlayerbotAIConfig.disableRandomLevels)
+    {
+        LOG_ERROR("playerbots", "随机等级已禁用（AiPlayerbot.DisableRandomLevels=1），跳过等级分布修复");
+        return;
+    }
+
+    LOG_INFO("playerbots", "开始修复机器人等级分布（清除 mod-rndbot-sync 遗留伤害，只升不降）……");
+
+    uint32 fixed = 0;
+    for (auto i : GetAllBots())
+    {
+        Player* bot = i.second;
+        if (!bot || !bot->IsInWorld())
+            continue;
+
+        if (FixBotLevel(bot))
+            ++fixed;
+    }
+
+    LOG_INFO("playerbots", "等级分布修复完成：{} 个在线机器人已重随机回原生分布；离线机器人将在下次登录时自愈", fixed);
+}
+
 bool RandomPlayerbotMgr::RandomTeleportNearPlayer(Player* bot)
 {
     if (sPlayerbotAIConfig.ambienceBotCount == 0 || players.empty())
@@ -3589,7 +3670,7 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
 
     if (!args || !*args)
     {
-        LOG_ERROR("playerbots", "用法: rndbot stats/update/reset/init/refresh/add/remove");
+        LOG_ERROR("playerbots", "用法: rndbot stats/update/reset/init/refresh/levelfix/add/remove");
         return false;
     }
 
@@ -3602,6 +3683,14 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
         LOG_INFO("playerbots", "所有玩家的随机机器人已重置，请重启服务器。");
         return true;
     }
+
+    // By leewheel 2026-08-30 一次性维护命令：修复 mod-rndbot-sync 遗留的等级分布伤害（在线bot批量重随机）
+    if (cmd == "levelfix")
+    {
+        sRandomPlayerbotMgr.FixLevelDistribution();
+        return true;
+    }
+    // End By leewheel
 
     if (cmd == "stats")
     {
@@ -3797,6 +3886,12 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
             factory.InitPetTalents();
         }
     }
+    // End By leewheel
+
+    // By leewheel 2026-08-30 等级分布登录自愈：清除已删除的 mod-rndbot-sync 遗留的
+    //   等级伤害（离线bot下次上线自动修，在线bot用控制台命令 rndbot levelfix）。
+    //   FixBotLevel 内部已含 disableRandomLevels/忙碌状态/只升不降 全部保护。
+    FixBotLevel(bot);
     // End By leewheel
 
     RandomPlayerbotFactory::AssignBotToArenaTeam(bot);
