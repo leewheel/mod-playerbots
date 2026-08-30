@@ -183,7 +183,6 @@ enum class SwpObjects : uint32
 };
 
 inline constexpr uint32 SWP_MAP_ID = 580;
-inline constexpr float SWP_PULL_COMPLETE_HP_PERCENT = 95.0f;
 
 // Feeds the "swp volatile fiend" value.
 inline constexpr uint32 VOLATILE_FIEND_CACHE_INTERVAL_MS = 200;

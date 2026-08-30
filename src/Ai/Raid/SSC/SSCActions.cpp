@@ -99,7 +99,8 @@ bool UnderbogColossusEscapeToxicPoolAction::Execute(Event /*event*/)
         return false;
 
     float safeDist = radius + bufferDist;
-    float moveX, moveY;
+    float moveX;
+    float moveY;
 
     if (distToObj == 0.0f)
     {
@@ -1298,17 +1299,17 @@ bool FathomLordKarathressMisdirectBossesToTanksAction::Execute(Event /*event*/)
     if (hunterIndex == 0)
     {
         bossTarget = AI_VALUE2(Unit*, "find target", "21964");
-        tankTarget = GetGroupAssistTank(botAI, bot, 0);
+        tankTarget = GetGroupAssistTank(bot, 0); // By leewheel 2026-08-30 合并上游：改用2参签名
     }
     else if (hunterIndex == 1)
     {
         bossTarget = AI_VALUE2(Unit*, "find target", "21965");
-        tankTarget = GetGroupAssistTank(botAI, bot, 2);
+        tankTarget = GetGroupAssistTank(bot, 2); // By leewheel 2026-08-30 合并上游：改用2参签名
     }
     else if (hunterIndex == 2)
     {
         bossTarget = AI_VALUE2(Unit*, "find target", "21966");
-        tankTarget = GetGroupAssistTank(botAI, bot, 1);
+        tankTarget = GetGroupAssistTank(bot, 1); // By leewheel 2026-08-30 合并上游：改用2参签名
     }
 
     if (!bossTarget || !tankTarget)

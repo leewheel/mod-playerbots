@@ -27,13 +27,11 @@ float GruulsLairDelayDpsCooldownsMultiplier::GetValue(Action* action)
         return 1.0f;
 
     Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
-    if (gruul && gruul->GetHealthPct() > 95.0f)
+    if (gruul && gruul->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
         return 0.0f;
 
-    // By leewheel 2026-08-29 合并：采用对侧新逻辑(优先杀Blindeye治疗，与AssignDpsPriority一致)，entry规则查找
     Unit* blindeye = AI_VALUE2(Unit*, "find target", "18831");
-    return blindeye && blindeye->GetHealthPct() > BLINDEYE_PULL_COMPLETE_HP_PERCENT ? 0.0f : 1.0f;
-    // End By leewheel
+    return blindeye && blindeye->GetHealthPct() > BLINDEYE_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 }
 
 float HighKingMaulgarControlTankActionsMultiplier::GetValue(Action* action)

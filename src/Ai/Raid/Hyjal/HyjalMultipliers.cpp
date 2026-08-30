@@ -5,47 +5,36 @@
  */
 
 #include "HyjalMultipliers.h"
-#include "AiFactory.h"
 #include "ChooseTargetActions.h"
-#include "DKActions.h"
-#include "DruidBearActions.h"
 #include "EncounterHelpers.h"
 #include "HunterActions.h"
 #include "HyjalActions.h"
 #include "HyjalHelpers.h"
-#include "PaladinActions.h"
 #include "ReachTargetActions.h"
 #include "ShamanActions.h"
-#include "WarriorActions.h"
 
 using namespace HyjalHelpers;
 using namespace EncounterHelpers;
+
+// Note: BOT_STATE_NON_COMBAT checks cannot be used by any multiplier that could result in a bot
+// having no valid targets as it will then swap to the non-combat engine, even during a boss fight.
+// This implicates any avoidance action that could hold the bot out of attack range.
 
 float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (bot->GetMapId() != HYJAL_MAP_ID) // Needed in case strategy isn't cleared outside
+    if (bot->GetMapId() != HYJAL_MAP_ID) // In case strategy persists outside (e.g., server reset)
         return 1.0f;
 
-    if (!IsDpsCooldownAction(bot, action)) // This includes Bloodlust & Heroism
+    if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-    // Last boss first, so an instance that has progressed answers on its first lookup
-    // By leewheel 2026-08-29 entry化：海加尔boss改用entry查找(经acore原版库3309验证)
-    Unit* boss = nullptr;
-    for (char const* name :
-         { "17968", "17842", "17888", "17808", "17767" })
-    {
-        boss = AI_VALUE2(Unit*, "find target", name);
-        if (boss)
-            break;
-    }
+    // Suppress Bloodlust/Heroism during all trash waves. It's blown on CD otherwise.
+    // By leewheel 2026-08-30 合并上游：改用新value "boss target"，替代本服entry循环查怪
+    Unit* boss = AI_VALUE(Unit*, "boss target");
     // End By leewheel
-
-    // Suppress Bloodlust/Heroism when no boss is present (trash waves). Asked only on this branch,
-    // since it is the only one the answer differs on--everything else here is a dps cooldown too
     if (!boss)
     {
         return bot->getClass() == CLASS_SHAMAN &&
@@ -53,8 +42,7 @@ float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
              dynamic_cast<CastHeroismAction*>(action)) ? 0.0f : 1.0f;
     }
 
-    // Suppress all dps cooldowns when boss is above 90% health
-    return boss->GetHealthPct() > 90.0f ? 0.0f : 1.0f;
+    return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 }
 
 // Rage Winterchill
@@ -306,7 +294,7 @@ float AzgalorDisableAutoTargetingAndPositioningMultiplier::GetValue(Action* acti
         return 1.0f;
     }
 
-    // Still disabled in RoF, below
+    // SBTA is still disabled in RoF (in AzgalorMeleeDpsControlAvoidanceMultiplier)
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
@@ -436,7 +424,7 @@ float ArchimondeControlDoomfireAvoidanceMultiplier::GetValue(Action* action)
     // Air Burst outranks Doomfire: a knockback lands the bot somewhere unpredictable anyway, and
     // its own action already reaches further than this suppression does
     if (dynamic_cast<ArchimondeAvoidDoomfireAction*>(action) ||
-        dynamic_cast<ArchimondeSpreadToAvoidAirBurstAction*>(action))
+        dynamic_cast<ArchimondeKeepAirBurstAwayFromTankAction*>(action))
     {
         return 1.0f;
     }
@@ -475,7 +463,7 @@ float ArchimondeSetTremorTotemMultiplier::GetValue(Action* action)
     }
 
     Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
-    if (!archimonde || archimonde->GetHealthPct() > 90.0f)
+    if (!archimonde || archimonde->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
         return 1.0f;
 
     return !HasProtectionOfElune(bot) ? 0.0f : 1.0f;

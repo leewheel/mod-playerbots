@@ -55,8 +55,10 @@ bool AlarPullingBossTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
+    // By leewheel 2026-08-30 合并上游：HP常量统一BOSS_ENGAGED_HEALTH_PCT；entry规则查怪(19514=al'ar)
     Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
-    return alar && alar->GetHealthPct() > 95.0f;
+    return alar && alar->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
+    // End By leewheel
 }
 
 bool AlarBossIsFlyingBetweenPlatformsTrigger::IsActive()

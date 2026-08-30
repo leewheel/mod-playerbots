@@ -27,6 +27,17 @@ bool ZulAmanNoEncounterInProgressTrigger::IsActive()
     return IsMechanicTrackerBot(bot, ZA_MAP_ID);
 }
 
+// The misdirect on the pull is the same job on every boss, and every Zul'Aman boss - and nothing
+// else in the instance - runs a BossAI, so "boss target" resolves whichever one the raid is on.
+bool ZulAmanPullingBossTrigger::IsActive()
+{
+    if (bot->getClass() != CLASS_HUNTER)
+        return false;
+
+    Unit* boss = AI_VALUE(Unit*, "boss target");
+    return boss && boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
+}
+
 // Trash
 
 bool AmanishiMedicineManSummonedWardTrigger::IsActive()
@@ -36,15 +47,6 @@ bool AmanishiMedicineManSummonedWardTrigger::IsActive()
 }
 
 // Akil'zon <Eagle Avatar>
-
-bool AkilzonPullingBossTrigger::IsActive()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    Unit* akilzon = AI_VALUE2(Unit*, "find target", "23574");
-    return akilzon && akilzon->GetHealthPct() > ZA_PULL_COMPLETE_HP_PERCENT;
-}
 
 bool AkilzonBossEngagedByTanksTrigger::IsActive()
 {
@@ -95,15 +97,6 @@ bool AkilzonBotsNeedToPrepareForElectricalStormTrigger::IsActive()
 
 // Nalorakk <Bear Avatar>
 
-bool NalorakkPullingBossTrigger::IsActive()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    Unit* nalorakk = AI_VALUE2(Unit*, "find target", "23576");
-    return nalorakk && nalorakk->GetHealthPct() > ZA_PULL_COMPLETE_HP_PERCENT;
-}
-
 bool NalorakkBossSwitchesFormsTrigger::IsActive()
 {
     if (!AI_VALUE2(Unit*, "find target", "23576"))
@@ -119,24 +112,15 @@ bool NalorakkBossCastsSurgeTrigger::IsActive()
 
 // Jan'alai <Dragonhawk Avatar>
 
-bool JanalaiPullingBossTrigger::IsActive()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
-    return janalai && janalai->GetHealthPct() > ZA_PULL_COMPLETE_HP_PERCENT;
-}
-
 bool JanalaiBossEngagedByTanksTrigger::IsActive()
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "23578"))
-        return false;
+    // By leewheel 2026-08-30 合并上游：改用IsJanalaiBombing判定；entry规则查怪(23578=jan'alai)
+    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
 
-    return !HasFireBombNearby(bot);
+    return janalai && !IsJanalaiBombing(janalai);
 }
 
 bool JanalaiBossCastsFlameBreathTrigger::IsActive()
@@ -144,18 +128,22 @@ bool JanalaiBossCastsFlameBreathTrigger::IsActive()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "23578"))
+    // By leewheel 2026-08-30 合并上游：改用IsJanalaiBombing判定；entry规则查怪(23578=jan'alai)
+    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
+    if (!janalai)
         return false;
 
     if (AI_VALUE2(Unit*, "find target", "23598"))
         return false;
 
-    return !HasFireBombNearby(bot);
+    return !IsJanalaiBombing(janalai);
 }
 
 bool JanalaiBossSummoningFireBombsTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "23578") && HasFireBombNearby(bot);
+    // By leewheel 2026-08-30 合并上游：改用IsJanalaiBombing helper；entry规则查怪(23578=jan'alai)
+    return IsJanalaiBombing(AI_VALUE2(Unit*, "find target", "23578"));
+    // End By leewheel
 }
 
 bool JanalaiAmanishiHatchersSpawnedTrigger::IsActive()
@@ -172,15 +160,6 @@ bool JanalaiAmanishiHatchersSpawnedTrigger::IsActive()
 }
 
 // Halazzi <Lynx Avatar>
-
-bool HalazziPullingBossTrigger::IsActive()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    Unit* halazzi = AI_VALUE2(Unit*, "find target", "23577");
-    return halazzi && halazzi->GetHealthPct() > ZA_PULL_COMPLETE_HP_PERCENT;
-}
 
 bool HalazziShouldBeTankedTrigger::IsActive()
 {
@@ -199,15 +178,6 @@ bool HalazziShouldFocusDpsTrigger::IsActive()
 }
 
 // Hex Lord Malacrass
-
-bool HexLordMalacrassPullingBossTrigger::IsActive()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
-    return malacrass && malacrass->GetHealthPct() > ZA_PULL_COMPLETE_HP_PERCENT;
-}
 
 bool HexLordMalacrassShouldPrioritizeAddsTrigger::IsActive()
 {
@@ -234,26 +204,6 @@ bool HexLordMalacrassBossPlacedFreezingTrapTrigger::IsActive()
 }
 
 // Zul'jin
-
-bool ZuljinMainTankNeedsAggroUponPullOrPhaseChangeTrigger::IsActive()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
-    if (!zuljin)
-        return false;
-
-    float hp = zuljin->GetHealthPct();
-
-    return (hp <= 100.0f && hp > ZA_PULL_COMPLETE_HP_PERCENT) ||
-           (hp <= 80.0f && hp > 75.0f &&
-            zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_BEAR))) ||
-           (hp <= 40.0f && hp > 35.0f &&
-            zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_LYNX))) ||
-           (hp <= 20.0f && hp > 15.0f &&
-            zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_DRAGONHAWK)));
-}
 
 bool ZuljinBossEngagedByTanksTrigger::IsActive()
 {

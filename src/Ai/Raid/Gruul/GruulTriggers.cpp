@@ -108,9 +108,10 @@ bool HighKingMaulgarPullingOgreCouncilTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    // By leewheel 2026-08-29 合并：修正entry错配(拉怪监控对象是Blindeye 18831而非Maulgar 18836)，采用对侧HP常量
+    // By leewheel 2026-08-29 合并：修正entry错配(拉怪监控对象是Blindeye 18831而非Maulgar 18836)；
+    //   2026-08-30 合并上游：HP常量统一为 BLINDEYE_ENGAGED_HEALTH_PCT
     Unit* blindeye = AI_VALUE2(Unit*, "find target", "18831");
-    return blindeye && blindeye->GetHealthPct() > BLINDEYE_PULL_COMPLETE_HP_PERCENT;
+    return blindeye && blindeye->GetHealthPct() > BLINDEYE_ENGAGED_HEALTH_PCT;
 }
 
 bool HighKingMaulgarBossCastsIntimidatingRoarTrigger::IsActive()

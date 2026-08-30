@@ -120,11 +120,13 @@ bool KalecgosPullingBossTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
+    // By leewheel 2026-08-30 合并上游：HP常量统一BOSS_ENGAGED_HEALTH_PCT；entry规则查怪(24850=kalecgos)
     Unit* kalecgos = AI_VALUE2(Unit*, "find target", "24850");
-    return kalecgos && kalecgos->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT;
+    return kalecgos && kalecgos->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
+    // End By leewheel
 }
 
-bool KalecgosBossRequiresTankRotationTrigger::IsActive()
+bool KalecgosRequiresTankRotationTrigger::IsActive()
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;
@@ -204,8 +206,10 @@ bool BrutallusPullingBossTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
+    // By leewheel 2026-08-30 合并上游：HP常量统一；entry规则查怪(24882=brutallus)
     Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
-    return brutallus && brutallus->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT;
+    return brutallus && brutallus->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
+    // End By leewheel
 }
 
 bool BrutallusRequiresTwoTanksTrigger::IsActive()
@@ -262,7 +266,7 @@ bool FelmystPullingBossTrigger::IsActive()
     if (!felmyst)
         return false;
 
-    if (felmyst->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT)
+    if (felmyst->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
         return true;
 
     if (felmyst->IsFlying())
@@ -317,7 +321,7 @@ bool FelmystRangedShouldPositionToDispelAndFleeTrigger::IsActive()
     // On initial landing, let the MT get aggro before assuming positions
     Player* mainTank = GetGroupMainTank(bot);
     if (mainTank && felmyst->GetVictim() != mainTank &&
-        felmyst->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT)
+        felmyst->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
     {
         return false;
     }
@@ -482,8 +486,10 @@ bool EredarTwinsPullingBossesTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
+    // By leewheel 2026-08-30 合并上游：HP常量统一；entry规则查怪(25166=grand warlock alythess)
     Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
-    return alythess && alythess->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT;
+    return alythess && alythess->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
+    // End By leewheel
 }
 
 bool EredarTwinsSacrolashRequiresTwoTanksTrigger::IsActive()

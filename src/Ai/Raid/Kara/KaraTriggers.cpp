@@ -13,7 +13,6 @@
 #include "KaraActions.h"
 #include "KaraHelpers.h"
 #include "Playerbots.h"
-#include "Timer.h"
 
 using namespace KaraHelpers;
 using namespace EncounterHelpers;

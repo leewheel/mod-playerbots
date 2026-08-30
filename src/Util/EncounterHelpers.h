@@ -20,12 +20,18 @@ class Unit;
 namespace EncounterHelpers
 {
 
-// Answers whether the bot can take one short step towards a destination, and where that step
-// lands. It says nothing about the destination itself--only about the next hop. stepX/Y/Z are
-// written on success and left untouched on failure
+// Cheap, rough proxies for how far along an encounter is. 95% HP means the boss and raid are
+// positioned, the tank has threat, and the fight proper has started, so it's time to use cooldowns.
+// 10% means the boss is almost dead, so ignore adds and finish off the boss.
+inline constexpr float BOSS_ENGAGED_HEALTH_PCT = 95.0f;
+inline constexpr float BOSS_BURN_HEALTH_PCT = 10.0f;
+
 bool CanTakeStepTowards(
     Player* bot, float destinationX, float destinationY, float moveDist,
     float& stepX, float& stepY, float& stepZ);
+bool GetTankPositionStep(
+    Player* bot, Position const& position, float arrivalDist, Unit* facing, float& stepX,
+    float& stepY, bool& backwards);
 bool MarkTargetWithIcon(Player* bot, Unit* target, uint8 iconId);
 bool MarkTargetWithSkull(Player* bot, Unit* target);
 bool MarkTargetWithSquare(Player* bot, Unit* target);
@@ -46,10 +52,8 @@ bool IsMechanicTrackerBot(PlayerbotAI* botAI, Player* bot, uint32 mapId, Player*
 // Returns true if the bot is the first alive bot in the group on the given map
 bool IsMechanicTrackerBot(Player* bot, uint32 mapId);
 Player* GetGroupMainTank(Player* bot);
-//By leewheel 2026-08-26 兼容包装声明：本分支存量代码的botAI签名调用点转发（实现见EncounterHelpers.cpp）
-Player* GetGroupMainTank(PlayerbotAI* botAI, Player* bot);
+// By leewheel 2026-08-30 合并上游：删除3参兼容包装声明(调用点已全部改用2参签名)
 Player* GetGroupAssistTank(Player* bot, uint8 index);
-Player* GetGroupAssistTank(PlayerbotAI* botAI, Player* bot, uint8 index);
 Unit* GetFirstAliveUnitByEntry(PlayerbotAI* botAI, uint32 entry);
 Player* GetNearestPlayerInRadius(Player* bot, float radius);
 std::vector<Position> GetDynamicObjectPositions(Player* bot, float searchRadius, uint32 spellId);

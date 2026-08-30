@@ -81,25 +81,17 @@ bool GrobbulusCloudTrigger::IsActive()
     return true;
 }
 
-//bool HeiganMeleeTrigger::IsActive()
-//{
-//    Unit* heigan = AI_VALUE2(Unit*, "find target", "15936");
-//    if (!heigan)
-//    {
-//        return false;
-//    }
-//    return !botAI->IsRanged(bot);
-//}
-//
-//bool HeiganRangedTrigger::IsActive()
-//{
-//    Unit* heigan = AI_VALUE2(Unit*, "find target", "15936");
-//    if (!heigan)
-//    {
-//        return false;
-//    }
-//    return botAI->IsRanged(bot);
-//}
+// By leewheel 2026-08-30 合并上游：Heigan安全舞触发器重新启用(时间钟helper)，删除本服注释掉的旧实现
+bool HeiganMeleeTrigger::IsActive()
+{
+    return PlayerbotAI::IsMelee(bot) && helper.UpdateBossAI();
+}
+
+bool HeiganRangedTrigger::IsActive()
+{
+    return PlayerbotAI::IsRanged(bot) && helper.UpdateBossAI();
+}
+// End By leewheel
 
 bool RazuviousTankTrigger::IsActive()
 {

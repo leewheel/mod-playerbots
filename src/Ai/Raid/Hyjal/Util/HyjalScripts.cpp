@@ -12,16 +12,16 @@
 #include "Playerbots.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
-#include "Timer.h"
 
 using namespace HyjalHelpers;
 using namespace EncounterHelpers;
 
-// The explicitly cast-at target, which is all that exists when a cast begins: Spell::prepare only
-// resolves a target list for item casts, so for a creature's cast GetUniqueTargetInfo stays empty
-// until Spell::cast runs at the end of the cast time. Both listeners below are driven by
-// DoCastRandomTarget, which always supplies an explicit unit target
-static Player* GetSpellPlayerTarget(Spell* spell)
+// Both spell listeners are driven by DoCastRandomTarget, which always has an explicit unit target.
+
+namespace
+{
+
+Player* GetTargetedPlayer(Spell* spell)
 {
     if (!spell)
         return nullptr;
@@ -51,7 +51,8 @@ bool ShouldInterruptForArchimondeAirBurst(Player* bot, Unit* caster, Player* tar
     float const distanceToActiveTank = bot->GetExactDist2d(activeTank);
     return distanceToActiveTank < AIR_BURST_SAFE_DISTANCE;
 }
-// End By leewheel
+
+} // namespace
 
 // Interrupts a cast when a Doomfire NPC comes too close. The trail it leaves behind is made of
 // SPELL_DOOMFIRE_TRAIL dynamic objects, which bots query directly, so nothing is recorded here.
@@ -93,7 +94,7 @@ public:
     }
 };
 
-// Air Burst is a 2s cast that hits all players within 13y of the target
+// Air Burst is a 2s cast that hits all players within 13y of the target.
 class ArchimondeAirBurstSpellListenerScript : public AllSpellScript
 {
 public:
@@ -105,7 +106,7 @@ public:
         if (spellInfo->Id != Id(HyjalSpells::SPELL_AIR_BURST))
             return;
 
-        Player* target = GetSpellPlayerTarget(spell);
+        Player* target = GetTargetedPlayer(spell);
         if (!target)
             return;
 
@@ -131,7 +132,7 @@ public:
     }
 };
 
-// Inferno summons a Towering Infernal at its target's then-current position after a 3.5s cast
+// Inferno summons a Towering Infernal at its target's then-current position after a 3.5s cast.
 class AnetheronInfernoSpellListenerScript : public AllSpellScript
 {
 public:
@@ -143,7 +144,7 @@ public:
         if (spellInfo->Id != Id(HyjalSpells::SPELL_INFERNO))
             return;
 
-        Player* target = GetSpellPlayerTarget(spell);
+        Player* target = GetTargetedPlayer(spell);
         if (!target)
             return;
 

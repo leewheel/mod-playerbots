@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "Playerbots.h"
@@ -90,8 +91,8 @@ public:
             PlayerbotsMgr::instance().AddPlayerbotData(player, false);
             sRandomPlayerbotMgr.OnPlayerLogin(player);
 
-            // Before modifying the following messages, please make sure it does not violate the AGPLv3.0 license
-            // especially if you are distributing a repack or hosting a public server
+            // Before modifying the following messages, please make sure it does not violate the GNU GPLv2
+            // license especially if you are distributing a repack or hosting a public server
             // e.g. you can replace the URL with your own repository,
             // but it should be publicly accessible and include all modifications you've made
             if (sPlayerbotAIConfig.enabled)
@@ -171,6 +172,8 @@ public:
             playerbotMgr->UpdateAI(diff);
         }
     }
+
+    using PlayerScript::OnPlayerCanUseChat;  // keep the base overloads visible
 
     bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 /*lang*/, std::string& msg, Player* receiver) override
     {
@@ -342,20 +345,22 @@ public:
 
     void OnBeforeWorldInitialized() override
     {
-        // Before modifying the following messages, please make sure it does not violate the AGPLv3.0 license
-        // especially if you are distributing a repack or hosting a public server
+        // Before modifying the following messages, please make sure it does not violate the GNU GPLv2
+        // license especially if you are distributing a repack or hosting a public server
         // e.g. you can replace the URL with your own repository,
         // but it should be publicly accessible and include all modifications you've made
-        LOG_INFO("server.loading", "┌──────────────────────────────────────────────────────────┐");
-        LOG_INFO("server.loading", "│                                                          │");
-        LOG_INFO("server.loading", "│              AzerothCore Playerbots Module               │");
-        LOG_INFO("server.loading", "│                                                          │");
-        LOG_INFO("server.loading", "├──────────────────────────────────────────────────────────┤");
-        LOG_INFO("server.loading", "│     mod-playerbots is a community-driven open-source     │");
-        LOG_INFO("server.loading", "│  project based on AzerothCore, licensed under AGPLv3.0   │");
-        LOG_INFO("server.loading", "├──────────────────────────────────────────────────────────┤");
-        LOG_INFO("server.loading", "│      https://github.com/mod-playerbots/mod-playerbots    │");
-        LOG_INFO("server.loading", "└──────────────────────────────────────────────────────────┘");
+        // By leewheel 2026-08-30 合并上游：许可证标注更正为GNU GPLv2(上游134c709ca统一)
+        LOG_INFO("server.loading", "╔══════════════════════════════════════════════════════════╗");
+        LOG_INFO("server.loading", "║                                                          ║");
+        LOG_INFO("server.loading", "║              AzerothCore Playerbots Module               ║");
+        LOG_INFO("server.loading", "║                                                          ║");
+        LOG_INFO("server.loading", "╟──────────────────────────────────────────────────────────╢");
+        LOG_INFO("server.loading", "║     mod-playerbots is a community-driven open-source     ║");
+        LOG_INFO("server.loading", "║  project based on AzerothCore, licensed under GNU GPLv2  ║");
+        LOG_INFO("server.loading", "╟──────────────────────────────────────────────────────────╢");
+        LOG_INFO("server.loading", "║     https://github.com/mod-playerbots/mod-playerbots     ║");
+        LOG_INFO("server.loading", "╚══════════════════════════════════════════════════════════╝");
+        // End By leewheel
 
         uint32 oldMSTime = getMSTime();
 

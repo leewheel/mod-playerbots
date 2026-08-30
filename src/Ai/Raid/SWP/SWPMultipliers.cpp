@@ -292,9 +292,9 @@ float BrutallusDelayCooldownsMultiplier::GetValue(Action* action)
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-    // By leewheel 2026-08-29 合并：采用对侧单行写法，entry规则查找
+    // By leewheel 2026-08-30 合并上游：HP常量统一BOSS_ENGAGED_HEALTH_PCT；entry规则查怪(24882=brutallus)
     Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
-    return brutallus && brutallus->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT ? 0.0f : 1.0f;
+    return brutallus && brutallus->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     // End By leewheel
 }
 
@@ -457,7 +457,7 @@ float FelmystDelayCooldownsMultiplier::GetValue(Action* action)
     if (felmyst->IsFlying())
         return 0.0f;
 
-    return felmyst->GetHealthPct() > SWP_PULL_COMPLETE_HP_PERCENT ? 0.0f : 1.0f;
+    return felmyst->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 }
 
 // Eredar Twins
@@ -757,8 +757,9 @@ float MuruDelayCooldownsMultiplier::GetValue(Action* action)
     if (!muru)
         return 1.0f;
 
+    // By leewheel 2026-08-30 合并上游：HP常量统一；entry规则查怪(25840=entropius)
     Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
-    if (entropius && entropius->GetHealthPct() < SWP_PULL_COMPLETE_HP_PERCENT)
+    if (entropius && entropius->GetHealthPct() < BOSS_ENGAGED_HEALTH_PCT)
         return 1.0f;
 
     // Bloodlust is saved for Entropius
