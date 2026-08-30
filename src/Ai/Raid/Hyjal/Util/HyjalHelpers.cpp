@@ -430,8 +430,9 @@ float GetKazrogalRangedArcSpan(float radius)
     return 2.0f * std::asin(ratio < 1.0f ? ratio : 1.0f);
 }
 
-bool IsKazrogalManaUser(PlayerbotAI* botAI, Player* bot)
+bool IsKazrogalManaUser(Player* bot) // By leewheel 2026-08-30 合并上游单参签名(botAI内部获取)
 {
+    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     switch (bot->getClass())
     {
         case CLASS_WARRIOR:
@@ -521,7 +522,7 @@ bool IsDoomed(Player* bot)
 
 // Standing behind Azgalor is immune at any range, which is where melee want to be anyway. The
 // range clause only matters for anyone who has to pass through his front
-bool IsDoomguardTank(PlayerbotAI* botAI, Player* bot)
+bool IsDoomguardTank(Player* bot) // By leewheel 2026-08-30 合并上游单参签名(原botAI参数未使用)
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;

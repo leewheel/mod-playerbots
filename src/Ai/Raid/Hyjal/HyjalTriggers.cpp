@@ -201,7 +201,7 @@ bool KazrogalRangedShouldAvoidWarStompTrigger::IsActive()
 
 bool KazrogalBotIsLowOnManaTrigger::IsActive()
 {
-    if (!IsKazrogalManaUser(botAI, bot))
+    if (!IsKazrogalManaUser(bot)) // By leewheel 2026-08-30 合并上游单参签名
         return false;
 
     // Hunters never run. They rely only on Aspect of the Viper.

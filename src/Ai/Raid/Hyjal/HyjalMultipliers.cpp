@@ -233,7 +233,7 @@ float KazrogalControlLowManaMovementMultiplier::GetValue(Action* action)
 {
     // Hunters are excluded alongside the classes the Mark cannot reach: it reaches them, but their
     // whole answer to it is Viper, so there is no escape here to clear the way for
-    if (!IsKazrogalManaUser(botAI, bot) || bot->getClass() == CLASS_HUNTER)
+    if (!IsKazrogalManaUser(bot) || bot->getClass() == CLASS_HUNTER) // By leewheel 2026-08-30 合并上游单参签名
         return 1.0f;
 
     if (!dynamic_cast<MovementAction*>(action) &&

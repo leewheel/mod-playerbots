@@ -219,7 +219,7 @@ bool IsInRainOfFire(PlayerbotAI* botAI);
 bool IsDoomed(Player* bot);
 // The tank that holds Lesser Doomguards: the first assist tank among the living, or the second if
 // the first is Doomed and so about to spawn one of its own.
-bool IsDoomguardTank(PlayerbotAI* botAI, Player* bot);
+bool IsDoomguardTank(Player* bot); // By leewheel 2026-08-30 合并上游单参签名
 // Cleave chains from Azgalor's victim to 4 more players, but only within this distance of that
 // victim and inside his frontal arc.
 inline constexpr float CLEAVE_CHAIN_RADIUS = 12.0f;
