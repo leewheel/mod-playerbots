@@ -180,6 +180,12 @@ public:
     uint32 ambienceBotCount;        // 氛围组bot数量（0=关闭）
     float ambienceBotRadius;        // 氛围组目的地与目标玩家的最大距离（码）
     // End By leewheel
+    // By leewheel 2026-08-30 氛围组等级同步：抽中氛围组bot时把其等级同步到在线最高等级
+    //   真实玩家附近（±ambienceSyncLevelBand），保证氛围组bot在玩家周围打得动怪、做得了任务。
+    //   取代已删除的 mod-rndbot-sync 全局等级同步（那会破坏战场等级段位）。
+    bool ambienceSyncLevel;         // 是否启用（0=关闭）
+    uint32 ambienceSyncLevelBand;   // 同步等级浮动半宽（±级）
+    // End By leewheel
 
     // Professions
     bool enableFishingWithMaster;

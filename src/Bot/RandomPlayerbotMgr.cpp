@@ -23,6 +23,7 @@
 #include "MapMgr.h"
 #include "NewRpgInfo.h"
 #include "NewRpgStrategy.h"
+#include "ObjectAccessor.h"
 #include "ObjectGuid.h"
 #include "Opcodes.h"
 #include "PerfMonitor.h"
@@ -2904,6 +2905,63 @@ void RandomPlayerbotMgr::ReshuffleAmbienceBots()
     uint32 count = std::min<uint32>(sPlayerbotAIConfig.ambienceBotCount, pool.size());
     for (uint32 i = 0; i < count; ++i)
         ambienceBots.insert(pool[i]);
+
+    // By leewheel 2026-08-30
+    // 氛围组等级同步：把抽中的bot等级同步到在线最高等级真实玩家附近（±AmbienceSyncLevelBand），
+    //   保证氛围组在玩家周围打得动怪、做得了该区域的任务（老大需求：30-50个bot与玩家等级
+    //   差不多、在玩家周围做任务杀怪）。只动氛围组自身、不碰全服bot种群，战场等级段位
+    //   不会被破坏（取代已删除的 mod-rndbot-sync 全局等级同步方案）。
+    // End By leewheel
+    if (sPlayerbotAIConfig.ambienceSyncLevel && !players.empty())
+    {
+        uint8 targetLevel = 0;
+        for (Player* player : players)
+        {
+            if (player && player->IsInWorld() && player->GetLevel() > targetLevel)
+                targetLevel = player->GetLevel();
+        }
+
+        if (targetLevel > 0)
+        {
+            uint8 maxLevel = static_cast<uint8>(sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
+            uint8 dkMinLevel = static_cast<uint8>(sWorld->getIntConfig(CONFIG_START_HEROIC_PLAYER_LEVEL));
+            uint32 synced = 0;
+
+            for (uint32 botId : ambienceBots)
+            {
+                Player* bot = ObjectAccessor::FindPlayer(ObjectGuid::Create<HighGuid::Player>(botId));
+                if (!bot || !bot->IsInWorld())
+                    continue;
+
+                // 战场/副本/排队/战斗/飞行中的bot不动，等下一轮轮换再说
+                if (bot->InBattleground() || bot->InBattlegroundQueue() || bot->InArena() ||
+                    bot->inRandomLfgDungeon() || bot->IsInCombat() || bot->IsInFlight() || !bot->IsAlive())
+                    continue;
+
+                int band = static_cast<int>(sPlayerbotAIConfig.ambienceSyncLevelBand);
+                int newLevel = static_cast<int>(targetLevel) + urand(-band, band);
+                newLevel = std::clamp(newLevel, 1, static_cast<int>(maxLevel));
+
+                // 死亡骑士不得低于英雄职业起始等级（55），否则破坏DK职业机制
+                if (bot->getClass() == CLASS_DEATH_KNIGHT && newLevel < dkMinLevel)
+                    newLevel = dkMinLevel;
+
+                // 等级只差1级以内不重随机化，避免无谓的 Randomize 开销
+                if (std::abs(static_cast<int>(bot->GetLevel()) - newLevel) <= 1)
+                    continue;
+
+                if (bot->IsMounted())
+                    bot->Dismount();
+
+                PlayerbotFactory factory(bot, static_cast<uint8>(newLevel));
+                factory.Randomize(false);
+                ++synced;
+            }
+
+            if (synced > 0)
+                LOG_INFO("playerbots", "氛围组等级同步：{} 个机器人已同步到 {} 级附近", synced, targetLevel);
+        }
+    }
 
     LOG_INFO("playerbots", "氛围组机器人已轮换：{} 个机器人将在真实玩家附近活动", ambienceBots.size());
 }

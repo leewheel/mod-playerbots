@@ -276,6 +276,10 @@ bool PlayerbotAIConfig::Initialize()
     ambienceBotCount = sConfigMgr->GetOption<uint32>("AiPlayerbot.AmbienceBotCount", 15);
     ambienceBotRadius = sConfigMgr->GetOption<float>("AiPlayerbot.AmbienceBotRadius", 1500.f);
     // End By leewheel
+    // By leewheel 2026-08-30 氛围组等级同步：抽中时把bot等级同步到在线最高等级真实玩家附近
+    ambienceSyncLevel = sConfigMgr->GetOption<bool>("AiPlayerbot.AmbienceSyncLevel", true);
+    ambienceSyncLevelBand = sConfigMgr->GetOption<uint32>("AiPlayerbot.AmbienceSyncLevelBand", 3);
+    // End By leewheel
 
     restrictHealerDPS = sConfigMgr->GetOption<bool>("AiPlayerbot.HealerDPSMapRestriction", false);
     LoadList<std::vector<uint32>>(
