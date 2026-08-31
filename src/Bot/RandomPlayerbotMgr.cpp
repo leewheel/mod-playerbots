@@ -468,6 +468,41 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
         }
     }
 
+    //By leewheel 2026-09-01 老大需求：随机机器人登录进度周期显示
+    // 启动爬坡期每10秒播报一条"已登录 N/M"；达到目标或连续6个周期无增长
+    // （可用角色不足/已达上限）则播报收尾并停止，避免长期刷屏。
+    // 注：UpdateAI 的 tick 间隔随爬坡阶段变化，10秒为下限，实际间隔取两者较大值。
+    if (sPlayerbotAIConfig.randomBotAutologin && !_loginProgressDone)
+    {
+        if (maxAllowedBotCount && onlineBotCount >= maxAllowedBotCount)
+        {
+            LOG_INFO("playerbots", "随机机器人登录完成：已登录 {}/{}", onlineBotCount, maxAllowedBotCount);
+            _loginProgressDone = true;
+        }
+        else if (time(nullptr) >= _loginProgressLastLog + 10)
+        {
+            if (onlineBotCount == _loginProgressLastCount)
+                ++_loginProgressStalls;
+            else
+                _loginProgressStalls = 0;
+
+            if (_loginProgressStalls >= 6)
+            {
+                LOG_INFO("playerbots", "随机机器人登录已稳定：已登录 {}/{}（无更多可登录角色）",
+                    onlineBotCount, maxAllowedBotCount);
+                _loginProgressDone = true;
+            }
+            else
+            {
+                LOG_INFO("playerbots", "随机机器人登录进度：已登录 {}/{}", onlineBotCount, maxAllowedBotCount);
+            }
+
+            _loginProgressLastLog = time(nullptr);
+            _loginProgressLastCount = onlineBotCount;
+        }
+    }
+    //End By leewheel
+
     if (pmo)
         pmo->finish();
 

@@ -285,6 +285,12 @@ private:
     float activityMod = 0.25;
     bool _isBotInitializing = true;
     bool _isBotLogging = true;
+    //By leewheel 2026-09-01 老大需求：随机机器人登录进度周期显示（每10秒一条INFO）
+    time_t _loginProgressLastLog = 0;      // 上次进度日志时间
+    uint32 _loginProgressLastCount = 0;    // 上次进度日志时的在线机器人数
+    uint32 _loginProgressStalls = 0;       // 连续无增长周期数（>=6 视为已稳定）
+    bool _loginProgressDone = false;       // 本轮登录进度播报是否结束（完成/稳定后不再刷屏）
+    //End By leewheel
     NewRpgStatistic rpgStasticTotal;
     CachedEvent* FindEvent(uint32 bot, std::string const& event);
     uint32 GetEventValue(uint32 bot, std::string const& event);
