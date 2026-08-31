@@ -492,6 +492,12 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
         else
             engine->addStrategiesNoInit("boost", "racials", "chat", "default", "aoe", "potions", "cast time", "dps assist", nullptr);
 
+        //By leewheel 2026-09-01: PVP 交战循环策略挂战斗引擎（修复批次2挂载点缺陷——
+        // 原六条链挂 BattlegroundStrategy 属 NONCOMBAT 类型只在脱战引擎生效，
+        // 被控远遁/绷带恢复全部发生在战斗状态，必须挂战斗引擎；竞技场同样生效）
+        engine->addStrategy("pvp cycle", false);
+        //End By leewheel
+
         engine->removeStrategy("custom::say", false);
         engine->removeStrategy("flee", false);
         engine->removeStrategy("threat", false);
@@ -703,6 +709,11 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
         if ((bgType <= BATTLEGROUND_EY || bgType == BATTLEGROUND_IC) &&
             !player->InArena())  // do not add for not supported bg or arena
             nonCombatEngine->addStrategy("battleground", false);
+
+        //By leewheel 2026-09-01: PVP 交战循环策略挂非战斗引擎（脱战绷带恢复；
+        // 战斗引擎侧的挂载见 AddDefaultCombatStrategies）
+        nonCombatEngine->addStrategy("pvp cycle", false);
+        //End By leewheel
 
         if (bgType == BATTLEGROUND_WS)
             nonCombatEngine->addStrategy("warsong", false);

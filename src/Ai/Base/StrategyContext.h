@@ -113,6 +113,9 @@ public:
         creators["eye"] = &StrategyContext::eye;
         creators["isle"] = &StrategyContext::isle;
         creators["arena"] = &StrategyContext::arena;
+        // By leewheel 2026-09-01 PVP 交战循环策略注册（修复挂载点缺陷，双引擎生效）
+        creators["pvp cycle"] = &StrategyContext::pvp_cycle;
+        // End By leewheel
         creators["mount"] = &StrategyContext::mount;
         creators["rtsc"] = &StrategyContext::rtsc;
         creators["attack tagged"] = &StrategyContext::attack_tagged;
@@ -197,6 +200,9 @@ private:
     static Strategy* eye(PlayerbotAI* botAI) { return new EyeStrategy(botAI); }
     static Strategy* isle(PlayerbotAI* botAI) { return new IsleStrategy(botAI); }
     static Strategy* arena(PlayerbotAI* botAI) { return new ArenaStrategy(botAI); }
+    // By leewheel 2026-09-01 PVP 交战循环策略工厂
+    static Strategy* pvp_cycle(PlayerbotAI* botAI) { return new PvpCycleStrategy(botAI); }
+    // End By leewheel
     static Strategy* rtsc(PlayerbotAI* botAI) { return new RTSCStrategy(botAI); }
     static Strategy* attack_tagged(PlayerbotAI* botAI) { return new AttackTaggedStrategy(botAI); }
     static Strategy* debug(PlayerbotAI* botAI) { return new DebugStrategy(botAI); }

@@ -2238,14 +2238,14 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
 
     // Pre-select CC-break trinket for PvP specs: best available by item level
     // that the bot meets the level requirement for.
-    // Humans (Every Man for Himself) and Undead (Will of the Forsaken) have a
-    // racial that shares the PvP trinket cooldown, so they don't need one.
     // By leewheel 2026-09-01: 老大要求"解控饰品是必需品"——从仅 PVP spec 扩大到所有 50+ bot，
-    // 保证随时进战场都有徽章可用（人类/亡灵有种族徽章豁免，不占饰品位）。
+    // 保证随时进战场都有徽章可用。修正原"人类/亡灵种族徽章共享CD豁免"的错误认知：
+    // 3.3.5 中 Every Man for Himself(59752)/Will of the Forsaken(20599) 与饰品徽章(42292)
+    // 是**独立 2 分钟 CD 不共享**（亡灵正因双解控才是PVP首选种族），NPCBots 的使用逻辑
+    // 同样不分种族。真人标准配装=种族解控+徽章双保险，故全种族强制佩戴。
     // End By leewheel
-    bool racialHasCcBreak = (bot->getRace() == RACE_HUMAN || bot->getRace() == RACE_UNDEAD_PLAYER);
     uint32 pvpTrinket1 = 0;
-    if (level >= 50 && !racialHasCcBreak)
+    if (level >= 50)
     {
         for (uint32 itemId : ccBreakTrinketCache)
         {

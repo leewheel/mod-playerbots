@@ -22,29 +22,29 @@ void BattlegroundStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
     triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));
     triggers.push_back(new TriggerNode("dead", { NextAction("bg reset objective force", ACTION_EMERGENCY)}));
+}
 
-    // By leewheel 2026-08-29
-    // PVP 自保触发链（参考 NPCBots 战场生存手法），优先级从高到低：
-    //   1) 濒死被围攻（血<25% 且敌>=2）→ 强制反方向撤退（最高优先，保命第一）；
-    //   2) 低血量被近身（血<40% 且敌近身）→ 施放本职业控制/逃生技能争取恢复窗口；
-    //   3) 血量偏低且无敌近身（血<60%）→ 安全窗口打绷带恢复。
-    //   三者在 ACTION_EMERGENCY/ACTION_MOVE 量级，保证在普通输出动作之前被调度。
-    // End By leewheel
+// By leewheel 2026-09-01
+// PVP 交战循环策略（修复挂载点缺陷，详见头文件注释）：
+//   原六条链挂在 BattlegroundStrategy（NONCOMBAT 类型，只在脱战引擎生效），
+//   战斗状态（被控/被打）全部不生效——本策略 GENERIC 类型，战斗/非战斗双引擎挂载。
+//   优先级从高到低：
+//   1) 濒死被围攻（血<25% 且敌>=2）→ 强制反方向撤退（保命第一）；
+//   2) 低血量被近身（血<40% 且敌近身）→ 施放本职业控制/逃生技能争取恢复窗口；
+//   3) 打不死（目标玩家血>20%）且自身血<70% → 硬控远遁进入循环；
+//   4) 恢复窗口（血<80% 且近身敌人全被控/无敌）→ 瞬发治疗石先手 + 绷带续接；
+//   5) 血量偏低且无敌近身（血<60%）→ 安全窗口打绷带。
+//   触发器自带战场/竞技场守卫，野外副本挂载无副作用。
+// End By leewheel
+void PvpCycleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+{
     triggers.push_back(new TriggerNode("pvp critical", { NextAction("pvp retreat", ACTION_EMERGENCY)}));
     triggers.push_back(new TriggerNode("low hp pvp", { NextAction("pvp cast cc escape", ACTION_EMERGENCY - 1)}));
-    triggers.push_back(new TriggerNode("safe to bandage", { NextAction("pvp use bandage", ACTION_MOVE + 1)}));
-
-    // By leewheel 2026-09-01
-    // PVP 交战循环触发链（移植 NPCBots 法师/盗贼"控制→远遁→等CD→再来一轮"要素并推广到全职业）：
-    //   1) 打不死（目标玩家血>20%）且自身血<70% → 对目标施放硬控并位移远遁；
-    //   2) 恢复窗口（血<80% 且近身敌人全被控/无敌）→ 瞬发治疗石先手 + 打绷带续接快速回血；
-    //   3) CD 转好后常规输出策略自然再接敌（隐式循环）。
-    //   优先级低于 8/29 保命链（保命 > 战术循环 > 常规输出）。
-    // End By leewheel
     triggers.push_back(new TriggerNode("pvp cycle disengage", { NextAction("pvp cc disengage", ACTION_EMERGENCY - 2)}));
     triggers.push_back(new TriggerNode("pvp cycle recover", {
         NextAction("healthstone", ACTION_MOVE + 3),
         NextAction("pvp use bandage", ACTION_MOVE + 2)}));
+    triggers.push_back(new TriggerNode("safe to bandage", { NextAction("pvp use bandage", ACTION_MOVE + 1)}));
 }
 
 void WarsongStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
