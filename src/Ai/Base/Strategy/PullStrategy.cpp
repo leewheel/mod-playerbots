@@ -213,7 +213,8 @@ float PullMultiplier::GetValue(Action* action)
         actionName == "return to pull position" ||
         actionName == "pull end" ||
         actionName == "follow" ||
-        actionName == "set facing")
+        actionName == "set facing" ||
+        actionName == "surface for breath")
         return 1.0f;
 
     // Melee pull: the pull itself is a plain attack, allow it.

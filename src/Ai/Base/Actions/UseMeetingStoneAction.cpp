@@ -6,14 +6,20 @@
 
 #include "UseMeetingStoneAction.h"
 #include "CellImpl.h"
+#include "DBCStores.h"
 #include "Event.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "InstanceSaveMgr.h"
 #include "NearestGameObjects.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "PositionValue.h"
+
+// 定义于 Script/BotInstanceEntryFix.cpp：传送前修复机器人副本进入条件
+// （进度绑定/难度/死亡/团队转换/钥匙/任务/成就/等级）
+extern bool EnsureBotCanEnterMap(Player* bot, uint32 mapId, Player* master);
 
 bool UseMeetingStoneAction::Execute(Event event)
 {
@@ -176,6 +182,33 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
 
     if (!summoner->IsBeingTeleported() && !player->IsBeingTeleported())
     {
+        //By leewheel 2026-08-31 修复: 副本内召唤机器人失败(黑暗深渊反馈)
+        //  1. 目标是副本地图时, 先修复机器人进入条件(进度绑定/难度/死亡/钥匙等),
+        //     否则 Player::TeleportTo 的 PlayerCannotEnter 检查会静默失败
+        //  2. 机器人与召唤者同地图但不同副本分卷时(坐标相同距离≈0),
+        //     传送必须带 newInstance=true 走跨地图路径重新解析副本分卷,
+        //     否则近程传送只是原地位移, 机器人仍留在旧分卷
+        uint32 const summonMapId = summoner->GetMapId();
+        MapEntry const* mapEntry = sMapStore.LookupEntry(summonMapId);
+        bool isDungeonMap = mapEntry && mapEntry->IsDungeon();
+
+        if (isDungeonMap)
+        {
+            if (player->GetMapId() == summonMapId && player->GetInstanceId() != summoner->GetInstanceId())
+            {
+                sInstanceSaveMgr->PlayerUnbindInstance(player->GetGUID(), summonMapId,
+                    player->GetDifficulty(mapEntry->IsRaid()), true, player);
+            }
+
+            if (!EnsureBotCanEnterMap(player, summonMapId, summoner))
+            {
+                botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                    "meeting_stone_cannot_enter_instance", "我进不了你所在的副本", {}));
+                return false;
+            }
+        }
+        //End By leewheel
+
         float followAngle = GetFollowAngle();
         for (float angle = followAngle - M_PI; angle <= followAngle + M_PI; angle += M_PI / 4)
         {
@@ -236,7 +269,10 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                 if (!preserveAuras)
                     player->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED |
                                                           AURA_INTERRUPT_FLAG_CHANGE_MAP);
-                player->TeleportTo(mapId, x, y, z, 0);
+                //By leewheel 2026-08-31 同图副本跨分卷: newInstance=true 强制跨地图路径重新解析副本分卷
+                player->TeleportTo(mapId, x, y, z, 0, 0, nullptr,
+                                   isDungeonMap && player->GetMapId() == mapId);
+                //End By leewheel
                 if (player->GetPet())
                     player->GetPet()->NearTeleportTo(x, y, z, player->GetOrientation());
                 if (player->GetGuardianPet())

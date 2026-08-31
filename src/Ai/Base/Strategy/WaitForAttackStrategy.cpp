@@ -79,7 +79,8 @@ float WaitForAttackMultiplier::GetValue(Action* action)
         actionName != "reach pull" &&
         actionName != "pull start" &&
         actionName != "pull action" &&
-        actionName != "pull end")
+        actionName != "pull end" &&
+        actionName != "surface for breath")
     {
         return WaitForAttackStrategy::ShouldWait(botAI) ? 0.0f : 1.0f;
     }

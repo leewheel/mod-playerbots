@@ -66,6 +66,11 @@ void WorldPacketHandlerStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
     triggers.push_back(new TriggerNode("revive from corpse", { NextAction("revive from corpse", relevance) }));
     triggers.push_back(new TriggerNode("master loot roll", { NextAction("master loot roll", relevance) }));
 
+    //By leewheel 2026-08-31 修复: 机器人水下不换气直接淹死(黑暗深渊)
+    //  气量低于60秒时以紧急优先级游向水面; "default"策略全状态生效
+    triggers.push_back(new TriggerNode("low breath", { NextAction("surface for breath", ACTION_EMERGENCY) }));
+    //End By leewheel
+
     // quest ?
     //triggers.push_back(new TriggerNode("quest confirm", { NextAction("quest confirm", relevance) }));
     triggers.push_back(new TriggerNode("questgiver quest details", { NextAction("turn in query quest", relevance) }));
