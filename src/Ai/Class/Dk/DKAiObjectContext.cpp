@@ -202,6 +202,9 @@ public:
         creators["hysteria"] = &DeathKnightAiObjectContextInternal::hysteria;
         creators["dancing rune weapon"] = &DeathKnightAiObjectContextInternal::dancing_rune_weapon;
         creators["dark command"] = &DeathKnightAiObjectContextInternal::dark_command;
+        // By leewheel 2026-09-01 DK 巫妖之躯解控（NPCBots BreakCC 移植）
+        creators["lichborne"] = &DeathKnightAiObjectContextInternal::lichborne;
+        // End By leewheel
     }
 
 private:
@@ -217,6 +220,9 @@ private:
     static Action* death_and_decay(PlayerbotAI* botAI) { return new CastDeathAndDecayAction(botAI); }
     static Action* unholy_presence(PlayerbotAI* botAI) { return new CastUnholyPresenceAction(botAI); }
     static Action* raise_dead(PlayerbotAI* botAI) { return new CastRaiseDeadAction(botAI); }
+    // By leewheel 2026-09-01 DK 巫妖之躯解控工厂
+    static Action* lichborne(PlayerbotAI* botAI) { return new CastLichborneAction(botAI); }
+    // End By leewheel
     static Action* army_of_the_dead(PlayerbotAI* botAI) { return new CastArmyOfTheDeadAction(botAI); }
     static Action* summon_gargoyle(PlayerbotAI* botAI) { return new CastSummonGargoyleAction(botAI); }
     static Action* anti_magic_shell(PlayerbotAI* botAI) { return new CastAntiMagicShellAction(botAI); }

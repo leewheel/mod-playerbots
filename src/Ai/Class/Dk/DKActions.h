@@ -311,6 +311,17 @@ public:
     CastVampiricBloodAction(PlayerbotAI* botAI) : CastBuffSpellAction(botAI, "vampiric blood") {}
 };
 
+// By leewheel 2026-09-01
+// DK 巫妖之躯解控（移植 NPCBots bot_death_knight_ai.cpp:499-509 BreakCC 重写）：
+//   主动解除恐惧/魅惑/沉睡（49039/50397，邪恶系天赋，未点出时 spell id 解析为 0 自然跳过）。
+//   职业解控免费，优先级压过徽章——把徽章留给下一轮控制（超越 NPCBots 的省饰品思路）。
+// End By leewheel
+class CastLichborneAction : public CastBuffSpellAction
+{
+public:
+    CastLichborneAction(PlayerbotAI* botAI) : CastBuffSpellAction(botAI, "lichborne") {}
+};
+
 class CastMindFreezeAction : public CastMeleeSpellAction
 {
 public:

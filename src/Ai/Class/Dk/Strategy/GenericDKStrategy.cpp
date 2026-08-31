@@ -80,4 +80,14 @@ void GenericDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             }
         )
     );
+
+    // By leewheel 2026-09-01
+    // DK 巫妖之躯解控（移植 NPCBots bot_death_knight_ai.cpp:499-509 BreakCC 重写）：
+    //   被恐惧/魅惑/沉睡时主动解（复用现成 fear charm sleep 触发器）。
+    //   优先级 EMERGENCY+2 压过亡灵意志(EMERGENCY+1)与解控饰品(EMERGENCY)——
+    //   职业解控免费，把徽章留给下一轮控制（超越 NPCBots 的省饰品优化）。
+    //   未点邪恶系巫妖之躯天赋时 spell id 解析为 0，动作自然不可用，无副作用。
+    // End By leewheel
+    triggers.push_back(
+        new TriggerNode("fear charm sleep", { NextAction("lichborne", ACTION_EMERGENCY + 2) }));
 }
