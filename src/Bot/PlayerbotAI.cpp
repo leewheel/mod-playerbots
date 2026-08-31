@@ -4408,7 +4408,7 @@ bool PlayerbotAI::IsInterruptableSpellCasting(Unit* target, std::string const sp
     // End By leewheel
     if (target->IsPlayer())
     {
-        Spell const* casting = target->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+        Spell* casting = target->GetCurrentSpell(CURRENT_GENERIC_SPELL);
         if (!casting)
             casting = target->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
 
