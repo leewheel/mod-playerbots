@@ -36,6 +36,14 @@ void GenericWarriorStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         "enemy out of melee", { NextAction("reach melee", ACTION_HIGH + 1) }));
     triggers.push_back(new TriggerNode(
         "fear sleep sap", { NextAction("berserker rage", ACTION_EMERGENCY + 1) }));
+
+    // By leewheel 2026-09-01
+    // 战士战场生存（NPCBots bot_warrior_ai.cpp 低血开盾墙思路，不分专精）：
+    //   战场血<40% 被近身 → 盾墙硬吃一轮物理，为控制远遁/绷带恢复争取窗口。
+    //   挂通用策略使 Arms/Fury/Tank 全专精生效（原盾墙只有坦克策略在副本仇恨场景用）。
+    // End By leewheel
+    triggers.push_back(new TriggerNode(
+        "low health pvp", { NextAction("shield wall", ACTION_EMERGENCY - 1) }));
 }
 
 class WarrirorAoeStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
