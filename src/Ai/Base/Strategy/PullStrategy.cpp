@@ -85,6 +85,9 @@ std::string PullStrategy::GetPullActionName() const
 
 std::string PullStrategy::GetSpellName() const
 {
+    if (IsMeleePull())
+        return "";
+
     Player* bot = botAI->GetBot();
     std::string spellName = GetPullActionName();
     if (!bot || spellName != "shoot")
@@ -116,6 +119,14 @@ std::string PullStrategy::GetSpellName() const
 float PullStrategy::GetRange() const
 {
     Player* bot = botAI->GetBot();
+    Unit* target = GetTarget();
+
+    if (bot && IsMeleePull())
+    {
+        float const targetReach = target ? target->GetCombatReach() : 0.0f;
+        return bot->GetCombatReach() + targetReach + ATTACK_DISTANCE;
+    }
+
     std::string const spellName = GetSpellName();
     if (bot && !spellName.empty())
     {
@@ -132,6 +143,19 @@ std::string PullStrategy::GetPreActionName() const
     return preAction;
 }
 
+bool PullStrategy::IsMeleePull() const
+{
+    std::string const pullAction = GetPullActionName();
+    if (pullAction == "attack")
+        return true;
+
+    if (pullAction != "shoot")
+        return false;
+
+    Player* bot = botAI->GetBot();
+    return bot && !bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED);
+}
+
 bool PullStrategy::CanDoPullAction(Unit* target)
 {
     Player* bot = botAI->GetBot();
@@ -141,11 +165,9 @@ bool PullStrategy::CanDoPullAction(Unit* target)
     if (!target->IsInWorld() || target->GetMapId() != bot->GetMapId())
         return false;
 
-    if (bot->getClass() != CLASS_DRUID && bot->getClass() != CLASS_PALADIN &&
-        GetPullActionName() == "shoot" && !bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED))
-    {
-        return false;
-    }
+    // No ranged pull means available: reach the target and attack in melee.
+    if (IsMeleePull())
+        return true;
 
     std::string const spellName = GetSpellName();
     if (spellName.empty())
@@ -192,6 +214,10 @@ float PullMultiplier::GetValue(Action* action)
         actionName == "pull end" ||
         actionName == "follow" ||
         actionName == "set facing")
+        return 1.0f;
+
+    // Melee pull: the pull itself is a plain attack, allow it.
+    if (actionName == "attack" && strategy->IsMeleePull())
         return 1.0f;
 
     return 0.0f;

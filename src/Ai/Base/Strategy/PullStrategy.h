@@ -51,6 +51,10 @@ public:
     float GetRange() const;
     virtual std::string GetPreActionName() const;
 
+    // True when the bot has no ranged pull means (e.g. warrior without a
+    // ranged weapon): the pull is done by reaching the target and attacking.
+    bool IsMeleePull() const;
+
     void RequestPull(Unit* target, bool resetTime = true);
     void OnPullStarted();
     void OnPullEnded();

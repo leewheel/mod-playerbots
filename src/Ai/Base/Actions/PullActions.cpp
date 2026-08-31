@@ -203,7 +203,8 @@ bool PullAction::Execute(Event event)
     }
 
     context->GetValue<Unit*>("current target")->Set(target);
-    if (!botAI->DoSpecificAction(strategy->GetPullActionName(), event, true))
+    std::string const pullActionName = strategy->IsMeleePull() ? "attack" : strategy->GetPullActionName();
+    if (!botAI->DoSpecificAction(pullActionName, event, true))
         return false;
 
     return true;
@@ -218,11 +219,13 @@ bool PullAction::isPossible()
         return false;
 
     Unit* target = strategy->GetTarget();
-    std::string const spellName = strategy->GetSpellName();
-    if (!target || !target->IsInWorld() || target->GetMapId() != bot->GetMapId() || spellName.empty())
+    if (!target || !target->IsInWorld() || target->GetMapId() != bot->GetMapId())
         return false;
 
-    return true;
+    if (strategy->IsMeleePull())
+        return true;
+
+    return !strategy->GetSpellName().empty();
 }
 
 void PullAction::InitPullAction()

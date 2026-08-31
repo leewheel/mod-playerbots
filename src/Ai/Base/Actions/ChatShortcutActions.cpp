@@ -10,6 +10,7 @@
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "PositionValue.h"
+#include "PullStrategy.h"
 
 void PositionsResetAction::ResetReturnPosition()
 {
@@ -278,6 +279,49 @@ bool TankAttackChatShortcutAction::Execute(Event /*event*/)
     // 设置为优先攻击目标
     botAI->GetAiObjectContext()->GetValue<GuidVector>("prioritized targets")->Set({targetGuid});
     botAI->GetAiObjectContext()->GetValue<ObjectGuid>("pull target")->Set(targetGuid);
+
+    //By leewheel 2026-08-31 修复: 坦克开怪只设目标不拉怪, 坦克原地开打且DPS抢仇恨
+    //  修复1: 发起完整拉怪流程, 拉怪点设为主人位置, 坦克把怪拉回队伍再打
+    //  修复2: 给队伍DPS启用"等待攻击", 等坦克建立仇恨后再输出
+    if (target->GetMapId() == bot->GetMapId())
+    {
+        botAI->ChangeStrategy("+pull,+pull back", BOT_STATE_COMBAT);
+
+        PullStrategy* pullStrategy = PullStrategy::Get(botAI);
+        if (pullStrategy && pullStrategy->CanDoPullAction(target))
+        {
+            PositionMap& posMap = context->GetValue<PositionMap&>("position")->Get();
+            PositionInfo pullPosition = posMap["pull"];
+            pullPosition.Set(master->GetPositionX(), master->GetPositionY(), master->GetPositionZ(), master->GetMapId());
+            posMap["pull"] = pullPosition;
+
+            pullStrategy->RequestPull(target);
+            context->GetValue<Unit*>("current target")->Set(target);
+            botAI->ChangeEngine(BOT_STATE_COMBAT);
+            botAI->SetNextCheckDelay(sPlayerbotAIConfig.reactDelay);
+        }
+
+        if (Group* group = bot->GetGroup())
+        {
+            for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+            {
+                Player* member = ref->GetSource();
+                if (!member || member == bot || member == master)
+                    continue;
+
+                PlayerbotAI* memberAI = GET_PLAYERBOT_AI(member);
+                if (!memberAI || !PlayerbotAI::IsDps(member, true) || PlayerbotAI::IsTank(member, true))
+                    continue;
+
+                memberAI->ChangeStrategy("+wait for attack", BOT_STATE_COMBAT);
+                AiObjectContext* memberContext = memberAI->GetAiObjectContext();
+                memberContext->GetValue<uint8>("wait for attack time")->Set(10);
+                memberContext->GetValue<time_t>("combat start time")->Set(0);
+            }
+        }
+    }
+    //End By leewheel
+
     if (verbose)
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "attacking", "攻击中", {}));
