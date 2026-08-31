@@ -2001,7 +2001,7 @@ bool BGTactics::selectObjective(bool reset)
                         if (Map* map = bot->GetMap())
                         {
                             float groundZ = map->GetHeight(rx, ry, rz);
-                            if (groundZ == VMAP_INVALID_HEIGHT_VALUE)
+                            if (groundZ != VMAP_INVALID_HEIGHT_VALUE)  //By leewheel 2026-09-01 复核修正反向Bug: 高度有效才吸附地面, 原==会把bot传送到-500虚空
                                 rz = groundZ;
                         }
 
@@ -2186,7 +2186,7 @@ bool BGTactics::selectObjective(bool reset)
                     if (Map* map = bot->GetMap())
                     {
                         float groundZ = map->GetHeight(rx, ry, rz);
-                        if (groundZ == VMAP_INVALID_HEIGHT_VALUE)
+                        if (groundZ != VMAP_INVALID_HEIGHT_VALUE)  //By leewheel 2026-09-01 复核修正反向Bug: 高度有效才吸附地面, 原==会把bot传送到-500虚空
                             rz = groundZ;
                     }
 
@@ -2229,7 +2229,7 @@ bool BGTactics::selectObjective(bool reset)
                 if (Map* map = bot->GetMap())
                 {
                     float groundZ = map->GetHeight(rx, ry, rz);
-                    if (groundZ == VMAP_INVALID_HEIGHT_VALUE)
+                    if (groundZ != VMAP_INVALID_HEIGHT_VALUE)  //By leewheel 2026-09-01 复核修正反向Bug: 高度有效才吸附地面, 原==会把bot传送到-500虚空
                         rz = groundZ;
                 }
 
@@ -2548,7 +2548,7 @@ bool BGTactics::selectObjective(bool reset)
                 if (Map* map = bot->GetMap())
                 {
                     float groundZ = map->GetHeight(rx, ry, rz);
-                    if (groundZ == VMAP_INVALID_HEIGHT_VALUE)
+                    if (groundZ != VMAP_INVALID_HEIGHT_VALUE)  //By leewheel 2026-09-01 复核修正反向Bug: 高度有效才吸附地面, 原==会把bot传送到-500虚空
                         rz = groundZ;
                 }
                 pos.Set(rx, ry, rz, bot->GetMapId());
@@ -2683,7 +2683,7 @@ bool BGTactics::selectObjective(bool reset)
                 if (Map* map = bot->GetMap())
                 {
                     float groundZ = map->GetHeight(rx, ry, rz);
-                    if (groundZ == VMAP_INVALID_HEIGHT_VALUE)
+                    if (groundZ != VMAP_INVALID_HEIGHT_VALUE)  //By leewheel 2026-09-01 复核修正反向Bug: 高度有效才吸附地面, 原==会把bot传送到-500虚空
                         rz = groundZ;
                 }
 
@@ -2829,7 +2829,7 @@ bool BGTactics::selectObjective(bool reset)
                     if (Map* map = bot->GetMap())
                     {
                         float groundZ = map->GetHeight(rx, ry, rz);
-                        if (groundZ == VMAP_INVALID_HEIGHT_VALUE)
+                        if (groundZ != VMAP_INVALID_HEIGHT_VALUE)  //By leewheel 2026-09-01 复核修正反向Bug: 高度有效才吸附地面, 原==会把bot传送到-500虚空
                             rz = groundZ;
                     }
 
@@ -2857,7 +2857,7 @@ bool BGTactics::selectObjective(bool reset)
                     if (Map* map = bot->GetMap())
                     {
                         float groundZ = map->GetHeight(rx, ry, rz);
-                        if (groundZ == VMAP_INVALID_HEIGHT_VALUE)
+                        if (groundZ != VMAP_INVALID_HEIGHT_VALUE)  //By leewheel 2026-09-01 复核修正反向Bug: 高度有效才吸附地面, 原==会把bot传送到-500虚空
                             rz = groundZ;
                     }
 
@@ -3146,6 +3146,8 @@ bool BGTactics::selectObjective(bool reset)
                 if (candidates.empty() && !unownedAll.empty())
                 {
                     // 全点人满：选最远的未控点开辟第二战场
+                    //By leewheel 2026-09-01 复核修正: 原循环内push+resize(1)会保留首个局部最大而非最远点
+                    uint32 farthestNode = 0;
                     float farthest = -1.f;
                     for (uint32 nodeId : unownedAll)
                     {
@@ -3157,10 +3159,12 @@ bool BGTactics::selectObjective(bool reset)
                         if (dist > farthest)
                         {
                             farthest = dist;
-                            candidates.push_back(nodeId);
+                            farthestNode = nodeId;
                         }
                     }
-                    candidates.resize(1);
+                    if (farthestNode)
+                        candidates.push_back(farthestNode);
+                    //End By leewheel
                 }
 
                 if (candidates.empty())

@@ -528,7 +528,11 @@ bool CastCcDisengageAction::EscapeFrom(Unit* threat)
 
 bool CastCcDisengageAction::isUseful()
 {
-    Unit* victim = bot->GetVictim();
+    //By leewheel 2026-09-01 复核修正: 同触发器侧，远程职业 GetVictim 恒空，优先取 AI 当前目标
+    Unit* victim = AI_VALUE(Unit*, "current target");
+    if (!victim || !victim->IsPlayer() || !victim->IsAlive())
+        victim = bot->GetVictim();
+    //End By leewheel
     if (!victim || !victim->IsPlayer() || !victim->IsAlive())
         return false;
 
@@ -538,7 +542,11 @@ bool CastCcDisengageAction::isUseful()
 
 bool CastCcDisengageAction::Execute(Event /*event*/)
 {
-    Unit* victim = bot->GetVictim();
+    //By leewheel 2026-09-01 复核修正: 远程职业 GetVictim 恒空，优先取 AI 当前目标（与 isUseful 一致）
+    Unit* victim = AI_VALUE(Unit*, "current target");
+    if (!victim || !victim->IsPlayer() || !victim->IsAlive())
+        victim = bot->GetVictim();
+    //End By leewheel
     if (!victim || !victim->IsPlayer() || !victim->IsAlive())
         return false;
 

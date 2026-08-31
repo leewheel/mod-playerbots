@@ -159,7 +159,11 @@ void MageBoostStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     }
     else if (tab == MAGE_TAB_FROST)  // Frost
     {
-        triggers.push_back(new TriggerNode("cold snap", { NextAction("cold snap", 28.0f) }));
+        //By leewheel 2026-09-01 复核修正: 原 28.0f 是旧"双CD才重置"工具位设计，低于战斗
+        //  循环(50+)会被饿死；批次5 场景B(血<40%+冰霜新星CD→重置保命)必须即时生效。
+        //  寒冰屏障瞬发无GCD无消耗，越早开越早重置(自身8分钟CD天然防循环)，提到紧急档。
+        triggers.push_back(new TriggerNode("cold snap", { NextAction("cold snap", 96.0f) }));
+        //End By leewheel
         triggers.push_back(new TriggerNode("icy veins", { NextAction("icy veins", 27.5f) }));
         triggers.push_back(new TriggerNode("mirror image", { NextAction("mirror image", 26.0f) }));
     }

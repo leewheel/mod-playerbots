@@ -420,7 +420,13 @@ bool PvpCycleDisengageTrigger::IsActive()
     if (!bot->GetBattleground() && !bot->InArena())
         return false;
 
-    Unit* victim = bot->GetVictim();
+    //By leewheel 2026-09-01 复核修正: GetVictim 仅近战自动攻击时置位，法/猎/术等远程职业
+    //  远程输出时恒空，导致控制远遁循环对远程职业永不触发。改为优先取 AI 当前目标
+    //  （近战/远程均有效），GetVictim 作兜底。动作侧 CastCcDisengageAction 同步修正。
+    Unit* victim = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
+    if (!victim || !victim->IsPlayer() || !victim->IsAlive())
+        victim = bot->GetVictim();
+    //End By leewheel
     if (!victim || !victim->IsPlayer() || !victim->IsAlive())
         return false;
 

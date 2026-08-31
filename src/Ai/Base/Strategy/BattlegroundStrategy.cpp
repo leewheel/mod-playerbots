@@ -38,6 +38,12 @@ void BattlegroundStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 // End By leewheel
 void PvpCycleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
+    //By leewheel 2026-09-01 复核修正: 徽章链原只在 RacialsStrategy（仅战斗引擎挂载），
+    //  BG 脱战引擎（被远程风筝/定身且身边无攻击者时）永不解控，违背"解控饰品是必需品"
+    //  的核心需求。本策略双引擎挂载，把徽章链补到脱战状态；战斗状态与 racials 链重复
+    //  注册同一"触发器→动作"对，第二次评估时 CC 已解、isUseful 自动为 false，无副作用。
+    triggers.push_back(new TriggerNode("cc victim", { NextAction("use ccbreak trinket", ACTION_EMERGENCY)}));
+    //End By leewheel
     triggers.push_back(new TriggerNode("pvp critical", { NextAction("pvp retreat", ACTION_EMERGENCY)}));
     triggers.push_back(new TriggerNode("low hp pvp", { NextAction("pvp cast cc escape", ACTION_EMERGENCY - 1)}));
     triggers.push_back(new TriggerNode("pvp cycle disengage", { NextAction("pvp cc disengage", ACTION_EMERGENCY - 2)}));
