@@ -342,6 +342,10 @@ public:
     bool Execute(Event event) override;
 
 protected:
+    // By leewheel 2026-09-01
+    // 允许子类（PVP 徽章解控）复用物品使用协议流程，并自定义动作名
+    UseTrinketAction(PlayerbotAI* botAI, std::string const name) : Action(botAI, name) {}
+
     bool UseTrinket(Item* trinket);
 
 private:

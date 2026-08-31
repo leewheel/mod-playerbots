@@ -2240,9 +2240,12 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
     // that the bot meets the level requirement for.
     // Humans (Every Man for Himself) and Undead (Will of the Forsaken) have a
     // racial that shares the PvP trinket cooldown, so they don't need one.
+    // By leewheel 2026-09-01: 老大要求"解控饰品是必需品"——从仅 PVP spec 扩大到所有 50+ bot，
+    // 保证随时进战场都有徽章可用（人类/亡灵有种族徽章豁免，不占饰品位）。
+    // End By leewheel
     bool racialHasCcBreak = (bot->getRace() == RACE_HUMAN || bot->getRace() == RACE_UNDEAD_PLAYER);
     uint32 pvpTrinket1 = 0;
-    if (isPvp && level >= 50 && !racialHasCcBreak)
+    if (level >= 50 && !racialHasCcBreak)
     {
         for (uint32 itemId : ccBreakTrinketCache)
         {

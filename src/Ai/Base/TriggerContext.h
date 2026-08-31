@@ -71,6 +71,9 @@ public:
 
         creators["generic boost"] = &TriggerContext::generic_boost;
         creators["loss of control"] = &TriggerContext::loss_of_control;
+        // By leewheel 2026-09-01 PVP 徽章解控调度入口（含沉睡/变形/放逐的完整失去控制判定）
+        creators["cc victim"] = &TriggerContext::cc_victim;
+        // End By leewheel
         creators["fear charm sleep"] = &TriggerContext::fear_charm_sleep;
         creators["fear sleep sap"] = &TriggerContext::fear_sleep_sap;
         creators["poison disease bleed"] = &TriggerContext::poison_disease_bleed;
@@ -404,6 +407,9 @@ private:
     }
     static Trigger* generic_boost(PlayerbotAI* botAI) { return new GenericBoostTrigger(botAI); }
     static Trigger* loss_of_control(PlayerbotAI* botAI) { return new LossOfControlTrigger(botAI); }
+    // By leewheel 2026-09-01 PVP 徽章解控调度入口
+    static Trigger* cc_victim(PlayerbotAI* botAI) { return new CcVictimTrigger(botAI); }
+    // End By leewheel
     static Trigger* fear_charm_sleep(PlayerbotAI* botAI) { return new FearCharmSleepTrigger(botAI); }
     static Trigger* fear_sleep_sap(PlayerbotAI* botAI) { return new FearSleepSapTrigger(botAI); }
     static Trigger* poison_disease_bleed(PlayerbotAI* botAI) { return new PoisonDiseaseBleedTrigger(botAI); }

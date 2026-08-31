@@ -240,6 +240,10 @@ public:
         creators["pvp retreat"] = &ActionContext::pvp_retreat;
         // End By leewheel
 
+        // By leewheel 2026-09-01 PVP 徽章解控（被硬控时主动用解控饰品，带留牌反打逻辑）
+        creators["use ccbreak trinket"] = &ActionContext::use_ccbreak_trinket;
+        // End By leewheel
+
         // Vehicles
         creators["enter vehicle"] = &ActionContext::enter_vehicle;
         creators["leave vehicle"] = &ActionContext::leave_vehicle;
@@ -458,6 +462,10 @@ private:
     static Action* pvp_cast_cc_escape(PlayerbotAI* botAI) { return new CastCcEscapeAction(botAI); }
     static Action* pvp_use_bandage(PlayerbotAI* botAI) { return new UseBandageInPvpAction(botAI); }
     static Action* pvp_retreat(PlayerbotAI* botAI) { return new PvpRetreatAction(botAI); }
+    // End By leewheel
+
+    // By leewheel 2026-09-01 PVP 徽章解控动作工厂
+    static Action* use_ccbreak_trinket(PlayerbotAI* botAI) { return new UseCcbreakTrinketAction(botAI); }
     // End By leewheel
 
     // Vehicles

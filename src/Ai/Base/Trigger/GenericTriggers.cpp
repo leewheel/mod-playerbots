@@ -472,6 +472,16 @@ bool LossOfControlTrigger::IsActive()
            bot->HasAuraType(SPELL_AURA_MOD_CHARM);
 }
 
+// By leewheel 2026-09-01
+// PVP 徽章解控调度入口：直接复用引擎为 42292 定义的失去控制掩码
+// （SharedDefines.h IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK），
+// 剔除 SNARE（减速不值得用徽章解）。是否真正出手由 UseCcbreakTrinketAction 的留牌逻辑决定。
+// End By leewheel
+bool CcVictimTrigger::IsActive()
+{
+    return bot->HasAuraWithMechanic(IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK & ~(1ULL << MECHANIC_SNARE));
+}
+
 bool FearCharmSleepTrigger::IsActive()
 {
     return bot->HasAuraType(SPELL_AURA_MOD_FEAR) ||

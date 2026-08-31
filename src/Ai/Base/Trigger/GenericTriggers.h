@@ -741,6 +741,19 @@ public:
     bool IsActive() override;
 };
 
+// By leewheel 2026-09-01
+// PVP 徽章解控调度入口：bot 身上存在任一"失去控制"类机制光环
+// （眩晕/恐惧/定身/迷惑/魅惑/沉睡/变形/放逐），具体是否出手由 action 的留牌逻辑决定。
+// 比 LossOfControlTrigger 覆盖面更全（含沉睡/变形/放逐），供解控饰品使用。
+// End By leewheel
+class CcVictimTrigger : public Trigger
+{
+public:
+    CcVictimTrigger(PlayerbotAI* botAI) : Trigger(botAI, "cc victim", 1) {}
+
+    bool IsActive() override;
+};
+
 class FearCharmSleepTrigger : public Trigger
 {
 public:

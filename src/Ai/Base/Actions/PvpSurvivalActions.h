@@ -9,6 +9,8 @@
 
 #include "MovementActions.h"
 #include "UseItemAction.h"
+// By leewheel 2026-09-01: 徽章解控复用 UseTrinketAction（物品使用协议流程）
+#include "GenericSpellActions.h"
 
 // By leewheel 2026-08-29
 // PVP 自保动作组（参考 NPCBots 战场生存手法）：
@@ -59,6 +61,28 @@ public:
 
     bool isUseful() override;
     bool Execute(Event event) override;
+};
+
+// By leewheel 2026-09-01
+// PVP 徽章解控（移植 NPCBots 被控解徽章 + 留牌反打优化）：
+//   1) 被硬控（眩晕/恐惧/定身/迷惑/魅惑/沉睡/变形/放逐）时主动使用身上的解控饰品（触发法术 42292）；
+//   2) 留牌逻辑：长 CC（剩余>15 秒，如变形术/放逐/沉睡）且自身状态良好（血>70%、围攻玩家<2）时
+//      不急着解，等第二段连控或爆发窗口再用（NPCBots 是即中即交，我们更聪明）；
+//   3) 复用 UseTrinketAction 的物品使用协议流程（含饰品 CD/类别 CD 跟踪）。
+// End By leewheel
+class UseCcbreakTrinketAction : public UseTrinketAction
+{
+public:
+    UseCcbreakTrinketAction(PlayerbotAI* botAI) : UseTrinketAction(botAI, "use ccbreak trinket") {}
+
+    bool isUseful() override;
+    bool Execute(Event event) override;
+
+protected:
+    // 查找身上失去控制类光环的最长剩余时间（毫秒），无硬控返回 0
+    uint32 GetLossOfControlRemainingMs() const;
+    // 从已装备饰品里找带解控法术（42292）的徽章饰品
+    Item* FindCcbreakTrinket() const;
 };
 
 #endif

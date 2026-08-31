@@ -84,6 +84,14 @@ void RacialsStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             "movement impaired", { NextAction("escape artist", ACTION_EMERGENCY + 1) }));
     }
 
+    // By leewheel 2026-09-01
+    // 解控饰品徽章（42292）：被硬控时主动使用，与种族徽章共享类别 CD，
+    // 优先级低于种族徽章（人类/亡灵有种族徽章时先交种族的，不占饰品位）。
+    // 留牌反打逻辑在 UseCcbreakTrinketAction::isUseful 内（长 CC 且状态好时不解）。
+    // End By leewheel
+    triggers.push_back(new TriggerNode(
+        "cc victim", { NextAction("use ccbreak trinket", ACTION_EMERGENCY) }));
+
     if (botAI->HasSpell("blood fury"))
     {
         triggers.push_back(new TriggerNode(
