@@ -866,6 +866,11 @@ void PlayerbotFactory::Randomize(bool incremental)
             pmo->finish();
     }
 
+    // By leewheel 2026-08-30 法术书重建完成后清理动作条失效按钮, 防止下次登录加载报
+    // "ActionButton loading problem"(萨满图腾条等高阶法术残留)
+    CleanupInvalidActionButtons();
+    // End By leewheel
+
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Save");
     LOG_DEBUG("playerbots", "Saving to DB...");
     bot->SetMoney(urand(level * 100000, level * 5 * 100000));
@@ -1488,6 +1493,31 @@ void PlayerbotFactory::ClearSpells()
         bot->removeSpell(*i, SPEC_MASK_ALL, false);
     }
 }
+
+// By leewheel 2026-08-30 清理动作条失效法术按钮
+// Randomize重建法术书(ClearSpells/removeSpell)或resetTalents遗忘天赋法术(如愤怒图腾3738)后,
+// 动作条(尤其萨满图腾条132-135)可能仍引用已不存在的法术, 导致core登录加载校验失败刷
+// "ActionButton loading problem"错误日志。此处主动移除失效按钮, 让错误不再发生。
+void PlayerbotFactory::CleanupInvalidActionButtons()
+{
+    uint32 removed = 0;
+    for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
+    {
+        ActionButton const* ab = bot->GetActionButton(button);
+        if (!ab || ab->GetType() != ACTION_BUTTON_SPELL)
+            continue;
+
+        if (bot->HasSpell(ab->GetAction()))
+            continue;
+
+        bot->removeActionButton(button);
+        ++removed;
+    }
+
+    if (removed)
+        LOG_INFO("playerbots", "机器人 {} 清理动作条失效法术按钮 {} 个(法术书重建后残留)", bot->GetName(), removed);
+}
+// End By leewheel
 
 void PlayerbotFactory::ResetQuests()
 {

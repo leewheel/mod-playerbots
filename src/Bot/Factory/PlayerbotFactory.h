@@ -189,6 +189,9 @@ private:
     void SetRandomSkill(uint16 id);
     void ClearSpells();
     void ClearSkills();
+    // By leewheel 2026-08-30 清理动作条上引用未学法术的失效按钮(法术书重建后残留, 防登录加载报错)
+    void CleanupInvalidActionButtons();
+    // End By leewheel
     void InitTalents(uint32 specNo);
     void InitTalentsByTemplate(uint32 specNo);
     void InitQuests(std::list<uint32>& questMap, bool withRewardItem = true);
