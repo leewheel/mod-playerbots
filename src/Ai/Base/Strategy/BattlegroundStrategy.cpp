@@ -33,6 +33,16 @@ void BattlegroundStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("pvp critical", { NextAction("pvp retreat", ACTION_EMERGENCY)}));
     triggers.push_back(new TriggerNode("low hp pvp", { NextAction("pvp cast cc escape", ACTION_EMERGENCY - 1)}));
     triggers.push_back(new TriggerNode("safe to bandage", { NextAction("pvp use bandage", ACTION_MOVE + 1)}));
+
+    // By leewheel 2026-09-01
+    // PVP 交战循环触发链（移植 NPCBots 法师/盗贼"控制→远遁→等CD→再来一轮"要素并推广到全职业）：
+    //   1) 打不死（目标玩家血>20%）且自身血<70% → 对目标施放硬控并位移远遁；
+    //   2) 恢复窗口（血<80% 且近身敌人全被控/无敌）→ 打绷带/药水快速回血；
+    //   3) CD 转好后常规输出策略自然再接敌（隐式循环）。
+    //   优先级低于 8/29 保命链（保命 > 战术循环 > 常规输出）。
+    // End By leewheel
+    triggers.push_back(new TriggerNode("pvp cycle disengage", { NextAction("pvp cc disengage", ACTION_EMERGENCY - 2)}));
+    triggers.push_back(new TriggerNode("pvp cycle recover", { NextAction("pvp use bandage", ACTION_MOVE + 2)}));
 }
 
 void WarsongStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)

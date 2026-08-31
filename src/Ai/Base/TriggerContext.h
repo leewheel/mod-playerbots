@@ -8,6 +8,7 @@
 #define PLAYERBOTS_TRIGGERCONTEXT_H
 
 #include "CureTriggers.h"
+#include "DrowningTriggers.h"
 #include "FishingTriggers.h"
 #include "GenericTriggers.h"
 #include "GuildTriggers.h"
@@ -39,6 +40,7 @@ public:
         creators["sit"] = &TriggerContext::sit;
         creators["return to stay position"] = &TriggerContext::return_to_stay_position;
         creators["collision"] = &TriggerContext::collision;
+        creators["low breath"] = &TriggerContext::low_breath;
 
         creators["timer"] = &TriggerContext::Timer;
         creators["timer bg"] = &TriggerContext::TimerBG;
@@ -99,6 +101,19 @@ public:
         creators["not dps aoe target active"] = &TriggerContext::not_dps_aoe_target_active;
         creators["has nearest adds"] = &TriggerContext::has_nearest_adds;
         creators["enemy player near"] = &TriggerContext::enemy_player_near;
+
+        // By leewheel 2026-09-01
+        // PVP 自保/交战循环触发器注册。
+        //   修复：8/29 的三件套（low hp pvp / safe to bandage / pvp critical）当时只写了
+        //   trigger 类和策略挂载，漏了这里的工厂注册，导致 TriggerNode 查找失败被静默跳过、
+        //   自保链从未生效——本次补注册；并新增循环状态机的两个触发器（disengage/recover）。
+        // End By leewheel
+        creators["low hp pvp"] = &TriggerContext::low_hp_pvp;
+        creators["safe to bandage"] = &TriggerContext::safe_to_bandage;
+        creators["pvp critical"] = &TriggerContext::pvp_critical;
+        creators["pvp cycle disengage"] = &TriggerContext::pvp_cycle_disengage;
+        creators["pvp cycle recover"] = &TriggerContext::pvp_cycle_recover;
+        // End By leewheel
 
         creators["tank assist"] = &TriggerContext::TankAssist;
         creators["lose aggro"] = &TriggerContext::LoseAggro;
@@ -363,6 +378,14 @@ private:
     static Trigger* not_dps_aoe_target_active(PlayerbotAI* botAI) { return new NotDpsAoeTargetActiveTrigger(botAI); }
     static Trigger* has_nearest_adds(PlayerbotAI* botAI) { return new HasNearestAddsTrigger(botAI); }
     static Trigger* enemy_player_near(PlayerbotAI* botAI) { return new EnemyPlayerNear(botAI); }
+
+    // By leewheel 2026-09-01 PVP 自保/交战循环触发器工厂（补注册 8/29 三件套 + 新增循环两触发器）
+    static Trigger* low_hp_pvp(PlayerbotAI* botAI) { return new LowHpPvpTrigger(botAI); }
+    static Trigger* safe_to_bandage(PlayerbotAI* botAI) { return new SafeToBandageTrigger(botAI); }
+    static Trigger* pvp_critical(PlayerbotAI* botAI) { return new PvpCriticalTrigger(botAI); }
+    static Trigger* pvp_cycle_disengage(PlayerbotAI* botAI) { return new PvpCycleDisengageTrigger(botAI); }
+    static Trigger* pvp_cycle_recover(PlayerbotAI* botAI) { return new PvpCycleRecoverTrigger(botAI); }
+    // End By leewheel
     static Trigger* Random(PlayerbotAI* botAI) { return new RandomTrigger(botAI, "random", 20); }
     static Trigger* seldom(PlayerbotAI* botAI) { return new RandomTrigger(botAI, "seldom", 300); }
     static Trigger* often(PlayerbotAI* botAI) { return new RandomTrigger(botAI, "often", 5); }
@@ -493,6 +516,7 @@ private:
     static Trigger* main_tank_can_mark_cross(PlayerbotAI* botAI) { return new MainTankMarkCrossTrigger(botAI); }
     // By leewheel 2026-07-15
     static Trigger* fleeing_target(PlayerbotAI* botAI) { return new FleeingTargetTrigger(botAI); }
+    static Trigger* low_breath(PlayerbotAI* ai) { return new LowBreathTrigger(ai); }
 };
 
 #endif

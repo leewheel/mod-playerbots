@@ -85,4 +85,29 @@ protected:
     Item* FindCcbreakTrinket() const;
 };
 
+// By leewheel 2026-09-01
+// PVP 交战循环·控制远遁（老大核心需求："杀不死对方使用控制类技能让对方进入昏迷、恐惧之类的
+//   状态，自己迅速远遁、绷带之类的给自己快速回血，然后等待循环CD到了之后再来一轮"）：
+//   1) 当前目标是玩家且打不死（目标血>20%）而自身状态不佳（血<70%）时，
+//      对目标施放本职业硬控（CC_TABLE 硬控优先）；
+//   2) 控制命中后用职业位移技能远遁（闪现/消失/逃脱/疾跑，ESCAPE_TABLE），
+//      无位移技能则向远离目标方向后撤 20 码；
+//   3) 远遁后进入绷带/药水恢复窗口（配合增强版 SafeToBandage：被控敌人不算威胁），
+//      CD 转好后由常规输出策略自然再接敌（隐式循环，无状态机死锁风险）。
+// End By leewheel
+class CastCcDisengageAction : public MovementAction
+{
+public:
+    CastCcDisengageAction(PlayerbotAI* botAI) : MovementAction(botAI, "pvp cc disengage") {}
+
+    bool isUseful() override;
+    bool Execute(Event event) override;
+
+protected:
+    // 对目标施放本职业可用的最强硬控（只放眩晕/恐惧/定身/变形/沉睡/沉默类，不放纯减速）
+    bool CastHardCc(Unit* target);
+    // 职业位移远遁（成功返回 true）；无位移技能或不可用返回 false
+    bool EscapeFrom(Unit* threat);
+};
+
 #endif

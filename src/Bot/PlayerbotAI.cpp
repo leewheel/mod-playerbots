@@ -4401,6 +4401,25 @@ bool PlayerbotAI::IsInterruptableSpellCasting(Unit* target, std::string const sp
     if (!spellid || !target->IsNonMeleeSpellCast(true))
         return false;
 
+    // By leewheel 2026-09-01
+    // 卡条窗口判定（移植 NPCBots bot_ai.cpp:16617-16631）：只在目标读条剩余 ≤ 800ms 时才确认打断，
+    // 保证打断落在读条末段（等效真人卡条），避免目标刚起手就交打断被假读条骗掉。
+    // 800ms = 瞬发打断的 GCD+投射时间余量（NPCBots 同款参数）。
+    // End By leewheel
+    if (target->IsPlayer())
+    {
+        Spell const* casting = target->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+        if (!casting)
+            casting = target->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
+
+        if (casting)
+        {
+            int32 remaining = casting->GetCastTimeRemaining();
+            if (remaining > 800)
+                return false;  // 读条还早，等下一拍（tick 循环会再次评估）
+        }
+    }
+
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellid);
     if (!spellInfo)
         return false;

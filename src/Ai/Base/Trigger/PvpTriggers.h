@@ -182,4 +182,29 @@ public:
     bool IsActive() override;
 };
 
+// By leewheel 2026-09-01
+// PVP 交战循环·控制远遁触发器：正在打敌方玩家、打不死（目标血>20%）
+// 且自身状态不佳（血<70%）→ 触发"硬控→远遁→绷带→等CD→再接敌"循环。
+// （老大核心需求的调度入口，具体执行见 CastCcDisengageAction）
+// End By leewheel
+class PvpCycleDisengageTrigger : public Trigger
+{
+public:
+    PvpCycleDisengageTrigger(PlayerbotAI* botAI) : Trigger(botAI, "pvp cycle disengage", 2) {}
+
+    bool IsActive() override;
+};
+
+// By leewheel 2026-09-01
+// PVP 交战循环·恢复窗口触发器：血<80% 且（15 码内无敌对玩家 或 近身敌对玩家全部被硬控）
+// → 打绷带/喝药恢复（控制远遁后的恢复阶段，NPCBots 无此机制，自研超越点）。
+// End By leewheel
+class PvpCycleRecoverTrigger : public Trigger
+{
+public:
+    PvpCycleRecoverTrigger(PlayerbotAI* botAI) : Trigger(botAI, "pvp cycle recover", 5) {}
+
+    bool IsActive() override;
+};
+
 #endif

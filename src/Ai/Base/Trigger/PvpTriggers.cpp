@@ -385,3 +385,57 @@ bool PvpCriticalTrigger::IsActive()
     // 血<25% 且 15 码内敌方玩家 >= 2 → 被围攻，强制撤退
     return bot->GetHealthPct() < 25.f && CountNearbyEnemyPlayers(botAI, 15.f) >= 2;
 }
+
+// By leewheel 2026-09-01
+// PVP 交战循环触发器实现（控制远遁 + 恢复窗口）。
+// End By leewheel
+namespace
+{
+// 判断单位是否处于失去控制类硬控（眩晕/恐惧/定身/变形/沉睡/放逐等，剔除减速）
+bool IsHardCc(Unit* unit)
+{
+    constexpr uint64 locMask = IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK & ~(1ULL << MECHANIC_SNARE);
+    return unit->HasAuraWithMechanic(locMask);
+}
+
+// 统计 range 码内"未被硬控"的敌方玩家数量（被控敌人不构成打断威胁）
+uint8 CountNearbyThreateningEnemyPlayers(PlayerbotAI* botAI, float range)
+{
+    Player* bot = botAI->GetBot();
+    GuidVector enemies = botAI->GetAiObjectContext()->GetValue<GuidVector>("nearest enemy players")->Get();
+    uint8 count = 0;
+    for (ObjectGuid const& guid : enemies)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->IsAlive() && bot->GetDistance(unit) < range && !IsHardCc(unit))
+            ++count;
+    }
+
+    return count;
+}
+}  // namespace
+
+bool PvpCycleDisengageTrigger::IsActive()
+{
+    if (!bot->GetBattleground() && !bot->InArena())
+        return false;
+
+    Unit* victim = bot->GetVictim();
+    if (!victim || !victim->IsPlayer() || !victim->IsAlive())
+        return false;
+
+    // 打不死（目标血>20%）且自身状态不佳（血<70%）→ 进入控制远遁循环
+    return victim->GetHealthPct() > 20.f && bot->GetHealthPct() < 70.f;
+}
+
+bool PvpCycleRecoverTrigger::IsActive()
+{
+    if (!bot->GetBattleground() && !bot->InArena())
+        return false;
+
+    if (bot->GetHealthPct() >= 80.f)
+        return false;
+
+    // 恢复窗口：15 码内无敌对玩家，或近身敌对玩家全部被硬控（控制远遁后的安全打绷带时机）
+    return CountNearbyThreateningEnemyPlayers(botAI, 15.f) == 0;
+}
