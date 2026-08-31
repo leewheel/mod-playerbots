@@ -214,6 +214,10 @@ float PullMultiplier::GetValue(Action* action)
         actionName == "pull end" ||
         actionName == "follow" ||
         actionName == "set facing" ||
+        // By leewheel 2026-08-31: 硬性规则 —— 拉怪窗口期也必须能立即标记骷髅/叉叉、转移逃跑怪
+        actionName == "mark skull target" ||
+        actionName == "mark cross target" ||
+        actionName == "prioritize fleeing target" ||
         actionName == "surface for breath")
         return 1.0f;
 
@@ -249,7 +253,9 @@ float MagePullMultiplier::GetValue(Action* action)
         name == "pull my target" || name == "pull rti target" ||
         name == "reach spell" || name == "reach pull" ||
         name == "return to pull position" || name == "follow" ||
-        name == "set facing" || name == "change strategy")
+        name == "set facing" || name == "change strategy" ||
+        // By leewheel 2026-08-31: 同 PullMultiplier —— 拉怪窗口期允许标记
+        name == "mark skull target" || name == "mark cross target" || name == "prioritize fleeing target")
         return 1.0f;
 
     return PassiveMultiplier::GetValue(action);

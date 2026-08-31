@@ -157,6 +157,17 @@ void AssassinationRogueStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
         )
     );
 
+    // By leewheel 2026-09-01 盗贼准备冷却经济学（NPCBots bot_rogue_ai.cpp:913-940 移植，同 Dps 策略）
+    triggers.push_back(
+        new TriggerNode(
+            "preparation",
+            {
+                NextAction("preparation", ACTION_HIGH + 10)
+            }
+        )
+    );
+    // End By leewheel
+
     triggers.push_back(
         new TriggerNode(
             "critical health",

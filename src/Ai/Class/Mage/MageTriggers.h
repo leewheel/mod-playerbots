@@ -135,10 +135,18 @@ public:
     bool IsActive() override;
 };
 
-class ColdSnapTrigger : public TwoTriggers
+// By leewheel 2026-09-01
+// 寒冰屏障冷却经济学（移植 NPCBots bot_mage_ai.cpp:830-852 needFactor 加权思想，二元化落地）：
+//   场景A 输出重置（原有）：冰脉+深结都在 CD → 重置冰系大招循环；
+//   场景B 生存重置（新增）：PVP 中血<40% 且冰霜新星在 CD（被近战贴脸控不住场）
+//          → 寒冰屏障重置冰霜新星，接闪现脱身——NPCBots 法师"控制→远遁"循环的 CD 支撑。
+// End By leewheel
+class ColdSnapTrigger : public Trigger
 {
 public:
-    ColdSnapTrigger(PlayerbotAI* botAI) : TwoTriggers(botAI, "icy veins on cd", "deep freeze on cd") {}
+    ColdSnapTrigger(PlayerbotAI* botAI) : Trigger(botAI, "cold snap", 2) {}
+
+    bool IsActive() override;
 };
 
 class MirrorImageTrigger : public BoostTrigger

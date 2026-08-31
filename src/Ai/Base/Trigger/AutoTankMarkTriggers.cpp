@@ -26,6 +26,21 @@ static bool IsMarkAllowed(Player* bot)
     return true;
 }
 
+// By leewheel 2026-08-31: 判断标记槽位是否可用(空 或 指向已死亡/消失的目标)
+// 核心不会在怪物死亡时清除队伍标记图标, 原"仅图标为空才触发"的逻辑
+// 会导致骷髅标记的怪死后图标一直指向尸体, 触发器永远不再激活,
+// 下一次开怪无法再标记(硬性规则失效)。
+// 图标指向存活怪物时返回 false —— 骷髅/叉叉锁定不变, 直到目标死亡。
+static bool IsMarkSlotAvailable(PlayerbotAI* botAI, Group* group, uint8 iconIndex)
+{
+    ObjectGuid const guid = group->GetTargetIcon(iconIndex);
+    if (guid.IsEmpty())
+        return true;
+
+    Unit* unit = botAI->GetUnit(guid);
+    return !unit || !unit->IsAlive() || !unit->IsInWorld() || unit->IsPlayer();
+}
+
 bool MainTankMarkSkullTrigger::IsActive()
 {
     if (!sPlayerbotAIConfig.autoTankMarkEnabled)
@@ -41,7 +56,9 @@ bool MainTankMarkSkullTrigger::IsActive()
     if (!botAI->IsMainTank(bot))
         return false;
 
-    if (!group->GetTargetIcon(RtiTargetValue::skullIndex).IsEmpty())
+    // By leewheel 2026-08-31: 硬性规则 —— 骷髅指向存活怪时锁定不变;
+    // 图标为空或指向已死亡/消失目标时激活, 由动作清除陈旧标记并重新标记
+    if (!IsMarkSlotAvailable(botAI, group, RtiTargetValue::skullIndex))
         return false;
 
     // 战斗中才触发（与NoRtiTrigger一致，不依赖attackers列表）
@@ -69,7 +86,8 @@ bool OffTankMarkCrossTrigger::IsActive()
     if (botAI->IsMainTank(bot))
         return false;
 
-    if (!group->GetTargetIcon(RtiTargetValue::crossIndex).IsEmpty())
+    // By leewheel 2026-08-31: 同骷髅逻辑 —— 叉叉指向存活怪时锁定, 指向死亡/消失目标时允许重新标记
+    if (!IsMarkSlotAvailable(botAI, group, RtiTargetValue::crossIndex))
         return false;
 
     // 战斗中才触发（与NoRtiTrigger一致，不依赖attackers列表）
@@ -117,7 +135,8 @@ bool MainTankMarkCrossTrigger::IsActive()
     if (CountOtherTanks(bot, group) > 0)
         return false;
 
-    if (!group->GetTargetIcon(RtiTargetValue::crossIndex).IsEmpty())
+    // By leewheel 2026-08-31: 同骷髅逻辑 —— 叉叉指向存活怪时锁定, 指向死亡/消失目标时允许重新标记
+    if (!IsMarkSlotAvailable(botAI, group, RtiTargetValue::crossIndex))
         return false;
 
     // 战斗中才触发（与NoRtiTrigger一致，不依赖attackers列表）

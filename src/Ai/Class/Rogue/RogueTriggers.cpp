@@ -131,3 +131,21 @@ bool OffHandWeaponNoEnchantTrigger::IsActive()
         return false;
     return true;
 }
+
+// By leewheel 2026-09-01
+// 盗贼准备冷却经济学（移植 NPCBots bot_rogue_ai.cpp:913-940）：
+//   闪避在 CD + 血<40% + 被近战围攻 → 准备重置闪避。
+//   闪避不在 CD 时不放准备（留给常规 evasion 触发器，省大招）。
+// End By leewheel
+bool PreparationTrigger::IsActive()
+{
+    uint32 evasionId = AI_VALUE2(uint32, "spell id", "evasion");
+    if (!evasionId || !bot->HasSpellCooldown(evasionId))
+        return false;
+
+    if (bot->GetHealthPct() >= 40.f)
+        return false;
+
+    // 正在被近战打（有攻击者）才值得交准备重置闪避
+    return !bot->getAttackers().empty();
+}

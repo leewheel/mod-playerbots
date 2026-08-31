@@ -133,4 +133,17 @@ public:
     TricksOfTheTradeOnMainTankTrigger(PlayerbotAI* ai) : BuffOnMainTankTrigger(ai, "tricks of the trade", true) {}
 };
 
+// By leewheel 2026-09-01
+// 盗贼准备冷却经济学（移植 NPCBots bot_rogue_ai.cpp:913-940 needFactor≥800 思想）：
+//   闪避在 CD + 血量告急（<40%）+ 正被近战围攻 → 用准备重置闪避，
+//   下一拍 evasion 触发器自然放出闪避（NPCBots 盗贼"盲→消失→等CD→再来一轮"的 CD 支撑）。
+// End By leewheel
+class PreparationTrigger : public Trigger
+{
+public:
+    PreparationTrigger(PlayerbotAI* botAI) : Trigger(botAI, "preparation", 2) {}
+
+    bool IsActive() override;
+};
+
 #endif

@@ -79,6 +79,9 @@ public:
         creators["tricks of the trade on main tank"] = &RogueTriggerFactoryInternal::tricks_of_the_trade_on_main_tank;
         creators["adrenaline rush"] = &RogueTriggerFactoryInternal::adrenaline_rush;
         creators["blade flurry"] = &RogueTriggerFactoryInternal::blade_flurry;
+        // By leewheel 2026-09-01 盗贼准备冷却经济学（NPCBots bot_rogue_ai.cpp:913-940 移植）
+        creators["preparation"] = &RogueTriggerFactoryInternal::preparation;
+        // End By leewheel
     }
 
 private:
@@ -103,6 +106,9 @@ private:
     }
     static Trigger* adrenaline_rush(PlayerbotAI* botAI) { return new AdrenalineRushTrigger(botAI); }
     static Trigger* blade_flurry(PlayerbotAI* botAI) { return new BladeFlurryTrigger(botAI); }
+    // By leewheel 2026-09-01 盗贼准备触发器工厂
+    static Trigger* preparation(PlayerbotAI* botAI) { return new PreparationTrigger(botAI); }
+    // End By leewheel
 };
 
 class RogueAiObjectContextInternal : public NamedObjectContext<Action>
@@ -121,6 +127,9 @@ public:
         creators["eviscerate"] = &RogueAiObjectContextInternal::eviscerate;
         creators["vanish"] = &RogueAiObjectContextInternal::vanish;
         creators["evasion"] = &RogueAiObjectContextInternal::evasion;
+        // By leewheel 2026-09-01 盗贼准备动作注册（NPCBots 冷却经济学移植）
+        creators["preparation"] = &RogueAiObjectContextInternal::preparation;
+        // End By leewheel
         creators["cloak of shadows"] = &RogueAiObjectContextInternal::cloak_of_shadows;
         creators["kick"] = &RogueAiObjectContextInternal::kick;
         creators["feint"] = &RogueAiObjectContextInternal::feint;
@@ -162,6 +171,9 @@ private:
     static Action* eviscerate(PlayerbotAI* botAI) { return new CastEviscerateAction(botAI); }
     static Action* vanish(PlayerbotAI* botAI) { return new CastVanishAction(botAI); }
     static Action* evasion(PlayerbotAI* botAI) { return new CastEvasionAction(botAI); }
+    // By leewheel 2026-09-01 盗贼准备动作工厂
+    static Action* preparation(PlayerbotAI* botAI) { return new CastPreparationAction(botAI); }
+    // End By leewheel
     static Action* cloak_of_shadows(PlayerbotAI* botAI) { return new CastCloakOfShadowsAction(botAI); }
     static Action* kick(PlayerbotAI* botAI) { return new CastKickAction(botAI); }
     static Action* feint(PlayerbotAI* botAI) { return new CastFeintAction(botAI); }

@@ -100,6 +100,38 @@ bool DeepFreezeCooldownTrigger::IsActive()
            SpellCooldownTrigger::IsActive();
 }
 
+// By leewheel 2026-09-01
+// 寒冰屏障冷却经济学（移植 NPCBots bot_mage_ai.cpp:830-852 needFactor 加权思想）：
+//   场景A 输出重置：冰脉(12472)+深结(44572)都在 CD → 重置冰系爆发循环；
+//   场景B 生存重置：PVP 战斗中血<40% 且冰霜新星(122)在 CD 且有敌方玩家 15 码内贴脸
+//          → 重置冰霜新星控场，接闪现远遁（NPCBots 法师循环的 CD 支撑）。
+// End By leewheel
+bool ColdSnapTrigger::IsActive()
+{
+    // 场景A：双大招 CD（原 TwoTriggers 语义，经上下文查已注册的 on-cd 触发器）
+    Trigger* icyVeinsCd = botAI->GetAiObjectContext()->GetTrigger("icy veins on cd");
+    Trigger* deepFreezeCd = botAI->GetAiObjectContext()->GetTrigger("deep freeze on cd");
+    if (icyVeinsCd && deepFreezeCd && icyVeinsCd->IsActive() && deepFreezeCd->IsActive())
+        return true;
+
+    // 场景B：PVP 生存窗口
+    constexpr uint32 SPELL_FROST_NOVA = 122;   // 冰霜新星（DBC 验证）
+    constexpr uint32 SPELL_ICE_BLOCK = 11426;  // 寒冰屏障本体（正在无敌时不重复开）
+    if (bot->GetHealthPct() < 40.f && bot->HasSpellCooldown(SPELL_FROST_NOVA) &&
+        !bot->HasAura(SPELL_ICE_BLOCK))
+    {
+        GuidVector enemies = AI_VALUE(GuidVector, "nearest enemy players");
+        for (ObjectGuid const& guid : enemies)
+        {
+            Unit* enemy = botAI->GetUnit(guid);
+            if (enemy && enemy->IsAlive() && bot->GetDistance(enemy) < 15.f)
+                return true;
+        }
+    }
+
+    return false;
+}
+
 const std::unordered_set<uint32> FlamestrikeNearbyTrigger::FLAMESTRIKE_SPELL_IDS = {
     2120, 2121, 8422, 8423, 10215, 10216, 27086, 42925, 42926
 };

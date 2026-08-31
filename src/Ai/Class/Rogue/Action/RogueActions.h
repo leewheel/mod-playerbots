@@ -18,6 +18,15 @@ public:
     CastEvasionAction(PlayerbotAI* botAI) : CastBuffSpellAction(botAI, "evasion") {}
 };
 
+// By leewheel 2026-09-01
+// 盗贼准备（NPCBots bot_rogue_ai.cpp:913-940 移植）：重置闪避等核心生存技能 CD。
+// End By leewheel
+class CastPreparationAction : public CastBuffSpellAction
+{
+public:
+    CastPreparationAction(PlayerbotAI* botAI) : CastBuffSpellAction(botAI, "preparation") {}
+};
+
 class CastCloakOfShadowsAction : public CastBuffSpellAction
 {
 public:

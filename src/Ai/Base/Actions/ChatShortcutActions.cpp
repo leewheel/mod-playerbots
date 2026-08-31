@@ -11,6 +11,7 @@
 #include "Playerbots.h"
 #include "PositionValue.h"
 #include "PullStrategy.h"
+#include "RtiTargetValue.h"
 
 void PositionsResetAction::ResetReturnPosition()
 {
@@ -299,7 +300,27 @@ bool TankAttackChatShortcutAction::Execute(Event /*event*/)
             context->GetValue<Unit*>("current target")->Set(target);
             botAI->ChangeEngine(BOT_STATE_COMBAT);
             botAI->SetNextCheckDelay(sPlayerbotAIConfig.reactDelay);
+
+            //By leewheel 2026-08-31 硬性规则: 开怪瞬间立即给第一只怪标骷髅, 不等触发器周期
+            //  前提: 骷髅槽位为空或指向已死亡/消失目标(陈旧标记)才覆盖,
+            //  已指向存活怪时保持不变(骷髅锁定直到该怪死亡)
+            if (sPlayerbotAIConfig.autoTankMarkEnabled && !bot->InBattleground() && !bot->InArena() &&
+                botAI->IsMainTank(bot) && target->IsCreature())
+            {
+                if (Group* group = bot->GetGroup())
+                {
+                    ObjectGuid const skullGuid = group->GetTargetIcon(RtiTargetValue::skullIndex);
+                    Unit* skulled = skullGuid.IsEmpty() ? nullptr : botAI->GetUnit(skullGuid);
+                    if (!skulled || !skulled->IsAlive() || !skulled->IsInWorld() || skulled->IsPlayer())
+                        group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), target->GetGUID());
+                }
+            }
+            //End By leewheel
         }
+
+        // 坦克自身清除"等待攻击"状态, 保证立即执行拉怪(此前可能被命令挂起过)
+        botAI->ChangeStrategy("-wait for attack", BOT_STATE_COMBAT);
+        context->GetValue<time_t>("combat start time")->Set(0);
 
         if (Group* group = bot->GetGroup())
         {

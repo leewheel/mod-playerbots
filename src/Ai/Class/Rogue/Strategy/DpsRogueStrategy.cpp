@@ -153,6 +153,20 @@ void DpsRogueStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         )
     );
 
+    // By leewheel 2026-09-01
+    // 盗贼准备冷却经济学（NPCBots bot_rogue_ai.cpp:913-940 移植）：
+    //   闪避在 CD + 血<40% + 被近战围攻 → 准备重置闪避（优先级压过闪避本体，
+    //   闪避不在 CD 时触发器不激活，常规 evasion 正常工作）。
+    // End By leewheel
+    triggers.push_back(
+        new TriggerNode(
+            "preparation",
+            {
+                NextAction("preparation", ACTION_HIGH + 10)
+            }
+        )
+    );
+
     triggers.push_back(
         new TriggerNode(
             "critical health",
