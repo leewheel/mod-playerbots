@@ -2083,8 +2083,14 @@ bool BGTactics::selectObjective(bool reset)
                     }
                 }
 
+                // By leewheel 2026-09-01
+                // 告急支援按节点价值排序（移植 NPCBots defend_priority_a/h 数组思想，
+                // bot_ai.cpp:19377）：defendObjectives 的声明顺序即优先级（最后墓地 > 地堡 > 墓地），
+                // 原随机选取会让 bot 去守低价值点而丢掉将军房前最后墓地。
+                // 驻守点保持随机（分散兵力）。
+                // End By leewheel
                 if (!contestedObjectives.empty())
-                    BgObjective = contestedObjectives[urand(0, contestedObjectives.size() - 1)];
+                    BgObjective = contestedObjectives.front();
                 else if (!availableObjectives.empty())
                     BgObjective = availableObjectives[urand(0, availableObjectives.size() - 1)];
             }
@@ -2108,7 +2114,29 @@ bool BGTactics::selectObjective(bool reset)
                         if (boss->IsAlive())
                         {
                             uint32 nearbyCount = getPlayersInArea(team, boss->GetPosition(), 200.0f, false);
-                            if (ownsFinalGY || nearbyCount >= 20)
+
+                            // By leewheel 2026-09-01
+                            // 团队就绪条件（移植 NPCBots bot_ai.cpp:19300-19329 双就绪判定）：
+                            //   条件A 半数队员在将军 60 码内（大军已至）；
+                            //   条件B 将军仇恨列表 ≥ 队伍 1/8（已有人开怪，其余人跟进）。
+                            //   条件B 同时解决"第一个到的 bot 永远凑不齐半数"的 rush 死锁。
+                            //   原条件只看全阵营人数/墓地，会单 bot 送人头（NPCBots 用未就绪原地等解决）。
+                            // End By leewheel
+                            GuidVector members = AI_VALUE(GuidVector, "group members");
+                            uint8 groupSize = std::max<size_t>(members.size(), 1);
+                            uint8 readyMembers = 0;
+                            for (ObjectGuid const& guid : members)
+                            {
+                                Unit* member = botAI->GetUnit(guid);
+                                if (member && member->IsAlive() && member->GetMapId() == bot->GetMapId() &&
+                                    member->GetDistance(boss) < 60.f)
+                                    ++readyMembers;
+                            }
+                            bool teamReady = readyMembers * 2 >= groupSize;
+                            bool bossEngaged = boss->GetThreatMgr().GetThreatListSize() >=
+                                               std::max<size_t>(1, static_cast<size_t>(groupSize) / 8);
+
+                            if ((ownsFinalGY || nearbyCount >= 20) && (teamReady || bossEngaged))
                                 BgObjective = boss;
                         }
                     }
@@ -2295,6 +2323,38 @@ bool BGTactics::selectObjective(bool reset)
             uint8 allianceScore = bg->GetTeamScore(TEAM_ALLIANCE);
             uint8 hordeScore = bg->GetTeamScore(TEAM_HORDE);
 
+            // By leewheel 2026-09-01
+            // WS 神水拾取（移植 NPCBots bot_ai.cpp:19615-19668）：
+            //   恢复神水（REGENBUFF）血<60% 优先喝；狂暴神水（BERSERKBUFF）未被缩小副作用
+            //   （SPELL_AURA_MOD_SCALE=30，NPCBots 同款判定）时喝。
+            //   神水 GO 必须 READY+已生成；队友已在神水 20 码内则去重跳过
+            //   （NPCBots 用"队友当前节点==神水节点"去重，我们无节点图，用距离近似）。
+            //   旗手不喝（送旗第一优先，NPCBots 的 BERSERK 条件也排除持旗者）。
+            // End By leewheel
+            auto GrabWsBuffGo = [&](uint32 goId) -> bool
+            {
+                GameObject* go = bg->GetBGObject(goId);
+                if (!go || !go->isSpawned() || go->GetGoState() != GO_STATE_READY)
+                    return false;
+
+                if (bot->GetDistance(go) > 80.f)
+                    return false;
+
+                GuidVector members = AI_VALUE(GuidVector, "group members");
+                for (ObjectGuid const& guid : members)
+                {
+                    if (guid == bot->GetGUID())
+                        continue;
+
+                    Unit* member = botAI->GetUnit(guid);
+                    if (member && member->IsAlive() && member->GetDistance(go) < 20.f)
+                        return false;  // 队友已在神水旁，不抢
+                }
+
+                SetSafePos(go->GetPosition());
+                return true;
+            };
+
             if (hasFlag)
             {
                 // 拿旗者：己方旗也在外（双方旗都被携带）→ 就近隐蔽避开交火；否则直奔本方旗房交旗
@@ -2302,6 +2362,16 @@ bool BGTactics::selectObjective(bool reset)
                     SetSafePos(teamFlagTaken() ? WS_FLAG_HIDE_ALLIANCE[urand(0, 2)] : WS_FLAG_POS_ALLIANCE);
                 else
                     SetSafePos(teamFlagTaken() ? WS_FLAG_HIDE_HORDE[urand(0, 2)] : WS_FLAG_POS_HORDE);
+            }
+            else if (bot->GetHealthPct() < 60.f &&
+                     (GrabWsBuffGo(BG_WS_OBJECT_REGENBUFF_1) || GrabWsBuffGo(BG_WS_OBJECT_REGENBUFF_2)))
+            {
+                // 恢复神水窗口（已在 lambda 内设置 target）
+            }
+            else if (!bot->HasAuraTypeWithValue(SPELL_AURA_MOD_SCALE, 30) &&
+                     (GrabWsBuffGo(BG_WS_OBJECT_BERSERKBUFF_1) || GrabWsBuffGo(BG_WS_OBJECT_BERSERKBUFF_2)))
+            {
+                // 狂暴神水窗口（未被缩小副作用才喝）
             }
             // Graveyard Camping if in lead
             else if (role < 8 &&
@@ -2486,6 +2556,36 @@ bool BGTactics::selectObjective(bool reset)
                 break;
             }
 
+            // --- PRIORITY 2.5: Speed buff pickup (NPCBots bot_ai.cpp:19770-19800) ---
+            // By leewheel 2026-09-01
+            // 顺路喝速度神水（移植 NPCBots AB 决策1）：只喝 45 码内的（顺路不绕远，
+            // NPCBots 注释 "let respawn"——神水会刷新，专门跑去喝不值当）；
+            // GO 必须 READY+已生成；队友已在 20 码内则去重跳过。
+            // End By leewheel
+            if (!BgObjective)
+            {
+                static constexpr uint32 const abSpeedBuffs[] = {
+                    BG_AB_OBJECT_SPEEDBUFF_STABLES, BG_AB_OBJECT_SPEEDBUFF_BLACKSMITH,
+                    BG_AB_OBJECT_SPEEDBUFF_FARM, BG_AB_OBJECT_SPEEDBUFF_LUMBER_MILL,
+                    BG_AB_OBJECT_SPEEDBUFF_GOLD_MINE
+                };
+                for (uint32 goId : abSpeedBuffs)
+                {
+                    GameObject* go = bg->GetBGObject(goId);
+                    if (!go || !go->isSpawned() || go->GetGoState() != GO_STATE_READY)
+                        continue;
+
+                    if (bot->GetDistance(go) > 45.f)
+                        continue;
+
+                    if (CountAlliesNear(go->GetPosition()) >= 1)
+                        continue;
+
+                    BgObjective = go;
+                    break;
+                }
+            }
+
             // --- PRIORITY 3: Defender logic ---
             if (isDefender && urand(0, 99) < 85)
             {
@@ -2623,6 +2723,30 @@ bool BGTactics::selectObjective(bool reset)
 
             bool isDefender = role < defendersProhab;
 
+            // By leewheel 2026-09-01
+            // NPCBots EY 决策移植（01文档 2.4）：人数配额统计 + 全点控制压家 + 旗点蹲守 + 旗手选点。
+            //   配额公式照抄 NPCBots bot_ai.cpp:20122：每点攻击人数上限 = 队伍/5+1。
+            // End By leewheel
+            GuidVector groupMembers = AI_VALUE(GuidVector, "group members");
+            uint8 teamSize = static_cast<uint8>(std::max<size_t>(groupMembers.size(), 5));
+
+            auto CountAlliesNearEY = [&](Position const& nodePos) -> uint8
+            {
+                uint8 count = 0;
+                for (ObjectGuid const& guid : groupMembers)
+                {
+                    if (guid == bot->GetGUID())
+                        continue;
+
+                    Unit* member = botAI->GetUnit(guid);
+                    if (member && member->IsAlive() && member->GetMapId() == bot->GetMapId() &&
+                        member->GetDistance2d(nodePos.GetPositionX(), nodePos.GetPositionY()) < 45.f)
+                        ++count;
+                }
+
+                return count;
+            };
+
             std::tuple<uint32, uint32, uint32> front[2];
             std::tuple<uint32, uint32, uint32> back[2];
 
@@ -2646,25 +2770,53 @@ bool BGTactics::selectObjective(bool reset)
             // --- PRIORITY 1: FLAG CARRIER ---
             if (bot->HasAura(BG_EY_NETHERSTORM_FLAG_SPELL))
             {
+                // By leewheel 2026-09-01
+                // 旗手送旗选点（移植 NPCBots bot_ai.cpp:19990-20050 并优化）：
+                //   原逻辑只选最近己有点——所有旗手都走同一条路，极易被蹲点拦截。
+                //   NPCBots 做法：己有点中随机（分散）；无己有点 → 队友最多的点（找人接应）。
+                //   我们的融合版：评分 = 队友数×100 − 距离（有人接应优先，同分选近的），
+                //   无己有点时向"队友最多的未控点"靠拢。
+                // End By leewheel
                 uint32 bestNodeId = 0;
-                float bestDist = FLT_MAX;
+                float bestScore = -FLT_MAX;
                 uint32 bestTrigger = 0;
 
+                bool ownsAnyNode = false;
                 for (auto const& [nodeId, _, areaTrigger] : EY_AttackObjectives)
                 {
                     if (!IsOwned(nodeId))
                         continue;
 
+                    ownsAnyNode = true;
                     auto it = EY_NodePositions.find(nodeId);
                     if (it == EY_NodePositions.end())
                         continue;
 
-                    float dist = bot->GetDistance(it->second);
-                    if (dist < bestDist)
+                    float score = CountAlliesNearEY(it->second) * 100.f - bot->GetDistance(it->second);
+                    if (score > bestScore)
                     {
-                        bestDist = dist;
+                        bestScore = score;
                         bestNodeId = nodeId;
                         bestTrigger = areaTrigger;
+                    }
+                }
+
+                // 无己有点：向队友最多的未控点靠拢（找人接应，NPCBots 同款）
+                if (!ownsAnyNode)
+                {
+                    uint8 mostAllies = 0;
+                    for (auto const& [nodeId, _, __] : EY_AttackObjectives)
+                    {
+                        auto it = EY_NodePositions.find(nodeId);
+                        if (it == EY_NodePositions.end())
+                            continue;
+
+                        uint8 allies = CountAlliesNearEY(it->second);
+                        if (allies > mostAllies)
+                        {
+                            mostAllies = allies;
+                            bestNodeId = nodeId;
+                        }
                     }
                 }
 
@@ -2735,6 +2887,78 @@ bool BGTactics::selectObjective(bool reset)
                         pos.Set(rx, ry, rz, bot->GetMapId());
                         foundObjective = true;
                     }
+                }
+            }
+
+            // --- PRIORITY 2.5: Flag point must have a camper (NPCBots bot_ai.cpp:20059-20083) ---
+            // By leewheel 2026-09-01
+            // 中央旗点必须有人蹲守（移植 NPCBots）：旗子在家（isSpawned）且旗点 45 码内
+            // 没有队友时，距离最近的非旗手 bot 前往占位——EY 的胜负手是中央旗，
+            // 原逻辑只有 defender 的 P4-3 会去捡旗，进攻型策略下旗点经常无人。
+            // End By leewheel
+            if (!foundObjective)
+            {
+                if (GameObject* flagGo = bg->GetBGObject(BG_EY_OBJECT_FLAG_NETHERSTORM); flagGo && flagGo->isSpawned())
+                {
+                    Position const flagPos = flagGo->GetPosition();
+                    if (CountAlliesNearEY(flagPos) == 0)
+                    {
+                        // 只让"最近的队友"去蹲（避免全队扑旗点）：比我近的队友存在则我不去
+                        bool closerAllyExists = false;
+                        float myDist = bot->GetDistance(flagGo);
+                        for (ObjectGuid const& guid : groupMembers)
+                        {
+                            if (guid == bot->GetGUID())
+                                continue;
+
+                            Unit* member = botAI->GetUnit(guid);
+                            if (member && member->IsAlive() && member->GetMapId() == bot->GetMapId() &&
+                                member->GetDistance(flagGo) < myDist)
+                            {
+                                closerAllyExists = true;
+                                break;
+                            }
+                        }
+
+                        if (!closerAllyExists)
+                        {
+                            pos.Set(flagPos.GetPositionX(), flagPos.GetPositionY(), flagPos.GetPositionZ(),
+                                    bot->GetMapId());
+                            foundObjective = true;
+                        }
+                    }
+                }
+            }
+
+            // --- PRIORITY 2.7: All nodes owned → intercept enemy spawn (NPCBots bot_ai.cpp:20085) ---
+            // By leewheel 2026-09-01
+            // 全点控制时压家拦截（移植 NPCBots pin 逻辑）：4 点全在我手 → 主动去敌方
+            // 出生点前拦截，把战线推到对面家里，不给敌人喘息重新开旗的机会。
+            // End By leewheel
+            if (!foundObjective)
+            {
+                bool ownsAllNodes = true;
+                for (auto const& [nodeId, _, __] : EY_AttackObjectives)
+                {
+                    if (!IsOwned(nodeId))
+                    {
+                        ownsAllNodes = false;
+                        break;
+                    }
+                }
+
+                if (ownsAllNodes && urand(0, 99) < 70)  // 70% 压家，30% 留人轮休占点
+                {
+                    Position const& interceptPos = (team == TEAM_ALLIANCE) ? EY_WAITING_POS_HORDE
+                                                                           : EY_WAITING_POS_ALLIANCE;
+                    float rx, ry, rz;
+                    bot->GetRandomPoint(interceptPos, 30.0f, rx, ry, rz);
+                    if (rz != VMAP_INVALID_HEIGHT_VALUE)
+                        pos.Set(rx, ry, rz, bot->GetMapId());
+                    else
+                        pos.Set(interceptPos.GetPositionX(), interceptPos.GetPositionY(),
+                                interceptPos.GetPositionZ(), bot->GetMapId());
+                    foundObjective = true;
                 }
             }
 
@@ -2898,11 +3122,45 @@ bool BGTactics::selectObjective(bool reset)
 
                 std::vector<uint32> candidates;
 
+                // By leewheel 2026-09-01
+                // 每点攻击人数配额（移植 NPCBots bot_ai.cpp:20122：上限 = 队伍/5+1）：
+                //   人满的点跳过，兵力自然流向缺人的点；全部人满时兜底选"离我最远的未控点"
+                //   （NPCBots 均衡战线思想：不闲着，去开辟第二战场）。
+                // End By leewheel
+                uint8 const nodeQuota = teamSize / 5 + 1;
+                std::vector<uint32> unownedAll;
                 for (auto const& obj : priority)
                 {
                     uint32 nodeId = std::get<0>(obj);
-                    if (!IsOwned(nodeId))
-                        candidates.push_back(nodeId);
+                    if (IsOwned(nodeId))
+                        continue;
+
+                    unownedAll.push_back(nodeId);
+                    auto it = EY_NodePositions.find(nodeId);
+                    if (it != EY_NodePositions.end() && CountAlliesNearEY(it->second) >= nodeQuota)
+                        continue;
+
+                    candidates.push_back(nodeId);
+                }
+
+                if (candidates.empty() && !unownedAll.empty())
+                {
+                    // 全点人满：选最远的未控点开辟第二战场
+                    float farthest = -1.f;
+                    for (uint32 nodeId : unownedAll)
+                    {
+                        auto it = EY_NodePositions.find(nodeId);
+                        if (it == EY_NodePositions.end())
+                            continue;
+
+                        float dist = bot->GetDistance(it->second);
+                        if (dist > farthest)
+                        {
+                            farthest = dist;
+                            candidates.push_back(nodeId);
+                        }
+                    }
+                    candidates.resize(1);
                 }
 
                 if (candidates.empty())
@@ -2910,8 +3168,14 @@ bool BGTactics::selectObjective(bool reset)
                     for (auto const& obj : secondary)
                     {
                         uint32 nodeId = std::get<0>(obj);
-                        if (!IsOwned(nodeId))
-                            candidates.push_back(nodeId);
+                        if (IsOwned(nodeId))
+                            continue;
+
+                        auto it = EY_NodePositions.find(nodeId);
+                        if (it != EY_NodePositions.end() && CountAlliesNearEY(it->second) >= nodeQuota)
+                            continue;
+
+                        candidates.push_back(nodeId);
                     }
                 }
 
