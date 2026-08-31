@@ -22,6 +22,7 @@
 #include <unordered_set>
 #include <map>
 #include <set>
+#include <ctime>
 
 class Player;
 class ChatHandler;
@@ -118,6 +119,25 @@ struct PendingBotSetup
 };
 
 // ============================================================
+//  小退保持：已保存的快速组队队伍构成 - By leewheel 2026-09-01
+//  主控登出（小退）时记录机器人构成，主控再次登录时自动召回恢复。
+//  仅存内存：服务器重启后丢失，重启场景由启动清理逻辑按旧行为处理。
+// ============================================================
+struct SavedFastGroupComposition
+{
+    std::vector<ObjectGuid> botGuids;   // 机器人GUID列表（保持召唤顺序）
+    time_t savedAt = 0;                 // 保存时间戳（用于过期判断）
+};
+
+// 小退恢复待传送记录：机器人全部上线（或30秒超时）后传送到主控身边
+struct FastGroupRestoreTeleport
+{
+    std::vector<ObjectGuid> botGuids;
+    time_t createTime = 0;
+};
+// End By leewheel
+
+// ============================================================
 //  快速组队核心管理类
 //  说明：方法实现在 FastGroup.cpp 中
 // ============================================================
@@ -133,7 +153,12 @@ public:
 
     // ---- 快速组队机器人列表管理（内存） ----
     void RegisterFastGroupBots(Player* master, const std::vector<ObjectGuid>& botGuids);
-    void LogoutFastGroupBots(Player* master);
+    //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+    // preserveForRelog=true（主控登出）：不清装备、不删DB记录、不解散队伍，
+    //   仅让机器人下线，并把队伍构成存入内存，等主控登录时自动召回恢复。
+    // preserveForRelog=false（显式退队/解散/重新组队）：保持原有彻底清理行为。
+    void LogoutFastGroupBots(Player* master, bool preserveForRelog = false);
+    //End By leewheel
 
     // 检查玩家是否已有快速组队机器人
     bool HasFastGroupBots(ObjectGuid masterGuid);
@@ -168,6 +193,16 @@ public:
     void SetRolesAssigned(ObjectGuid masterGuid, bool assigned);
     // End By leewheel
 
+    //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+    // ---- 小退保持：队伍构成存取（内存） ----
+    // 主控登出时保存队伍构成（由 LogoutFastGroupBots(preserve=true) 调用）
+    void SaveCompositionOnLogout(ObjectGuid masterGuid, const std::vector<ObjectGuid>& botGuids);
+    // 主控登录时取出并移除保存的队伍构成；超过有效期(24h)视为残留返回false
+    bool PopSavedComposition(ObjectGuid masterGuid, std::vector<ObjectGuid>& outBotGuids);
+    // 清除指定主控的保存构成（显式退队/解散时调用，防止误恢复）
+    void ClearSavedComposition(ObjectGuid masterGuid);
+    //End By leewheel
+
 private:
     FastGroupMgr() = default;
     ~FastGroupMgr() = default;
@@ -184,6 +219,11 @@ private:
     // 已完成LFG角色分配的主控玩家GUID集合
     std::set<ObjectGuid> m_rolesAssigned;
     // End By leewheel
+
+    //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+    // 主控玩家GUID -> 小退时保存的快速组队队伍构成
+    std::unordered_map<ObjectGuid, SavedFastGroupComposition> m_savedCompositions;
+    //End By leewheel
 };
 
 #define sFastGroupMgr FastGroupMgr::instance()

@@ -155,6 +155,15 @@ AiPlayerbot.GroupInvitationPermission = 1
 # 1 = enabled (prevents bots from automatically leaving the group)
 AiPlayerbot.KeepAltsInGroup = 0
 
+# By leewheel 2026-09-01
+# 快速组队小退保持：主控玩家登出（小退）时不清理快速组队机器人的装备、
+# 不删除组队记录、不解散队伍；主控重新登录后自动召回同一批机器人并传送到
+# 主控身边（副本内小退再进可直接恢复队伍继续打）。显式退队/解散命令不受影响。
+# 0 = 关闭（登出即清理，旧行为）
+# 1 = 开启（默认）
+AiPlayerbot.FastGroupKeepOnRelog = 1
+# End By leewheel
+
 # Auto-login all player alts as altbots on player login
 AiPlayerbot.BotAutologin = 0
 

@@ -448,6 +448,11 @@ public:
     int32 groupInvitationPermission;
     bool keepAltsInGroup = false;
     bool KeepAltsInGroup() const { return keepAltsInGroup; }
+    //By leewheel 2026-09-01 用户需求：副本中小退再进保持快速组队队伍状态
+    //  （登出时不清装备/不删记录/不解散队伍，登录时自动召回同一批机器人归队）
+    bool fastGroupKeepOnRelog = true;
+    bool FastGroupKeepOnRelog() const { return fastGroupKeepOnRelog; }
+    //End By leewheel
     bool allowSummonInCombat;
     bool allowSummonWhenMasterIsDead;
     bool allowSummonWhenBotIsDead;

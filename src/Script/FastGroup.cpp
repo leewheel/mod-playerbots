@@ -40,6 +40,10 @@
 #include "Opcodes.h"
 // End By leewheel
 
+//By leewheel 2026-09-01 小退恢复传送：解除机器人旧副本绑定所需
+#include "InstanceSaveMgr.h"
+//End By leewheel
+
 // By leewheel 2026-07-07 - 引入共享头文件，供 AutoJoinRaid.cpp 共同使用
 #include "FastGroupCommon.h"
 // End By leewheel
@@ -50,6 +54,11 @@
 #include <string>
 
 using namespace Acore::ChatCommands;
+
+//By leewheel 2026-09-01 小退再进恢复：传送机器人进主控所在副本前修复副本绑定
+//（函数实现于 BotInstanceEntryFix.cpp，与 AutoJoinRaid.cpp 相同的 extern 引用方式）
+extern bool EnsureBotCanEnterMap(Player* bot, uint32 mapId, Player* master);
+//End By leewheel
 
 // ============================================================
 //  标准队伍配置表定义
@@ -245,7 +254,58 @@ void FastGroupMgr::RegisterFastGroupBots(Player* master, const std::vector<Objec
     m_fastGroupBots[master->GetGUID()] = botGuids;
 }
 
-void FastGroupMgr::LogoutFastGroupBots(Player* master)
+//By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+// ---- 小退保持：队伍构成存取（内存） ----
+
+void FastGroupMgr::SaveCompositionOnLogout(ObjectGuid masterGuid, const std::vector<ObjectGuid>& botGuids)
+{
+    // 卫生清理：保存时顺带丢弃所有超过24小时的过期条目，防止主控长期不上线导致滞留
+    time_t const maxAge = 24 * 60 * 60;
+    time_t const now = time(nullptr);
+    for (auto it = m_savedCompositions.begin(); it != m_savedCompositions.end(); )
+    {
+        if (now - it->second.savedAt > maxAge)
+            it = m_savedCompositions.erase(it);
+        else
+            ++it;
+    }
+
+    SavedFastGroupComposition comp;
+    comp.botGuids = botGuids;
+    comp.savedAt = now;
+    m_savedCompositions[masterGuid] = std::move(comp);
+
+    LOG_DEBUG("playerbots", "快速组队：主控 {} 登出，已保存队伍构成（{} 名机器人），等待小退再进恢复。",
+        masterGuid.ToString(), botGuids.size());
+}
+
+bool FastGroupMgr::PopSavedComposition(ObjectGuid masterGuid, std::vector<ObjectGuid>& outBotGuids)
+{
+    auto itr = m_savedCompositions.find(masterGuid);
+    if (itr == m_savedCompositions.end())
+        return false;
+
+    // 超过24小时的保存视为残留，不再恢复（按旧清理逻辑处理）
+    time_t const maxAge = 24 * 60 * 60;
+    if (time(nullptr) - itr->second.savedAt > maxAge)
+    {
+        m_savedCompositions.erase(itr);
+        return false;
+    }
+
+    outBotGuids = std::move(itr->second.botGuids);
+    m_savedCompositions.erase(itr);
+    return true;
+}
+
+void FastGroupMgr::ClearSavedComposition(ObjectGuid masterGuid)
+{
+    m_savedCompositions.erase(masterGuid);
+}
+
+//End By leewheel
+
+void FastGroupMgr::LogoutFastGroupBots(Player* master, bool preserveForRelog)
 {
     if (!master)
         return;
@@ -255,6 +315,35 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
         return;
 
     PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(master);
+
+    //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+    // 保留模式（主控登出）：不清装备、不删DB记录、不解散队伍，
+    // 仅让机器人下线（LogoutPlayerBot 内部会 SaveToDB 保存位置/装备/天赋），
+    // 并把队伍构成存入内存；主控再次登录时由 RestoreFastGroupOnRelog 自动召回，
+    // 机器人凭 group_member 表记录自动归队，再传送到主控身边（含副本内）。
+    if (preserveForRelog)
+    {
+        std::vector<ObjectGuid> const botGuids = itr->second;
+
+        for (ObjectGuid botGuid : botGuids)
+        {
+            Player* bot = mgr ? mgr->GetPlayerBot(botGuid) : nullptr;
+            if (bot)
+            {
+                // 装备原样保留（LogoutPlayerBot 内部 SaveToDB 保存位置/装备/天赋）
+                mgr->LogoutPlayerBot(botGuid);
+            }
+            // 机器人已不在线：无需处理，队伍成员关系按GUID保留
+        }
+
+        SaveCompositionOnLogout(master->GetGUID(), botGuids);
+        m_fastGroupBots.erase(itr);
+
+        LOG_INFO("playerbots", "快速组队：玩家 {} 登出，{} 名快速组队机器人已保存并下线（装备保留），小退再进将自动恢复队伍。",
+            master->GetName(), botGuids.size());
+        return;
+    }
+    //End By leewheel
 
     // By leewheel 2026-07-08
     // 获取队伍指针，用于移除不在线的机器人
@@ -326,6 +415,10 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master)
     }
 
     m_fastGroupBots.erase(itr);
+
+    //By leewheel 2026-09-01 显式退队/解散/重新组队：同时清除小退保存的队伍构成，防止误恢复
+    ClearSavedComposition(master->GetGUID());
+    //End By leewheel
 
     // By leewheel 2026-07-08 - 清除角色分配标记
     m_rolesAssigned.erase(master->GetGUID());
@@ -1430,7 +1523,11 @@ public:
             return;
 
         // 在 LogoutAllBots 之前下线快速组队机器人并清理装备
-        sFastGroupMgr.LogoutFastGroupBots(player);
+        //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+        // 开启 FastGroupKeepOnRelog 时走保留模式：不清装备、不删记录、不解散队伍，
+        // 仅下线机器人并保存队伍构成，等主控登录时自动召回恢复。
+        sFastGroupMgr.LogoutFastGroupBots(player, sPlayerbotAIConfig.FastGroupKeepOnRelog());
+        //End By leewheel
     }
     // End By leewheel
 
@@ -1443,11 +1540,25 @@ public:
         // By leewheel 2026-07-11
         // 主控玩家上线时的残留队伍和数据库记录检查
         // 原因：如果服务器崩溃或上次下线异常，可能残留快速组队记录和空队伍
-        if (!GET_PLAYERBOT_AI(player))
+        //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+        // 1. 增加 !IsBot() 判断：机器人的 PlayerbotAI 在 OnBotLogin（晚于本钩子）才创建，
+        //    仅用 !GET_PLAYERBOT_AI 会把刚登录的机器人误当主控执行残留清理，
+        //    小退恢复时机器人带着保留的队伍成员关系登录，会被 CleanupMasterLogin 踢出队伍。
+        // 2. 优先检查是否有小退时保存的队伍构成：有则自动召回恢复，无则走原有残留清理
+        if (!player->GetSession()->IsBot() && !GET_PLAYERBOT_AI(player))
         {
-            CleanupMasterLogin(player);
+            std::vector<ObjectGuid> savedBots;
+            if (sPlayerbotAIConfig.FastGroupKeepOnRelog() &&
+                sFastGroupMgr.PopSavedComposition(player->GetGUID(), savedBots))
+            {
+                RestoreFastGroupOnRelog(player, savedBots);
+            }
+            else
+            {
+                CleanupMasterLogin(player);
+            }
         }
-        // End By leewheel
+        //End By leewheel
 
         // 检查是否是快速组队待设置的机器人
         PendingBotSetup setup;
@@ -1583,11 +1694,135 @@ public:
         // 清除待设置记录
         sFastGroupMgr.ClearPendingSetups(player->GetGUID());
 
+        //By leewheel 2026-09-01 小退恢复挂起记录随下线清除（机器人会随主控登出再次下线）
+        m_restorePending.erase(player->GetGUID());
+        //End By leewheel
+
         // By leewheel 2026-07-08 - 清除遗留机器人检查冷却
         m_nextOrphanCheck.erase(player->GetGUID());
         // End By leewheel
     }
     // End By leewheel
+
+    //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+    // ---- 小退恢复：主控登录时召回同一批机器人 ----
+    // 机器人凭 group_member 表记录登录时自动归队（OnBotLogin 校验队伍含主控，不会解散），
+    // 装备/天赋原样保留（登出时未清理），全部上线（或超时）后由
+    // OnPlayerAfterUpdate -> TryRestoreTeleport 传送到主控身边（含副本内跨分卷）。
+    void RestoreFastGroupOnRelog(Player* master, std::vector<ObjectGuid> const& botGuids)
+    {
+        if (!master || botGuids.empty())
+            return;
+
+        PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(master);
+        if (!mgr)
+        {
+            LOG_WARN("playerbots", "快速组队：玩家 {} 登录恢复失败，无法获取 PlayerbotMgr。", master->GetName());
+            return;
+        }
+
+        uint32 masterAccountId = master->GetSession()->GetAccountId();
+        std::vector<ObjectGuid> recalled;
+
+        for (ObjectGuid botGuid : botGuids)
+        {
+            // 已在线的机器人（异常残留）直接纳入管理，不再重复召唤
+            if (!ObjectAccessor::FindConnectedPlayer(botGuid))
+                mgr->AddPlayerBot(botGuid, masterAccountId);
+
+            recalled.push_back(botGuid);
+        }
+
+        // 重新注册快速组队列表：下次登出继续走保留路径
+        sFastGroupMgr.RegisterFastGroupBots(master, recalled);
+
+        FastGroupRestoreTeleport tp;
+        tp.botGuids = recalled;
+        tp.createTime = time(nullptr);
+        m_restorePending[master->GetGUID()] = tp;
+
+        ChatHandler handler(master->GetSession());
+        handler.PSendSysMessage("|cff00ff00[快速组队] 小退再进：正在自动召回上次队伍的 {} 名机器人，稍后归队|r",
+            recalled.size());
+
+        LOG_INFO("playerbots", "快速组队：玩家 {} 登录，恢复小退前队伍，召回 {} 名机器人。",
+            master->GetName(), recalled.size());
+    }
+
+    // ---- 小退恢复：等待机器人全部上线后传送到主控身边 ----
+    void TryRestoreTeleport(Player* master, ObjectGuid masterGuid, FastGroupRestoreTeleport& tp)
+    {
+        if (tp.botGuids.empty())
+        {
+            m_restorePending.erase(masterGuid);
+            return;
+        }
+
+        uint32 onlineCount = 0;
+        for (ObjectGuid botGuid : tp.botGuids)
+        {
+            if (ObjectAccessor::FindConnectedPlayer(botGuid))
+                ++onlineCount;
+        }
+
+        time_t now = time(nullptr);
+        bool timeout = (now - tp.createTime) > 30;  // 30秒超时兜底
+
+        // 机器人还没全部上线，等下一个tick
+        if (onlineCount < tp.botGuids.size() && !timeout)
+            return;
+
+        uint32 const masterMapId = master->GetMapId();
+        MapEntry const* mapEntry = sMapStore.LookupEntry(masterMapId);
+        bool isDungeonMap = mapEntry && mapEntry->IsDungeon();
+
+        for (ObjectGuid botGuid : tp.botGuids)
+        {
+            Player* bot = ObjectAccessor::FindConnectedPlayer(botGuid);
+            if (!bot || bot->IsBeingTeleported())
+                continue;
+
+            // 已在主控身边（同图近距离），无需传送
+            if (bot->GetMapId() == masterMapId && bot->IsWithinDistInMap(master, 60.0f))
+                continue;
+
+            // 与会议石召唤相同的修复序列（BotInstanceEntryFix / 8月31日修复模式）：
+            // 1. 同图不同副本分卷 -> 先解除旧副本绑定
+            if (isDungeonMap && bot->GetMapId() == masterMapId && bot->GetInstanceId() != master->GetInstanceId())
+            {
+                sInstanceSaveMgr->PlayerUnbindInstance(bot->GetGUID(), masterMapId,
+                    bot->GetDifficulty(mapEntry->IsRaid()), true, bot);
+            }
+
+            // 2. 修复进入条件（进度/难度/死亡/钥匙等）
+            if (isDungeonMap && !EnsureBotCanEnterMap(bot, masterMapId, master))
+            {
+                LOG_INFO("playerbots", "快速组队：机器人 {} 无法进入玩家 {} 所在副本，跳过传送（可稍后手动召唤）。",
+                    bot->GetName(), master->GetName());
+                continue;
+            }
+
+            // 3. 移除会被传送打断的光环，然后传送（同图跨分卷需 newInstance=true）
+            bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
+            bot->TeleportTo(masterMapId, master->GetPositionX(), master->GetPositionY(),
+                master->GetPositionZ(), master->GetOrientation(), 0, nullptr,
+                isDungeonMap && bot->GetMapId() == masterMapId);
+
+            LOG_DEBUG("playerbots", "快速组队：机器人 {} 已传送回玩家 {} 身边（地图:{}）。",
+                bot->GetName(), master->GetName(), masterMapId);
+        }
+
+        uint32 const totalBots = static_cast<uint32>(tp.botGuids.size());
+        m_restorePending.erase(masterGuid);
+
+        ChatHandler handler(master->GetSession());
+        handler.PSendSysMessage("|cff00ff00[快速组队] 队伍已恢复：{}/{} 名机器人已上线并传送归队|r",
+            onlineCount, totalBots);
+
+        LOG_INFO("playerbots", "快速组队：玩家 {} 的小退恢复完成，机器人上线 {}/{}。",
+            master->GetName(), onlineCount, totalBots);
+    }
+    //End By leewheel
 
     // By leewheel 2026-07-11
     // 主控玩家上线时的残留清理
@@ -1598,6 +1833,10 @@ public:
             return;
 
         uint32 masterGuid = master->GetGUID().GetCounter();
+
+        //By leewheel 2026-09-01 残留清理时同步清除内存中的小退保存构成，防止后续误恢复
+        sFastGroupMgr.ClearSavedComposition(master->GetGUID());
+        //End By leewheel
 
         // 1. 检查数据库中是否有残留的快速组队记录
         //    正常下线时 OnPlayerBeforeLogout 已清理，此处处理异常情况
@@ -1658,6 +1897,16 @@ public:
             return;
 
         ObjectGuid guid = player->GetGUID();
+
+        //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+        // 小退恢复处理中：等待机器人全部上线后传送到主控身边，本tick跳过其他检查
+        auto restoreIt = m_restorePending.find(guid);
+        if (restoreIt != m_restorePending.end())
+        {
+            TryRestoreTeleport(player, guid, restoreIt->second);
+            return;
+        }
+        //End By leewheel
 
         // By leewheel 2026-07-08
         // 遗留机器人检查：如果玩家在队伍中，且队伍中有在线的快速组队机器人，
@@ -1746,6 +1995,11 @@ private:
     // 遗留机器人检查冷却：玩家GUID -> 下次检查时间
     std::unordered_map<ObjectGuid, time_t> m_nextOrphanCheck;
     // End By leewheel
+
+    //By leewheel 2026-09-01 用户需求：副本中小退再进保持队伍状态
+    // 小退恢复待传送记录（结构体定义于 FastGroupCommon.h）：主控GUID -> 待上线机器人列表
+    std::unordered_map<ObjectGuid, FastGroupRestoreTeleport> m_restorePending;
+    //End By leewheel
 };
 
 // ============================================================
