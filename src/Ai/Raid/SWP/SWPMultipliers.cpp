@@ -631,10 +631,8 @@ float EredarTwinsDelayCooldownsMultiplier::GetValue(Action* action)
     if (!alythess)
         return 1.0f;
 
-    // By leewheel 2026-08-29 合并：采用对侧单行写法，entry规则查找(sacrolash->25165)
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
-    return sacrolash && sacrolash->GetHealthPct() > MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
-    // End By leewheel
+    return sacrolash && sacrolash->GetHealthPct() > EREDAR_TWINS_MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
 }
 
 // M'uru
@@ -735,7 +733,7 @@ float MuruControlMovementMultiplier::GetValue(Action* action)
             MURU_ENTRANCE_POSITION : MURU_STACK_POSITION;
         float const targetDistFromRef = actionTarget->GetExactDist2d(refPosition);
 
-        return targetDistFromMuru > DARKNESS_SAFE_DISTANCE &&
+        return targetDistFromMuru > MURU_DARKNESS_SAFE_DISTANCE &&
             targetDistFromRef < MURU_HOLDING_POSITION_RADIUS;
     };
 

@@ -12,7 +12,7 @@
 
 using namespace HyjalHelpers;
 
-void RaidHyjalSummitStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+void RaidHyjalStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     // General
     triggers.push_back(new TriggerNode("hyjal summit no encounter in progress", {
@@ -136,7 +136,7 @@ void RaidHyjalSummitStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("archimonde remove doomfire dot", ACTION_EMERGENCY + 7) }));
 }
 
-void RaidHyjalSummitStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
+void RaidHyjalStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 {
     // Trash
     multipliers.push_back(new HyjalSummitDelayDpsCooldownsMultiplier(botAI));
@@ -171,7 +171,7 @@ void RaidHyjalSummitStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
 }
 
 // Limit Infernals to Infernal tank
-void RaidHyjalSummitStrategy::AppendTargetExclusions(
+void RaidHyjalStrategy::AppendTargetExclusions(
     GuidSet& exclusions, TargetValueExclusionType type)
 {
     if (type != TargetValueExclusionType::Tank)

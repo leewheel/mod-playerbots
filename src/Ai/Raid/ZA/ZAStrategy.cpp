@@ -27,7 +27,7 @@ void RaidZulAmanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("akil'zon boss engaged by tanks", {
         NextAction("akil'zon tanks position boss", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("akil'zon boss casts static disruption", {
+    triggers.push_back(new TriggerNode("akil'zon spread for static disruption", {
         NextAction("akil'zon spread ranged", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("akil'zon electrical storm incoming", {
@@ -40,14 +40,14 @@ void RaidZulAmanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("nalorakk boss switches forms", {
         NextAction("nalorakk tanks position boss", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("nalorakk boss casts surge", {
+    triggers.push_back(new TriggerNode("nalorakk spread for surge", {
         NextAction("nalorakk spread ranged", ACTION_RAID) }));
 
     // Jan'alai <Dragonhawk Avatar>
     triggers.push_back(new TriggerNode("jan'alai boss engaged by tanks", {
         NextAction("jan'alai tanks position boss", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("jan'alai boss casts flame breath", {
+    triggers.push_back(new TriggerNode("jan'alai spread for flame breath", {
         NextAction("jan'alai spread ranged in circle", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("jan'alai boss summoning fire bombs", {
@@ -86,7 +86,7 @@ void RaidZulAmanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("zul'jin boss is summoning cyclones in eagle form", {
         NextAction("zul'jin spread raid for cyclones", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("zul'jin boss casts aoe abilities in dragonhawk form", {
+    triggers.push_back(new TriggerNode("zul'jin spread for dragonhawk aoe", {
         NextAction("zul'jin spread ranged", ACTION_RAID) }));
 }
 
@@ -94,24 +94,19 @@ void RaidZulAmanStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 {
     // General
     multipliers.push_back(new ZulAmanDelayDpsCooldownsMultiplier(botAI));
+    multipliers.push_back(new ZulAmanDisableTankActionsMultiplier(botAI));
+    multipliers.push_back(new ZulAmanControlMisdirectionMultiplier(botAI));
     multipliers.push_back(new ZulAmanDisableCombatFormationMoveMultiplier(botAI));
     multipliers.push_back(new ZulAmanAvoidWhirlwindMultiplier(botAI));
 
     // Akil'zon <Eagle Avatar>
     multipliers.push_back(new AkilzonStayInEyeOfTheStormMultiplier(botAI));
 
-    // Nalorakk <Bear Avatar>
-    multipliers.push_back(new NalorakkDisableTankActionsMultiplier(botAI));
-    multipliers.push_back(new NalorakkControlMisdirectionMultiplier(botAI));
-
     // Jan'alai <Dragonhawk Avatar>
-    multipliers.push_back(new JanalaiDisableTankActionsMultiplier(botAI));
     multipliers.push_back(new JanalaiStayAwayFromFireBombsMultiplier(botAI));
     multipliers.push_back(new JanalaiDoNotCrowdControlHatchersMultiplier(botAI));
 
     // Halazzi <Lynx Avatar>
-    multipliers.push_back(new HalazziDisableTankActionsMultiplier(botAI));
-    multipliers.push_back(new HalazziControlMisdirectionMultiplier(botAI));
     multipliers.push_back(new HalazziDisableAutoDpsTargetingMultiplier(botAI));
 
     // Hex Lord Malacrass
@@ -119,6 +114,5 @@ void RaidZulAmanStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new HexLordMalacrassSpellReflectionMultiplier(botAI));
 
     // Zul'jin
-    multipliers.push_back(new ZuljinDisableTankFaceMultiplier(botAI));
     multipliers.push_back(new ZuljinEagleDisableAvoidAoeMultiplier(botAI));
 }
