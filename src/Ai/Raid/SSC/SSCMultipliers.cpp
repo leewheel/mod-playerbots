@@ -28,13 +28,13 @@
 #include "WarriorActions.h"
 #include "WipeAction.h"
 
-using namespace SerpentShrineCavernHelpers;
+using namespace SscHelpers;
 
 // Trash
 
 float UnderbogColossusEscapeToxicPoolMultiplier::GetValue(Action* action)
 {
-    if (!bot->HasAura(SPELL_TOXIC_POOL))
+    if (!bot->HasAura(Id(SscSpells::SPELL_TOXIC_POOL)))
         return 1.0f;
 
     if (!dynamic_cast<MovementAction*>(action))
@@ -61,9 +61,14 @@ float HydrossTheUnstableDisableTankActionsMultiplier::GetValue(Action* action)
         dynamic_cast<CombatFormationMoveAction*>(action))
         return 0.0f;
 
-    if ((PlayerbotAI::IsMainTank(bot) && !hydross->HasAura(SPELL_CORRUPTION)) ||
-        (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) && hydross->HasAura(SPELL_CORRUPTION)))
+    if (PlayerbotAI::IsMainTank(bot) && !hydross->HasAura(Id(SscSpells::SPELL_CORRUPTION)))
         return 1.0f;
+
+    if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
+        hydross->HasAura(Id(SscSpells::SPELL_CORRUPTION)))
+    {
+        return 1.0f;
+    }
 
     if (dynamic_cast<CastReachTargetSpellAction*>(action) ||
         dynamic_cast<ReachTargetAction*>(action) ||
@@ -98,7 +103,7 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValue(Action* action)
     constexpr uint32 phaseChangeWaitMs = 1 * IN_MILLISECONDS;
     constexpr uint32 dpsWaitMs = 5 * IN_MILLISECONDS;
 
-    if (!hydross->HasAura(SPELL_CORRUPTION) && !PlayerbotAI::IsMainTank(bot))
+    if (!hydross->HasAura(Id(SscSpells::SPELL_CORRUPTION)) && !PlayerbotAI::IsMainTank(bot))
     {
         auto itDps = hydrossFrostDpsWaitTimer.find(instanceId);
         auto itPhase = hydrossChangeToFrostPhaseTimer.find(instanceId);
@@ -117,7 +122,7 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValue(Action* action)
             return 0.0f;
     }
 
-    if (hydross->HasAura(SPELL_CORRUPTION) && !PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
+    if (hydross->HasAura(Id(SscSpells::SPELL_CORRUPTION)) && !PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
     {
         auto itDps = hydrossNatureDpsWaitTimer.find(instanceId);
         auto itPhase = hydrossChangeToNaturePhaseTimer.find(instanceId);
@@ -241,12 +246,12 @@ float LeotherasTheBlindAvoidWhirlwindMultiplier::GetValue(Action* action)
     if (PlayerbotAI::IsTank(bot))
         return 1.0f;
 
-    if (bot->HasAura(SPELL_INSIDIOUS_WHISPER))
+    if (bot->HasAura(Id(SscSpells::SPELL_INSIDIOUS_WHISPER)))
         return 1.0f;
 
-    Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215");
-    if (!leotheras || (!leotheras->HasAura(SPELL_WHIRLWIND) &&
-        !leotheras->HasAura(SPELL_WHIRLWIND_CHANNEL)))
+Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215");
+    if (!leotheras || (!leotheras->HasAura(Id(SscSpells::SPELL_WHIRLWIND)) &&
+        !leotheras->HasAura(Id(SscSpells::SPELL_WHIRLWIND_CHANNEL))))
         return 1.0f;
 
     if (dynamic_cast<CastReachTargetSpellAction*>(action))
@@ -262,7 +267,7 @@ float LeotherasTheBlindAvoidWhirlwindMultiplier::GetValue(Action* action)
 
 float LeotherasTheBlindDisableTankActionsMultiplier::GetValue(Action* action)
 {
-    if (!PlayerbotAI::IsTank(bot) || bot->HasAura(SPELL_INSIDIOUS_WHISPER))
+    if (!PlayerbotAI::IsTank(bot) || bot->HasAura(Id(SscSpells::SPELL_INSIDIOUS_WHISPER)))
         return 1.0f;
 
     if (!AI_VALUE2(Unit*, "find target", "21215"))
@@ -279,7 +284,7 @@ float LeotherasTheBlindDisableTankActionsMultiplier::GetValue(Action* action)
 
 float LeotherasTheBlindFocusOnInnerDemonMultiplier::GetValue(Action* action)
 {
-    if (!bot->HasAura(SPELL_INSIDIOUS_WHISPER))
+    if (!bot->HasAura(Id(SscSpells::SPELL_INSIDIOUS_WHISPER)))
         return 1.0f;
 
     return dynamic_cast<TankAssistAction*>(action) ||
@@ -303,7 +308,7 @@ float LeotherasTheBlindMeleeDpsAvoidChaosBlastMultiplier::GetValue(Action* actio
     if (!GetPhase2LeotherasDemon(bot))
         return 1.0f;
 
-    Aura* chaosBlast = bot->GetAura(SPELL_CHAOS_BLAST);
+    Aura* chaosBlast = bot->GetAura(Id(SscSpells::SPELL_CHAOS_BLAST));
     if (!chaosBlast || chaosBlast->GetStackAmount() < 5)
         return 1.0f;
 
@@ -323,7 +328,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
     if (!leotheras)
         return 1.0f;
 
-    if (bot->HasAura(SPELL_INSIDIOUS_WHISPER))
+    if (bot->HasAura(Id(SscSpells::SPELL_INSIDIOUS_WHISPER)))
         return 1.0f;
 
     if (dynamic_cast<LeotherasTheBlindMisdirectBossToDemonFormTankAction*>(action))
@@ -333,9 +338,9 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
     const uint32 now = getMSTime();
 
     constexpr uint32 dpsWaitMsPhase1 = 5 * IN_MILLISECONDS;
-    Unit* leotherasHuman = GetLeotherasHuman(bot);
-    Unit* leotherasPhase3Demon = GetPhase3LeotherasDemon(bot);
-    if (leotherasHuman && !leotherasHuman->HasAura(SPELL_LEOTHERAS_BANISHED) &&
+    Creature* leotherasHuman = GetLeotherasHuman(bot);
+    Creature* leotherasPhase3Demon = GetPhase3LeotherasDemon(bot);
+    if (leotherasHuman && !leotherasHuman->HasAura(Id(SscSpells::SPELL_LEOTHERAS_BANISHED)) &&
         !leotherasPhase3Demon)
     {
         if (PlayerbotAI::IsTank(bot))
@@ -353,7 +358,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValue(Action* action)
     }
 
     constexpr uint32 dpsWaitMsPhase2 = 12 * IN_MILLISECONDS;
-    Unit* leotherasPhase2Demon = GetPhase2LeotherasDemon(bot);
+    Creature* leotherasPhase2Demon = GetPhase2LeotherasDemon(bot);
     Player* demonFormTank = GetLeotherasDemonFormTank(bot);
     if (leotherasPhase2Demon)
     {
@@ -400,8 +405,8 @@ float LeotherasTheBlindDelayBloodlustAndHeroismMultiplier::GetValue(Action* acti
     if (bot->getClass() != CLASS_SHAMAN)
         return 1.0f;
 
-    Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215");
-    if (!leotheras || !leotheras->HasAura(SPELL_LEOTHERAS_BANISHED))
+Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215");
+    if (!leotheras || !leotheras->HasAura(Id(SscSpells::SPELL_LEOTHERAS_BANISHED)))
         return 1.0f;
 
     if (dynamic_cast<CastHeroismAction*>(action) ||
@@ -580,8 +585,7 @@ float LadyVashjDelayCooldownsMultiplier::GetValue(Action* action)
     if (!AI_VALUE2(Unit*, "find target", "21212"))
         return 1.0f;
 
-    if (bot->getClass() == CLASS_SHAMAN &&
-        !IsLadyVashjInPhase3(botAI) &&
+    if (bot->getClass() == CLASS_SHAMAN && !IsLadyVashjInPhase3(botAI) &&
         (dynamic_cast<CastBloodlustAction*>(action) ||
          dynamic_cast<CastHeroismAction*>(action)))
         return 0.0f;
@@ -657,7 +661,7 @@ float LadyVashjMaintainPhase1RangedSpreadMultiplier::GetValue(Action* action)
 
 float LadyVashjStaticChargeStayAwayFromGroupMultiplier::GetValue(Action* action)
 {
-    if (PlayerbotAI::IsMainTank(bot) || !bot->HasAura(SPELL_STATIC_CHARGE))
+    if (PlayerbotAI::IsMainTank(bot) || !bot->HasAura(Id(SscSpells::SPELL_STATIC_CHARGE)))
         return 1.0f;
 
     if (!AI_VALUE2(Unit*, "find target", "21212"))
@@ -699,16 +703,14 @@ float LadyVashjCorePassersPrioritizePositioningMultiplier::GetValue(Action* acti
     for (int i = 0; i < static_cast<int>(coreHandlers.size()); ++i)
     {
         if (coreHandlers[i] && coreHandlers[i] == bot)
-        {
             isCoreHandler = true;
-        }
     }
     if (!isCoreHandler)
         return 1.0f;
 
     auto hasCore = [](Player* player)
     {
-        return player && player->HasItemCount(ITEM_TAINTED_CORE, 1, false);
+        return player && player->HasItemCount(Id(SscItems::ITEM_TAINTED_CORE), 1, false);
     };
 
     // If the bot actually has the core, only allow core handling
@@ -720,8 +722,8 @@ float LadyVashjCorePassersPrioritizePositioningMultiplier::GetValue(Action* acti
         dynamic_cast<LadyVashjAssignPhase2AndPhase3DpsPriorityAction*>(action))
     {
         constexpr float corpseSearchRadius = 30.0f;
-        if (AI_VALUE2(Unit*, "find target", "22009") ||
-            bot->FindNearestCreature(NPC_TAINTED_ELEMENTAL, corpseSearchRadius, false))
+if (AI_VALUE2(Unit*, "find target", "22009") ||
+            bot->FindNearestCreature(Id(SscNpcs::NPC_TAINTED_ELEMENTAL), corpseSearchRadius, false))
             return 0.0f;
     }
 
