@@ -150,3 +150,48 @@ bool MarkCrossTargetAction::Execute(Event event)
 
     return true;
 }
+
+bool FallbackMarkSkullAction::Execute(Event event)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    if (bot->InBattleground())
+        return false;
+
+    ObjectGuid const mainTankGuid = PlayerbotAI::GetMainTankGuid(group);
+    if (mainTankGuid.IsEmpty())
+        return false;
+
+    Unit* mainTankUnit = botAI->GetUnit(mainTankGuid);
+    Player* mainTank = mainTankUnit ? mainTankUnit->ToPlayer() : nullptr;
+    if (!mainTank || GET_PLAYERBOT_AI(mainTank))
+        return false;
+
+    // 骷髅锁定规则与 MarkSkullTargetAction 一致: 指向存活怪时不变, 指向死亡/消失目标时清除重标
+    ObjectGuid const skullGuid = group->GetTargetIcon(RtiTargetValue::skullIndex);
+    if (!skullGuid.IsEmpty())
+    {
+        Unit* skulled = botAI->GetUnit(skullGuid);
+        if (skulled && skulled->IsAlive() && skulled->IsInWorld() && !skulled->IsPlayer())
+            return true;
+
+        group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), ObjectGuid::Empty);
+    }
+
+    // 优先标主坦克当前仇恨目标(正在拉的怪), 其次标主坦克选中的目标
+    Unit* target = mainTank->GetVictim();
+    if (!target || !target->IsCreature() || !target->IsAlive() || !target->IsInWorld())
+    {
+        target = botAI->GetUnit(mainTank->GetTarget());
+        if (!target || !target->IsCreature() || !target->IsAlive() || !target->IsInWorld())
+            return false;
+    }
+
+    // By leewheel 2026-08-31: 去重 —— 多个 Bot 可能同时触发, 图标已指向该目标时不重复 Set
+    if (group->GetTargetIcon(RtiTargetValue::skullIndex) != target->GetGUID())
+        group->SetTargetIcon(RtiTargetValue::skullIndex, bot->GetGUID(), target->GetGUID());
+
+    return true;
+}

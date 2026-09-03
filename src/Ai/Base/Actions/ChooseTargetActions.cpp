@@ -26,19 +26,24 @@ bool AttackEnemyPlayerAction::isUseful()
 bool AttackEnemyFlagCarrierAction::isUseful()
 {
     Unit* target = context->GetValue<Unit*>("enemy flag carrier")->Get();
-    if (!target || !PlayerHasFlag::IsCapturingFlag(bot))
+    // By leewheel 2026-09-01 修复：原条件 `!PlayerHasFlag::IsCapturingFlag(bot)` 写反了——
+    //   IsCapturingFlag(bot) 返回 true 表示 bot 自己持旗。原逻辑要求"bot 自己持旗才攻击
+    //   敌方旗手"，导致所有不持旗的 bot 全部被排除在拦截之外（用户实测"夺旗后无人拦截"）。
+    //   正确逻辑：自己持旗时应去交旗/护送（不追敌方旗手）；自己不持旗时才应拦截敌方旗手。
+    //   改为：自己持旗 → 返回 false（不拦截）；自己不持旗且敌方旗手在追距内 → 拦截。
+    // End By leewheel
+    if (!target || PlayerHasFlag::IsCapturingFlag(bot))
         return false;
 
     float dist = ServerFacade::instance().GetDistance2d(bot, target);
 
-    // By leewheel 2026-08-29
-    // 追旗手速度门槛（参考 NPCBots：由速度增益持有者负责追击）：
-    //   携带移动速度增益（狂暴/加速/旗帜加速等 SPEED 类 aura）的 bot 可远距离追击（100 码内）；
-    //   无增益的 bot 只在近距离（40 码内）参与拦截——否则追不上旗手白白空跑，
-    //   还不如留在自己的岗位（守家/守旗）。
+    // By leewheel 2026-09-01 修复：原"速度增益才追 100 码，无增益只追 40 码"导致
+    //   无加速 buff 的 bot 几乎不参与拦截，夺旗后无人追旗（用户实测"夺旗后无人拦截"）。
+    //   参考 NPCBots：任何 bot 视野内都应追击旗手。放宽为：有加速 buff 追 100 码，
+    //   无加速 buff 也能追 80 码（战场双方互相可见的距离内都能参与拦截）。
     // End By leewheel
     bool hasSpeedBuff = bot->HasAuraType(SPELL_AURA_MOD_INCREASE_SPEED);
-    float chaseRange = hasSpeedBuff ? 100.0f : 40.0f;
+    float chaseRange = hasSpeedBuff ? 100.0f : 80.0f;
 
     return ServerFacade::instance().IsDistanceLessOrEqualThan(dist, chaseRange);
 }

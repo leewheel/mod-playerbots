@@ -80,6 +80,12 @@ float WaitForAttackMultiplier::GetValue(Action* action)
         actionName != "pull start" &&
         actionName != "pull action" &&
         actionName != "pull end" &&
+        // By leewheel 2026-08-31: 等待攻击期间也允许标记 —— 等待中的 DPS 可能是兜底标骷髅的执行者,
+        // 若被清零就会出现玩家反馈的"标记延迟, 快打死了才标上"
+        actionName != "mark skull target" &&
+        actionName != "mark cross target" &&
+        actionName != "fallback mark skull" &&
+        actionName != "prioritize fleeing target" &&
         actionName != "surface for breath")
     {
         return WaitForAttackStrategy::ShouldWait(botAI) ? 0.0f : 1.0f;

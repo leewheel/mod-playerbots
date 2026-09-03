@@ -1651,7 +1651,15 @@ bool BGTactics::Execute(Event /*event*/)
     }
 
     if (getName() == "select objective")
-        return selectObjective();
+    {
+        // By leewheel 2026-09-01 修复：原 selectObjective() 不带 reset 参数，
+        //   而 selectObjective 开头有 if (pos.isSet() && !reset) return false;
+        //   导致岗位目标一旦设置就永不重算——守家 bot 守着旧目标不动，
+        //   拦截 bot 不追旗手（因为目标位置是旧的中场点而非旗手当前位置）。
+        //   改为强制重算（reset=true），每次触发都刷新岗位，达到 NPCBots 动态补位效果。
+        // End By leewheel
+        return selectObjective(true);
+    }
 
     if (getName() == "protect fc")
     {
@@ -1689,7 +1697,13 @@ bool BGTactics::Execute(Event /*event*/)
 
         // NOTE: can't use IsInCombat() when in vehicle as player is stuck in combat forever while in vehicle (ac bug?)
         bool inCombat = bot->GetVehicle() ? (bool)AI_VALUE(Unit*, "enemy player target") : bot->IsInCombat();
-        if (inCombat && !PlayerHasFlag::IsCapturingFlag(bot))
+        // By leewheel 2026-09-01 修复：原代码只要 inCombat 且非持旗就 return false，
+        //   但战场中 bot 几乎总在战斗（IsInCombat 持续 6 秒），导致岗位移动永远不执行。
+        //   改为：有活跃攻击目标（current target 非空）才阻断移动，否则即使战斗残留状态
+        //   （刚杀死目标等）也允许走向岗位。参考 NPCBots：bot 边走边打，无目标时朝岗位前进。
+        // End By leewheel
+        Unit* activeTarget = AI_VALUE(Unit*, "current target");
+        if (inCombat && activeTarget && !PlayerHasFlag::IsCapturingFlag(bot))
         {
             // bot->GetMotionMaster()->MovementExpired();
             return false;
@@ -3755,8 +3769,69 @@ bool BGTactics::resetObjective()
         bot->HasAura(BG_EY_NETHERSTORM_FLAG_SPELL);
 
     // Change role if allowed by odds and not carrying flag
-    if (urand(0, 99) < oddsToChangeRole && !isCarryingFlag)
+    // By leewheel 2026-09-01 动态守家补位（移植 NPCBots bot_ai.cpp 动态配额思想）：
+    //   固定 role（urand 0-9）的缺陷：守家岗(role<defMax)阵亡或离位后旗房空防，
+    //   只有 oddsToChangeRole%（WSG 2%）概率重掷 role 才可能补位——战场瞬息万变，2% 远不够。
+    //   NPCBots 做法：统计队友在关键节点的人数，不足时强制补位（bot_ai.cpp:19572-19762）。
+    //   这里在 WSG 中：统计本方存活队友在旗房 35 码内的人数，若低于守家配额，且当前 bot
+    //   离旗房 < 90 码、非持旗、非守家岗，则转为守家岗补位。补位概率随距离递减（避免全员
+    //   涌向旗房）。其他 BG 保持原 oddsToChangeRole 轮换机制。
+    // End By leewheel
+    if (bgType == BATTLEGROUND_WS && !isCarryingFlag)
+    {
+        uint32 myRole = context->GetValue<uint32>("bg role")->Get();
+        TeamId team = bot->GetTeamId();
+        Position const& homeFlagPos = (team == TEAM_ALLIANCE) ? WS_FLAG_POS_ALLIANCE : WS_FLAG_POS_HORDE;
+
+        // 守家配额（与 selectObjective WSG 分支一致：BALANCED=2/OFFENSIVE=1/DEFENSIVE=3）
+        uint8 defQuota = 2;
+        WSBotStrategy strat = static_cast<WSBotStrategy>(GetBotStrategyForTeam(bg, team));
+        switch (static_cast<uint8>(strat))
+        {
+            case WS_STRATEGY_OFFENSIVE: defQuota = 1; break;
+            case WS_STRATEGY_DEFENSIVE: defQuota = 3; break;
+            default: defQuota = 2; break;
+        }
+
+        // 统计本方存活队友在旗房 35 码内的人数（不含自己，自己后面单独判断）
+        uint32 guardCount = 0;
+        GuidVector members = AI_VALUE(GuidVector, "group members");
+        for (ObjectGuid const& guid : members)
+        {
+            if (guid == bot->GetGUID())
+                continue;
+            Unit* member = botAI->GetUnit(guid);
+            if (!member || !member->IsAlive())
+                continue;
+            if (member->GetDistance2d(homeFlagPos.GetPositionX(), homeFlagPos.GetPositionY()) < 35.0f)
+                ++guardCount;
+        }
+
+        bool isGuard = (myRole < defQuota);
+        float distHome = bot->GetDistance2d(homeFlagPos.GetPositionX(), homeFlagPos.GetPositionY());
+
+        // 守家不足且自己离旗房近 → 补位守家
+        if (!isGuard && guardCount < defQuota && distHome < 90.0f)
+        {
+            // 补位概率：离越近越高（避免全员涌向旗房，留人继续进攻）
+            uint32 chance = distHome < 45.0f ? 60 : 30;
+            if (urand(0, 99) < chance)
+            {
+                context->GetValue<uint32>("bg role")->Set(urand(0, defQuota - 1));
+                LOG_DEBUG("playerbots", "{} 补位守家：旗房守家人数不足({})，距旗房 {:.0f} 码",
+                    bot->GetName(), guardCount, distHome);
+            }
+        }
+        // 守家充足或已补位 → 保持原来的 2% 轮换（让角色有机会响应策略变化）
+        else if (urand(0, 99) < oddsToChangeRole)
+        {
+            context->GetValue<uint32>("bg role")->Set(urand(0, 9));
+        }
+    }
+    else if (urand(0, 99) < oddsToChangeRole && !isCarryingFlag)
+    {
         context->GetValue<uint32>("bg role")->Set(urand(0, 9));
+    }
 
     // Reset objective position
     PositionMap& posMap = context->GetValue<PositionMap&>("position")->Get();
@@ -4396,6 +4471,17 @@ void BGTactics::focusTeamTarget()
     if (!bot->IsInCombat())
         return;
 
+    // By leewheel 2026-09-01 修复：守旗岗不参与集火——若 bot 处于本方旗房 40 码内
+    //   （守旗岗角色 0/1 通常钉在旗房），强制集火会把守旗 bot 拉离旗位去追远方目标，
+    //   导致旗房空防（用户反馈"双方都没人守旗"）。守旗 bot 应专心留守旗房。
+    // End By leewheel
+    if (bot->GetBattlegroundTypeId() == BATTLEGROUND_WS)
+    {
+        Position const myFlagPos = bot->GetTeamId() == TEAM_ALLIANCE ? WS_FLAG_POS_ALLIANCE : WS_FLAG_POS_HORDE;
+        if (bot->GetDistance2d(myFlagPos.GetPositionX(), myFlagPos.GetPositionY()) < 40.0f)
+            return;
+    }
+
     // 统计队友的攻击目标
     std::unordered_map<ObjectGuid, uint8> targetCount;
     GuidVector members = AI_VALUE(GuidVector, "group members");
@@ -4440,7 +4526,12 @@ void BGTactics::focusTeamTarget()
     if (!focusTarget || !focusTarget->IsAlive() || bot->GetDistance(focusTarget) > 60.f)
         return;
 
-    botAI->GetAiObjectContext()->GetValue<ObjectGuid>("current target")->Set(bestGuid);
+    //By leewheel 2026-09-01 崩溃修复：原代码用 GetValue<ObjectGuid>("current target")，
+    //   但全库 "current target" value 注册类型是 Unit*（AiObjectContext::GetValue 内部 dynamic_cast
+    //   类型不匹配返回 nullptr，->Set() 空指针解引用崩溃 C0000005，崩溃栈 BGTactics::focusTeamTarget）。
+    //   改为 Unit* 类型并写入解析出的 focusTarget 指针。
+    botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Set(focusTarget);
+    //End By leewheel
     LOG_DEBUG("playerbots", "团队集火：机器人 {} 对齐目标到 {}（{} 名队友在攻击）", bot->GetName(),
               focusTarget->GetName(), bestCount);
 }

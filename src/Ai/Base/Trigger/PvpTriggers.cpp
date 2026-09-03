@@ -242,6 +242,11 @@ bool EnemyTeamHasFlag::IsActive()
     return false;
 }
 
+// By leewheel 2026-09-01 修复：原"更近敌人 +15 码"排除逻辑过严——混战中旗手身边
+//   总有其他敌人，导致 bot 永远不追旗手（用户反馈"夺旗后没人拦截"）。
+//   参考 NPCBots：旗手优先级最高，只要视野内存在旗手且距离 < 100 码就应追击。
+//   移除"更近敌人"排除，确保拦截旗手是第一要务。
+// End By leewheel
 bool EnemyFlagCarrierNear::IsActive()
 {
     Unit* carrier = AI_VALUE(Unit*, "enemy flag carrier");
@@ -249,38 +254,17 @@ bool EnemyFlagCarrierNear::IsActive()
     if (!carrier || !ServerFacade::instance().IsDistanceLessOrEqualThan(ServerFacade::instance().GetDistance2d(bot, carrier), 100.f))
         return false;
 
-    // Check if there is another enemy player target closer than the FC
-    Unit* nearbyEnemy = AI_VALUE(Unit*, "enemy player target");
-
-    if (nearbyEnemy)
-    {
-        float distToFC = ServerFacade::instance().GetDistance2d(bot, carrier);
-        float distToEnemy = ServerFacade::instance().GetDistance2d(bot, nearbyEnemy);
-
-        // If the other enemy is significantly closer, don't pursue FC
-        if (distToEnemy + 15.0f < distToFC) // Add small buffer
-            return false;
-    }
-
     return true;
 }
 
 bool TeamFlagCarrierNear::IsActive()
 {
-    if (bot->GetBattlegroundTypeId() == BATTLEGROUND_WS)
-    {
-        BattlegroundWS* bg = dynamic_cast<BattlegroundWS*>(bot->GetBattleground());
-        if (bg)
-        {
-            bool bothFlagsNotAtBase =
-                bg->GetFlagState(TEAM_ALLIANCE) != BG_WS_FLAG_STATE_ON_BASE &&
-                bg->GetFlagState(TEAM_HORDE) != BG_WS_FLAG_STATE_ON_BASE;
-
-            if (bothFlagsNotAtBase)
-                return false;
-        }
-    }
-
+    // By leewheel 2026-09-01 修复：原"双旗都不在基地 → 返回 false"会让己方旗手失去保护——
+    //   当敌方夺走我方旗、我方又夺走敌旗时（bothFlagsNotAtBase 成立），bot 不再护送己方旗手，
+    //   导致己方旗手孤身被击杀、夺旗进度归零（用户反馈"夺旗后无人护送/拦截"）。
+    //   参考 NPCBots：护送己方旗手与拦截敌方旗手都是第一优先级，互不冲突。
+    //   移除该排除，只要己方旗手在 200 码内就护送。
+    // End By leewheel
     Unit* carrier = AI_VALUE(Unit*, "team flag carrier");
     return carrier && ServerFacade::instance().IsDistanceLessOrEqualThan(ServerFacade::instance().GetDistance2d(bot, carrier), 200.f);
 }

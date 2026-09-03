@@ -99,6 +99,7 @@ private:
 
 std::unordered_set<ObjectGuid> BotInitGuard::botsBeingInitialized;
 std::unordered_map<ObjectGuid, uint32> PlayerbotHolder::botLoading;
+std::unordered_map<ObjectGuid, time_t> PlayerbotHolder::botLoadingTime;
 
 PlayerbotHolder::PlayerbotHolder() : PlayerbotAIBase(false) {}
 class PlayerbotLoginQueryHolder : public LoginQueryHolder
@@ -200,6 +201,7 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
     }
 
     botLoading.emplace(playerGuid, masterAccountId);
+    botLoadingTime[playerGuid] = time(nullptr);
 
     // Always login in with world session to avoid race condition
     sWorld->AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(holder))
@@ -227,6 +229,7 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
                         }
 
                         PlayerbotHolder::botLoading.erase(holder.GetGuid());
+                        PlayerbotHolder::botLoadingTime.erase(holder.GetGuid());
 
                         return;
                     }
@@ -245,14 +248,26 @@ bool PlayerbotHolder::IsAccountLinked(uint32 accountId, uint32 linkedAccountId)
 
 void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder const& holder)
 {
+    //By leewheel 2026年9月1日 诊断日志（已注释，老大要求去掉刷屏）
     uint32 botAccountId = holder.GetAccountId();
+    ObjectGuid botGuid = holder.GetGuid();
+    //LOG_INFO("playerbots", "机器人登录诊断: 进入 HandlePlayerBotLoginCallback accountId={} guid={}", botAccountId, botGuid.GetCounter());
+    //End By leewheel
+
     // At login DBC locale should be what the server is set to use by default (as spells etc are hardcoded to ENUS this
     // allows channels to work as intended)
     WorldSession* botSession =
         new WorldSession(botAccountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING, time_t(0),
                          sWorld->GetDefaultDbcLocale(), 0, false, false, 0, true);
 
+    //By leewheel 2026年9月1日 诊断日志（已注释，老大要求去掉刷屏）
+    //LOG_INFO("playerbots", "机器人登录诊断: 即将调用 HandlePlayerLoginFromDB guid={}", botGuid.GetCounter());
+    //End By leewheel
     botSession->HandlePlayerLoginFromDB(holder);  // will delete lqh
+
+    //By leewheel 2026年9月1日 诊断日志（已注释，老大要求去掉刷屏）
+    //LOG_INFO("playerbots", "机器人登录诊断: HandlePlayerLoginFromDB 返回 guid={}", botGuid.GetCounter());
+    //End By leewheel
 
     Player* bot = botSession->GetPlayer();
     if (!bot)
@@ -262,6 +277,7 @@ void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder con
         botSession->LogoutPlayer(true);
         delete botSession;
         PlayerbotHolder::botLoading.erase(holder.GetGuid());
+        PlayerbotHolder::botLoadingTime.erase(holder.GetGuid());
 
         return;
     }
@@ -281,6 +297,7 @@ void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder con
     PlayerbotWorldThreadProcessor::instance().QueueOperation(std::move(op));
 
     PlayerbotHolder::botLoading.erase(holder.GetGuid());
+    PlayerbotHolder::botLoadingTime.erase(holder.GetGuid());
 }
 
 void PlayerbotHolder::UpdateSessions()

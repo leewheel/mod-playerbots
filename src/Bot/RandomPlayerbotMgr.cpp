@@ -427,6 +427,35 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
 
     if (!availableBots.empty())
     {
+        // By leewheel 2026-09-01 修复：botLoading 中卡死的条目（异步查询回调异常/丢失）
+        //   会阻塞整个登录循环（gate: botLoading.empty()），导致在线 bot 数稳定在 N/500
+        //   永不增长。无条件（不依赖 loginBots）检查 botLoading：已在线但未擦除的条目、
+        //   以及入队超过 60 秒仍未完成登录的条目，一律清理，让登录循环继续。
+        // End By leewheel
+        if (!botLoading.empty())
+        {
+            time_t now = time(nullptr);
+            std::vector<ObjectGuid> staleEntries;
+            for (auto const& [guid, _] : botLoading)
+            {
+                // 已在线（登录完成但回调未擦除 botLoading）→ 清理
+                if (ObjectAccessor::FindConnectedPlayer(guid))
+                {
+                    staleEntries.push_back(guid);
+                    continue;
+                }
+                // 入队超过 60 秒（登录卡住/异步回调丢失）→ 清理
+                auto it = botLoadingTime.find(guid);
+                if (it != botLoadingTime.end() && (now - it->second) > 60)
+                    staleEntries.push_back(guid);
+            }
+            for (ObjectGuid const& stale : staleEntries)
+            {
+                botLoading.erase(stale);
+                botLoadingTime.erase(stale);
+            }
+        }
+
         // Update bots
         for (auto bot : availableBots)
         {
@@ -442,29 +471,32 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
                 break;
         }
 
-        if (loginBots && botLoading.empty())
+        if (loginBots)
         {
-            loginBots += updateBots;
-            loginBots = std::min(loginBots, maxNewBots);
-
-            LOG_DEBUG("playerbots", "{} 个新机器人准备登录", loginBots);
-
-            // Log in bots
-            for (auto bot : availableBots)
+            if (botLoading.empty())
             {
-                if (GetPlayerBot(bot))
-                    continue;
+                loginBots += updateBots;
+                loginBots = std::min(loginBots, maxNewBots);
 
-                if (ProcessBot(bot))
+                LOG_DEBUG("playerbots", "{} 个新机器人准备登录", loginBots);
+
+                // Log in bots
+                for (auto bot : availableBots)
                 {
-                    loginBots--;
+                    if (GetPlayerBot(bot))
+                        continue;
+
+                    if (ProcessBot(bot))
+                    {
+                        loginBots--;
+                    }
+
+                    if (!loginBots)
+                        break;
                 }
 
-                if (!loginBots)
-                    break;
+                DelayLoginBotsTimer = 0;
             }
-
-            DelayLoginBotsTimer = 0;
         }
     }
 
@@ -2439,7 +2471,18 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
     uint32 randomTime;
     if (!player)
     {
+        // By leewheel 2026-09-01 修复：原代码无条件 return true，掩盖 AddPlayerBot
+        //   静默失败（角色缓存缺失/查询回调异常等）。AddPlayerBot 成功入队登录后会
+        //   写入 botLoading；若未入队（静默失败）返回 false，登录循环会继续尝试其他 bot，
+        //   避免"499/500 永不增长"——卡死的 bot 不再被误判为已处理。
+        //   注意：如果 botLoading 中已有该 guid（上次登录卡住残留），AddPlayerBot 首行
+        //   直接 return，不会新入队——此时 botLoading 仍有该 guid，但并非新发起的登录。
+        //   需要检查调用前是否已在 botLoading 中，是则返回 false（等超时清理后重试）。
+        // End By leewheel
+        bool wasAlreadyLoading = botLoading.find(botGUID) != botLoading.end();
         AddPlayerBot(botGUID, 0);
+        if (botLoading.find(botGUID) == botLoading.end() || wasAlreadyLoading)
+            return false;
         randomTime = urand(1, 2);
 
         uint32 randomBotUpdateInterval = _isBotInitializing ? 1 : sPlayerbotAIConfig.randomBotUpdateInterval;
@@ -2974,7 +3017,10 @@ void RandomPlayerbotMgr::ReshuffleAmbienceBots()
                     continue;
 
                 int band = static_cast<int>(sPlayerbotAIConfig.ambienceSyncLevelBand);
-                int newLevel = static_cast<int>(targetLevel) + urand(-band, band);
+                // By leewheel 2026-09-01 修复崩溃：urand 参数是 uint32，负数 -band 会转成巨大值触发
+                //   "Assertion failed: max >= min"。改用有符号整数的 irand(-band, band)。
+                int newLevel = static_cast<int>(targetLevel) + irand(-band, band);
+                // End By leewheel
                 newLevel = std::clamp(newLevel, 1, static_cast<int>(maxLevel));
 
                 // 死亡骑士不得低于英雄职业起始等级（55），否则破坏DK职业机制

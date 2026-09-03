@@ -18,6 +18,15 @@ BGStrategy::BGStrategy(PlayerbotAI* botAI) : PassThroughStrategy(botAI) {}
 
 void BattlegroundStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
+    // By leewheel 2026-09-01 修复岗位刷新频率：原 "bg active"→"bg move to objective" 在
+    //   NONCOMBAT 引擎（脱战）执行，战场中 bot 几乎总在战斗导致岗位目标几乎不更新。
+    //   现在 WarsongStrategy（GENERIC 双引擎）也挂载了 "often"→"bg check objective" 与
+    //   "bg active"→"bg move to objective"，确保战斗中岗位目标持续刷新。
+    //   注意：不把 "bg select objective" 挂到 "bg active"（每 tick 触发）——那会导致每 tick
+    //   强制重算岗位（selectObjective 带 reset=true），造成目标位置抖动（NPCBots 思想：岗位
+    //   刷新由 often 定时器驱动，而非每 tick 重算）。岗位刷新由 "bg check objective"→
+    //   resetObjective→selectObjective(true) 每 ~5 秒执行一次，加上 2% 概率轮换 role。
+    // End By leewheel
     triggers.push_back(new TriggerNode("bg waiting", { NextAction("bg move to start", ACTION_BG)}));
     triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
     triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));
@@ -56,6 +65,14 @@ void PvpCycleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 void WarsongStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     triggers.push_back(new TriggerNode("bg active", { NextAction("bg check flag", ACTION_EMERGENCY )}));
+    // By leewheel 2026-09-01 修复：原 BattlegroundStrategy 只在脱战引擎执行（NONCOMBAT），
+    //   战场中 bot 几乎总在战斗，导致岗位移动（bg move to objective）几乎不触发。
+    //   WarsongStrategy 为 GENERIC 类型，战斗/非战斗双引擎挂载，这里补充 bg move to objective
+    //   与 bg check objective，让 bot 在战斗中也能走向岗位（实际执行时战斗动作优先级更高，
+    //   只在无攻击目标时走位，不干扰战斗）。
+    // End By leewheel
+    triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
+    triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));
     triggers.push_back(new TriggerNode("enemy flagcarrier near", { NextAction("attack enemy flag carrier", ACTION_RAID + 1.0f)}));
     triggers.push_back(new TriggerNode("team flagcarrier near", { NextAction("bg protect fc", ACTION_RAID)}));
     triggers.push_back(new TriggerNode("often", { NextAction("bg use buff", ACTION_BG)}));
@@ -67,12 +84,26 @@ void WarsongStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void AlteracStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
+    // By leewheel 2026-09-01 修复 AV 战斗中岗位失效：原 alterac 策略只有 "alliance no snowfall gy"
+    //   与 "timer bg"，岗位移动/刷新完全依赖 battleground 策略（NONCOMBAT 仅脱战引擎生效），
+    //   战斗中岗位永不刷新。alterac 是 GENERIC 双引擎，补挂岗位链对齐 warsong。
+    // End By leewheel
+    triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
+    triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));
     triggers.push_back(new TriggerNode("alliance no snowfall gy", { NextAction("bg move to objective", ACTION_EMERGENCY)}));
     triggers.push_back(new TriggerNode("timer bg", { NextAction("bg reset objective force", ACTION_EMERGENCY)}));
 }
 
 void ArathiStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
+    // By leewheel 2026-09-01 修复 AB 战斗中岗位失效：原 arathi 策略只挂 "bg check flag"，
+    //   岗位移动("bg move to objective")与岗位刷新("often→bg check objective")由
+    //   battleground 策略提供，但那是 NONCOMBAT 类型只在脱战引擎生效——战斗中岗位永不刷新，
+    //   bot 打完一架就站在原地发呆（用户实测"战场一片懒散"）。arathi 是 GENERIC 双引擎，
+    //   这里补挂两条岗位链，与 warsong 对齐，战斗中持续刷新岗位。
+    // End By leewheel
+    triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
+    triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));
     triggers.push_back(new TriggerNode("bg active", { NextAction("bg check flag", ACTION_EMERGENCY)}));
     triggers.push_back(new TriggerNode("often", { NextAction("bg use buff", ACTION_BG)}));
     triggers.push_back(new TriggerNode("low health", { NextAction("bg use buff", ACTION_MOVE)}));
@@ -81,6 +112,11 @@ void ArathiStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void EyeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
+    // By leewheel 2026-09-01 修复 EotS 战斗中岗位失效：同 AB 问题（见 ArathiStrategy 注释），
+    //   eye 策略补挂岗位移动与刷新链，战斗中持续刷新岗位。
+    // End By leewheel
+    triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
+    triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));
     triggers.push_back(new TriggerNode("bg active", { NextAction("bg check flag", ACTION_EMERGENCY)}));
     triggers.push_back(new TriggerNode("often", { NextAction("bg use buff", ACTION_BG)}));
     triggers.push_back(new TriggerNode("low health", { NextAction("bg use buff", ACTION_MOVE)}));
@@ -92,6 +128,12 @@ void EyeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 //TODO: Do Priorities
 void IsleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
+    // By leewheel 2026-09-01 修复 IC 战斗中岗位失效：原 isle 策略只有载具动作，
+    //   岗位移动完全依赖 battleground 策略（NONCOMBAT 仅脱战引擎生效）。
+    //   isle 是 GENERIC 双引擎，补挂岗位链，下船后/走路阶段能持续刷新岗位。
+    // End By leewheel
+    triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
+    triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));
     triggers.push_back(new TriggerNode("bg active", { NextAction("bg check flag", ACTION_MOVE)}));
     triggers.push_back(new TriggerNode("timer", { NextAction("enter vehicle", ACTION_MOVE + 8.0f)}));
     triggers.push_back(new TriggerNode("random", { NextAction("leave vehicle", ACTION_MOVE + 7.0f)}));

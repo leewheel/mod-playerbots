@@ -284,6 +284,9 @@ public:
         creators["off tank can mark cross"] = &TriggerContext::off_tank_can_mark_cross;
         creators["main tank can mark cross"] = &TriggerContext::main_tank_can_mark_cross;
 
+        // By leewheel 2026-08-31: 主坦克是真实玩家时的兜底标骷髅触发器
+        creators["fallback mark skull"] = &TriggerContext::fallback_mark_skull;
+
         // By leewheel 2026-07-15: 逃跑怪优先集火触发器
         creators["fleeing target"] = &TriggerContext::fleeing_target;
     }
@@ -522,6 +525,9 @@ private:
     static Trigger* main_tank_can_mark_skull(PlayerbotAI* botAI) { return new MainTankMarkSkullTrigger(botAI); }
     static Trigger* off_tank_can_mark_cross(PlayerbotAI* botAI) { return new OffTankMarkCrossTrigger(botAI); }
     static Trigger* main_tank_can_mark_cross(PlayerbotAI* botAI) { return new MainTankMarkCrossTrigger(botAI); }
+
+    // By leewheel 2026-08-31: 主坦克是真实玩家时的兜底标骷髅触发器
+    static Trigger* fallback_mark_skull(PlayerbotAI* botAI) { return new FallbackMarkSkullTrigger(botAI); }
     // By leewheel 2026-07-15
     static Trigger* fleeing_target(PlayerbotAI* botAI) { return new FleeingTargetTrigger(botAI); }
     static Trigger* low_breath(PlayerbotAI* ai) { return new LowBreathTrigger(ai); }

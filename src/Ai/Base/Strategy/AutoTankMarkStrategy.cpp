@@ -18,9 +18,18 @@ void AutoTankMarkStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     ));
 
     // 主坦克自动标记骷髅（第一攻击目标）
+    // By leewheel 2026-08-31: 硬性规则要求开怪立即标记, 优先级从 NORMAL+5 提升到 HIGH,
+    // 解决玩家反馈的"标记延迟, 快打死了才标上"
     triggers.push_back(new TriggerNode(
         "main tank can mark skull",
-        { NextAction("mark skull target", ACTION_NORMAL + 5.0f) }
+        { NextAction("mark skull target", ACTION_HIGH) }
+    ));
+
+    // By leewheel 2026-08-31: 主坦克是真实玩家时, 由任意队伍 Bot 兜底标骷髅
+    // （否则没有任何 Bot 满足 IsMainTank, 骷髅永远不会被标记）
+    triggers.push_back(new TriggerNode(
+        "fallback mark skull",
+        { NextAction("fallback mark skull", ACTION_HIGH) }
     ));
 
     // 副坦克自动标记叉叉（第二攻击目标）—— 团本场景

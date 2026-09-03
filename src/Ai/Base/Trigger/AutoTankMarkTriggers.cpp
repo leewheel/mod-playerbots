@@ -145,3 +145,35 @@ bool MainTankMarkCrossTrigger::IsActive()
 
     return true;
 }
+
+bool FallbackMarkSkullTrigger::IsActive()
+{
+    if (!sPlayerbotAIConfig.autoTankMarkEnabled)
+        return false;
+
+    if (!IsMarkAllowed(bot))
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    ObjectGuid const mainTankGuid = PlayerbotAI::GetMainTankGuid(group);
+    if (mainTankGuid.IsEmpty())
+        return false;
+
+    Unit* mainTankUnit = botAI->GetUnit(mainTankGuid);
+    Player* mainTank = mainTankUnit ? mainTankUnit->ToPlayer() : nullptr;
+    if (!mainTank)
+        return false;
+
+    // 主坦克是机器人时由它自己的"main tank can mark skull"触发器负责, 此处不重复
+    if (GET_PLAYERBOT_AI(mainTank))
+        return false;
+
+    // 主坦克(真实玩家)进战斗后立即标记, 不等其他 Bot 进战斗
+    if (!mainTank->IsInCombat())
+        return false;
+
+    return IsMarkSlotAvailable(botAI, group, RtiTargetValue::skullIndex);
+}

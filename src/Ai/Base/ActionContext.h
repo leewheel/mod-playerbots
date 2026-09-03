@@ -306,6 +306,9 @@ public:
         creators["mark skull target"] = &ActionContext::mark_skull_target;
         creators["mark cross target"] = &ActionContext::mark_cross_target;
 
+        // By leewheel 2026-08-31: 主坦克是真实玩家时的兜底标骷髅动作
+        creators["fallback mark skull"] = &ActionContext::fallback_mark_skull;
+
         // By leewheel 2026-07-15: 逃跑怪优先集火动作
         creators["prioritize fleeing target"] = &ActionContext::prioritize_fleeing_target;
     }
@@ -533,6 +536,9 @@ private:
     // By leewheel 2026-07-15
     static Action* mark_skull_target(PlayerbotAI* botAI) { return new MarkSkullTargetAction(botAI); }
     static Action* mark_cross_target(PlayerbotAI* botAI) { return new MarkCrossTargetAction(botAI); }
+
+    // By leewheel 2026-08-31: 主坦克是真实玩家时的兜底标骷髅动作
+    static Action* fallback_mark_skull(PlayerbotAI* botAI) { return new FallbackMarkSkullAction(botAI); }
     // By leewheel 2026-07-15
     static Action* prioritize_fleeing_target(PlayerbotAI* botAI) { return new PrioritizeFleeingTargetAction(botAI); }
 };

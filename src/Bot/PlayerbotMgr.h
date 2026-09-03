@@ -10,6 +10,7 @@
 #include "ObjectGuid.h"
 #include "Player.h"
 #include "PlayerbotAIBase.h"
+#include <ctime>
 
 class ChatHandler;
 class PlayerbotAI;
@@ -59,6 +60,11 @@ protected:
 
     PlayerBotMap playerBots;
     static std::unordered_map<ObjectGuid, uint32> botLoading;
+    // By leewheel 2026-09-01 修复：botLoading 无超时机制——若某 bot 的登录异步回调丢失/异常，
+    //   它会永久驻留 botLoading，AddPlayerBot 因首行重复检查直接 return（看似"已入队"），
+    //   但 bot 永远登录不上，还阻塞整个登录循环。记录每个 bot 的入队时间，超时强制清除。
+    // End By leewheel
+    static std::unordered_map<ObjectGuid, time_t> botLoadingTime;
 };
 
 class PlayerbotMgr : public PlayerbotHolder

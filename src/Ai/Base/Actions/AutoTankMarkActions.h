@@ -31,4 +31,14 @@ public:
     bool Execute(Event event) override;
 };
 
+// By leewheel 2026-08-31: 兜底标骷髅动作 —— 主坦克是真实玩家时,
+// 把骷髅标记打在真实玩家主坦克当前正在拉的怪(仇恨目标/当前目标)上
+class FallbackMarkSkullAction : public Action
+{
+public:
+    FallbackMarkSkullAction(PlayerbotAI* botAI) : Action(botAI, "fallback mark skull") {}
+
+    bool Execute(Event event) override;
+};
+
 #endif

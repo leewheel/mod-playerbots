@@ -45,4 +45,16 @@ public:
     bool IsActive() override;
 };
 
+// By leewheel 2026-08-31: 兜底标骷髅触发器 —— 主坦克是真实玩家时
+// 主坦克不是机器人则没有任何 Bot 满足 IsMainTank(bot)，骷髅永远不会被标记
+// （玩家反馈"自动标记时有时无"的根因之一）。
+// 条件：配置开启 + 非战场/竞技场 + 主坦克为真实玩家且已进战斗 + 骷髅槽位可用
+class FallbackMarkSkullTrigger : public Trigger
+{
+public:
+    FallbackMarkSkullTrigger(PlayerbotAI* botAI) : Trigger(botAI, "fallback mark skull") {}
+
+    bool IsActive() override;
+};
+
 #endif
