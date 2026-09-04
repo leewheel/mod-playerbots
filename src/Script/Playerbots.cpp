@@ -6,6 +6,7 @@
 
 #include "Playerbots.h"
 #include "BattleGroundTactics.h"
+#include "BgWanderGraph.h"
 #include "BattlefieldScript.h"
 #include "Channel.h"
 #include "Config.h"
@@ -373,6 +374,10 @@ public:
         LOG_INFO("server.loading", " ");
 
         PlayerbotSpellRepository::Instance().Initialize();
+
+        // By leewheel 2026-09-03 加载战场游走节点图(移植自NPCBots, 供战场策略按节点决策)
+        BgWanderGraph::instance()->Load();
+        // End By leewheel
 
         LOG_INFO("server.loading", "Playerbots World Thread Processor initialized");
     }

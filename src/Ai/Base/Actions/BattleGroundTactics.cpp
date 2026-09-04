@@ -8,6 +8,7 @@
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
 #include "BattleGroundJoinAction.h"
+#include "BgWanderGraph.h"
 #include "Battleground.h"
 #include "BattlegroundAB.h"
 #include "BattlegroundAV.h"
@@ -1689,6 +1690,77 @@ bool BGTactics::Execute(Event /*event*/)
                 return true;
         }
 
+        // By leewheel 2026-09-03 - 掉旗30码必捡（移植 NPCBots bot_ai.cpp:18393-18405）：
+        //   WSG/EY 场上有掉落旗时，30码内无条件先去捡（战斗中也让位）：
+        //   <5码下马直接Use拾取，5~30码移动过去。旗手不适用(已持旗)。
+        //   隐身/潜行者不抢(NPCBots同款排除)。
+        // End By leewheel
+        if (bgType == BATTLEGROUND_WS || bgType == BATTLEGROUND_EY)
+        {
+            if (!bot->HasInvisibilityAura() && !bot->HasStealthAura() &&
+                !bot->HasAuraTypeWithMiscvalue(SPELL_AURA_FORCE_REACTION, 1059) &&
+                !PlayerHasFlag::IsCapturingFlag(bot))
+            {
+                ObjectGuid droppedFlagGuid;
+                if (bgType == BATTLEGROUND_WS)
+                {
+                    droppedFlagGuid = static_cast<BattlegroundWS*>(bg)->GetDroppedFlagGUID(bot->GetTeamId());
+                    if (droppedFlagGuid.IsEmpty())
+                        droppedFlagGuid = static_cast<BattlegroundWS*>(bg)->GetDroppedFlagGUID(bg->GetOtherTeamId(bot->GetTeamId()));
+                }
+                else if (BattlegroundEY* eyBg = dynamic_cast<BattlegroundEY*>(bg))
+                    droppedFlagGuid = eyBg->GetDroppedFlagGUID();
+
+                GameObject* droppedFlag = droppedFlagGuid ? bg->GetBgMap()->GetGameObject(droppedFlagGuid) : nullptr;
+                if (droppedFlag)
+                {
+                    float const fdist = bot->GetDistance(droppedFlag);
+                    if (fdist < 30.f)
+                    {
+                        if (fdist < INTERACTION_DISTANCE * 0.5f)
+                        {
+                            if (bot->IsMounted())
+                                bot->RemoveAurasByType(SPELL_AURA_MOUNTED);
+
+                            if (bot->IsInDisallowedMountForm())
+                                bot->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT);
+
+                            bot->StopMoving();
+                            WorldPacket data(CMSG_GAMEOBJ_USE);
+                            data << droppedFlag->GetGUID();
+                            bot->GetSession()->HandleGameObjectUseOpcode(data);
+                            resetObjective();
+                            return true;
+                        }
+                        return MoveTo(bot->GetMapId(), droppedFlag->GetPositionX(), droppedFlag->GetPositionY(),
+                                      droppedFlag->GetPositionZ());
+                    }
+                }
+                // By leewheel 2026-09-03 - 非旗手80码内跟随旗手（NPCBots bot_ai.cpp:18406-18422）：
+                //   掉旗无活可干时向旗手聚拢，形成天然护航。旗手不适用。
+                // End By leewheel
+                if (!PlayerHasFlag::IsCapturingFlag(bot))
+                {
+                    // 遍历战场所有玩家找旗手(敌我不限, NPCBots语义)
+                    Unit* nearbyFC = nullptr;
+                    for (auto const& bgPlayer : bg->GetPlayers())
+                    {
+                        Player* player = bgPlayer.second;
+                        if (player && player->IsAlive() && player != bot &&
+                            (player->HasAura(BG_WS_SPELL_WARSONG_FLAG) || player->HasAura(BG_WS_SPELL_SILVERWING_FLAG) ||
+                             player->HasAura(BG_EY_NETHERSTORM_FLAG_SPELL)))
+                        {
+                            nearbyFC = player;
+                            break;
+                        }
+                    }
+                    if (nearbyFC && bot->GetDistance(nearbyFC) < 80.f && bot->GetDistance(nearbyFC) > 15.f)
+                        return MoveTo(bot->GetMapId(), nearbyFC->GetPositionX(), nearbyFC->GetPositionY(),
+                                      nearbyFC->GetPositionZ());
+                }
+            }
+        }
+
         if (vFlagIds && atFlag(*vPaths, *vFlagIds))
             return true;
 
@@ -2256,17 +2328,19 @@ bool BGTactics::selectObjective(bool reset)
         }
         case BATTLEGROUND_WS:
         {
+            // By leewheel 2026-09-03 - 完整移植 NPCBots(Trickerer版) 战歌策略(bot_ai.cpp:19572-19942)：
+            //   舍弃随机 role 岗位制，改为"全队实时动态核算 + 四步优先级链"：
+            //   ① 我是旗手 → 走向本方交旗点(无附加条件，送旗高于一切)；
+            //   ② 敌旗在基地 → 冲敌方旗房拿旗(在攻防核算之前，保证拿旗永远是第一行动机会)；
+            //   ③ 神水(血<60%吃恢复/无缩小吃狂暴，带一人一buff去重)；
+            //   ④ 攻防配额核算：max_attackers=max(size*8/10, size/2+2)，攻方未满/我旗被拿(赛跑战术)/
+            //      我被缩小 → 攻向敌旗房；攻满且我旗在家 → 不足 max_defenders 时补防守。
+            //   移动载体：节点图(BgWanderGraph, NPCBots WanderNode 等价)最短路径下一跳；
+            //   图未加载时退化到旧常量点位(WS_FLAG_POS_* 等)。
+            // End By leewheel
             Position target;
             TeamId team = bot->GetTeamId();
-
-            // By leewheel 2026-08-29 - 重写战歌峡谷目标选择：以夺旗为核心，击杀只是夺旗的手段。
-            //   旧逻辑的三大问题：
-            //   1) 进攻者 70% 概率追杀敌方旗手，多数时间在杀人而非抢旗；
-            //   2) 不判断敌方旗帜是否还在基地，己方旗手已拿到敌旗时仍空跑敌方旗房；
-            //   3) 守家者仅 33% 概率留在基地附近，本方旗房经常空防。
-            //   新逻辑：按 role 0-9 划分四个岗位 —— 守家 / 中场拦截 / 偷旗 / 机动，
-            //   各岗位依据双方旗帜状态（在基地 / 被携带）选择目标。
-            // End By leewheel
+            BattlegroundWS* ws = static_cast<BattlegroundWS*>(bg);
 
             // 随机点安置工具（修复旧版对 GetRandomPoint 返回值的 valid/invalid 处理写反的问题）
             auto SetSafePos = [&](Position const& origin, float radius = 0.0f) -> void
@@ -2287,170 +2361,207 @@ bool BGTactics::selectObjective(bool reset)
             // Check if the bot is carrying the flag
             bool hasFlag = bot->HasAura(BG_WS_SPELL_WARSONG_FLAG) || bot->HasAura(BG_WS_SPELL_SILVERWING_FLAG);
 
-            // Retrieve role
-            uint8 role = context->GetValue<uint32>("bg role")->Get();
-            WSBotStrategy strategyHorde = static_cast<WSBotStrategy>(GetBotStrategyForTeam(bg, TEAM_HORDE));
-            WSBotStrategy strategyAlliance = static_cast<WSBotStrategy>(GetBotStrategyForTeam(bg, TEAM_ALLIANCE));
-            WSBotStrategy strategy = (team == TEAM_ALLIANCE) ? strategyAlliance : strategyHorde;
-            WSBotStrategy enemyStrategy = (team == TEAM_ALLIANCE) ? strategyHorde : strategyAlliance;
-
-            // By leewheel 2026-08-29 - 岗位区间（随队伍策略调整兵力分配）：
-            //   守家 [0, defMax) / 中场拦截 [defMax, intMax) / 偷旗 [intMax, offMax) / 机动 [offMax, 10)
+            // By leewheel 2026-09-03 - 全队成员表(存活+同图，攻防核算/去重/跟随判定的基础数据)
             // End By leewheel
-            uint8 defMax = 2;  // 默认 Balanced：2 守家 / 3 拦截 / 3 偷旗 / 2 机动
-            uint8 intMax = 5;
-            uint8 offMax = 8;
-            // By leewheel 2026-08-29 - 按策略枚举分支。
-            //   修复旧逻辑：策略值只会是 BALANCED(0)/OFFENSIVE(1)/DEFENSIVE(2)（Playerbots.cpp OnBattlegroundStart
-            //   以 urand(0, WS_STRATEGY_MAX - 1) 初始化），但旧 switch 按 0-9 分组且 case 4-9 永远不可达，
-            //   导致 OFFENSIVE/DEFENSIVE 全部落进 case 0-3 按 Balanced 处理 —— 队伍策略从未真正生效。
-            // End By leewheel
-            switch (static_cast<uint8>(strategy))
+            GuidVector members = AI_VALUE(GuidVector, "group members");
+            std::vector<Unit*> teamMembers;
+            for (ObjectGuid const& guid : members)
             {
-                case WS_STRATEGY_OFFENSIVE:  // 进攻：1 守家 / 3 拦截 / 4 偷旗 / 2 机动
-                    defMax = 1;
-                    intMax = 4;
-                    offMax = 8;
-                    break;
-                case WS_STRATEGY_DEFENSIVE:  // 防守：3 守家 / 3 拦截 / 2 偷旗 / 2 机动
-                    defMax = 3;
-                    intMax = 6;
-                    offMax = 8;
-                    break;
-                case WS_STRATEGY_BALANCED:
-                default:  // 平衡（含未知脏值兜底）：2 守家 / 3 拦截 / 3 偷旗 / 2 机动
-                    defMax = 2;
-                    intMax = 5;
-                    offMax = 8;
-                    break;
+                if (guid == bot->GetGUID())
+                    continue;
+                Unit* member = botAI->GetUnit(guid);
+                if (member && member->IsAlive() && member->GetMapId() == bot->GetMapId())
+                    teamMembers.push_back(member);
             }
+            // NPCBots 的核算把自己也算进队伍总人数
+            uint32 const teamSize = static_cast<uint32>(teamMembers.size()) + 1;
 
-            // 敌方龟缩防守时我方减少守家兵力，加强中场拦截
-            if (enemyStrategy == WS_STRATEGY_DEFENSIVE && defMax > 1)
-                defMax = 1;
+            // 旗帜状态(NPCBots 语义：GetFlagPickerGUID(team)=拿着该队旗的人)
+            //   enemyFlagPicker != 空 → 我方旗被敌方拿着(敌旗手在场)
+            //   teamFlagPicker 仅注释用途保留语义说明：己方旗手在场判定走 "team flag carrier" 值
+            ObjectGuid const enemyFlagPicker = ws->GetFlagPickerGUID(team);
+            bool const enemyFlagOnBase = ws->GetFlagState(bg->GetOtherTeamId(team)) == BG_WS_FLAG_STATE_ON_BASE;
+            bool const myFlagOnBase = ws->GetFlagState(team) == BG_WS_FLAG_STATE_ON_BASE;
+            // 我被缩小(NPCBots：缩小者必进攻、不守家、不吃狂暴)
+            bool const iAmShrunk = bot->HasAuraTypeWithValue(SPELL_AURA_MOD_SCALE, 30);
 
-            // Retrieve flag carriers
-            Unit* enemyFC = AI_VALUE(Unit*, "enemy flag carrier");
-            Unit* teamFC = AI_VALUE(Unit*, "team flag carrier");
-
-            // Retrieve current score
-            uint8 allianceScore = bg->GetTeamScore(TEAM_ALLIANCE);
-            uint8 hordeScore = bg->GetTeamScore(TEAM_HORDE);
-
-            // By leewheel 2026-09-01
-            // WS 神水拾取（移植 NPCBots bot_ai.cpp:19615-19668）：
-            //   恢复神水（REGENBUFF）血<60% 优先喝；狂暴神水（BERSERKBUFF）未被缩小副作用
-            //   （SPELL_AURA_MOD_SCALE=30，NPCBots 同款判定）时喝。
-            //   神水 GO 必须 READY+已生成；队友已在神水 20 码内则去重跳过
-            //   （NPCBots 用"队友当前节点==神水节点"去重，我们无节点图，用距离近似）。
-            //   旗手不喝（送旗第一优先，NPCBots 的 BERSERK 条件也排除持旗者）。
+            // By leewheel 2026-09-03 - 节点图准备：本bot当前所在节点 + 关键目标节点
             // End By leewheel
-            auto GrabWsBuffGo = [&](uint32 goId) -> bool
+            BgWanderGraph* wgraph = BgWanderGraph::instance();
+            bool const haveGraph = wgraph->IsLoaded();
+            BgWanderNode const* curNode = haveGraph
+                ? wgraph->GetClosestNode(bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), team, 60.f)
+                : nullptr;
+            // 敌方旗房(我方视角的拾旗点)/本方交旗点/本方旗房(防守点) —— 用节点图找，退化用旧常量坐标
+            BgWanderNode const* attackNode = haveGraph ? wgraph->FindInMapWPs(bot->GetMapId(), [team](BgWanderNode const* n)
             {
-                GameObject* go = bg->GetBGObject(goId);
-                if (!go || !go->isSpawned() || go->GetGoState() != GO_STATE_READY)
+                return (team == TEAM_ALLIANCE) ? (n->flags & BgWpFlags::HORDE_FLAG_PICKUP_TARGET)
+                                               : (n->flags & BgWpFlags::ALLIANCE_FLAG_PICKUP_TARGET);
+            }) : nullptr;
+            BgWanderNode const* deliverNode = haveGraph ? wgraph->FindInMapWPs(bot->GetMapId(), [team](BgWanderNode const* n)
+            {
+                return (team == TEAM_ALLIANCE) ? (n->flags & BgWpFlags::ALLIANCE_FLAG_DELIVER_TARGET)
+                                               : (n->flags & BgWpFlags::HORDE_FLAG_DELIVER_TARGET);
+            }) : nullptr;
+            BgWanderNode const* defendNode = haveGraph ? wgraph->FindInMapWPs(bot->GetMapId(), [team](BgWanderNode const* n)
+            {
+                return (team == TEAM_ALLIANCE) ? (n->flags & BgWpFlags::ALLIANCE_FLAG_PICKUP_TARGET)
+                                               : (n->flags & BgWpFlags::HORDE_FLAG_PICKUP_TARGET);
+            }) : nullptr;
+            // 节点缺失时的常量兜底(与旧版一致)
+            if (!attackNode)
+                attackNode = curNode;   // 没有图就保持原地(下方各步均判空)
+            if (!deliverNode)
+                deliverNode = curNode;
+            if (!defendNode)
+                defendNode = curNode;
+
+            // By leewheel 2026-09-03 - 节点走向工具：朝目标节点走最短路径下一跳；
+            //   无图/无路时退化为直接把目标点设为节点坐标(引擎寻路兜底)。
+            // End By leewheel
+            auto MoveTowardNode = [&](BgWanderNode const* dest) -> bool
+            {
+                if (!dest)
                     return false;
-
-                if (bot->GetDistance(go) > 80.f)
-                    return false;
-
-                GuidVector members = AI_VALUE(GuidVector, "group members");
-                for (ObjectGuid const& guid : members)
-                {
-                    if (guid == bot->GetGUID())
-                        continue;
-
-                    Unit* member = botAI->GetUnit(guid);
-                    if (member && member->IsAlive() && member->GetDistance(go) < 20.f)
-                        return false;  // 队友已在神水旁，不抢
-                }
-
-                SetSafePos(go->GetPosition());
+                BgWanderNode const* next = curNode ? wgraph->NextHopToward(curNode, dest) : nullptr;
+                BgWanderNode const* goNode = next ? next : dest;
+                target.Relocate(goNode->pos.GetPositionX(), goNode->pos.GetPositionY(), goNode->pos.GetPositionZ());
                 return true;
             };
 
+            // By leewheel 2026-09-03 - 神水节点查找与去重(NPCBots 步骤③)：
+            //   恢复神水=OPTIONAL_PICKUP_1/3, 狂暴神水=OPTIONAL_PICKUP_2/4(WSG图 5021-5024)。
+            //   去重：一名队友的"当前最近节点==该buff节点"即视为已有人去。
+            // End By leewheel
+            auto FindBuffNode = [&](uint32 buffFlags) -> BgWanderNode const*
+            {
+                if (!haveGraph)
+                    return nullptr;
+                BgWanderNode const* buffNode = wgraph->FindInMapWPs(bot->GetMapId(), [buffFlags](BgWanderNode const* n)
+                {
+                    return (n->flags & buffFlags) != 0 &&
+                        (n->flags & BgWpFlags::OPTIONAL_PICKUP_MASK) == (n->flags & buffFlags); // 精确匹配一种神水
+                });
+                if (!buffNode)
+                    return nullptr;
+                for (Unit* member : teamMembers)
+                {
+                    if (!member)
+                        continue;
+                    BgWanderNode const* memberNode = wgraph->GetClosestNode(bot->GetMapId(),
+                        member->GetPositionX(), member->GetPositionY(), member->GetPositionZ(), team, 15.f);
+                    if (memberNode == buffNode)
+                        return nullptr; // 已有队友在此节点，让位
+                }
+                return buffNode;
+            };
+
+            // By leewheel 2026-09-03 - 攻/守在场人数统计(NPCBots 攻防核算用"当前节点"，
+            //   我们用"距离旗房<35码或正走向旗房节点"近似，效果等价)。
+            // End By leewheel
+            auto CountRoleNear = [&](BgWanderNode const* node) -> uint32
+            {
+                if (!node)
+                    return 0;
+                uint32 count = 0;
+                for (Unit* member : teamMembers)
+                {
+                    if (!member)
+                        continue;
+                    if (member->GetDistance2d(node->pos.GetPositionX(), node->pos.GetPositionY()) < 35.f)
+                        ++count;
+                    else
+                    {
+                        BgWanderNode const* memberNode = wgraph->GetClosestNode(bot->GetMapId(),
+                            member->GetPositionX(), member->GetPositionY(), member->GetPositionZ(), team, 15.f);
+                        if (memberNode == node || wgraph->HasLink(memberNode, node))
+                            ++count;
+                    }
+                }
+                return count;
+            };
+
+            // By leewheel 2026-09-03 - 攻防配额核算(④，NPCBots 核心逻辑 bot_ai.cpp:19831-19942)封为 lambda
+            auto AttackDefenseStep = [&]() -> void
+            {
+                // 配额公式(NPCBots 原样)：10人→8攻2守；8人→6攻2守；5人→4攻1守
+                uint8 const maxAttackers = std::max<uint8>(static_cast<uint8>(teamSize * 8 / 10),
+                                                           static_cast<uint8>(teamSize / 2 + 2));
+                uint8 const maxDefenders = static_cast<uint8>(teamSize) - maxAttackers;
+
+                bool const myFlagTakenByEnemy = !enemyFlagPicker.IsEmpty();   // 我方旗被敌方拿着
+                uint32 const attackerCount = CountRoleNear(attackNode);
+
+                // --- 攻击判定(先攻后守！) ---
+                // 攻方未满 / 我旗被拿(全员压上，赛跑战术) / 我被缩小(快速突击) → 攻向敌旗房
+                if (attackNode && (attackerCount < maxAttackers || myFlagTakenByEnemy || iAmShrunk))
+                {
+                    if (!MoveTowardNode(attackNode))
+                        SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_HORDE : WS_FLAG_POS_ALLIANCE, 5.0f);
+                }
+                // --- 防守判定(兜底) ---
+                // 前提：我方旗在基地(未被拿) 且 我未被缩小(否则根本不考虑守)
+                else if (defendNode && myFlagOnBase && !iAmShrunk)
+                {
+                    uint32 const defenderCount = CountRoleNear(defendNode);
+                    if (defenderCount < maxDefenders)
+                    {
+                        if (!MoveTowardNode(defendNode))
+                            SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_ALLIANCE : WS_FLAG_POS_HORDE, 8.0f);
+                    }
+                    else
+                    {
+                        // 攻守均满员 → 中场游走待机(下一轮核算会重新分配)
+                        SetSafePos(WS_ROAM_POS, 40.0f);
+                    }
+                }
+                // 敌旗被拿但攻方已满(不可能同时守——旗不在家) → 追敌方旗手
+                else if (Unit* enemyFC = AI_VALUE(Unit*, "enemy flag carrier"))
+                {
+                    target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
+                }
+                else if (attackNode)
+                {
+                    if (!MoveTowardNode(attackNode))
+                        SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_HORDE : WS_FLAG_POS_ALLIANCE, 5.0f);
+                }
+            };
+
+            // ===== NPCBots 四步优先级链 =====
+            // ① 我是旗手 → 走向本方交旗点(NPCBots：无任何附加条件)
             if (hasFlag)
             {
-                // 拿旗者：己方旗也在外（双方旗都被携带）→ 就近隐蔽避开交火；否则直奔本方旗房交旗
-                if (team == TEAM_ALLIANCE)
-                    SetSafePos(teamFlagTaken() ? WS_FLAG_HIDE_ALLIANCE[urand(0, 2)] : WS_FLAG_POS_ALLIANCE);
+                if (deliverNode && deliverNode != curNode)
+                    MoveTowardNode(deliverNode);
                 else
-                    SetSafePos(teamFlagTaken() ? WS_FLAG_HIDE_HORDE[urand(0, 2)] : WS_FLAG_POS_HORDE);
+                    SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_ALLIANCE : WS_FLAG_POS_HORDE, 3.0f);
             }
-            else if (bot->GetHealthPct() < 60.f &&
-                     (GrabWsBuffGo(BG_WS_OBJECT_REGENBUFF_1) || GrabWsBuffGo(BG_WS_OBJECT_REGENBUFF_2)))
+            // ② 敌旗在基地 → 冲敌方旗房拿旗(NPCBots：置于攻防核算之前)
+            else if (enemyFlagOnBase && attackNode)
             {
-                // 恢复神水窗口（已在 lambda 内设置 target）
-            }
-            else if (!bot->HasAuraTypeWithValue(SPELL_AURA_MOD_SCALE, 30) &&
-                     (GrabWsBuffGo(BG_WS_OBJECT_BERSERKBUFF_1) || GrabWsBuffGo(BG_WS_OBJECT_BERSERKBUFF_2)))
-            {
-                // 狂暴神水窗口（未被缩小副作用才喝）
-            }
-            // Graveyard Camping if in lead
-            else if (role < 8 &&
-                ((team == TEAM_ALLIANCE && allianceScore == 2 && hordeScore == 0) ||
-                (team == TEAM_HORDE && hordeScore == 2 && allianceScore == 0)))
-            {
-                if (team == TEAM_ALLIANCE)
-                    SetSafePos(WS_GY_CAMPING_HORDE, 10.0f);
-                else
-                    SetSafePos(WS_GY_CAMPING_ALLIANCE, 10.0f);
-            }
-            else if (role < defMax)
-            {
-                // By leewheel 2026-08-29 - 守家岗：钉在本方旗房防偷旗 / 接应回到基地的旗。
-                //   不再被敌方旗手拉出基地追杀（追杀是拦截岗的职责），
-                //   只有敌方旗手摸进旗房 25 码内才就地反击夺旗。
-                // End By leewheel
-                SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_ALLIANCE : WS_FLAG_POS_HORDE, 8.0f);
-
-                if (enemyFC && bot->GetDistance2d(enemyFC) < 25.0f)
-                    target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
-            }
-            else if (role < intMax)
-            {
-                // By leewheel 2026-08-29 - 中场拦截岗：我方旗被敌方携带 → 全图追杀敌方旗手夺回旗帜；
-                //   我方旗安全 → 卡住中场偏本方一侧的通道，在敌方偷旗手抵达我方旗房前截杀。
-                // End By leewheel
-                if (enemyFC)
-                    target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
-                else
-                    SetSafePos(team == TEAM_ALLIANCE ? WS_INTERCEPT_POS_ALLIANCE : WS_INTERCEPT_POS_HORDE, 30.0f);
-            }
-            else if (role < offMax)
-            {
-                // By leewheel 2026-08-29 - 偷旗岗：敌方旗在基地 → 直奔敌方旗房拿旗（僵局时主动权的来源）；
-                //   敌方旗已被我方旗手携带 → 转为护航，紧跟己方旗手清出回家的路。
-                //   旧逻辑没有这个岗位，进攻者大多在中场杀人，旗房无人问津。
-                // End By leewheel
-                if (teamFC)
-                {
-                    target.Relocate(teamFC->GetPositionX(), teamFC->GetPositionY(), teamFC->GetPositionZ());
-                    if (ServerFacade::instance().GetDistance2d(bot, teamFC) < 33.0f)
-                        Follow(teamFC);
-                }
-                else
+                if (!MoveTowardNode(attackNode))
                     SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_HORDE : WS_FLAG_POS_ALLIANCE, 5.0f);
             }
-            else
+            // ③ 神水：血<60%吃恢复；无缩小吃狂暴(一人一buff去重)，无神水落到 ④
+            else if (bot->GetHealthPct() < 60.f)
             {
-                // By leewheel 2026-08-29 - 机动岗：视战况补位 —— 我方旗被拿 → 协助拦截；
-                //   我方旗手运旗 → 协助护航；双旗均在基地 → 一半协攻敌旗房、一半中场游走。
-                // End By leewheel
-                if (enemyFC && !teamFC)
-                    target.Relocate(enemyFC->GetPositionX(), enemyFC->GetPositionY(), enemyFC->GetPositionZ());
-                else if (teamFC)
-                {
-                    target.Relocate(teamFC->GetPositionX(), teamFC->GetPositionY(), teamFC->GetPositionZ());
-                    if (ServerFacade::instance().GetDistance2d(bot, teamFC) < 33.0f)
-                        Follow(teamFC);
-                }
-                else if (urand(0, 99) < 50)
-                    SetSafePos(team == TEAM_ALLIANCE ? WS_FLAG_POS_HORDE : WS_FLAG_POS_ALLIANCE, 10.0f);
+                BgWanderNode const* buffNode = FindBuffNode(BgWpFlags::WS_PICKUP_RESTORATION);
+                if (buffNode)
+                    MoveTowardNode(buffNode);
                 else
-                    SetSafePos(WS_ROAM_POS, 75.0f);
+                    AttackDefenseStep();
             }
+            else if (!iAmShrunk)
+            {
+                BgWanderNode const* buffNode = FindBuffNode(BgWpFlags::WS_PICKUP_BERSERKING);
+                if (buffNode)
+                    MoveTowardNode(buffNode);
+                else
+                    AttackDefenseStep();
+            }
+            // ④ 攻防配额核算
+            else
+                AttackDefenseStep();
 
             // Save the final target position
             if (target.IsPositionValid())
@@ -3768,67 +3879,13 @@ bool BGTactics::resetObjective()
         bot->HasAura(BG_WS_SPELL_SILVERWING_FLAG) ||
         bot->HasAura(BG_EY_NETHERSTORM_FLAG_SPELL);
 
-    // Change role if allowed by odds and not carrying flag
-    // By leewheel 2026-09-01 动态守家补位（移植 NPCBots bot_ai.cpp 动态配额思想）：
-    //   固定 role（urand 0-9）的缺陷：守家岗(role<defMax)阵亡或离位后旗房空防，
-    //   只有 oddsToChangeRole%（WSG 2%）概率重掷 role 才可能补位——战场瞬息万变，2% 远不够。
-    //   NPCBots 做法：统计队友在关键节点的人数，不足时强制补位（bot_ai.cpp:19572-19762）。
-    //   这里在 WSG 中：统计本方存活队友在旗房 35 码内的人数，若低于守家配额，且当前 bot
-    //   离旗房 < 90 码、非持旗、非守家岗，则转为守家岗补位。补位概率随距离递减（避免全员
-    //   涌向旗房）。其他 BG 保持原 oddsToChangeRole 轮换机制。
+    // By leewheel 2026-09-03 - WSG 移植 NPCBots 后不再依赖 role 岗位制：
+    //   selectObjective 的 WSG 分支已改为全队实时动态核算(四步优先级链)，每次核算都
+    //   以真实旗况/队友位置重新分配攻守，role 值对 WSG 无意义。此处跳过旧 role 轮换与
+    //   2026-09-01 的守家补位补丁(其职能已被 ④ 攻防核算的防守兜底取代)，直接重置目标。
+    //   其他战场(AB/EY/AV/IC)保持原 role 轮换机制不变。
     // End By leewheel
-    if (bgType == BATTLEGROUND_WS && !isCarryingFlag)
-    {
-        uint32 myRole = context->GetValue<uint32>("bg role")->Get();
-        TeamId team = bot->GetTeamId();
-        Position const& homeFlagPos = (team == TEAM_ALLIANCE) ? WS_FLAG_POS_ALLIANCE : WS_FLAG_POS_HORDE;
-
-        // 守家配额（与 selectObjective WSG 分支一致：BALANCED=2/OFFENSIVE=1/DEFENSIVE=3）
-        uint8 defQuota = 2;
-        WSBotStrategy strat = static_cast<WSBotStrategy>(GetBotStrategyForTeam(bg, team));
-        switch (static_cast<uint8>(strat))
-        {
-            case WS_STRATEGY_OFFENSIVE: defQuota = 1; break;
-            case WS_STRATEGY_DEFENSIVE: defQuota = 3; break;
-            default: defQuota = 2; break;
-        }
-
-        // 统计本方存活队友在旗房 35 码内的人数（不含自己，自己后面单独判断）
-        uint32 guardCount = 0;
-        GuidVector members = AI_VALUE(GuidVector, "group members");
-        for (ObjectGuid const& guid : members)
-        {
-            if (guid == bot->GetGUID())
-                continue;
-            Unit* member = botAI->GetUnit(guid);
-            if (!member || !member->IsAlive())
-                continue;
-            if (member->GetDistance2d(homeFlagPos.GetPositionX(), homeFlagPos.GetPositionY()) < 35.0f)
-                ++guardCount;
-        }
-
-        bool isGuard = (myRole < defQuota);
-        float distHome = bot->GetDistance2d(homeFlagPos.GetPositionX(), homeFlagPos.GetPositionY());
-
-        // 守家不足且自己离旗房近 → 补位守家
-        if (!isGuard && guardCount < defQuota && distHome < 90.0f)
-        {
-            // 补位概率：离越近越高（避免全员涌向旗房，留人继续进攻）
-            uint32 chance = distHome < 45.0f ? 60 : 30;
-            if (urand(0, 99) < chance)
-            {
-                context->GetValue<uint32>("bg role")->Set(urand(0, defQuota - 1));
-                LOG_DEBUG("playerbots", "{} 补位守家：旗房守家人数不足({})，距旗房 {:.0f} 码",
-                    bot->GetName(), guardCount, distHome);
-            }
-        }
-        // 守家充足或已补位 → 保持原来的 2% 轮换（让角色有机会响应策略变化）
-        else if (urand(0, 99) < oddsToChangeRole)
-        {
-            context->GetValue<uint32>("bg role")->Set(urand(0, 9));
-        }
-    }
-    else if (urand(0, 99) < oddsToChangeRole && !isCarryingFlag)
+    if (bgType != BATTLEGROUND_WS && urand(0, 99) < oddsToChangeRole && !isCarryingFlag)
     {
         context->GetValue<uint32>("bg role")->Set(urand(0, 9));
     }
