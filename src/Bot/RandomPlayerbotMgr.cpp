@@ -1517,12 +1517,129 @@ static int32 GetHealerSpecTab(uint8 cls)
     }
 }
 
+// By leewheel 2026-09-04
+// LFG 补位「天赋切换安全层」：副本等级段预检 + 切换失败回滚
+//
+// 背景（玩家反馈：30 级圣骑士 DPS 排随机本始终等不到坦克）：
+//   1. 原实现顺序是「先 InitTalentsBySpecNo 切天赋 → 再 SendLfgJoinPacket 尝试入队」，
+//      而 SendLfgJoinPacket 内部会按 bot 等级过滤真实玩家所选副本。于是高阶 bot
+//      （如 55+ 死亡骑士）被洗成坦克天赋后，才发现进不了 30 级玩家的本——白洗一次天赋，
+//      且下一轮补位会原样再来一遍。
+//   2. 切天赋后若 IsBotTank 校验失败，原实现只 continue，bot 被永久留在「洗了一半」的
+//      错误天赋上，日志表现为同一轮连试 7 个德鲁伊全部失败。
+//
+// 修复策略（纯叠加，不删除、不屏蔽任何既有分支）：
+//   A. GetLfgValidDungeonsForBot：把 SendLfgJoinPacket 内的等级过滤规则原样抽成独立函数，
+//      供「切天赋之前」预检复用，杜绝「洗了天赋却进不了本」。
+//   B. RestoreBotTalents：切天赋失败时按切换前的天赋页恢复，禁止把 bot 留在洗坏状态。
+// End By leewheel
+static bool GetLfgValidDungeonsForBot(Player* bot, lfg::LfgDungeonSet const& dungeons, lfg::LfgDungeonSet& outValid)
+{
+    outValid.clear();
+    if (!bot)
+        return false;
+
+    for (uint32 dungeonId : dungeons)
+    {
+        LFGDungeonEntry const* dungeon = sLFGDungeonStore.LookupEntry(dungeonId);
+        if (!dungeon)
+            continue;
+        if (dungeon->TypeID != lfg::LFG_TYPE_RANDOM && dungeon->TypeID != lfg::LFG_TYPE_DUNGEON &&
+            dungeon->TypeID != lfg::LFG_TYPE_HEROIC && dungeon->TypeID != lfg::LFG_TYPE_RAID)
+            continue;
+        auto const& botLevel = bot->GetLevel();
+        if ((dungeon->MinLevel && (botLevel < dungeon->MinLevel || botLevel > dungeon->MaxLevel)) ||
+            (botLevel > dungeon->MinLevel + 10 && dungeon->TypeID == lfg::LFG_TYPE_DUNGEON))
+            continue;
+        outValid.insert(dungeonId);
+    }
+
+    return !outValid.empty();
+}
+
+// 按天赋页恢复 bot 天赋（切换坦克/治疗失败时回滚用，与正向切换走同一条 randomClassSpecIndex 映射）
+// By leewheel 2026-09-04
+static void RestoreBotTalents(Player* bot, uint8 specTab)
+{
+    if (!bot)
+        return;
+
+    uint8 const cls = bot->getClass();
+    uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
+    PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
+    if (bot->GetFreeTalentPoints() > 0)
+    {
+        PlayerbotFactory factory(bot, bot->GetLevel());
+        factory.InitTalentsTree(true, false, false);
+    }
+    if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot))
+        botAI->ResetStrategies(false);
+}
+// End By leewheel
+
+// By leewheel 2026-09-04
+// 统计「LFG 队列中真正能进入真实玩家所选副本」的 bot 角色数。
+//
+// 原口径缺陷：needTanks/needHealers/needDps 是全服队列计数，既不看副本、也不看等级段。
+// 于是会出现日志打「LFG补位完成: 坦克、治疗和DPS职责均已补齐」，而真实玩家依旧一个坦克
+// 都等不到的假成功——玩家侧反馈「日志说补齐了，但我等了 523 秒」。
+// 此函数按「队列状态 + 能否进入玩家副本集合」双重过滤，给出与玩家体感一致的口径。
+struct LfgFillStats
+{
+    int tanks = 0;
+    int healers = 0;
+    int dps = 0;
+};
+
+static LfgFillStats CountQueueBotsMatchingDungeons(TeamId teamId, lfg::LfgDungeonSet const& playerDungeons)
+{
+    LfgFillStats stats;
+    for (PlayerBotMap::const_iterator it = sRandomPlayerbotMgr.GetPlayerBotsBegin();
+         it != sRandomPlayerbotMgr.GetPlayerBotsEnd(); ++it)
+    {
+        Player* bot = it->second;
+        if (!bot || bot->GetTeamId() != teamId || !sRandomPlayerbotMgr.IsRandomBot(bot))
+            continue;
+
+        lfg::LfgState const state = sLFGMgr->GetState(bot->GetGUID());
+        if (state == lfg::LFG_STATE_NONE || state >= lfg::LFG_STATE_DUNGEON)
+            continue;
+
+        lfg::LfgDungeonSet valid;
+        if (!GetLfgValidDungeonsForBot(bot, playerDungeons, valid))
+            continue;
+
+        uint8 const roles = sLFGMgr->GetRoles(bot->GetGUID());
+        if (roles & lfg::PLAYER_ROLE_TANK)
+            stats.tanks++;
+        else if (roles & lfg::PLAYER_ROLE_HEALER)
+            stats.healers++;
+        else
+            stats.dps++;
+    }
+    return stats;
+}
+// End By leewheel
+
 // 发送LFG加入数据包
 // By leewheel 2026-07-29
 // 返回机器人是否确实进入了LFG队列，调用方只能在成功后扣减职责缺额。
 static bool SendLfgJoinPacket(Player* bot, const lfg::LfgDungeonSet& dungeons, uint8 role)
 // End By leewheel
 {
+    // By leewheel 2026-09-04
+    // 入队可行性预检：规则与下方等级过滤完全一致，等价于 validDungeons.empty() 的提前返回，
+    // 但把失败点前移到「切天赋之前」，避免 bot 被洗天赋后才发现进不了本。
+    // 下方既有过滤逻辑保持不动（语义幂等，双保险）。
+    lfg::LfgDungeonSet precheckDungeons;
+    if (!GetLfgValidDungeonsForBot(bot, dungeons, precheckDungeons))
+    {
+        LOG_DEBUG("playerbots", "[LFG诊断] bot {} (等级{}) 与玩家副本等级段不匹配，跳过入队(不切天赋)",
+            bot ? bot->GetName().c_str() : "?", bot ? (uint32)bot->GetLevel() : 0);
+        return false;
+    }
+    // End By leewheel
+
     // 按等级过滤副本
     lfg::LfgDungeonSet validDungeons;
     for (uint32 dungeonId : dungeons)
@@ -1898,6 +2015,10 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     // 潜在坦克误判统计：坦克专精天赋点数≥20但 GetPlayerSpecTab 误判为非坦克的 bot 数量
     // 用于诊断"明明是坦克天赋的机器人自认为DPS"问题
     std::array<int, 4> potentialTanksByClass = {};
+    // By leewheel 2026-09-04
+    // 因等级段不匹配被预筛淘汰的空闲 bot 数量（诊断用，解释"候选很多但没人能进本"）
+    int filteredByLevel = 0;
+    // End By leewheel
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* bot = it->second;
@@ -1922,6 +2043,23 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
         // 收集空闲候选 bot，并顺带完成诊断统计
         if (!isRandom || !IsBotIdleForLfg(bot))
             continue;
+
+        // By leewheel 2026-09-04
+        // 等级段预筛：只保留能进入真实玩家所选副本的 bot 作为补位候选。
+        // 根因：候选池里混入与低等级玩家副本不匹配的高阶 bot（如 55+ 死亡骑士），
+        //       它们会被优先切坦克天赋、却永远入队失败，挤占真正可用候选的轮转机会。
+        //       30 级玩家可排本约 20-37 级，55 级 DK 会被 `botLevel > MinLevel + 10` 一脚踢掉。
+        // 注意：本 continue 位于队列角色统计之后，不影响 tanksInQueue 等缺额统计口径。
+        {
+            lfg::LfgDungeonSet botValidDungeons;
+            if (!GetLfgValidDungeonsForBot(bot, dungeonSet, botValidDungeons))
+            {
+                filteredByLevel++;
+                continue;
+            }
+        }
+        // End By leewheel
+
         bool const isTank = IsBotTank(bot);
         bool const isHealer = IsBotHealer(bot);
         int32 const tankClassSlot = GetTankClassSlot(bot->getClass());
@@ -1983,6 +2121,16 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     LOG_INFO("playerbots", "[LFG诊断] 空闲bot统计: 总计={} 坦克={} 治疗={} DPS={} (阵营={})",
              idleTotal, idleTanks, idleHealers, idleDps,
              teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+    // By leewheel 2026-09-04
+    // 等级段预筛诊断：解释"明明有很多空闲 bot，坦克却一个都补不进来"——
+    // 被排除的这部分 bot 等级与真实玩家所选副本不匹配，进去也只会入队失败。
+    if (filteredByLevel > 0)
+    {
+        LOG_INFO("playerbots", "[LFG诊断] 等级段预筛: 空闲bot={} 其中等级不匹配玩家副本被排除={} 有效候选={} (阵营={})",
+                 idleTotal + filteredByLevel, filteredByLevel, idleTotal,
+                 teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+    }
+    // End By leewheel
     LOG_INFO("playerbots", "[LFG诊断] 坦克职业候选: 战士(现成{} 非治疗可切{} 治疗可切{}) 圣骑士(现成{} 非治疗可切{} 治疗可切{}) 德鲁伊(现成{} 非治疗可切{} 治疗可切{}) 死亡骑士(现成{} 非治疗可切{} 治疗可切{})",
              idleTankByClass[0], switchableNonHealerTankByClass[0], switchableHealerTankByClass[0],
              idleTankByClass[1], switchableNonHealerTankByClass[1], switchableHealerTankByClass[1],
@@ -2084,6 +2232,11 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     sRandomPlayerbotMgr.RecordSpecSwitchTime(cand.bot->GetGUID());
                     // End By leewheel
 
+                    // By leewheel 2026-09-04
+                    // 记录切换前的天赋页快照：切换失败时据此回滚，
+                    // 否则 bot 会带着洗坏的天赋留在池子里，下一轮补位再次判定失败，形成连败循环。
+                    uint8 const specTabBefore = AiFactory::GetPlayerSpecTab(cand.bot);
+                    // End By leewheel
                     uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cand.cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(cand.bot, specIndex, true);
                     if (cand.bot->GetFreeTalentPoints() > 0)
@@ -2096,6 +2249,10 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     {
                         LOG_WARN("playerbots", "LFG坦克职业轮转失败: {}({}) 切换后仍不是坦克天赋，继续尝试该职业其他机器人",
                             cand.bot->GetName().c_str(), GetTankClassName(classSlot));
+                        // By leewheel 2026-09-04
+                        // 回滚原天赋，禁止把 bot 留在「洗了一半」的错误专精上
+                        RestoreBotTalents(cand.bot, specTabBefore);
+                        // End By leewheel
                         continue;
                     }
                 }
@@ -2229,6 +2386,10 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                         continue;
                     sRandomPlayerbotMgr.RecordSpecSwitchTime(bot->GetGUID());
                     // End By leewheel
+                    // By leewheel 2026-09-04
+                    // 记录切换前的天赋页快照，切换失败时回滚（同坦克职业轮转段）
+                    uint8 const specTabBefore = AiFactory::GetPlayerSpecTab(bot);
+                    // End By leewheel
                     uint32 specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
                     if (bot->GetFreeTalentPoints() > 0)
@@ -2241,6 +2402,10 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     if (!IsBotTank(bot))
                     {
                         LOG_WARN("playerbots", "LFG补位失败: {} 切换坦克天赋后仍不是坦克天赋，继续尝试其他机器人", bot->GetName().c_str());
+                        // By leewheel 2026-09-04
+                        // 回滚原天赋，禁止把 bot 留在「洗了一半」的错误专精上
+                        RestoreBotTalents(bot, specTabBefore);
+                        // End By leewheel
                         continue;
                     }
                     // End By leewheel
@@ -2277,6 +2442,10 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                         continue;
                     sRandomPlayerbotMgr.RecordSpecSwitchTime(bot->GetGUID());
                     // End By leewheel
+                    // By leewheel 2026-09-04
+                    // 记录切换前的天赋页快照，切换失败时回滚
+                    uint8 const healSpecTabBefore = AiFactory::GetPlayerSpecTab(bot);
+                    // End By leewheel
                     uint32 specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
                     if (bot->GetFreeTalentPoints() > 0)
@@ -2284,6 +2453,17 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                         PlayerbotFactory factory(bot, bot->GetLevel());
                         factory.InitTalentsTree(true, false, false);
                     }
+                    // By leewheel 2026-09-04
+                    // 与坦克段对齐：治疗天赋切换后必须按实际天赋页校验。
+                    // 原实现此处缺少校验，直接 SendLfgJoinPacket 会把「切治疗失败」的 bot 以治疗职责
+                    // 送进队列，造成队列治疗数虚高、真实玩家依旧等不到治疗（与坦克侧同一类隐患）。
+                    if (!IsBotHealer(bot))
+                    {
+                        LOG_WARN("playerbots", "LFG补位失败: {} 切换治疗天赋后仍不是治疗天赋，回滚并尝试其他机器人", bot->GetName().c_str());
+                        RestoreBotTalents(bot, healSpecTabBefore);
+                        continue;
+                    }
+                    // End By leewheel
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
                     if (botAI)
                         botAI->ResetStrategies(false);
@@ -2338,12 +2518,26 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     continue;  // 已在队列，跳过
                 if (!ClassCanTank(bot->getClass()))
                     continue;
+                // By leewheel 2026-09-04
+                // 兜底段走的是全量 bot 遍历，不经过候选池的等级段预筛，此处补上。
+                // 否则兜底会强行把一个 55+ 死亡骑士洗成坦克天赋并刷新装备，
+                // 结果 SendLfgJoinPacket 仍因等级不匹配失败——白白洗天赋 + 刷装备。
+                {
+                    lfg::LfgDungeonSet forceValidDungeons;
+                    if (!GetLfgValidDungeonsForBot(bot, dungeonSet, forceValidDungeons))
+                        continue;
+                }
+                // End By leewheel
                 int32 const specTab = GetTankSpecTab(bot->getClass());
                 if (specTab < 0)
                     continue;
                 // 强制切到坦克天赋
                 if (!IsBotTank(bot))
                 {
+                    // By leewheel 2026-09-04
+                    // 记录切换前的天赋页快照，切换失败时回滚（与其它切换点保持一致）
+                    uint8 const specTabBefore = AiFactory::GetPlayerSpecTab(bot);
+                    // End By leewheel
                     uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[bot->getClass()][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
                     if (bot->GetFreeTalentPoints() > 0)
@@ -2352,7 +2546,13 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                         factory.InitTalentsTree(true, false, false);
                     }
                     if (!IsBotTank(bot))
+                    {
+                        // By leewheel 2026-09-04
+                        // 回滚原天赋，禁止把 bot 留在「洗了一半」的错误专精上
+                        RestoreBotTalents(bot, specTabBefore);
+                        // End By leewheel
                         continue;  // 天赋模板缺失等仍非坦克，换下一个
+                    }
                 }
                 // 刷新装备保证坦克战力
                 PlayerbotFactory eqFactory(bot, bot->GetLevel());
@@ -2382,11 +2582,36 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     // 玩家反馈"随机本坦克10分钟不进组"，需要运维能看到补位结果，升级回 INFO
     if (needTanks <= 0 && needHealers <= 0 && needDps <= 0)
     {
+        // By leewheel 2026-09-04
+        // 复核：原「补位完成」只反映全服队列缺额，与真实玩家能否成组无关。
+        // 这里按「能否进入玩家所选副本(含等级段)」重新统计，消除假成功日志——
+        // 玩家侧表现为「日志说补齐了，但我等了 523 秒还没坦克」。
+        LfgFillStats const matched = CountQueueBotsMatchingDungeons(teamId, dungeonSet);
+        if (matched.tanks > 0)
+        {
+            LOG_INFO("playerbots", "[LFG补位复核] 可通过: 能进入玩家副本等级段的 坦克{} 治疗{} DPS{} (阵营={})",
+                matched.tanks, matched.healers, matched.dps,
+                teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+        }
+        else
+        {
+            LOG_ERROR("playerbots", "[LFG补位复核] 假成功: 全服队列缺额已补齐，但按玩家副本等级段过滤后匹配的坦克=0 (匹配治疗{} DPS{})，玩家仍将等不到坦克! (阵营={})",
+                matched.healers, matched.dps,
+                teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+        }
+        // End By leewheel
         LOG_INFO("playerbots", "LFG补位完成: 坦克、治疗和DPS职责均已补齐 (阵营={})",
             teamId == TEAM_ALLIANCE ? "联盟" : "部落");
     }
     else
     {
+        // By leewheel 2026-09-04
+        // 缺额分支同样给出匹配口径，便于区分「没有坦克 bot」与「坦克 bot 等级不匹配」。
+        LfgFillStats const matched = CountQueueBotsMatchingDungeons(teamId, dungeonSet);
+        LOG_WARN("playerbots", "[LFG补位复核] 当前能进入玩家副本等级段的 坦克{} 治疗{} DPS{} (阵营={})",
+            matched.tanks, matched.healers, matched.dps,
+            teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+        // End By leewheel
         LOG_WARN("playerbots", "LFG本轮补位结束但仍有缺额: 坦{}奶{}DPS{} (阵营={})",
             needTanks > 0 ? needTanks : 0, needHealers > 0 ? needHealers : 0, needDps > 0 ? needDps : 0,
             teamId == TEAM_ALLIANCE ? "联盟" : "部落");
