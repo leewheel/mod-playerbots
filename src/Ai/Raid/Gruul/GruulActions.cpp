@@ -173,8 +173,8 @@ bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
     {
         target = olm;
     }
-    else if ((krosh = AI_VALUE2(Unit*, "find target", "krosh firehand")) &&
-        PlayerbotAI::IsRanged(bot))
+    else if (PlayerbotAI::IsRanged(bot) &&
+        (krosh = AI_VALUE2(Unit*, "find target", "krosh firehand")))
     {
         target = krosh;
     }
