@@ -346,16 +346,6 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     return false;
 }
 
-bool HighKingMaulgarCastFearWardOnMainTankAction::Execute(Event /*event*/)
-{
-    constexpr uint32 fearWard = Id(GruulSpells::SPELL_FEAR_WARD);
-    Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank || mainTank->HasAura(fearWard))
-        return false;
-
-    return botAI->CanCastSpell(fearWard, mainTank) && botAI->CastSpell(fearWard, mainTank);
-}
-
 // Gruul the Dragonkiller
 
 bool GruulTheDragonkillerTanksPositionBossAction::Execute(Event /*event*/)

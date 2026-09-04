@@ -116,12 +116,6 @@ bool HighKingMaulgarPullingOgreCouncilTrigger::IsActiveInEncounter()
     return blindeye && blindeye->GetHealthPct() > BLINDEYE_ENGAGED_HEALTH_PCT;
 }
 
-bool HighKingMaulgarBossCastsIntimidatingRoarTrigger::IsActiveInEncounter()
-{
-    return bot->getClass() == CLASS_PRIEST && AI_VALUE2(Unit*, "find target", "18836");
-    // End By leewheel
-}
-
 // Gruul the Dragonkiller
 
 bool GruulTheDragonkillerShouldBeTankedTrigger::IsActiveInEncounter()

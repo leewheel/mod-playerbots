@@ -390,7 +390,7 @@ bool AzgalorShouldDivideDpsTrigger::IsActiveInEncounter()
 
 bool ArchimondeBossCastsFearTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_PRIEST && bot->getClass() != CLASS_SHAMAN)
+    if (bot->getClass() != CLASS_SHAMAN)
         return false;
 
     Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");

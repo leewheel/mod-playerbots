@@ -808,36 +808,13 @@ bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
 
 // Archimonde
 
-bool ArchimondeCastFearImmunitySpellAction::Execute(Event /*event*/)
-{
-    if (bot->getClass() == CLASS_PRIEST)
-        return CastFearWardOnMainTank();
-
-    return SetTremorTotem();
-}
-
-bool ArchimondeCastFearImmunitySpellAction::CastFearWardOnMainTank()
-{
-    constexpr uint32 fearWard = Id(HyjalSpells::SPELL_FEAR_WARD);
-    Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank || mainTank->HasAura(fearWard))
-        return false;
-
-    if (!botAI->CanCastSpell(Id(HyjalSpells::SPELL_FEAR_WARD), mainTank))
-        return false;
-
-    return botAI->CastSpell(Id(HyjalSpells::SPELL_FEAR_WARD), mainTank);
-}
-
-bool ArchimondeCastFearImmunitySpellAction::SetTremorTotem()
+bool ArchimondeSetTremorTotemAction::Execute(Event /*event*/)
 {
     if (AI_VALUE2(bool, "has totem", "tremor totem"))
         return false;
 
-    if (!botAI->CanCastSpell(Id(HyjalSpells::SPELL_TREMOR_TOTEM), bot))
-        return false;
-
-    return botAI->CastSpell(Id(HyjalSpells::SPELL_TREMOR_TOTEM), bot);
+    constexpr uint32 tremorTotem = Id(HyjalSpells::SPELL_TREMOR_TOTEM);
+    return botAI->CanCastSpell(tremorTotem, bot) && botAI->CastSpell(tremorTotem, bot);
 }
 
 // Air Burst knocks everyone around its target into the air. Losing the whole melee group at once

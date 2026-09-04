@@ -192,15 +192,6 @@ bool HighAstromancerSolarianSolariumPriestsSpawnedTrigger::IsActiveInEncounter()
     return AI_VALUE2(Unit*, "find target", "18806");
 }
 
-bool HighAstromancerSolarianBossCastsPsychicScreamTrigger::IsActiveInEncounter()
-{
-    if (bot->getClass() != CLASS_PRIEST)
-        return false;
-
-    Unit* astromancer = AI_VALUE2(Unit*, "find target", "18805");
-    return astromancer && astromancer->HasAura(Id(TkSpells::SPELL_SOLARIAN_TRANSFORM));
-}
-
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
 bool KaelthasSunstriderThaladredIsFixatedOnBotTrigger::IsActiveInEncounter()
@@ -245,22 +236,6 @@ bool KaelthasSunstriderSanguinarOrTelonicusShouldBeTankedTrigger::IsActiveInEnco
         return IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20063"));
 
     return false;
-}
-
-bool KaelthasSunstriderSanguinarCastsBellowingRoarTrigger::IsActiveInEncounter()
-{
-    if (bot->getClass() != CLASS_PRIEST)
-        return false;
-
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
-    if (!kaelthas)
-        return false;
-
-    uint32 const phase = GetKaelthasPhase(kaelthas);
-    if (phase != PHASE_SINGLE_ADVISOR && phase != PHASE_TRANSITION && phase != PHASE_ALL_ADVISORS)
-        return false;
-
-    return IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20060"));
 }
 
 bool KaelthasSunstriderCapernianShouldBeTankedByWarlockTrigger::IsActiveInEncounter()
