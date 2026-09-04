@@ -5,6 +5,7 @@
  */
 
 #include "TradeValues.h"
+#include "ItemCountValue.h"
 #include "ItemUsageValue.h"
 #include "Playerbots.h"
 
@@ -25,6 +26,9 @@ std::vector<Item*> ItemsUsefulToGiveValue::Calculate()
     {
         std::vector<Item*> myItems =
             AI_VALUE2(std::vector<Item*>, "inventory items", "usage " + std::to_string(myUsage));
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        myItems = InventoryItemValueBase::FilterLive(bot, myItems);
         std::reverse(myItems.begin(), myItems.end());
 
         for (auto& item : myItems)

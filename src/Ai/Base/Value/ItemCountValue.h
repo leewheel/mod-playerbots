@@ -20,6 +20,16 @@ public:
 
     bool Execute(Event /*event*/) override { return false; }
 
+    // By leewheel 2026-09-04
+    // 防悬空过滤器：过滤掉"inventory items"等缓存列表中已失效的裸指针。
+    //   背景（玩家崩溃日志 2026-09-04）：InventoryItemValue 缓存 1000ms，窗口内物品
+    //   被用掉/堆叠合并/交易后销毁，缓存中的 Item* 悬空，消费方取用即 C0000005
+    //   （栈：CanUseItem→Item::GetTemplate→Object::GetUInt32Value）。
+    //   实现：遍历 bot 当前背包/装备建立"活指针集合"，候选指针按值比对过滤——
+    //   全程不解引用候选指针，悬空指针也不会引发访问违例。
+    // End By leewheel
+    static std::vector<Item*> FilterLive(Player* bot, std::vector<Item*> const& candidates);
+
 protected:
     std::vector<Item*> Find(std::string const qualifier);
 };

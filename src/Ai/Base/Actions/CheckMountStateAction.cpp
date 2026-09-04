@@ -11,6 +11,7 @@
 #include "BattlegroundWS.h"
 #include "DBCStores.h"
 #include "Event.h"
+#include "ItemCountValue.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
@@ -335,6 +336,9 @@ bool CheckMountStateAction::Mount()
     }
 
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", "mount");
+    // By leewheel 2026-09-04 防悬空崩溃: 缓存物品列表先过滤失效指针再取用
+    // End By leewheel
+    items = InventoryItemValueBase::FilterLive(bot, items);
     if (!items.empty())
         return UseItemAuto(*items.begin());
 

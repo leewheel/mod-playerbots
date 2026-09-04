@@ -5,6 +5,7 @@
  */
 
 #include "ItemUsageValue.h"
+#include "ItemCountValue.h"
 #include "AiFactory.h"
 #include "ChatHelper.h"
 #include "GuildTaskMgr.h"
@@ -727,6 +728,9 @@ Item* ItemUsageValue::CurrentItem(ItemTemplate const* proto)
 {
     Item* bestItem = nullptr;
     std::vector<Item*> found = AI_VALUE2(std::vector<Item*>, "inventory items", chat->FormatItem(proto));
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    found = InventoryItemValueBase::FilterLive(bot, found);
     for (auto item : found)
     {
         if (bestItem && item->GetUInt32Value(ITEM_FIELD_DURABILITY) < bestItem->GetUInt32Value(ITEM_FIELD_DURABILITY))
@@ -746,6 +750,9 @@ float ItemUsageValue::CurrentStacks(ItemTemplate const* proto)
     uint32 maxStack = proto->GetMaxStackSize();
 
     std::vector<Item*> found = AI_VALUE2(std::vector<Item*>, "inventory items", chat->FormatItem(proto));
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    found = InventoryItemValueBase::FilterLive(bot, found);
 
     float itemCount = 0;
 
@@ -760,6 +767,9 @@ float ItemUsageValue::CurrentStacks(ItemTemplate const* proto)
 float ItemUsageValue::BetterStacks(ItemTemplate const* proto, std::string const itemType)
 {
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", itemType);
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    items = InventoryItemValueBase::FilterLive(bot, items);
 
     float stacks = 0;
 

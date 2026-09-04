@@ -6,6 +6,7 @@
 
 #include "WarlockActions.h"
 #include "Event.h"
+#include "ItemCountValue.h"
 #include "Item.h"
 #include "ObjectGuid.h"
 #include "Player.h"
@@ -236,6 +237,9 @@ static bool HasSoulstoneAura(Unit* unit)
 bool UseSoulstoneSelfAction::Execute(Event /*event*/)
 {
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", "soulstone");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    items = InventoryItemValueBase::FilterLive(bot, items);
     if (items.empty())
         return false;
 
@@ -270,6 +274,9 @@ bool UseSoulstoneMasterAction::Execute(Event /*event*/)
     CleanupSoulstoneReservations();
 
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", "soulstone");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    items = InventoryItemValueBase::FilterLive(bot, items);
     if (items.empty())
         return false;
 
@@ -304,6 +311,9 @@ bool UseSoulstoneTankAction::Execute(Event /*event*/)
     CleanupSoulstoneReservations();
 
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", "soulstone");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    items = InventoryItemValueBase::FilterLive(bot, items);
     if (items.empty())
         return false;
 
@@ -372,6 +382,9 @@ bool UseSoulstoneHealerAction::Execute(Event /*event*/)
     CleanupSoulstoneReservations();
 
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", "soulstone");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    items = InventoryItemValueBase::FilterLive(bot, items);
     if (items.empty())
         return false;
 

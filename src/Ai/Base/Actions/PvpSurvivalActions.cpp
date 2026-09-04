@@ -6,6 +6,7 @@
 
 #include "PvpSurvivalActions.h"
 #include "Event.h"
+#include "ItemCountValue.h"
 #include "Playerbots.h"
 
 // By leewheel 2026-08-29
@@ -193,6 +194,9 @@ Item* UseBandageInPvpAction::FindBandage()
             continue;
 
         std::vector<Item*> found = AI_VALUE2(std::vector<Item*>, "inventory items", chat->FormatItem(proto));
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        found = InventoryItemValueBase::FilterLive(bot, found);
         if (!found.empty())
             return *found.begin();
     }

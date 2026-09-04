@@ -5,6 +5,7 @@
  */
 
 #include "RogueActions.h"
+#include "ItemCountValue.h"
 #include "Event.h"
 #include "ObjectGuid.h"
 #include "Player.h"
@@ -88,6 +89,9 @@ bool UseDeadlyPoisonAction::Execute(Event /*event*/)
     {
         poison_name = "Deadly Poison" + suffix;
         items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        items = InventoryItemValueBase::FilterLive(bot, items);
         if (!items.empty())
         {
             break;
@@ -111,6 +115,9 @@ bool UseDeadlyPoisonAction::isPossible()
     {
         poison_name = "Deadly Poison" + suffix;
         items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        items = InventoryItemValueBase::FilterLive(bot, items);
         if (!items.empty())
         {
             break;
@@ -128,6 +135,9 @@ bool UseInstantPoisonAction::Execute(Event /*event*/)
     {
         poison_name = "Instant Poison" + suffix;
         items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        items = InventoryItemValueBase::FilterLive(bot, items);
         if (!items.empty())
         {
             break;
@@ -150,6 +160,9 @@ bool UseInstantPoisonAction::isPossible()
     {
         poison_name = "Instant Poison" + suffix;
         items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        items = InventoryItemValueBase::FilterLive(bot, items);
         if (!items.empty())
         {
             break;
@@ -167,6 +180,9 @@ bool UseInstantPoisonOffHandAction::Execute(Event /*event*/)
     {
         poison_name = "Instant Poison" + suffix;
         items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        items = InventoryItemValueBase::FilterLive(bot, items);
         if (!items.empty())
         {
             break;
@@ -189,6 +205,9 @@ bool UseInstantPoisonOffHandAction::isPossible()
     {
         poison_name = "Instant Poison" + suffix;
         items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        items = InventoryItemValueBase::FilterLive(bot, items);
         if (!items.empty())
         {
             break;

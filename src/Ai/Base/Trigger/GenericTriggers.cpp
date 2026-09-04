@@ -8,6 +8,7 @@
 #include "Corpse.h"
 #include "CreatureAI.h"
 #include "GenericBuffUtils.h"
+#include "ItemCountValue.h"
 #include "ItemVisitors.h"
 #include "LastSpellCastValue.h"
 #include "ObjectGuid.h"
@@ -257,7 +258,9 @@ bool NoFoodTrigger::IsActive()
     if (isRandomBot && botAI->HasCheat(BotCheatMask::food))
         return false;
 
-    return AI_VALUE2(std::vector<Item*>, "inventory items", "conjured food").empty();
+    // By leewheel 2026-09-04 防悬空: 过滤缓存列表中已失效的物品指针, 避免"空背包误判为有"
+    // End By leewheel
+    return InventoryItemValueBase::FilterLive(bot, AI_VALUE2(std::vector<Item*>, "inventory items", "conjured food")).empty();
 }
 
 bool NoDrinkTrigger::IsActive()
@@ -266,7 +269,9 @@ bool NoDrinkTrigger::IsActive()
     if (isRandomBot && botAI->HasCheat(BotCheatMask::food))
         return false;
 
-    return AI_VALUE2(std::vector<Item*>, "inventory items", "conjured water").empty();
+    // By leewheel 2026-09-04 防悬空: 过滤缓存列表中已失效的物品指针, 避免"空背包误判为有"
+    // End By leewheel
+    return InventoryItemValueBase::FilterLive(bot, AI_VALUE2(std::vector<Item*>, "inventory items", "conjured water")).empty();
 }
 
 bool TargetInSightTrigger::IsActive() { return AI_VALUE(Unit*, "grind target"); }

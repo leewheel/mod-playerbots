@@ -88,6 +88,9 @@ bool SmartDestroyItemAction::Execute(Event /*event*/)
     for (auto& usage : bestToDestroy)
     {
         std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", "usage " + std::to_string(usage));
+        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+        // End By leewheel
+        items = InventoryItemValueBase::FilterLive(bot, items);
         std::reverse(items.begin(), items.end());
 
         for (auto& item : items)

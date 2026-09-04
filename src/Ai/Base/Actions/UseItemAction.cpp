@@ -7,6 +7,7 @@
 #include "UseItemAction.h"
 #include "ChatHelper.h"
 #include "Event.h"
+#include "ItemCountValue.h"
 #include "ItemPackets.h"
 #include "ItemUsageValue.h"
 #include "PlayerbotTextMgr.h"
@@ -19,6 +20,12 @@ bool UseItemAction::Execute(Event event)
         name = getName();
 
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", name);
+    // By leewheel 2026-09-04 防悬空崩溃: "inventory items" 缓存1000ms, 窗口内物品可能
+    //   被用掉/堆叠合并/交易而销毁, 缓存中的裸指针悬空(玩家崩溃日志:
+    //   CanUseItem→Item::GetTemplate→Object::GetUInt32Value C0000005)。
+    //   取用前按 bot 当前背包物品指针集合过滤, 悬空指针不解引用直接丢弃。
+    // End By leewheel
+    items = InventoryItemValueBase::FilterLive(bot, items);
     GuidVector gos = chat->parseGameobjects(name);
 
     if (gos.empty())
@@ -65,6 +72,18 @@ bool UseItemAction::UseItemOnItem(Item* item, Item* itemTarget) { return UseItem
 
 bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Unit* unitTarget)
 {
+    // By leewheel 2026-09-04 防悬空崩溃(纵深防御): 上游调用方(Execute/CheckMountState/OCActions等)
+    //   传入的 Item* 可能来自1000ms缓存已失效, 进入 deref 前统一过滤一次。
+    // End By leewheel
+    if (item)
+    {
+        std::vector<Item*> check = InventoryItemValueBase::FilterLive(bot, {item});
+        if (check.empty())
+            return false;
+    }
+    else
+        return false;
+
     if (bot->CanUseItem(item) != EQUIP_ERR_OK)
         return false;
 
@@ -426,6 +445,9 @@ bool UseHearthStone::isUseful() { return !bot->InBattleground(); }
 bool UseRandomRecipe::Execute(Event /*event*/)
 {
     std::vector<Item*> recipes = AI_VALUE2(std::vector<Item*>, "inventory items", "recipe");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    recipes = InventoryItemValueBase::FilterLive(bot, recipes);
 
     std::string recipeName = "";
 
@@ -458,6 +480,9 @@ bool UseRandomQuestItem::Execute(Event /*event*/)
     ObjectGuid goTarget;
 
     std::vector<Item*> questItems = AI_VALUE2(std::vector<Item*>, "inventory items", "quest");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    questItems = InventoryItemValueBase::FilterLive(bot, questItems);
     if (questItems.empty())
         return false;
 

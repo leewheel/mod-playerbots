@@ -9,6 +9,7 @@
 #include "BudgetValues.h"
 #include "Event.h"
 #include "GuildMgr.h"
+#include "ItemCountValue.h"
 #include "Playerbots.h"
 #include "RandomPlayerbotFactory.h"
 #include "ServerFacade.h"
@@ -97,6 +98,9 @@ bool BuyPetitionAction::canBuyPetition(Player* bot)
 bool PetitionOfferAction::Execute(Event event)
 {
     std::vector<Item*> petitions = AI_VALUE2(std::vector<Item*>, "inventory items", chat->FormatQItem(5863));
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    petitions = InventoryItemValueBase::FilterLive(bot, petitions);
 
     if (petitions.empty())
         return false;
@@ -211,6 +215,9 @@ bool PetitionTurnInAction::Execute(Event /*event*/)
 {
     GuidVector vendors = botAI->GetAiObjectContext()->GetValue<GuidVector>("nearest npcs")->Get();
     std::vector<Item*> petitions = AI_VALUE2(std::vector<Item*>, "inventory items", chat->FormatQItem(5863));
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
+    // End By leewheel
+    petitions = InventoryItemValueBase::FilterLive(bot, petitions);
 
     if (petitions.empty())
         return false;
