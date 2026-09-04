@@ -223,7 +223,7 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::CurrentTankPositionAttumen(Unit* at
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetTankPositionStep(bot, position, arrivalDist, attumen, moveX, moveY, backwards))
+    if (!GetStepToPosition(bot, position, arrivalDist, attumen, moveX, moveY, backwards))
         return false;
 
     return MoveTo(
@@ -324,7 +324,7 @@ bool MaidenOfVirtueTankPositionBossAction::Execute(Event /*event*/)
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetTankPositionStep(bot, position, arrivalDist, maiden, moveX, moveY, backwards))
+    if (!GetStepToPosition(bot, position, arrivalDist, maiden, moveX, moveY, backwards))
         return false;
 
     return MoveTo(
@@ -405,7 +405,7 @@ bool BigBadWolfPositionBossAction::Execute(Event /*event*/)
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetTankPositionStep(bot, position, arrivalDist, wolf, moveX, moveY, backwards))
+    if (!GetStepToPosition(bot, position, arrivalDist, wolf, moveX, moveY, backwards))
         return false;
 
     return MoveTo(
@@ -511,7 +511,7 @@ bool TheCuratorPositionBossAction::Execute(Event /*event*/)
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetTankPositionStep(bot, position, arrivalDist, curator, moveX, moveY, backwards))
+    if (!GetStepToPosition(bot, position, arrivalDist, curator, moveX, moveY, backwards))
         return false;
 
     return MoveTo(
@@ -1206,7 +1206,7 @@ bool NightbaneGroundPhaseTanksPositionBossAction::Execute(Event /*event*/)
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetTankPositionStep(bot, destination, arrivalDist, nightbane, moveX, moveY, backwards))
+    if (!GetStepToPosition(bot, destination, arrivalDist, nightbane, moveX, moveY, backwards))
         return false;
 
     return MoveTo(

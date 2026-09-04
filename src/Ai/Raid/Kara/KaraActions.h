@@ -15,6 +15,8 @@
 #include "MovementActions.h"
 #include <vector>
 
+// General
+
 class KarazhanResetEncounterStatesAction : public Action
 {
 public:
@@ -35,6 +37,8 @@ private:
     bool SetTremorTotem();
 };
 
+// Trash
+
 class ManaWarpStunCreatureBeforeWarpBreachAction : public AttackAction
 {
 public:
@@ -42,6 +46,8 @@ public:
         : AttackAction(botAI, "mana warp stun creature before warp breach") {}
     bool Execute(Event event) override;
 };
+
+// Attumen the Huntsman
 
 class AttumenTheHuntsmanHandlePhaseOneAction : public AttackAction
 {
@@ -74,6 +80,8 @@ public:
     bool Execute(Event event) override;
 };
 
+// Moroes <Tower Steward>
+
 class MoroesMarkTargetAction : public Action
 {
 public:
@@ -81,6 +89,8 @@ public:
         : Action(botAI, "moroes mark target") {}
     bool Execute(Event event) override;
 };
+
+// Maiden of Virtue
 
 class MaidenOfVirtueTankPositionBossAction : public AttackAction
 {
@@ -109,6 +119,8 @@ public:
     bool Execute(Event event) override;
 };
 
+// The Big Bad Wolf
+
 class BigBadWolfPositionBossAction : public AttackAction
 {
 public:
@@ -135,6 +147,8 @@ private:
     uint8 _runIndex = 0;
 };
 
+// Romulo and Julianne
+
 class RomuloAndJulianneMarkTargetAction : public Action
 {
 public:
@@ -142,6 +156,8 @@ public:
         : Action(botAI, "romulo and julianne mark target") {}
     bool Execute(Event event) override;
 };
+
+// The Wizard of Oz
 
 class WizardOfOzMarkTargetAction : public Action
 {
@@ -158,6 +174,8 @@ public:
         : Action(botAI, "wizard of oz scorch strawman") {}
     bool Execute(Event event) override;
 };
+
+// The Curator
 
 class TheCuratorMarkAstralFlareAction : public Action
 {
@@ -183,6 +201,8 @@ public:
     bool Execute(Event event) override;
 };
 
+// Terestian Illhoof
+
 class TerestianIllhoofMarkTargetAction : public Action
 {
 public:
@@ -190,6 +210,8 @@ public:
         : Action(botAI, "terestian illhoof mark target") {}
     bool Execute(Event event) override;
 };
+
+// Shade of Aran
 
 class ShadeOfAranRunAwayFromArcaneExplosionAction : public MovementAction
 {
@@ -222,6 +244,8 @@ public:
         : MovementAction(botAI, "shade of aran ranged maintain distance") {}
     bool Execute(Event event) override;
 };
+
+// Netherspite
 
 class NetherspiteBlockRedBeamAction : public MovementAction
 {
@@ -318,6 +342,8 @@ public:
     bool Execute(Event event) override;
 };
 
+// Prince Malchezaar
+
 class PrinceMalchezaarEnfeebledBotAvoidHazardAction : public MovementAction
 {
 public:
@@ -341,6 +367,8 @@ public:
         : AttackAction(botAI, "prince malchezaar tanks position boss") {}
     bool Execute(Event event) override;
 };
+
+// Nightbane
 
 class NightbaneGroundPhaseTanksPositionBossAction : public AttackAction
 {

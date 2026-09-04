@@ -20,7 +20,7 @@ bool ShirrakFleeFocusFireTrigger::IsActive()
     if (!AI_VALUE2(Unit*, "find target", "18371"))
         return false;
 
-    return bot->FindNearestCreature(NPC_FOCUS_FIRE, FLARE_SEARCH_RADIUS, true);
+    return bot->FindNearestCreature(NPC_FOCUS_FIRE, FLARE_SEARCH_RADIUS);
 }
 
 bool ShirrakRangedKeepDistanceTrigger::IsActive()

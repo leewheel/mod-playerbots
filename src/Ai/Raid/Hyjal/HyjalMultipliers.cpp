@@ -47,7 +47,7 @@ float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
 
 // Rage Winterchill
 
-float RageWinterchillDisableCombatFormationMoveMultiplier::GetValue(Action* action)
+float RageWinterchillDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -61,7 +61,7 @@ float RageWinterchillDisableCombatFormationMoveMultiplier::GetValue(Action* acti
     return AI_VALUE2(Unit*, "find target", "17767") ? 0.0f : 1.0f;
 }
 
-float RageWinterchillMeleeControlAvoidanceMultiplier::GetValue(Action* action)
+float RageWinterchillMeleeControlAvoidanceMultiplier::GetValueInEncounter(Action* action)
 {
     if (PlayerbotAI::IsRanged(bot))
         return 1.0f;
@@ -91,11 +91,13 @@ float RageWinterchillMeleeControlAvoidanceMultiplier::GetValue(Action* action)
     return winterchill->GetVictim() == bot || PlayerbotAI::IsMainTank(bot) ? 1.0f : 0.0f;
 }
 
+// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名GetValueInEncounter(基类HyjalSummitEncounterMultiplier门控),
+// 保留HEAD侧的注释说明
 // Stock avoid-aoe discards Death and Decay outright: it drops any hazard whose own radius exceeds
 // AiPlayerbot.MaxAoeAvoidRadius, and at the default 15 a 20 yard pool never qualifies. Where it
 // does run it flees to the raw radius, which still sits inside the aura once the target's combat
 // reach is added. The hardcoded action handles both, so keep the two from fighting over the bot
-float RageWinterchillRangedControlAvoidanceMultiplier::GetValue(Action* action)
+float RageWinterchillRangedControlAvoidanceMultiplier::GetValueInEncounter(Action* action)
 {
     if (!PlayerbotAI::IsRanged(bot))
         return 1.0f;
@@ -130,7 +132,7 @@ float RageWinterchillRangedControlAvoidanceMultiplier::GetValue(Action* action)
 
 // Anetheron
 
-float AnetheronDisableAssistTargetingMultiplier::GetValue(Action* action)
+float AnetheronDisableAssistTargetingMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -145,7 +147,9 @@ float AnetheronDisableAssistTargetingMultiplier::GetValue(Action* action)
     return AI_VALUE2(Unit*, "find target", "17808") ? 0.0f : 1.0f;
 }
 
-float AnetheronAvoidAccidentalInfernalAggroMultiplier::GetValue(Action* action)
+// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名GetValueInEncounter
+// Keep non-Infernal tanks from inadvertesntly grabbing aggro with Consecration, Thunder Clap, etc.
+float AnetheronAvoidAccidentalInfernalAggroMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -161,7 +165,7 @@ float AnetheronAvoidAccidentalInfernalAggroMultiplier::GetValue(Action* action)
     return IsInfernalTank(bot) ? 1.0f : 0.0f;
 }
 
-float AnetheronInfernalTargetRunToPositionMultiplier::GetValue(Action* action)
+float AnetheronInfernalTargetRunToPositionMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<MovementAction*>(action) &&
         !dynamic_cast<CastReachTargetSpellAction*>(action))
@@ -182,7 +186,7 @@ float AnetheronInfernalTargetRunToPositionMultiplier::GetValue(Action* action)
     return GetInfernoTarget(anetheron) == bot || GetInfernalTargetingBot(bot) ? 0.0f : 1.0f;
 }
 
-float AnetheronControlMovementMultiplier::GetValue(Action* action)
+float AnetheronControlMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -199,7 +203,7 @@ float AnetheronControlMovementMultiplier::GetValue(Action* action)
     return AI_VALUE2(Unit*, "find target", "17808") ? 0.0f : 1.0f;
 }
 
-float AnetheronControlMisdirectionMultiplier::GetValue(Action* action)
+float AnetheronControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -215,7 +219,7 @@ float AnetheronControlMisdirectionMultiplier::GetValue(Action* action)
 
 // Kaz'rogal
 
-float KazrogalDisableDisperseAndTankFaceMultiplier::GetValue(Action* action)
+float KazrogalDisableDisperseAndTankFaceMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -229,7 +233,7 @@ float KazrogalDisableDisperseAndTankFaceMultiplier::GetValue(Action* action)
     return AI_VALUE2(Unit*, "find target", "17888") ? 0.0f : 1.0f;
 }
 
-float KazrogalControlLowManaMovementMultiplier::GetValue(Action* action)
+float KazrogalControlLowManaMovementMultiplier::GetValueInEncounter(Action* action)
 {
     // Hunters are excluded alongside the classes the Mark cannot reach: it reaches them, but their
     // whole answer to it is Viper, so there is no escape here to clear the way for
@@ -255,7 +259,7 @@ float KazrogalControlLowManaMovementMultiplier::GetValue(Action* action)
     return botsBelowManaThreshold.contains(bot->GetGUID()) ? 0.0f : 1.0f;
 }
 
-float KazrogalKeepAspectOfTheViperActiveMultiplier::GetValue(Action* action)
+float KazrogalKeepAspectOfTheViperActiveMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -281,7 +285,7 @@ float KazrogalKeepAspectOfTheViperActiveMultiplier::GetValue(Action* action)
 
 // Azgalor
 
-float AzgalorDisableAutoTargetingAndPositioningMultiplier::GetValue(Action* action)
+float AzgalorDisableAutoTargetingAndPositioningMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -301,7 +305,7 @@ float AzgalorDisableAutoTargetingAndPositioningMultiplier::GetValue(Action* acti
     return AI_VALUE2(Unit*, "find target", "17842") ? 0.0f : 1.0f;
 }
 
-float AzgalorDoomedBotPrioritizePositioningMultiplier::GetValue(Action* action)
+float AzgalorDoomedBotPrioritizePositioningMultiplier::GetValueInEncounter(Action* action)
 {
     if (!IsDoomed(bot))
         return 1.0f;
@@ -315,8 +319,9 @@ float AzgalorDoomedBotPrioritizePositioningMultiplier::GetValue(Action* action)
     return dynamic_cast<AzgalorMoveToDoomguardTankAction*>(action) ? 1.0f : 0.0f;
 }
 
+// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名GetValueInEncounter, 保留HEAD注释
 // Leave the escape action as the only thing that moves melee while Rain of Fire is a threat
-float AzgalorMeleeDpsControlAvoidanceMultiplier::GetValue(Action* action)
+float AzgalorMeleeDpsControlAvoidanceMultiplier::GetValueInEncounter(Action* action)
 {
     if (!PlayerbotAI::IsMelee(bot) || PlayerbotAI::IsTank(bot))
         return 1.0f;
@@ -349,6 +354,7 @@ float AzgalorMeleeDpsControlAvoidanceMultiplier::GetValue(Action* action)
     return IsNearRainOfFire(botAI, RAIN_OF_FIRE_MELEE_CONTROL_RADIUS) ? 0.0f : 1.0f;
 }
 
+// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名GetValueInEncounter, 保留HEAD注释
 // Rain of Fire is 15 yards, so unlike Death and Decay it does scrape past the default
 // MaxAoeAvoidRadius and stock avoid-aoe does handle it--but only out to the raw radius, which
 // leaves the bot inside the aura. The hardcoded action owns this instead.
@@ -357,7 +363,7 @@ float AzgalorMeleeDpsControlAvoidanceMultiplier::GetValue(Action* action)
 // rather than settling like the spreads at the other bosses do. It only loses to the escape on the
 // ticks the escape actually returns true, so on any tick FleePosition declines an angle it would
 // be free to walk the bot back into the fire it has just left
-float AzgalorRangedControlAvoidanceMultiplier::GetValue(Action* action)
+float AzgalorRangedControlAvoidanceMultiplier::GetValueInEncounter(Action* action)
 {
     if (!PlayerbotAI::IsRanged(bot))
         return 1.0f;
@@ -392,7 +398,7 @@ float AzgalorRangedControlAvoidanceMultiplier::GetValue(Action* action)
 
 // Archimonde
 
-float ArchimondeDisableCombatFormationMoveMultiplier::GetValue(Action* action)
+float ArchimondeDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -409,11 +415,12 @@ float ArchimondeDisableCombatFormationMoveMultiplier::GetValue(Action* action)
     return !HasProtectionOfElune(bot) ? 0.0f : 1.0f;
 }
 
+// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名GetValueInEncounter, 保留HEAD注释
 // Leave the Doomfire avoidance as the only thing that moves a bot near a trail. Its push tapers to
 // nothing at DOOMFIRE_DANGER_RADIUS, so without this anything that wants the bot elsewhere--closing
 // to spell range, stock avoid-aoe on the same patches, the ranged spread--takes over the instant it
 // stops being pushed, drags it back inside, and the two swap the bot every tick
-float ArchimondeControlDoomfireAvoidanceMultiplier::GetValue(Action* action)
+float ArchimondeControlDoomfireAvoidanceMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<MovementAction*>(action) &&
         !dynamic_cast<CastReachTargetSpellAction*>(action))
@@ -446,7 +453,7 @@ float ArchimondeControlDoomfireAvoidanceMultiplier::GetValue(Action* action)
     return IsNearDoomfire(botAI, DOOMFIRE_CONTROL_RADIUS) ? 0.0f : 1.0f;
 }
 
-float ArchimondeSetTremorTotemMultiplier::GetValue(Action* action)
+float ArchimondeSetTremorTotemMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;

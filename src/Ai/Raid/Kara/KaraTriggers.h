@@ -12,11 +12,15 @@
 
 #include "Trigger.h"
 
+// General
+
 class KarazhanNoEncounterInProgressTrigger : public Trigger
 {
 public:
+    // Throttled to once per second. This trigger is true for all trash and downtime and, being
+    // for between-encounter clean-up, has no real urgency to it.
     KarazhanNoEncounterInProgressTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "karazhan no encounter in progress") {}
+        : Trigger(botAI, "karazhan no encounter in progress", 1000) {}
     bool IsActive() override;
 };
 
@@ -28,6 +32,8 @@ public:
     bool IsActive() override;
 };
 
+// Trash
+
 class ManaWarpIsAboutToExplodeTrigger : public Trigger
 {
 public:
@@ -35,6 +41,8 @@ public:
         : Trigger(botAI, "mana warp is about to explode") {}
     bool IsActive() override;
 };
+
+// Attumen the Huntsman
 
 class AttumenTheHuntsmanPhaseOneActiveTrigger : public Trigger
 {
@@ -60,6 +68,8 @@ public:
     bool IsActive() override;
 };
 
+// Moroes <Tower Steward>
+
 class MoroesShouldPrioritizeAddsTrigger : public Trigger
 {
 public:
@@ -67,6 +77,8 @@ public:
         : Trigger(botAI, "moroes should prioritize adds") {}
     bool IsActive() override;
 };
+
+// Maiden of Virtue
 
 class MaidenOfVirtueBossEngagedByTanksTrigger : public Trigger
 {
@@ -92,6 +104,8 @@ public:
     bool IsActive() override;
 };
 
+// The Big Bad Wolf
+
 class BigBadWolfBossEngagedByTankTrigger : public Trigger
 {
 public:
@@ -108,6 +122,8 @@ public:
     bool IsActive() override;
 };
 
+// Romulo and Julianne
+
 class RomuloAndJulianneBothBossesRevivedTrigger : public Trigger
 {
 public:
@@ -115,6 +131,8 @@ public:
         : Trigger(botAI, "romulo and julianne both bosses revived") {}
     bool IsActive() override;
 };
+
+// The Wizard of Oz
 
 class WizardOfOzNeedTargetPriorityTrigger : public Trigger
 {
@@ -131,6 +149,9 @@ public:
         : Trigger(botAI, "wizard of oz strawman is vulnerable to fire") {}
     bool IsActive() override;
 };
+
+// The Curator
+
 class TheCuratorAstralFlareSpawnedTrigger : public Trigger
 {
 public:
@@ -155,6 +176,8 @@ public:
     bool IsActive() override;
 };
 
+// Terestian Illhoof
+
 class TerestianIllhoofShouldPrioritizeChainsTrigger : public Trigger
 {
 public:
@@ -162,6 +185,8 @@ public:
         : Trigger(botAI, "terestian illhoof should prioritize chains") {}
     bool IsActive() override;
 };
+
+// Shade of Aran
 
 class ShadeOfAranArcaneExplosionIsCastingTrigger : public Trigger
 {
@@ -194,6 +219,8 @@ public:
         : Trigger(botAI, "shade of aran boss casts counterspell nearby") {}
     bool IsActive() override;
 };
+
+// Netherspite
 
 class NetherspiteRedBeamIsActiveTrigger : public Trigger
 {
@@ -243,6 +270,8 @@ public:
     bool IsActive() override;
 };
 
+// Prince Malchezaar
+
 class PrinceMalchezaarBotIsEnfeebledTrigger : public Trigger
 {
 public:
@@ -266,6 +295,8 @@ public:
         : Trigger(botAI, "prince malchezaar boss engaged by tanks") {}
     bool IsActive() override;
 };
+
+// Nightbane
 
 class NightbaneBossEngagedByTanksTrigger : public Trigger
 {

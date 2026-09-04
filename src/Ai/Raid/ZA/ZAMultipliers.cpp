@@ -30,6 +30,17 @@ using namespace EncounterHelpers;
 namespace
 {
 
+// Actions that place the bot relative to its current target: closing to melee or spell range, the
+// gap-closers, and the formation moves that circle one. These are what fight a flee, so a hazard a
+// bot has been moved away from holds them until it is clear of it. Distinct from the below, which
+// is every movement at all - reach for that only where the bot should not move for any reason.
+bool IsApproachMovement(Action* action)
+{
+    return dynamic_cast<ReachTargetAction*>(action) ||
+        dynamic_cast<CastReachTargetSpellAction*>(action) ||
+        dynamic_cast<CombatFormationMoveAction*>(action);
+}
+
 bool IsHazardousMovement(Action* action)
 {
     return (dynamic_cast<MovementAction*>(action) && !dynamic_cast<AttackAction*>(action)) ||
@@ -43,7 +54,7 @@ bool IsHazardousMovement(Action* action)
 
 // General
 
-float ZulAmanDelayDpsCooldownsMultiplier::GetValue(Action* action)
+float ZulAmanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -57,7 +68,7 @@ float ZulAmanDelayDpsCooldownsMultiplier::GetValue(Action* action)
     // Every Zul'Aman boss, and nothing else in the instance, runs a BossAI.
     Unit* boss = AI_VALUE(Unit*, "boss target");
     if (!boss)
-        return 1.0f;
+        return 0.0f;
 
     if (boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
         return 0.0f;
@@ -86,22 +97,18 @@ float ZulAmanDelayDpsCooldownsMultiplier::GetValue(Action* action)
         if (boss->GetHealthPct() <= JANALAI_HATCH_ALL_HEALTH_PCT)
             return 1.0f;
 
-        return CountAttackersByEntry(botAI, Id(ZaNpcs::NPC_AMANI_DRAGONHAWK_HATCHLING)) >=
-            JANALAI_BLOODLUST_HATCHLING_COUNT ? 1.0f : 0.0f;
+        return CountJanalaiHatchlingsByEntry(botAI) >= JANALAI_BLOODLUST_HATCHLING_COUNT ?
+            1.0f : 0.0f;
     }
 
     return 1.0f;
 }
 
 // Malacrass siphoning a Warrior soul and Zul'jin have very similar Whirlwinds
-float ZulAmanAvoidWhirlwindMultiplier::GetValue(Action* action)
+float ZulAmanAvoidWhirlwindMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!dynamic_cast<ReachTargetAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action) &&
-        !dynamic_cast<CastKillingSpreeAction*>(action))
-    {
+    if (!IsApproachMovement(action) && !dynamic_cast<CastKillingSpreeAction*>(action))
         return 1.0f;
-    }
 
     Unit* boss = AI_VALUE(Unit*, "boss target");
     if (!boss)
@@ -129,7 +136,7 @@ float ZulAmanAvoidWhirlwindMultiplier::GetValue(Action* action)
     return bot->GetExactDist2d(boss) <= ZA_WHIRLWIND_HOLD_DISTANCE ? 0.0f : 1.0f;
 }
 
-float ZulAmanDisableTankActionsMultiplier::GetValue(Action* action)
+float ZulAmanDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -198,7 +205,7 @@ float ZulAmanDisableTankActionsMultiplier::GetValue(Action* action)
 
 // Nalorakk: Don't Misdirect the boss in troll form to the Main Tank.
 // Halazzi: Don't Misdirect the Spirit of the Lynx to the Main Tank.
-float ZulAmanControlMisdirectionMultiplier::GetValue(Action* action)
+float ZulAmanControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -219,7 +226,7 @@ float ZulAmanControlMisdirectionMultiplier::GetValue(Action* action)
 
 // CombatFormationMoveAction is the action for the "disperse" command. It is also the parent class
 // for SetBehindTargetAction and TankFaceAction.
-float ZulAmanDisableCombatFormationMoveMultiplier::GetValue(Action* action)
+float ZulAmanDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -240,7 +247,7 @@ float ZulAmanDisableCombatFormationMoveMultiplier::GetValue(Action* action)
 
 // Akil'zon <Eagle Avatar>
 
-float AkilzonStayInEyeOfTheStormMultiplier::GetValue(Action* action)
+float AkilzonStayInEyeOfTheStormMultiplier::GetValueInEncounter(Action* action)
 {
     if (!IsHazardousMovement(action))
         return 1.0f;
@@ -265,7 +272,7 @@ float AkilzonStayInEyeOfTheStormMultiplier::GetValue(Action* action)
 
 // Jan'alai <Dragonhawk Avatar>
 
-float JanalaiStayAwayFromFireBombsMultiplier::GetValue(Action* action)
+float JanalaiStayAwayFromFireBombsMultiplier::GetValueInEncounter(Action* action)
 {
     if (!IsHazardousMovement(action))
         return 1.0f;
@@ -280,7 +287,7 @@ float JanalaiStayAwayFromFireBombsMultiplier::GetValue(Action* action)
     return IsJanalaiBombing(boss) ? 0.0f : 1.0f;
 }
 
-float JanalaiDoNotCrowdControlHatchersMultiplier::GetValue(Action* action)
+float JanalaiDoNotCrowdControlHatchersMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -294,7 +301,7 @@ float JanalaiDoNotCrowdControlHatchersMultiplier::GetValue(Action* action)
 
 // Halazzi <Lynx Avatar>
 
-float HalazziDisableAutoDpsTargetingMultiplier::GetValue(Action* action)
+float HalazziDisableAutoDpsTargetingMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -315,7 +322,7 @@ float HalazziDisableAutoDpsTargetingMultiplier::GetValue(Action* action)
 // Hex Lord Malacrass
 
 // Weirdly, Unstable Affliction is considered a magic effect, not a curse.
-float HexLordMalacrassUnstableAfflictionMultiplier::GetValue(Action* action)
+float HexLordMalacrassUnstableAfflictionMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -350,7 +357,7 @@ float HexLordMalacrassUnstableAfflictionMultiplier::GetValue(Action* action)
     return target && target->HasAura(Id(ZaSpells::SPELL_UNSTABLE_AFFLICTION)) ? 0.0f : 1.0f;
 }
 
-float HexLordMalacrassSpellReflectionMultiplier::GetValue(Action* action)
+float HexLordMalacrassSpellReflectionMultiplier::GetValueInEncounter(Action* action)
 {
     if (!PlayerbotAI::IsCaster(bot))
         return 1.0f;
@@ -366,12 +373,20 @@ float HexLordMalacrassSpellReflectionMultiplier::GetValue(Action* action)
         boss->HasAura(Id(ZaSpells::SPELL_HEX_LORD_SPELL_REFLECTION)) ? 0.0f : 1.0f;
 }
 
+float HexLordMalacrassStayAwayFromFreezingTrapMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!IsApproachMovement(action))
+        return 1.0f;
+
+    return GetNearbyFreezingTrap(botAI) ? 0.0f : 1.0f;
+}
+
 // Zul'jin
 
 // AvoidAoeAction is otherwise triggered by the Feather Vortices, and it is useless as they chase
 // players at player run speed (the bot runs away when it gets hit, and the vortex just chases the
 // bot at the same speed).
-float ZuljinEagleDisableAvoidAoeMultiplier::GetValue(Action* action)
+float ZuljinEagleDisableAvoidAoeMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;

@@ -13,7 +13,7 @@ using namespace GruulHelpers;
 
 // General
 
-bool GruulsLairNoEncounterInProgress::IsActive()
+bool GruulsLairNoEncounterInProgressTrigger::IsActive()
 {
     if (bot->GetMapId() != GRUUL_MAP_ID)
         return false;
@@ -22,9 +22,9 @@ bool GruulsLairNoEncounterInProgress::IsActive()
     return instance && !instance->IsEncounterInProgress();
 }
 
-// High King Maulgar
+// High King Maulgar <Lord of the Ogres>
 
-bool HighKingMaulgarThreeOgresNeedMeleeTanksTrigger::IsActive()
+bool HighKingMaulgarThreeOgresNeedMeleeTanksTrigger::IsActiveInEncounter()
 {
     if (IsBlindeyeTank(bot))
         return AI_VALUE2(Unit*, "find target", "18831");
@@ -37,21 +37,21 @@ bool HighKingMaulgarThreeOgresNeedMeleeTanksTrigger::IsActive()
     // End By leewheel
 }
 
-bool HighKingMaulgarKroshNeedsMageTankTrigger::IsActive()
+bool HighKingMaulgarKroshNeedsMageTankTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-08-29 合并：采用对侧IsKroshMageTank助手(职责单一)，entry规则查找
     return IsKroshMageTank(bot) && AI_VALUE2(Unit*, "find target", "18832");
     // End By leewheel
 }
 
-bool HighKingMaulgarKigglerNeedsMoonkinTankTrigger::IsActive()
+bool HighKingMaulgarKigglerNeedsMoonkinTankTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-08-29 合并：采用对侧IsKigglerMoonkinTank助手，entry规则查找
     return IsKigglerMoonkinTank(bot) && AI_VALUE2(Unit*, "find target", "18835");
     // End By leewheel
 }
 
-bool HighKingMaulgarDeterminingKillOrderTrigger::IsActive()
+bool HighKingMaulgarDeterminingKillOrderTrigger::IsActiveInEncounter()
 {
     if (!AI_VALUE2(Unit*, "find target", "18831"))
         return false;
@@ -76,7 +76,7 @@ bool HighKingMaulgarDeterminingKillOrderTrigger::IsActive()
     return true;
 }
 
-bool HighKingMaulgarBossChannelingWhirlwindTrigger::IsActive()
+bool HighKingMaulgarBossChannelingWhirlwindTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-08-29 修复：旋风斩是 High King Maulgar(18836) 的技能，
     // 旧代码误用 18831(Blindeye the Seer) 导致该触发器永远无法在正确的boss身上生效
@@ -88,7 +88,7 @@ bool HighKingMaulgarBossChannelingWhirlwindTrigger::IsActive()
     return !IsMaulgarTank(bot);
 }
 
-bool HighKingMaulgarKroshCastsBlastWaveTrigger::IsActive()
+bool HighKingMaulgarShouldStandBackFromKroshTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-08-29 合并：坦克与Krosh法师坦克放行(对侧新增)，entry规则查找
     if (PlayerbotAI::IsTank(bot) || IsKroshMageTank(bot))
@@ -98,12 +98,14 @@ bool HighKingMaulgarKroshCastsBlastWaveTrigger::IsActive()
     // End By leewheel
 }
 
-bool HighKingMaulgarWildFelStalkerSpawnedTrigger::IsActive()
+bool HighKingMaulgarWildFelStalkerSpawnedTrigger::IsActiveInEncounter()
 {
-    return bot->getClass() == CLASS_WARLOCK && AI_VALUE2(Unit*, "find target", "18847");
+    // By leewheel 2026-09-04 合并冲突解决: 采纳brighton的GetNearbyWildFelStalkers缓存式助手(内部已用entry 18847判断)
+    // End By leewheel
+    return bot->getClass() == CLASS_WARLOCK && !GetNearbyWildFelStalkers(botAI).empty();
 }
 
-bool HighKingMaulgarPullingOgreCouncilTrigger::IsActive()
+bool HighKingMaulgarPullingOgreCouncilTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
@@ -114,7 +116,7 @@ bool HighKingMaulgarPullingOgreCouncilTrigger::IsActive()
     return blindeye && blindeye->GetHealthPct() > BLINDEYE_ENGAGED_HEALTH_PCT;
 }
 
-bool HighKingMaulgarBossCastsIntimidatingRoarTrigger::IsActive()
+bool HighKingMaulgarBossCastsIntimidatingRoarTrigger::IsActiveInEncounter()
 {
     return bot->getClass() == CLASS_PRIEST && AI_VALUE2(Unit*, "find target", "18836");
     // End By leewheel
@@ -122,17 +124,17 @@ bool HighKingMaulgarBossCastsIntimidatingRoarTrigger::IsActive()
 
 // Gruul the Dragonkiller
 
-bool GruulTheDragonkillerShouldBeTankedTrigger::IsActive()
+bool GruulTheDragonkillerShouldBeTankedTrigger::IsActiveInEncounter()
 {
     return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "19044");
 }
 
-bool GruulTheDragonkillerRangedShouldSpreadTrigger::IsActive()
+bool GruulTheDragonkillerRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
     return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "19044");
 }
 
-bool GruulTheDragonkillerIncomingShatterTrigger::IsActive()
+bool GruulTheDragonkillerIncomingShatterTrigger::IsActiveInEncounter()
 {
     return HasGroundSlam(bot);
 }
