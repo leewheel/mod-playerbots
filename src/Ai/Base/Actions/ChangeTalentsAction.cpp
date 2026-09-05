@@ -40,6 +40,13 @@ bool ChangeTalentsAction::Execute(Event event)
                 bot->ActivateSpec(0);
                 out << "已激活第一套天赋";
                 botAI->ResetStrategies();
+                // By leewheel 2026-09-04
+                // 装备联动切换：激活第一套天赋后，按新天赋定位（坦克/治疗/DPS）重新配置最佳装备。
+                // 老大要求：切天赋必须同时切对应装备，禁止出现坦克天赋穿DPS装进本的情况。
+                // InitEquipment 会把换下的旧装备移入背包，不会销毁。
+                PlayerbotFactory gearFactory(bot, bot->GetLevel());
+                gearFactory.InitEquipment(false);
+                // End By leewheel
             }
             else if (param.find("switch 2") != std::string::npos)
             {
@@ -51,12 +58,21 @@ bool ChangeTalentsAction::Execute(Event event)
                 bot->ActivateSpec(1);
                 out << "已激活第二套天赋";
                 botAI->ResetStrategies();
+                // By leewheel 2026-09-04
+                // 装备联动切换：激活第二套天赋后，按新天赋定位重新配置最佳装备（同上）。
+                PlayerbotFactory gearFactory(bot, bot->GetLevel());
+                gearFactory.InitEquipment(false);
+                // End By leewheel
             }
         }
         else if (param.find("autopick") != std::string::npos)
         {
             PlayerbotFactory factory(bot, bot->GetLevel());
             factory.InitTalentsTree(true);
+            // By leewheel 2026-09-04
+            // 装备联动切换：自动选择天赋后，按新天赋定位重新配置最佳装备。
+            factory.InitEquipment(false);
+            // End By leewheel
             out << "自动选择天赋";
             botAI->ResetStrategies();
         }
@@ -148,6 +164,12 @@ std::string ChangeTalentsAction::SpecPick(std::string param)
             PlayerbotFactory factory(bot, bot->GetLevel());
             factory.InitGlyphs(false);
 
+            // By leewheel 2026-09-04
+            // 装备联动切换：应用预设专精后，按新天赋定位重新配置最佳装备，
+            // 保证坦克/治疗/DPS 专精各自穿戴对应定位的装备。
+            factory.InitEquipment(false);
+            // End By leewheel
+
             std::ostringstream out;
             out << "正在应用专精 " << sPlayerbotAIConfig.premadeSpecName[cls][specNo];
             return out.str();
@@ -169,6 +191,13 @@ std::string ChangeTalentsAction::SpecApply(std::string param)
         return out.str();
     }
     PlayerbotFactory::InitTalentsByParsedSpecLink(bot, parsedSpecLink, true);
+    // By leewheel 2026-09-04
+    // 装备联动切换：应用天赋链接后，按新天赋定位重新配置最佳装备（同 SpecPick）。
+    {
+        PlayerbotFactory factory(bot, bot->GetLevel());
+        factory.InitEquipment(false);
+    }
+    // End By leewheel
     out << "正在应用 " << param;
     return out.str();
 }

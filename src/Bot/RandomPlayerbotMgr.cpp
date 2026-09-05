@@ -2255,6 +2255,14 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                         // End By leewheel
                         continue;
                     }
+                    // By leewheel 2026-09-04
+                    // 装备联动切换：坦克职业轮转切完天赋后，按坦克定位重新配置最佳装备，
+                    // 防止以坦克职责进本却穿DPS装（秒躺拖垮队伍）。
+                    {
+                        PlayerbotFactory eqFactory(cand.bot, cand.bot->GetLevel());
+                        eqFactory.InitEquipment(false);
+                    }
+                    // End By leewheel
                 }
 
                 if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(cand.bot))
@@ -2412,6 +2420,14 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
                     if (botAI)
                         botAI->ResetStrategies(false);
+                    // By leewheel 2026-09-04
+                    // 装备联动切换：补位切成坦克天赋后，按坦克定位重新配置最佳装备，
+                    // 防止以坦克职责进本却穿DPS装（秒躺拖垮队伍）。
+                    {
+                        PlayerbotFactory eqFactory(bot, bot->GetLevel());
+                        eqFactory.InitEquipment(false);
+                    }
+                    // End By leewheel
                     // By leewheel 2026-07-29
                     if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_TANK))
                     {
@@ -2467,6 +2483,14 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
                     if (botAI)
                         botAI->ResetStrategies(false);
+                    // By leewheel 2026-09-04
+                    // 装备联动切换：补位切成治疗天赋后，按治疗定位重新配置最佳装备
+                    // （法强/回蓝优先），防止治疗进本带DPS装导致奶量不足。
+                    {
+                        PlayerbotFactory eqFactory(bot, bot->GetLevel());
+                        eqFactory.InitEquipment(false);
+                    }
+                    // End By leewheel
                     // By leewheel 2026-07-29
                     if (SendLfgJoinPacket(bot, dungeonSet, lfg::PLAYER_ROLE_HEALER))
                     {
