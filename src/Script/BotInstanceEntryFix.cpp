@@ -93,7 +93,8 @@ static bool IsDungeonFixThrottled(Player* bot)
 // By leewheel 2026-07-18
 // 遍历所有副本地图，给机器人补全所有缺少的进入条件（钥匙/任务/成就/等级）
 // 用于LFG排队前刷新缓存：不确定会排到哪个副本，所以全部补全
-static void FixAllDungeonRequirements(Player* bot, Player* master = nullptr)
+// By leewheel 2026-09-05 修复C4100警告：master参数暂未使用（552行调用点传入），注释参数名保留签名
+static void FixAllDungeonRequirements(Player* bot, Player* /*master*/ = nullptr)
 {
     if (!bot)
         return;
