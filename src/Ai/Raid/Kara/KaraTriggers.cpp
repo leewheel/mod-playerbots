@@ -9,7 +9,6 @@
 
 #include "KaraTriggers.h"
 #include "EncounterHelpers.h"
-#include "InstanceScript.h"
 #include "KaraActions.h"
 #include "KaraHelpers.h"
 #include "Playerbots.h"
@@ -21,21 +20,23 @@ using namespace EncounterHelpers;
 
 bool KarazhanNoEncounterInProgressTrigger::IsActive()
 {
-    if (bot->GetMapId() != KARA_MAP_ID)
-        return false;
-
-    InstanceScript* instance = bot->GetInstanceScript();
-    return instance && !instance->IsEncounterInProgress();
+    return !IsEncounterInProgress(bot, KARA_MAP_ID);
 }
 
 bool KarazhanEnemiesCastFearTrigger::IsActive()
 {
-    if (bot->getClass() != CLASS_SHAMAN && bot->getClass() != CLASS_PRIEST)
+    if (bot->getClass() != CLASS_SHAMAN)
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "17225") ||
+// By leewheel 2026-09-05 合并：采纳上游颤抖图腾与Nightbane飞行高度新逻辑，boss按entry规则查找
+    if (AI_VALUE2(bool, "has totem", "tremor totem"))
+        return false;
+
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
+    return (nightbane && nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z) ||
         AI_VALUE2(Unit*, "find target", "15547") ||
         AI_VALUE2(Unit*, "find target", "17521");
+    // End By leewheel
 }
 
 // Trash

@@ -5,7 +5,6 @@
  */
 
 #include "TKStrategy.h"
-#include "Playerbots.h"
 #include "TKMultipliers.h"
 
 void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
@@ -33,8 +32,8 @@ void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("al'ar embers explode upon death", {
         NextAction("al'ar assist tanks pick up embers", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("al'ar killing embers damages boss", {
-        NextAction("al'ar ranged dps prioritize embers", ACTION_RAID + 1) }));
+    triggers.push_back(new TriggerNode("al'ar should assign non-tank target", {
+        NextAction("al'ar assign non-tank target", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("al'ar incoming flame quills", {
         NextAction("al'ar jump from platform", ACTION_EMERGENCY + 7) }));
@@ -66,8 +65,9 @@ void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("high astromancer solarian should be tanked", {
         NextAction("high astromancer solarian main tank pick up boss", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("high astromancer solarian bot has wrath of the astromancer", {
-        NextAction("high astromancer solarian move away from group", ACTION_EMERGENCY + 6) }));
+    triggers.push_back(
+        new TriggerNode("high astromancer solarian bot has wrath of the astromancer", {
+            NextAction("high astromancer solarian move away from group", ACTION_EMERGENCY + 6) }));
 
     triggers.push_back(new TriggerNode("high astromancer solarian solarium priests spawned", {
         NextAction("high astromancer solarian target solarium priests", ACTION_RAID + 1) }));
@@ -83,8 +83,9 @@ void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         "kael'thas sunstrider sanguinar or telonicus should be tanked", {
         NextAction("kael'thas sunstrider melee tanks position advisors", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("kael'thas sunstrider capernian should be tanked by warlock", {
-        NextAction("kael'thas sunstrider warlock tank position capernian", ACTION_RAID) }));
+    triggers.push_back(
+        new TriggerNode("kael'thas sunstrider capernian should be tanked by warlock", {
+            NextAction("kael'thas sunstrider warlock tank position capernian", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("kael'thas sunstrider capernian blows up near and far", {
         NextAction("kael'thas sunstrider spread and move away from capernian", ACTION_RAID + 2) }));
@@ -117,8 +118,8 @@ void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("kael'thas sunstrider main tank position boss", ACTION_RAID),
         NextAction("kael'thas sunstrider avoid flame strike", ACTION_EMERGENCY + 8) }));
 
-    triggers.push_back(new TriggerNode("kael'thas sunstrider phoenixes and eggs are spawning", {
-        NextAction("kael'thas sunstrider handle phoenixes and eggs", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("kael'thas sunstrider should assign final phase target", {
+        NextAction("kael'thas sunstrider assign final phase target", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("kael'thas sunstrider raid member is mind controlled", {
         NextAction("kael'thas sunstrider break mind control", ACTION_EMERGENCY + 1) }));
@@ -156,17 +157,6 @@ void RaidTempestKeepStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new KaelthasSunstriderPrepareForPhase3Multiplier(botAI));
     multipliers.push_back(new KaelthasSunstriderDelayCooldownsMultiplier(botAI));
     multipliers.push_back(new KaelthasSunstriderStaySpreadDuringGravityLapseMultiplier(botAI));
-}
-
-// Used only to exclude melee dps from Kael'thas Phoenixes
-void RaidTempestKeepStrategy::AppendTargetExclusions(
-    GuidSet& exclusions, TargetValueExclusionType /*type*/)
-{
-    Player* bot = botAI->GetBot();
-    if (PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsTank(bot))
-        return;
-
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    if (Unit* phoenix = AI_VALUE2(Unit*, "find target", "21362"))
-        exclusions.insert(phoenix->GetGUID());
+    // By leewheel 2026-09-05 合并：采纳上游"移除TK目标排除"，凤凰(21362)的规避改由动作层(NonTanksAssignTargetAndAvoidPhoenixes)处理
+    // End By leewheel
 }

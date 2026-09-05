@@ -8,7 +8,6 @@
 #include "EncounterHelpers.h"
 #include "HyjalActions.h"
 #include "HyjalHelpers.h"
-#include "InstanceScript.h"
 #include "Playerbots.h"
 
 using namespace HyjalHelpers;
@@ -18,11 +17,7 @@ using namespace EncounterHelpers;
 
 bool HyjalSummitNoEncounterInProgress::IsActive()
 {
-    if (bot->GetMapId() != HYJAL_MAP_ID)
-        return false;
-
-    InstanceScript* instance = bot->GetInstanceScript();
-    return instance && !instance->IsEncounterInProgress();
+    return !IsEncounterInProgress(bot, HYJAL_MAP_ID);
 }
 
 bool HyjalPullingBossTrigger::IsActive()
@@ -144,7 +139,8 @@ bool AnetheronInfernalsPulseImmolationTrigger::IsActiveInEncounter()
     if (PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "anetheron"))
+    // By leewheel 2026-09-05 清理英文遗留：Anetheron按entry规则(17808)
+    if (!AI_VALUE2(Unit*, "find target", "17808"))
         return false;
 
     Unit* infernal = GetNearestInfernal(bot);
@@ -305,7 +301,8 @@ bool KazrogalImmunityNoLongerNeededTrigger::IsActiveInEncounter()
     if (bot->GetHealthPct() <= keepImmunityHealthPct)
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "kaz'rogal");
+    // By leewheel 2026-09-05 清理英文遗留：Kaz'rogal按entry规则(17888)
+    return AI_VALUE2(Unit*, "find target", "17888");
 }
 
 // Azgalor

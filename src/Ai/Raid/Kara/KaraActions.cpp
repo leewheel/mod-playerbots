@@ -80,40 +80,15 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
     //End By leewheel
 }
 
-bool KarazhanCastFearProtectionSpellAction::Execute(Event /*event*/)
+bool KarazhanSetTremorTotemAction::Execute(Event /*event*/)
 {
-    if (bot->getClass() == CLASS_PRIEST)
-        return CastFearWardOnMainTank();
-
-    return SetTremorTotem();
-}
-
-bool KarazhanCastFearProtectionSpellAction::CastFearWardOnMainTank()
-{
-    constexpr uint32 fearWard = Id(KaraSpells::SPELL_FEAR_WARD);
-    Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank || mainTank->HasAura(fearWard))
-        return false;
-
-    if (!botAI->CanCastSpell(Id(KaraSpells::SPELL_FEAR_WARD), mainTank))
-        return false;
-
-    return botAI->CastSpell(Id(KaraSpells::SPELL_FEAR_WARD), mainTank);
-}
-
-bool KarazhanCastFearProtectionSpellAction::SetTremorTotem()
-{
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
-    if (!nightbane || nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
-        return false;
-
-    if (AI_VALUE2(bool, "has totem", "tremor totem"))
-        return false;
-
-    if (!botAI->CanCastSpell(Id(KaraSpells::SPELL_TREMOR_TOTEM), bot))
-        return false;
-
-    return botAI->CastSpell(Id(KaraSpells::SPELL_TREMOR_TOTEM), bot);
+// By leewheel 2026-09-05 合并：采纳上游"去掉恐惧结界(fear ward)动作"的简化写法。
+    //  上游在KaraActions.h一并删除了KarazhanCastFearProtectionSpellAction类，
+    //  本地旧写法里祭司走恐惧结界的分支实际上被萨满专属触发器门控，属死代码，故一并移除。
+    //  颤地图腾的目标与Nightbane飞行高度校验已上移到上层触发器部门，此处直接施放即可。
+    constexpr uint32 tremorTotem = Id(KaraSpells::SPELL_TREMOR_TOTEM);
+    return botAI->CanCastSpell(tremorTotem, bot) && botAI->CastSpell(tremorTotem, bot);
+    // End By leewheel
 }
 
 // Trash

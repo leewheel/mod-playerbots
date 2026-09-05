@@ -77,11 +77,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class AlarMeleeDpsMoveBetweenPlatformsAction : public AttackAction
+class AlarMeleeDpsMoveBetweenPlatformsAction : public MovementAction
 {
 public:
     AlarMeleeDpsMoveBetweenPlatformsAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "al'ar melee dps move between platforms") {}
+        : MovementAction(botAI, "al'ar melee dps move between platforms") {}
     bool Execute(Event event) override;
 };
 
@@ -105,11 +105,11 @@ private:
     bool HandlePhase2Embers(Event const& event);
 };
 
-class AlarRangedDpsPrioritizeEmbersAction : public AttackAction
+class AlarAssignNonTankTargetAction : public AttackAction
 {
 public:
-    AlarRangedDpsPrioritizeEmbersAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "al'ar ranged dps prioritize embers") {}
+    AlarAssignNonTankTargetAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "al'ar assign non-tank target") {}
     bool Execute(Event event) override;
 };
 
@@ -377,16 +377,16 @@ public:
     bool Execute(Event event) override;
 };
 
-class KaelthasSunstriderHandlePhoenixesAndEggsAction : public AttackAction
+class KaelthasSunstriderAssignFinalPhaseTargetAction : public AttackAction
 {
 public:
-    KaelthasSunstriderHandlePhoenixesAndEggsAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "kael'thas sunstrider handle phoenixes and eggs") {}
+    KaelthasSunstriderAssignFinalPhaseTargetAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "kael'thas sunstrider assign final phase target") {}
     bool Execute(Event event) override;
 
 private:
     bool AssistTanksPickUpPhoenixes();
-    bool NonTanksDestroyEggsAndAvoidPhoenixes();
+    bool NonTanksAssignTargetAndAvoidPhoenixes();
 };
 
 class KaelthasSunstriderBreakMindControlAction : public AttackAction

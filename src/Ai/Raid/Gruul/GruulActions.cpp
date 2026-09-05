@@ -5,12 +5,12 @@
  */
 
 #include "GruulActions.h"
-#include "CreatureAI.h"
 #include "EncounterHelpers.h"
 #include "GruulHelpers.h"
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <vector>
 
@@ -169,7 +169,7 @@ bool HighKingMaulgarMoonkinTankAttackKigglerAction::Execute(Event /*event*/)
 // Priority: (1) Blindeye, (2) Olm, (3) Krosh (ranged only), (4) Kiggler, and (5) Maulgar
 bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游 nullptr 初始化,
+// By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游 nullptr 初始化,
     // 上游新增末位 maulgar 兜底分支(本分支用entry 18836, 见下), 初值不再承担兜底职责。
     Unit* target = nullptr;
     Unit* krosh = nullptr;
@@ -181,7 +181,7 @@ bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
     {
         target = olm;
     }
-    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游"先判断远程再查找krosh"的顺序,
+// By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游"先判断远程再查找krosh"的顺序,
     // 但本铁律boss按entry查找, 故仍用 18832 而非上游的 "krosh firehand"。
     else if (PlayerbotAI::IsRanged(bot) &&
         (krosh = AI_VALUE2(Unit*, "find target", "18832")))
@@ -192,7 +192,7 @@ bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
     {
         target = kiggler;
     }
-    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游新增 maulgar 兜底分支,
+// By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游新增 maulgar 兜底分支,
     // boss按entry查找(18836), 不用上游的名字查找。
     else if (Unit* maulgar = AI_VALUE2(Unit*, "find target", "18836"))
     {
@@ -295,7 +295,7 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     {
         Player* member = ref->GetSource();
         if (member && member->IsAlive() && member->getClass() == CLASS_HUNTER &&
-            GET_PLAYERBOT_AI(member))
+            member->GetMapId() == GRUUL_MAP_ID && GET_PLAYERBOT_AI(member))
         {
             hunters.push_back(member);
         }
@@ -332,13 +332,15 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     }
     else if (hunterIndex == 2)
     {
+        //By leewheel 2026-09-05 合并：保留entry规则(18835)与本项目变量名；助手签名随上游统一为botAI
         ogreTarget = AI_VALUE2(Unit*, "find target", "18835");
-        tankTarget = GetKigglerMoonkinTank(bot);
+        tankTarget = GetKigglerMoonkinTank(botAI);
     }
     else if (hunterIndex == 3)
     {
+        //By leewheel 2026-09-05 合并：保留entry规则(18832)与本项目变量名；助手签名随上游统一为botAI
         ogreTarget = AI_VALUE2(Unit*, "find target", "18832");
-        tankTarget = GetKroshMageTank(bot);
+        tankTarget = GetKroshMageTank(botAI);
     }
 
     if (!ogreTarget || !tankTarget || !tankTarget->IsAlive())
@@ -396,23 +398,27 @@ bool GruulTheDragonkillerSpreadRangedAction::Execute(Event /*event*/)
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
             Player* member = ref->GetSource();
-            if (!member || !member->IsAlive())
+            if (!member || !member->IsAlive() || member->GetMapId() != GRUUL_MAP_ID ||
+                !GET_PLAYERBOT_AI(member) || !PlayerbotAI::IsRanged(member))
+            {
                 continue;
+            }
 
             members.push_back(member);
         }
 
+        if (members.empty())
+            return false;
+
         auto it = std::find(members.begin(), members.end(), bot);
-        uint8 botIndex = (it != members.end()) ? std::distance(members.begin(), it) : 0;
-        uint8 count = members.size();
+        size_t const botIndex = (it != members.end()) ? std::distance(members.begin(), it) : 0;
 
         constexpr float minRadius = 25.0f;
         constexpr float maxRadius = 40.0f;
-        float angle = 2 * M_PI * botIndex / count;
-        float radius = minRadius + static_cast<float>(rand()) /
-            static_cast<float>(RAND_MAX) * (maxRadius - minRadius);
-        float targetX = position.GetPositionX() + radius * cos(angle);
-        float targetY = position.GetPositionY() + radius * sin(angle);
+        float const angle = 2.0f * M_PI * botIndex / members.size();
+        float const radius = frand(minRadius, maxRadius);
+        float const targetX = position.GetPositionX() + radius * std::cos(angle);
+        float const targetY = position.GetPositionY() + radius * std::sin(angle);
 
         _initialPosition = Position(targetX, targetY, position.GetPositionZ());
         _hasInitialPosition = true;

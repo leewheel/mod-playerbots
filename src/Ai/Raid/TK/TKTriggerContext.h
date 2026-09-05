@@ -36,8 +36,8 @@ public:
         creators["al'ar embers explode upon death"] =
             &RaidTempestKeepTriggerContext::alar_embers_explode_upon_death;
 
-        creators["al'ar killing embers damages boss"] =
-            &RaidTempestKeepTriggerContext::alar_killing_embers_damages_boss;
+        creators["al'ar should assign non-tank target"] =
+            &RaidTempestKeepTriggerContext::alar_should_assign_non_tank_target;
 
         creators["al'ar incoming flame quills"] =
             &RaidTempestKeepTriggerContext::alar_incoming_flame_quills;
@@ -121,8 +121,8 @@ public:
         creators["kael'thas sunstrider raid member is mind controlled"] =
             &RaidTempestKeepTriggerContext::kaelthas_sunstrider_raid_member_is_mind_controlled;
 
-        creators["kael'thas sunstrider phoenixes and eggs are spawning"] =
-            &RaidTempestKeepTriggerContext::kaelthas_sunstrider_phoenixes_and_eggs_are_spawning;
+        creators["kael'thas sunstrider should assign final phase target"] =
+            &RaidTempestKeepTriggerContext::kaelthas_sunstrider_should_assign_final_phase_target;
 
         creators["kael'thas sunstrider boss is manipulating gravity"] =
             &RaidTempestKeepTriggerContext::kaelthas_sunstrider_boss_is_manipulating_gravity;
@@ -152,8 +152,8 @@ private:
     static Trigger* alar_embers_explode_upon_death(PlayerbotAI* botAI) {
         return new AlarEmbersExplodeUponDeathTrigger(botAI);
     }
-    static Trigger* alar_killing_embers_damages_boss(PlayerbotAI* botAI) {
-        return new AlarKillingEmbersDamagesBossTrigger(botAI);
+    static Trigger* alar_should_assign_non_tank_target(PlayerbotAI* botAI) {
+        return new AlarShouldAssignNonTankTargetTrigger(botAI);
     }
     static Trigger* alar_incoming_flame_quills(PlayerbotAI* botAI) {
         return new AlarIncomingFlameQuillsTrigger(botAI);
@@ -240,8 +240,8 @@ private:
     static Trigger* kaelthas_sunstrider_raid_member_is_mind_controlled(PlayerbotAI* botAI) {
         return new KaelthasSunstriderRaidMemberIsMindControlledTrigger(botAI);
     }
-    static Trigger* kaelthas_sunstrider_phoenixes_and_eggs_are_spawning(PlayerbotAI* botAI) {
-        return new KaelthasSunstriderPhoenixesAndEggsAreSpawningTrigger(botAI);
+    static Trigger* kaelthas_sunstrider_should_assign_final_phase_target(PlayerbotAI* botAI) {
+        return new KaelthasSunstriderShouldAssignFinalPhaseTargetTrigger(botAI);
     }
     static Trigger* kaelthas_sunstrider_boss_is_manipulating_gravity(PlayerbotAI* botAI) {
         return new KaelthasSunstriderBossIsManipulatingGravityTrigger(botAI);

@@ -6,7 +6,6 @@
 
 #include "TKHelpers.h"
 #include "EncounterHelpers.h"
-#include "LootObjectStack.h"
 #include "Playerbots.h"
 #include "TKKaelthasBossAI.h"
 #include <limits>
@@ -283,7 +282,28 @@ bool HasWrathOfTheAstromancer(Player* bot)
 
 std::unordered_map<uint32, uint32> advisorDpsWaitTimer;
 
-uint32 GetKaelthasPhase(Unit* kaelthas)
+Unit* GetKaelthasTk(PlayerbotAI* botAI)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    // By leewheel 2026-09-05 合并：Kael'thas按entry规则查找(19622)，替代上游名字查找
+    if (Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622"))
+        return kaelthas;
+    // End By leewheel
+
+    Player* bot = botAI->GetBot();
+    auto const& creatureStore = bot->GetMap()->GetCreatureBySpawnIdStore();
+    auto const it = creatureStore.find(KAELTHAS_DB_GUID);
+    if (it == creatureStore.end())
+        return nullptr;
+
+    Creature* kaelthas = it->second;
+    if (!kaelthas || bot->GetExactDist2d(kaelthas) > KAELTHAS_ROOM_SEARCH_DISTANCE)
+        return nullptr;
+
+    return kaelthas;
+}
+
+uint32 GetKaelthasTkPhase(Unit* kaelthas)
 {
     if (!kaelthas)
         return PHASE_NONE;

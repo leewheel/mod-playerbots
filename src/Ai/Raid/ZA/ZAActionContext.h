@@ -31,8 +31,7 @@ public:
         creators["akil'zon tanks position boss"] =
             &RaidZulAmanActionContext::akilzon_tanks_position_boss;
 
-        creators["akil'zon spread ranged"] =
-            &RaidZulAmanActionContext::akilzon_spread_ranged;
+        creators["akil'zon spread ranged"] = &RaidZulAmanActionContext::akilzon_spread_ranged;
 
         creators["akil'zon move to eye of the storm"] =
             &RaidZulAmanActionContext::akilzon_move_to_eye_of_the_storm;
@@ -44,8 +43,7 @@ public:
         creators["nalorakk tanks position boss"] =
             &RaidZulAmanActionContext::nalorakk_tanks_position_boss;
 
-        creators["nalorakk spread ranged"] =
-            &RaidZulAmanActionContext::nalorakk_spread_ranged;
+        creators["nalorakk spread ranged"] = &RaidZulAmanActionContext::nalorakk_spread_ranged;
 
         // Jan'alai <Dragonhawk Avatar>
         creators["jan'alai tanks position boss"] =
@@ -54,8 +52,7 @@ public:
         creators["jan'alai spread ranged in circle"] =
             &RaidZulAmanActionContext::janalai_spread_ranged_in_circle;
 
-        creators["jan'alai avoid fire bombs"] =
-            &RaidZulAmanActionContext::janalai_avoid_fire_bombs;
+        creators["jan'alai avoid fire bombs"] = &RaidZulAmanActionContext::janalai_avoid_fire_bombs;
 
         creators["jan'alai mark amani'shi hatchers"] =
             &RaidZulAmanActionContext::janalai_mark_amanishi_hatchers;
@@ -90,8 +87,7 @@ public:
         creators["zul'jin spread raid for cyclones"] =
             &RaidZulAmanActionContext::zuljin_spread_raid_for_cyclones;
 
-        creators["zul'jin spread ranged"] =
-            &RaidZulAmanActionContext::zuljin_spread_ranged;
+        creators["zul'jin spread ranged"] = &RaidZulAmanActionContext::zuljin_spread_ranged;
     }
 
 private:
@@ -111,8 +107,7 @@ private:
     // Akil'zon <Eagle Avatar>
     static Action* akilzon_tanks_position_boss(PlayerbotAI* botAI) {
         return new ZulAmanTanksPositionBossAction(
-            botAI, "akil'zon tanks position boss", "akil'zon",
-            ZaHelpers::AKILZON_TANK_POSITION);
+            botAI, "akil'zon tanks position boss", "akil'zon", ZaHelpers::AKILZON_TANK_POSITION);
     }
     static Action* akilzon_spread_ranged(PlayerbotAI* botAI) {
         return new ZulAmanSpreadRangedAction(botAI, "akil'zon spread ranged", 13.0f);
@@ -151,8 +146,7 @@ private:
     // Halazzi <Lynx Avatar>
     static Action* halazzi_main_tank_position_boss(PlayerbotAI* botAI) {
         return new ZulAmanTanksPositionBossAction(
-            botAI, "halazzi main tank position boss", "halazzi",
-            ZaHelpers::HALAZZI_TANK_POSITION);
+            botAI, "halazzi main tank position boss", "halazzi", ZaHelpers::HALAZZI_TANK_POSITION);
     }
     static Action* halazzi_first_assist_tank_attack_spirit_lynx(PlayerbotAI* botAI) {
         return new HalazziFirstAssistTankAttackSpiritLynxAction(botAI);
@@ -176,8 +170,7 @@ private:
     // Zul'jin
     static Action* zuljin_tanks_position_boss(PlayerbotAI* botAI) {
         return new ZulAmanTanksPositionBossAction(
-            botAI, "zul'jin tanks position boss", "zul'jin",
-            ZaHelpers::ZULJIN_TANK_POSITION);
+            botAI, "zul'jin tanks position boss", "zul'jin", ZaHelpers::ZULJIN_TANK_POSITION);
     }
     static Action* zuljin_spread_ranged(PlayerbotAI* botAI) {
         return new ZulAmanSpreadRangedAction(botAI, "zul'jin spread ranged", 6.0f);

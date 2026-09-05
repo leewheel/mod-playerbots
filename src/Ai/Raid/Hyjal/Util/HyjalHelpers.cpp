@@ -25,7 +25,6 @@ std::vector<Position> const& GetCachedHazardPositions(PlayerbotAI* botAI, std::s
     return botAI ? botAI->GetAiObjectContext()->GetValue<std::vector<Position>>(value)->RefGet()
         : none;
 }
-
 }
 
 // General
@@ -209,8 +208,11 @@ std::vector<Player*> GetRangedMembers(Player* bot)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (member && member->GetMapId() == HYJAL_MAP_ID && PlayerbotAI::IsRanged(member))
+        if (member && member->GetMapId() == HYJAL_MAP_ID && GET_PLAYERBOT_AI(member) &&
+            PlayerbotAI::IsRanged(member))
+        {
             members.push_back(member);
+        }
     }
 
     return members;
@@ -339,7 +341,7 @@ Unit* GetNearestInfernal(Player* bot)
         if (!infernal)
             continue;
 
-        float const distance = bot->GetDistance2d(infernal);
+        float const distance = bot->GetExactDist2d(infernal);
         if (!nearest || distance < nearestDistance)
         {
             nearest = infernal;

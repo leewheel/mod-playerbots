@@ -42,8 +42,8 @@ public:
         creators["al'ar assist tanks pick up embers"] =
             &RaidTempestKeepActionContext::alar_assist_tanks_pick_up_embers;
 
-        creators["al'ar ranged dps prioritize embers"] =
-            &RaidTempestKeepActionContext::alar_ranged_dps_prioritize_embers;
+        creators["al'ar assign non-tank target"] =
+            &RaidTempestKeepActionContext::alar_assign_non_tank_target;
 
         creators["al'ar jump from platform"] =
             &RaidTempestKeepActionContext::alar_jump_from_platform;
@@ -129,8 +129,8 @@ public:
         creators["kael'thas sunstrider avoid flame strike"] =
             &RaidTempestKeepActionContext::kaelthas_sunstrider_avoid_flame_strike;
 
-        creators["kael'thas sunstrider handle phoenixes and eggs"] =
-            &RaidTempestKeepActionContext::kaelthas_sunstrider_handle_phoenixes_and_eggs;
+        creators["kael'thas sunstrider assign final phase target"] =
+            &RaidTempestKeepActionContext::kaelthas_sunstrider_assign_final_phase_target;
 
         creators["kael'thas sunstrider break mind control"] =
             &RaidTempestKeepActionContext::kaelthas_sunstrider_break_mind_control;
@@ -169,8 +169,8 @@ private:
     static Action* alar_assist_tanks_pick_up_embers(PlayerbotAI* botAI) {
         return new AlarAssistTanksPickUpEmbersAction(botAI);
     }
-    static Action* alar_ranged_dps_prioritize_embers(PlayerbotAI* botAI) {
-        return new AlarRangedDpsPrioritizeEmbersAction(botAI);
+    static Action* alar_assign_non_tank_target(PlayerbotAI* botAI) {
+        return new AlarAssignNonTankTargetAction(botAI);
     }
     static Action* alar_jump_from_platform(PlayerbotAI* botAI) {
         return new AlarJumpFromPlatformAction(botAI);
@@ -259,8 +259,8 @@ private:
     static Action* kaelthas_sunstrider_avoid_flame_strike(PlayerbotAI* botAI) {
         return new KaelthasSunstriderAvoidFlameStrikeAction(botAI);
     }
-    static Action* kaelthas_sunstrider_handle_phoenixes_and_eggs(PlayerbotAI* botAI) {
-        return new KaelthasSunstriderHandlePhoenixesAndEggsAction(botAI);
+    static Action* kaelthas_sunstrider_assign_final_phase_target(PlayerbotAI* botAI) {
+        return new KaelthasSunstriderAssignFinalPhaseTargetAction(botAI);
     }
     static Action* kaelthas_sunstrider_break_mind_control(PlayerbotAI* botAI) {
         return new KaelthasSunstriderBreakMindControlAction(botAI);

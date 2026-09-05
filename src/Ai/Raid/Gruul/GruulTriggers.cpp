@@ -5,21 +5,18 @@
  */
 
 #include "GruulTriggers.h"
+#include "EncounterHelpers.h"
 #include "GruulHelpers.h"
-#include "InstanceScript.h"
 #include "Playerbots.h"
 
 using namespace GruulHelpers;
+using namespace EncounterHelpers;
 
 // General
 
 bool GruulsLairNoEncounterInProgressTrigger::IsActive()
 {
-    if (bot->GetMapId() != GRUUL_MAP_ID)
-        return false;
-
-    InstanceScript* instance = bot->GetInstanceScript();
-    return instance && !instance->IsEncounterInProgress();
+    return !IsEncounterInProgress(bot, GRUUL_MAP_ID);
 }
 
 // High King Maulgar <Lord of the Ogres>
@@ -39,15 +36,15 @@ bool HighKingMaulgarThreeOgresNeedMeleeTanksTrigger::IsActiveInEncounter()
 
 bool HighKingMaulgarKroshNeedsMageTankTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-08-29 合并：采用对侧IsKroshMageTank助手(职责单一)，entry规则查找
-    return IsKroshMageTank(bot) && AI_VALUE2(Unit*, "find target", "18832");
+// By leewheel 2026-09-05 合并：Krosh法师坦克触发采用entry规则(18832)；助手签名随上游统一为botAI
+    return IsKroshMageTank(botAI) && AI_VALUE2(Unit*, "find target", "18832");
     // End By leewheel
 }
 
 bool HighKingMaulgarKigglerNeedsMoonkinTankTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-08-29 合并：采用对侧IsKigglerMoonkinTank助手，entry规则查找
-    return IsKigglerMoonkinTank(bot) && AI_VALUE2(Unit*, "find target", "18835");
+// By leewheel 2026-09-05 合并：Kiggler月光坦克触发采用entry规则(18835)；助手签名随上游统一为botAI
+    return IsKigglerMoonkinTank(botAI) && AI_VALUE2(Unit*, "find target", "18835");
     // End By leewheel
 }
 
@@ -65,11 +62,11 @@ bool HighKingMaulgarDeterminingKillOrderTrigger::IsActiveInEncounter()
     if (IsBlindeyeTank(bot))
         return !AI_VALUE2(Unit*, "find target", "18836");
 
-    // By leewheel 2026-08-29 合并：采用对侧IsKroshMageTank/IsKigglerMoonkinTank助手形态，entry规则查找
-    if (IsKroshMageTank(bot))
+// By leewheel 2026-09-05 合并：Krosh(18832)/Kiggler(18835)按entry规则查找；助手签名随上游统一为botAI
+    if (IsKroshMageTank(botAI))
         return !AI_VALUE2(Unit*, "find target", "18832");
 
-    if (IsKigglerMoonkinTank(bot))
+    if (IsKigglerMoonkinTank(botAI))
         return !AI_VALUE2(Unit*, "find target", "18835");
     // End By leewheel
 
@@ -90,8 +87,8 @@ bool HighKingMaulgarBossChannelingWhirlwindTrigger::IsActiveInEncounter()
 
 bool HighKingMaulgarShouldStandBackFromKroshTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-08-29 合并：坦克与Krosh法师坦克放行(对侧新增)，entry规则查找
-    if (PlayerbotAI::IsTank(bot) || IsKroshMageTank(bot))
+// By leewheel 2026-09-05 合并：坦克与Krosh法师坦克放行；助手签名随上游统一为botAI
+    if (PlayerbotAI::IsTank(bot) || IsKroshMageTank(botAI))
         return false;
 
     return AI_VALUE2(Unit*, "find target", "18832");
