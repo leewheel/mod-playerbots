@@ -55,6 +55,7 @@ namespace BlackwingLairHelpers
     };
 
     // 自定义Boss: Valthorax — 法术ID
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 保留本分支自定义Boss定义, 函数签名随上游east-const风格。
     enum ValthoraxSpells
     {
         SPELL_VALTHORAX_FROSTBOMB = 80031,     // 50%血量时对自身施放
@@ -69,10 +70,10 @@ namespace BlackwingLairHelpers
     static constexpr const char* BOSS_NAME_VALTHORAX = "死亡使者瓦索拉克斯";
     //End By leewheel
 
-    bool IsActiveSuppressionDeviceInRange(const GameObject* go, const Player* bot);
+    bool IsActiveSuppressionDeviceInRange(GameObject const* go, Player const* bot);
     bool AreRazorgoreEggsAlive(PlayerbotAI* botAI);
     bool IsRazorgoreOffTank(Player* bot);
-    bool IsNonBABotNearPosition(const Player* bot, Position const& position, float distance);
+    bool IsNonBABotNearPosition(Player const* bot, Position const& position, float distance);
 }
 
 #endif

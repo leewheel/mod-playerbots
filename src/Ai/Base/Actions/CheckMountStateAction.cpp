@@ -87,7 +87,7 @@ static const uint32 flightMountSpells[] = {
 std::unordered_map<uint32, PreferredMountCache> CheckMountStateAction::mountCache;
 bool CheckMountStateAction::preferredMountTableChecked = false;
 
-MountData CollectMountData(const Player* bot)
+MountData CollectMountData(Player const* bot)
 {
     MountData data;
     for (auto& entry : bot->GetSpellMap())
@@ -535,8 +535,9 @@ bool CheckMountStateAction::TryPreferredMount(Player* master) const
 //       结果：地面坐骑时间歇性失败（有时1个上、有时3个上、有时全不上）。
 //       飞行坐骑不受影响，因为飞行区域机器人通常已经停下。
 // 修复：StopMoving 后清除移动状态标志，使 CanCastSpell 通过移动检查。
+// 2026-09-04 合并brighton-chi/the-lab：参数声明随上游改为east-const风格，与头文件声明保持一致，逻辑不变。
 // End By leewheel
-bool CheckMountStateAction::TryRandomMountFiltered(const std::map<int32, std::vector<uint32>>& spells, int32 masterSpeed) const
+bool CheckMountStateAction::TryRandomMountFiltered(std::map<int32, std::vector<uint32>> const& spells, int32 masterSpeed) const
 {
     for (auto it = spells.rbegin(); it != spells.rend(); ++it)
     {

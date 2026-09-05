@@ -147,7 +147,7 @@ bool ManaWarpStunCreatureBeforeWarpBreachAction::Execute(Event /*event*/)
         "shockwave",
     };
 
-    for (const char* spell : spells)
+    for (char const* spell : spells)
     {
         if (botAI->CanCastSpell(spell, target) && botAI->CastSpell(spell, target))
             return true;
@@ -271,7 +271,9 @@ bool MoroesMarkTargetAction::Execute(Event /*event*/)
     };
     // End By leewheel
 
-    for (const char* entry : moroesGuests)
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 循环变量声明随上游east-const风格,
+    // 变量名保留本分支 entry(数组内容是entry而非上游的名字)。
+    for (char const* entry : moroesGuests)
     {
         if (Unit* guest = AI_VALUE2(Unit*, "find target", entry))
             return MarkTargetWithSkull(bot, guest);
@@ -469,7 +471,7 @@ bool RomuloAndJulianneMarkTargetAction::Execute(Event /*event*/)
 
 bool WizardOfOzMarkTargetAction::Execute(Event /*event*/)
 {
-    for (const char* name : OZ_TARGETS)
+    for (char const* name : OZ_TARGETS)
     {
         if (Unit* target = AI_VALUE2(Unit*, "find target", name))
             return MarkTargetWithSkull(bot, target);
@@ -538,7 +540,7 @@ bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
     };
     // End By leewheel
 
-    for (const char* name : illhoofTargets)
+    for (char const* name : illhoofTargets)
     {
         if (Unit* target = AI_VALUE2(Unit*, "find target", name))
             return MarkTargetWithSkull(bot, target);

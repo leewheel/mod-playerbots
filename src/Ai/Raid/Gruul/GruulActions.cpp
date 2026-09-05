@@ -169,7 +169,9 @@ bool HighKingMaulgarMoonkinTankAttackKigglerAction::Execute(Event /*event*/)
 // Priority: (1) Blindeye, (2) Olm, (3) Krosh (ranged only), (4) Kiggler, and (5) Maulgar
 bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* target = AI_VALUE2(Unit*, "find target", "18836");
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游 nullptr 初始化,
+    // 上游新增末位 maulgar 兜底分支(本分支用entry 18836, 见下), 初值不再承担兜底职责。
+    Unit* target = nullptr;
     Unit* krosh = nullptr;
     if (Unit* blindeye = AI_VALUE2(Unit*, "find target", "18831"))
     {
@@ -179,14 +181,22 @@ bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
     {
         target = olm;
     }
-    else if ((krosh = AI_VALUE2(Unit*, "find target", "18832")) &&
-        PlayerbotAI::IsRanged(bot))
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游"先判断远程再查找krosh"的顺序,
+    // 但本铁律boss按entry查找, 故仍用 18832 而非上游的 "krosh firehand"。
+    else if (PlayerbotAI::IsRanged(bot) &&
+        (krosh = AI_VALUE2(Unit*, "find target", "18832")))
     {
         target = krosh;
     }
     else if (Unit* kiggler = AI_VALUE2(Unit*, "find target", "18835"))
     {
         target = kiggler;
+    }
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游新增 maulgar 兜底分支,
+    // boss按entry查找(18836), 不用上游的名字查找。
+    else if (Unit* maulgar = AI_VALUE2(Unit*, "find target", "18836"))
+    {
+        target = maulgar;
     }
 
     if (!target)

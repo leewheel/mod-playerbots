@@ -274,8 +274,8 @@ private:
 
     ~RandomPlayerbotMgr() = default;
 
-    RandomPlayerbotMgr(const RandomPlayerbotMgr&) = delete;
-    RandomPlayerbotMgr& operator=(const RandomPlayerbotMgr&) = delete;
+    RandomPlayerbotMgr(RandomPlayerbotMgr const&) = delete;
+    RandomPlayerbotMgr& operator=(RandomPlayerbotMgr const&) = delete;
 
     RandomPlayerbotMgr(RandomPlayerbotMgr&&) = delete;
     RandomPlayerbotMgr& operator=(RandomPlayerbotMgr&&) = delete;
@@ -335,6 +335,7 @@ private:
     void FixLevelDistribution();                                    // 遍历在线bot批量修复（控制台命令）
     // End By leewheel
     uint32 GetZoneLevel(uint16 mapId, float teleX, float teleY, float teleZ);
+    std::vector<WorldLocation> GetPlayerZoneTeleportLocations(std::vector<WorldLocation> const& locs, Player* bot);
     typedef void (RandomPlayerbotMgr::*ConsoleCommandHandler)(Player*);
     std::vector<Player*> players;
 

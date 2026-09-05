@@ -378,10 +378,10 @@ void Engine::addStrategies(std::string first, ...)
     va_list vl;
     va_start(vl, first);
 
-    const char* cur;
+    char const* cur;
     do
     {
-        cur = va_arg(vl, const char*);
+        cur = va_arg(vl, char const*);
         if (cur)
             addStrategy(cur, false);
     } while (cur);
@@ -398,10 +398,10 @@ void Engine::addStrategiesNoInit(std::string first, ...)
     va_list vl;
     va_start(vl, first);
 
-    const char* cur;
+    char const* cur;
     do
     {
-        cur = va_arg(vl, const char*);
+        cur = va_arg(vl, char const*);
         if (cur)
             addStrategy(cur, false);
     } while (cur);

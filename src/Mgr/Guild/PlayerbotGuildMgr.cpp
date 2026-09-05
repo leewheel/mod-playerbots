@@ -5,6 +5,7 @@
  */
 
 #include "PlayerbotGuildMgr.h"
+#include "CharacterCache.h"
 #include "DatabaseEnv.h"
 #include "Guild.h"
 #include "GuildMgr.h"
@@ -16,7 +17,7 @@ void PlayerbotGuildMgr::Init()
 {
     _guildCache.clear();
     if (sPlayerbotAIConfig.deleteRandomBotGuilds)
-        DeleteBotGuilds();
+        DeleteRandomBotGuilds();
 
     LoadGuildNames();
     ValidateGuildCache();
@@ -110,7 +111,7 @@ std::string PlayerbotGuildMgr::AssignToGuild(Player* player)
 
     size_t count = std::count_if(
         _guildCache.begin(), _guildCache.end(),
-        [](const std::pair<const uint32, GuildCache>& pair)
+        [](std::pair<const uint32, GuildCache> const& pair)
         {
             return !pair.second.hasRealPlayer;
         }
@@ -245,26 +246,31 @@ void PlayerbotGuildMgr::ValidateGuildCache()
     }
 }
 
-void PlayerbotGuildMgr::DeleteBotGuilds()
+void PlayerbotGuildMgr::DeleteRandomBotGuilds()
 {
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游删除逻辑重构(与ArenaTeams行为对齐,
+    // 变量改名guildsToDisband), 游戏日志按项目规则保留中文。
     LOG_INFO("playerbots", "正在删除随机机器人公会...");
-    std::vector<uint32> randomBots;
+    std::vector<uint32> guildsToDisband;
 
-    PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_RANDOM_BOTS_BOT);
-    stmt->SetData(0, "add");
-    if (PreparedQueryResult result = PlayerbotsDatabase.Query(stmt))
+    if (QueryResult result = CharacterDatabase.Query("SELECT guildid, leaderguid FROM guild"))
     {
         do
         {
             Field* fields = result->Fetch();
-            uint32 bot = fields[0].Get<uint32>();
-            randomBots.push_back(bot);
+            uint32 guildId = fields[0].Get<uint32>();
+            ObjectGuid leader = ObjectGuid::Create<HighGuid::Player>(fields[1].Get<uint32>());
+
+            // The leader's account is checked instead of the 'add' event or anything else that depends on the
+            // bot being online.
+            if (sPlayerbotAIConfig.IsInRandomAccountList(sCharacterCache->GetCharacterAccountIdByGuid(leader)))
+                guildsToDisband.push_back(guildId);
         } while (result->NextRow());
     }
 
-    for (std::vector<uint32>::iterator i = randomBots.begin(); i != randomBots.end(); ++i)
+    for (uint32 guildId : guildsToDisband)
     {
-        if (Guild* guild = sGuildMgr->GetGuildByLeader(ObjectGuid::Create<HighGuid::Player>(*i)))
+        if (Guild* guild = sGuildMgr->GetGuildById(guildId))
             guild->Disband();
     }
     LOG_INFO("playerbots", "随机机器人公会已删除");

@@ -82,136 +82,67 @@ bool CastTricksOfTheTradeOnMainTankAction::isUseful()
 
 bool UseDeadlyPoisonAction::Execute(Event /*event*/)
 {
-    std::vector<std::string> poison_suffixs = {" IX", " VIII", " VII", " VI", " V", " IV", " III", " II", ""};
-    std::vector<Item*> items;
-    std::string poison_name;
-    for (std::string& suffix : poison_suffixs)
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游重写毒药使用逻辑, 去掉旧的后缀循环,
+    // 直接按名称取一次"Deadly Poison"(库存物品值查询本身按名称前后缀匹配), 并新增消耗品类过滤。
+    // 上游注释译: 该检查仅在按名称匹配时才有必要, 唯一冲突项是"致命毒药手册V"(书本物品),
+    // 可能被某些途径恢复进背包, 保险起见保留此过滤。
+    std::vector<Item*> items =
+        AI_VALUE2(std::vector<Item*>, "inventory items", "Deadly Poison");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针, 防止访问已释放内存
+    items = InventoryItemValueBase::FilterLive(bot, items);
+    // End By leewheel
+    for (Item* const item : items)
     {
-        poison_name = "Deadly Poison" + suffix;
-        items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
-        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
-        // End By leewheel
-        items = InventoryItemValueBase::FilterLive(bot, items);
-        if (!items.empty())
-        {
-            break;
-        }
-    }
-    if (items.empty())
-    {
-        return false;
-    }
-    Item* const itemForSpell = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
-    return UseItem(*items.begin(), ObjectGuid::Empty, itemForSpell);
-    // return UseItemAuto(*items.begin());
-}
+        if (item->GetTemplate()->Class != ITEM_CLASS_CONSUMABLE)
+            continue;
 
-bool UseDeadlyPoisonAction::isPossible()
-{
-    std::vector<std::string> poison_suffixs = {" IX", " VIII", " VII", " VI", " V", " IV", " III", " II", ""};
-    std::vector<Item*> items;
-    std::string poison_name;
-    for (std::string& suffix : poison_suffixs)
-    {
-        poison_name = "Deadly Poison" + suffix;
-        items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
-        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
-        // End By leewheel
-        items = InventoryItemValueBase::FilterLive(bot, items);
-        if (!items.empty())
-        {
-            break;
-        }
+        Item* const itemForSpell = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+        return UseItem(item, ObjectGuid::Empty, itemForSpell);
     }
-    return !items.empty();
+
+    return false;
 }
 
 bool UseInstantPoisonAction::Execute(Event /*event*/)
 {
-    std::vector<std::string> poison_suffixs = {" IX", " VIII", " VII", " VI", " V", " IV", " III", " II", ""};
-    std::vector<Item*> items;
-    std::string poison_name;
-    for (std::string& suffix : poison_suffixs)
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游重写毒药使用逻辑(同致命毒药, 见上),
+    // 保留本分支 FilterLive 防悬空崩溃过滤。
+    std::vector<Item*> items =
+        AI_VALUE2(std::vector<Item*>, "inventory items", "Instant Poison");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针, 防止访问已释放内存
+    items = InventoryItemValueBase::FilterLive(bot, items);
+    // End By leewheel
+    for (Item* const item : items)
     {
-        poison_name = "Instant Poison" + suffix;
-        items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
-        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
-        // End By leewheel
-        items = InventoryItemValueBase::FilterLive(bot, items);
-        if (!items.empty())
-        {
-            break;
-        }
-    }
-    if (items.empty())
-    {
-        return false;
-    }
-    Item* const itemForSpell = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
-    return UseItem(*items.begin(), ObjectGuid::Empty, itemForSpell);
-}
+        // 上游注释译: 速效毒药本身无需此检查, 为对称性保留以引导潜在重构。
+        if (item->GetTemplate()->Class != ITEM_CLASS_CONSUMABLE)
+            continue;
 
-bool UseInstantPoisonAction::isPossible()
-{
-    std::vector<std::string> poison_suffixs = {" IX", " VIII", " VII", " VI", " V", " IV", " III", " II", ""};
-    std::vector<Item*> items;
-    std::string poison_name;
-    for (std::string& suffix : poison_suffixs)
-    {
-        poison_name = "Instant Poison" + suffix;
-        items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
-        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
-        // End By leewheel
-        items = InventoryItemValueBase::FilterLive(bot, items);
-        if (!items.empty())
-        {
-            break;
-        }
+        Item* const itemForSpell = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
+        return UseItem(item, ObjectGuid::Empty, itemForSpell);
     }
-    return !items.empty();
+
+    return false;
 }
 
 bool UseInstantPoisonOffHandAction::Execute(Event /*event*/)
 {
-    std::vector<std::string> poison_suffixs = {" IX", " VIII", " VII", " VI", " V", " IV", " III", " II", ""};
-    std::vector<Item*> items;
-    std::string poison_name;
-    for (std::string& suffix : poison_suffixs)
+    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游重写毒药使用逻辑(同致命毒药, 见上),
+    // 保留本分支 FilterLive 防悬空崩溃过滤。
+    std::vector<Item*> items =
+        AI_VALUE2(std::vector<Item*>, "inventory items", "Instant Poison");
+    // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针, 防止访问已释放内存
+    items = InventoryItemValueBase::FilterLive(bot, items);
+    // End By leewheel
+    for (Item* const item : items)
     {
-        poison_name = "Instant Poison" + suffix;
-        items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
-        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
-        // End By leewheel
-        items = InventoryItemValueBase::FilterLive(bot, items);
-        if (!items.empty())
-        {
-            break;
-        }
-    }
-    if (items.empty())
-    {
-        return false;
-    }
-    Item* const itemForSpell = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
-    return UseItem(*items.begin(), ObjectGuid::Empty, itemForSpell);
-}
+        // 上游注释译: 速效毒药本身无需此检查, 为对称性保留以引导潜在重构。
+        if (item->GetTemplate()->Class != ITEM_CLASS_CONSUMABLE)
+            continue;
 
-bool UseInstantPoisonOffHandAction::isPossible()
-{
-    std::vector<std::string> poison_suffixs = {" IX", " VIII", " VII", " VI", " V", " IV", " III", " II", ""};
-    std::vector<Item*> items;
-    std::string poison_name;
-    for (std::string& suffix : poison_suffixs)
-    {
-        poison_name = "Instant Poison" + suffix;
-        items = AI_VALUE2(std::vector<Item*>, "inventory items", poison_name);
-        // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
-        // End By leewheel
-        items = InventoryItemValueBase::FilterLive(bot, items);
-        if (!items.empty())
-        {
-            break;
-        }
+        Item* const itemForSpell = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+        return UseItem(item, ObjectGuid::Empty, itemForSpell);
     }
-    return !items.empty();
+
+    return false;
 }

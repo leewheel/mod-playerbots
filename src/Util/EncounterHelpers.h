@@ -55,7 +55,7 @@ bool IsMechanicTrackerBot(Player* bot, uint32 mapId);
 Player* GetGroupMainTank(Player* bot);
 // By leewheel 2026-08-30 合并上游：删除3参兼容包装声明(调用点已全部改用2参签名)
 Player* GetGroupAssistTank(Player* bot, uint8 index);
-Unit* GetFirstAliveUnitByEntry(PlayerbotAI* botAI, uint32 entry);
+Unit* GetFirstAliveUnitByEntry(PlayerbotAI* botAI, uint32 entry); // DO NOT USE, WILL BE REMOVED
 Player* GetNearestPlayerInRadius(Player* bot, float radius);
 std::vector<Position> GetDynamicObjectPositions(Player* bot, float searchRadius, uint32 spellId);
 bool IsDpsCooldownAction(Player* bot, Action* action);

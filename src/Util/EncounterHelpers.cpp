@@ -210,7 +210,7 @@ bool MarkTargetWithMoon(Player* bot, Unit* target)
 }
 
 // For clearing marks outside of combat so bots don't Leeroy on sight. This is best used when gated
-// behind an out of combat check (such as with IsInCombatValue).
+// behind an out-of-combat check (such as with IsInCombatValue).
 bool ClearTargetIcon(Player* bot, uint8 iconId)
 {
     Group* group = bot->GetGroup();
@@ -356,6 +356,7 @@ Player* GetGroupAssistTank(Player* bot, uint8 index)
 }
 
 // By leewheel 2026-08-30 合并上游：删除3参兼容包装(调用点已全部改用2参签名)
+// 上游注释译：请勿使用，待所有调用点改造完成后此处将被移除。
 // Return the first matching alive unit from PossibleTargetsValue within .sightDistance from config
 // End By leewheel
 // Note that PossibleTargetsValue picks up only hostile units

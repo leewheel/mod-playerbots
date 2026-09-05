@@ -96,8 +96,10 @@ private:
     // 性能优化：原参数按值传递 std::vector<NextAction>，每次调用都拷贝整个 vector
     //（含 string 成员）；调用方传入的均为临时对象（getHandlers()/getDefaultActions() 按值返回），
     // 改为 const& 绑定零拷贝，行为完全不变。
+    // 2026-09-04 合并brighton-chi/the-lab：保留本分支const&性能优化，
+    // pushType参数声明随上游east-const风格，与Engine.cpp实现签名一致。
     bool MultiplyAndPush(std::vector<NextAction> const& actions, float forceRelevance, bool skipPrerequisites,
-                         Event event, const char* pushType);
+                         Event event, char const* pushType);
     // End By leewheel
     void Reset();
     void ProcessTriggers(bool minimal);
