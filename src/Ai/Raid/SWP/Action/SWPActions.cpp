@@ -92,6 +92,28 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
     return reset;
 }
 
+bool SunwellPlateauRemoveDebuffWithImmunityAction::Execute(Event /*event*/)
+{
+    // By leewheel 2026-09-06 补全brighton遗漏的统一实现：用免疫技能(冰箱/圣盾术/暗影斗篷)抵消有害debuff
+    switch (bot->getClass())
+    {
+        case CLASS_MAGE:
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot);
+
+        case CLASS_PALADIN:
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot);
+
+        case CLASS_ROGUE:
+            return botAI->CanCastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot) &&
+                botAI->CastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot);
+
+        default:
+            return false;
+    }
+}
+
 bool SunwellPlateauRemoveAuraAction::Execute(Event /*event*/)
 {
     if (bot->getClass() == CLASS_MAGE && bot->HasAura(Id(SwpSpells::SPELL_ICE_BLOCK)))

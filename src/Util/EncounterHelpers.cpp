@@ -429,8 +429,7 @@ std::vector<Position> GetDynamicObjectPositions(Player* bot, float searchRadius,
     return dynObjs;
 }
 
-// Ice Block, Divine Shield, and/or Cloak of Shadows can be used to nullify or ignore several
-// dangerous boss mechanics.
+// 冰箱、圣盾术和/或暗影斗篷可用于抵消或无视多种危险的首领机制。
 uint32 GetSelfImmunitySpell(Player* bot)
 {
     constexpr uint32 iceBlock = 45438;
