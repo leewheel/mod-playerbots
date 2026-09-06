@@ -262,6 +262,12 @@ public:
     bool randomBotJoinBG;
     bool randomBotAutoJoinBG;
 
+    // By leewheel 2026-09-06 引入 NPCBots 战场机器人系统：playerbots 禁入战场 TypeId 集合。
+    //   由配置 AiPlayerbot.RandomBotDisabledBattlegrounds（逗号分隔）解析而来，
+    //   命中集合的战场 playerbots 一律不排队、不补位、不自动开战，填充交由 BG_BOTS（NPCBots）负责。
+    std::set<uint32> randomBotDisabledBattlegrounds;
+    // End By leewheel 2026-09-06
+
     // By leewheel 2026-07-07
     // 战场排队相关配置：最大排队等待时间（秒），默认180秒（3分钟）
     // 超过此时间后强制更多机器人加入战场队列

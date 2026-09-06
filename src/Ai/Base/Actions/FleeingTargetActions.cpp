@@ -89,7 +89,9 @@ static Unit* FindFleeingTarget(PlayerbotAI* botAI)
     return nullptr;
 }
 
-bool PrioritizeFleeingTargetAction::Execute(Event event)
+// By leewheel 2026-09-06 清理 C4100 警告：Execute 的 event 参数未被引用，改为注释形式标注。
+// End By leewheel 2026-09-06
+bool PrioritizeFleeingTargetAction::Execute(Event /*event*/)
 {
     Group* group = bot->GetGroup();
     if (!group)

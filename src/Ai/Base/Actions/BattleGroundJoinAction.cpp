@@ -7,6 +7,10 @@
 #include "BattleGroundJoinAction.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
+// By leewheel 2026-09-06 引入 NPCBots 战场机器人系统：禁入战场双保险过滤——
+//   直接读取 BG_BOTS 接管状态（单一事实源，与配置黑名单并行生效；两侧符号冲突已通过 bgbot* 头改名彻底解决)。
+#include "bgbotconfig.h"
+// End By leewheel 2026-09-06
 #include "BattlegroundMgr.h"
 #include "Event.h"
 #include "GroupMgr.h"
@@ -196,6 +200,12 @@ bool BGJoinAction::canJoinBg(BattlegroundQueueTypeId queueTypeId, BattlegroundBr
 {
     // check if bot can join this bracket for the specific Battleground/Arena type
     BattlegroundTypeId bgTypeId = BattlegroundMgr::BGTemplateId(queueTypeId);
+
+    // By leewheel 2026-09-06 引入 NPCBots 战场机器人系统：禁入战场在排队决策阶段即排除，
+    //   避免 playerbots 对 BG_BOTS 已接管的战场产生无用的排队决策。
+    if (sPlayerbotAIConfig.randomBotDisabledBattlegrounds.count(bgTypeId) || BotCfg::GetBGTargetTeamPlayersCount(bgTypeId) > 0)
+        return false;
+    // End By leewheel 2026-09-06
 
     // check if already in queue
     if (bot->InBattlegroundQueueForBattlegroundQueueType(queueTypeId))
@@ -420,6 +430,23 @@ bool BGJoinAction::JoinQueue(uint32 type)
     BattlegroundTypeId bgTypeId = BattlegroundMgr::BGTemplateId(queueTypeId);
     BattlegroundBracketId bracketId;
 
+    // By leewheel 2026-09-06 引入 NPCBots 战场机器人系统：禁入战场终极闸门（双保险）。
+    //   1) 配置黑名单 AiPlayerbot.RandomBotDisabledBattlegrounds；
+    //   2) 直接读取 BG_BOTS 接管状态：GetBGTargetTeamPlayersCount > 0 即该战场已由 NPCBots 独家填充——
+    //      单一事实源，BG_BOTS 开启哪个战场，playerbots 自动禁入哪个，两份配置永不漂移。
+    //   本函数是全部排队路径（定时补位 BGJoinAction / RPG 战场大师 FreeBGJoinAction）的发包必经点。
+    if (sPlayerbotAIConfig.randomBotDisabledBattlegrounds.count(bgTypeId))
+    {
+        LOG_INFO("playerbots", "[禁入诊断] Bot {} 尝试排队 {}：命中配置黑名单，已拦截", bot->GetGUID().ToString().c_str(), uint32(bgTypeId));
+        return false;
+    }
+    if (BotCfg::GetBGTargetTeamPlayersCount(bgTypeId) > 0)
+    {
+        LOG_INFO("playerbots", "[禁入诊断] Bot {} 尝试排队 {}：该战场已由 BG_BOTS 接管（目标人数>0），已拦截", bot->GetGUID().ToString().c_str(), uint32(bgTypeId));
+        return false;
+    }
+    // End By leewheel 2026-09-06
+
     Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(bgTypeId);
     if (!bg)
         return false;
@@ -582,6 +609,12 @@ bool BGJoinAction::JoinQueue(uint32 type)
 bool FreeBGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, BattlegroundBracketId bracketId)
 {
     BattlegroundTypeId bgTypeId = BattlegroundMgr::BGTemplateId(queueTypeId);
+
+    // By leewheel 2026-09-06 引入 NPCBots 战场机器人系统：RPG 战场大师排队路径同样排除禁入战场。
+    if (sPlayerbotAIConfig.randomBotDisabledBattlegrounds.count(bgTypeId) || BotCfg::GetBGTargetTeamPlayersCount(bgTypeId) > 0)
+        return false;
+    // End By leewheel 2026-09-06
+
     Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(bgTypeId);
     if (!bg)
         return false;

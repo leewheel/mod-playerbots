@@ -20,6 +20,10 @@
 #include <cctype>
 #include <iostream>
 #include <sstream>
+// By leewheel 2026-09-06 引入 NPCBots 战场机器人系统：禁入战场配置解析所需头文件。
+#include "StringConvert.h"
+#include "StringFormat.h"
+// End By leewheel 2026-09-06
 
 template <class T>
 void LoadList(std::string const value, T& list)
@@ -391,6 +395,32 @@ bool PlayerbotAIConfig::Initialize()
 
     randomBotJoinBG = sConfigMgr->GetOption<bool>("AiPlayerbot.RandomBotJoinBG", true);
     randomBotAutoJoinBG = sConfigMgr->GetOption<bool>("AiPlayerbot.RandomBotAutoJoinBG", false);
+
+    // By leewheel 2026-09-06 引入 NPCBots 战场机器人系统：禁入战场配置。
+    //   逗号分隔的战场 TypeId 列表（默认 30,489,529,566 = AV/WSG/AB/EotS，即 BG_BOTS 已完整支持并独家填充的战场），
+    //   BG_BOTS 后续每扩展一个新战场，将对应 TypeId 追加进配置即可。
+    //   命中集合的战场：playerbots 排队入口（定时补位/自动开战/RPG 战场大师）全部不生效。
+    randomBotDisabledBattlegrounds.clear();
+    {
+        std::string const disabledBgs = sConfigMgr->GetOption<std::string>("AiPlayerbot.RandomBotDisabledBattlegrounds", "30,489,529,566");
+        std::istringstream stream(disabledBgs);
+        std::string token;
+        while (std::getline(stream, token, ','))
+        {
+            Acore::String::Trim(token);
+            if (token.empty())
+                continue;
+            if (Optional<uint32> bgId = Acore::StringTo<uint32>(token))
+                randomBotDisabledBattlegrounds.insert(*bgId);
+        }
+        // By leewheel 2026-09-06 诊断日志：禁入战场集合解析结果实锤（排查排队禁入未生效问题）
+        std::string dump;
+        for (uint32 id : randomBotDisabledBattlegrounds)
+            dump += std::to_string(id) + " ";
+        LOG_INFO("server.loading", "[禁入诊断] RandomBotDisabledBattlegrounds 解析完成：共 {} 项 [{}]", randomBotDisabledBattlegrounds.size(), dump);
+        // End By leewheel 2026-09-06
+    }
+    // End By leewheel 2026-09-06
 
     // By leewheel 2026-07-07
     // 战场排队最大等待时间（秒），默认180秒（3分钟），超过此时间强制更多机器人加入

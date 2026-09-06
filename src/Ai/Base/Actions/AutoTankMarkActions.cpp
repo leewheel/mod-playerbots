@@ -26,8 +26,7 @@ static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
     if (!bot)
         return nullptr;
 
-    Unit* target = nullptr;
-
+    // By leewheel 2026-09-06 清理 C4189 警告：该变量初始化后在函数内从未引用，直接删除。
     if (mode == 0)
     {
         // 骷髅优先用坦克当前正在攻击的目标（实时、可靠，进战斗即命中）
@@ -87,7 +86,9 @@ static Unit* SelectMarkTarget(PlayerbotAI* botAI, Group* group, int mode)
     return bestTarget;
 }
 
-bool MarkSkullTargetAction::Execute(Event event)
+// By leewheel 2026-09-06 清理 C4100 警告：以下三处 Execute 的 event 参数未被引用，改为注释形式标注。
+// End By leewheel 2026-09-06
+bool MarkSkullTargetAction::Execute(Event /*event*/)
 {
     Group* group = bot->GetGroup();
     if (!group)
@@ -121,7 +122,7 @@ bool MarkSkullTargetAction::Execute(Event event)
     return true;
 }
 
-bool MarkCrossTargetAction::Execute(Event event)
+bool MarkCrossTargetAction::Execute(Event /*event*/)
 {
     Group* group = bot->GetGroup();
     if (!group)
@@ -151,7 +152,7 @@ bool MarkCrossTargetAction::Execute(Event event)
     return true;
 }
 
-bool FallbackMarkSkullAction::Execute(Event event)
+bool FallbackMarkSkullAction::Execute(Event /*event*/)
 {
     Group* group = bot->GetGroup();
     if (!group)
