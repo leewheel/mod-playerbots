@@ -363,7 +363,7 @@ bool AlarJumpFromPlatformAction::Execute(Event /*event*/)
 {
     if (bot->GetPositionZ() > ALAR_BALCONY_Z)
     {
-        Position const& ground = GetClosestGroundPosition(bot->GetPosition());
+        Position const ground = GetClosestGroundPosition(bot->GetPosition());
         bot->CastStop();
         return JumpTo(
             TK_MAP_ID, ground.GetPositionX(), ground.GetPositionY(), ground.GetPositionZ(),
@@ -426,7 +426,7 @@ bool AlarMoveAwayFromRebirthAction::Execute(Event /*event*/)
     // On the other hand, melee dps jumps off at 5% HP because TBC hates them.
     if (bot->GetPositionZ() > ALAR_BALCONY_Z)
     {
-        Position const& ground = GetClosestGroundPosition(bot->GetPosition());
+        Position const ground = GetClosestGroundPosition(bot->GetPosition());
         bot->CastStop();
         return JumpTo(
             TK_MAP_ID, ground.GetPositionX(), ground.GetPositionY(), ground.GetPositionZ(),
@@ -1821,7 +1821,7 @@ bool KaelthasSunstriderUseLegendaryWeaponsAction::UseEquippedItemWithPacket(Item
     return true;
 }
 
-bool KaelthasSunstriderMainTankPositionBossAction::Execute(Event /*event*/)
+bool KaelthasSunstriderTanksPositionBossAction::Execute(Event /*event*/)
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;
@@ -1853,14 +1853,21 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::Execute(Event /*event*/)
     if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) ||
         PlayerbotAI::IsAssistTankOfIndex(bot, 1, true))
     {
-        if (AssistTanksPickUpPhoenixes())
-            return true;
+        if (Unit* phoenix = GetAssignedPhoenix())
+            return AssistTankPicksUpPhoenix(phoenix);
+
+        Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+        if (!kaelthas || kaelthas->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+            return false;
+
+        return AI_VALUE(Unit*, "current target") != kaelthas && Attack(kaelthas);
     }
 
     return NonTanksAssignTargetAndAvoidPhoenixes();
 }
 
-bool KaelthasSunstriderAssignFinalPhaseTargetAction::AssistTanksPickUpPhoenixes()
+// If there is more than one Phoenix up, the assist tanks will each pick up one.
+Unit* KaelthasSunstriderAssignFinalPhaseTargetAction::GetAssignedPhoenix()
 {
     std::vector<Unit*> phoenixes;
     for (auto const& targetGuid : AI_VALUE(GuidVector, "possible targets no los"))
@@ -1871,22 +1878,23 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::AssistTanksPickUpPhoenixes(
     }
 
     if (phoenixes.empty())
-        return false;
+        return nullptr;
 
     std::sort(phoenixes.begin(), phoenixes.end(),
         [](Unit* first, Unit* second) { return first->GetGUID() < second->GetGUID(); });
 
-    Unit* targetPhoenix = phoenixes[0];
     if (!PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) && phoenixes.size() >= 2)
-        targetPhoenix = phoenixes[1];
+        return phoenixes[1];
 
-    if (!targetPhoenix)
-        return false;
+    return phoenixes[0];
+}
 
-    if (AI_VALUE(Unit*, "current target") != targetPhoenix)
-        return Attack(targetPhoenix);
+bool KaelthasSunstriderAssignFinalPhaseTargetAction::AssistTankPicksUpPhoenix(Unit* phoenix)
+{
+    if (AI_VALUE(Unit*, "current target") != phoenix)
+        return Attack(phoenix);
 
-    if (targetPhoenix->GetVictim() != bot)
+    if (phoenix->GetVictim() != bot)
         return false;
 
     constexpr float safeDistance = 12.0f;
@@ -1902,7 +1910,11 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::AssistTanksPickUpPhoenixes(
 bool KaelthasSunstriderAssignFinalPhaseTargetAction::NonTanksAssignTargetAndAvoidPhoenixes()
 {
 // By leewheel 2026-09-05 合并：phoenix 须函数级作用域(下方 target = phoenix 需要)，保留entry 21362查找
+    // 2026-09-07 合并 brighton：凤凰变蛋后仍在线且不可攻击，置空处理
     Unit* phoenix = AI_VALUE2(Unit*, "find target", "21362");
+    if (phoenix && phoenix->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+        phoenix = nullptr;
+
     if (phoenix)
     {
         constexpr float safeDistance = 15.0f;

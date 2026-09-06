@@ -51,6 +51,8 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
     }
 
     // Eredar Twins
+    reset |= alythessTankLastBlazeGuid.erase(guid) > 0;
+
     Action* twinsAction = context->GetAction("eredar twins alythess tank move out of blaze");
     if (twinsAction && static_cast<EredarTwinsAlythessTankMoveOutOfBlazeAction*>(
             twinsAction)->ResetAlythessTankStep())
@@ -92,40 +94,22 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
     return reset;
 }
 
+// Clear Kalecgos's Arcane Buffet, the Eredar Twins' Flame Sear, and Kil'jaeden's Fire Bloom.
 bool SunwellPlateauRemoveDebuffWithImmunityAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-09-06 补全brighton遗漏的统一实现：用免疫技能(冰箱/圣盾术/暗影斗篷)抵消有害debuff
-    switch (bot->getClass())
-    {
-        case CLASS_MAGE:
-            return botAI->CanCastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot) &&
-                botAI->CastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot);
-
-        case CLASS_PALADIN:
-            return botAI->CanCastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot) &&
-                botAI->CastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot);
-
-        case CLASS_ROGUE:
-            return botAI->CanCastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot) &&
-                botAI->CastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot);
-
-        default:
-            return false;
-    }
+    uint32 const spellId = GetSelfImmunitySpell(bot);
+    return spellId && botAI->CanCastSpell(spellId, bot) && botAI->CastSpell(spellId, bot);
 }
 
 bool SunwellPlateauRemoveAuraAction::Execute(Event /*event*/)
 {
-    if (bot->getClass() == CLASS_MAGE && bot->HasAura(Id(SwpSpells::SPELL_ICE_BLOCK)))
+    // Only the immunities that stop the bot from contributing should be cancelled, so Cloak of
+    // Shadows and HPal bubbles are excluded.
+    uint32 const spellId = GetSelfImmunitySpell(bot);
+    if (spellId && bot->getClass() != CLASS_ROGUE && !PlayerbotAI::IsHeal(bot) &&
+        bot->HasAura(spellId))
     {
-        bot->RemoveAura(Id(SwpSpells::SPELL_ICE_BLOCK));
-        return true;
-    }
-
-    if (bot->getClass() == CLASS_PALADIN && !PlayerbotAI::IsHeal(bot) &&
-        bot->HasAura(Id(SwpSpells::SPELL_DIVINE_SHIELD)))
-    {
-        bot->RemoveAura(Id(SwpSpells::SPELL_DIVINE_SHIELD));
+        bot->RemoveAura(spellId);
         return true;
     }
 
@@ -133,26 +117,12 @@ bool SunwellPlateauRemoveAuraAction::Execute(Event /*event*/)
         return false;
 
     // It is Blizzlike for Burn to persist after the kill, but bots will murder the raid without
-    // a dedicated non-combat strategy for it. It's no fun to do that and wait around for expiry
-    // so I'm just wiping the aura after the encounter.
+    // a dedicated non-combat strategy for it. That's a waste of time, so just wipe the aura.
     if (!HasBrutallusBurn(bot))
         return false;
 
     bot->RemoveAura(Id(SwpSpells::SPELL_BURN));
     return true;
-}
-
-namespace SwpHelpers
-{
-
-ObjectGuid FindSwpVolatileFiendGuid(Player* bot)
-{
-    Creature* fiend = bot->FindNearestCreature(
-        Id(SwpNpcs::NPC_VOLATILE_FIEND), VOLATILE_FIEND_SEARCH_RADIUS);
-
-    return fiend ? fiend->GetGUID() : ObjectGuid::Empty;
-}
-
 }
 
 bool VolatileFiendKeepEnemyAwayFromGroupAction::Execute(Event /*event*/)

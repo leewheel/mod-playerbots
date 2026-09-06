@@ -209,7 +209,43 @@ float GruulTheDragonkillerStaySpreadForShatterMultiplier::GetValueInEncounter(Ac
         return 1.0f;
     }
 
-    return dynamic_cast<GruulTheDragonkillerShatterSpreadAction*>(action) ? 1.0f : 0.0f;
+    return dynamic_cast<GruulTheDragonkillerShatterSpreadAction*>(action) ||
+        dynamic_cast<GruulTheDragonkillerGetOutOfCaveInAction*>(action) ? 1.0f : 0.0f;
+}
+
+// When near a cave in, ignore the ranged spread, as well as standard movement actions like reaching
+// the target, with some exceptions for tanks (and full exception for the active tank on Gruul).
+float GruulTheDragonkillerControlAvoidanceMultiplier::GetValueInEncounter(Action* action)
+{
+    if (dynamic_cast<AttackAction*>(action))
+        return 1.0f;
+
+    bool const isReachTargetSpell = dynamic_cast<CastReachTargetSpellAction*>(action);
+
+    if (PlayerbotAI::IsTank(bot) &&
+        (isReachTargetSpell || dynamic_cast<ReachTargetAction*>(action)))
+    {
+        return 1.0f;
+    }
+
+    if (!isReachTargetSpell && !dynamic_cast<MovementAction*>(action))
+        return 1.0f;
+
+    if (dynamic_cast<GruulTheDragonkillerGetOutOfCaveInAction*>(action))
+        return 1.0f;
+
+    // The shatter spread multiplier takes over during Ground Slam (and allows the Cave In escape).
+    if (HasGroundSlam(bot))
+        return 1.0f;
+
+    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
+    if (!gruul)
+        return 1.0f;
+
+    if (gruul->GetVictim() == bot)
+        return 1.0f;
+
+    return IsNearCaveIn(botAI, CAVE_IN_CONTROL_RADIUS) ? 0.0f : 1.0f;
 }
 
 // MoveTo does not check speed, and thus even with a snare of -100% or more, it starts a spline
@@ -223,9 +259,9 @@ float GruulTheDragonkillerHoldWhileSnaredMultiplier::GetValueInEncounter(Action*
     if (bot->GetSpeed(MOVE_RUN) > 0.0f)
         return 1.0f;
 
-    // By leewheel 2026-08-29 entry化修正（gruul->19044）
-    if (!AI_VALUE2(Unit*, "find target", "19044"))
+    // By leewheel 2026-08-29 entry化修正（gruul->19044）；2026-09-07 合并 brighton：非移动动作直接放行
+    if (!dynamic_cast<MovementAction*>(action))
         return 1.0f;
 
-    return dynamic_cast<MovementAction*>(action) ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "19044") ? 0.0f : 1.0f;
 }

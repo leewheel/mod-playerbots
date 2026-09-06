@@ -122,7 +122,7 @@ Unit* SelectNearestQualifying(
     Unit* currentTarget = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
 
     Unit* best = nullptr;
-    float bestDistance = 0.0f;
+    float bestDistance = std::numeric_limits<float>::max();
 
     for (ObjectGuid const& guid : candidates)
     {
@@ -137,7 +137,7 @@ Unit* SelectNearestQualifying(
         if (candidate == currentTarget)
             return candidate;
 
-        if (!best || distance < bestDistance)
+        if (distance < bestDistance)
         {
             best = candidate;
             bestDistance = distance;
@@ -208,11 +208,25 @@ bool TryGetMuruDarknessEarlyState(Player* bot, Unit* muru, uint32 earlyWindowMs)
     if (!TryGetMuruDarknessActiveState(bot, muru))
         return false;
 
+    return PeekMuruDarknessEarlyState(bot, earlyWindowMs);
+}
+
+bool PeekMuruDarknessActiveState(Player* bot)
+{
+    auto const stateItr = muruDarknessStates.find(bot->GetInstanceId());
+    return stateItr != muruDarknessStates.end() && stateItr->second.expireMs > getMSTime();
+}
+
+bool PeekMuruDarknessEarlyState(Player* bot, uint32 earlyWindowMs)
+{
     auto const stateItr = muruDarknessStates.find(bot->GetInstanceId());
     if (stateItr == muruDarknessStates.end())
         return false;
 
     uint32 const now = getMSTime();
+    if (stateItr->second.expireMs <= now)
+        return false;
+
     return stateItr->second.startMs < now && now - stateItr->second.startMs < earlyWindowMs;
 }
 

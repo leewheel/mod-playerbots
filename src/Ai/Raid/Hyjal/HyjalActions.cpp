@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <limits>
 #include <vector>
 
 using namespace HyjalHelpers;
@@ -671,11 +672,11 @@ bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
 
     // Leave the nearest pool, still refusing any heading that would cross into the cleave
     Position const* nearest = nullptr;
-    float nearestDistance = 0.0f;
+    float nearestDistance = std::numeric_limits<float>::max();
     for (Position const& pool : pools)
     {
         float const distance = bot->GetExactDist2d(pool);
-        if (!nearest || distance < nearestDistance)
+        if (distance < nearestDistance)
         {
             nearest = &pool;
             nearestDistance = distance;
@@ -869,7 +870,7 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
     float const botY = bot->GetPositionY();
 
     Position const* nearest = nullptr;
-    float nearestDistance = 0.0f;
+    float nearestDistance = std::numeric_limits<float>::max();
     float totalDx = 0.0f;
     float totalDy = 0.0f;
 
@@ -879,7 +880,7 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
         if (d >= DOOMFIRE_FIELD_RADIUS)
             continue;
 
-        if (!nearest || d < nearestDistance)
+        if (d < nearestDistance)
         {
             nearest = &patch;
             nearestDistance = d;

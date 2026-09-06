@@ -60,6 +60,12 @@ inline std::array const KILJAEDEN_DRAGON_ORB_ENTRIES = {
     Id(SwpObjects::GO_DRAGON_ORB_4),
 };
 
+inline std::array const KILJAEDEN_DRAGON_SPELLS = {
+    Id(SwpSpells::SPELL_SHIELD_OF_THE_BLUE),
+    Id(SwpSpells::SPELL_DRAGON_BREATH_HASTE),
+    Id(SwpSpells::SPELL_DRAGON_BREATH_REVITALIZE),
+};
+
 inline constexpr float KILJAEDEN_PHASE3_HP_THRESHOLD = 85.0f;
 inline constexpr float KILJAEDEN_PHASE4_HP_THRESHOLD = 55.0f;
 inline constexpr float KILJAEDEN_PHASE5_HP_THRESHOLD = 25.0f;

@@ -14,7 +14,10 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <limits>
 #include <map>
+#include <string>
+#include <vector>
 
 using namespace SwpHelpers;
 using namespace EncounterHelpers;
@@ -454,8 +457,8 @@ bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
 {
     GameObject* closestOrb = nullptr;
     GameObject* closestInUseOrb = nullptr;
-    float closestDistance = 0.0f;
-    float closestInUseOrbDistance = 0.0f;
+    float closestDistance = std::numeric_limits<float>::max();
+    float closestInUseOrbDistance = std::numeric_limits<float>::max();
     bool orbInUse = false;
 
     for (ObjectGuid const& orbGuid : AI_VALUE(GuidVector, "kiljaeden dragon orbs"))
@@ -468,7 +471,7 @@ bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
         if (orb->HasGameObjectFlag(GO_FLAG_IN_USE))
         {
             orbInUse = true;
-            if (!closestInUseOrb || distance < closestInUseOrbDistance)
+            if (distance < closestInUseOrbDistance)
             {
                 closestInUseOrb = orb;
                 closestInUseOrbDistance = distance;
@@ -480,7 +483,7 @@ bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
         if (orb->HasGameObjectFlag(GO_FLAG_NOT_SELECTABLE))
             continue;
 
-        if (!closestOrb || distance < closestDistance)
+        if (distance < closestDistance)
         {
             closestOrb = orb;
             closestDistance = distance;

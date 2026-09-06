@@ -15,6 +15,7 @@
 #include <iterator>
 #include <list>
 #include <utility>
+#include <vector>
 
 using namespace SwpHelpers;
 using namespace EncounterHelpers;
@@ -662,9 +663,8 @@ bool MuruVoidSpawnCastShadowBoltVolleyAction::Execute(Event /*event*/)
     if (voidSpawn->HasSpellCooldown(volleySpellId))
         return commandedAttack;
 
-    constexpr uint32 globalCooldown = 1000;
     voidSpawn->CastSpell(target, volleySpellId, true);
-    voidSpawn->AddSpellCooldown(volleySpellId, 0, globalCooldown);
+    voidSpawn->AddSpellCooldown(volleySpellId, 0, GetManualCastCooldown(volleySpellId));
     return true;
 }
 
@@ -701,11 +701,12 @@ Unit* MuruEnslavedVoidSpawnAttackAction::GetVoidSpawnVolleyPriorityTarget(Unit* 
 
 bool MuruKeepDistanceFromDarkFiendsAction::Execute(Event /*event*/)
 {
-    bot->CastStop();
-
+    // The trigger's search radius is wider than the distance worth moving for, so the cast is
+    // only interrupted once there is somewhere to go.
     if (Creature* voidZone = FindMuruVoidZoneToAvoid(botAI))
     {
         float const distFromVoidZone = bot->GetExactDist2d(voidZone);
+        bot->CastStop();
         return MoveAway(voidZone, VOID_ZONE_SAFE_DISTANCE - distFromVoidZone);
     }
 
@@ -719,6 +720,7 @@ bool MuruKeepDistanceFromDarkFiendsAction::Execute(Event /*event*/)
     if (distFromFiend > DARK_FIEND_SAFE_DISTANCE)
         return false;
 
+    bot->CastStop();
     return MoveAway(darkFiend, DARK_FIEND_SAFE_DISTANCE - distFromFiend);
 }
 
@@ -733,7 +735,8 @@ bool MuruEscapeTheSingularityAction::Execute(Event /*event*/)
     if (!singularity || !singularity->IsAlive())
         return false;
 
-    float const safeDistance = entropius->GetVictim() == bot ? 20.0f : 15.0f;
+    float const safeDistance = entropius->GetVictim() == bot ?
+        SINGULARITY_TANK_SAFE_DISTANCE : SINGULARITY_SAFE_DISTANCE;
     float const currentDistance = bot->GetExactDist2d(singularity);
     if (currentDistance >= safeDistance)
         return false;
