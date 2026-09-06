@@ -114,6 +114,9 @@ public:
         creators["eredar twins melee jump from balcony"] =
             &RaidSwpActionContext::eredar_twins_melee_jump_from_balcony;
 
+        creators["eredar twins announce alythess tank"] =
+            &RaidSwpActionContext::eredar_twins_announce_alythess_tank;
+
         creators["eredar twins misdirect bosses to tanks"] =
             &RaidSwpActionContext::eredar_twins_misdirect_bosses_to_tanks;
 
@@ -260,7 +263,8 @@ private:
         return new KalecgosDisperseRangedAction(botAI);
     }
     static Action* kalecgos_remove_arcane_buffet(PlayerbotAI* botAI) {
-        return new KalecgosRemoveArcaneBuffetAction(botAI);
+        return new SunwellPlateauRemoveDebuffWithImmunityAction(
+            botAI, "kalecgos remove arcane buffet");
     }
     static Action* kalecgos_sathrovarr_tank_stand_with_kalec(PlayerbotAI* botAI) {
         return new KalecgosSathrovarrTankStandWithKalecAction(botAI);
@@ -333,6 +337,9 @@ private:
     static Action* eredar_twins_melee_jump_from_balcony(PlayerbotAI* botAI) {
         return new EredarTwinsMeleeJumpFromBalconyAction(botAI);
     }
+    static Action* eredar_twins_announce_alythess_tank(PlayerbotAI* botAI) {
+        return new EredarTwinsAnnounceAlythessTankAction(botAI);
+    }
     static Action* eredar_twins_misdirect_bosses_to_tanks(PlayerbotAI* botAI) {
         return new EredarTwinsMisdirectBossesToTanksAction(botAI);
     }
@@ -349,7 +356,8 @@ private:
         return new EredarTwinsStackInRoomCenterAction(botAI);
     }
     static Action* eredar_twins_remove_flame_sear(PlayerbotAI* botAI) {
-        return new EredarTwinsRemoveFlameSearAction(botAI);
+        return new SunwellPlateauRemoveDebuffWithImmunityAction(
+            botAI, "eredar twins remove flame sear");
     }
     static Action* eredar_twins_dps_prioritize_sacrolash(PlayerbotAI* botAI) {
         return new EredarTwinsDpsPrioritizeSacrolashAction(botAI);
@@ -431,7 +439,8 @@ private:
         return new KiljaedenPositionRangedAndAvoidArmageddonsAction(botAI);
     }
     static Action* kiljaeden_remove_fire_bloom(PlayerbotAI* botAI) {
-        return new KiljaedenRemoveFireBloomAction(botAI);
+        return new SunwellPlateauRemoveDebuffWithImmunityAction(
+            botAI, "kil'jaeden remove fire bloom");
     }
     static Action* kiljaeden_stack_for_shield_of_the_blue(PlayerbotAI* botAI) {
         return new KiljaedenStackForShieldOfTheBlueAction(botAI);

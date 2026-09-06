@@ -38,12 +38,11 @@ private:
     std::string const _bossName;
 };
 
-// The main tank walking his boss to where the raid wants him: take the target, wait until he is
-// actually being held in melee, then close on the spot a step at a time. All five encounters do
-// this and only the spot, how near counts as arrived, and whether the tank's own health calls it
-// off differ, so they share one class and name those at registration.
+// 主坦克将他的首领带到团队希望他所在的位置：先接住目标，等到目标确实被
+// 拉进近战范围，然后一步步靠近该位置。五个首领都这样做，只有位置、到达
+// 判定距离以及坦克自身血量是否中断不同，因此它们共享一个类并在注册时命名。
 //
-// bailBelowHealthPct needs no special case at its default: a bot alive to run this is above zero
+// bailBelowHealthPct 在默认值时无需特判：能执行此动作的机器人血量必然大于零
 class HyjalMainTankPositionBossAction : public AttackAction
 {
 public:
@@ -56,8 +55,17 @@ public:
 
 private:
     std::string const _bossName;
-    Position const& _position;
+    Position const _position;
     float const _bailBelowHealthPct;
+};
+
+// Remove Mark of Kaz'rogal and Doomfire in certain cases
+class HyjalSummitRemoveDangerousDotAction : public Action
+{
+public:
+    HyjalSummitRemoveDangerousDotAction(PlayerbotAI* botAI)
+        : Action(botAI, "hyjal summit remove dangerous dot") {}
+    bool Execute(Event event) override;
 };
 
 // Rage Winterchill
@@ -198,13 +206,6 @@ public:
     bool Execute(Event event) override;
 };
 
-class KazrogalCancelMarkAction : public Action
-{
-public:
-    KazrogalCancelMarkAction(PlayerbotAI* botAI) : Action(botAI, "kaz'rogal cancel mark") {}
-    bool Execute(Event event) override;
-};
-
 class KazrogalCancelImmunityAction : public Action
 {
 public:
@@ -254,11 +255,12 @@ public:
     bool Execute(Event event) override;
 };
 
-class AzgalorFirstAssistTankPositionDoomguardAction : public AttackAction
+// The Doomguard tank is the first assist tank, or the second when the first is Doomed.
+class AzgalorTankPositionDoomguardAction : public AttackAction
 {
 public:
-    AzgalorFirstAssistTankPositionDoomguardAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "azgalor first assist tank position doomguard") {}
+    AzgalorTankPositionDoomguardAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "azgalor tank position doomguard") {}
     bool Execute(Event event) override;
 };
 
@@ -301,14 +303,6 @@ class ArchimondeAvoidDoomfireAction : public MovementAction
 public:
     ArchimondeAvoidDoomfireAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "archimonde avoid doomfire") {}
-    bool Execute(Event event) override;
-};
-
-class ArchimondeRemoveDoomfireDotAction : public Action
-{
-public:
-    ArchimondeRemoveDoomfireDotAction(PlayerbotAI* botAI)
-        : Action(botAI, "archimonde remove doomfire dot") {}
     bool Execute(Event event) override;
 };
 

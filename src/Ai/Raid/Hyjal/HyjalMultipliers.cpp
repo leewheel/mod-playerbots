@@ -148,7 +148,7 @@ float AnetheronDisableAssistTargetingMultiplier::GetValueInEncounter(Action* act
 }
 
 // By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名GetValueInEncounter
-// Keep non-Infernal tanks from inadvertesntly grabbing aggro with Consecration, Thunder Clap, etc.
+// 防止非地狱火坦克在无意间用奉献、雷霆一击等技能拉到仇恨
 float AnetheronAvoidAccidentalInfernalAggroMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -157,8 +157,8 @@ float AnetheronAvoidAccidentalInfernalAggroMultiplier::GetValueInEncounter(Actio
     if (!IsAoeThreatAction(bot, action))
         return 1.0f;
 
-    constexpr float holdTankAoeRadius = 20.0f; // arbitrary but > AoE threat ability radii
-    Unit* infernal = GetNearestInfernal(bot);
+    constexpr float holdTankAoeRadius = 20.0f; // 任意取值，但大于范围伤害技能半径
+    Unit* infernal = GetNearestInfernal(botAI);
     if (!infernal || infernal->GetExactDist2d(bot) > holdTankAoeRadius)
         return 1.0f;
 
@@ -183,7 +183,7 @@ float AnetheronInfernalTargetRunToPositionMultiplier::GetValueInEncounter(Action
     if (IsInfernalTank(bot))
         return 1.0f;
 
-    return GetInfernoTarget(anetheron) == bot || GetInfernalTargetingBot(bot) ? 0.0f : 1.0f;
+    return GetInfernoTarget(anetheron) == bot || GetInfernalTargetingBot(botAI) ? 0.0f : 1.0f;
 }
 
 float AnetheronControlMovementMultiplier::GetValueInEncounter(Action* action)
@@ -235,9 +235,7 @@ float KazrogalDisableDisperseAndTankFaceMultiplier::GetValueInEncounter(Action* 
 
 float KazrogalControlLowManaMovementMultiplier::GetValueInEncounter(Action* action)
 {
-    // Hunters are excluded alongside the classes the Mark cannot reach: it reaches them, but their
-    // whole answer to it is Viper, so there is no escape here to clear the way for
-    if (!IsKazrogalManaUser(bot) || bot->getClass() == CLASS_HUNTER) // By leewheel 2026-08-30 合并上游单参签名
+    if (!IsKazrogalManaUser(botAI) || bot->getClass() == CLASS_HUNTER)
         return 1.0f;
 
     if (!dynamic_cast<MovementAction*>(action) &&

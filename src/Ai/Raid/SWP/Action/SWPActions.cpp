@@ -15,7 +15,7 @@
 #include "SWPEncounter_KJ.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
-#include "SWPSharedConstants.h"
+#include "SWPShared.h"
 #include <list>
 
 using namespace SwpHelpers;
@@ -82,6 +82,7 @@ bool SunwellPlateauResetEncounterStatesAction::Execute(Event /*event*/)
     reset |= eredarTwinsIncomingConflagrationStates.erase(instanceId) > 0;
     reset |= eredarTwinsBlazeTargetStates.erase(instanceId) > 0;
     reset |= eredarTwinsDpsHoldStartMs.erase(instanceId) > 0;
+    reset |= eredarTwinsTankAssignments.erase(instanceId) > 0;
     reset |= muruDarknessStates.erase(instanceId) > 0;
     reset |= muruVoidSentinelTankAssignments.erase(instanceId) > 0;
     reset |= kiljaedenEncounterStates.erase(instanceId) > 0;
@@ -106,8 +107,7 @@ bool SunwellPlateauRemoveAuraAction::Execute(Event /*event*/)
         return true;
     }
 
-    InstanceScript* instance = bot->GetInstanceScript();
-    if (!instance || instance->IsEncounterInProgress())
+    if (IsEncounterInProgress(bot, SWP_MAP_ID))
         return false;
 
     // It is Blizzlike for Burn to persist after the kill, but bots will murder the raid without
@@ -170,6 +170,9 @@ bool ApocalypseGuardAttackWithHolyMagicAction::Execute(Event /*event*/)
         if (!target || apocalypseGuard->GetGUID() < target->GetGUID())
             target = apocalypseGuard;
     }
+
+    if (!target)
+        return false;
 
     if (bot->HasAura(Id(SwpSpells::SPELL_SHADOWFORM)))
         bot->RemoveAura(Id(SwpSpells::SPELL_SHADOWFORM));

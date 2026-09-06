@@ -5,8 +5,6 @@
  */
 
 #include "AllCreatureScript.h"
-#include "DynamicObjectScript.h"
-#include "EncounterHelpers.h"
 #include "HyjalHelpers.h"
 #include "Player.h"
 #include "Playerbots.h"
@@ -14,7 +12,6 @@
 #include "Spell.h"
 
 using namespace HyjalHelpers;
-using namespace EncounterHelpers;
 
 // Both spell listeners are driven by DoCastRandomTarget, which always has an explicit unit target.
 

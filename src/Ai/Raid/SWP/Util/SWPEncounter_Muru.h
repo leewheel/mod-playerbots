@@ -9,7 +9,7 @@
 
 #include "ObjectGuid.h"
 #include "Position.h"
-#include "SWPSharedConstants.h"
+#include "SWPShared.h"
 #include <unordered_map>
 #include <vector>
 

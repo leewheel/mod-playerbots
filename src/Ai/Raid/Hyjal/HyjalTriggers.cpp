@@ -6,7 +6,6 @@
 
 #include "HyjalTriggers.h"
 #include "EncounterHelpers.h"
-#include "HyjalActions.h"
 #include "HyjalHelpers.h"
 #include "Playerbots.h"
 
@@ -89,7 +88,7 @@ bool AnetheronPullingBossOrInfernalTrigger::IsActive()
 
 bool AnetheronRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
-    if (PlayerbotAI::IsMelee(bot))
+    if (!PlayerbotAI::IsRanged(bot))
         return false;
 
     Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
@@ -131,7 +130,7 @@ bool AnetheronBotIsTargetedByInfernalTrigger::IsActiveInEncounter()
     if (IsInfernalTank(bot))
         return false;
 
-    return GetInfernalTargetingBot(bot);
+    return GetInfernalTargetingBot(botAI);
 }
 
 bool AnetheronInfernalsPulseImmolationTrigger::IsActiveInEncounter()
@@ -143,7 +142,7 @@ bool AnetheronInfernalsPulseImmolationTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "17808"))
         return false;
 
-    Unit* infernal = GetNearestInfernal(bot);
+    Unit* infernal = GetNearestInfernal(botAI);
     return infernal && infernal->GetVictim() != bot &&
         bot->GetExactDist2d(infernal) < INFERNAL_DANGER_RADIUS;
 }
@@ -156,7 +155,7 @@ bool AnetheronInfernalsShouldBeTankedAwayTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "17808"))
         return false;
 
-    Unit* infernal = GetInfernalTargetingBot(bot);
+    Unit* infernal = GetInfernalTargetingBot(botAI);
     return infernal && bot->IsWithinMeleeRange(infernal);
 }
 
@@ -198,7 +197,7 @@ bool KazrogalRangedShouldAvoidWarStompTrigger::IsActiveInEncounter()
 
 bool KazrogalBotIsLowOnManaTrigger::IsActiveInEncounter()
 {
-    if (!IsKazrogalManaUser(bot)) // By leewheel 2026-08-30 合并上游单参签名
+    if (!IsKazrogalManaUser(botAI))
         return false;
 
     // Hunters never run. They rely only on Aspect of the Viper.
@@ -288,7 +287,7 @@ bool KazrogalImmunityNoLongerNeededTrigger::IsActiveInEncounter()
         return false;
     }
 
-    uint32 const spellId = GetKazrogalImmunitySpell(bot);
+    uint32 const spellId = GetSelfImmunitySpell(bot);
     if (!spellId || !bot->HasAura(spellId))
         return false;
 

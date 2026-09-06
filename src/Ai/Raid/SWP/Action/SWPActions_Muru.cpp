@@ -8,7 +8,7 @@
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
 #include "SWPEncounter_Muru.h"
-#include "SWPSharedConstants.h"
+#include "SWPShared.h"
 #include <algorithm>
 #include <array>
 #include <cmath>

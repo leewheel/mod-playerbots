@@ -23,7 +23,7 @@
 #include "SWPEncounter_KJ.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
-#include "SWPSharedConstants.h"
+#include "SWPShared.h"
 #include "Timer.h"
 #include "WipeAction.h"
 
@@ -34,11 +34,7 @@ using namespace EncounterHelpers;
 
 float SunwellPlateauNoEncounterDrinkingMultiplier::GetValue(Action* action)
 {
-    if (bot->GetMapId() != SWP_MAP_ID)
-        return 1.0f;
-
-    InstanceScript* instance = bot->GetInstanceScript();
-    if (!instance || !instance->IsEncounterInProgress())
+    if (IsEncounterInProgress(bot, SWP_MAP_ID))
         return 1.0f;
 
     return dynamic_cast<DrinkAction*>(action) ? 0.0f : 1.0f;
@@ -541,7 +537,7 @@ float EredarTwinsHoldDpsAtStartMultiplier::GetValueInEncounter(Action* action)
 
 float EredarTwinsControlThreatMultiplier::GetValueInEncounter(Action* action)
 {
-    if (PlayerbotAI::IsHeal(bot)) // early return; already excluded from ShouldHoldTwinThreat()
+    if (PlayerbotAI::IsHeal(bot)) // early return; the threat hold already excludes healers
         return 1.0f;
 
     if (!dynamic_cast<CastSpellAction*>(action) && !dynamic_cast<AttackAction*>(action))
@@ -553,10 +549,9 @@ float EredarTwinsControlThreatMultiplier::GetValueInEncounter(Action* action)
     Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
 
-    bool const shouldHoldSacrolashThreat = sacrolash && !PlayerbotAI::IsTank(bot) &&
-        ShouldHoldTwinThreat(bot, sacrolash, SACROLASH_THREAT_HOLD_RATIO, IsAnySacrolashTank);
-    bool const shouldHoldAlythessThreat = alythess &&
-        ShouldHoldTwinThreat(bot, alythess, ALYTHESS_THREAT_HOLD_RATIO, IsAlythessTank);
+    bool const shouldHoldSacrolashThreat =
+        sacrolash && !PlayerbotAI::IsTank(bot) && ShouldHoldSacrolashThreat(bot, sacrolash);
+    bool const shouldHoldAlythessThreat = alythess && ShouldHoldAlythessThreat(bot, alythess);
 
     if (!shouldHoldSacrolashThreat && !shouldHoldAlythessThreat)
         return 1.0f;
@@ -845,7 +840,7 @@ float KiljaedenSingleTargetHandsMultiplier::GetValue(Action* action)
 
     // By leewheel 2026-08-29 合并：采用对侧SUNWELL中心范围判断(不在平台内的bot不受限)
     if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
-        return 1.0;
+        return 1.0f;
     // End By leewheel
 
     return AI_VALUE(GuidVector, "kiljaeden hands").empty() ? 1.0f : 0.0f;

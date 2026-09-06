@@ -313,13 +313,12 @@ GuidVector const& GetInfernalGuids(PlayerbotAI* botAI)
     return botAI->GetAiObjectContext()->GetValue<GuidVector>("hyjal infernals")->RefGet();
 }
 
-Unit* GetLooseInfernal(Player* bot)
+Unit* GetLooseInfernal(PlayerbotAI* botAI)
 {
-    Player* infernalTank = GetInfernalTank(bot);
+    Player* infernalTank = GetInfernalTank(botAI->GetBot());
     if (!infernalTank)
         return nullptr;
 
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     for (ObjectGuid const guid : GetInfernalGuids(botAI))
     {
         Unit* infernal = botAI->GetUnit(guid);
@@ -330,9 +329,9 @@ Unit* GetLooseInfernal(Player* bot)
     return nullptr;
 }
 
-Unit* GetNearestInfernal(Player* bot)
+Unit* GetNearestInfernal(PlayerbotAI* botAI)
 {
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
+    Player* bot = botAI->GetBot();
     Unit* nearest = nullptr;
     float nearestDistance = 0.0f;
     for (ObjectGuid const guid : GetInfernalGuids(botAI))
@@ -365,15 +364,15 @@ Unit* GetInfernalToAttack(PlayerbotAI* botAI, Unit* anetheron)
             break;
     }
 
-    if (!infernal || botAI->GetBot()->GetDistance2d(infernal) >= INFERNAL_RANGED_ENGAGE_DISTANCE)
+    if (!infernal || botAI->GetBot()->GetExactDist2d(infernal) >= INFERNAL_RANGED_ENGAGE_DISTANCE)
         return nullptr;
 
     return infernal;
 }
 
-Unit* GetInfernalTargetingBot(Player* bot)
+Unit* GetInfernalTargetingBot(PlayerbotAI* botAI)
 {
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
+    Player* bot = botAI->GetBot();
     for (ObjectGuid const guid : GetInfernalGuids(botAI))
     {
         Unit* infernal = botAI->GetUnit(guid);
@@ -391,18 +390,7 @@ bool IsInfernalTank(Player* bot)
 
 Player* GetInfernalTank(Player* bot)
 {
-    Group* group = bot->GetGroup();
-    if (!group)
-        return nullptr;
-
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (member && IsInfernalTank(member))
-            return member;
-    }
-
-    return nullptr;
+    return GetGroupAssistTank(bot, 0);
 }
 
 Position const& GetInfernalTankPosition(Player* bot)
@@ -432,10 +420,9 @@ float GetKazrogalRangedArcSpan(float radius)
     return 2.0f * std::asin(ratio < 1.0f ? ratio : 1.0f);
 }
 
-bool IsKazrogalManaUser(Player* bot) // By leewheel 2026-08-30 合并上游单参签名(botAI内部获取)
+bool IsKazrogalManaUser(PlayerbotAI* botAI) // By leewheel 2026-09-06 采纳brighton botAI参数签名
 {
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-    switch (bot->getClass())
+    switch (botAI->GetBot()->getClass())
     {
         case CLASS_WARRIOR:
         case CLASS_ROGUE:
@@ -456,21 +443,6 @@ bool HasMarkOfKazrogal(Player* bot)
     return bot->HasAura(Id(HyjalSpells::SPELL_MARK_OF_KAZROGAL));
 }
 
-uint32 GetKazrogalImmunitySpell(Player* bot)
-{
-    switch (bot->getClass())
-    {
-        case CLASS_MAGE:
-            return Id(HyjalSpells::SPELL_ICE_BLOCK);
-
-        case CLASS_PALADIN:
-            return Id(HyjalSpells::SPELL_DIVINE_SHIELD);
-
-        default:
-            return 0;
-    }
-}
-
 // Azgalor
 
 // Each Rain of Fire is its own dynamic object that expires after 10s; there can be 2 up at a time.
@@ -479,8 +451,8 @@ std::vector<Position> GetRainOfFirePositions(PlayerbotAI* botAI)
     return GetCachedHazardPositions(botAI, "hyjal rain of fire");
 }
 
-// Fleeing the nearest can walk a bot into a second pool, which then becomes the nearest and is
-// fled in turn. That resolves itself a step at a time and is no worse than standing in the first
+// 逃离最近的火雨可能会让机器人走进第二个火雨池，该池随即成为最近目标并被逃离。
+// 这会逐步自行化解，且并不比站在第一个池中更糟
 bool GetNearestRainOfFirePosition(PlayerbotAI* botAI, Position& pool)
 {
     Player* bot = botAI->GetBot();
@@ -529,16 +501,18 @@ bool IsDoomguardTank(Player* bot) // By leewheel 2026-08-30 合并上游单参�
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
-        return true;
-
-    if (!PlayerbotAI::IsAssistTankOfIndex(bot, 1, true))
+    // GetGroupAssistTank() skips dead tanks so the second assist tank naturally becomes the first
+    // if the first dies.
+    Player* firstAssistTank = GetGroupAssistTank(bot, 0);
+    if (!firstAssistTank)
         return false;
 
-    // The second assist tank takes over if the first assist tank is Doomed. GetGroupAssistTank()
-    // requires a live tank, so if the first dies, the second becomes the Doomguard tank.
-    Player* firstAssistTank = GetGroupAssistTank(bot, 0);
-    return !firstAssistTank || IsDoomed(firstAssistTank);
+    if (firstAssistTank == bot)
+        return true;
+
+    // The second assist tank also takes over while the first is Doomed and so about to die and
+    // spawn a Doomguard of its own.
+    return IsDoomed(firstAssistTank) && GetGroupAssistTank(bot, 1) == bot;
 }
 
 bool IsSafeFromAzgalorCleave(Unit* azgalor, float x, float y)

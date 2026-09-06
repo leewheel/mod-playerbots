@@ -56,15 +56,6 @@ enum class HyjalSpells : uint32
     SPELL_ASPECT_OF_THE_VIPER = 34074,
     SPELL_MISDIRECTION        = 35079,
 
-    // Mage
-    SPELL_ICE_BLOCK           = 45438,
-
-    // Paladin
-    SPELL_DIVINE_SHIELD       = 642,
-
-    // Rogue
-    SPELL_CLOAK_OF_SHADOWS    = 31224,
-
     // Shaman
     SPELL_TREMOR_TOTEM        = 8143,
 };
@@ -117,7 +108,8 @@ bool FindStepToCircle(
 bool GetHazardEscapeStep(
     Player* bot, Position const& hazard, float escapeRadius, float moveDist, float& stepX,
     float& stepY, float& stepZ, std::function<bool(float, float)> const& isAcceptable = {});
-// Every ranged raid member on the map, in group order.
+// Every ranged raid member on the map, in group order. The dead are kept in the list so that a
+// death does not shift every survivor's ring index.
 std::vector<Player*> GetRangedMembers(Player* bot);
 RangedGroups GetRangedGroups(Player* bot);
 std::pair<size_t, size_t> GetBotCircleIndexAndCount(Player* bot, RangedGroups const& groups);
@@ -149,21 +141,23 @@ inline constexpr float INFERNAL_SEARCH_RADIUS = 100.0f;
 inline constexpr float INFERNAL_DANGER_RADIUS = 10.0f;
 inline constexpr float INFERNAL_ESCAPE_DISTANCE = INFERNAL_DANGER_RADIUS + 2.0f;
 // Past this, ranged stay on the boss rather than switching to the Infernal. Arbitrary, but near
-// enough that ranged do not bunch up and risk too many getting hit by a Carrion Swarm.
+// enough that ranged do not bunch up and risk too many getting hit by a Carrion Swarm. Measured
+// center to center; a Towering Infernal's CombatReach is 4y.
 inline constexpr float INFERNAL_RANGED_ENGAGE_DISTANCE = 50.0f;
 Player* GetInfernoTarget(Unit* anetheron);
 // Every living Towering Infernal, oldest first, read through the "hyjal infernals" value
 GuidVector FindInfernalGuids(Player* bot);
 GuidVector const& GetInfernalGuids(PlayerbotAI* botAI);
 // The first Infernal that the Infernal tank does not have aggro on.
-Unit* GetLooseInfernal(Player* bot);
-Unit* GetNearestInfernal(Player* bot);
+Unit* GetLooseInfernal(PlayerbotAI* botAI);
+Unit* GetNearestInfernal(PlayerbotAI* botAI);
 // The Infernal a ranged bot should attack instead of the boss, if any. It is the oldest Infernal
 // alive, but in practice, a raid should have only one up at a time.
 Unit* GetInfernalToAttack(PlayerbotAI* botAI, Unit* anetheron);
-Unit* GetInfernalTargetingBot(Player* bot);
+Unit* GetInfernalTargetingBot(PlayerbotAI* botAI);
+// Both resolve the first assist tank among the living, so keep them in step.
 bool IsInfernalTank(Player* bot);
-Player* GetInfernalTank(Player* bot); // First Assist Tank
+Player* GetInfernalTank(Player* bot);
 // Whichever of the two spots the Infernal tank stands nearer.
 Position const& GetInfernalTankPosition(Player* bot);
 
@@ -194,9 +188,8 @@ inline constexpr float MARK_ESCAPE_DISTANCE = 16.0f;
 extern std::unordered_set<ObjectGuid> botsBelowManaThreshold;
 float GetKazrogalRangedArcRadius(Unit* kazrogal);
 float GetKazrogalRangedArcSpan(float radius);
-bool IsKazrogalManaUser(Player* bot);
+bool IsKazrogalManaUser(PlayerbotAI* botAI);
 bool HasMarkOfKazrogal(Player* bot);
-uint32 GetKazrogalImmunitySpell(Player* bot);
 
 // Azgalor
 

@@ -20,6 +20,9 @@ public:
         creators["hyjal summit reset encounter states"] =
             &RaidHyjalActionContext::hyjal_summit_reset_encounter_states;
 
+        creators["hyjal summit remove dangerous dot"] =
+            &RaidHyjalActionContext::hyjal_summit_remove_dangerous_dot;
+
         // Rage Winterchill
         creators["rage winterchill misdirect boss to main tank"] =
             &RaidHyjalActionContext::rage_winterchill_misdirect_boss_to_main_tank;
@@ -79,11 +82,9 @@ public:
         creators["kaz'rogal activate aspect of the viper"] =
             &RaidHyjalActionContext::kazrogal_activate_aspect_of_the_viper;
 
-        creators["kaz'rogal cancel mark"] =
-            &RaidHyjalActionContext::kazrogal_cancel_mark;
-
         creators["kaz'rogal cancel immunity"] =
             &RaidHyjalActionContext::kazrogal_cancel_immunity;
+
         creators["kaz'rogal warlock manage mana"] =
             &RaidHyjalActionContext::kazrogal_warlock_manage_mana;
 
@@ -106,8 +107,8 @@ public:
         creators["azgalor move to doomguard tank"] =
             &RaidHyjalActionContext::azgalor_move_to_doomguard_tank;
 
-        creators["azgalor first assist tank position doomguard"] =
-            &RaidHyjalActionContext::azgalor_first_assist_tank_position_doomguard;
+        creators["azgalor tank position doomguard"] =
+            &RaidHyjalActionContext::azgalor_tank_position_doomguard;
 
         creators["azgalor determine dps priority"] =
             &RaidHyjalActionContext::azgalor_determine_dps_priority;
@@ -130,15 +131,15 @@ public:
 
         creators["archimonde avoid doomfire"] =
             &RaidHyjalActionContext::archimonde_avoid_doomfire;
-
-        creators["archimonde remove doomfire dot"] =
-            &RaidHyjalActionContext::archimonde_remove_doomfire_dot;
     }
 
 private:
     // General
     static Action* hyjal_summit_reset_encounter_states(PlayerbotAI* botAI) {
         return new HyjalSummitResetEncounterStatesAction(botAI);
+    }
+    static Action* hyjal_summit_remove_dangerous_dot(PlayerbotAI* botAI) {
+        return new HyjalSummitRemoveDangerousDotAction(botAI);
     }
 
     // Rage Winterchill
@@ -211,9 +212,6 @@ private:
     static Action* kazrogal_activate_aspect_of_the_viper(PlayerbotAI* botAI) {
         return new KazrogalActivateAspectOfTheViperAction(botAI);
     }
-    static Action* kazrogal_cancel_mark(PlayerbotAI* botAI) {
-        return new KazrogalCancelMarkAction(botAI);
-    }
     static Action* kazrogal_cancel_immunity(PlayerbotAI* botAI) {
         return new KazrogalCancelImmunityAction(botAI);
     }
@@ -243,8 +241,8 @@ private:
     static Action* azgalor_move_to_doomguard_tank(PlayerbotAI* botAI) {
         return new AzgalorMoveToDoomguardTankAction(botAI);
     }
-    static Action* azgalor_first_assist_tank_position_doomguard(PlayerbotAI* botAI) {
-        return new AzgalorFirstAssistTankPositionDoomguardAction(botAI);
+    static Action* azgalor_tank_position_doomguard(PlayerbotAI* botAI) {
+        return new AzgalorTankPositionDoomguardAction(botAI);
     }
     static Action* azgalor_determine_dps_priority(PlayerbotAI* botAI) {
         return new AzgalorDetermineDpsPriorityAction(botAI);
@@ -271,9 +269,6 @@ private:
     }
     static Action* archimonde_avoid_doomfire(PlayerbotAI* botAI) {
         return new ArchimondeAvoidDoomfireAction(botAI);
-    }
-    static Action* archimonde_remove_doomfire_dot(PlayerbotAI* botAI) {
-        return new ArchimondeRemoveDoomfireDotAction(botAI);
     }
 };
 

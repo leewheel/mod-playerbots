@@ -102,6 +102,12 @@ bool HyjalMainTankPositionBossAction::Execute(Event /*event*/)
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
+bool HyjalSummitRemoveDangerousDotAction::Execute(Event /*event*/)
+{
+    uint32 const spellId = GetSelfImmunitySpell(bot);
+    return spellId && botAI->CanCastSpell(spellId, bot) && botAI->CastSpell(spellId, bot);
+}
+
 // Rage Winterchill
 
 // This is essentially a forced "avoid aoe" due to the default AiPlayerbot.MaxAoeAvoidRadius in the
@@ -255,7 +261,7 @@ bool AnetheronMisdirectBossAndInfernalsToTanksAction::Execute(Event /*event*/)
         tankTarget = GetGroupMainTank(bot);
         enemyTarget = anetheron;
     }
-    else if (Unit* infernal = GetLooseInfernal(bot))
+    else if (Unit* infernal = GetLooseInfernal(botAI))
     {
         tankTarget = GetInfernalTank(bot);
         enemyTarget = infernal;
@@ -377,7 +383,7 @@ bool AnetheronInfernalTankTakePositionAction::Execute(Event /*event*/)
     float moveY;
     bool backwards;
     if (!GetStepToPosition(
-            bot, GetInfernalTankPosition(bot), arrivalDist, GetInfernalTargetingBot(bot), moveX,
+            bot, GetInfernalTankPosition(bot), arrivalDist, GetInfernalTargetingBot(botAI), moveX,
             moveY, backwards))
     {
         return false;
@@ -391,7 +397,7 @@ bool AnetheronInfernalTankTakePositionAction::Execute(Event /*event*/)
 // A live Infernal burns everything within 10y of itself, so anybody who is not holding it leaves.
 bool AnetheronGetOutOfImmolationAction::Execute(Event /*event*/)
 {
-    Unit* infernal = GetNearestInfernal(bot);
+    Unit* infernal = GetNearestInfernal(botAI);
     if (!infernal || infernal->GetVictim() == bot)
         return false;
 
@@ -533,18 +539,9 @@ bool KazrogalActivateAspectOfTheViperAction::Execute(Event /*event*/)
         botAI->CastSpell(Id(HyjalSpells::SPELL_ASPECT_OF_THE_VIPER), bot);
 }
 
-bool KazrogalCancelMarkAction::Execute(Event /*event*/)
-{
-    uint32 const spellId = GetKazrogalImmunitySpell(bot);
-    return spellId && botAI->CanCastSpell(spellId, bot) && botAI->CastSpell(spellId, bot);
-}
-
 bool KazrogalCancelImmunityAction::Execute(Event /*event*/)
 {
-    uint32 const spellId = GetKazrogalImmunitySpell(bot);
-    if (!spellId || !bot->HasAura(spellId))
-        return false;
-
+    uint32 const spellId = GetSelfImmunitySpell(bot);
     bot->RemoveAura(spellId);
     return true;
 }
@@ -577,7 +574,7 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
     if (!azgalor)
         return false;
 
-    float const safeDistFromBoss = 30.0f; // ~20 yards + boss and bot CombatReaches
+    constexpr float safeDistFromBoss = 30.0f; // 约20码 + 首领与机器人各自的战斗范围
     constexpr uint32 minInterval = 0;
 
     if (bot->GetExactDist2d(azgalor) < safeDistFromBoss &&
@@ -600,10 +597,9 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
     return nearestPlayer && FleePosition(nearestPlayer->GetPosition(), safeDistFromPlayer);
 }
 
-// The same question as at Winterchill, with two differences: Azgalor can have more than one pool
-// up at a time, and his frontal arc is taken away by the cleave chain whatever the fire is doing.
-// Both are just further blocked arcs on the same ring. Cleave safety is never traded against
-// standing in fire--fire ticks, cleave kills
+// 与冬泉谷暗影伤害池的情况相同，但有两处不同：阿兹加洛可同时存在多个火雨池，
+// 且无论火焰在做什么，他的正面弧形区域都会被顺劈链封锁。两者都只是同一圆环上的
+// 更多被阻断的弧线。绝不用站火中的安全去换顺劈安全——火焰是持续掉血，顺劈是致命一击
 bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
 {
     Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
@@ -737,7 +733,7 @@ bool AzgalorMoveToDoomguardTankAction::Execute(Event /*event*/)
         false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-bool AzgalorFirstAssistTankPositionDoomguardAction::Execute(Event /*event*/)
+bool AzgalorTankPositionDoomguardAction::Execute(Event /*event*/)
 {
     Position const& position = AZGALOR_DOOMGUARD_POSITION;
     constexpr float arrivalDist = 3.0f;
@@ -780,11 +776,7 @@ bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
         return false;
 
     if (PlayerbotAI::IsMelee(bot))
-    {
-        if (AI_VALUE(Unit*, "current target") != azgalor)
-            return Attack (azgalor);
-        return false;
-    }
+        return AI_VALUE(Unit*, "current target") != azgalor && Attack(azgalor);
 
     Unit* target = nullptr;
     if (azgalor->GetHealthPct() < BOSS_BURN_HEALTH_PCT)
@@ -800,10 +792,7 @@ bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
             target = azgalor;
     }
 
-    if (!target || AI_VALUE(Unit*, "current target") == target)
-        return false;
-
-    return Attack(target);
+    return AI_VALUE(Unit*, "current target") != target && Attack(target);
 }
 
 // Archimonde
@@ -1024,25 +1013,4 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
     return MoveTo(
         HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
-}
-
-bool ArchimondeRemoveDoomfireDotAction::Execute(Event /*event*/)
-{
-    switch (bot->getClass())
-    {
-        case CLASS_MAGE:
-            return botAI->CanCastSpell(Id(HyjalSpells::SPELL_ICE_BLOCK), bot) &&
-                botAI->CastSpell(Id(HyjalSpells::SPELL_ICE_BLOCK), bot);
-
-        case CLASS_PALADIN:
-            return botAI->CanCastSpell(Id(HyjalSpells::SPELL_DIVINE_SHIELD), bot) &&
-                botAI->CastSpell(Id(HyjalSpells::SPELL_DIVINE_SHIELD), bot);
-
-        case CLASS_ROGUE:
-            return botAI->CanCastSpell(Id(HyjalSpells::SPELL_CLOAK_OF_SHADOWS), bot) &&
-                botAI->CastSpell(Id(HyjalSpells::SPELL_CLOAK_OF_SHADOWS), bot);
-
-        default:
-            return false;
-    }
 }

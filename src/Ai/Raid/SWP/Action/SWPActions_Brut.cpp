@@ -8,7 +8,7 @@
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
 #include "SWPEncounter_Brut.h"
-#include "SWPSharedConstants.h"
+#include "SWPShared.h"
 #include <cmath>
 
 using namespace SwpHelpers;

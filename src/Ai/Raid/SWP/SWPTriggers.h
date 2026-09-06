@@ -8,7 +8,7 @@
 #define PLAYERBOTS_SWPTRIGGERS_H
 
 #include "EncounterHelpers.h"
-#include "SWPSharedConstants.h"
+#include "SWPShared.h"
 #include "Trigger.h"
 #include <string>
 
@@ -332,6 +332,16 @@ class EredarTwinsMeleeIsAtBalconyTrigger : public SunwellPlateauEncounterTrigger
 public:
     EredarTwinsMeleeIsAtBalconyTrigger(PlayerbotAI* botAI)
         : SunwellPlateauEncounterTrigger(botAI, "eredar twins melee is at balcony") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class EredarTwinsShouldAnnounceAlythessTankTrigger : public SunwellPlateauEncounterTrigger
+{
+public:
+    EredarTwinsShouldAnnounceAlythessTankTrigger(PlayerbotAI* botAI)
+        : SunwellPlateauEncounterTrigger(botAI, "eredar twins should announce alythess tank") {}
 
 protected:
     bool IsActiveInEncounter() override;

@@ -13,7 +13,7 @@
 #include "SWPEncounter_KJ.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
-#include "SWPSharedConstants.h"
+#include "SWPShared.h"
 #include <cmath>
 
 using namespace SwpHelpers;
@@ -41,11 +41,9 @@ bool SunwellPlateauNoEncounterInProgressTrigger::IsActive()
 
 bool SunwellPlateauBotHasAuraToRemoveTrigger::IsActive()
 {
-    if (bot->getClass() == CLASS_MAGE && bot->HasAura(Id(SwpSpells::SPELL_ICE_BLOCK)))
-        return true;
-
-    if (bot->getClass() == CLASS_PALADIN && !PlayerbotAI::IsHeal(bot) &&
-        bot->HasAura(Id(SwpSpells::SPELL_DIVINE_SHIELD)))
+    uint32 const spellId = GetSelfImmunitySpell(bot);
+    if (spellId && bot->getClass() != CLASS_ROGUE && !PlayerbotAI::IsHeal(bot) &&
+        bot->HasAura(spellId))
     {
         return true;
     }
@@ -476,6 +474,19 @@ bool EredarTwinsMeleeIsAtBalconyTrigger::IsActiveInEncounter()
         return false;
 
     return bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z;
+}
+
+bool EredarTwinsShouldAnnounceAlythessTankTrigger::IsActiveInEncounter()
+{
+    if (!IsMechanicTrackerBot(bot, SWP_MAP_ID))
+        return false;
+
+    auto const itr = eredarTwinsTankAssignments.find(bot->GetInstanceId());
+    if (itr != eredarTwinsTankAssignments.end() && itr->second.announcementMs)
+        return false;
+
+    return AI_VALUE2(Unit*, "find target", "grand warlock alythess") ||
+        AI_VALUE2(Unit*, "find target", "lady sacrolash");
 }
 
 bool EredarTwinsPullingBossesTrigger::IsActive()

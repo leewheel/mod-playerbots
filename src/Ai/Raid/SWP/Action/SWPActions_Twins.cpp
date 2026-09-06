@@ -7,8 +7,11 @@
 #include "SWPActions.h"
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
+#include "PlayerbotTextMgr.h"
 #include "SWPEncounter_Twins.h"
-#include "SWPSharedConstants.h"
+#include "SWPShared.h"
+#include <map>
+#include <string>
 
 using namespace SwpHelpers;
 using namespace EncounterHelpers;
@@ -33,6 +36,52 @@ bool EredarTwinsMeleeJumpFromBalconyAction::Execute(Event /*event*/)
     return JumpTo(
         SWP_MAP_ID, landingPosition.GetPositionX(), landingPosition.GetPositionY(),
         landingPosition.GetPositionZ(), MovementPriority::MOVEMENT_FORCED);
+}
+
+// Alythess really needs a Paladin tank so has a custom tank-selection method. To try to limit
+// confusion, announcements are made about which tank should be holding Alythess and why.
+bool EredarTwinsAnnounceAlythessTankAction::Execute(Event /*event*/)
+{
+    ResolveEredarTwinsTankAssignment(bot);
+
+    AlythessTankSource const source = GetAlythessTankSource(bot);
+    Player* alythessTank = GetAlythessTank(bot);
+    if (source == AlythessTankSource::Unresolved || !alythessTank)
+        return false;
+
+    eredarTwinsTankAssignments[bot->GetInstanceId()].announcementMs = getMSTime();
+
+    std::map<std::string, std::string> placeholders = {{"%bot", alythessTank->GetName()}};
+    std::string text;
+
+    switch (source)
+    {
+        case AlythessTankSource::MainTankPaladin:
+            text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "eredar_twins_alythess_tank_main_tank_paladin",
+                "Alythess requires a Paladin tank. %bot is the main tank and a Paladin and is "
+                "assigned to tank Alythess.",
+                placeholders);
+            break;
+
+        case AlythessTankSource::PaladinTank:
+            text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "eredar_twins_alythess_tank_paladin_tank",
+                "Alythess requires a Paladin tank. The main tank is not a Paladin. %bot is the "
+                "best-geared Paladin tank and is assigned to tank Alythess.",
+                placeholders);
+            break;
+
+        default:
+            text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "eredar_twins_alythess_tank_no_paladin",
+                "Alythess requires a Paladin tank. However, no Paladin tank is present. "
+                "Therefore, the main tank, %bot, is assigned to tank Alythess.",
+                placeholders);
+            break;
+    }
+
+    return botAI->SayToRaid(text);
 }
 
 bool EredarTwinsMisdirectBossesToTanksAction::Execute(Event /*event*/)
@@ -67,22 +116,28 @@ bool EredarTwinsMisdirectBossesToTanksAction::Execute(Event /*event*/)
     if (hunterIndex == -1)
         return false;
 
+    // Ensure that the Alythess tank is always top priority, whether or not it is the main tank.
+    Player* const alythessTank = GetAlythessTank(bot);
+    Player* const sacrolashTank = GetSacrolashTank(bot, 0);
+    Player* const sacrolashSecondTank = GetSacrolashTank(bot, 1);
+
     Unit* boss = nullptr;
     Player* tank = nullptr;
     if (hunterIndex == 0)
     {
+        // 业务逻辑采纳brighton(alythessTank优先)，boss名称按项目规则用entry(25166=grand warlock alythess) --By leewheel 2026-09-06
         boss = AI_VALUE2(Unit*, "find target", "25166");
-        tank = GetGroupAssistTank(bot, 0);
+        tank = alythessTank;
     }
     else if (hunterIndex == 1)
     {
         boss = AI_VALUE2(Unit*, "find target", "25165");
-        tank = GetGroupMainTank(bot);
+        tank = sacrolashTank;
     }
     else if (hunterIndex == 2)
     {
         boss = AI_VALUE2(Unit*, "find target", "25165");
-        tank = GetGroupAssistTank(bot, 1);
+        tank = sacrolashSecondTank;
     }
 
     if (!boss || !tank || !tank->IsAlive())
@@ -256,49 +311,23 @@ bool EredarTwinsStackInRoomCenterAction::Execute(Event /*event*/)
         false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-bool EredarTwinsRemoveFlameSearAction::Execute(Event /*event*/)
-{
-    switch (bot->getClass())
-    {
-        case CLASS_MAGE:
-            return botAI->CanCastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot) &&
-                botAI->CastSpell(Id(SwpSpells::SPELL_ICE_BLOCK), bot);
-
-        case CLASS_PALADIN:
-            return botAI->CanCastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot) &&
-                botAI->CastSpell(Id(SwpSpells::SPELL_DIVINE_SHIELD), bot);
-
-        case CLASS_ROGUE:
-            return botAI->CanCastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot) &&
-                botAI->CastSpell(Id(SwpSpells::SPELL_CLOAK_OF_SHADOWS), bot);
-
-        default:
-            return false;
-    }
-}
-
 bool EredarTwinsDpsPrioritizeSacrolashAction::Execute(Event /*event*/)
 {
     // 合并brighton 2026-08-27: 新增DPS仇恨保持起始记录; lady sacrolash按entry规则转25165 --By leewheel 2026年8月27日
     RecordEredarTwinsDpsHoldStart(bot);
 
-    Unit* twinTarget = AI_VALUE2(Unit*, "find target", "25165");
-    float threatHoldRatio = SACROLASH_THREAT_HOLD_RATIO;
-    bool (*isTwinTank)(Player*) = IsAnySacrolashTank;
-
-    if (!twinTarget)
-    {
-        twinTarget = AI_VALUE2(Unit*, "find target", "25166");
-        threatHoldRatio = ALYTHESS_THREAT_HOLD_RATIO;
-        isTwinTank = IsAlythessTank;
-    }
+    // boss名称按entry规则: 25165=lady sacrolash, 25166=grand warlock alythess --By leewheel 2026-09-06
+    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
+    Unit* twinTarget =
+        sacrolash ? sacrolash : AI_VALUE2(Unit*, "find target", "25166");
 
     if (!twinTarget)
         return false;
 
-    // Healers are excluded from ShouldHoldTwinThreat() but need this action so that they focus
-    // their "healer dps"/wanding on Sacrolash in phase 1.
-    if (ShouldHoldTwinThreat(bot, twinTarget, threatHoldRatio, isTwinTank))
+    bool const shouldHoldThreat = sacrolash ?
+        ShouldHoldSacrolashThreat(bot, twinTarget) : ShouldHoldAlythessThreat(bot, twinTarget);
+
+    if (!shouldHoldThreat)
     {
         bot->AttackStop();
         bot->InterruptSpell(CURRENT_MELEE_SPELL);
