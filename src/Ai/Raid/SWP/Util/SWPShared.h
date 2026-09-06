@@ -80,12 +80,18 @@ enum class SwpSpells : uint32
 
     // Mage
     SPELL_SPELLSTEAL                   = 30449,
+    SPELL_ICE_BLOCK                    = 45438,  // 法师冰箱，消减危险首领机制用 --By leewheel 2026-09-06 补充
+
+    // Paladin
+    SPELL_DIVINE_SHIELD                = 642,    // 圣骑士圣盾术 --By leewheel 2026-09-06 补充
 
     // Priest
     SPELL_DISPEL_MAGIC_RANK_1          = 527,
     SPELL_SHADOWFORM                   = 15473,
     SPELL_MASS_DISPEL                  = 32375,
 
+    // Rogue
+    SPELL_CLOAK_OF_SHADOWS             = 31224,  // 盗贼暗影斗篷 --By leewheel 2026-09-06 补充
 
     // Shaman
     SPELL_PURGE_RANK_1                 = 370,

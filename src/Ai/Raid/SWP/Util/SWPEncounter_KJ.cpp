@@ -20,34 +20,6 @@ namespace SwpHelpers
 namespace
 {
 
-float GetCenteredArcSlotAngleOffset(uint8 slotIndex, uint8 slotCount, float arcWidth)
-{
-    if (slotCount <= 1)
-        return 0.0f;
-
-    float const angleStep = arcWidth / static_cast<float>(slotCount - 1);
-    if (slotCount % 2 == 1)
-    {
-        if (slotIndex == 0)
-            return 0.0f;
-
-        uint8 const stepIndex = (slotIndex + 1) / 2;
-        float angleOffset = angleStep * stepIndex;
-        if (slotIndex % 2 == 0)
-            angleOffset = -angleOffset;
-
-        return angleOffset;
-    }
-
-    float const halfStep = angleStep / 2.0f;
-    uint8 const pairIndex = slotIndex / 2;
-    float angleOffset = halfStep + angleStep * pairIndex;
-    if (slotIndex % 2 == 1)
-        angleOffset = -angleOffset;
-
-    return angleOffset;
-}
-
 uint32 GetDragonManualCooldown(uint32 spellId)
 {
     constexpr uint32 globalCooldown = 1000;
