@@ -2415,13 +2415,11 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
             }
             break;
         case CLASS_DRUID:
-            // By leewheel 2026-07-29
-            // 修复：移除 bear form / Thick Hide(16931) 检测。
-            // 原代码要求熊形态或 Thick Hide 光环，导致 Feral 德鲁伊在猫/枭兽形态下
-            //   被 IsTank() 判为 false，LFG 角色识别、LfgRolePriorityTrigger、装备推荐
-            //   等所有依赖 IsTank(bySpec=true) 的地方都失效。
-            // 修复：Feral（tab==1）就是坦克专精，与形态无关。bot 在副本中会按需自动切熊。
-            if (tab == DRUID_TAB_FERAL)
+            // By leewheel 2026-07-29 曾简化为"Feral(tab==1) 即坦克"（移除熊形态/Thick Hole 检测）。
+            // By leewheel 2026-09-07 修正（玩家反馈）：野性页含"猫 DPS"与"熊坦"两路，不能全按坦克。
+            //   德鲁伊仅当点出熊坦标志天赋（适者生存 Survival of the Fittest 被动 spell 33888）才算熊坦；
+            //   仍为纯天赋判定（符合"只基于天赋"铁律），不依赖形态/光环；spell id 如有偏差以实测校准。
+            if (tab == DRUID_TAB_FERAL && player->HasSpell(33888))
             {
                 return true;
             }

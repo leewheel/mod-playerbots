@@ -515,7 +515,7 @@ bool IsTankBySpec(Player* player)
         case CLASS_WARRIOR:      return tab == WARRIOR_TAB_PROTECTION;
         case CLASS_PALADIN:      return tab == PALADIN_TAB_PROTECTION;
         case CLASS_DEATH_KNIGHT: return tab == DEATH_KNIGHT_TAB_BLOOD;
-        case CLASS_DRUID:        return tab == DRUID_TAB_FERAL;
+        case CLASS_DRUID:        return tab == DRUID_TAB_FERAL && player->HasSpell(33888); // 熊坦标志天赋(适者生存 SotF)，排除野性猫 DPS --By leewheel 2026-09-07
         default:                 return false;
     }
 }
