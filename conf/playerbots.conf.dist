@@ -1756,7 +1756,7 @@ AiPlayerbot.RandomBotAutoJoinBGICCount = 0
 #   命中列表的战场 playerbots 不排队、不补位、不自动开战，填充交由 BG_BOTS 负责。
 #   默认 30,489,529,566 = AV/WSG/AB/EotS；BG_BOTS 每扩展一个新战场，把对应 TypeId 追加进来即可。
 # End By leewheel 2026-09-06
-AiPlayerbot.RandomBotDisabledBattlegrounds = 30,489,529,566
+AiPlayerbot.RandomBotDisabledBattlegrounds = 30,489,529,566,607,628
 
 # Arena bracket (single bracket only):
 # Custom code changes are required for lower-level arena brackets to function properly.
