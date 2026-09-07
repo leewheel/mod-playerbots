@@ -2416,10 +2416,10 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
             break;
         case CLASS_DRUID:
             // By leewheel 2026-07-29 曾简化为"Feral(tab==1) 即坦克"（移除熊形态/Thick Hole 检测）。
-            // By leewheel 2026-09-07 修正（玩家反馈）：野性页含"猫 DPS"与"熊坦"两路，不能全按坦克。
-            //   德鲁伊仅当点出熊坦标志天赋（适者生存 Survival of the Fittest 被动 spell 33888）才算熊坦；
-            //   仍为纯天赋判定（符合"只基于天赋"铁律），不依赖形态/光环；spell id 如有偏差以实测校准。
-            if (tab == DRUID_TAB_FERAL && player->HasSpell(33888))
+            // By leewheel 2026-09-07 修正（玩家反馈+spell实查）：野性页含"猫 DPS"与"熊坦"两路，不能全按坦克。
+            //   德鲁伊仅当点出熊坦标志天赋"适者生存 Survival of the Fittest"(WLK被动 spell 33853)才算熊坦；
+            //   仍为纯天赋判定（符合"只基于天赋"铁律），不依赖形态/光环。
+            if (tab == DRUID_TAB_FERAL && player->HasSpell(33853))
             {
                 return true;
             }
