@@ -20,14 +20,14 @@ public:
         creators["zul'aman reset encounter states"] =
             &RaidZulAmanActionContext::zulaman_reset_encounter_states;
 
-        creators["zul'aman misdirect boss to main tank"] =
-            &RaidZulAmanActionContext::zulaman_misdirect_boss_to_main_tank;
-
         // Trash
         creators["amani'shi medicine man mark ward"] =
             &RaidZulAmanActionContext::amanishi_medicine_man_mark_ward;
 
         // Akil'zon <Eagle Avatar>
+        creators["akil'zon misdirect boss to main tank"] =
+            &RaidZulAmanActionContext::akilzon_misdirect_boss_to_main_tank;
+
         creators["akil'zon tanks position boss"] =
             &RaidZulAmanActionContext::akilzon_tanks_position_boss;
 
@@ -40,12 +40,18 @@ public:
             &RaidZulAmanActionContext::akilzon_manage_electrical_storm_timer;
 
         // Nalorakk <Bear Avatar>
+        creators["nalorakk misdirect boss to main tank"] =
+            &RaidZulAmanActionContext::nalorakk_misdirect_boss_to_main_tank;
+
         creators["nalorakk tanks position boss"] =
             &RaidZulAmanActionContext::nalorakk_tanks_position_boss;
 
         creators["nalorakk spread ranged"] = &RaidZulAmanActionContext::nalorakk_spread_ranged;
 
         // Jan'alai <Dragonhawk Avatar>
+        creators["jan'alai misdirect boss to main tank"] =
+            &RaidZulAmanActionContext::janalai_misdirect_boss_to_main_tank;
+
         creators["jan'alai tanks position boss"] =
             &RaidZulAmanActionContext::janalai_tanks_position_boss;
 
@@ -58,6 +64,9 @@ public:
             &RaidZulAmanActionContext::janalai_mark_amanishi_hatchers;
 
         // Halazzi <Lynx Avatar>
+        creators["halazzi misdirect boss to main tank"] =
+            &RaidZulAmanActionContext::halazzi_misdirect_boss_to_main_tank;
+
         creators["halazzi main tank position boss"] =
             &RaidZulAmanActionContext::halazzi_main_tank_position_boss;
 
@@ -68,6 +77,9 @@ public:
             &RaidZulAmanActionContext::halazzi_dps_attack_totem_and_boss;
 
         // Hex Lord Malacrass
+        creators["hex lord malacrass misdirect boss to main tank"] =
+            &RaidZulAmanActionContext::hex_lord_malacrass_misdirect_boss_to_main_tank;
+
         creators["hex lord malacrass assign dps priority"] =
             &RaidZulAmanActionContext::hex_lord_malacrass_assign_dps_priority;
 
@@ -78,6 +90,9 @@ public:
             &RaidZulAmanActionContext::hex_lord_malacrass_move_away_from_freezing_trap;
 
         // Zul'jin
+        creators["zul'jin misdirect boss to main tank"] =
+            &RaidZulAmanActionContext::zuljin_misdirect_boss_to_main_tank;
+
         creators["zul'jin tanks position boss"] =
             &RaidZulAmanActionContext::zuljin_tanks_position_boss;
 
@@ -95,9 +110,6 @@ private:
     static Action* zulaman_reset_encounter_states(PlayerbotAI* botAI) {
         return new ZulAmanResetEncounterStatesAction(botAI);
     }
-    static Action* zulaman_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
-        return new ZulAmanMisdirectBossToMainTankAction(botAI);
-    }
 
     // Trash
     static Action* amanishi_medicine_man_mark_ward(PlayerbotAI* botAI) {
@@ -105,9 +117,13 @@ private:
     }
 
     // Akil'zon <Eagle Avatar>
+    static Action* akilzon_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new ZulAmanMisdirectBossToMainTankAction(
+            botAI, "akil'zon misdirect boss to main tank", "23574");
+    }
     static Action* akilzon_tanks_position_boss(PlayerbotAI* botAI) {
         return new ZulAmanTanksPositionBossAction(
-            botAI, "akil'zon tanks position boss", "akil'zon", ZaHelpers::AKILZON_TANK_POSITION);
+            botAI, "akil'zon tanks position boss", "23574", ZaHelpers::AKILZON_TANK_POSITION);
     }
     static Action* akilzon_spread_ranged(PlayerbotAI* botAI) {
         return new ZulAmanSpreadRangedAction(botAI, "akil'zon spread ranged", 13.0f);
@@ -120,6 +136,10 @@ private:
     }
 
     // Nalorakk <Bear Avatar>
+    static Action* nalorakk_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new ZulAmanMisdirectBossToMainTankAction(
+            botAI, "nalorakk misdirect boss to main tank", "23576");
+    }
     static Action* nalorakk_tanks_position_boss(PlayerbotAI* botAI) {
         return new NalorakkTanksPositionBossAction(botAI);
     }
@@ -128,9 +148,13 @@ private:
     }
 
     // Jan'alai <Dragonhawk Avatar>
+    static Action* janalai_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new ZulAmanMisdirectBossToMainTankAction(
+            botAI, "jan'alai misdirect boss to main tank", "23578");
+    }
     static Action* janalai_tanks_position_boss(PlayerbotAI* botAI) {
         return new ZulAmanTanksPositionBossAction(
-            botAI, "jan'alai tanks position boss", "jan'alai",
+            botAI, "jan'alai tanks position boss", "23578",
             ZaHelpers::JANALAI_TANK_POSITION);
     }
     static Action* janalai_spread_ranged_in_circle(PlayerbotAI* botAI) {
@@ -144,9 +168,13 @@ private:
     }
 
     // Halazzi <Lynx Avatar>
+    static Action* halazzi_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new ZulAmanMisdirectBossToMainTankAction(
+            botAI, "halazzi misdirect boss to main tank", "23577");
+    }
     static Action* halazzi_main_tank_position_boss(PlayerbotAI* botAI) {
         return new ZulAmanTanksPositionBossAction(
-            botAI, "halazzi main tank position boss", "halazzi", ZaHelpers::HALAZZI_TANK_POSITION);
+            botAI, "halazzi main tank position boss", "23577", ZaHelpers::HALAZZI_TANK_POSITION);
     }
     static Action* halazzi_first_assist_tank_attack_spirit_lynx(PlayerbotAI* botAI) {
         return new HalazziFirstAssistTankAttackSpiritLynxAction(botAI);
@@ -156,28 +184,36 @@ private:
     }
 
     // Hex Lord Malacrass
+    static Action* hex_lord_malacrass_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new ZulAmanMisdirectBossToMainTankAction(
+            botAI, "hex lord malacrass misdirect boss to main tank", "24239");
+    }
     static Action* hex_lord_malacrass_assign_dps_priority(PlayerbotAI* botAI) {
         return new HexLordMalacrassAssignDpsPriorityAction(botAI);
     }
     static Action* hex_lord_malacrass_run_away_from_whirlwind(PlayerbotAI* botAI) {
         return new ZulAmanRunAwayFromWhirlwindAction(
-            botAI, "hex lord malacrass run away from whirlwind", "hex lord malacrass");
+            botAI, "hex lord malacrass run away from whirlwind", "24239");
     }
     static Action* hex_lord_malacrass_move_away_from_freezing_trap(PlayerbotAI* botAI) {
         return new HexLordMalacrassMoveAwayFromFreezingTrapAction(botAI);
     }
 
     // Zul'jin
+    static Action* zuljin_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        return new ZulAmanMisdirectBossToMainTankAction(
+            botAI, "zul'jin misdirect boss to main tank", "23863");
+    }
     static Action* zuljin_tanks_position_boss(PlayerbotAI* botAI) {
         return new ZulAmanTanksPositionBossAction(
-            botAI, "zul'jin tanks position boss", "zul'jin", ZaHelpers::ZULJIN_TANK_POSITION);
+            botAI, "zul'jin tanks position boss", "23863", ZaHelpers::ZULJIN_TANK_POSITION);
     }
     static Action* zuljin_spread_ranged(PlayerbotAI* botAI) {
         return new ZulAmanSpreadRangedAction(botAI, "zul'jin spread ranged", 6.0f);
     }
     static Action* zuljin_run_away_from_whirlwind(PlayerbotAI* botAI) {
         return new ZulAmanRunAwayFromWhirlwindAction(
-            botAI, "zul'jin run away from whirlwind", "zul'jin");
+            botAI, "zul'jin run away from whirlwind", "23863");
     }
     static Action* zuljin_spread_raid_for_cyclones(PlayerbotAI* botAI) {
         return new ZuljinSpreadRaidForCyclonesAction(botAI);

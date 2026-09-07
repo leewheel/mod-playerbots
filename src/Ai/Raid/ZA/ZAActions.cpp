@@ -36,12 +36,12 @@ bool ZulAmanResetEncounterStatesAction::Execute(Event /*event*/)
 
 bool ZulAmanMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE(Unit*, "boss target");
+    Unit* boss = AI_VALUE2(Unit*, "find target", _bossName);
     if (!boss)
         return false;
 
     Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank)
+    if (!mainTank || !mainTank->IsAlive())
         return false;
 
     if (botAI->CanCastSpell("misdirection", mainTank))
@@ -139,11 +139,14 @@ bool AkilzonManageElectricalStormTimerAction::Execute(Event /*event*/)
 
 // Nalorakk <Bear Avatar>
 
-bool NalorakkTanksPositionBossAction::Execute(Event /*event*/)
+bool NalorakkTanksPositionBossAction::Execute(Event event)
 {
     Unit* nalorakk = AI_VALUE2(Unit*, "find target", "23576");
     if (!nalorakk)
         return false;
+
+    if (AI_VALUE(Unit*, "current target") != nalorakk)
+        return Attack(nalorakk);
 
     // Main tank takes bear, assist tank takes troll
     Player* nalorakkTank = nullptr;
@@ -154,11 +157,8 @@ bool NalorakkTanksPositionBossAction::Execute(Event /*event*/)
 
     if (nalorakkTank && nalorakkTank == bot)
     {
-        if (AI_VALUE(Unit*, "current target") != nalorakk)
-            return Attack(nalorakk);
-
         if (nalorakk->GetVictim() != bot)
-            return botAI->DoSpecificAction("taunt spell", Event(), true);
+            return botAI->DoSpecificAction("taunt spell", event, true);
 
         if (!bot->IsWithinMeleeRange(nalorakk))
             return false;
@@ -276,8 +276,8 @@ bool JanalaiMarkAmanishiHatchersAction::Execute(Event /*event*/)
 // Halazzi <Lynx Avatar>
 
 // 合并brighton 2026-08-26: HalazziMainTankPositionBossAction已从ZAActions.h移除(职责并入FirstAssistTank与Dps行动), 删除旧实现
-//By leewheel 2026年8月26日
-bool HalazziFirstAssistTankAttackSpiritLynxAction::Execute(Event /*event*/)
+// 同步brighton 2026-09-08: Execute接收事件参数并透传给taunt动作(替代原空事件) --By leewheel 2026年9月8日
+bool HalazziFirstAssistTankAttackSpiritLynxAction::Execute(Event event)
 {
     // 合并brighton 2026-08-26: spirit of the lynx按entry规则转23877 --By leewheel 2026年8月26日
     Unit* lynx = AI_VALUE2(Unit*, "find target", "23877");
@@ -287,7 +287,7 @@ bool HalazziFirstAssistTankAttackSpiritLynxAction::Execute(Event /*event*/)
             return Attack(lynx);
 
         // 合并brighton 2026-08-26: taunt失败立即返回 --By leewheel 2026年8月26日
-        if (lynx->GetVictim() != bot && botAI->DoSpecificAction("taunt spell", Event(), true))
+        if (lynx->GetVictim() != bot && botAI->DoSpecificAction("taunt spell", event, true))
             return true;
     }
 
