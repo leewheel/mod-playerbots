@@ -5,8 +5,8 @@
  */
 
 #include "HyjalActions.h"
-#include "HyjalHelpers.h"
 #include "EncounterHelpers.h"
+#include "HyjalHelpers.h"
 #include "Playerbots.h"
 #include <algorithm>
 #include <cmath>
@@ -111,8 +111,8 @@ bool HyjalSummitRemoveDangerousDotAction::Execute(Event /*event*/)
 
 // Rage Winterchill
 
-// This is essentially a forced "avoid aoe" due to the default AiPlayerbot.MaxAoeAvoidRadius in the
-// config being 15 yards; avoid aoe works fine without this strategy if it is set to 20+ yards.
+// This is essentially a modified "avoid aoe" due to the default AiPlayerbot.MaxAoeAvoidRadius in
+// the config being 15y (>25y would be needed for avoid aoe to work for D&D).
 bool RageWinterchillRangedGetOutOfDeathAndDecayAction::Execute(Event /*event*/)
 {
     Position pool;
@@ -129,41 +129,17 @@ bool RageWinterchillSpreadRangedInCircleAction::Execute(Event /*event*/)
     if (_winterchillPositionReached)
         return false;
 
-    RangedGroups groups = GetRangedGroups(bot);
-    auto [botIndex, count] = GetBotCircleIndexAndCount(bot, groups);
-    if (count == 0)
-        return false;
-
-    float const radius = PlayerbotAI::IsHeal(bot) ? 25.0f : 35.0f;
-    constexpr float arcSpan = 2.0f * M_PI;
-    constexpr float arcCenter = 0.0f;
-    constexpr float arcStart = arcCenter - arcSpan / 2.0f;
-
-    float const angle = (count == 1) ? arcCenter :
-        (arcStart + arcSpan * static_cast<float>(botIndex) / static_cast<float>(count));
-
-    // The assigned angle only has to be roughly right--all this is doing is keeping ranged apart--
-    // so a point that cannot be reached is worth abandoning for its neighbour rather than walking
-    // at forever. Ranged are close enough together that swapping arcs with someone costs nothing
-    Position const& position = WINTERCHILL_TANK_POSITION;
-    constexpr float moveDist = 3.5f;
-    float moveX, moveY, moveZ, chosenX, chosenY;
-    if (!FindStepToCircle(bot, position, radius, angle, moveDist, moveX, moveY, moveZ, {},
-                          &chosenX, &chosenY))
+    // 同步 brighton 2026-09-08 重构: 远程环形站位收敛为统一helper(治疗25码/远程35码双半径),
+    // 目标不可达时由helper内判定"已就位", 避免反复请求移动 --By leewheel 2026-09-08
+    constexpr float healerRadius = 25.0f;
+    constexpr float dpsRadius = 35.0f;
+    float moveX;
+    float moveY;
+    float moveZ;
+    if (!GetRangedRingStep(
+            bot, WINTERCHILL_TANK_POSITION, healerRadius, dpsRadius, moveX, moveY, moveZ,
+            _winterchillPositionReached))
     {
-        // Nowhere on the ring can be reached at all, so settle for where the bot stands rather
-        // than spend the fight asking again and contending with everything else that wants to
-        // move it. Being spread is a preference here, not a requirement
-        _winterchillPositionReached = true;
-        return false;
-    }
-
-    // Measured against the point actually being walked to. A bot that had to settle for a
-    // neighbouring angle is finished when it gets there, not left asking forever for one it
-    // cannot reach
-    if (bot->GetExactDist2d(chosenX, chosenY) <= 2.0f)
-    {
-        _winterchillPositionReached = true;
         return false;
     }
 
@@ -177,7 +153,7 @@ bool RageWinterchillSpreadRangedInCircleAction::Execute(Event /*event*/)
 // the hazard and waits it out.
 //
 // Two jobs, since the suppression that comes with this action reaches past the pool itself: inside
-// the pool it is an escape, and from there out to DEATH_AND_DECAY_MELEE_CONTROL_RADIUS it is the
+// the pool it is an escape, and from there out to DEATH_AND_DECAY_CONTROL_RADIUS it is the
 // only thing that can walk the bot back onto Winterchill's ring
 bool RageWinterchillMeleeManeuverThroughDeathAndDecayAction::Execute(Event /*event*/)
 {
@@ -189,54 +165,13 @@ bool RageWinterchillMeleeManeuverThroughDeathAndDecayAction::Execute(Event /*eve
     if (!GetDeathAndDecayPosition(botAI, pool))
         return false;
 
-    constexpr float moveDist = 10.0f;
-    float moveX, moveY, moveZ;
-
-    float const meleeRadius = bot->GetMeleeRange(winterchill) - MELEE_RANGE_INSET;
-
-    std::vector<BlockedArc> blocked;
-    BlockedArc poolArc;
-    if (GetHazardBlockedArc(
-            winterchill->GetPosition(), meleeRadius, pool, DEATH_AND_DECAY_RADIUS, poolArc))
-    {
-        blocked.push_back(poolArc);
-    }
-
-    float const bossX = winterchill->GetPositionX();
-    float const bossY = winterchill->GetPositionY();
-    float const botHeading = std::atan2(bot->GetPositionY() - bossY, bot->GetPositionX() - bossX);
-
-    float standAngle;
-    if (FindNearestUnblockedAngle(blocked, botHeading, standAngle))
-    {
-        float const targetX = bossX + std::cos(standAngle) * meleeRadius;
-        float const targetY = bossY + std::sin(standAngle) * meleeRadius;
-        float const distToTarget = bot->GetExactDist2d(targetX, targetY);
-
-        constexpr float minStepDistance = 0.5f;
-        if (distToTarget < minStepDistance)
-            return false;
-
-        float const stepDist = std::min(moveDist, distToTarget);
-        float const botX = bot->GetPositionX();
-        float const botY = bot->GetPositionY();
-
-        return MoveTo(
-            HYJAL_MAP_ID, botX + ((targetX - botX) / distToTarget) * stepDist,
-            botY + ((targetY - botY) / distToTarget) * stepDist, bot->GetPositionZ(),
-            false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
-    }
-
-    // No heading on the ring is open. Fleeing is the answer only while the bot is actually in the
-    // pool: the escape aims at a point on a circle drawn round it, so a bot that has already
-    // cleared that circle would be walked back inward toward it. Standing still is better--the
-    // ring reopens on its own as Winterchill is dragged or the pool expires
-    if (!IsInDeathAndDecay(botAI))
-        return false;
-
-    constexpr float escapeMargin = 2.0f;
-    if (!GetHazardEscapeStep(
-            bot, pool, DEATH_AND_DECAY_RADIUS + escapeMargin, moveDist, moveX, moveY, moveZ))
+    // 同步 brighton 2026-09-08 重构: 近战在死亡凋零环上的机动收敛为统一helper,
+    // 环上无空位时仅在身处池内才向外逃跑, 已出圈则原地等待(helper内部判定) --By leewheel 2026-09-08
+    float moveX;
+    float moveY;
+    float moveZ;
+    if (!GetMeleeHazardManeuverStep(
+            bot, winterchill, { pool }, DEATH_AND_DECAY_RADIUS, {}, moveX, moveY, moveZ))
     {
         return false;
     }
@@ -295,37 +230,17 @@ bool AnetheronSpreadRangedInCircleAction::Execute(Event /*event*/)
         return false;
     }
 
-    RangedGroups groups = GetRangedGroups(bot);
-    auto [botIndex, count] = GetBotCircleIndexAndCount(bot, groups);
-    if (count == 0)
-        return false;
-
-    float const radius = PlayerbotAI::IsHeal(bot) ? 27.0f : 34.0f;
-    constexpr float arcSpan = M_PI * 2.0f;
-    constexpr float arcCenter = 0.0f;
-    constexpr float arcStart = arcCenter - arcSpan / 2.0f;
-
-    float const angle = (count == 1) ? arcCenter :
-        (arcStart + arcSpan * static_cast<float>(botIndex) / static_cast<float>(count));
-
-    Position const& position = ANETHERON_TANK_POSITION;
-
-    // The circle was laid out with sin for X and cos for Y here, mirroring Winterchill's
-    // convention. Over a full circle of evenly spaced points that maps the set onto itself, so the
-    // ring is unchanged and only which bot stands where differs
-    constexpr float moveDist = 3.5f;
-    float moveX, moveY, moveZ, chosenX, chosenY;
-    if (!FindStepToCircle(bot, position, radius, angle, moveDist, moveX, moveY, moveZ, {},
-                          &chosenX, &chosenY))
+    // 同步 brighton 2026-09-08 重构: 阿纳塞隆远程环形站位收敛为统一helper(治疗27码/远程34码),
+    // 已就位判定与不可达兜底均在helper内部完成 --By leewheel 2026-09-08
+    constexpr float healerRadius = 27.0f;
+    constexpr float dpsRadius = 34.0f;
+    float moveX;
+    float moveY;
+    float moveZ;
+    if (!GetRangedRingStep(
+            bot, ANETHERON_TANK_POSITION, healerRadius, dpsRadius, moveX, moveY, moveZ,
+            _anetheronPositionReached))
     {
-        // As at Winterchill: no reachable angle at all means settle for where the bot stands
-        _anetheronPositionReached = true;
-        return false;
-    }
-
-    if (bot->GetExactDist2d(chosenX, chosenY) <= 2.0f)
-    {
-        _anetheronPositionReached = true;
         return false;
     }
 
@@ -395,11 +310,11 @@ bool AnetheronInfernalTankTakePositionAction::Execute(Event /*event*/)
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-// A live Infernal burns everything within 10y of itself, so anybody who is not holding it leaves.
+// An Infernal burns everything within 10y of itself, so anybody who is not tanking it leaves.
 bool AnetheronGetOutOfImmolationAction::Execute(Event /*event*/)
 {
     Unit* infernal = GetNearestInfernal(botAI);
-    if (!infernal || infernal->GetVictim() == bot)
+    if (!infernal)
         return false;
 
     constexpr uint32 minInterval = 0;
@@ -438,7 +353,6 @@ bool AnetheronAssignDpsPriorityAction::Execute(Event /*event*/)
 }
 
 // Kaz'rogal
-// CombatReach is 7.875 yards
 
 bool KazrogalAssistTanksMoveInFrontAction::Execute(Event /*event*/)
 {
@@ -481,7 +395,7 @@ bool KazrogalSpreadRangedInArcAction::Execute(Event /*event*/)
     float const arcSpan = GetKazrogalRangedArcSpan(arcRadius);
     float const arcStart = KAZROGAL_RANGED_ARC_CENTER - arcSpan / 2.0f;
 
-    float angle = (count == 1) ? KAZROGAL_RANGED_ARC_CENTER :
+    float const angle = (count == 1) ? KAZROGAL_RANGED_ARC_CENTER :
         (arcStart + arcSpan * static_cast<float>(botIndex) / static_cast<float>(count - 1));
 
     float const targetX = kazrogal->GetPositionX() + arcRadius * std::cos(angle);
@@ -543,7 +457,10 @@ bool KazrogalActivateAspectOfTheViperAction::Execute(Event /*event*/)
 bool KazrogalCancelImmunityAction::Execute(Event /*event*/)
 {
     uint32 const spellId = GetSelfImmunitySpell(bot);
-    bot->RemoveAura(spellId);
+    if (!spellId || !bot->HasAura(spellId))
+        return false;
+
+    bot->RemoveOwnedAura(spellId, ObjectGuid::Empty, 0, AURA_REMOVE_BY_CANCEL);
     return true;
 }
 
@@ -553,10 +470,11 @@ bool KazrogalCancelImmunityAction::Execute(Event /*event*/)
 bool KazrogalWarlockManageManaAction::Execute(Event /*event*/)
 {
     if (bot->GetPower(POWER_MANA) <= MARK_LIFE_TAP_MANA &&
-        bot->GetHealthPct() > sPlayerbotAIConfig.lowHealth &&
-        botAI->CanCastSpell("life tap", bot))
+        // 同步 brighton 2026-09-08: 移除低血量门槛, 卡兹罗加印记期间低血也强制生命分流,
+        // 避免蓝量耗尽引爆印记祸及全团(暗影之幕兜底生存) --By leewheel 2026-09-08
+        botAI->CanCastSpell("life tap", bot) && botAI->CastSpell("life tap", bot))
     {
-        return botAI->CastSpell("life tap", bot);
+        return true;
     }
 
     if (!HasMarkOfKazrogal(bot))
@@ -566,8 +484,6 @@ bool KazrogalWarlockManageManaAction::Execute(Event /*event*/)
 }
 
 // Azgalor
-// CombatReach is 8.8 yards
-// Doomguard CombatReach is 3.75 yards
 
 bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
 {
@@ -588,7 +504,7 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
     constexpr float safeDistFromDoomguard = 10.0f; // War Stomp is 10 yards center-to-center
 
     if (doomguard && bot->GetExactDist2d(doomguard) < safeDistFromDoomguard)
-        return FleePosition(doomguard->GetPosition(), safeDistFromDoomguard);
+        return FleePosition(doomguard->GetPosition(), safeDistFromDoomguard, minInterval);
 
     if (doomguard && AI_VALUE(Unit*, "current target") == doomguard)
         return false;
@@ -611,87 +527,21 @@ bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
     if (pools.empty())
         return false;
 
-    constexpr float moveDist = 10.0f;
-    float moveX;
-    float moveY;
-    float moveZ;
-    float const meleeRadius = bot->GetMeleeRange(azgalor) - MELEE_RANGE_INSET;
+    std::vector<BlockedArc> const cleaveArc = {
+        { azgalor->GetOrientation(), CLEAVE_DANGER_ARC / 2.0f } };
 
-    std::vector<BlockedArc> blocked;
-    blocked.reserve(pools.size() + 1);
-
-    for (Position const& pool : pools)
-    {
-        BlockedArc poolArc;
-        if (GetHazardBlockedArc(
-                azgalor->GetPosition(), meleeRadius, pool, RAIN_OF_FIRE_RADIUS, poolArc))
-        {
-            blocked.push_back(poolArc);
-        }
-    }
-
-    // Every ring point sits inside the chain radius of whoever he is hitting, so on this ring the
-    // range half of the cleave rule never saves anyone and his frontal arc is simply unavailable
-    blocked.push_back({ azgalor->GetOrientation(), CLEAVE_DANGER_ARC / 2.0f });
-
-    float const bossX = azgalor->GetPositionX();
-    float const bossY = azgalor->GetPositionY();
-    float const botHeading =
-        std::atan2(bot->GetPositionY() - bossY, bot->GetPositionX() - bossX);
-
-    float standAngle;
-    if (FindNearestUnblockedAngle(blocked, botHeading, standAngle))
-    {
-        // Level ground, as at Winterchill, so the step needs no validating--only the unblocked
-        // angle decides whether the ring is worth standing on
-        float const targetX = bossX + std::cos(standAngle) * meleeRadius;
-        float const targetY = bossY + std::sin(standAngle) * meleeRadius;
-        float const distToTarget = bot->GetExactDist2d(targetX, targetY);
-
-        // Already standing on the open heading, so hold rather than divide by nothing below
-        constexpr float minStepDistance = 0.5f;
-        if (distToTarget < minStepDistance)
-            return false;
-
-        float const stepDist = std::min(moveDist, distToTarget);
-        float const botX = bot->GetPositionX();
-        float const botY = bot->GetPositionY();
-
-        return MoveTo(
-            HYJAL_MAP_ID, botX + ((targetX - botX) / distToTarget) * stepDist,
-            botY + ((targetY - botY) / distToTarget) * stepDist, bot->GetPositionZ(),
-            false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
-    }
-
-    // No heading on the ring is open. Fleeing is the answer only while the bot is actually in fire:
-    // the escape aims at a point on a circle drawn round the pool, so a bot that has already
-    // cleared that circle would be walked back inward toward it. Standing still is better--the ring
-    // reopens on its own as Azgalor is dragged or the pool expires
-    if (!IsInRainOfFire(botAI))
-        return false;
-
-    // Leave the nearest pool, still refusing any heading that would cross into the cleave
-    Position const* nearest = nullptr;
-    float nearestDistance = std::numeric_limits<float>::max();
-    for (Position const& pool : pools)
-    {
-        float const distance = bot->GetExactDist2d(pool);
-        if (distance < nearestDistance)
-        {
-            nearest = &pool;
-            nearestDistance = distance;
-        }
-    }
-
-    constexpr float escapeMargin = 2.0f;
+    // 同步 brighton 2026-09-08 重构: 火雨+顺劈双重威胁下的近战机动收敛为统一helper,
+    // 由helper综合火雨池与正面顺劈弧计算可站角度, 无可站角度且身处火中时朝最近池外逃 --By leewheel 2026-09-08
     auto cleaveSafe = [azgalor](float x, float y)
     {
         return IsSafeFromAzgalorCleave(azgalor, x, y);
     };
 
-    if (!GetHazardEscapeStep(
-            bot, *nearest, RAIN_OF_FIRE_RADIUS + escapeMargin, moveDist,
-            moveX, moveY, moveZ, cleaveSafe))
+    float moveX;
+    float moveY;
+    float moveZ;
+    if (!GetMeleeHazardManeuverStep(
+            bot, azgalor, pools, RAIN_OF_FIRE_RADIUS, cleaveArc, moveX, moveY, moveZ, cleaveSafe))
     {
         return false;
     }
@@ -701,8 +551,8 @@ bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
         MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
-// As at Winterchill, except Azgalor can have more than one pool up, so the nearest is the one to
-// leave. Stepping out of it and into another is handled by simply doing this again next tick
+// 与冬泉谷凋零的远程规避同理(默认配置下的强制规避范围不足, 此处需>20码才安全), 但阿兹加洛可
+// 同时存在多个火雨池, 故总是离开最近的一个; 踏出此池却踩进另一池的情况由下一tick再次执行处理
 bool AzgalorRangedGetOutOfRainOfFireAction::Execute(Event /*event*/)
 {
     Position pool;
@@ -713,12 +563,11 @@ bool AzgalorRangedGetOutOfRainOfFireAction::Execute(Event /*event*/)
     return FleePosition(pool, RAIN_OF_FIRE_RADIUS, minInterval);
 }
 
-// The spot is between the paths leading from Thrall's keep
+// 该站位点位于萨尔要塞下方两条通路之间
 bool AzgalorMoveToDoomguardTankAction::Execute(Event /*event*/)
 {
     Position const& position = AZGALOR_DOOMGUARD_POSITION;
     float const distToPosition = bot->GetExactDist2d(position);
-
     if (distToPosition <= 5.0f)
         return false;
 
@@ -780,7 +629,7 @@ bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
         return AI_VALUE(Unit*, "current target") != azgalor && Attack(azgalor);
 
     Unit* target = nullptr;
-    if (azgalor->GetHealthPct() < BOSS_BURN_HEALTH_PCT)
+    if (azgalor->GetHealthPct() <= BOSS_BURN_HEALTH_PCT)
     {
         target = azgalor;
     }

@@ -18,7 +18,7 @@ using namespace EncounterHelpers;
 
 // Note: BOT_STATE_NON_COMBAT checks cannot be used by any multiplier that could result in a bot
 // having no valid targets as it will then swap to the non-combat engine, even during a boss fight.
-// This implicates any avoidance action that could hold the bot out of attack range.
+// This concern implicates any avoidance action that could hold the bot out of attack range.
 
 float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
 {
@@ -63,7 +63,7 @@ float RageWinterchillDisableCombatFormationMoveMultiplier::GetValueInEncounter(A
 
 float RageWinterchillMeleeControlAvoidanceMultiplier::GetValueInEncounter(Action* action)
 {
-    if (PlayerbotAI::IsRanged(bot))
+    if (!PlayerbotAI::IsMelee(bot))
         return 1.0f;
 
     bool const isAvoidAoe = dynamic_cast<AvoidAoeAction*>(action);
@@ -80,9 +80,9 @@ float RageWinterchillMeleeControlAvoidanceMultiplier::GetValueInEncounter(Action
     if (!winterchill)
         return 1.0f;
 
-    // Shares its radius with the trigger that runs the maneuver action, so that action owns melee
-    // movement across exactly the area this clears for it and there is no band between them
-    if (!IsNearDeathAndDecay(botAI, DEATH_AND_DECAY_MELEE_CONTROL_RADIUS))
+    // 同步 brighton 2026-09-08 重构: 采用统一危险控制半径(危险边缘+5码控制带),
+    // 与触发/机动helper共用同一半径体系, 避免各环节半径不一致产生行为空档 --By leewheel 2026-09-08
+    if (!IsNearDeathAndDecay(botAI, DEATH_AND_DECAY_CONTROL_RADIUS))
         return 1.0f;
 
     if (isAvoidAoe)
@@ -123,11 +123,8 @@ float RageWinterchillRangedControlAvoidanceMultiplier::GetValueInEncounter(Actio
     if (dynamic_cast<AvoidAoeAction*>(action))
         return 0.0f;
 
-    // The spread settles once a bot reaches its point on the circle and then stops asking, but a
-    // bot pushed off course before it ever arrives never settles and keeps trying for the rest of
-    // the fight--including back into the pool it was just moved out of
-    constexpr float suppressionRadius = DEATH_AND_DECAY_RADIUS + 10.0f;
-    return IsNearDeathAndDecay(botAI, suppressionRadius) ? 0.0f : 1.0f;
+    // 同步 brighton 2026-09-08 重构: 远程规避抑制半径统一为危险控制半径, 该函数内无需再叠加自定义扩展值
+    return IsNearDeathAndDecay(botAI, DEATH_AND_DECAY_CONTROL_RADIUS) ? 0.0f : 1.0f;
 }
 
 // Anetheron
@@ -137,7 +134,8 @@ float AnetheronDisableAssistTargetingMultiplier::GetValueInEncounter(Action* act
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    bool const isTankAssist = dynamic_cast<TankAssistAction*>(action) != nullptr;
+    bool const isTankAssist = dynamic_cast<TankAssistAction*>(action);
+
     if (!isTankAssist && !dynamic_cast<DpsAssistAction*>(action))
         return 1.0f;
 
@@ -278,7 +276,7 @@ float KazrogalKeepAspectOfTheViperActiveMultiplier::GetValueInEncounter(Action* 
     if (!AI_VALUE2(Unit*, "find target", "17888"))
         return 1.0f;
 
-    return bot->GetPower(POWER_MANA) <= MARK_DANGER_MANA ? 0.0f : 1.0f;
+    return bot->GetPower(POWER_MANA) <= MARK_REJOIN_MANA ? 0.0f : 1.0f;
 }
 
 // Azgalor
@@ -296,7 +294,7 @@ float AzgalorDisableAutoTargetingAndPositioningMultiplier::GetValueInEncounter(A
         return 1.0f;
     }
 
-    // SBTA is still disabled in RoF (in AzgalorMeleeDpsControlAvoidanceMultiplier)
+    // Set Behind Target is still disabled in RoF (in AzgalorMeleeDpsControlAvoidanceMultiplier)
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
@@ -347,9 +345,8 @@ float AzgalorMeleeDpsControlAvoidanceMultiplier::GetValueInEncounter(Action* act
     if (!AI_VALUE2(Unit*, "find target", "17842"))
         return 1.0f;
 
-    // Shares its radius with the trigger that runs the maneuver action, so that action owns melee
-    // movement across exactly the area this clears for it and there is no band between them
-    return IsNearRainOfFire(botAI, RAIN_OF_FIRE_MELEE_CONTROL_RADIUS) ? 0.0f : 1.0f;
+    // 同步 brighton 2026-09-08 重构: 阿兹加洛近战火雨控制半径统一为CONTROL_RADIUS, 与触发/机动helper一致
+    return IsNearRainOfFire(botAI, RAIN_OF_FIRE_CONTROL_RADIUS) ? 0.0f : 1.0f;
 }
 
 // By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名GetValueInEncounter, 保留HEAD注释
@@ -386,12 +383,9 @@ float AzgalorRangedControlAvoidanceMultiplier::GetValueInEncounter(Action* actio
     if (!AI_VALUE2(Unit*, "find target", "17842"))
         return 1.0f;
 
-    // Wider than the escape trigger's own radius on purpose. The band between them is where a bot
-    // that has just left a pool waits it out: the dispersal action is what would otherwise move it,
-    // and letting that resume at the pool's edge is the tug-of-war this exists to prevent. Nothing
-    // is lost by holding it there--the dispersal trigger stops firing across the same band anyway
-    constexpr float suppressionRadius = RAIN_OF_FIRE_RADIUS + 10.0f;
-    return IsNearRainOfFire(botAI, suppressionRadius) ? 0.0f : 1.0f;
+    // 同步 brighton 2026-09-08 重构: 远程火雨规避抑制半径统一为CONTROL_RADIUS, 与触发/机动helper一致,
+    // 避免抑制带与触发带不一致造成拉扯(helper已内置刚离开火池的等待逻辑)
+    return IsNearRainOfFire(botAI, RAIN_OF_FIRE_CONTROL_RADIUS) ? 0.0f : 1.0f;
 }
 
 // Archimonde
