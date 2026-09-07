@@ -252,6 +252,8 @@ inline constexpr uint32 ADVISOR_DPS_WAIT_NOT_STARTED = 0;
 extern std::unordered_map<uint32, uint32> advisorDpsWaitTimer;
 
 uint32 GetKaelthasTkPhase(Unit* kaelthas);
+// By leewheel 2026-09-07 合并恢复：brighton 删除了 GetKaelthasTk，但本项目 TKActions 仍在调用且实现保留（entry 19622 查找）
+Unit* GetKaelthasTk(PlayerbotAI* botAI);
 bool IsAdvisorActive(Unit* advisor);
 Player* GetCapernianTank(Player* bot);
 bool IsSanguinarDebuffHunter(Player* bot);
