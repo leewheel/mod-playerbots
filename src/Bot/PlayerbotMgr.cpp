@@ -1586,7 +1586,9 @@ void PlayerbotMgr::HandleCommand(uint32 type, std::string const text)
     if (!master)
         return;
 
-    if (text.find(sPlayerbotAIConfig.commandSeparator) != std::string::npos)
+    // By leewheel 2026-09-08 与 PlayerbotAI 保持一致：分隔符按字符集合匹配，并防止空分隔符导致无限递归
+    if (!sPlayerbotAIConfig.commandSeparator.empty() &&
+        text.find_first_of(sPlayerbotAIConfig.commandSeparator) != std::string::npos)
     {
         std::vector<std::string> commands;
         split(commands, text, sPlayerbotAIConfig.commandSeparator.c_str());

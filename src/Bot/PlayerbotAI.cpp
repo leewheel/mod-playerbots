@@ -635,7 +635,12 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const& text, Player& fr
     if (type == CHAT_MSG_SYSTEM)
         return;
 
-    if (filtered.find(sPlayerbotAIConfig.commandSeparator) != std::string::npos)
+    // By leewheel 2026-09-08 分隔符判断与 split() 的 strtok 字符集合语义对齐（源码侧兜底）
+    // 原先用 find() 做整串匹配，玩家必须连打与配置等量的反斜杠才会拆分；
+    // 改为 find_first_of() 后，打一个或连打多个反斜杠都能正确拆分多条命令；
+    // 同时防止分隔符被配置为空串时 find("") 恒真导致的无限递归。
+    if (!sPlayerbotAIConfig.commandSeparator.empty() &&
+        filtered.find_first_of(sPlayerbotAIConfig.commandSeparator) != std::string::npos)
     {
         std::vector<std::string> commands;
         split(commands, filtered, sPlayerbotAIConfig.commandSeparator.c_str());
@@ -974,7 +979,9 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
     if (type == CHAT_MSG_SYSTEM)
         return;
 
-    if (text.find(sPlayerbotAIConfig.commandSeparator) != std::string::npos)
+    // By leewheel 2026-09-08 同上：分隔符判断改为按字符集合匹配，并防止空分隔符导致无限递归
+    if (!sPlayerbotAIConfig.commandSeparator.empty() &&
+        text.find_first_of(sPlayerbotAIConfig.commandSeparator) != std::string::npos)
     {
         std::vector<std::string> commands;
         split(commands, text, sPlayerbotAIConfig.commandSeparator.c_str());

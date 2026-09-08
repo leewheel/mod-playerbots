@@ -523,6 +523,35 @@ bool PlayerbotAIConfig::Initialize()
     commandPrefix = sConfigMgr->GetOption<std::string>("AiPlayerbot.CommandPrefix", "");
     commandSeparator = sConfigMgr->GetOption<std::string>("AiPlayerbot.CommandSeparator", "\\\\");
 
+    // By leewheel 2026-09-08 机器人命令分隔符归一化（源码侧兜底，配置文件无需再改）
+    // 1. 原因：Config.cpp 读取配置时只去掉了双引号，不做转义解析，
+    //    所以 playerbots.conf 里写的 "\\\\"（四个反斜杠）会被原样读成四个反斜杠字符；
+    // 2. 冲突：Util/Helpers.cpp 的 split() 内部使用 strtok()，分隔符按“字符集合”生效，
+    //    四个反斜杠与一个反斜杠完全等价；但三处调用点用 std::string::find() 做整串匹配，
+    //    玩家必须连打与配置等量的反斜杠才会触发拆分，只打一个时整条多命令会被当成一句无效指令；
+    // 3. 处理：把配置中连续重复的分隔符字符折叠为单个字符（如 "\\\\" -> "\"、";;" -> ";"），
+    //    使 find()/find_first_of() 与 split() 的语义完全对齐，
+    //    玩家无论打一个还是连打多个反斜杠，都能正确拆分多条命令；
+    // 4. 说明：配置保持原样即可继续生效，无需修改 playerbots.conf。
+    if (commandSeparator.size() > 1)
+    {
+        std::string normalizedSeparator;
+        normalizedSeparator.reserve(commandSeparator.size());
+        for (char separatorChar : commandSeparator)
+        {
+            // 跳过空白字符，避免配置里多写了空格（如 "\\ "）导致空格也被当成命令分隔符
+            if (separatorChar == ' ' || separatorChar == '\t' || separatorChar == '\r' || separatorChar == '\n')
+                continue;
+
+            if (normalizedSeparator.empty() || normalizedSeparator.back() != separatorChar)
+                normalizedSeparator.push_back(separatorChar);
+        }
+
+        if (!normalizedSeparator.empty())
+            commandSeparator = normalizedSeparator;
+    }
+    //End By leewheel
+
     commandServerPort = sConfigMgr->GetOption<int32>("AiPlayerbot.CommandServerPort", 8888);
     perfMonEnabled = sConfigMgr->GetOption<bool>("AiPlayerbot.PerfMonEnabled", false);
 
