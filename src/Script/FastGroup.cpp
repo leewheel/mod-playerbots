@@ -693,16 +693,29 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
     if (classToSpecTab.empty())
         return candidates;
 
-    // 构建阵营种族条件
-    std::string raceCondition;
-    if (teamId == TEAM_ALLIANCE)
+    // By leewheel 2026-09-09 修复：快速组队大团缺员根因
+    // 原实现把阵营种族写死为原版12种族（联盟 1/3/4/7/11，部落 2/5/6/8/10），
+    // 将自定义种族(12-21，如联盟14高等精灵/20恶魔猎手/12虚空精灵、部落21恶魔猎手等)
+    // 全部排除在招募之外，导致可招募的离线机器人池大幅缩小，25/40 人团经常缺员。
+    // 改为动态遍历 ChrRaces DBC，把所有 TeamID 与主控阵营一致(7=联盟,1=部落)的种族
+    // 都纳入招募，与 Player::TeamIdForRace 的判定完全一致。
+    std::string raceCondition = "race IN (";
+    bool firstRace = true;
+    uint32 const wantTeamId = (teamId == TEAM_ALLIANCE) ? 7 : 1;
+    for (uint32 i = 0; i < sChrRacesStore.GetNumRows(); ++i)
     {
-        raceCondition = "race IN (1, 3, 4, 7, 11)";
+        ChrRacesEntry const* re = sChrRacesStore.LookupEntry(i);
+        if (!re)
+            continue;
+        if (re->TeamID != wantTeamId)
+            continue;
+        if (!firstRace)
+            raceCondition += ",";
+        raceCondition += std::to_string(re->RaceID);
+        firstRace = false;
     }
-    else
-    {
-        raceCondition = "race IN (2, 5, 6, 8, 10)";
-    }
+    raceCondition += ")";
+    // End By leewheel
 
     // 构建职业 IN 条件
     std::string classList;
@@ -905,9 +918,11 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
     // 玩家自身的职业也算已使用，避免机器人与玩家同职业
     usedClasses.insert(master->getClass());
 
+    uint32 gotTanks = 0, gotHeals = 0, gotDps = 0;
     if (needTanks > 0)
     {
         auto tanks = FindOfflineBotsForRole(FG_ROLE_TANK, teamId, needTanks, targetLevel, usedGuids, usedClasses);
+        gotTanks = static_cast<uint32>(tanks.size());
         for (auto& t : tanks)
             allBots.push_back(t);
     }
@@ -915,6 +930,7 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
     if (needHeals > 0)
     {
         auto heals = FindOfflineBotsForRole(FG_ROLE_HEAL, teamId, needHeals, targetLevel, usedGuids, usedClasses);
+        gotHeals = static_cast<uint32>(heals.size());
         for (auto& h : heals)
             allBots.push_back(h);
     }
@@ -922,6 +938,7 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
     if (needDps > 0)
     {
         auto dps = FindOfflineBotsForRole(FG_ROLE_DPS, teamId, needDps, targetLevel, usedGuids, usedClasses);
+        gotDps = static_cast<uint32>(dps.size());
         for (auto& d : dps)
             allBots.push_back(d);
     }
@@ -939,6 +956,26 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
             handler->PSendSysMessage("|cffffcc00[快速组队] 警告：可用机器人不足，仅找到 {} 个（需要 {} 个）。|r",
                 allBots.size(), totalBotsNeeded);
     }
+
+    // By leewheel 2026-09-09 缺员明细提示
+    // 把缺员具体到角色定位，方便玩家知道差的是坦克/治疗/输出，以及缺几个
+    if (gotTanks < needTanks || gotHeals < needHeals || gotDps < needDps)
+    {
+        if (handler)
+        {
+            if (gotTanks < needTanks)
+                handler->PSendSysMessage("|cffffcc00[快速组队] 缺坦克 {} 个：需要 {} 个，机器人池仅找到 {} 个。|r",
+                    needTanks - gotTanks, needTanks, gotTanks);
+            if (gotHeals < needHeals)
+                handler->PSendSysMessage("|cffffcc00[快速组队] 缺治疗 {} 个：需要 {} 个，机器人池仅找到 {} 个。|r",
+                    needHeals - gotHeals, needHeals, gotHeals);
+            if (gotDps < needDps)
+                handler->PSendSysMessage("|cffffcc00[快速组队] 缺输出 {} 个：需要 {} 个，机器人池仅找到 {} 个。|r",
+                    needDps - gotDps, needDps, gotDps);
+            handler->PSendSysMessage("|cffffcc00[快速组队] 该阵营注册的随机机器人不足，将按实有数量组队（缺员）。如需满编，可稍后再试或扩充同阵营随机机器人。|r");
+        }
+    }
+    // End By leewheel
 
     // 获取 PlayerbotMgr
     PlayerbotMgr* mgr = GET_PLAYERBOT_MGR(master);
