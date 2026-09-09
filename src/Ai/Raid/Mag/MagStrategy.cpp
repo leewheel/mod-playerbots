@@ -10,39 +10,39 @@
 void RaidMagtheridonStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     triggers.push_back(new TriggerNode("magtheridon no encounter in progress", {
-        NextAction("magtheridon reset encounter states", ACTION_EMERGENCY + 12) }));
+        NextAction("magtheridon reset encounter states", ACTION_EMERGENCY + 10) }));
 
-    triggers.push_back(new TriggerNode("magtheridon first three channelers engaged by main tank", {
-        NextAction("magtheridon main tank attack first three channelers", ACTION_RAID + 1) }));
+    triggers.push_back(new TriggerNode("magtheridon main tank should tank channelers", {
+        NextAction("magtheridon main tank attack first three channelers", ACTION_RAID) }));
 
-    // By leewheel 2026-08-18 - 修正 TriggerNode 名与 MagTriggerContext/MagTriggers 实际注册名不一致：strategy 原引用"magtheridon nw channeler engaged by first assist tank"，但该名字不存在于 trigger context 中，导致副坦处理西北/东北两个 channeler 的策略永远无法触发（功能失效）；改为实际注册名"magtheridon last two channelers engaged by assist tanks"
-    triggers.push_back(new TriggerNode("magtheridon last two channelers engaged by assist tanks", {
-        NextAction("magtheridon assist tanks attack last two channelers", ACTION_RAID + 1) }));
+// By leewheel 2026-09-09 合并brighton: 副坦处理channeler trigger沿用brighton注册名(与MagTriggerContext一致)
+    triggers.push_back(new TriggerNode("magtheridon assist tanks should tank channelers", {
+        NextAction("magtheridon assist tanks attack last two channelers", ACTION_RAID) }));
     // End By leewheel
 
     triggers.push_back(new TriggerNode("magtheridon pulling west and east channelers", {
-        NextAction("magtheridon misdirect hellfire channelers to main tank", ACTION_RAID + 2) }));
+        NextAction("magtheridon misdirect hellfire channelers to main tank", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("magtheridon determining kill order", {
-        NextAction("magtheridon assign dps priority", ACTION_RAID + 1) }));
+        NextAction("magtheridon assign dps priority", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("magtheridon burning abyssal spawned", {
-        NextAction("magtheridon warlock cc burning abyssal", ACTION_RAID + 3) }));
+        NextAction("magtheridon warlock cc burning abyssal", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("magtheridon boss engaged by main tank", {
-        NextAction("magtheridon main tank position boss", ACTION_RAID + 2) }));
+    triggers.push_back(new TriggerNode("magtheridon should be tanked", {
+        NextAction("magtheridon main tank position boss", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("magtheridon boss engaged by ranged", {
-        NextAction("magtheridon spread ranged", ACTION_RAID + 2) }));
+    triggers.push_back(new TriggerNode("magtheridon should spread ranged", {
+        NextAction("magtheridon spread ranged", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("magtheridon standing in debris", {
-        NextAction("magtheridon move out of debris", ACTION_EMERGENCY + 10) }));
+        NextAction("magtheridon move out of debris", ACTION_EMERGENCY + 7) }));
 
     triggers.push_back(new TriggerNode("magtheridon incoming blast nova", {
-        NextAction("magtheridon use manticron cube", ACTION_EMERGENCY + 9) }));
+        NextAction("magtheridon use manticron cube", ACTION_EMERGENCY + 6) }));
 
-    triggers.push_back(new TriggerNode("magtheridon need to manage timers and assignments", {
-        NextAction("magtheridon manage timers and assignments", ACTION_EMERGENCY + 11) }));
+    triggers.push_back(new TriggerNode("magtheridon should manage timers and assignments", {
+        NextAction("magtheridon manage timers and assignments", ACTION_EMERGENCY + 10) }));
 }
 
 void RaidMagtheridonStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)

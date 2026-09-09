@@ -23,15 +23,12 @@ using namespace EncounterHelpers;
 
 bool SunwellPlateauNoEncounterInProgressTrigger::IsActive()
 {
-    if (bot->GetMapId() != SWP_MAP_ID)
-        return false;
-
     // InstanceScript reports IN_PROGRESS for every SWP boss from JustEngagedWith until kill/evade,
     // except for Kil'jaeden, which does not commence until the first Hand dies.
     if (IsEncounterInProgress(bot, SWP_MAP_ID))
         return false;
 
-// By leewheel 2026-08-29 合并：采用对侧增强判断(不在SUNWELL平台内视为非KJ战； hands空=未开战)，保留25588 entry语义
+    // By leewheel 2026-08-29 合并：采用对侧增强判断(不在SUNWELL平台内视为非KJ战； hands空=未开战)，保留25588 entry语义
     if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
         return true;
 
