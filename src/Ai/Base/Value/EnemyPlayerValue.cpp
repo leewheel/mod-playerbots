@@ -60,6 +60,10 @@ bool IsCastingHeal(Unit* unit)
 
 float ScorePvpTarget(PlayerbotAI* botAI, Unit* target)
 {
+    //By leewheel 2026-09-09 守卫：防御性判空,避免后续解引用空指针
+    if (!botAI || !target)
+        return 0.f;
+    //End By leewheel
     float score = 0.f;
 
     if (IsFlagCarrier(target))
