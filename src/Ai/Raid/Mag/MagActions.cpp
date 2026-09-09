@@ -320,7 +320,7 @@ bool MagtheridonUseManticronCubeAction::Execute(Event /*event*/)
 
     // If Blast Nova is actively casting, always try to click the cube
     if (IsBlastNovaCasting(magtheridon))
-        return HandleCubeInteraction(*cubeInfo, cube);
+        return HandleCubeInteraction(cube);
 
     // Otherwise, if Blast Nova is coming soon, move to and wait near the cube
     return HandleWaitingPhase(*cubeInfo);
@@ -357,45 +357,47 @@ bool MagtheridonUseManticronCubeAction::HandleCubeRelease(Unit* magtheridon)
     return true;
 }
 
-bool MagtheridonUseManticronCubeAction::HandleCubeInteraction(
-    CubeInfo const& cubeInfo, GameObject* cube)
+bool MagtheridonUseManticronCubeAction::HandleCubeInteraction(GameObject* cube)
 {
-    constexpr float interactDistance = 1.0f;
-    float const cubeDist = bot->GetDistance2d(cubeInfo.x, cubeInfo.y);
-
-    if (cubeDist < interactDistance + 1.0f)
+    if (cube->IsAtInteractDistance(*bot, cube->GetInteractionDistance()))
     {
-        uint32 const minDelayMs = 200;
-        uint32 const maxDelayMs = 1500;
-        uint32 delay = urand(minDelayMs, maxDelayMs);
-        botAI->AddTimedEvent(
-            [this, cube]
-            {
-                bot->StopMoving();
-                cube->Use(bot);
-            },
-            delay);
-        botAI->SetNextCheckDelay(delay + 50);
+        // If already clicked, don't let go!
+        if (bot->HasAura(Id(MagSpells::SPELL_SHADOW_GRASP)))
+            return true;
+
+        bot->StopMoving();
+        cube->Use(bot);
         return true;
     }
+
+    float const targetDist = cube->GetInteractionDistance() - 0.5f;
+    float const angle = cube->GetAngle(bot);
+    float const destX = cube->GetPositionX() + std::cos(angle) * targetDist;
+    float const destY = cube->GetPositionY() + std::sin(angle) * targetDist;
 
     bot->CastStop();
-    return MoveTo(cube, interactDistance, MovementPriority::MOVEMENT_FORCED);
+    return MoveTo(
+        MAG_MAP_ID, destX, destY, cube->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(const CubeInfo& cubeInfo)
+bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(CubeInfo const& cubeInfo)
 {
+    // By leewheel 2026-09-09 合并brighton: 采纳brighton简化(移除重复INTERIM判定, 靠下方stagger控制时机), 保留GetMap()取实例id
     auto timerIt = blastNovaTimer.find(bot->GetMap()->GetInstanceId());
-    if (timerIt == blastNovaTimer.end() ||
-        getMSTimeDiff(timerIt->second, getMSTime()) < BLAST_NOVA_INTERIM_MS)
-    {
+    if (timerIt == blastNovaTimer.end())
         return false;
-    }
+    // End By leewheel
 
-    constexpr float safeWaitDistance = 8.0f;
+    // Stagger departures so the clickers do not all move on the same tick.
+    constexpr uint32 departureSpreadMs = 1500;
+    uint32 const stagger = bot->GetGUID().GetCounter() % departureSpreadMs;
+    if (getMSTimeDiff(timerIt->second, getMSTime()) < BLAST_NOVA_INTERIM_MS + stagger)
+        return false;
 
+    constexpr float safeWaitDistance = 10.0f;
     if (fabs(bot->GetDistance2d(cubeInfo.x, cubeInfo.y) - safeWaitDistance) <= 1.0f)
-        return true;
+        return false;
 
     Position safePos;
     if (!FindSafePositionNearCube(cubeInfo, safeWaitDistance, safePos))
@@ -468,7 +470,7 @@ bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
     float minMoveDistance = std::numeric_limits<float>::max();
     bool foundSafe = false;
 
-    // Need to remove float loop
+    // NTS: Need to remove float loop
     for (float distance = 2.0f; distance <= maxSearchRadius; distance += distanceStep)
     {
         for (float angle = 0.0f; angle < 2.0f * M_PI; angle += angleStep)
@@ -531,6 +533,7 @@ bool MagtheridonManageTimersAndAssignmentsAction::Execute(Event /*event*/)
     return updated;
 }
 
+// NTS: The assignments should probably be cached.
 bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers(uint32 instanceId)
 {
     // By leewheel 2026-09-09 合并brighton: 移除函数内重复的instanceId遮蔽声明(改用参数), 消除shadow警告
