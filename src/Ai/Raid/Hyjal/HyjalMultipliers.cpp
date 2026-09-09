@@ -20,7 +20,7 @@ using namespace EncounterHelpers;
 // having no valid targets as it will then swap to the non-combat engine, even during a boss fight.
 // This concern implicates any avoidance action that could hold the bot out of attack range.
 
-float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
+float HyjalDelayDpsCooldownsMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -45,9 +45,7 @@ float HyjalSummitDelayDpsCooldownsMultiplier::GetValue(Action* action)
     return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 }
 
-// Rage Winterchill
-
-float RageWinterchillDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* action)
+float HyjalDisableDisperseAndTankFaceMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -58,8 +56,15 @@ float RageWinterchillDisableCombatFormationMoveMultiplier::GetValueInEncounter(A
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "17767") ? 0.0f : 1.0f;
+    if (HasProtectionOfElune(bot))
+        return 1.0f;
+
+    return AI_VALUE2(Unit*, "find target", "17968") ||
+        AI_VALUE2(Unit*, "find target", "17888") ||
+        AI_VALUE2(Unit*, "find target", "17767") ? 0.0f : 1.0f;
 }
+
+// Rage Winterchill
 
 float RageWinterchillMeleeControlAvoidanceMultiplier::GetValueInEncounter(Action* action)
 {
@@ -216,20 +221,6 @@ float AnetheronControlMisdirectionMultiplier::GetValueInEncounter(Action* action
 }
 
 // Kaz'rogal
-
-float KazrogalDisableDisperseAndTankFaceMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!dynamic_cast<CombatFormationMoveAction*>(action))
-        return 1.0f;
-
-    if (dynamic_cast<SetBehindTargetAction*>(action))
-        return 1.0f;
-
-    return AI_VALUE2(Unit*, "find target", "17888") ? 0.0f : 1.0f;
-}
 
 float KazrogalControlLowManaMovementMultiplier::GetValueInEncounter(Action* action)
 {
@@ -389,23 +380,6 @@ float AzgalorRangedControlAvoidanceMultiplier::GetValueInEncounter(Action* actio
 }
 
 // Archimonde
-
-float ArchimondeDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!dynamic_cast<CombatFormationMoveAction*>(action))
-        return 1.0f;
-
-    if (dynamic_cast<SetBehindTargetAction*>(action))
-        return 1.0f;
-
-    if (!AI_VALUE2(Unit*, "find target", "17968"))
-        return 1.0f;
-
-    return !HasProtectionOfElune(bot) ? 0.0f : 1.0f;
-}
 
 // By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名GetValueInEncounter, 保留HEAD注释
 // Leave the Doomfire avoidance as the only thing that moves a bot near a trail. Its push tapers to

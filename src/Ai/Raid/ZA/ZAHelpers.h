@@ -48,9 +48,11 @@ enum class ZaSpells : uint32
 
     // Zul'jin
     SPELL_ZULJIN_WHIRLWIND          = 17207,
+    SPELL_SHAPE_OF_THE_BEAR         = 42594,
     SPELL_SHAPE_OF_THE_EAGLE        = 42606,
     SPELL_SHAPE_OF_THE_LYNX         = 42607,
     SPELL_SHAPE_OF_THE_DRAGONHAWK   = 42608,
+    SPELL_CREEPING_PARALYSIS        = 43095,
     // SPELL_CLAW_RAGE              = 43149,
 
     // 43149 is a 6s aura Zul'jin self-casts during Lynx phase that ticks twice a second, each tick
@@ -60,6 +62,9 @@ enum class ZaSpells : uint32
 
     // Hunter
     SPELL_MISDIRECTION              = 35079,
+
+    // Priest
+    SPELL_MASS_DISPEL               = 32375,
 };
 
 enum class ZaNpcs : uint32
@@ -67,12 +72,6 @@ enum class ZaNpcs : uint32
     // Trash
     NPC_AMANI_HEALING_WARD          = 23757,
     NPC_AMANI_PROTECTIVE_WARD       = 23822,
-
-    // Akil'zon <Eagle Avatar>
-    NPC_AKILZON                     = 23574,
-
-    // Nalorakk <Bear Avatar>
-    NPC_NALORAKK                    = 23576,
 
     // Jan'alai <Dragonhawk Avatar>
     NPC_JANALAI                     = 23578,
@@ -112,6 +111,8 @@ inline constexpr uint32 ZA_MAP_ID = 568;
 // hold distance is for the don't run back in multiplier and adds another 3y of padding.
 inline constexpr float ZA_WHIRLWIND_SAFE_DISTANCE = 12.0f;
 inline constexpr float ZA_WHIRLWIND_HOLD_DISTANCE = 15.0f;
+// For Medicine Man totems, Halazzi totem, and Jan'alai Hatchers
+inline constexpr float ZA_CREATURE_SEARCH_RADIUS = 40.0f;
 
 // Akil'zon <Eagle Avatar>
 
@@ -232,6 +233,8 @@ inline std::array<Position, 8> const ZULJIN_SPREAD_POSITIONS = {{
 // Presumably, players will bring 2 healers, and the intent is to allow each healer to reach every
 // other bot's position (accordingly, no two spots are more than 39y apart).
 bool GetZuljinSpreadSlotIndex(Player* bot, size_t slotCount, size_t& slotIndex);
+// Find the closest target with Creeping Paralysis to cast Mass Dispel on.
+Player* GetZuljinCreepingParalysisDispelTarget(Player* bot);
 
 }
 

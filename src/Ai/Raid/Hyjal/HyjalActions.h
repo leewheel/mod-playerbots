@@ -14,11 +14,11 @@
 
 // General
 
-class HyjalSummitResetEncounterStatesAction : public Action
+class HyjalResetEncounterStatesAction : public Action
 {
 public:
-    HyjalSummitResetEncounterStatesAction(PlayerbotAI* botAI)
-        : Action(botAI, "hyjal summit reset encounter states") {}
+    HyjalResetEncounterStatesAction(PlayerbotAI* botAI)
+        : Action(botAI, "hyjal reset encounter states") {}
     bool Execute(Event event) override;
 };
 
@@ -60,11 +60,11 @@ private:
 };
 
 // Remove Mark of Kaz'rogal and Doomfire in certain cases
-class HyjalSummitRemoveDangerousDotAction : public Action
+class HyjalRemoveDangerousDotAction : public Action
 {
 public:
-    HyjalSummitRemoveDangerousDotAction(PlayerbotAI* botAI)
-        : Action(botAI, "hyjal summit remove dangerous dot") {}
+    HyjalRemoveDangerousDotAction(PlayerbotAI* botAI)
+        : Action(botAI, "hyjal remove dangerous dot") {}
     bool Execute(Event event) override;
 };
 

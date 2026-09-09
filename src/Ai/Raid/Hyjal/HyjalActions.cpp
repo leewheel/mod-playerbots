@@ -26,7 +26,7 @@ using namespace EncounterHelpers;
 // never in the step
 // General
 
-bool HyjalSummitResetEncounterStatesAction::Execute(Event /*event*/)
+bool HyjalResetEncounterStatesAction::Execute(Event /*event*/)
 {
     bool reset = false;
 
@@ -103,7 +103,7 @@ bool HyjalMainTankPositionBossAction::Execute(Event /*event*/)
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-bool HyjalSummitRemoveDangerousDotAction::Execute(Event /*event*/)
+bool HyjalRemoveDangerousDotAction::Execute(Event /*event*/)
 {
     uint32 const spellId = GetSelfImmunitySpell(bot);
     return spellId && botAI->CanCastSpell(spellId, bot) && botAI->CastSpell(spellId, bot);

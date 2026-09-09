@@ -80,7 +80,7 @@ bool AkilzonElectricalStormIncomingTrigger::IsActiveInEncounter()
     return IsInStormWindow(it->second);
 }
 
-bool AkilzonBotsNeedToPrepareForElectricalStormTrigger::IsActiveInEncounter()
+bool AkilzonShouldTrackElectricalStormTrigger::IsActiveInEncounter()
 {
     if (!IsMechanicTrackerBot(bot, ZA_MAP_ID))
         return false;
@@ -91,7 +91,7 @@ bool AkilzonBotsNeedToPrepareForElectricalStormTrigger::IsActiveInEncounter()
 
 // Nalorakk <Bear Avatar>
 
-bool NalorakkBossSwitchesFormsTrigger::IsActiveInEncounter()
+bool NalorakkBothFormsShouldBeTankedTrigger::IsActiveInEncounter()
 {
     if (!AI_VALUE2(Unit*, "find target", "23576"))
         return false;
@@ -133,7 +133,7 @@ bool JanalaiSpreadForFlameBreathTrigger::IsActiveInEncounter()
     return !IsJanalaiBombing(janalai);
 }
 
-bool JanalaiBossSummoningFireBombsTrigger::IsActiveInEncounter()
+bool JanalaiIsFireBombingTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-08-30 合并上游：改用IsJanalaiBombing helper；entry规则查怪(23578=jan'alai)
     return IsJanalaiBombing(AI_VALUE2(Unit*, "find target", "23578"));
@@ -152,8 +152,7 @@ bool JanalaiAmanishiHatchersSpawnedTrigger::IsActiveInEncounter()
     if (!janalai || janalai->GetHealthPct() <= JANALAI_HATCH_ALL_HEALTH_PCT)
         return false;
 
-    constexpr float searchRadius = 40.0f;
-    return bot->FindNearestCreature(Id(ZaNpcs::NPC_AMANISHI_HATCHER), searchRadius);
+    return bot->FindNearestCreature(Id(ZaNpcs::NPC_AMANISHI_HATCHER), ZA_CREATURE_SEARCH_RADIUS);
 }
 
 // Halazzi <Lynx Avatar>
@@ -181,7 +180,7 @@ bool HexLordMalacrassShouldPrioritizeAddsTrigger::IsActiveInEncounter()
     return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "24239");
 }
 
-bool HexLordMalacrassBossIsChannelingWhirlwindTrigger::IsActiveInEncounter()
+bool HexLordMalacrassChannelingWhirlwindTrigger::IsActiveInEncounter()
 {
     // 合并brighton 2026-08-26: hex lord malacrass按entry规则转24239; 攻击者为bot时视为安全(非通道旋风目标); 移除孤立的BossHasSpellReflectionTrigger(无声明) --By leewheel 2026年8月26日
     Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
@@ -191,12 +190,12 @@ bool HexLordMalacrassBossIsChannelingWhirlwindTrigger::IsActiveInEncounter()
     return malacrass->HasAura(Id(ZaSpells::SPELL_HEX_LORD_WHIRLWIND));
 }
 
-bool HexLordMalacrassBossPlacedFreezingTrapTrigger::IsActiveInEncounter()
+bool HexLordMalacrassFreezingTrapPlacedTrigger::IsActiveInEncounter()
 {
     if (!AI_VALUE2(Unit*, "find target", "24239"))
         return false;
 
-    return GetNearbyFreezingTrap(botAI) != nullptr;
+    return GetNearbyFreezingTrap(botAI);
 }
 
 // Zul'jin
@@ -206,7 +205,7 @@ bool ZuljinShouldBeTankedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-// By leewheel 2026-09-05 合并：Zul'jin按entry规则查找(23863)，替代上游名字查找
+    // By leewheel 2026-09-05 合并：Zul'jin按entry规则查找(23863)，替代上游名字查找
     Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
     return zuljin &&
            !zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_EAGLE)) &&
@@ -214,7 +213,7 @@ bool ZuljinShouldBeTankedTrigger::IsActiveInEncounter()
     // End By leewheel
 }
 
-bool ZuljinBossIsChannelingWhirlwindInTrollFormTrigger::IsActiveInEncounter()
+bool ZuljinChannelingWhirlwindInTrollFormTrigger::IsActiveInEncounter()
 {
     Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
     if (!zuljin || !zuljin->HasAura(Id(ZaSpells::SPELL_ZULJIN_WHIRLWIND)))
@@ -223,10 +222,37 @@ bool ZuljinBossIsChannelingWhirlwindInTrollFormTrigger::IsActiveInEncounter()
     return !PlayerbotAI::IsTank(bot) || zuljin->GetVictim() != bot;
 }
 
-bool ZuljinBossIsSummoningCyclonesInEagleFormTrigger::IsActiveInEncounter()
+bool ZuljinCreepingParalysisInBearFormTrigger::IsActiveInEncounter()
 {
+    // By leewheel 2026-09-09 合并brighton 2026-09-08: 采用brighton重塑逻辑(牧师+熊形态+可驱散目标),
+    //   boss查找按entry规则用23863 -- End By leewheel
+    if (bot->getClass() != CLASS_PRIEST)
+        return false;
+
     Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
-    return zuljin && zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_EAGLE));
+    if (!zuljin || !zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_BEAR)))
+        return false;
+
+    return GetZuljinCreepingParalysisDispelTarget(bot);
+}
+
+bool ZuljinSummoningCyclonesInEagleFormTrigger::IsActiveInEncounter()
+{
+    if (!PlayerbotAI::IsRanged(bot))
+        return false;
+
+    // By leewheel 2026-09-09 合并brighton: Zul'jin按entry规则查找(23863)
+    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
+    if (!zuljin)
+        return false;
+
+    if (zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_EAGLE)))
+        return true;
+
+    // The aura check is cleaner, but the health check here allows ranged to head to their
+    // positions during the phase transition sequence.
+    float const healthPct = zuljin->GetHealthPct();
+    return healthPct <= 60.0f && healthPct > 40.0f;
 }
 
 bool ZuljinSpreadForDragonhawkAoeTrigger::IsActiveInEncounter()

@@ -17,11 +17,11 @@ public:
     RaidHyjalActionContext()
     {
         // General
-        creators["hyjal summit reset encounter states"] =
-            &RaidHyjalActionContext::hyjal_summit_reset_encounter_states;
+        creators["hyjal reset encounter states"] =
+            &RaidHyjalActionContext::hyjal_reset_encounter_states;
 
-        creators["hyjal summit remove dangerous dot"] =
-            &RaidHyjalActionContext::hyjal_summit_remove_dangerous_dot;
+        creators["hyjal remove dangerous dot"] =
+            &RaidHyjalActionContext::hyjal_remove_dangerous_dot;
 
         // Rage Winterchill
         creators["rage winterchill misdirect boss to main tank"] =
@@ -82,8 +82,7 @@ public:
         creators["kaz'rogal activate aspect of the viper"] =
             &RaidHyjalActionContext::kazrogal_activate_aspect_of_the_viper;
 
-        creators["kaz'rogal cancel immunity"] =
-            &RaidHyjalActionContext::kazrogal_cancel_immunity;
+        creators["kaz'rogal cancel immunity"] = &RaidHyjalActionContext::kazrogal_cancel_immunity;
 
         creators["kaz'rogal warlock manage mana"] =
             &RaidHyjalActionContext::kazrogal_warlock_manage_mana;
@@ -95,8 +94,7 @@ public:
         creators["azgalor main tank position boss"] =
             &RaidHyjalActionContext::azgalor_main_tank_position_boss;
 
-        creators["azgalor disperse ranged"] =
-            &RaidHyjalActionContext::azgalor_disperse_ranged;
+        creators["azgalor disperse ranged"] = &RaidHyjalActionContext::azgalor_disperse_ranged;
 
         creators["azgalor melee maneuver through fire"] =
             &RaidHyjalActionContext::azgalor_melee_maneuver_through_fire;
@@ -126,20 +124,18 @@ public:
         creators["archimonde keep air burst away from tank"] =
             &RaidHyjalActionContext::archimonde_keep_air_burst_away_from_tank;
 
-        creators["archimonde spread ranged"] =
-            &RaidHyjalActionContext::archimonde_spread_ranged;
+        creators["archimonde spread ranged"] = &RaidHyjalActionContext::archimonde_spread_ranged;
 
-        creators["archimonde avoid doomfire"] =
-            &RaidHyjalActionContext::archimonde_avoid_doomfire;
+        creators["archimonde avoid doomfire"] = &RaidHyjalActionContext::archimonde_avoid_doomfire;
     }
 
 private:
     // General
-    static Action* hyjal_summit_reset_encounter_states(PlayerbotAI* botAI) {
-        return new HyjalSummitResetEncounterStatesAction(botAI);
+    static Action* hyjal_reset_encounter_states(PlayerbotAI* botAI) {
+        return new HyjalResetEncounterStatesAction(botAI);
     }
-    static Action* hyjal_summit_remove_dangerous_dot(PlayerbotAI* botAI) {
-        return new HyjalSummitRemoveDangerousDotAction(botAI);
+    static Action* hyjal_remove_dangerous_dot(PlayerbotAI* botAI) {
+        return new HyjalRemoveDangerousDotAction(botAI);
     }
 
     // Rage Winterchill
