@@ -58,15 +58,15 @@ float ZulAmanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     Unit* boss = nullptr;
-    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin"))
+    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863"))
         boss = zuljin;
-    else if (Unit* malacrass = AI_VALUE2(Unit*, "find target", "hex lord malacrass"))
+    else if (Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239"))
         boss = malacrass;
-    else if (Unit* janalai = AI_VALUE2(Unit*, "find target", "jan'alai"))
+    else if (Unit* janalai = AI_VALUE2(Unit*, "find target", "23578"))
         boss = janalai;
-    else if (Unit* nalorakk = AI_VALUE2(Unit*, "find target", "nalorakk"))
+    else if (Unit* nalorakk = AI_VALUE2(Unit*, "find target", "23576"))
         boss = nalorakk;
-    else if (Unit* akilzon = AI_VALUE2(Unit*, "find target", "akil'zon"))
+    else if (Unit* akilzon = AI_VALUE2(Unit*, "find target", "23574"))
         boss = akilzon;
 
     if (!boss)
@@ -114,12 +114,12 @@ float ZulAmanAvoidWhirlwindMultiplier::GetValueInEncounter(Action* action)
 
     Unit* boss = nullptr;
     uint32 whirlwind = 0;
-    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin"))
+    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863"))
     {
         boss = zuljin;
         whirlwind = Id(ZaSpells::SPELL_ZULJIN_WHIRLWIND);
     }
-    else if (Unit* malacrass = AI_VALUE2(Unit*, "find target", "hex lord malacrass"))
+    else if (Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239"))
     {
         boss = malacrass;
         whirlwind = Id(ZaSpells::SPELL_HEX_LORD_WHIRLWIND);
@@ -154,7 +154,7 @@ float ZulAmanDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
 
     // Nalorakk: A tank swap is used by form, so only the tank assigned to the current form may
     // taunt. Same as NalorakkTanksPositionBossAction: main tank gets bear, assist tank gets troll.
-    if (Unit* nalorakk = AI_VALUE2(Unit*, "find target", "nalorakk"))
+    if (Unit* nalorakk = AI_VALUE2(Unit*, "find target", "23576"))
     {
         if (!isTaunt)
             return 0.0f;
@@ -166,7 +166,7 @@ float ZulAmanDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
     }
 
     // Halazzi: The assist tank picks up the lynx so disable the main tank from taunting it.
-    if (AI_VALUE2(Unit*, "find target", "halazzi"))
+    if (AI_VALUE2(Unit*, "find target", "23577"))
     {
         if (!isTaunt)
             return 0.0f;
@@ -182,7 +182,7 @@ float ZulAmanDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     // Zul'jin: Allow tank face in Phase 5 for the tank to turn him away from the raid.
-    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin"))
+    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863"))
     {
         return isTankFace &&
             !zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_DRAGONHAWK)) ? 0.0f : 1.0f;
@@ -191,7 +191,7 @@ float ZulAmanDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
     // Jan'alai: Allow tank assist for the assist tank to pick up the Hatchlings. Tank face is
     // already disabled as part of ZulAmanDisableCombatFormationMoveMultiplier so the addition here
     // is just belt-and-suspenders for no cost.
-    if (AI_VALUE2(Unit*, "find target", "jan'alai"))
+    if (AI_VALUE2(Unit*, "find target", "23578"))
         return isTankFace || PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
 
     // Akil'zon disables only tank face action, and that is already handled by
@@ -211,8 +211,8 @@ float ZulAmanControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
     if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "nalorakk") ||
-        AI_VALUE2(Unit*, "find target", "halazzi") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "23576") ||
+        AI_VALUE2(Unit*, "find target", "23577") ? 0.0f : 1.0f;
 }
 
 // CombatFormationMoveAction is the action for the "disperse" command. It is also the parent class
@@ -228,12 +228,12 @@ float ZulAmanDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* a
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin");
+    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
     if (zuljin && zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_EAGLE)))
         return 0.0f;
 
-    return AI_VALUE2(Unit*, "find target", "jan'alai") ||
-        AI_VALUE2(Unit*, "find target", "akil'zon") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "23578") ||
+        AI_VALUE2(Unit*, "find target", "23574") ? 0.0f : 1.0f;
 }
 
 // Akil'zon <Eagle Avatar>
@@ -243,7 +243,7 @@ float AkilzonStayInEyeOfTheStormMultiplier::GetValueInEncounter(Action* action)
     if (!IsHazardousMovement(action))
         return 1.0f;
 
-    Unit* akilzon = AI_VALUE2(Unit*, "find target", "akil'zon");
+    Unit* akilzon = AI_VALUE2(Unit*, "find target", "23574");
     if (!akilzon)
         return 1.0f;
 
@@ -271,7 +271,7 @@ float JanalaiStayAwayFromFireBombsMultiplier::GetValueInEncounter(Action* action
     if (dynamic_cast<JanalaiAvoidFireBombsAction*>(action))
         return 1.0f;
 
-    Unit* janalai = AI_VALUE2(Unit*, "find target", "jan'alai");
+    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
     if (!janalai)
         return 1.0f;
 
@@ -306,7 +306,7 @@ float HalazziDisableAutoDpsTargetingMultiplier::GetValueInEncounter(Action* acti
         return 1.0f;
     }
 
-    return AI_VALUE2(Unit*, "find target", "halazzi") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "23577") ? 0.0f : 1.0f;
 }
 
 // Hex Lord Malacrass
@@ -339,7 +339,7 @@ float HexLordMalacrassUnstableAfflictionMultiplier::GetValueInEncounter(Action* 
         return 1.0f;
     }
 
-    Unit* malacrass = AI_VALUE2(Unit*, "find target", "hex lord malacrass");
+    Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
     if (!malacrass)
         return 1.0f;
 
@@ -358,7 +358,7 @@ float HexLordMalacrassSpellReflectionMultiplier::GetValueInEncounter(Action* act
     if (!dynamic_cast<CastSpellAction*>(action))
         return 1.0f;
 
-    Unit* malacrass = AI_VALUE2(Unit*, "find target", "hex lord malacrass");
+    Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
     if (!malacrass)
         return 1.0f;
 
@@ -387,7 +387,7 @@ float ZuljinStopAttackingDuringPhaseChangeMultiplier::GetValueInEncounter(Action
         return 1.0f;
 
     // Above 80% is Phase 1.
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin");
+    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
     if (!zuljin || zuljin->GetHealthPct() > 80.0f)
         return 1.0f;
 
@@ -409,7 +409,7 @@ float ZuljinEagleDisableAvoidAoeMultiplier::GetValueInEncounter(Action* action)
     if (!dynamic_cast<AvoidAoeAction*>(action))
         return 1.0f;
 
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "zul'jin");
+    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
     if (!zuljin)
         return 1.0f;
 

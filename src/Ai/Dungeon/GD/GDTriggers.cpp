@@ -121,7 +121,7 @@ Player* GetStackTank(PlayerbotAI* botAI)
     }
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    if (!context->GetValue<Unit*>("find target", "slad'ran")->Get())
+    if (!context->GetValue<Unit*>("find target", "29304")->Get())
     {
         return nullptr;
     }
@@ -160,7 +160,7 @@ Unit* GetTankHoldTarget(PlayerbotAI* botAI)
     }
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    Unit* boss = context->GetValue<Unit*>("find target", "slad'ran")->Get();
+    Unit* boss = context->GetValue<Unit*>("find target", "29304")->Get();
     if (!boss || !boss->IsAlive())
     {
         return nullptr;
