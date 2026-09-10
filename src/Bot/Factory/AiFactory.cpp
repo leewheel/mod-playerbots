@@ -503,6 +503,40 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
         engine->removeStrategy("threat", false);
         engine->addStrategy("boost", false);
     }
+
+    // By leewheel 2026-09-10
+    // 老大规定：治疗职业在副本内除治疗外，只允许做辅助控制类操作（如困住怪），不做任何 DPS 输出。
+    // 上面的职业分支与"无队伍/随机 bot"分支会统一挂上 "dps assist"、"aoe"（部分职业还有
+    // "healer dps"/"holy dps"/"shadow aoe"/"caster aoe"/"baoe" 等），导致治疗 bot 在副本里
+    // 抢着打怪、不专心加血与补 BUFF。
+    // 此处对「治疗职业 + 副本(含团本)」统一摘除 DPS 策略；副本外（野外任务/战场/竞技场）行为不变。
+    // 保留：cure(驱散) / cc(控制) / tranquility / blanketing / 各职业图腾与祝福类 BUFF。
+    // 注：放在函数末尾，确保覆盖前面所有挂载点（含战场/竞技场分支之后的最终状态）。
+    if (PlayerbotAI::IsHeal(player, true) && player->GetMap() &&
+        (player->GetMap()->IsDungeon() || player->GetMap()->IsRaid()))
+    {
+        static char const* const healerForbiddenCombatStrategies[] = {
+            "dps assist",   // 协助攻击
+            "aoe",          // 职业 AOE（DPS 性质）
+            "healer dps",   // 治疗职业打 DPS
+            "holy dps",     // 牧师神圣/戒律的 DPS 分支
+            "shadow debuff",// 牧师暗影
+            "shadow aoe",   // 牧师暗影 AOE
+            "caster",       // 萨满恢复无队伍时的法系输出
+            "caster aoe",   // 萨满恢复无队伍时的法系 AOE
+            "baoe",         // 圣骑士 AOE
+            "dps",          // 兜底
+        };
+        for (char const* strategyName : healerForbiddenCombatStrategies)
+            engine->removeStrategy(strategyName, false);
+
+        // 允许的辅助操作：控制类技能（把怪困住）。
+        // 牧师=束缚亡灵(shackle undead) / 圣骑士=驱邪术(turn undead) / 德鲁伊=旋风(cyclone)，
+        // 均为纯控制、无 DPS 成分。萨满无 cc 定义，Engine::addStrategy 内部
+        // GetStrategy("cc") 取不到会直接跳过，不会产生任何日志错误。
+        engine->addStrategy("cc", false);
+    }
+    // End By leewheel
 }
 
 Engine* AiFactory::createCombatEngine(Player* player, PlayerbotAI* const facade, AiObjectContext* aiObjectContext)

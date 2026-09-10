@@ -7,6 +7,7 @@
 #include "SpellIdValue.h"
 #include "ChatHelper.h"
 #include "Playerbots.h"
+#include "SpellNameIdFallback.h"
 #include "Vehicle.h"
 
 #include <cctype>
@@ -146,6 +147,35 @@ uint32 SpellIdValue::Calculate()
             spellIds.insert(spellId);
         }
     }
+
+    // By leewheel 2026-09-10
+    // 名称在 bot 已学技能里匹配不到时，改用 DBC 静态映射表（SpellNameIdFallbackData.h）兜底。
+    // 触发场景：魔改版技能名与策略里写的名字对不上，或 bot 尚未学到该技能。
+    // 原有匹配逻辑一行未动，仅在它失败时才介入。
+    if (spellIds.empty())
+    {
+        std::vector<uint32_t> const fallbackIds =
+            PlayerbotsSpellNameId::FindSpellIdsByName(PlayerbotsSpellNameId::NormalizeSpellName(namepart));
+
+        // 兜底表按 rank 升序返回，倒序取第一个 bot 已学会的，即为可用的最高级。
+        for (auto it = fallbackIds.rbegin(); it != fallbackIds.rend(); ++it)
+        {
+            if (bot->HasSpell(*it))
+            {
+                spellIds.insert(*it);
+                break;
+            }
+        }
+
+        // bot 一个等级都没学会：把结论写进日志，避免像原来那样静默返回 0 无从排查。
+        if (spellIds.empty() && !fallbackIds.empty())
+        {
+            LOG_DEBUG("playerbots",
+                      "[SpellIdFallback] bot '{}' has no rank of spell '{}' (DBC has {} ranks, top spellId {})",
+                      bot->GetName(), namepart, fallbackIds.size(), fallbackIds.back());
+        }
+    }
+    // End By leewheel
 
     if (spellIds.empty())
         return 0;
