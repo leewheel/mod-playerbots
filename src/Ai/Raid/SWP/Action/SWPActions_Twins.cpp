@@ -314,8 +314,11 @@ bool EredarTwinsStackInRoomCenterAction::Execute(Event /*event*/)
 
 bool EredarTwinsDpsPrioritizeSacrolashAction::Execute(Event /*event*/)
 {
-    // 合并brighton 2026-08-27: 新增DPS仇恨保持起始记录; lady sacrolash按entry规则转25165 --By leewheel 2026年8月27日
-    RecordEredarTwinsDpsHoldStart(bot);
+    // By leewheel 2026-09-10 合并brighton ea343e67(fix twins bugs): 其已删除RecordEredarTwinsDpsHoldStart辅助函数,
+    // 改为直接写入起始时间戳, 此处随之采用内联写法
+    // Start the 8s clock for tanks to get aggro first.
+    // End By leewheel
+    eredarTwinsDpsHoldStartMs.try_emplace(bot->GetInstanceId(), getMSTime());
 
     // boss名称按entry规则: 25165=lady sacrolash, 25166=grand warlock alythess --By leewheel 2026-09-06
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
@@ -328,7 +331,7 @@ bool EredarTwinsDpsPrioritizeSacrolashAction::Execute(Event /*event*/)
     bool const shouldHoldThreat = sacrolash ?
         ShouldHoldSacrolashThreat(bot, twinTarget) : ShouldHoldAlythessThreat(bot, twinTarget);
 
-    if (!shouldHoldThreat)
+    if (shouldHoldThreat && bot->GetVictim())
     {
         bot->AttackStop();
         bot->InterruptSpell(CURRENT_MELEE_SPELL);

@@ -59,15 +59,22 @@ bool VolatileFiendSelfDestructsWhenNearTrigger::IsActive()
     if (!fiend || !fiend->IsAlive())
         return false;
 
-    // Z-position comparison is so bots will go up the ramp to M'uru without getting stuck
-    // due to proximity to the volatile fiends below, in case the player decides to skip them.
+    // Z-position comparison is so bots will go up the ramp to M'uru without getting stuck due to
+    // proximity to the volatile fiends below (in case the player decides to skip them).
     constexpr float verticalOffset = 10.0f;
     return std::abs(bot->GetPositionZ() - fiend->GetPositionZ()) < verticalOffset;
 }
 
 bool ApocalypseGuardProtectedByInfernalDefenseTrigger::IsActive()
 {
-    return bot->getClass() == CLASS_PRIEST && AI_VALUE2(Unit*, "find target", "25593");
+    // By leewheel 2026-09-10 合并brighton bc76de70(SWP apoc guard use exorcism):
+    // 采纳其新增的圣骑士支持(牧师/圣骑士均可对天启守卫使用神圣法术驱散),
+    // 但boss查找保留entry字符串"25593"(NPC_APOCALYPSE_GUARD)遵循项目规则
+    // End By leewheel
+    if (bot->getClass() != CLASS_PALADIN && bot->getClass() != CLASS_PRIEST)
+        return false;
+
+    return AI_VALUE2(Unit*, "find target", "25593");
 }
 
 // Kalecgos
@@ -482,8 +489,11 @@ bool EredarTwinsShouldAnnounceAlythessTankTrigger::IsActiveInEncounter()
     if (itr != eredarTwinsTankAssignments.end() && itr->second.announcementMs)
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "grand warlock alythess") ||
-        AI_VALUE2(Unit*, "find target", "lady sacrolash");
+    // By leewheel 2026-09-10 合并brighton ea343e67(fix twins bugs)时按项目entry规则修正历史遗留:
+    // boss名称一律用entry, 25166=高阶术士奥蕾塞丝(grand warlock alythess), 25165=萨洛拉丝女王(lady sacrolash)
+    // End By leewheel
+    return AI_VALUE2(Unit*, "find target", "25166") ||
+        AI_VALUE2(Unit*, "find target", "25165");
 }
 
 bool EredarTwinsPullingBossesTrigger::IsActiveInEncounter()
@@ -577,6 +587,7 @@ bool EredarTwinsShouldFocusDpsTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "25166"))
         return false;
 
+    // Healers are included to flip to their combat engines since dps assist is disabled.
     if (PlayerbotAI::IsDps(bot) || PlayerbotAI::IsHeal(bot))
         return true;
 
