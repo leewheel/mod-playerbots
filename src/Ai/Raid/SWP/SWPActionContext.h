@@ -247,8 +247,10 @@ private:
 
     // Kalecgos
     static Action* kalecgos_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        // By leewheel 2026-09-10 合并brighton 5e3dac27: boss名按本地entry规则改写(卡雷苟斯24850)
         return new SunwellMisdirectBossToMainTankAction(
-            botAI, "kalecgos misdirect boss to main tank", "kalecgos");
+            botAI, "kalecgos misdirect boss to main tank", "24850");
+        // End By leewheel
     }
     static Action* kalecgos_announce_boss_health(PlayerbotAI* botAI) {
         return new KalecgosAnnounceBossHealthAction(botAI);
@@ -275,8 +277,10 @@ private:
 
     // Brutallus
     static Action* brutallus_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        // By leewheel 2026-09-10 合并brighton 5e3dac27: boss名按本地entry规则改写(布鲁塔卢斯24882)
         return new SunwellMisdirectBossToMainTankAction(
-            botAI, "brutallus misdirect boss to main tank", "brutallus");
+            botAI, "brutallus misdirect boss to main tank", "24882");
+        // End By leewheel
     }
     static Action* brutallus_tanks_position_and_swap(PlayerbotAI* botAI) {
         return new BrutallusTanksPositionAndSwapAction(botAI);
@@ -293,8 +297,10 @@ private:
 
     // Felmyst
     static Action* felmyst_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
+        // By leewheel 2026-09-10 合并brighton 5e3dac27: boss名按本地entry规则改写(菲米丝25038)
         return new SunwellMisdirectBossToMainTankAction(
-            botAI, "felmyst misdirect boss to main tank", "felmyst");
+            botAI, "felmyst misdirect boss to main tank", "25038");
+        // End By leewheel
     }
     static Action* felmyst_main_tank_position_boss_on_ground(PlayerbotAI* botAI) {
         return new FelmystMainTankPositionBossOnGroundAction(botAI);
