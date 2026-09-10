@@ -32,11 +32,9 @@ using namespace EncounterHelpers;
 
 // General
 
-float SunwellPlateauNoEncounterDrinkingMultiplier::GetValue(Action* action)
+// Without this, bots are able to drink after Kil'jaeden's Hands go down.
+float SunwellNoEncounterDrinkingMultiplier::GetValueInEncounter(Action* action)
 {
-    if (IsEncounterInProgress(bot, SWP_MAP_ID))
-        return 1.0f;
-
     return dynamic_cast<DrinkAction*>(action) ? 0.0f : 1.0f;
 }
 
@@ -824,8 +822,10 @@ float KiljaedenSingleTargetHandsMultiplier::GetValue(Action* action)
 
     // By leewheel 2026-08-29 合并：对侧新逻辑把Tanks版与DpsFocus版两乘数合并简化为本函数(lower complexity of hands actions)，
     // 旧KiljaedenDpsFocusAssignedHandOnlyMultiplier实现一并移除(头文件本无声明)；手部目标控制交给新版ControlHands行动
-    // Shaman have no spreading DoTs, and their only spell classified as ActionThreatType::Aoe is
-    // Chain Lightning, which is a strong single-target spell in addition to providing AoE damage.
+    // By leewheel 2026-09-10 合并brighton 5e3dac27：采纳其精简后的英文说明
+    // The only Shaman spell classified as ActionThreatType::Aoe is Chain Lightning, which is a
+    // strong single-target spell in addition to providing AoE damage.
+    // End By leewheel
     if (bot->getClass() == CLASS_SHAMAN)
         return 1.0f;
 
