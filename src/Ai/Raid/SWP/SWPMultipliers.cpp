@@ -35,7 +35,7 @@ using namespace EncounterHelpers;
 // Without this, bots are able to drink after Kil'jaeden's Hands go down.
 float SunwellNoEncounterDrinkingMultiplier::GetValueInEncounter(Action* action)
 {
-    return dynamic_cast<DrinkAction*>(action) ? 0.0f : 1.0f;
+    return dynamic_cast<DrinkAction*>(action) || dynamic_cast<EatAction*>(action) ? 0.0f : 1.0f;
 }
 
 // Trash
@@ -62,9 +62,9 @@ float VolatileFiendRestrictApproachMultiplier::GetValue(Action* action)
         0.0f : 1.0f;
 }
 
-// Kalecgos
+// Shared Boss
 
-float KalecgosControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
+float SunwellControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -75,7 +75,20 @@ float KalecgosControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
     if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "24850") ? 0.0f : 1.0f;
+    // By leewheel 2026-09-11 合并brighton 9da3494f(swp consolidate misdirection multipliers):
+    // 采纳其重构(4个per-boss误导乘数统一为 SunwellControlMisdirectionMultiplier),
+    // 但boss名称按项目规则(AGENTS.md第81条)一律用entry:
+    // 25840=熵魔, 24850=卡雷苟斯, 24882=布鲁塔卢斯, 25166=高阶术士奥蕾塞丝,
+    // 25741=穆鲁, 25315=基尔加丹
+    // End By leewheel
+    if (AI_VALUE2(Unit*, "find target", "25840"))
+        return 1.0f;
+
+    return AI_VALUE2(Unit*, "find target", "24850") ||
+        AI_VALUE2(Unit*, "find target", "24882") ||
+        AI_VALUE2(Unit*, "find target", "25166") ||
+        AI_VALUE2(Unit*, "find target", "25741") ||
+        AI_VALUE2(Unit*, "find target", "25315") ? 0.0f : 1.0f;
 }
 
 float KalecgosWaitToDecurseMultiplier::GetValueInEncounter(Action* action)
@@ -214,20 +227,7 @@ float KalecgosDelayCooldownsForSathrovarrMultiplier::GetValueInEncounter(Action*
 
 // Brutallus
 
-float BrutallusControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (bot->getClass() != CLASS_HUNTER)
-        return 1.0f;
-
-    if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
-        return 1.0f;
-
-    return AI_VALUE2(Unit*, "find target", "24882") ? 0.0f : 1.0f;
-}
-
+// By leewheel 2026-09-11 合并brighton 9da3494f: 该 per-boss 误导乘数已并入 SunwellControlMisdirectionMultiplier, 此处随之删除
 float BrutallusControlMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -494,20 +494,7 @@ float EredarTwinsDisableAutomaticTargetingMultiplier::GetValueInEncounter(Action
     return AI_VALUE2(Unit*, "find target", "25166") ? 0.0f : 1.0f;
 }
 
-float EredarTwinsControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (bot->getClass() != CLASS_HUNTER)
-        return 1.0f;
-
-    if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
-        return 1.0f;
-
-    return AI_VALUE2(Unit*, "find target", "25166") ? 0.0f : 1.0f;
-}
-
+// By leewheel 2026-09-11 合并brighton 9da3494f: 该 per-boss 误导乘数已并入 SunwellControlMisdirectionMultiplier, 此处随之删除
 float EredarTwinsHoldDpsAtStartMultiplier::GetValueInEncounter(Action* action)
 {
     if (PlayerbotAI::IsTank(bot))
@@ -684,23 +671,7 @@ float MuruDisableDefaultTargetingMultiplier::GetValueInEncounter(Action* action)
     return currentTarget && currentTarget->GetEntry() == Id(SwpNpcs::NPC_VOID_SPAWN) ? 0.0f : 1.0f;
 }
 
-float MuruControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (bot->getClass() != CLASS_HUNTER)
-        return 1.0f;
-
-    if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
-        return 1.0f;
-
-    if (AI_VALUE2(Unit*, "find target", "25840"))
-        return 1.0f;
-
-    return AI_VALUE2(Unit*, "find target", "25741") ? 0.0f : 1.0f;
-}
-
+// By leewheel 2026-09-11 合并brighton 9da3494f: 该 per-boss 误导乘数已并入 SunwellControlMisdirectionMultiplier, 此处随之删除
 float MuruControlMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
