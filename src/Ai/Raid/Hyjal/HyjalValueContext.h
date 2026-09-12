@@ -26,6 +26,9 @@ protected:
     GuidVector Calculate() override { return HyjalHelpers::FindInfernalGuids(bot); }
 };
 
+// By leewheel 2026-09-13 合并brighton caa4094e: 本处冲突系双方各自在注释/新增类上落笔 ——
+//   保留我方关于 ground hazards 缓存的说明注释，同时采纳上游新增的 KazrogalBelowManaThresholdValue。
+// End By leewheel
 // The ground hazards, cached for the same reason the Infernals are, only more so: Engine applies
 // every multiplier to every action it pulls from the queue each tick, so a grid search inside a
 // multiplier body is paid once per action rather than once per bot. Between the triggers, the
@@ -33,6 +36,16 @@ protected:
 //
 // Each is searched at its own radius, derived from the widest thing that asks about it, and
 // the helpers narrow it further from there
+
+// A latch so the gap between MARK_DANGER_MANA and MARK_REJOIN_MANA does not have bots running
+// back and forth to/from the group.
+class KazrogalBelowManaThresholdValue : public ManualSetValue<bool>
+{
+public:
+    KazrogalBelowManaThresholdValue(PlayerbotAI* botAI)
+        : ManualSetValue<bool>(botAI, false, "kaz'rogal below mana threshold") {}
+};
+
 class HyjalHazardPositionsValue : public CalculatedValue<std::vector<Position>>
 {
 public:
@@ -62,11 +75,16 @@ public:
         creators["hyjal death and decay"] = &RaidHyjalValueContext::hyjal_death_and_decay;
         creators["hyjal rain of fire"] = &RaidHyjalValueContext::hyjal_rain_of_fire;
         creators["hyjal doomfire trail"] = &RaidHyjalValueContext::hyjal_doomfire_trail;
+        creators["kaz'rogal below mana threshold"] =
+            &RaidHyjalValueContext::kazrogal_below_mana_threshold;
     }
 
 private:
     static UntypedValue* hyjal_infernals(PlayerbotAI* botAI) {
         return new HyjalInfernalsValue(botAI);
+    }
+    static UntypedValue* kazrogal_below_mana_threshold(PlayerbotAI* botAI) {
+        return new KazrogalBelowManaThresholdValue(botAI);
     }
     static UntypedValue* hyjal_death_and_decay(PlayerbotAI* botAI) {
         return new HyjalHazardPositionsValue(

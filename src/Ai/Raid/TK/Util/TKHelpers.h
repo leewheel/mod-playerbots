@@ -51,7 +51,7 @@ enum class TkSpells : uint32
 
     // Kael'thas Sunstrider
     SPELL_PERMANENT_FEIGN_DEATH     = 29266,
-    SPELL_GRAVITY_LAPSE             = 39432,
+    SPELL_GRAVITY_LAPSE_AURA        = 39432, // The core's SPELL_GRAVITY_LAPSE (35941) is the cast
     SPELL_KAEL_FULL_POWER           = 36187,
     SPELL_MENTAL_PROTECTION_FIELD   = 36480, // Staff of Disintegration
     SPELL_ARCANE_BARRIER            = 36481, // Phaseshift Bulwark
@@ -110,6 +110,10 @@ inline constexpr uint32 TK_MAP_ID = 550;
 
 std::pair<Unit*, Unit*> GetTargetUnitPair(PlayerbotAI* botAI, uint32 entry);
 Player* GetNearestNonTankPlayerInRadius(Player* bot, float radius);
+
+// Trash
+
+Unit* GetCenturionCastingArcaneFlurry(PlayerbotAI* botAI);
 
 // Al'ar <Phoenix God>
 // CombatReach is 15 yards
@@ -177,6 +181,8 @@ inline Position const ALAR_SE_RAMP_BASE        = { 281.064f, -36.590f, -2.389f }
 inline Position const ALAR_SW_RAMP_BASE        = { 281.064f,  36.590f, -2.389f };
 inline Position const ALAR_ROOM_S_CENTER       = { 281.064f,   0.000f, -2.389f };
 
+inline constexpr float ALAR_FLAME_PATCH_SEARCH_DISTANCE = 40.0f;
+
 extern std::unordered_map<uint32, bool> lastRebirthState;
 extern std::unordered_map<uint32, bool> isAlarInPhase2;
 
@@ -189,7 +195,8 @@ bool IsPrimaryEmberTank(Player* bot);
 bool IsFirstAlarTank(Player* bot);
 bool IsSecondAlarTank(Player* bot);
 Player* GetSecondaryEmberTank(Player* bot);
-std::vector<Unit*> GetFlamePatches(Player* bot, float searchRadius);
+GuidVector FindFlamePatchGuids(Player* bot);
+std::vector<Unit*> GetFlamePatches(PlayerbotAI* botAI);
 
 // Void Reaver
 // CombatReach is 15 yards
@@ -257,10 +264,10 @@ Unit* GetKaelthasTk(PlayerbotAI* botAI);
 bool IsAdvisorActive(Unit* advisor);
 Player* GetCapernianTank(Player* bot);
 bool IsSanguinarDebuffHunter(Player* bot);
-Unit* GetLegendaryWeapon(Player* bot, uint32 weaponEntry);
-GuidVector FindDeadLegendaryWeaponGuids(Player* bot);
-GuidVector const& GetDeadLegendaryWeaponGuids(PlayerbotAI* botAI);
+GuidVector FindLegendaryWeaponGuids(Player* bot);
+Unit* GetLegendaryWeapon(PlayerbotAI* botAI, uint32 weaponEntry);
 Creature* GetDeadLegendaryWeapon(PlayerbotAI* botAI, uint32 weaponEntry);
+bool HasDeadLegendaryWeapon(PlayerbotAI* botAI);
 bool IsLegendaryWeaponItem(uint32 itemId);
 bool HasEquippableItemForSlot(Player* bot, uint8 slot);
 Item* GetEquippedItemInSlot(Player* bot, uint8 slot, uint32 itemId);

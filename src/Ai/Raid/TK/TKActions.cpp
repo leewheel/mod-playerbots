@@ -20,7 +20,6 @@
 #include <cmath>
 #include <iterator>
 #include <limits>
-#include <list>
 
 using namespace TkHelpers;
 using namespace EncounterHelpers;
@@ -80,24 +79,7 @@ bool TempestKeepTankPositionAction::MoveToTankPosition(
 
 bool CrimsonHandCenturionCastPolymorphAction::Execute(Event /*event*/)
 {
-    Unit* target = nullptr;
-    constexpr float searchRadius = 40.0f;
-    std::list<Creature*> centurions;
-    bot->GetCreatureListWithEntryInGrid(
-        centurions, Id(TkNpcs::NPC_CRIMSON_HAND_CENTURION), searchRadius);
-
-    for (Creature* centurion : centurions)
-    {
-        if (!centurion || !centurion->HasAura(Id(TkSpells::SPELL_ARCANE_FLURRY)) ||
-            botAI->HasAura("polymorph", centurion))
-        {
-            continue;
-        }
-
-        if (!target || centurion->GetGUID() < target->GetGUID())
-            target = centurion;
-    }
-
+    Unit* target = GetCenturionCastingArcaneFlurry(botAI);
     if (!target)
         return false;
 
@@ -433,12 +415,19 @@ bool AlarMoveAwayFromRebirthAction::Execute(Event /*event*/)
             MovementPriority::MOVEMENT_FORCED);
     }
 
+    // Al'ar stays at its platform for the first 8 seconds of the pretend-death and is only then
+    // moved to the middle, so the push has to come from the room center rather than from Al'ar.
     constexpr float safeDistance = 35.0f;
-    float const currentDistance = bot->GetExactDist2d(ALAR_ROOM_CENTER);
-    if (currentDistance >= safeDistance)
+    if (bot->GetExactDist2d(ALAR_ROOM_CENTER) >= safeDistance)
         return false;
 
-    return MoveAway(alar, safeDistance - currentDistance);
+    float const angle = ALAR_ROOM_CENTER.GetAngle(bot);
+    float const targetX = ALAR_ROOM_CENTER.GetPositionX() + std::cos(angle) * safeDistance;
+    float const targetY = ALAR_ROOM_CENTER.GetPositionY() + std::sin(angle) * safeDistance;
+
+    return MoveTo(
+        TK_MAP_ID, targetX, targetY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 bool AlarSwapTanksOnBossAction::Execute(Event event)
@@ -473,8 +462,7 @@ bool AlarAvoidFlamePatchesAndDiveBombsAction::Execute(Event /*event*/)
 
 bool AlarAvoidFlamePatchesAndDiveBombsAction::AvoidFlamePatch()
 {
-    constexpr float searchRadius = 40.0f;
-    std::vector<Unit*> flamePatches = GetFlamePatches(bot, searchRadius);
+    std::vector<Unit*> const flamePatches = GetFlamePatches(botAI);
 
     constexpr float hazardRadius = 8.0f;
 
@@ -1251,10 +1239,10 @@ bool KaelthasSunstriderManageAdvisorDpsTimerAction::Execute(Event /*event*/)
 
 bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* axe = GetLegendaryWeapon(bot, Id(TkNpcs::NPC_DEVASTATION));
-    Unit* mace = GetLegendaryWeapon(bot, Id(TkNpcs::NPC_COSMIC_INFUSER));
-    Unit* dagger = GetLegendaryWeapon(bot, Id(TkNpcs::NPC_INFINITY_BLADES));
-    Unit* sword = GetLegendaryWeapon(bot, Id(TkNpcs::NPC_WARP_SLICER));
+    Unit* axe = GetLegendaryWeapon(botAI, Id(TkNpcs::NPC_DEVASTATION));
+    Unit* mace = GetLegendaryWeapon(botAI, Id(TkNpcs::NPC_COSMIC_INFUSER));
+    Unit* dagger = GetLegendaryWeapon(botAI, Id(TkNpcs::NPC_INFINITY_BLADES));
+    Unit* sword = GetLegendaryWeapon(botAI, Id(TkNpcs::NPC_WARP_SLICER));
 
     bool const isTank = PlayerbotAI::IsTank(bot);
     bool const isRangedDps = PlayerbotAI::IsRangedDps(bot);
@@ -1305,7 +1293,7 @@ bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::Execute(Event /*e
         if (weapon.rangedDpsOnly && !isRangedDps)
             continue;
 
-        Unit* candidate = GetLegendaryWeapon(bot, Id(weapon.entry));
+        Unit* candidate = GetLegendaryWeapon(botAI, Id(weapon.entry));
         if (!candidate)
             continue;
 
@@ -1380,7 +1368,7 @@ bool KaelthasSunstriderAssignLegendaryWeaponDpsPriorityAction::HandleDevastation
 
 bool KaelthasSunstriderMoveDevastationAwayAction::Execute(Event /*event*/)
 {
-    Unit* axe = GetLegendaryWeapon(bot, Id(TkNpcs::NPC_DEVASTATION));
+    Unit* axe = GetLegendaryWeapon(botAI, Id(TkNpcs::NPC_DEVASTATION));
     if (!axe)
         return false;
 
@@ -1792,8 +1780,8 @@ bool KaelthasSunstriderUseLegendaryWeaponsAction::UseEquippedItemWithPacket(Item
 
     uint8 bagIndex = item->GetBagSlot();
     uint8 slot = item->GetSlot();
-    uint8 cast_count = 1;
-    ObjectGuid item_guid = item->GetGUID();
+    uint8 castCount = 1;
+    ObjectGuid itemGuid = item->GetGUID();
     uint32 glyphIndex = 0;
     uint8 castFlags = 0;
     uint32 spellId = 0;
@@ -1812,7 +1800,7 @@ bool KaelthasSunstriderUseLegendaryWeaponsAction::UseEquippedItemWithPacket(Item
         return false;
 
     WorldPacket packet(CMSG_USE_ITEM);
-    packet << bagIndex << slot << cast_count << spellId << item_guid << glyphIndex << castFlags;
+    packet << bagIndex << slot << castCount << spellId << itemGuid << glyphIndex << castFlags;
 
     uint32 targetFlag = TARGET_FLAG_UNIT;
     packet << targetFlag << bot->GetPackGUID();
@@ -2024,7 +2012,7 @@ bool KaelthasSunstriderBreakMindControlAction::Execute(Event /*event*/)
 // for flight and instead toggling their flight flags manually upon movement.
 bool KaelthasSunstriderSpreadOutInMidairAction::Execute(Event /*event*/)
 {
-    if (!bot->HasAura(Id(TkSpells::SPELL_GRAVITY_LAPSE)))
+    if (!bot->HasAura(Id(TkSpells::SPELL_GRAVITY_LAPSE_AURA)))
         return DropToGround();
 
     return HoverAndSpread();
@@ -2088,9 +2076,9 @@ bool KaelthasSunstriderSpreadOutInMidairAction::HoverAndSpread()
             bot->SendMovementFlagUpdate();
     }
 
-    MotionMaster* mm = bot->GetMotionMaster();
-    if (mm->GetMotionSlotType(MOTION_SLOT_CONTROLLED) != NULL_MOTION_TYPE)
-        mm->MovementExpiredOnSlot(MOTION_SLOT_CONTROLLED);
+    MotionMaster* motionMaster = bot->GetMotionMaster();
+    if (motionMaster->GetMotionSlotType(MOTION_SLOT_CONTROLLED) != NULL_MOTION_TYPE)
+        motionMaster->MovementExpiredOnSlot(MOTION_SLOT_CONTROLLED);
 
     auto const roll = [](uint32 value, uint32 salt)
     {
@@ -2103,7 +2091,7 @@ bool KaelthasSunstriderSpreadOutInMidairAction::HoverAndSpread()
         return (hash >> 8) / static_cast<float>(1 << 24);
     };
 
-    Aura* lapse = bot->GetAura(Id(TkSpells::SPELL_GRAVITY_LAPSE));
+    Aura* lapse = bot->GetAura(Id(TkSpells::SPELL_GRAVITY_LAPSE_AURA));
     if (!lapse)
         return false;
 

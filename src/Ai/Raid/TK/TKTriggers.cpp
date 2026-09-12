@@ -39,8 +39,11 @@ bool TempestKeepStuckFallingTrigger::IsActive()
 
 bool CrimsonHandCenturionCastsArcaneFlurryTrigger::IsActive()
 {
-    return bot->getClass() == CLASS_MAGE &&
-        AI_VALUE2(Unit*, "find target", "19510");
+// By leewheel 2026-09-13 合并brighton caa4094e: 采纳上游 1749c628 的 Centurion 判定写法 ——
+//   改用 GetCenturionCastingArcaneFlurry(botAI)（基于 attackers 值 + 施法状态判定，比原先
+//   单纯的 "find target 19510"(血手百夫长) 存活查找更精确）。该 helper 的定义见 TK/Util/TKHelpers。
+// End By leewheel
+    return bot->getClass() == CLASS_MAGE && GetCenturionCastingArcaneFlurry(botAI);
 }
 
 // Al'ar <Phoenix God>
@@ -318,8 +321,18 @@ bool KaelthasSunstriderLegendaryWeaponsAreAliveTrigger::IsActiveInEncounter()
 
 bool KaelthasSunstriderLegendaryAxeCastsWhirlwindTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsMainTank(bot) &&
-        GetLegendaryWeapon(bot, Id(TkNpcs::NPC_DEVASTATION)) != nullptr;
+    if (!PlayerbotAI::IsMainTank(bot))
+        return false;
+
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    if (!kaelthas)
+        return false;
+
+    uint32 const phase = GetKaelthasTkPhase(kaelthas);
+    if (phase < PHASE_WEAPONS || phase > PHASE_ALL_ADVISORS)
+        return false;
+
+    return GetLegendaryWeapon(botAI, Id(TkNpcs::NPC_DEVASTATION)) != nullptr;
 }
 
 bool KaelthasSunstriderLegendaryWeaponsAreDeadTrigger::IsActiveInEncounter()
@@ -332,11 +345,11 @@ bool KaelthasSunstriderLegendaryWeaponsAreDeadTrigger::IsActiveInEncounter()
     if (phase < PHASE_WEAPONS || phase > PHASE_ALL_ADVISORS)
         return false;
 
-    Unit* axe = GetLegendaryWeapon(bot, Id(TkNpcs::NPC_DEVASTATION));
+    Unit* axe = GetLegendaryWeapon(botAI, Id(TkNpcs::NPC_DEVASTATION));
     if (axe && axe->GetVictim() == bot)
         return false;
 
-    return !GetDeadLegendaryWeaponGuids(botAI).empty();
+    return HasDeadLegendaryWeapon(botAI);
 }
 
 bool KaelthasSunstriderLegendaryWeaponsAreEquippedTrigger::IsActiveInEncounter()

@@ -478,7 +478,8 @@ Unit* GetInfernalToAttack(PlayerbotAI* botAI, Unit* anetheron)
         if (!infernal || !infernal->IsAlive())
             continue;
 
-        return bot->GetExactDist2d(infernal) < INFERNAL_RANGED_ENGAGE_DISTANCE ? infernal : nullptr;
+        if (bot->GetExactDist2d(infernal) < INFERNAL_RANGED_ENGAGE_DISTANCE)
+            return infernal;
     }
 
     return nullptr;
@@ -520,8 +521,6 @@ Position const& GetInfernalTankPosition(Player* bot)
 
 // Kaz'rogal
 
-std::unordered_set<ObjectGuid> botsBelowManaThreshold;
-
 float GetKazrogalRangedArcRadius(Unit* kazrogal)
 {
     return (kazrogal && kazrogal->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
@@ -536,7 +535,8 @@ float GetKazrogalRangedArcSpan(float radius)
 
 bool IsKazrogalManaUser(PlayerbotAI* botAI) // By leewheel 2026-09-06 采纳brighton botAI参数签名
 {
-    switch (botAI->GetBot()->getClass())
+    Player* bot = botAI->GetBot();
+    switch (bot->getClass())
     {
         case CLASS_WARRIOR:
         case CLASS_ROGUE:
@@ -544,8 +544,7 @@ bool IsKazrogalManaUser(PlayerbotAI* botAI) // By leewheel 2026-09-06 采纳brig
             return false;
 
         case CLASS_DRUID:
-            return !botAI->HasStrategy("bear", BOT_STATE_COMBAT) &&
-                !botAI->HasStrategy("cat", BOT_STATE_COMBAT);
+            return PlayerbotAI::IsRanged(bot);
 
         default:
             return true;

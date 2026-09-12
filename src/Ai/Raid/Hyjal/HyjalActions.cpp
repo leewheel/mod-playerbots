@@ -46,7 +46,12 @@ bool HyjalResetEncounterStatesAction::Execute(Event /*event*/)
         reset = true;
     }
 
-    reset |= botsBelowManaThreshold.erase(bot->GetGUID()) > 0;
+    if (AI_VALUE(bool, "kaz'rogal below mana threshold"))
+    {
+        RESET_AI_VALUE(bool, "kaz'rogal below mana threshold");
+        reset = true;
+    }
+
     reset |= archimondeAirBurstTargets.erase(bot->GetInstanceId()) > 0;
 
     return reset;
@@ -271,18 +276,15 @@ bool AnetheronMoveAwayFromInfernoTargetAction::Execute(Event /*event*/)
 // the 3.5s cast ends. Both cases are the same job: carry it to the gathering spot
 bool AnetheronBringInfernalToInfernalTankAction::Execute(Event /*event*/)
 {
-    Position const& position = GetInfernalTankPosition(bot);
-    float const distToPosition = bot->GetExactDist2d(position);
-
-    if (distToPosition <= 2.0f)
+    constexpr float arrivalDist = 2.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(
+            bot, GetInfernalTankPosition(bot), arrivalDist, nullptr, moveX, moveY, backwards))
+    {
         return false;
-
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-    constexpr float maxMoveDist = 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToPosition);
-    float const moveX = botX + ((position.GetPositionX() - botX) / distToPosition) * moveDist;
-    float const moveY = botY + ((position.GetPositionY() - botY) / distToPosition) * moveDist;
+    }
 
     return MoveTo(
         HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
@@ -401,27 +403,26 @@ bool KazrogalSpreadRangedInArcAction::Execute(Event /*event*/)
     float const targetX = kazrogal->GetPositionX() + arcRadius * std::cos(angle);
     float const targetY = kazrogal->GetPositionY() + arcRadius * std::sin(angle);
 
-    float const distToTarget = bot->GetExactDist2d(targetX, targetY);
-    if (distToTarget <= 0.5f)
+    constexpr float moveDist = 3.5f;
+    float moveX;
+    float moveY;
+    float moveZ;
+    if (!CanTakeStepTowards(bot, targetX, targetY, moveDist, moveX, moveY, moveZ))
         return false;
 
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-    constexpr float maxMoveDist = 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToTarget);
-    float const moveX = botX + ((targetX - botX) / distToTarget) * moveDist;
-    float const moveY = botY + ((targetY - botY) / distToTarget) * moveDist;
-
     return MoveTo(
-        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+        // By leewheel 2026-09-13 合并brighton caa4094e: 采纳上游 b5a282be —— CanTakeStepTowards 新增
+        //   moveZ 输出参数后，MoveTo 应使用该步进高度 moveZ，而非当前 bot->GetPositionZ()（后者会把
+        //   斜坡/台阶上的水平移动强行拉平回原地高度）。
+        HYJAL_MAP_ID, moveX, moveY, moveZ, false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
 bool KazrogalMoveAwayFromGroupAction::Execute(Event /*event*/)
 {
     if (bot->GetPower(POWER_MANA) > MARK_REJOIN_MANA)
     {
-        botsBelowManaThreshold.erase(bot->GetGUID());
+        RESET_AI_VALUE(bool, "kaz'rogal below mana threshold");
         return false;
     }
 
@@ -566,17 +567,15 @@ bool AzgalorRangedGetOutOfRainOfFireAction::Execute(Event /*event*/)
 // 该站位点位于萨尔要塞下方两条通路之间
 bool AzgalorMoveToDoomguardTankAction::Execute(Event /*event*/)
 {
-    Position const& position = AZGALOR_DOOMGUARD_POSITION;
-    float const distToPosition = bot->GetExactDist2d(position);
-    if (distToPosition <= 5.0f)
+    constexpr float arrivalDist = 5.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(
+            bot, AZGALOR_DOOMGUARD_POSITION, arrivalDist, nullptr, moveX, moveY, backwards))
+    {
         return false;
-
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-    constexpr float maxMoveDist = 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToPosition);
-    float const moveX = botX + ((position.GetPositionX() - botX) / distToPosition) * moveDist;
-    float const moveY = botY + ((position.GetPositionY() - botY) / distToPosition) * moveDist;
+    }
 
     return MoveTo(
         HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
@@ -841,16 +840,18 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
     if (inPosition)
         return false;
 
-    float const distToBoss = bot->GetExactDist2d(archimonde);
-    if (distToBoss < 0.5f)
+    constexpr float arrivalDist = 0.5f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(
+            bot, archimonde->GetPosition(), arrivalDist, nullptr, moveX, moveY, backwards))
+    {
         return false;
-
-    // A whole step every time, letting the test above stop it. Trimming the last step to land
-    // exactly on the range would need that range back in centre-to-centre terms, which is the
-    // conversion this is avoiding
-    constexpr float maxMoveDist = 3.5f;
-    float const moveX = botX + ((archimonde->GetPositionX() - botX) / distToBoss) * maxMoveDist;
-    float const moveY = botY + ((archimonde->GetPositionY() - botY) / distToBoss) * maxMoveDist;
+        // By leewheel 2026-09-13 合并brighton caa4094e: 采纳上游重构 —— moveX/moveY 已由上方
+        //   GetStepToPosition 求出（第 843~848 行），此处闭合 if 即可；我方旧版在该处又按
+        //   botX/botY/distToBoss 手工重算了一次 moveX/moveY，与上方 float moveX; 声明重复定义。
+    }
 
     // A trail lying between the bot and Archimonde is the ordinary case for ranged, not a corner
     // one: it walks the floor they stand off. Stepping into it only to be shoved straight back out

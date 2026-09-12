@@ -12,6 +12,7 @@
 #include "HunterActions.h"
 #include "MageActions.h"
 #include "Playerbots.h"
+#include "PriestActions.h"
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "ShamanActions.h"
@@ -229,8 +230,11 @@ float KaelthasSunstriderWaitForDpsMultiplier::GetValueInEncounter(Action* action
     if (!dynamic_cast<CastSpellAction*>(action) && !dynamic_cast<AttackAction*>(action))
         return 1.0f;
 
-    if (dynamic_cast<CastHealingSpellAction*>(action))
+    if (dynamic_cast<CastHealingSpellAction*>(action) ||
+        dynamic_cast<CastFearWardOnMainTankAction*>(action))
+    {
         return 1.0f;
+    }
 
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
@@ -307,32 +311,37 @@ float KaelthasSunstriderControlMisdirectionMultiplier::GetValueInEncounter(Actio
 
 // This multiplier is not needed right now because Soulshatter is cast only when there are
 // multiple enemies. That's probably not the right approach and should be fixed, so this
-// multiplier remains in place in anticipation of a future correction to Soulshatter usage.
-float KaelthasSunstriderDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (bot->getClass() != CLASS_WARLOCK)
-        return 1.0f;
-
-    if (!dynamic_cast<CastSoulshatterAction*>(action))
-        return 1.0f;
-
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
-    if (!kaelthas)
-        return 1.0f;
-
-    uint32 const phase = GetKaelthasTkPhase(kaelthas);
-    if (phase != PHASE_SINGLE_ADVISOR && phase != PHASE_ALL_ADVISORS)
-        return 1.0f;
-
-    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
-    if (!IsAdvisorActive(capernian))
-        return 1.0f;
-
-    return GetCapernianTank(bot) == bot ? 0.0f : 1.0f;
-}
+// By leewheel 2026-09-13 合并brighton caa4094e(9 提交, TK/Hyjal/SSC/Gruul):
+//   采纳上游「注释停用 Soulshatter multiplier」—— 上游同一批提交已同步注释 TKMultipliers.h 的类声明
+//   与 TKStrategy.cpp 的注册行；此处若保留活代码定义，会因类未声明而编译失败。
+//   原实现体内的 "19622"(凯尔萨斯)/"20062"(大星术师卡普尼恩) 系 rule81 entry 化写法，一并保留在注释中备查。
+// multiplier is kept (commented out) in anticipation of a future correction to Soulshatter usage.
+// float KaelthasSunstriderDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(Action* action)
+// {
+//     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+//         return 1.0f;
+//
+//     if (bot->getClass() != CLASS_WARLOCK)
+//         return 1.0f;
+//
+//     if (!dynamic_cast<CastSoulshatterAction*>(action))
+//         return 1.0f;
+//
+//     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+//     if (!kaelthas)
+//         return 1.0f;
+//
+//     uint32 const phase = GetKaelthasTkPhase(kaelthas);
+//     if (phase != PHASE_SINGLE_ADVISOR && phase != PHASE_ALL_ADVISORS)
+//         return 1.0f;
+//
+//     Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
+//     if (!IsAdvisorActive(capernian))
+//         return 1.0f;
+//
+//     return GetCapernianTank(bot) == bot ? 0.0f : 1.0f;
+// }
+// End By leewheel
 
 float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValueInEncounter(Action* action)
 {
@@ -508,7 +517,7 @@ float KaelthasSunstriderDelayCooldownsMultiplier::GetValueInEncounter(Action* ac
 
 float KaelthasSunstriderStaySpreadDuringGravityLapseMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!bot->HasAura(Id(TkSpells::SPELL_GRAVITY_LAPSE)))
+    if (!bot->HasAura(Id(TkSpells::SPELL_GRAVITY_LAPSE_AURA)))
         return 1.0f;
 
     if (!dynamic_cast<MovementAction*>(action) &&
