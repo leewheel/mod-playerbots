@@ -43,7 +43,11 @@ bool HeiganBossHelper::UpdateBossAI()
             return false;
         }
 
-        _unit = AI_VALUE2(Unit*, "find target", "heigan the unclean");
+        // By leewheel 2026-09-12 - 规则81：boss 名称一律 entry 化。原英文名 "heigan the unclean"
+        //   在本项目中文 creature_template（肮脏的希尔盖）下无法命中，该 helper 实为失效查找；
+        //   15936 = Heigan the Unclean（Naxx 其余 boss 助手均为 entry，唯此处遗漏）
+        _unit = AI_VALUE2(Unit*, "find target", "15936");
+        // End By leewheel
         if (!_unit)
             return false;
     }

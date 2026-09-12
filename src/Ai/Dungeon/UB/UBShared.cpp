@@ -58,7 +58,10 @@ float MaxEffectRadius(uint32 spellId, float fallback)
 
 Unit* HungarfenTarget(AiObjectContext* context)
 {
-    return AI_VALUE2(Unit*, "find target", "hungarfen");
+    // By leewheel 2026-09-12 - 规则81：boss 名称一律 entry 化（同目录 UBActions/UBMultipliers/UBTriggers
+    //   均已使用 entry）。原英文名 "hungarfen" 在本项目中文 creature_template 下无法命中；17770 = Hungarfen
+    return AI_VALUE2(Unit*, "find target", "17770");
+    // End By leewheel
 }
 
 ObjectGuid FindHungarfenGuid(Player* bot)
