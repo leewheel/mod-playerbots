@@ -36,7 +36,7 @@ bool SunwellNoEncounterInProgressTrigger::IsActive()
     // End By leewheel
 }
 
-bool SunwellBotHasAuraToRemoveTrigger::IsActive()
+bool SunwellAuraToRemoveTrigger::IsActive()
 {
     uint32 const spellId = GetSelfImmunitySpell(bot);
     if (spellId && bot->getClass() != CLASS_ROGUE && !PlayerbotAI::IsHeal(bot) &&
@@ -149,7 +149,7 @@ bool KalecgosSpectralRiftIsOpenTrigger::IsActiveInEncounter()
     return botAI->GetGameObject(AI_VALUE(ObjectGuid, "kalecgos spectral rift"));
 }
 
-bool KalecgosBotsTakeSplashDamageTrigger::IsActiveInEncounter()
+bool KalecgosRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
         return false;
@@ -246,7 +246,7 @@ bool BrutallusRangedShouldSoakMeteorSlashTrigger::IsActiveInEncounter()
     return brutallus && brutallus->GetVictim() != bot;
 }
 
-bool BrutallusBotIsBurningTrigger::IsActiveInEncounter()
+bool BrutallusBurnOnNonTankTrigger::IsActiveInEncounter()
 {
     if (!HasBrutallusBurn(bot))
         return false;
@@ -352,7 +352,7 @@ bool FelmystMeleeShouldStayTogetherTrigger::IsActiveInEncounter()
     return !GetFelmystEncapsulateTarget(bot) && !DidEncapsulateOccurThisGroundPhase(bot);
 }
 
-bool FelmystBotIsEncapsulatedTrigger::IsActiveInEncounter()
+bool FelmystEncapsulateOnMageOrPaladinTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_MAGE && bot->getClass() != CLASS_PALADIN)
         return false;
@@ -363,7 +363,7 @@ bool FelmystBotIsEncapsulatedTrigger::IsActiveInEncounter()
     return !PlayerbotAI::IsMainTank(bot);
 }
 
-bool FelmystBotNearEncapsulatedPlayerTrigger::IsActiveInEncounter()
+bool FelmystNearEncapsulatedPlayerTrigger::IsActiveInEncounter()
 {
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst || felmyst->IsFlying())
@@ -408,7 +408,7 @@ bool FelmystShouldAvoidDemonicVaporTrailsTrigger::IsActiveInEncounter()
     return !TryGetActiveFogOfCorruptionState(bot, felmyst, fogState);
 }
 
-bool FelmystBotIsDemonicVaporTargetTrigger::IsActiveInEncounter()
+bool FelmystTargetedByDemonicVaporTrigger::IsActiveInEncounter()
 {
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
     if (!felmyst || !felmyst->IsFlying())
@@ -634,7 +634,7 @@ bool MuruVoidSentinelOrEntropiusHasAppearedTrigger::IsActiveInEncounter()
     return entropius && entropius->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT;
 }
 
-bool MuruBossTransformedIntoEntropiusTrigger::IsActiveInEncounter()
+bool MuruTransformedIntoEntropiusTrigger::IsActiveInEncounter()
 {
     return PlayerbotAI::IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "25840");
 }
@@ -799,7 +799,11 @@ bool MuruTheSingularityIsNearTrigger::IsActiveInEncounter()
 
 bool KiljaedenShouldCoordinateOrbUseTrigger::IsActive()
 {
-    // By leewheel 2026-08-29 合并：采用对侧龙珠公告去重状态检查(afa0e30a orb announcements)，entry规则查找
+    // By leewheel 2026-08-29 合并：采用对侧龙珠公告去重状态检查(afa0e30a orb announcements)
+    // By leewheel 2026-09-12 合并brighton b72069ab(trigger renames): 采纳其"平台范围 + hands向量"判定,
+    //   取代原先按 entry 25588(hand of the deceiver) 的单目标查找; 与相邻
+    //   KiljaedenHandsOfTheDeceiverAreActiveTrigger 写法保持一致, 也不再依赖英文名
+    // End By leewheel
     if (!IsMechanicTrackerBot(bot, SWP_MAP_ID))
         return false;
 
@@ -807,8 +811,10 @@ bool KiljaedenShouldCoordinateOrbUseTrigger::IsActive()
     if (stateItr != kiljaedenEncounterStates.end() && stateItr->second.dragonOrbAnnouncementMs)
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "25588");
-    // End By leewheel
+    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
+        return false;
+
+    return !AI_VALUE(GuidVector, "kiljaeden hands").empty();
 }
 
 bool KiljaedenHandsOfTheDeceiverAreActiveTrigger::IsActive()
@@ -836,7 +842,7 @@ bool KiljaedenTanksShouldHoldBossAndReflectionsTrigger::IsActiveInEncounter()
     return !IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden);
 }
 
-bool KiljaedenBossEngagedByMeleeTrigger::IsActiveInEncounter()
+bool KiljaedenMeleeShouldSplitIntoTwoGroupsTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsMelee(bot) || PlayerbotAI::IsTank(bot))
         return false;
@@ -851,7 +857,7 @@ bool KiljaedenBossEngagedByMeleeTrigger::IsActiveInEncounter()
     return !IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden);
 }
 
-bool KiljaedenBossEngagedByRangedTrigger::IsActiveInEncounter()
+bool KiljaedenRangedShouldSpreadInTwoArcsTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
         return false;
@@ -873,7 +879,7 @@ bool KiljaedenBossEngagedByRangedTrigger::IsActiveInEncounter()
     return true;
 }
 
-bool KiljaedenBotHasFireBloomTrigger::IsActiveInEncounter()
+bool KiljaedenFireBloomOnImmunityClassTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_MAGE &&
         bot->getClass() != CLASS_PALADIN)
@@ -939,24 +945,12 @@ bool KiljaedenDragonOrbIsActiveTrigger::IsActiveInEncounter()
     return result;
 }
 
-bool KiljaedenBotHasStaleRootAfterDragonTrigger::IsActiveInEncounter()
-{
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
-    if (!kiljaeden || kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD)
-        return false;
-
-    if (GetKiljaedenDragonOrbUser(bot) != bot)
-        return false;
-
-    if (!bot->IsRooted() || bot->HasUnitState(UNIT_STATE_LOST_CONTROL))
-        return false;
-
-    if (HasKiljaedenDragonAura(bot) || HasRecentKiljaedenDragonOrbUse(bot, DRAGON_ORB_USE_GRACE_MS))
-        return false;
-
-    return bot->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == NULL_MOTION_TYPE;
-}
-
+// By leewheel 2026-09-12 合并brighton b72069ab(KJ drake root madness + trigger renames):
+//   原先本处的 KiljaedenBotHasStaleRootAfterDragonTrigger 已被 brighton 撤销/并入:
+//   龙变身后"卡在原地"的判定改由 KiljaedenStaleRootAfterDragonTrigger 承担(见下方),
+//   其逻辑从"龙珠使用者 + IsRooted + 相位阈值"改为 HasUsedKiljaedenDragonOrb + HasStaleRootFlag,
+//   与新增的 ReleaseStaleRootFlag 释放机制配套; 此处整块随 brighton 删除
+// End By leewheel
 bool KiljaedenBotControlsDragonTrigger::IsActiveInEncounter()
 {
     if (!AI_VALUE2(Unit*, "find target", "25315"))
@@ -966,4 +960,16 @@ bool KiljaedenBotControlsDragonTrigger::IsActiveInEncounter()
         return false;
 
     return GetKiljaedenControlledDragon(bot);
+}
+
+bool KiljaedenStaleRootAfterDragonTrigger::IsActiveInEncounter()
+{
+    // Shield of the Blue stuns the drake it is cast from, and that stun is applied to the orb user
+    // bot as well. The drake dies on the last tick of the second Shield of the Blue cast, which
+    // occurs before the aura expires, so the drake dies still stunned, leaving the bot stunned as
+    // well and rooted mid-encounter.
+    if (!HasUsedKiljaedenDragonOrb(bot) || HasKiljaedenDragonAura(bot))
+        return false;
+
+    return HasStaleRootFlag(bot);
 }

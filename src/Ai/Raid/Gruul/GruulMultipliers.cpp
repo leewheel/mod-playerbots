@@ -238,7 +238,10 @@ float GruulTheDragonkillerControlAvoidanceMultiplier::GetValueInEncounter(Action
     if (HasGroundSlam(bot))
         return 1.0f;
 
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
+    // By leewheel 2026-09-12 按 AGENTS.md 第81条修正历史遗留英文名:
+    //   19044 = 屠龙者格鲁尔, 本目录其余 40+ 处均已有entry, 此处补齐
+    // End By leewheel
+    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
     if (!gruul)
         return 1.0f;
 

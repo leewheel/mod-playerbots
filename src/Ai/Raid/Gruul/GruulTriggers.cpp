@@ -73,7 +73,7 @@ bool HighKingMaulgarDeterminingKillOrderTrigger::IsActiveInEncounter()
     return true;
 }
 
-bool HighKingMaulgarBossChannelingWhirlwindTrigger::IsActiveInEncounter()
+bool HighKingMaulgarChannelingWhirlwindTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-08-29 修复：旋风斩是 High King Maulgar(18836) 的技能，
     // 旧代码误用 18831(Blindeye the Seer) 导致该触发器永远无法在正确的boss身上生效
@@ -127,7 +127,9 @@ bool GruulTheDragonkillerRangedShouldSpreadTrigger::IsActiveInEncounter()
 
 bool GruulTheDragonkillerInCaveInTrigger::IsActiveInEncounter()
 {
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
+    // By leewheel 2026-09-12 按 AGENTS.md 第81条修正历史遗留英文名: 19044 = 屠龙者格鲁尔
+    // End By leewheel
+    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
     if (!gruul)
         return false;
 

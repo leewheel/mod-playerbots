@@ -24,7 +24,7 @@ bool TempestKeepNoEncounterInProgressTrigger::IsActive()
     return IsMechanicTrackerBot(bot, TK_MAP_ID);
 }
 
-bool TempestKeepBotIsStuckFallingTrigger::IsActive()
+bool TempestKeepStuckFallingTrigger::IsActive()
 {
     if (!bot->HasUnitMovementFlag(MOVEMENTFLAG_FALLING) || !bot->movespline->Finalized())
         return false;
@@ -56,7 +56,7 @@ bool AlarPullingBossTrigger::IsActiveInEncounter()
     // End By leewheel
 }
 
-bool AlarBossIsFlyingBetweenPlatformsTrigger::IsActiveInEncounter()
+bool AlarFliesBetweenPlatformsTrigger::IsActiveInEncounter()
 {
     Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     if (!alar || IsAlarInPhase2(alar->GetInstanceId()))
@@ -104,7 +104,7 @@ bool AlarRisingFromTheAshesTrigger::IsActiveInEncounter()
         GetAlarDestinationLocationIndex(alar) != POINT_QUILL_OR_DIVE_IDX;
 }
 
-bool AlarIsInPhase2Trigger::IsActiveInEncounter()
+bool AlarInPhase2Trigger::IsActiveInEncounter()
 {
     Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
     return alar && IsAlarInPhase2(alar->GetInstanceId());
@@ -176,7 +176,7 @@ bool HighAstromancerSolarianShouldBeTankedTrigger::IsActiveInEncounter()
     return astromancerCreature && astromancerCreature->GetReactState() != REACT_PASSIVE;
 }
 
-bool HighAstromancerSolarianBotHasWrathOfTheAstromancerTrigger::IsActiveInEncounter()
+bool HighAstromancerSolarianWrathOfTheAstromancerTrigger::IsActiveInEncounter()
 {
     return HasWrathOfTheAstromancer(bot);
 }
@@ -191,7 +191,7 @@ bool HighAstromancerSolarianSolariumPriestsSpawnedTrigger::IsActiveInEncounter()
 
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
-bool KaelthasSunstriderThaladredIsFixatedOnBotTrigger::IsActiveInEncounter()
+bool KaelthasSunstriderChasedByThaladredTrigger::IsActiveInEncounter()
 {
     Unit* thaladred = AI_VALUE2(Unit*, "find target", "20064");
     if (!thaladred || thaladred->GetVictim() != bot)
@@ -243,7 +243,7 @@ bool KaelthasSunstriderCapernianShouldBeTankedByWarlockTrigger::IsActiveInEncoun
     return IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20062"));
 }
 
-bool KaelthasSunstriderCapernianBlowsUpNearAndFarTrigger::IsActiveInEncounter()
+bool KaelthasSunstriderShouldStandBackFromCapernianTrigger::IsActiveInEncounter()
 {
     if (!IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20062")))
         return false;
@@ -254,7 +254,7 @@ bool KaelthasSunstriderCapernianBlowsUpNearAndFarTrigger::IsActiveInEncounter()
     return true;
 }
 
-bool KaelthasSunstriderBotsShouldHoldPhase3PositionsTrigger::IsActiveInEncounter()
+bool KaelthasSunstriderShouldHoldPhase3PositionsTrigger::IsActiveInEncounter()
 {
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
@@ -390,7 +390,7 @@ bool KaelthasSunstriderLegendaryWeaponsWereLostTrigger::IsActive()
     return false;
 }
 
-bool KaelthasSunstriderBossHasEnteredTheFightTrigger::IsActiveInEncounter()
+bool KaelthasSunstriderHasEnteredTheFightTrigger::IsActiveInEncounter()
 {
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas)
@@ -405,7 +405,9 @@ bool KaelthasSunstriderShouldAssignFinalPhaseTargetTrigger::IsActiveInEncounter(
     if (PlayerbotAI::IsMainTank(bot))
         return false;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+    // By leewheel 2026-09-12 按 AGENTS.md 第81条修正历史遗留英文名: 19622 = 凯尔萨斯·逐日者(风暴要塞)
+    // End By leewheel
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
     if (!kaelthas || kaelthas->GetVictim() == bot)
         return false;
     // End By leewheel
@@ -442,7 +444,7 @@ bool KaelthasSunstriderRaidMemberIsMindControlledTrigger::IsActiveInEncounter()
     return false;
 }
 
-bool KaelthasSunstriderBossIsManipulatingGravityTrigger::IsActiveInEncounter()
+bool KaelthasSunstriderInGravityLapsePhaseTrigger::IsActiveInEncounter()
 {
     constexpr float gravityLapseHpThreshold = 50.0f;
     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");

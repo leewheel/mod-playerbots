@@ -1856,7 +1856,10 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::Execute(Event /*event*/)
         if (Unit* phoenix = GetAssignedPhoenix())
             return AssistTankPicksUpPhoenix(phoenix);
 
-        Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider");
+        // By leewheel 2026-09-12 按 AGENTS.md 第81条修正历史遗留英文名:
+        //   19622 = 凯尔萨斯·逐日者(风暴要塞), 本目录其余 20+ 处均已有entry, 此处补齐
+        // End By leewheel
+        Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
         if (!kaelthas || kaelthas->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
             return false;
 

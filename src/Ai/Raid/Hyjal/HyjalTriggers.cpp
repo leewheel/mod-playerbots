@@ -100,10 +100,12 @@ bool AnetheronRangedShouldSpreadTrigger::IsActiveInEncounter()
 }
 
 // By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名IsActiveInEncounter(brighton的encounter门控框架)
+// By leewheel 2026-09-12 合并brighton b72069ab(trigger renames): 类名随之改为 AnetheronNearInfernoTargetTrigger
 // Whoever is holding Anetheron stays put: walking him across the platform costs the raid more than
 // a two second stun costs one bot. The Inferno target itself is excluded because it has its own job
 // -- carrying the summon to the gathering spot -- and nothing it does avoids a stun centred on it
-bool AnetheronBotIsNearInfernoTargetTrigger::IsActiveInEncounter()
+// End By leewheel
+bool AnetheronNearInfernoTargetTrigger::IsActiveInEncounter()
 {
     Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron || anetheron->GetVictim() == bot)
@@ -116,7 +118,7 @@ bool AnetheronBotIsNearInfernoTargetTrigger::IsActiveInEncounter()
     return bot->GetExactDist2d(infernoTarget) < INFERNAL_ESCAPE_DISTANCE;
 }
 
-bool AnetheronBotIsTargetedByInfernalTrigger::IsActiveInEncounter()
+bool AnetheronTargetedByInfernalTrigger::IsActiveInEncounter()
 {
     Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
     if (!anetheron || anetheron->GetVictim() == bot)
@@ -195,7 +197,7 @@ bool KazrogalRangedShouldAvoidWarStompTrigger::IsActiveInEncounter()
     return !botsBelowManaThreshold.contains(bot->GetGUID());
 }
 
-bool KazrogalBotIsLowOnManaTrigger::IsActiveInEncounter()
+bool KazrogalLowOnManaTrigger::IsActiveInEncounter()
 {
     if (!IsKazrogalManaUser(botAI))
         return false;
@@ -378,7 +380,7 @@ bool AzgalorShouldDivideDpsTrigger::IsActiveInEncounter()
 
 // Archimonde
 
-bool ArchimondeBossCastsFearTrigger::IsActiveInEncounter()
+bool ArchimondeShamanShouldProtectAgainstFearTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_SHAMAN)
         return false;
@@ -390,7 +392,7 @@ bool ArchimondeBossCastsFearTrigger::IsActiveInEncounter()
     return !HasProtectionOfElune(bot);
 }
 
-bool ArchimondeBossCastingAirBurstTrigger::IsActiveInEncounter()
+bool ArchimondeCastingAirBurstTrigger::IsActiveInEncounter()
 {
     Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
     if (!archimonde || archimonde->GetVictim() == bot)
@@ -420,7 +422,7 @@ bool ArchimondeRangedShouldSpreadTrigger::IsActiveInEncounter()
     return !HasProtectionOfElune(bot);
 }
 
-bool ArchimondeBotIsNearDoomfireTrigger::IsActiveInEncounter()
+bool ArchimondeNearDoomfireTrigger::IsActiveInEncounter()
 {
     if (!AI_VALUE2(Unit*, "find target", "17968"))
         return false;
@@ -437,7 +439,7 @@ bool ArchimondeBotIsNearDoomfireTrigger::IsActiveInEncounter()
     return IsNearDoomfire(botAI, DOOMFIRE_CONTROL_RADIUS);
 }
 
-bool ArchimondeBotStoodInDoomfireTrigger::IsActiveInEncounter()
+bool ArchimondeStoodInDoomfireTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_MAGE && bot->getClass() != CLASS_ROGUE &&
         bot->getClass() != CLASS_PALADIN)
