@@ -145,10 +145,14 @@ std::string NewRpgInfo::ToString()
         }
         else if constexpr (std::is_same_v<T, WanderNpc>)
         {
+            // By leewheel 2026-09-14 合并brighton 11404fea: 采纳上游把 npcOrGo 输出扩展为
+            //   "entry + guid" 的新写法；文案沿用我方汉化。
             out << "游荡NPC";
-            out << "\nNPC/对象ID: " << arg.npcOrGo.GetCounter();
+            out << "\nNPC/对象: entry " << arg.npcOrGo.GetEntry() << " (guid " << arg.npcOrGo.GetCounter()
+                << ")";
             out << "\n上次游荡: " << startT;
             out << "\n上次到达: " << arg.lastReach;
+            // End By leewheel
         }
         else if constexpr (std::is_same_v<T, WanderRandom>)
         {
