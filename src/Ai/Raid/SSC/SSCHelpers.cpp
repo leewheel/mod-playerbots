@@ -20,39 +20,6 @@ using namespace EncounterHelpers;
 namespace SscHelpers
 {
 
-namespace
-{
-
-// A step towards a point on a circle, at the angle nearest to preferred that the bot can reach.
-bool FindStepToCircle(
-    Player* bot, Position const& center, float radius, float preferredAngle, float moveDist,
-    float& stepX, float& stepY, float& stepZ)
-{
-    float const centerX = center.GetPositionX();
-    float const centerY = center.GetPositionY();
-
-    constexpr uint8 fanSteps = 8;
-    constexpr float fanStep = static_cast<float>(M_PI) / fanSteps;
-
-    for (uint8 step = 0; step <= fanSteps; ++step)
-    {
-        float const delta = fanStep * step;
-        uint8 const candidates = (step == 0) ? 1 : 2;
-        for (uint8 i = 0; i < candidates; ++i)
-        {
-            float const angle = preferredAngle + (i == 0 ? delta : -delta);
-            float const targetX = centerX + std::cos(angle) * radius;
-            float const targetY = centerY + std::sin(angle) * radius;
-
-            if (CanTakeStepTowards(bot, targetX, targetY, moveDist, stepX, stepY, stepZ))
-                return true;
-        }
-    }
-
-    return false;
-}
-
-} // end anonymous namespace
 
 // Trash
 
@@ -61,20 +28,56 @@ std::vector<Position> const& GetCachedHazardPositions(PlayerbotAI* botAI, std::s
     return botAI->GetAiObjectContext()->GetValue<std::vector<Position>>(value)->RefGet();
 }
 
-bool GetHazardEscapeStep(
-    Player* bot, Position const& hazard, float escapeRadius, float moveDist, float& stepX,
-    float& stepY, float& stepZ)
+bool FindHazardEscapeStep(
+    Player* bot, Position const& hazard, float moveDist, float& stepX, float& stepY,
+    float& stepZ, std::function<bool(float, float)> const& isAcceptable)
 {
-    float const centerX = hazard.GetPositionX();
-    float const centerY = hazard.GetPositionY();
-    float escapeAngle =
-        std::atan2(bot->GetPositionY() - centerY, bot->GetPositionX() - centerX);
+    float const botX = bot->GetPositionX();
+    float const botY = bot->GetPositionY();
+    float const botDistance = bot->GetExactDist2d(hazard);
 
-    if (bot->GetExactDist2d(centerX, centerY) <= 0.1f)
+    float escapeAngle = std::atan2(botY - hazard.GetPositionY(), botX - hazard.GetPositionX());
+    if (botDistance <= 0.1f)
         escapeAngle = bot->GetOrientation();
 
-    return FindStepToCircle(
-        bot, hazard, escapeRadius, escapeAngle, moveDist, stepX, stepY, stepZ);
+    constexpr uint8 fanSteps = 16;
+    constexpr float fanStep = static_cast<float>(M_PI) / fanSteps;
+
+    for (uint8 step = 0; step <= fanSteps; ++step)
+    {
+        float const delta = fanStep * step;
+        uint8 const candidates = (step == 0) ? 1 : 2;
+        for (uint8 i = 0; i < candidates; ++i)
+        {
+            float const angle = escapeAngle + (i == 0 ? delta : -delta);
+            float const candidateX = botX + std::cos(angle) * moveDist;
+            float const candidateY = botY + std::sin(angle) * moveDist;
+
+            if (hazard.GetExactDist2d(candidateX, candidateY) <= botDistance)
+                continue;
+
+            if (isAcceptable && !isAcceptable(candidateX, candidateY))
+                continue;
+
+            if (CanTakeStepTowards(bot, candidateX, candidateY, moveDist, stepX, stepY, stepZ))
+                return true;
+        }
+    }
+
+    return false;
+}
+
+bool IsDryGround(Player* bot, float x, float y)
+{
+    float const ground = bot->GetMapHeight(x, y, bot->GetPositionZ());
+    if (ground <= INVALID_HEIGHT)
+        return false;
+
+    LiquidData const liquid = bot->GetMap()->GetLiquidData(
+        bot->GetPhaseMask(), x, y, bot->GetPositionZ(), bot->GetCollisionHeight(), {});
+
+    constexpr float clearance = 0.5f;
+    return liquid.Level <= INVALID_HEIGHT || ground > liquid.Level - clearance;
 }
 
 bool GetToxicPoolPosition(PlayerbotAI* botAI, Position& toxicPool)
@@ -189,65 +192,6 @@ int8 GetLurkerSpoutSpin(Unit* lurker)
         return -1;
 
     return 0;
-}
-
-bool GetLurkerRangedStation(Player* bot, Position& station)
-{
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-
-    bool const healer = PlayerbotAI::IsHeal(bot);
-    std::vector<Player*> peers;
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (member && member->GetMapId() == SSC_MAP_ID && GET_PLAYERBOT_AI(member) &&
-            PlayerbotAI::IsRanged(member) && PlayerbotAI::IsHeal(member) == healer)
-        {
-            peers.push_back(member);
-        }
-    }
-
-    auto const it = std::find(peers.begin(), peers.end(), bot);
-    if (it == peers.end())
-        return false;
-
-    size_t const index = static_cast<size_t>(std::distance(peers.begin(), it));
-    auto const& stations = healer ? LURKER_HEALER_STATIONS : LURKER_RANGED_DPS_STATIONS;
-    station = stations[index % stations.size()];
-    return true;
-}
-
-bool FindLurkerDivePoint(
-    Player* bot, Position const& station, Unit* lurker, Position& dive, float& waterLevel)
-{
-    Map* map = bot->GetMap();
-    float const angle = station.GetAngle(lurker);
-    constexpr std::array<float, 4> probeDistances = { 3.0f, 5.0f, 7.0f, 9.0f };
-
-    for (float const distance : probeDistances)
-    {
-        for (int8 side = 1; side >= -1; side -= 2)
-        {
-            float const x = station.GetPositionX() + side * distance * std::cos(angle);
-            float const y = station.GetPositionY() + side * distance * std::sin(angle);
-            LiquidData const liquid = map->GetLiquidData(
-                bot->GetPhaseMask(), x, y, station.GetPositionZ(), bot->GetCollisionHeight(), {});
-
-            if (liquid.Level <= INVALID_HEIGHT ||
-                liquid.Level - liquid.DepthLevel < LURKER_DIVE_DEPTH + 1.0f)
-            {
-                continue;
-            }
-
-            waterLevel = liquid.Level;
-            dive.Relocate(x, y, liquid.Level - LURKER_DIVE_DEPTH);
-            return true;
-        }
-    }
-
-    return false;
 }
 
 GuidVector FindLurkerGuardianGuids(Player* bot)

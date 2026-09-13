@@ -50,7 +50,7 @@ float AlarSuppressGapClosersMultiplier::GetValueInEncounter(Action* action)
     if (PlayerbotAI::IsTank(bot))
         return 1.0f;
 
-    // Block Charge, etc. for non-tanks when not at a platform
+    // Block Charge, etc. for non-tanks when not at a platform.
     int8 const currentLocationIndex = GetAlarCurrentLocationIndex(alar);
     return currentLocationIndex < PLATFORM_0_IDX ||
         currentLocationIndex > PLATFORM_3_IDX ? 0.0f : 1.0f;
@@ -251,12 +251,14 @@ float KaelthasSunstriderWaitForDpsMultiplier::GetValueInEncounter(Action* action
         return 1.0f;
     }
 
-    // Only the applicable tank may attack during the first 10 seconds of an advisor in phase 1
-    if (IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20060")))
+    // Only the applicable tank may attack during the first 10 seconds of an advisor in phase 1.
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游 IsCapernianTank() 简化写法（取代原先的
+    // "术士 + GetCapernianTank(bot) == bot" 组合判定），并按 AGENTS.md 第81条保留 entry 化写法。
+    if (IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20060")))  // 20060 = 萨古纳尔男爵
         return PlayerbotAI::IsMainTank(bot) ? 1.0f : 0.0f;
 
-    if (IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20062")))
-        return bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot ? 1.0f : 0.0f;
+    if (IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20062")))  // 20062 = 大星术师卡普尼恩
+        return IsCapernianTank(bot) ? 1.0f : 0.0f;
 
     if (IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20063")))
         return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) ? 1.0f : 0.0f;
@@ -310,12 +312,13 @@ float KaelthasSunstriderControlMisdirectionMultiplier::GetValueInEncounter(Actio
 }
 
 // This multiplier is not needed right now because Soulshatter is cast only when there are
-// multiple enemies. That's probably not the right approach and should be fixed, so this
-// By leewheel 2026-09-13 合并brighton caa4094e(9 提交, TK/Hyjal/SSC/Gruul):
-//   采纳上游「注释停用 Soulshatter multiplier」—— 上游同一批提交已同步注释 TKMultipliers.h 的类声明
-//   与 TKStrategy.cpp 的注册行；此处若保留活代码定义，会因类未声明而编译失败。
-//   原实现体内的 "19622"(凯尔萨斯)/"20062"(大星术师卡普尼恩) 系 rule81 entry 化写法，一并保留在注释中备查。
-// multiplier is kept (commented out) in anticipation of a future correction to Soulshatter usage.
+// multiple enemies. That's probably not the right approach and should be fixed, so this multiplier
+// remains here but commented out in anticipation of a future correction to Soulshatter usage.
+// By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游注释措辞。上游同一批提交已同步注释
+//   TKMultipliers.h 的类声明与 TKStrategy.cpp 的注册行，故此处只能保持停用 —— 若保留活代码定义，
+//   会因类未声明而编译失败。原实现体内的 entry 化写法（19622 凯尔萨斯 / 20062 大星术师卡普尼恩）
+//   一并保留在下方注释中备查。
+// End By leewheel
 // float KaelthasSunstriderDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(Action* action)
 // {
 //     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -339,7 +342,7 @@ float KaelthasSunstriderControlMisdirectionMultiplier::GetValueInEncounter(Actio
 //     if (!IsAdvisorActive(capernian))
 //         return 1.0f;
 //
-//     return GetCapernianTank(bot) == bot ? 0.0f : 1.0f;
+//     return IsCapernianTank(bot) ? 0.0f : 1.0f;
 // }
 // End By leewheel
 
@@ -376,7 +379,7 @@ float KaelthasSunstriderManageWeaponTankingMultiplier::GetValueInEncounter(Actio
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    // Try to keep main tank from grabbing aggro on any weapon other than the axe
+    // Try to keep main tank from grabbing aggro on any weapon other than the axe.
     if (!IsTauntAction(bot, action) && !IsAoeThreatAction(bot, action))
         return 1.0f;
 
@@ -473,14 +476,11 @@ float KaelthasSunstriderPrepareForPhase3Multiplier::GetValueInEncounter(Action* 
         return sanguinar && sanguinar->IsAlive() ? 0.0f : 1.0f;
     }
 
-    // The Sanguinar check is a proxy for the revival/Kael talk phase (any non-selectable advisor
-    // would do, since all four revive together, but Sanguinar is already needed for the healer).
     if (!sanguinar || !sanguinar->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         return 1.0f;
 
-    if (PlayerbotAI::IsMainTank(bot) ||
-        PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) ||
-        (bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot))
+    if (PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) ||
+        IsCapernianTank(bot))
     {
         return 0.0f;
     }

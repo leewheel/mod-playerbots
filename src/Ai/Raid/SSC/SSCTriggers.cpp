@@ -76,23 +76,12 @@ bool HydrossTheUnstableShouldManagePhaseTimersTrigger::IsActiveInEncounter()
 
 // The Lurker Below
 
-// Melee run around; ranged dive instead
 bool TheLurkerBelowSpoutIsActiveTrigger::IsActiveInEncounter()
 {
-    return !PlayerbotAI::IsRanged(bot) &&
-        IsLurkerSpouting(AI_VALUE2(Unit*, "find target", "21217"));
-}
-
-bool TheLurkerBelowRangedShouldHoldStationTrigger::IsActiveInEncounter()
-{
-    return PlayerbotAI::IsRanged(bot) &&
-        IsLurkerSurfacedAndCalm(AI_VALUE2(Unit*, "find target", "21217"));
-}
-
-bool TheLurkerBelowRangedShouldDiveTrigger::IsActiveInEncounter()
-{
-    return PlayerbotAI::IsRanged(bot) &&
-        IsLurkerSpouting(AI_VALUE2(Unit*, "find target", "21217"));
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游 e8ac948a 放弃"站位/下潜"方案
+    // （TheLurkerBelowRangedShouldHoldStationTrigger / ...ShouldDiveTrigger 已被上游删除），
+    // 保留 Spout 判定并按 AGENTS.md 第81条 entry 化（21217 = 深水领主卡拉瑟雷斯 The Lurker Below）
+    return IsLurkerSpouting(AI_VALUE2(Unit*, "find target", "21217"));
 }
 
 bool TheLurkerBelowShouldBeTankedTrigger::IsActiveInEncounter()

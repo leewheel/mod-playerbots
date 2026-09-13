@@ -35,7 +35,7 @@ bool MagtheridonAssistTanksShouldTankChannelersTrigger::IsActiveInEncounter()
         return false;
 
     if (GetChanneler(bot, NORTHWEST_CHANNELER_DB_GUID) &&
-        PlayerbotAI::IsAssistTankOfIndex(bot, 0, false))
+        PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
     {
         return true;
     }
@@ -63,8 +63,9 @@ bool MagtheridonDeterminingKillOrderTrigger::IsActiveInEncounter()
 
 bool MagtheridonBurningAbyssalSpawnedTrigger::IsActiveInEncounter()
 {
-    return bot->getClass() == CLASS_WARLOCK &&
-        AI_VALUE2(Unit*, "find target", "17454");
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游新 helper GetBurningAbyssals(botAI)，
+    // 不再需要按英文名"burning abyssal"/entry 17454 查找，故 rule81 entry 化在此处退役
+    return bot->getClass() == CLASS_WARLOCK && !GetBurningAbyssals(botAI).empty();
 }
 
 bool MagtheridonShouldBeTankedTrigger::IsActiveInEncounter()
@@ -90,12 +91,9 @@ bool MagtheridonShouldSpreadRangedTrigger::IsActiveInEncounter()
     if (!magtheridon || !IsMagtheridonActive(magtheridon) || magtheridon->GetVictim() == bot)
         return false;
 
-    /* constexpr uint32 dpsWaitMs = 6 * IN_MILLISECONDS;
-    auto it = dpsWaitTimer.find(magtheridon->GetMap()->GetInstanceId());
-    if (it == dpsWaitTimer.end() || getMSTimeDiff(it->second, getMSTime()) < dpsWaitMs)
-        return false; */
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 上游已彻底移除 dpsWait 计时分支
+    // （原 2026-08-26 的注释停用写法随之退役）
     // End By leewheel
-
     if (!IsCubeClicker(bot))
         return true;
 
@@ -108,16 +106,21 @@ bool MagtheridonShouldSpreadRangedTrigger::IsActiveInEncounter()
 
 bool MagtheridonStandingInDebrisTrigger::IsActiveInEncounter()
 {
-    if (!AI_VALUE2(Unit*, "find target", "17257"))
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游新增的 IsCeilingCollapsed 判定, 保留 entry 化
+    if (!IsCeilingCollapsed(bot) || !AI_VALUE2(Unit*, "find target", "17257"))
         return false;
 
-    return IsPositionInActiveDebris(bot, bot->GetPositionX(), bot->GetPositionY());
+    return IsPositionInActiveDebris(botAI, bot->GetPositionX(), bot->GetPositionY());
 }
 
 bool MagtheridonIncomingBlastNovaTrigger::IsActiveInEncounter()
 {
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游把 IsCubeClicker 提前的写法, 保留 entry 化
+    if (!IsCubeClicker(bot))
+        return false;
+
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
-    return magtheridon && IsMagtheridonActive(magtheridon) && IsCubeClicker(bot);
+    return magtheridon && IsMagtheridonActive(magtheridon);
 }
 
 bool MagtheridonShouldManageTimersAndAssignmentsTrigger::IsActiveInEncounter()

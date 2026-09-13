@@ -14,6 +14,7 @@
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
 #include "SSCHelpers.h"
+#include <algorithm>
 
 using namespace SscHelpers;
 using namespace EncounterHelpers;
@@ -65,20 +66,32 @@ bool UnderbogColossusEscapeToxicPoolAction::Execute(Event /*event*/)
     if (!GetToxicPoolPosition(botAI, pool))
         return false;
 
-    constexpr float moveDist = 10.0f;
-    constexpr float escapeMargin = 2.0f;
+    // The colossi stand on boardwalks over the lake; a player's pathfinder treats the water as
+    // reachable, so the ring point and the landing must both be on dry ground
+    auto const isDryGround = [this](float x, float y) { return IsDryGround(bot, x, y); };
+
+    // Short enough that a straight step follows the curve of the walk
+    constexpr float moveDist = 5.0f;
     float stepX;
     float stepY;
     float stepZ;
-    if (!GetHazardEscapeStep(
-            bot, pool, TOXIC_POOL_HAZARD_RADIUS + escapeMargin, moveDist, stepX, stepY, stepZ))
+    if (!FindHazardEscapeStep(bot, pool, moveDist, stepX, stepY, stepZ, isDryGround))
     {
+        LOG_DEBUG("playerbots", "toxic pool: {} found no dry escape step from ({:.1f}, {:.1f})",
+            bot->GetName(), pool.GetPositionX(), pool.GetPositionY());
         return false;
     }
 
-    return MoveTo(
-        SSC_MAP_ID, stepX, stepY, stepZ, false, false, false, false,
-        MovementPriority::MOVEMENT_COMBAT, true, false);
+    if (!MoveTo(
+            SSC_MAP_ID, stepX, stepY, stepZ, false, false, false, false,
+            MovementPriority::MOVEMENT_COMBAT, true, false))
+    {
+        LOG_DEBUG("playerbots", "toxic pool: {} MoveTo refused step ({:.1f}, {:.1f}, {:.1f})",
+            bot->GetName(), stepX, stepY, stepZ);
+        return false;
+    }
+
+    return true;
 }
 
 bool GreyheartTidecallerMarkWaterElementalTotemAction::Execute(Event /*event*/) // Deleted GetFirstAliveUnitByEntry, remains in helpers. Can FindNearestCreature get this totem?
@@ -303,12 +316,12 @@ bool HydrossTheUnstableManageTimersAction::Execute(Event /*event*/)
 
 // The Lurker Below
 
-// Run around Lurker to stay clear of Spout. The wind-up pins his facing to the victim, so
-// "behind" is a fixed point and the shortest way round is right. Once the aura is up the beam
+// Run around Lurker to stay clear of Spout. The 3s wind-up pins his facing to the victim, so the
+// safe arc behind him is fixed: a bot already in it holds its bearing and only trims its radius,
+// a bot in front heads for the nearer edge of the arc the short way. Once the aura is up the beam
 // sweeps at 0.4 rad/s, faster than any bot on the ring: running against it closes at 0.75 rad/s
 // and meets the beam every ~8s, running with it costs at most one crossing and then never again.
-// So the spin decides the direction and the bot simply keeps running. The cone is 24 degrees, so
-// anywhere well off the beam is safe and the personal offsets around "behind" can be wide.
+// So from then on the spin decides the direction and everyone simply keeps running.
 bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
 {
     Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
@@ -316,41 +329,44 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
         return false;
 
     uint32 const seed = bot->GetGUID().GetCounter();
-    float const radius = LURKER_SPOUT_RUN_RADIUS_MIN +
+    float const runRadius = LURKER_SPOUT_RUN_RADIUS_MIN +
         (LURKER_SPOUT_RUN_RADIUS_MAX - LURKER_SPOUT_RUN_RADIUS_MIN) * (seed % 100) / 100.0f;
-    float const arcOffset =
-        LURKER_SPOUT_RUN_ARC_HALF_WIDTH * ((seed % 200) - 100) / 100.0f;
 
+    float const distance = bot->GetExactDist2d(lurker);
     float const botAngle = std::atan2(
         bot->GetPositionY() - lurker->GetPositionY(), bot->GetPositionX() - lurker->GetPositionX());
-    float const targetAngle = lurker->GetOrientation() + static_cast<float>(M_PI) + arcOffset;
-    float const stepAngle = LURKER_SPOUT_RUN_STEP / radius;
+    // Bearing relative to his facing; pi is directly behind
+    float const relative = Position::NormalizeOrientation(botAngle - lurker->GetOrientation());
+    bool const inArc =
+        std::fabs(relative - static_cast<float>(M_PI)) <= LURKER_SPOUT_RUN_ARC_HALF_WIDTH;
 
-    float direction;
-    float step;
+    float const stepAngle = LURKER_SPOUT_RUN_STEP / runRadius;
+    float angularStep = 0.0f;
     if (int8 const spin = GetLurkerSpoutSpin(lurker))
     {
-        // No clamp: at these radii the bot cannot overtake a target receding at 0.4 rad/s, and a
-        // clamped step near the target would drop below the movement floor and stutter
-        direction = spin;
-        step = stepAngle;
+        // No clamp: at these radii the bot cannot overtake a beam receding at 0.4 rad/s, and a
+        // clamped step would drop below the movement floor and stutter
+        angularStep = spin * stepAngle;
     }
-    else
+    else if (!inArc)
     {
-        float delta = Position::NormalizeOrientation(targetAngle - botAngle);
-        if (delta > M_PI)
-            delta -= 2.0f * static_cast<float>(M_PI);
-
-        if (std::fabs(delta) < LURKER_SPOUT_RUN_ANGULAR_DEADZONE)
-            return false;
-
-        direction = delta > 0.0f ? 1.0f : -1.0f;
-        step = std::min(stepAngle, std::fabs(delta));
+        float const edge = static_cast<float>(M_PI) +
+            (relative < M_PI ? -LURKER_SPOUT_RUN_ARC_HALF_WIDTH : LURKER_SPOUT_RUN_ARC_HALF_WIDTH);
+        float const toEdge = edge - relative;
+        angularStep = (toEdge > 0.0f ? 1.0f : -1.0f) * std::min(stepAngle, std::fabs(toEdge));
+    }
+    else if (std::fabs(distance - runRadius) < LURKER_SPOUT_RUN_RADIAL_DEADZONE)
+    {
+        return false;
     }
 
-    float const moveAngle = botAngle + direction * step;
-    float const moveX = lurker->GetPositionX() + radius * std::cos(moveAngle);
-    float const moveY = lurker->GetPositionY() + radius * std::sin(moveAngle);
+    // Radius is corrected alongside the angular step, a step's worth at a time
+    float const radialStep = std::clamp(
+        runRadius - distance, -LURKER_SPOUT_RUN_STEP, LURKER_SPOUT_RUN_STEP);
+    float const moveRadius = distance + radialStep;
+    float const moveAngle = botAngle + angularStep;
+    float const moveX = lurker->GetPositionX() + moveRadius * std::cos(moveAngle);
+    float const moveY = lurker->GetPositionY() + moveRadius * std::sin(moveAngle);
 
     bot->CastStop();
     return MoveTo(
@@ -453,59 +469,10 @@ bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-// Ranged hold a fixed station and, during Spout, dive into the water beside it. Every move here is
-// an exact waypoint: on land the station is a known walkable point, and from under the surface the
-// pathfinder has no start poly and would refuse a normal move.
-bool TheLurkerBelowRangedHoldStationAction::Execute(Event /*event*/)
-{
-    Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
-    if (!lurker)
-        return false;
-
-    Position station;
-    if (!GetLurkerRangedStation(bot, station))
-        return false;
-
-    if (IsLurkerSpouting(lurker))
-        return Dive(station, lurker);
-
-    if (!bot->IsInWater() && bot->GetExactDist2d(station) < LURKER_STATION_ARRIVAL_DIST)
-        return false;
-
-    return MoveTo(
-        SSC_MAP_ID, station.GetPositionX(), station.GetPositionY(), station.GetPositionZ(),
-        false, false, false, true, MovementPriority::MOVEMENT_COMBAT, true, false);
-}
-
-bool TheLurkerBelowRangedHoldStationAction::Dive(Position const& station, Unit* lurker)
-{
-    Position dive;
-    float waterLevel;
-    if (!FindLurkerDivePoint(bot, station, lurker, dive, waterLevel))
-        return false;
-
-    if (!bot->IsInWater())
-    {
-        bot->CastStop();
-        return MoveTo(
-            SSC_MAP_ID, dive.GetPositionX(), dive.GetPositionY(), dive.GetPositionZ(),
-            false, false, false, true, MovementPriority::MOVEMENT_FORCED, true, false);
-    }
-
-    // The module only sets the swim flag on the water-walk transition, so a straight dive never
-    // gets it: run speed and a running animation under water otherwise
-    if (!bot->isSwimming())
-        bot->SetSwim(true);
-
-    float const floatZ = waterLevel - LURKER_FLOAT_DEPTH;
-    if (std::fabs(bot->GetPositionZ() - floatZ) < 0.5f)
-        return false;
-
-    return MoveTo(
-        SSC_MAP_ID, bot->GetPositionX(), bot->GetPositionY(), floatZ,
-        false, false, false, true, MovementPriority::MOVEMENT_FORCED, true, false);
-}
-
+// By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游 e8ac948a「forget trying to dive for lurker」——
+//   上游已放弃 TheLurkerBelowRangedHoldStationAction::Execute / Dive 的"站位下潜"方案，
+//   本条冲突以删除我方保留的这两个实现收尾（若保留会因 .h 声明与 Strategy 注册已删而编译失败）。
+// End By leewheel 2026-09-13
 // During the submerge phase the main tank and the first two assist tanks each claim one Coilfang
 // Guardian off the shared sorted list, taunt it off whoever it aggroed onto, and hold it away from
 // the other two. The Ambushers are left to natural targeting. Mirrors the Kil'jaeden hands pattern.

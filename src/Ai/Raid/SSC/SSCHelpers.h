@@ -11,6 +11,7 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include <array>
+#include <functional>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -145,11 +146,16 @@ inline constexpr float TOXIC_POOL_HOLDING_RADIUS = TOXIC_POOL_HAZARD_RADIUS + 5.
 inline constexpr float TOXIC_POOL_SEARCH_RADIUS = TOXIC_POOL_HOLDING_RADIUS + 2.0f; // 2y margin for hazard search
 
 std::vector<Position> const& GetCachedHazardPositions(PlayerbotAI* botAI, std::string const& value);
-// A step straight out of a circular hazard, fanning around the escape heading on collision. Copied
-// from HyjalHelpers pending promotion to EncounterHelpers.
-bool GetHazardEscapeStep(
-    Player* bot, Position const& hazard, float escapeRadius, float moveDist, float& stepX,
-    float& stepY, float& stepZ);
+// A step out of a circular hazard. Directions fan out from straight-away in fine steps; the first
+// landing point that passes isAcceptable, is reachable, and is farther from the hazard than the bot
+// wins. Unlike Hyjal's ring-based GetHazardEscapeStep this needs no clear point at the ring: a
+// narrow curved boardwalk still offers two dry directions whatever the ring looks like.
+bool FindHazardEscapeStep(
+    Player* bot, Position const& hazard, float moveDist, float& stepX, float& stepY,
+    float& stepZ, std::function<bool(float, float)> const& isAcceptable = {});
+// True where the map has ground above any liquid at x/y. A player counts water as reachable, so
+// the pathfinder alone lets an escape step off a boardwalk into the lake.
+bool IsDryGround(Player* bot, float x, float y);
 bool GetToxicPoolPosition(PlayerbotAI* botAI, Position& toxicPool);
 bool IsNearToxicPool(PlayerbotAI* botAI, float radius);
 bool IsInToxicPool(PlayerbotAI* botAI);
@@ -192,42 +198,13 @@ int8 GetLurkerSpoutSpin(Unit* lurker);
 
 // Spout sweeps at 0.4 rad/s. A bot running at 7 yd/s manages 7 / r rad/s, so the ring radius is
 // the speed: 17 yd keeps pace with the beam, 21 yd falls behind at 0.07 rad/s. Each bot gets a
-// fixed radius in this band and a fixed offset around "behind" from its GUID so the raid looks
-// spread rather than stacked, without the destination moving from tick to tick.
+// fixed radius in this band from its GUID so the raid is not stacked on one ring. The safe arc is
+// a zone, not a point: a bot already inside it holds its bearing during the wind-up.
 inline constexpr float LURKER_SPOUT_RUN_RADIUS_MIN = 17.0f;
 inline constexpr float LURKER_SPOUT_RUN_RADIUS_MAX = 21.0f;
 inline constexpr float LURKER_SPOUT_RUN_ARC_HALF_WIDTH = static_cast<float>(M_PI) / 3.0f;
 inline constexpr float LURKER_SPOUT_RUN_STEP = 3.5f;
-inline constexpr float LURKER_SPOUT_RUN_ANGULAR_DEADZONE = 0.105f; // ~6 degrees
-
-// Ranged stand on fixed stations and dive during Spout: the cone skips anyone IsInWater(), at the
-// cost of Scalding Water (500 fire on entry, 500 every 3s). Ranged DPS use the three islets the
-// Ambushers spawn on (Lurker's CombatReach is 22y, so 40y spells reach them); healers stay on the
-// inner ring to keep the melee in range.
-inline std::array<Position, 3> const LURKER_RANGED_DPS_STATIONS = { {
-    { 77.937f, -384.500f, -19.722f }, // NW islet
-    { 63.022f, -456.310f, -19.793f }, // NE islet
-    { 14.283f, -457.467f, -19.793f }  // E islet
-} };
-inline std::array<Position, 3> const LURKER_HEALER_STATIONS = { {
-    { 16.237f, -438.098f, -19.551f }, // SE
-    { 37.255f, -387.031f, -19.417f }, // SW
-    { 66.268f, -418.774f, -19.592f }  // N
-} };
-// The pathfinder snaps any point within 5y of the water-surface navmesh poly back onto it, which
-// leaves the bot at WATER_WALK rather than IN_WATER. A dive deeper than that finds no poly and goes
-// through as a straight spline. Once in, the bot rises to just under the surface: still IN_WATER,
-// no breath timer.
-inline constexpr float LURKER_DIVE_DEPTH = 5.5f;
-inline constexpr float LURKER_FLOAT_DEPTH = 1.0f;
-inline constexpr float LURKER_STATION_ARRIVAL_DIST = 2.0f;
-
-// The station for this bot's role and index among its ranged peers; false if there are none.
-bool GetLurkerRangedStation(Player* bot, Position& station);
-// A point in water near the station deep enough to dive under the poly snap, probing towards and
-// away from Lurker. Returns the surface level through waterLevel.
-bool FindLurkerDivePoint(
-    Player* bot, Position const& station, Unit* lurker, Position& dive, float& waterLevel);
+inline constexpr float LURKER_SPOUT_RUN_RADIAL_DEADZONE = 2.0f;
 
 // Submerge: three Coilfang Guardians, one each for the main tank and the first two assist tanks.
 // The guardians are found by a sorted, cached grid search so every tank sees the same list in the

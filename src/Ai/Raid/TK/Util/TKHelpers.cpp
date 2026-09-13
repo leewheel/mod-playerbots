@@ -18,9 +18,6 @@ namespace TkHelpers
 
 // General
 
-// Embers of Al'ar and Solarium Priests are put in combat with the zone when summoned, so they sit
-// on every group member's threat list and the group-wide "attackers" value sees them without a
-// grid search.
 std::pair<Unit*, Unit*> GetTargetUnitPair(PlayerbotAI* botAI, uint32 entry)
 {
     Unit* lowest = nullptr;
@@ -30,7 +27,7 @@ std::pair<Unit*, Unit*> GetTargetUnitPair(PlayerbotAI* botAI, uint32 entry)
     for (ObjectGuid const targetGuid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* unit = botAI->GetUnit(targetGuid);
-        if (unit && unit->GetEntry() == entry)
+        if (unit && unit->IsAlive() && unit->GetEntry() == entry)
         {
             if (!lowest || unit->GetGUID().GetRawValue() < lowest->GetGUID().GetRawValue())
                 lowest = unit;
@@ -71,8 +68,7 @@ Player* GetNearestNonTankPlayerInRadius(Player* bot, float radius)
 
 // Trash
 
-// Lowest-GUID centurion with Arcane Flurry up, so every mage agrees on the target. "attackers"
-// already drops polymorphed units, so a sheeped centurion falls out without a separate check.
+// "attackers" already drops polymorphed units so no check for it is necessary.
 Unit* GetCenturionCastingArcaneFlurry(PlayerbotAI* botAI)
 {
     Unit* target = nullptr;
@@ -209,21 +205,20 @@ Position const& GetClosestGroundPosition(Position const& botPos)
     return ALAR_GROUND_POSITIONS[closestPlatform];
 }
 
-// Main tank rotates between W (where Al'ar initially lands) and NE platforms in phase 1
+// The main tank rotates between the W (where Al'ar initially lands) and NE platforms in phase 1
 // and starts on Al'ar in phase 2.
 bool IsFirstAlarTank(Player* bot)
 {
     return PlayerbotAI::IsMainTank(bot);
 }
 
-// First assist tank rotates between NW and E platforms in phase 1.
+// The first assist tank rotates between the NW and E platforms in phase 1.
 bool IsSecondAlarTank(Player* bot)
 {
     return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 }
 
-// Second assist tank is the primary ember tank. Living-only to match the other two tank roles, or
-// a dead first assist tank would make the same bot both the second Al'ar tank and the ember tank.
+// The second assist tank is the primary ember tank.
 bool IsPrimaryEmberTank(Player* bot)
 {
     return PlayerbotAI::IsAssistTankOfIndex(bot, 1, true);
@@ -263,7 +258,6 @@ GuidVector FindFlamePatchGuids(Player* bot)
     return guids;
 }
 
-// Flame patches are timed summons, so the cached value holds GUIDs and they are resolved on read.
 std::vector<Unit*> GetFlamePatches(PlayerbotAI* botAI)
 {
     GuidVector const& guids =
@@ -328,6 +322,28 @@ bool HasWrathOfTheAstromancer(Player* bot)
 
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
+namespace
+{
+
+GuidVector const& GetLegendaryWeaponGuids(PlayerbotAI* botAI)
+{
+    return botAI->GetAiObjectContext()->GetValue<GuidVector>("tk legendary weapons")->RefGet();
+}
+
+Creature* GetLegendaryWeaponByState(PlayerbotAI* botAI, uint32 weaponEntry, bool alive)
+{
+    for (ObjectGuid const guid : GetLegendaryWeaponGuids(botAI))
+    {
+        Creature* weapon = botAI->GetCreature(guid);
+        if (weapon && weapon->GetEntry() == weaponEntry && weapon->IsAlive() == alive)
+            return weapon;
+    }
+
+    return nullptr;
+}
+
+} // end anonymous namespace
+
 std::unordered_map<uint32, uint32> advisorDpsWaitTimer;
 
 Unit* GetKaelthasTk(PlayerbotAI* botAI)
@@ -369,8 +385,8 @@ bool IsAdvisorActive(Unit* advisor)
         !advisor->HasAura(Id(TkSpells::SPELL_PERMANENT_FEIGN_DEATH));
 }
 
-// (1) First priority is an assistant Warlock (real player or bot)
-// (2) If no assistant Warlock, then look for any Warlock bot
+// (1) First priority is an assistant Warlock (real player or bot).
+// (2) If no assistant Warlock, then look for any Warlock bot.
 Player* GetCapernianTank(Player* bot)
 {
     Group* group = bot->GetGroup();
@@ -398,10 +414,15 @@ Player* GetCapernianTank(Player* bot)
     return fallbackWarlock;
 }
 
+bool IsCapernianTank(Player* bot)
+{
+    return bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot;
+}
+
 // One Hunter will start on Sanguinar in phase 3 (with melee) to apply Armor Disruption from the
 // Netherstrand Longbow.
-// (1) First priority is an assistant Hunter (real player or bot)
-// (2) If no assistant Hunter, then look for any Hunter bot
+// (1) First priority is an assistant Hunter (real player or bot).
+// (2) If no assistant Hunter, then look for any Hunter bot.
 bool IsSanguinarDebuffHunter(Player* bot)
 {
     if (bot->getClass() != CLASS_HUNTER)
@@ -432,13 +453,6 @@ bool IsSanguinarDebuffHunter(Player* bot)
     return fallbackHunter == bot;
 }
 
-// Threat-scoped lookups such as "find target" cannot be used for the weapons. A bot that was dead
-// when they called SetInCombatWithZone, or that died and was resurrected afterwards, holds no
-// threat entry on them and never regains one, so it sees a different set of weapons from everyone
-// else, which leaves the raid disagreeing on the kill order and dragging the icon between two
-// weapons. One grid search collects every weapon, alive or dead, into the cached
-// "tk legendary weapons" value; the readers below decide alive/dead at resolve time, so a weapon
-// that dies inside the cache interval is seen as dead at once.
 GuidVector FindLegendaryWeaponGuids(Player* bot)
 {
     static std::vector<uint32> const weaponEntries = {
@@ -463,28 +477,6 @@ GuidVector FindLegendaryWeaponGuids(Player* bot)
     }
 
     return guids;
-}
-
-namespace
-{
-
-GuidVector const& GetLegendaryWeaponGuids(PlayerbotAI* botAI)
-{
-    return botAI->GetAiObjectContext()->GetValue<GuidVector>("tk legendary weapons")->RefGet();
-}
-
-Creature* GetLegendaryWeaponByState(PlayerbotAI* botAI, uint32 weaponEntry, bool alive)
-{
-    for (ObjectGuid const guid : GetLegendaryWeaponGuids(botAI))
-    {
-        Creature* weapon = botAI->GetCreature(guid);
-        if (weapon && weapon->GetEntry() == weaponEntry && weapon->IsAlive() == alive)
-            return weapon;
-    }
-
-    return nullptr;
-}
-
 }
 
 Unit* GetLegendaryWeapon(PlayerbotAI* botAI, uint32 weaponEntry)

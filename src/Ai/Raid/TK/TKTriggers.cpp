@@ -240,7 +240,7 @@ bool KaelthasSunstriderSanguinarOrTelonicusShouldBeTankedTrigger::IsActiveInEnco
 
 bool KaelthasSunstriderCapernianShouldBeTankedByWarlockTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_WARLOCK || GetCapernianTank(bot) != bot)
+    if (!IsCapernianTank(bot))
         return false;
 
     return IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20062"));
@@ -251,10 +251,7 @@ bool KaelthasSunstriderShouldStandBackFromCapernianTrigger::IsActiveInEncounter(
     if (!IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20062")))
         return false;
 
-    if (bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot)
-        return false;
-
-    return true;
+    return !IsCapernianTank(bot);
 }
 
 bool KaelthasSunstriderShouldHoldPhase3PositionsTrigger::IsActiveInEncounter()
@@ -266,9 +263,11 @@ bool KaelthasSunstriderShouldHoldPhase3PositionsTrigger::IsActiveInEncounter()
     if (GetKaelthasTkPhase(kaelthas) != PHASE_ALL_ADVISORS)
         return false;
 
+    // The designated healer stays in position by the melee tanks while the rest of the raid runs
+    // all over the place to kite and kill Thaladred.
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游注释措辞，保留 rule81 entry 化
+    // （20060 = 萨古纳尔男爵 Lord Sanguinar）
     Unit* sanguinar = AI_VALUE2(Unit*, "find target", "20060");
-    // The healer holds its spot from the start of the revival until Sanguinar dies, since that
-    // spot is what keeps both melee tanks in range.
     if (PlayerbotAI::IsAssistHealOfIndex(bot, 0, true))
         return sanguinar && sanguinar->IsAlive();
 
@@ -277,9 +276,8 @@ bool KaelthasSunstriderShouldHoldPhase3PositionsTrigger::IsActiveInEncounter()
     if (!sanguinar || !sanguinar->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         return false;
 
-    return PlayerbotAI::IsMainTank(bot) ||
-        PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) ||
-        (bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot);
+    return PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) ||
+        IsCapernianTank(bot);
 }
 
 bool KaelthasSunstriderDeterminingAdvisorKillOrderTrigger::IsActiveInEncounter()

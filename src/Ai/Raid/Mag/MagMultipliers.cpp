@@ -15,7 +15,6 @@
 #include "MovementActions.h"
 #include "Playerbots.h"
 #include "ReachTargetActions.h"
-#include "WipeAction.h"
 
 using namespace MagHelpers;
 using namespace EncounterHelpers;
@@ -35,8 +34,12 @@ float MagtheridonUseManticronCubeMultiplier::GetValueInEncounter(Action* action)
         !dynamic_cast<CastBlinkBackAction*>(action) &&
         !dynamic_cast<CastDisengageAction*>(action))
     {
-        return 1.0;
+        return 1.0f;
     }
+
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游把 IsCubeClicker 判定前移的结构
+    if (!IsCubeClicker(bot))
+        return 1.0f;
 
 // By leewheel 2026-09-09 合并brighton: boss按entry规则用17257, 采纳brighton加IsMagtheridonActive活性判定
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
@@ -44,10 +47,9 @@ float MagtheridonUseManticronCubeMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
     // End By leewheel
 
-    if (!IsCubeClicker(bot))
-        return 1.0f;
-
-    //By leewheel 2026-08-26 合并：采用对侧简化后的计时判定(GetInstanceId直取)
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 此处原重复的 IsCubeClicker 判定已随上游前移而删除
+    // （2026-08-26 的"简化计时判定"写法已并入上游代码）
+    // End By leewheel
     auto timerIt = blastNovaTimer.find(bot->GetInstanceId());
     if (timerIt == blastNovaTimer.end())
         return 1.0f;
@@ -58,11 +60,8 @@ float MagtheridonUseManticronCubeMultiplier::GetValueInEncounter(Action* action)
 // Wait for 6 seconds after Magtheridon becomes attackable before engaging.
 float MagtheridonWaitToAttackMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!dynamic_cast<AttackAction*>(action) &&
-        !dynamic_cast<CastSpellAction*>(action))
-    {
+    if (!dynamic_cast<AttackAction*>(action) && !dynamic_cast<CastSpellAction*>(action))
         return 1.0f;
-    }
 
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
@@ -92,8 +91,7 @@ float MagtheridonControlTankActionsMultiplier::GetValueInEncounter(Action* actio
         return 1.0f;
 
     bool const isAvoidAoe = dynamic_cast<AvoidAoeAction*>(action);
-    bool const isReachTargetSpell =
-        dynamic_cast<CastReachTargetSpellAction*>(action);
+    bool const isReachTargetSpell = dynamic_cast<CastReachTargetSpellAction*>(action);
 
     if (!isAvoidAoe && !isReachTargetSpell && !IsTauntAction(bot, action) &&
         !dynamic_cast<TankAssistAction*>(action) &&
@@ -109,7 +107,7 @@ float MagtheridonControlTankActionsMultiplier::GetValueInEncounter(Action* actio
     if (isAvoidAoe && magtheridon->GetVictim() != bot)
         return 1.0f;
 
-    // Block the main tank from charging the assist tanks' Channelers when moving to the waiting
+    // Block the main tank from charging the assist tanks' Channelers while moving to the waiting
     // position.
     if (isReachTargetSpell && PlayerbotAI::IsMainTank(bot))
         return IsMagtheridonActive(magtheridon) ? 1.0f : 0.0f;
@@ -133,6 +131,10 @@ float MagtheridonDebrisDangerMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
     }
 
+    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游新增的 IsCeilingCollapsed 判定, 保留 entry 化
+    if (!IsCeilingCollapsed(bot))
+        return 1.0f;
+
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return 1.0f;
@@ -140,5 +142,5 @@ float MagtheridonDebrisDangerMultiplier::GetValueInEncounter(Action* action)
 
     constexpr float debrisSuppressionZone = 15.0f;
     return IsPositionInActiveDebris(
-        bot, bot->GetPositionX(), bot->GetPositionY(), debrisSuppressionZone) ? 0.0f : 1.0f;
+        botAI, bot->GetPositionX(), bot->GetPositionY(), debrisSuppressionZone) ? 0.0f : 1.0f;
 }
