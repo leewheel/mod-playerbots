@@ -22,6 +22,9 @@
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
 #include "cmath"
+// By leewheel 2026-09-14：OnDatabaseGetDBRevision 改用上游的 map<string,string>& 签名，显式引入 <map>
+#include <map>
+// End By leewheel
 
 //By leewheel 2026-07-20 - 新手玩家向高级机器人求助互动
 extern bool HandleBotBeggingInteraction(Player* sender, Player* receiver, const std::string& msg);
@@ -32,7 +35,15 @@ class PlayerbotsDatabaseScript : public DatabaseScript
 public:
     PlayerbotsDatabaseScript() : DatabaseScript("PlayerbotsDatabaseScript") {}
 
-    bool OnDatabasesLoading() override
+    // By leewheel 2026-09-14 适配 Acore e1823bb2（enable modules to own their database）：
+    //   上游官方本提交引入"模块自有数据库"钩子 OnModuleDatabasesLoading / OnModuleDatabasesKeepAlive
+    //   / OnModuleDatabasesClosing，与本模块原有自研钩子 OnDatabasesLoading / OnDatabasesKeepAlive
+    //   / OnDatabasesClosing 语义完全相同但命名不同。不同步改名有两个后果：
+    //   ① 基类里已无旧名，override 直接编译失败；
+    //   ② 即便去掉 override，新钩子也只会走基类空实现 —— PlayerbotsDatabase 将不会被打开、保活与关闭。
+    //   故此处整体对齐上游命名。OnDatabaseGetDBRevision 同时改为上游的 map<string,string>& 签名，
+    //   按模块名上报版本(供 .server info 汇总显示)。OnDatabaseSelectIndexLogout 为上游所无，保留。
+    bool OnModuleDatabasesLoading() override
     {
         DatabaseLoader playerbotLoader("server.playerbots");
         playerbotLoader.SetUpdateFlags(sConfigMgr->GetOption<bool>("Playerbots.Updates.EnableDatabases", true)
@@ -43,9 +54,9 @@ public:
         return playerbotLoader.Load();
     }
 
-    void OnDatabasesKeepAlive() override { PlayerbotsDatabase.KeepAlive(); }
+    void OnModuleDatabasesKeepAlive() override { PlayerbotsDatabase.KeepAlive(); }
 
-    void OnDatabasesClosing() override { PlayerbotsDatabase.Close(); }
+    void OnModuleDatabasesClosing() override { PlayerbotsDatabase.Close(); }
 
     void OnDatabaseWarnAboutSyncQueries(bool apply) override { PlayerbotsDatabase.WarnAboutSyncQueries(apply); }
 
@@ -55,8 +66,10 @@ public:
         statementParam = player->GetGUID().GetCounter();
     }
 
-    void OnDatabaseGetDBRevision(std::string& revision) override
+    void OnDatabaseGetDBRevision(std::map<std::string, std::string>& revisions) override
     {
+        std::string revision;
+
         if (QueryResult resultPlayerbot =
                 PlayerbotsDatabase.Query("SELECT date FROM version_db_playerbots ORDER BY date DESC LIMIT 1"))
         {
@@ -66,7 +79,10 @@ public:
 
         if (revision.empty())
             revision = "Unknown Playerbots Database Revision";
+
+        revisions["Playerbots"] = revision;
     }
+    // End By leewheel
 };
 
 class PlayerbotsPlayerScript : public PlayerScript
