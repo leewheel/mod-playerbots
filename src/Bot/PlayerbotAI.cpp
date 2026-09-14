@@ -254,9 +254,11 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
         nextAICheckDelay = 0;
 
     // Early return if bot is in invalid state
+    //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
     if (!bot || !bot->GetSession() || !bot->IsInWorld() || bot->IsBeingTeleported() ||
-        bot->GetSession()->isLogingOut() || bot->IsDuringRemoveFromWorld())
+        bot->GetSession()->IsLoggingOut() || bot->IsDuringRemoveFromWorld())
         return;
+    //End By leewheel
 
     // Track last combat time for post-combat acceleration (looting, next target finding)
     if (bot->IsInCombat())
@@ -523,7 +525,9 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
     HandleCommands();
 
     // logout if logout timer is ready or if instant logout is possible
-    if (bot->GetSession()->isLogingOut())
+    //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+    if (bot->GetSession()->IsLoggingOut())
+    //End By leewheel
     {
         WorldSession* botWorldSessionPtr = bot->GetSession();
         bool logout = botWorldSessionPtr->ShouldLogOut(time(nullptr));
@@ -881,7 +885,9 @@ void PlayerbotAI::Reset(bool full)
     bool logout = botWorldSessionPtr->ShouldLogOut(time(nullptr));
 
     // cancel logout
-    if (!logout && bot->GetSession()->isLogingOut())
+    //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+    if (!logout && bot->GetSession()->IsLoggingOut())
+    //End By leewheel
     {
         WorldPackets::Character::LogoutCancel data = WorldPacket(CMSG_LOGOUT_CANCEL);
         bot->GetSession()->HandleLogoutCancelOpcode(data);
@@ -1079,8 +1085,10 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
     }
     else if (filtered == "logout")
     {
-        if (bot->GetSession()->isLogingOut())
+        //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        if (bot->GetSession()->IsLoggingOut())
             return;
+        //End By leewheel
 
         // Verify the command came from this bot's master. Also handles nullptr
         if (fromPlayer != master)
@@ -1119,8 +1127,10 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
     }
     else if (filtered == "logout cancel")
     {
-        if (!bot->GetSession()->isLogingOut())
+        //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        if (!bot->GetSession()->IsLoggingOut())
             return;
+        //End By leewheel
 
         if (type == CHAT_MSG_WHISPER)
         {
@@ -4728,9 +4738,11 @@ bool PlayerbotAI::HasPlayerNearby(float range)
 bool PlayerbotAI::AllowActive(ActivityType activityType)
 {
     // bot is in an invalid state, not safe to process
+    //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
     if (!bot || !bot->GetSession() || !bot->IsInWorld() || bot->IsBeingTeleported() ||
-        bot->GetSession()->isLogingOut() || bot->IsDuringRemoveFromWorld())
+        bot->GetSession()->IsLoggingOut() || bot->IsDuringRemoveFromWorld())
         return false;
+    //End By leewheel
 
     // always allow packet handling (e.g. group invites, trade, loot, friend requests etc)
     if (activityType == PACKET_ACTIVITY)
@@ -4870,9 +4882,11 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
 
         for (auto& player : sRandomPlayerbotMgr.GetPlayers())
         {
+            //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
             if (!player || !player->GetSession() || !player->IsInWorld() || player->IsDuringRemoveFromWorld() ||
-                player->GetSession()->isLogingOut())
+                player->GetSession()->IsLoggingOut())
                 continue;
+            //End By leewheel
 
             PlayerbotAI* playerAI = GET_PLAYERBOT_AI(player);
             if (!playerAI || !IsSelfBot(player))

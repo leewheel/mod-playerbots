@@ -444,8 +444,10 @@ void FastGroupMgr::LogoutFastGroupBots(Player* master, bool preserveForRelog)
             for (GroupReference* itr2 = currentGroup->GetFirstMember(); itr2 != nullptr; itr2 = itr2->next())
             {
                 Player* member = itr2->GetSource();
-                if (member && member->GetSession() && !member->GetSession()->isLogingOut())
+                //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+                if (member && member->GetSession() && !member->GetSession()->IsLoggingOut())
                     ++onlineCount;
+                //End By leewheel
             }
 
             // 如果只有主控玩家自己在线，离开队伍
@@ -1907,8 +1909,10 @@ public:
             for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
             {
                 Player* member = itr->GetSource();
-                if (member && member->GetSession() && !member->GetSession()->isLogingOut())
+                //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+                if (member && member->GetSession() && !member->GetSession()->IsLoggingOut())
                     ++onlineCount;
+                //End By leewheel
             }
 
             // 如果只有玩家自己在线，离开队伍

@@ -381,7 +381,9 @@ void PlayerbotMgr::CancelLogout()
         if (!botAI || IsSelfBot(bot))
             continue;
 
-        if (bot->GetSession()->isLogingOut())
+        //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        if (bot->GetSession()->IsLoggingOut())
+        //End By leewheel
         {
             WorldPackets::Character::LogoutCancel data = WorldPacket(CMSG_LOGOUT_CANCEL);
             bot->GetSession()->HandleLogoutCancelOpcode(data);
@@ -401,7 +403,9 @@ void PlayerbotMgr::CancelLogout()
         if (botAI->GetMaster() != master)
             continue;
 
-        if (bot->GetSession()->isLogingOut())
+        //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        if (bot->GetSession()->IsLoggingOut())
+        //End By leewheel
         {
             WorldPackets::Character::LogoutCancel data = WorldPacket(CMSG_LOGOUT_CANCEL);
             bot->GetSession()->HandleLogoutCancelOpcode(data);
@@ -432,8 +436,10 @@ void PlayerbotHolder::LogoutPlayerBot(ObjectGuid guid)
         WorldSession* botWorldSessionPtr = bot->GetSession();
         [[maybe_unused]] WorldSession* masterWorldSessionPtr = nullptr;     // Remove [[maybe_unused]] tag if timed logout implemented.
 
-        if (botWorldSessionPtr->isLogingOut())
+        //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        if (botWorldSessionPtr->IsLoggingOut())
             return;
+        //End By leewheel
 
         Player* master = botAI->GetMaster();
         if (master)
