@@ -43,6 +43,10 @@ public:
     //   ② 即便去掉 override，新钩子也只会走基类空实现 —— PlayerbotsDatabase 将不会被打开、保活与关闭。
     //   故此处整体对齐上游命名。OnDatabaseGetDBRevision 同时改为上游的 map<string,string>& 签名，
     //   按模块名上报版本(供 .server info 汇总显示)。OnDatabaseSelectIndexLogout 为上游所无，保留。
+    // By leewheel 2026-09-15 合并brighton b2f6e460：本轮确认 brighton 侧 f7de76c4
+    //   （"fixes to allow compile after AC update"）做了完全相同的改名
+    //   （OnModuleDatabasesLoading/KeepAlive/Closing + OnDatabaseGetDBRevision 的 map 签名 + 写入
+    //   revisions["Playerbots"]），两方已收敛到同一套实现，此处不再有任何差异。
     bool OnModuleDatabasesLoading() override
     {
         DatabaseLoader playerbotLoader("server.playerbots");

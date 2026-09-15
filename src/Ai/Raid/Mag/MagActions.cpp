@@ -7,6 +7,7 @@
 #include "MagActions.h"
 #include "EncounterHelpers.h"
 #include "MagHelpers.h"
+#include "MoveSpline.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
@@ -22,10 +23,10 @@ bool MagtheridonResetEncounterStatesAction::Execute(Event /*event*/)
     uint32 const instanceId = bot->GetInstanceId();
 
     bool reset = false;
+    reset |= magDpsWaitTimer.erase(instanceId) > 0;
     reset |= blastNovaTimer.erase(instanceId) > 0;
-    reset |= dpsWaitTimer.erase(instanceId) > 0;
-    reset |= ceilingCollapseApplied.erase(instanceId) > 0;
     reset |= lastBlastNovaState.erase(instanceId) > 0;
+    reset |= ceilingCollapseApplied.erase(instanceId) > 0;
     reset |= botToCubeAssignments.erase(instanceId) > 0;
 
     if (!AI_VALUE2(bool, "combat", "self target"))
@@ -310,8 +311,6 @@ bool MagtheridonUseManticronCubeAction::Execute(Event /*event*/)
     if (IsBlastNovaCasting(magtheridon))
         return HandleCubeInteraction(cube);
 
-    _blastNovaSeenMs = 0;
-
     // Otherwise, if Blast Nova is coming soon, move to and wait near the cube.
     return HandleWaitingPhase(*cubeInfo);
 }
@@ -334,16 +333,19 @@ bool MagtheridonUseManticronCubeAction::HandleCubeRelease(Unit* magtheridon)
         return false;
     }
 
-    uint32 const minDelayMs = 200;
-    uint32 const maxDelayMs = 2000;
-    uint32 delay = urand(minDelayMs, maxDelayMs);
+    // Stagger releasing cube so the clickers do not do it on the same tick, which looks stupid.
+    uint32 const minReleaseDelayMs = 200;
+    uint32 const maxReleaseDelayMs = 1500;
+    uint32 const releaseDelay = urand(minReleaseDelayMs, maxReleaseDelayMs);
+
     botAI->AddTimedEvent(
         [this]
         {
             bot->CastStop();
         },
-        delay);
-    botAI->SetNextCheckDelay(delay + 50);
+        releaseDelay);
+
+    botAI->SetNextCheckDelay(releaseDelay + ONE_WORLD_UPDATE_MS);
     return true;
 }
 
@@ -360,25 +362,38 @@ bool MagtheridonUseManticronCubeAction::HandleCubeInteraction(GameObject* cube)
         return true;
     }
 
-    // Stagger the run from the waiting spot so the clickers do not all move on the same tick.
-    uint32 const now = getMSTime();
-    if (!_blastNovaSeenMs)
-        _blastNovaSeenMs = now;
+    // A spline still in flight is the run-in queued below; let it land.
+    if (!bot->movespline->Finalized())
+        return true;
 
-    constexpr uint32 departureSpreadMs = 1000;
-    uint32 const stagger = bot->GetGUID().GetCounter() % departureSpreadMs;
-    if (getMSTimeDiff(_blastNovaSeenMs, now) < stagger)
-        return false;
+    // Stagger the run from the waiting spot so the clickers do not all move on the same tick, which
+    // looks stupid.
+    uint32 const minRunDelayMs = 200;
+    uint32 const maxRunDelayMs = 1000;
+    uint32 const runDelay = urand(minRunDelayMs, maxRunDelayMs);
+    ObjectGuid const cubeGuid = cube->GetGUID();
 
-    float const targetDist = cube->GetInteractionDistance() - 0.5f;
-    float const angle = cube->GetAngle(bot);
-    float const destX = cube->GetPositionX() + std::cos(angle) * targetDist;
-    float const destY = cube->GetPositionY() + std::sin(angle) * targetDist;
+    botAI->AddTimedEvent(
+        [this, cubeGuid]
+        {
+            GameObject* cube = botAI->GetGameObject(cubeGuid);
+            if (!cube)
+                return;
 
-    bot->CastStop();
-    return MoveTo(
-        MAG_MAP_ID, destX, destY, cube->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED, true, false);
+            float const targetDist = cube->GetInteractionDistance() - 0.5f;
+            float const angle = cube->GetAngle(bot);
+            float const destX = cube->GetPositionX() + std::cos(angle) * targetDist;
+            float const destY = cube->GetPositionY() + std::sin(angle) * targetDist;
+
+            bot->CastStop();
+            MoveTo(
+                MAG_MAP_ID, destX, destY, cube->GetPositionZ(), false, false, false, false,
+                MovementPriority::MOVEMENT_FORCED, true, false);
+        },
+        runDelay);
+
+    botAI->SetNextCheckDelay(runDelay + ONE_WORLD_UPDATE_MS);
+    return true;
 }
 
 bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(CubeInfo const& cubeInfo)
@@ -458,9 +473,8 @@ bool MagtheridonMoveOutOfDebrisAction::Execute(Event /*event*/)
 
     bot->CastStop();
     return MoveTo(
-        MAG_MAP_ID, safePos.GetPositionX(), safePos.GetPositionY(),
-        bot->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED, true, false);
+        MAG_MAP_ID, safePos.GetPositionX(), safePos.GetPositionY(), bot->GetPositionZ(),
+        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
@@ -507,7 +521,7 @@ bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
     return foundSafe;
 }
 
-bool MagtheridonManageTimersAndAssignmentsAction::Execute(Event /*event*/)
+bool MagtheridonUpdateTimersAndAssignmentsAction::Execute(Event /*event*/)
 {
     // By leewheel 2026-09-09 合并brighton: boss按entry规则用17257, 采纳brighton加IsMagtheridonActive活性判定
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
@@ -527,12 +541,12 @@ bool MagtheridonManageTimersAndAssignmentsAction::Execute(Event /*event*/)
 
     bool updated = false;
     updated |= blastNovaTimer.try_emplace(instanceId, now).second;
-    updated |= dpsWaitTimer.try_emplace(instanceId, now).second;
+    updated |= magDpsWaitTimer.try_emplace(instanceId, now).second;
 
-    // Here, we account for the one-time 18s delay of the ceiling collapse at 30% health.
-    if (magtheridon->GetHealthPct() < 30.0f && !ceilingCollapseApplied.contains(instanceId))
+    if (magtheridon->GetHealthPct() < CEILING_COLLAPSE_HP_PCT &&
+        !ceilingCollapseApplied.contains(instanceId))
     {
-        blastNovaTimer[instanceId] += 18 * IN_MILLISECONDS;
+        blastNovaTimer[instanceId] += CEILING_COLLAPSE_DELAY_MS;
         ceilingCollapseApplied.insert(instanceId);
         updated = true;
     }
@@ -542,7 +556,7 @@ bool MagtheridonManageTimersAndAssignmentsAction::Execute(Event /*event*/)
     return updated;
 }
 
-bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers(
+bool MagtheridonUpdateTimersAndAssignmentsAction::AssignCubeClickers(
     uint32 instanceId, Unit* magtheridon)
 {
     // By leewheel 2026-09-09 合并brighton: 移除函数内重复的instanceId遮蔽声明(改用参数), 消除shadow警告
@@ -566,7 +580,7 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers(
             ++it;
     }
 
-    // Get Magtheridon's victim outside of the assignment loops to use for computing assignments.
+    // Get Magtheridon's victim outside of the assignment loops to exclude them from assignments.
     Player* victim = magtheridon->GetVictim() ? magtheridon->GetVictim()->ToPlayer() : nullptr;
 
     // Fill unassigned cubes.
@@ -631,7 +645,7 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers(
     return true;
 }
 
-bool MagtheridonManageTimersAndAssignmentsAction::NeedsCubeReassignment(uint32 instanceId)
+bool MagtheridonUpdateTimersAndAssignmentsAction::NeedsCubeReassignment(uint32 instanceId)
 {
     auto mapIt = botToCubeAssignments.find(instanceId);
     if (mapIt == botToCubeAssignments.end() || mapIt->second.empty())

@@ -41,6 +41,7 @@ static bool IsNameInExcludeList(Player* bot, std::vector<std::string> const& exc
 static bool BotInFriendList(Player* bot, std::vector<uint32> const& socialFriendsList)
 {
     //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+    //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致
     if (!bot || !bot->IsInWorld() || !bot->GetSession() || bot->GetSession()->IsLoggingOut() ||
         bot->IsDuringRemoveFromWorld())
         return false;
@@ -73,6 +74,7 @@ static bool BotInArenaTeam(Player* bot)
 static bool IsBotSafeForLevelReset(Player* bot)
 {
     //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+    //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致
     if (!bot || !bot->GetSession() || bot->GetSession()->IsLoggingOut() || bot->IsDuringRemoveFromWorld())
         return false;
     //End By leewheel
@@ -298,6 +300,7 @@ int RandomBotLevelMgr::GetLevelRangeIndex(uint8 level, TeamId team)
 void RandomBotLevelMgr::AdjustBotToRange(Player* bot, int targetRangeIndex, TeamId team)
 {
     //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+    //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致
     if (!bot || !bot->IsInWorld() || !bot->GetSession() || bot->GetSession()->IsLoggingOut() ||
         bot->IsDuringRemoveFromWorld())
         return;
@@ -732,6 +735,7 @@ void RandomBotLevelMgr::ProcessPendingLevelResets()
         Player* bot = ObjectAccessor::FindPlayer(it->botGuid);
 
         //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致
         if (!bot || !bot->IsInWorld() || !bot->GetSession() || bot->GetSession()->IsLoggingOut() ||
             bot->IsDuringRemoveFromWorld())
         //End By leewheel

@@ -526,6 +526,7 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
 
     // logout if logout timer is ready or if instant logout is possible
     //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+    //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致，保留我方注释
     if (bot->GetSession()->IsLoggingOut())
     //End By leewheel
     {
@@ -752,7 +753,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const& text, Player& fr
     // TODO: missing implementation to port
     /*else if (filtered == "logout")
     {
-        if (!(bot->IsStunnedByLogout() || bot->GetSession()->isLogingOut()))
+        if (!(bot->IsStunnedByLogout() || bot->GetSession()->IsLoggingOut()))
         {
             if (type == CHAT_MSG_WHISPER)
                 TellPlayer(&fromPlayer, BOT_TEXT("logout_start"));
@@ -763,7 +764,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const& text, Player& fr
     }
     else if (filtered == "logout cancel")
     {
-        if (bot->IsStunnedByLogout() || bot->GetSession()->isLogingOut())
+        if (bot->IsStunnedByLogout() || bot->GetSession()->IsLoggingOut())
         {
             if (type == CHAT_MSG_WHISPER)
                 TellPlayer(&fromPlayer, BOT_TEXT("logout_cancel"));
@@ -886,6 +887,7 @@ void PlayerbotAI::Reset(bool full)
 
     // cancel logout
     //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+    //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致，保留我方注释
     if (!logout && bot->GetSession()->IsLoggingOut())
     //End By leewheel
     {
@@ -1086,6 +1088,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
     else if (filtered == "logout")
     {
         //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致
         if (bot->GetSession()->IsLoggingOut())
             return;
         //End By leewheel
@@ -1128,6 +1131,7 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
     else if (filtered == "logout cancel")
     {
         //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致
         if (!bot->GetSession()->IsLoggingOut())
             return;
         //End By leewheel

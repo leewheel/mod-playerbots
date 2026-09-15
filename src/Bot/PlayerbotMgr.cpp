@@ -382,6 +382,7 @@ void PlayerbotMgr::CancelLogout()
             continue;
 
         //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致，保留我方注释
         if (bot->GetSession()->IsLoggingOut())
         //End By leewheel
         {
@@ -404,6 +405,7 @@ void PlayerbotMgr::CancelLogout()
             continue;
 
         //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致，保留我方注释
         if (bot->GetSession()->IsLoggingOut())
         //End By leewheel
         {
@@ -437,6 +439,7 @@ void PlayerbotHolder::LogoutPlayerBot(ObjectGuid guid)
         [[maybe_unused]] WorldSession* masterWorldSessionPtr = nullptr;     // Remove [[maybe_unused]] tag if timed logout implemented.
 
         //By leewheel 2026-09-14 合并Acore e962278b：上游 WorldSession::isLogingOut 更名为 IsLoggingOut
+        //By leewheel 2026-09-15 合并brighton b2f6e460：brighton f7de76c4 亦做同名替换，两方改法一致
         if (botWorldSessionPtr->IsLoggingOut())
             return;
         //End By leewheel
@@ -1884,7 +1887,7 @@ PlayerbotAI* PlayerbotsMgr::GetPlayerbotAI(Player* player)
     {
         return nullptr;
     }
-    // if (player->GetSession()->isLogingOut() || player->IsDuringRemoveFromWorld())
+    // if (player->GetSession()->IsLoggingOut() || player->IsDuringRemoveFromWorld())
     // {
     //     return nullptr;
     // }
