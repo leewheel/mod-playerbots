@@ -340,40 +340,71 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
     bool const inArc =
         std::fabs(relative - static_cast<float>(M_PI)) <= LURKER_SPOUT_RUN_ARC_HALF_WIDTH;
 
-    float const stepAngle = LURKER_SPOUT_RUN_STEP / runRadius;
-    float angularStep = 0.0f;
+    float const lurkerX = lurker->GetPositionX();
+    float const lurkerY = lurker->GetPositionY();
+    float const lurkerZ = lurker->GetPositionZ();
+
+    // Spinning: steps with the spin. Radius is corrected alongside, a step's worth at a time.
     if (int8 const spin = GetLurkerSpoutSpin(lurker))
     {
-        // No clamp: at these radii the bot cannot overtake a beam receding at 0.4 rad/s, and a
-        // clamped step would drop below the movement floor and stutter
-        angularStep = spin * stepAngle;
-    }
-    else if (!inArc)
-    {
-        float const edge = static_cast<float>(M_PI) +
-            (relative < M_PI ? -LURKER_SPOUT_RUN_ARC_HALF_WIDTH : LURKER_SPOUT_RUN_ARC_HALF_WIDTH);
-        float const toEdge = edge - relative;
-        angularStep = (toEdge > 0.0f ? 1.0f : -1.0f) * std::min(stepAngle, std::fabs(toEdge));
-    }
-    else if (std::fabs(distance - runRadius) < LURKER_SPOUT_RUN_RADIAL_DEADZONE)
-    {
-        return false;
+        float const radialStep = std::clamp(
+            runRadius - distance, -LURKER_SPOUT_RUN_STEP, LURKER_SPOUT_RUN_STEP);
+        float const moveRadius = distance + radialStep;
+        float const moveAngle = botAngle + spin * LURKER_SPOUT_RUN_STEP / runRadius;
+
+        bot->CastStop();
+        return MoveTo(
+            SSC_MAP_ID, lurkerX + moveRadius * std::cos(moveAngle),
+            lurkerY + moveRadius * std::sin(moveAngle), lurkerZ, false, false, false, false,
+            MovementPriority::MOVEMENT_FORCED, true, false);
     }
 
-    // Radius is corrected alongside the angular step, a step's worth at a time
-    float const radialStep = std::clamp(
-        runRadius - distance, -LURKER_SPOUT_RUN_STEP, LURKER_SPOUT_RUN_STEP);
-    float const moveRadius = distance + radialStep;
-    float const moveAngle = botAngle + angularStep;
-    float const moveX = lurker->GetPositionX() + moveRadius * std::cos(moveAngle);
-    float const moveY = lurker->GetPositionY() + moveRadius * std::sin(moveAngle);
+    // Wind-up, already behind him: hold the bearing, trim the radius
+    if (inArc)
+    {
+        if (std::fabs(distance - runRadius) < LURKER_SPOUT_RUN_RADIAL_DEADZONE)
+            return false;
+
+        return MoveTo(
+            SSC_MAP_ID, lurkerX + runRadius * std::cos(botAngle),
+            lurkerY + runRadius * std::sin(botAngle), lurkerZ, false, false, false, false,
+            MovementPriority::MOVEMENT_COMBAT, true, false);
+    }
+
+    // Wind-up, in front: one far move to the nearer arc edge, issued below the spinning moves'
+    // priority so the first of those goes through without waiting out this one's lock. Checked
+    // to set off the short way; if the walkway that way is cut, a step towards the edge instead.
+    int8 const direction = relative < M_PI ? 1 : -1;
+    float const edgeAngle = lurker->GetOrientation() + static_cast<float>(M_PI) -
+        direction * LURKER_SPOUT_RUN_ARC_HALF_WIDTH;
+    float const edgeX = lurkerX + runRadius * std::cos(edgeAngle);
+    float const edgeY = lurkerY + runRadius * std::sin(edgeAngle);
+
+    if (IsWaitingForLastMove(MovementPriority::MOVEMENT_COMBAT))
+        return false;
 
     bot->CastStop();
+    if (DoesPathRoundLurker(bot, lurker, edgeX, edgeY, lurkerZ, direction))
+    {
+        return MoveTo(
+            SSC_MAP_ID, edgeX, edgeY, lurkerZ, false, false, false, false,
+            MovementPriority::MOVEMENT_COMBAT, true, false);
+    }
+
+    float const stepAngle = botAngle + direction * LURKER_SPOUT_RUN_STEP / runRadius;
     return MoveTo(
-        SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED, true, false);
+        SSC_MAP_ID, lurkerX + runRadius * std::cos(stepAngle),
+        lurkerY + runRadius * std::sin(stepAngle), lurkerZ, false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
+// Reach closes on Lurker for the pickup; only once he is on the tank does this walk him to the
+// spot, as a single direct move rather than steps (the spot lies past spillover on the walkway,
+// and each short step into it was refused). The run-around outranks the move if a Spout starts en
+// route. From some pickup sides the spot is cut off by a gap in the walkway; a move there would end
+// at the gap, out of range, and Lurker would swing at whoever is in range instead. So the move is
+// only issued if its path arrives; otherwise the tank stays where reach left him, in range, since
+// Lurker's 22y reach makes anywhere on the ring a tanking spot.
 bool TheLurkerBelowPositionMainTankAction::Execute(Event /*event*/)
 {
     Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
@@ -383,19 +414,28 @@ bool TheLurkerBelowPositionMainTankAction::Execute(Event /*event*/)
     if (AI_VALUE(Unit*, "current target") != lurker)
         return Attack(lurker);
 
-    constexpr float arrivalDist = 2.0f;
-    float moveX;
-    float moveY;
-    bool backwards;
-    if (!GetStepToPosition(
-            bot, LURKER_MAIN_TANK_POSITION, arrivalDist, lurker, moveX, moveY, backwards))
+    if (lurker->GetVictim() != bot)
+        return false;
+
+    Position const& position = LURKER_MAIN_TANK_POSITION;
+    constexpr float arrivalDist = 1.0f;
+    if (bot->GetExactDist2d(position) <= arrivalDist)
+        return false;
+
+    if (IsWaitingForLastMove(MovementPriority::MOVEMENT_COMBAT))
+        return false;
+
+    constexpr float pathTolerance = 3.0f;
+    if (!DoesPathArrive(
+            bot, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
+            pathTolerance))
     {
         return false;
     }
 
     return MoveTo(
-        SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_COMBAT, true, backwards);
+        SSC_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
+        false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
 // Assign ranged positions within a 120-degree arc behind Lurker
@@ -441,10 +481,9 @@ bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
 
         float angle = (count == 1) ? arcCenter :
             (arcStart + arcSpan * static_cast<float>(botIndex) / static_cast<float>(count - 1));
-        constexpr float radius = 27.0f;
 
-        float targetX = lurker->GetPositionX() + radius * std::sin(angle);
-        float targetY = lurker->GetPositionY() + radius * std::cos(angle);
+        float targetX = lurker->GetPositionX() + LURKER_RANGED_SAFE_DISTANCE * std::sin(angle);
+        float targetY = lurker->GetPositionY() + LURKER_RANGED_SAFE_DISTANCE * std::cos(angle);
 
         lurkerRangedPositions.try_emplace(guid, Position(targetX, targetY, lurker->GetPositionZ()));
         it = lurkerRangedPositions.find(guid);
@@ -464,8 +503,19 @@ bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
         return false;
     }
 
+    // A bot knocked into the pool by Whirl cannot step out: a step point over the water has no
+    // walkable height and MoveTo refuses it. Move to the spot itself instead, which the
+    // pathfinder reaches by swimming to shore.
+    if (!IsDryGround(bot, moveX, moveY))
+    {
+        return MoveTo(
+            SSC_MAP_ID, position.GetPositionX(), position.GetPositionY(),
+            position.GetPositionZ(), false, false, false, false,
+            MovementPriority::MOVEMENT_COMBAT, true, false);
+    }
+
     return MoveTo(
-        SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        SSC_MAP_ID, moveX, moveY, lurker->GetPositionZ(), false, false, false, false,
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -497,13 +547,10 @@ bool TheLurkerBelowTanksPickUpAddsAction::Execute(Event /*event*/)
         return Attack(guardian);
 
     // The stock "lose aggro" taunt treats a guardian on another tank as held, so taunt explicitly
-    if (guardian->GetVictim() != bot)
-        return CastTauntOn(botAI, guardian);
-
-    if (!bot->IsWithinMeleeRange(guardian))
+    if (guardian->GetVictim() == bot)
         return false;
 
-    return KeepClearOfOtherTanks(tanks, myIndex);
+    return CastTauntOn(botAI, guardian);
 }
 
 // Keep my existing claim while that guardian lives; otherwise take the first one no other tank holds
@@ -542,32 +589,6 @@ ObjectGuid TheLurkerBelowTanksPickUpAddsAction::ClaimGuardianForTank(
     }
 
     return assignedGuid;
-}
-
-// The main tank holds where it is; the assist tanks back their guardians away from the others
-bool TheLurkerBelowTanksPickUpAddsAction::KeepClearOfOtherTanks(
-    std::vector<Player*> const& tanks, size_t myIndex)
-{
-    if (myIndex == 0)
-        return false;
-
-    auto const& assignments = lurkerGuardianTankAssignments[bot->GetInstanceId()];
-
-    for (size_t i = 0; i < tanks.size(); ++i)
-    {
-        Unit* otherGuardian = botAI->GetUnit(assignments[i]);
-        if (i == myIndex || !tanks[i]->IsAlive() || !otherGuardian || !otherGuardian->IsAlive())
-            continue;
-
-        float const remaining = LURKER_GUARDIAN_TANK_SEPARATION - bot->GetExactDist2d(tanks[i]);
-        if (remaining <= LURKER_GUARDIAN_TANK_MOVE_DEADZONE)
-            continue;
-
-        if (MoveAway(tanks[i], std::min(remaining, LURKER_GUARDIAN_TANK_MOVE_STEP), true))
-            return true;
-    }
-
-    return false;
 }
 
 // Leotheras the Blind

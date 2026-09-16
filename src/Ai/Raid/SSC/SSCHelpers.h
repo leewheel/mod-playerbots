@@ -170,8 +170,8 @@ extern std::unordered_map<uint32, uint32> hydrossNatureDpsWaitTimer;
 extern std::unordered_map<uint32, uint32> hydrossChangeToFrostPhaseTimer;
 extern std::unordered_map<uint32, uint32> hydrossChangeToNaturePhaseTimer;
 
-// The main tank holds Hydross in frost, the first assist tank in nature. Every other tank is an
-// add tank and never touches Hydross.
+// The main tank holds Hydross in frost phase, the first assist tank in nature phase. Every other
+// tank is an add tank and picks up the Elementals that spawn upon phase changes.
 bool IsHydrossPhaseTank(Player* bot);
 bool IsHydrossAddTank(Player* bot);
 bool IsHydrossInFrostPhase(Unit* hydross);
@@ -186,6 +186,42 @@ bool HasNoMarkOfCorruption(Player* bot);
 inline Position const LURKER_MAIN_TANK_POSITION = { 23.706f, -406.038f, -19.686f };
 
 extern std::unordered_map<ObjectGuid, Position> lurkerRangedPositions;
+inline constexpr size_t LURKER_GUARDIAN_TANK_COUNT = 3;
+extern std::unordered_map<uint32, std::array<ObjectGuid, LURKER_GUARDIAN_TANK_COUNT>>
+    lurkerGuardianTankAssignments;
+
+inline constexpr float LURKER_WHIRL_RADIUS = 25.0f;
+inline constexpr float LURKER_RANGED_SAFE_DISTANCE = LURKER_WHIRL_RADIUS + 2.0f;
+// Spout sweeps at 0.4 rad/s. A bot running at 7 yd/s manages 7 / r rad/s, so the ring radius is
+// the speed: 19 yd falls behind the beam at 0.03 rad/s, 21 yd at 0.07. The band must stay on the
+// walkway: a target over the pool edge makes MoveTo refuse and the bot stand still (the main tank
+// spot is 18.6y out). Each bot gets a fixed radius in the band from its GUID so the raid is not
+// stacked on one ring. The safe arc is a zone, not a point: a bot already inside it holds its
+// bearing during the wind-up.
+inline constexpr float LURKER_SPOUT_RUN_RADIUS_MIN = 19.0f;
+inline constexpr float LURKER_SPOUT_RUN_RADIUS_MAX = 21.0f;
+inline constexpr float LURKER_SPOUT_RUN_ARC_HALF_WIDTH = static_cast<float>(M_PI) / 3.0f;
+// Two movement regimes, each used where its failure does not bite. A short step that crosses
+// spillover on the walkway is detoured around it and re-targeted from mid-detour next tick, so the
+// bot dithers at the puddle; but a blocked step is refused, never re-routed. A far target is
+// reached by a path on which the puddle is a kink; but if the walkway ahead has a gap the
+// pathfinder reaches the same target the long way round. So the wind-up, when nothing is firing
+// and the bot in the mouth must get clear fast, uses one far move to the arc edge, checked to set
+// off the right way; the spin, when the beam is live, uses steps.
+inline constexpr float LURKER_SPOUT_RUN_STEP = 7.0f;
+inline constexpr float LURKER_SPOUT_RUN_RADIAL_DEADZONE = 2.0f;
+
+// True if a navmesh path from the bot to x/y sets off around Lurker in the given angular
+// direction (+1 counter-clockwise, -1 clockwise).
+bool DoesPathRoundLurker(Player* bot, Unit* lurker, float x, float y, float z, int8 direction);
+// True if a navmesh path from the bot ends within tolerance of x/y rather than short of it.
+bool DoesPathArrive(Player* bot, float x, float y, float z, float tolerance);
+
+// Submerge: three Coilfang Guardians, one each for the main tank and the first two assist tanks.
+// The guardians are found by a sorted, cached grid search so every tank sees the same list in the
+// same order (summon GUIDs are sequential, so sorted is spawn order).
+inline constexpr uint32 LURKER_GUARDIAN_CACHE_INTERVAL = 200;
+inline constexpr float LURKER_GUARDIAN_SEARCH_RADIUS = 100.0f;
 
 // The script sets REACT_PASSIVE on the first tick of the Spout wind-up and REACT_AGGRESSIVE when
 // the rotation aura drops 19s later, and at no other point while in combat; Submerge uses the
@@ -195,31 +231,6 @@ bool IsLurkerSpouting(Unit* lurker);
 bool IsLurkerSurfacedAndCalm(Unit* lurker);
 // +1 counter-clockwise, -1 clockwise, 0 during the 3s wind-up before the spin starts.
 int8 GetLurkerSpoutSpin(Unit* lurker);
-
-// Spout sweeps at 0.4 rad/s. A bot running at 7 yd/s manages 7 / r rad/s, so the ring radius is
-// the speed: 17 yd keeps pace with the beam, 21 yd falls behind at 0.07 rad/s. Each bot gets a
-// fixed radius in this band from its GUID so the raid is not stacked on one ring. The safe arc is
-// a zone, not a point: a bot already inside it holds its bearing during the wind-up.
-inline constexpr float LURKER_SPOUT_RUN_RADIUS_MIN = 17.0f;
-inline constexpr float LURKER_SPOUT_RUN_RADIUS_MAX = 21.0f;
-inline constexpr float LURKER_SPOUT_RUN_ARC_HALF_WIDTH = static_cast<float>(M_PI) / 3.0f;
-inline constexpr float LURKER_SPOUT_RUN_STEP = 3.5f;
-inline constexpr float LURKER_SPOUT_RUN_RADIAL_DEADZONE = 2.0f;
-
-// Submerge: three Coilfang Guardians, one each for the main tank and the first two assist tanks.
-// The guardians are found by a sorted, cached grid search so every tank sees the same list in the
-// same order (summon GUIDs are sequential, so sorted is spawn order).
-inline constexpr uint32 LURKER_GUARDIAN_CACHE_INTERVAL = 200;
-inline constexpr float LURKER_GUARDIAN_SEARCH_RADIUS = 100.0f;
-inline constexpr size_t LURKER_GUARDIAN_TANK_COUNT = 3;
-// How far apart the tanks hold their guardians, and the step used to get there.
-inline constexpr float LURKER_GUARDIAN_TANK_SEPARATION = 20.0f;
-inline constexpr float LURKER_GUARDIAN_TANK_MOVE_STEP = 2.25f;
-inline constexpr float LURKER_GUARDIAN_TANK_MOVE_DEADZONE = 1.5f;
-
-extern std::unordered_map<uint32, std::array<ObjectGuid, LURKER_GUARDIAN_TANK_COUNT>>
-    lurkerGuardianTankAssignments;
-
 GuidVector FindLurkerGuardianGuids(Player* bot);
 std::vector<Unit*> GetLurkerGuardians(PlayerbotAI* botAI);
 // The guardian tanks in index order; empty unless all three exist.
