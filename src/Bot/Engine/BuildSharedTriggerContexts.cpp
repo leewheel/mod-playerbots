@@ -69,6 +69,9 @@ void AiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Tr
     triggerContexts.Add(new RaidVanillaNaxxTriggerContext());
     //End By leewheel
     triggerContexts.Add(new TbcDungeonHellfireRampartsTriggerContext());
+    // By leewheel 2026-09-16 新增破碎大厅（map 540）
+    triggerContexts.Add(new TbcDungeonShatteredHallsTriggerContext());
+    // End By leewheel
     triggerContexts.Add(new TbcDungeonAuchenaiCryptsTriggerContext());
     triggerContexts.Add(new TbcDungeonUnderbogTriggerContext());
     triggerContexts.Add(new TbcDungeonSethekkHallsTriggerContext());

@@ -23,6 +23,9 @@
 #include "OCStrategy.h"
 #include "PoSStrategy.h"
 #include "SethStrategy.h"
+// By leewheel 2026-09-16 新增破碎大厅（map 540）策略
+#include "SHStrategy.h"
+// End By leewheel
 #include "Strategy.h"
 #include "TOCStrategy.h"
 #include "UBStrategy.h"
@@ -40,6 +43,9 @@ class DungeonStrategyContext : public NamedObjectContext<Strategy>
 
             // Burning Crusade
             creators["tbc-hfr"] = &DungeonStrategyContext::tbc_hfr;         // Hellfire Citadel: Hellfire Ramparts
+            // By leewheel 2026-09-16 新增破碎大厅（此前 mod-playerbots 完全没有这个副本的策略）
+            creators["tbc-sh"] = &DungeonStrategyContext::tbc_sh;           // Hellfire Citadel: Shattered Halls
+            // End By leewheel
             creators["tbc-ac"] = &DungeonStrategyContext::tbc_ac;           // Auchindoun: Auchenai Crypts
             creators["tbc-seth"] = &DungeonStrategyContext::tbc_seth;       // Auchindoun: Sethekk Halls
             creators["tbc-mech"] = &DungeonStrategyContext::tbc_mech;       // Tempest Keep: The Mechanar
@@ -65,6 +71,9 @@ class DungeonStrategyContext : public NamedObjectContext<Strategy>
         }
     private:
         static Strategy* tbc_hfr(PlayerbotAI* botAI) { return new TbcDungeonHellfireRampartsStrategy(botAI); }
+        // By leewheel 2026-09-16
+        static Strategy* tbc_sh(PlayerbotAI* botAI) { return new TbcDungeonShatteredHallsStrategy(botAI); }
+        // End By leewheel
         static Strategy* tbc_ac(PlayerbotAI* botAI) { return new TbcDungeonAuchenaiCryptsStrategy(botAI); }
         static Strategy* tbc_seth(PlayerbotAI* botAI) { return new TbcDungeonSethekkHallsStrategy(botAI); }
         static Strategy* tbc_mech(PlayerbotAI* botAI) { return new TbcDungeonMechanarStrategy(botAI); }

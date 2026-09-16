@@ -270,8 +270,26 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                     player->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED |
                                                           AURA_INTERRUPT_FLAG_CHANGE_MAP);
                 //By leewheel 2026-08-31 同图副本跨分卷: newInstance=true 强制跨地图路径重新解析副本分卷
-                player->TeleportTo(mapId, x, y, z, 0, 0, nullptr,
-                                   isDungeonMap && player->GetMapId() == mapId);
+                //By leewheel 2026-09-16 修正：newInstance 只在【跨分卷】时才置 true。
+                //  机器人已经和召唤者处在**同一个副本分卷**时若仍走远传送，Player::TeleportTo
+                //  会重新过一遍 MapMgr::PlayerCannotEnter → InstanceMap::CannotEnter，
+                //  而那条路径的 "player->GetMapRef().getTarget() == this" 判定(Map.cpp:2073)
+                //  对"已经在本实例内"的机器人直接返回 CANNOT_ENTER_ALREADY_IN_MAP，
+                //  TeleportTo 静默返回 false —— 玩家看到的就是"召唤命令完全没反应"
+                //  (破碎大厅现场反馈：机器人不跟着跳，命令也拉不过来)。
+                //  同分卷改用近程传送，既不再触发副本准入检查，也不会把机器人送错分卷。
+                bool const sameInstance = (player->GetMapId() == mapId &&
+                                           player->GetInstanceId() == summoner->GetInstanceId());
+                bool const teleported = player->TeleportTo(mapId, x, y, z, 0, 0, nullptr,
+                                                           isDungeonMap && !sameInstance);
+                if (!teleported)
+                {
+                    //By leewheel 2026-09-16 传送失败必须让玩家知道
+                    //  （此前返回值被丢弃 ⇒ 任何准入失败都退化成"命令没反应"）
+                    botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                        "meeting_stone_teleport_failed", "我过不去，可能副本人数已满或准入条件不满足。", {}));
+                    return false;
+                }
                 //End By leewheel
                 if (player->GetPet())
                     player->GetPet()->NearTeleportTo(x, y, z, player->GetOrientation());

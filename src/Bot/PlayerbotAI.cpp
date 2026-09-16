@@ -1672,6 +1672,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     {
         "aq20", "blacktemple", "bwl", "karazhan", "gruulslair", "hyjal", "icc", "magtheridon",
         "moltencore", "naxx", "onyxia", "rs", "ssc", "sunwell", "tbc-ac", "tbc-hfr", "tbc-mech",
+        // By leewheel 2026-09-16 新增破碎大厅（Hellfire Citadel: Shattered Halls, map 540）
+        "tbc-sh",
+        // End By leewheel
         // By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游新增"tbc-mgt"(魔导师平台),
         // 保留本分支"vanilla naxx"与下方中文映射表。
         "tbc-mgt", "tbc-seth", "tbc-ub", "tempestkeep", "ulduar", "voa", "wotlk-an", "wotlk-cos",
@@ -1704,6 +1707,10 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         {"zulaman",       "祖阿曼"},
         {"tbc-ac",        "奥金尼地穴"},
         {"tbc-ub",        "幽暗沼泽"},
+        // By leewheel 2026-09-16 新增破碎大厅（Hellfire Citadel: Shattered Halls）
+        {"tbc-sh",        "破碎大厅"},
+        {"tbc-hfr",       "地狱火城墙"},
+        // End By leewheel
         // By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游新增MGT策略, 补充中文映射
         {"tbc-mgt",       "魔导师平台"},
         //End By leewheel
@@ -1772,6 +1779,10 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             break;
         case 534:
             strategyName = "hyjal";  // The Battle for Mount Hyjal (Hyjal Summit)
+            break;
+        case 540:
+            // By leewheel 2026-09-16 Hellfire Citadel: Shattered Halls（破碎大厅）
+            strategyName = "tbc-sh";
             break;
         case 543:
             strategyName = "tbc-hfr";  // Hellfire Citadel: Hellfire Ramparts

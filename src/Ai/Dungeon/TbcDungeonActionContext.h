@@ -12,6 +12,9 @@
 #include "MechActionContext.h"
 #include "MgTActionContext.h"
 #include "SethActionContext.h"
+// By leewheel 2026-09-16 新增破碎大厅（map 540）动作上下文
+#include "SHActionContext.h"
+// End By leewheel
 #include "UBActionContext.h"
 
 #endif

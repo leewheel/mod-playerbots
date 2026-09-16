@@ -71,6 +71,9 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new RaidVanillaNaxxActionContext());
     //End By leewheel
     actionContexts.Add(new TbcDungeonHellfireRampartsActionContext());
+    // By leewheel 2026-09-16 新增破碎大厅（map 540）
+    actionContexts.Add(new TbcDungeonShatteredHallsActionContext());
+    // End By leewheel
     actionContexts.Add(new TbcDungeonAuchenaiCryptsActionContext());
     actionContexts.Add(new TbcDungeonUnderbogActionContext());
     actionContexts.Add(new TbcDungeonSethekkHallsActionContext());
