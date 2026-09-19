@@ -343,14 +343,26 @@ uint32 RandomPlayerbotFactory::CalculateTotalAccountCount()
         {
             PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_UPD_ACCOUNT_TYPE_UNASSIGN);
             stmt->SetData(0, uint8(1));
-            PlayerbotsDatabase.Execute(stmt);
+            // By leewheel 2026-09-19 合并上游 the-lab 时的库语义适配：
+            //   上游 ModuleDatabasePool 的 Execute(语句) 是【同步】语义（ModuleDatabasePool.h:38-41：
+            //   连接为同步、语句必须全部 CONNECTION_SYNCH），本核 DatabaseWorkerPool 的 Execute(语句)
+            //   是【异步】入队并要求 CONNECTION_ASYNC（DatabaseWorkerPool.h:95-97）。
+            //   PLAYERBOTS_UPD_ACCOUNT_TYPE_UNASSIGN 在本核为 CONNECTION_SYNCH，用异步 API 会在
+            //   异步连接上取不到语句而断言崩溃（MySQLConnection.cpp:210 ASSERT(m_mStmt)）；
+            //   且下方 358 行起的轮询（注释明确要求"等待 DB 反映变更"）依赖本 UPDATE 已落库，
+            //   异步执行会让该轮询失去意义，故必须用同步 API。
+            PlayerbotsDatabase.DirectExecute(stmt);
+            // End By leewheel
             LOG_INFO("playerbots", "MaxRandomBots set to 0, any RNDbot accounts (type 1) will be unassigned (type 0)");
         }
         if (sPlayerbotAIConfig.addClassAccountPoolSize == 0)
         {
             PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_UPD_ACCOUNT_TYPE_UNASSIGN);
             stmt->SetData(0, uint8(2));
-            PlayerbotsDatabase.Execute(stmt);
+            // By leewheel 2026-09-19 同上（理由见本函数上一个 DirectExecute 处）：
+            //   PLAYERBOTS_UPD_ACCOUNT_TYPE_UNASSIGN 为 CONNECTION_SYNCH，且下方轮询依赖其已落库。
+            PlayerbotsDatabase.DirectExecute(stmt);
+            // End By leewheel
             LOG_INFO("playerbots", "AddClassAccountPoolSize set to 0, any AddClass accounts (type 2) will be unassigned (type 0)");
         }
 
@@ -509,7 +521,16 @@ void RandomPlayerbotFactory::CreateRandomBots()
         // First execute all the cleanup SQL commands
         // Clear playerbots_random_bots and playerbots_account_type
         PlayerbotsDatabase.Execute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_RANDOM_BOTS));
-        PlayerbotsDatabase.Execute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_ACCOUNT_TYPE));
+        // By leewheel 2026-09-19 合并上游 the-lab 时的库语义适配：
+        //   上一句 PLAYERBOTS_DEL_RANDOM_BOTS 在本核是 CONNECTION_ASYNC，用异步 Execute 正确；
+        //   但本句 PLAYERBOTS_DEL_ACCOUNT_TYPE 在本核是 CONNECTION_SYNCH，必须用同步 API
+        //   （本核 DatabaseWorkerPool.h:95-120：Execute 要求 ASYNC、DirectExecute 要求 SYNCH；
+        //   上游 ModuleDatabasePool 两者皆为同步语义）。若用异步 API，该语句在异步连接上会被
+        //   PrepareStatement 主动置空（MySQLConnection.cpp:510-514），执行即断言崩溃
+        //   （MySQLConnection.cpp:210 ASSERT(m_mStmt)）；且本段是"删除全部随机机器人"流程，
+        //   后续步骤依赖本删除已完成，同步语义才是正确行为。
+        PlayerbotsDatabase.DirectExecute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_ACCOUNT_TYPE));
+        // End By leewheel
 
         // Get the character database name dynamically (used in same-server subqueries below)
         std::string characterDBName = CharacterDatabase.GetConnectionInfo()->database;

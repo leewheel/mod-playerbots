@@ -620,7 +620,14 @@ void RandomPlayerbotMgr::AssignAccountTypes()
             PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_INS_ACCOUNT_TYPE);
             stmt->SetData(0, accountId);
             stmt->SetData(1, uint8(0));
-            PlayerbotsDatabase.Execute(stmt);
+            // By leewheel 2026-09-19 合并上游 the-lab 时的库语义适配：
+            //   上游 ModuleDatabasePool 的 Execute(语句) 是【同步】语义（ModuleDatabasePool.h:38-41：
+            //   其连接为同步、语句必须全部 CONNECTION_SYNCH），本核 DatabaseWorkerPool 的 Execute(语句)
+            //   则是【异步】入队并要求 CONNECTION_ASYNC（DatabaseWorkerPool.h:95-97）。
+            //   PLAYERBOTS_INS_ACCOUNT_TYPE 在本核标记为 CONNECTION_SYNCH，用异步 API 会在异步连接上
+            //   取不到该语句而断言崩溃（MySQLConnection.cpp:210 ASSERT(m_mStmt)），故改用同步 API。
+            PlayerbotsDatabase.DirectExecute(stmt);
+            // End By leewheel
             currentAssignments[accountId] = 0;
         }
     }
@@ -666,7 +673,10 @@ void RandomPlayerbotMgr::AssignAccountTypes()
                 PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_UPD_ACCOUNT_TYPE);
                 stmt->SetData(0, uint8(1));
                 stmt->SetData(1, accountId);
-                PlayerbotsDatabase.Execute(stmt);
+                // By leewheel 2026-09-19 同上（理由见本文件 PLAYERBOTS_INS_ACCOUNT_TYPE 处说明）：
+                //   PLAYERBOTS_UPD_ACCOUNT_TYPE 为 CONNECTION_SYNCH，必须用同步 API。
+                PlayerbotsDatabase.DirectExecute(stmt);
+                // End By leewheel
                 currentAssignments[accountId] = 1;
                 assigned++;
             }
@@ -694,7 +704,10 @@ void RandomPlayerbotMgr::AssignAccountTypes()
                 PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_UPD_ACCOUNT_TYPE);
                 stmt->SetData(0, uint8(2));
                 stmt->SetData(1, accountId);
-                PlayerbotsDatabase.Execute(stmt);
+                // By leewheel 2026-09-19 同上（理由见本文件 PLAYERBOTS_INS_ACCOUNT_TYPE 处说明）：
+                //   PLAYERBOTS_UPD_ACCOUNT_TYPE 为 CONNECTION_SYNCH，必须用同步 API。
+                PlayerbotsDatabase.DirectExecute(stmt);
+                // End By leewheel
                 currentAssignments[accountId] = 2;
                 assigned++;
             }
@@ -3177,9 +3190,19 @@ void RandomPlayerbotMgr::Init()
     if (sPlayerbotAIConfig.randomBotJoinBG)
         sRandomPlayerbotMgr.LoadBattleMastersCache();
 
+    // By leewheel 2026-09-19 合并上游 the-lab 时的库语义适配（★此处在实测中真实崩溃过）：
+    //   上游 ModuleDatabasePool 的 Execute(语句) 是【同步】语义（ModuleDatabasePool.h:38-41），
+    //   本核 DatabaseWorkerPool 的 Execute(语句) 是【异步】入队并要求 CONNECTION_ASYNC
+    //   （DatabaseWorkerPool.h:95-97）。PLAYERBOTS_DEL_RANDOM_BOTS_BY_EVENT 在本核标记为
+    //   CONNECTION_SYNCH，用异步 API 执行时，异步连接上该语句被 PrepareStatement 主动置空
+    //   （MySQLConnection.cpp:510-514），执行即断言失败：实测 worldserver 启动到本函数时崩溃
+    //   （Crashes 转储：MySQLConnection.cpp:210 Execute / ASSERT(m_mStmt)），
+    //   日志 DBErrors.log 记录 "Could not fetch prepared statement 69 on database
+    //   `acore_playerbots`, connection type: asynchronous."。故改用同步 API DirectExecute。
     PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_RANDOM_BOTS_BY_EVENT);
     stmt->SetData(0, std::string("add"));
-    PlayerbotsDatabase.Execute(stmt);
+    PlayerbotsDatabase.DirectExecute(stmt);
+    // End By leewheel
 }
 
 void RandomPlayerbotMgr::InitArenaTeams()

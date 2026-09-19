@@ -657,7 +657,14 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* /* handler */, char const* 
     if (cmd == "reset")
     {
         // By leewheel 2026-09-19 采用上游 prepared statement 写法；日志文本按项目规则保持中文
-        PlayerbotsDatabase.Execute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_GUILD_TASKS_ALL));
+        // By leewheel 2026-09-19 库语义适配：PLAYERBOTS_DEL_GUILD_TASKS_ALL 在本核是 CONNECTION_SYNCH，
+        //   而上游 ModuleDatabasePool 的 Execute(语句) 是【同步】语义（ModuleDatabasePool.h:38-41），
+        //   本核 DatabaseWorkerPool 的 Execute(语句) 则是【异步】入队并要求 CONNECTION_ASYNC
+        //   （DatabaseWorkerPool.h:95-97）。用异步 API 时该语句在异步连接上已被 PrepareStatement 置空
+        //   （MySQLConnection.cpp:510-514），执行即断言崩溃（MySQLConnection.cpp:210 ASSERT(m_mStmt)）。
+        //   GM 命令 "gtask reset" 也应立即重置完成，故改用同步 API。
+        PlayerbotsDatabase.DirectExecute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_GUILD_TASKS_ALL));
+        // End By leewheel
         LOG_INFO("playerbots", "所有玩家的公会任务已重置");
         return true;
     }

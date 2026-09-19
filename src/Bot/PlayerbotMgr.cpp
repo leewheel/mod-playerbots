@@ -1936,7 +1936,16 @@ void PlayerbotMgr::HandleSetSecurityKeyCommand(Player* player, std::string const
     PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_REP_ACCOUNT_KEY);
     stmt->SetData(0, accountId);
     stmt->SetData(1, hashedKey.str());
-    PlayerbotsDatabase.Execute(stmt);
+    // By leewheel 2026-09-19 合并上游 the-lab 时的库语义适配：
+    //   上游 ModuleDatabasePool 的 Execute(语句) 是【同步】语义（ModuleDatabasePool.h:38-41 明确其连接
+    //   为同步、语句必须全部 CONNECTION_SYNCH），本核 DatabaseWorkerPool 的 Execute(语句) 则是
+    //   【异步】入队并要求语句为 CONNECTION_ASYNC（DatabaseWorkerPool.h:95-97）。本语句
+    //   PLAYERBOTS_REP_ACCOUNT_KEY 在本核标记为 CONNECTION_SYNCH，若用异步 API 执行，异步连接上
+    //   该语句会被 PrepareStatement 主动置空（MySQLConnection.cpp:510-514），执行时必然断言失败
+    //   （实测 MySQLConnection.cpp:210 ASSERT(m_mStmt)，worldserver 直接崩溃）。故改用本核的同步 API
+    //   DirectExecute，保持与上游完全一致的同步语义。
+    PlayerbotsDatabase.DirectExecute(stmt);
+    // End By leewheel
 
     ChatHandler(player->GetSession()).PSendSysMessage("安全密钥设置成功。");
 }
@@ -1983,12 +1992,18 @@ void PlayerbotMgr::HandleLinkAccountCommand(Player* player, std::string const& a
     PlayerbotsDatabasePreparedStatement* linkStmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_INS_ACCOUNT_LINK);
     linkStmt->SetData(0, accountId);
     linkStmt->SetData(1, linkedAccountId);
-    PlayerbotsDatabase.Execute(linkStmt);
+    // By leewheel 2026-09-19 同上（理由见本文件 PLAYERBOTS_REP_ACCOUNT_KEY 处说明）：
+    //   PLAYERBOTS_INS_ACCOUNT_LINK 为 CONNECTION_SYNCH，必须用同步 API。
+    PlayerbotsDatabase.DirectExecute(linkStmt);
+    // End By leewheel
 
     linkStmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_INS_ACCOUNT_LINK);
     linkStmt->SetData(0, linkedAccountId);
     linkStmt->SetData(1, accountId);
-    PlayerbotsDatabase.Execute(linkStmt);
+    // By leewheel 2026-09-19 同上（理由见本文件 PLAYERBOTS_REP_ACCOUNT_KEY 处说明）：
+    //   PLAYERBOTS_INS_ACCOUNT_LINK 为 CONNECTION_SYNCH，必须用同步 API。
+    PlayerbotsDatabase.DirectExecute(linkStmt);
+    // End By leewheel
 
     ChatHandler(player->GetSession()).PSendSysMessage("账号关联成功。");
 }
@@ -2044,7 +2059,10 @@ void PlayerbotMgr::HandleUnlinkAccountCommand(Player* player, std::string const&
     stmt->SetData(1, linkedAccountId);
     stmt->SetData(2, linkedAccountId);
     stmt->SetData(3, accountId);
-    PlayerbotsDatabase.Execute(stmt);
+    // By leewheel 2026-09-19 同上（理由见本文件 PLAYERBOTS_REP_ACCOUNT_KEY 处说明）：
+    //   PLAYERBOTS_DEL_ACCOUNT_LINK 为 CONNECTION_SYNCH，必须用同步 API。
+    PlayerbotsDatabase.DirectExecute(stmt);
+    // End By leewheel
 
     ChatHandler(player->GetSession()).PSendSysMessage("账号已取消关联。");
 }
