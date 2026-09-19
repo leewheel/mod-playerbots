@@ -14,7 +14,16 @@
 #include "BuiltInConfig.h"
 #include "DBUpdater.h"
 #include "DatabaseEnv.h"
+// By leewheel 2026-09-19 合并上游 the-lab（2b15a2fb..799274b4）：本核的 PlayerbotsDatabase 仍是
+//   核心自建的 DatabaseWorkerPool<PlayerbotsDatabaseConnection>（DatabaseEnv.h:45 声明 /
+//   DatabaseEnv.cpp:25 定义），玩家机器人库的加载走【核心 DatabaseLoader 通道】，
+//   故必须引入 DatabaseLoader.h。
+//   上游新增的 "PlayerbotsDatabase.h" 在本核解析为
+//   src/server/database/Database/Implementation/PlayerbotsDatabase.h（同一份；
+//   模块侧那份同名副本因「类型重定义」已删除，见 PlayerbotsDatabase.h 内中文说明）。
+#include "DatabaseLoader.h"
 #include "PlayerbotsDatabase.h"
+// End By leewheel
 #include <mysqld_error.h>
 #include "GuildTaskMgr.h"
 #include "PlayerScript.h"
@@ -51,74 +60,62 @@ public:
     //   （"fixes to allow compile after AC update"）做了完全相同的改名
     //   （OnModuleDatabasesLoading/KeepAlive/Closing + OnDatabaseGetDBRevision 的 map 签名 + 写入
     //   revisions["Playerbots"]），两方已收敛到同一套实现，此处不再有任何差异。
+    // By leewheel 2026-09-19 合并上游 the-lab：本函数体【有意偏离上游，保留本核自建仓基线的接线】。
+    //   上游 #2793 把玩家机器人库的所有权收进模块（ModuleDatabasePool + ModuleDBUpdater），
+    //   其写法要求 DoPrepareStatements 里【每一条】语句都是 CONNECTION_SYNCH ——
+    //   ModuleDatabasePool.h:38-41 原文：
+    //     "DoPrepareStatements must mark every statement CONNECTION_SYNCH: a CONNECTION_ASYNC
+    //      one is skipped on these connections and asserts on first use."
+    //   而本核 PlayerbotsDatabaseConnection::DoPrepareStatements() 共 71 条语句，其中
+    //   【24 条是 CONNECTION_ASYNC】（如 PLAYERBOTS_INS_RANDOM_BOTS / PLAYERBOTS_DEL_RANDOM_BOTS* /
+    //   PLAYERBOTS_INS_*_CACHE / PLAYERBOTS_INS_*TRAVELNODE* / PLAYERBOTS_INS_EQUIP_CACHE_NEW 等）。
+    //   若照搬上游那套写法，这 24 条会在首次使用时断言，随机机器人库、旅行节点、装备/稀有度/传送
+    //   缓存等全部失效 —— 故不能采纳。
+    //   ⇒ 本核维持【自建仓基线】的既有接线：PlayerbotsDatabase 是核心的
+    //   DatabaseWorkerPool<PlayerbotsDatabaseConnection>（DatabaseEnv.h:45 声明 / DatabaseEnv.cpp:25 定义），
+    //   库的创建、填充、更新由核心 DatabaseLoader + DBUpdater<PlayerbotsDatabaseConnection> 承担：
+    //     · DatabaseLoader.cpp:235-245 已为本核显式实例化 AddDatabase<PlayerbotsDatabaseConnection>；
+    //     · DBUpdater.cpp:204-235 提供本核的 GetSourceDirectory()/GetBaseFilesDirectory()/GetTableName()/
+    //       IsEnabled() 特化，其中 IsEnabled() 用 DatabaseLoader::DATABASE_PLAYERBOTS 判定
+    //       （DatabaseLoader.h:52，枚举值 8）。
+    //   语义与上游 ModuleDBUpdater 等价，但支持异步语句，且是本项目长期在跑的路径。
     bool OnModuleDatabasesLoading() override
     {
-        std::string const dbString = sConfigMgr->GetOption<std::string>("PlayerbotsDatabaseInfo", "");
-        if (dbString.empty())
-        {
-            LOG_ERROR("server.playerbots", "Playerbots database is not specified in configuration file");
-            return false;
-        }
+        DatabaseLoader playerbotLoader("server.playerbots");
+        playerbotLoader.SetUpdateFlags(sConfigMgr->GetOption<bool>("Playerbots.Updates.EnableDatabases", true)
+                                           ? DatabaseLoader::DATABASE_PLAYERBOTS
+                                           : 0);
+        playerbotLoader.AddDatabase(PlayerbotsDatabase, "Playerbots");
 
-        uint8 const synchThreads = sConfigMgr->GetOption<uint8>("PlayerbotsDatabase.SynchThreads", 2);
-        PlayerbotsDatabase.SetConnectionInfo(dbString, synchThreads);
-
-        bool const updatesEnabled = sConfigMgr->GetOption<bool>("Playerbots.Updates.EnableDatabases", true);
-        if (updatesEnabled && !DBUpdaterUtil::CheckExecutable())
-            return false;
-
-        uint32 error = PlayerbotsDatabase.Open();
-        if (error == ER_BAD_DB_ERROR && updatesEnabled)
-        {
-            // Database missing: create it through the mysql CLI and connect again
-            if (!ModuleDBUpdater::Create(PlayerbotsDatabase))
-                return false;
-
-            error = PlayerbotsDatabase.Open();
-        }
-
-        if (error)
-        {
-            LOG_ERROR("server.playerbots", "Cannot connect to the playerbots database, error {}", error);
-            return false;
-        }
-
-        if (updatesEnabled)
-        {
-            DBUpdaterInfo const info = {
-                "Playerbots",
-                BuiltInConfig::GetSourceDirectory() + "/modules/mod-playerbots",
-                BuiltInConfig::GetSourceDirectory() + "/modules/mod-playerbots/data/sql/playerbots/base/",
-                "db_playerbot"
-            };
-
-            if (!ModuleDBUpdater::Populate(PlayerbotsDatabase, info))
-            {
-                LOG_ERROR("server.playerbots", "Could not populate the playerbots database, see log for details.");
-                return false;
-            }
-
-            if (!ModuleDBUpdater::Update(PlayerbotsDatabase, info))
-            {
-                LOG_ERROR("server.playerbots", "Could not update the playerbots database, see log for details.");
-                return false;
-            }
-        }
-
-        if (!PlayerbotsDatabase.PrepareStatements())
-        {
-            LOG_ERROR("server.playerbots", "Could not prepare statements of the playerbots database, see log for details.");
-            return false;
-        }
-
-        return true;
+        return playerbotLoader.Load();
     }
+    // End By leewheel
 
     void OnModuleDatabasesKeepAlive() override { PlayerbotsDatabase.KeepAlive(); }
 
     void OnModuleDatabasesClosing() override { PlayerbotsDatabase.Close(); }
 
     void OnDatabaseWarnAboutSyncQueries(bool apply) override { PlayerbotsDatabase.WarnAboutSyncQueries(apply); }
+
+    // By leewheel 2026-09-19 合并上游 the-lab：本 override 【必须保留】——
+    //   上游 799274b4 已无此函数，但它的共同祖先 2b15a2fb 仍然有，是 upstream 的
+    //   af078829 "Use core modular database functionality (#2793)" 重写整块时【一并去掉】的
+    //   （该提交主题是库所有权，删此钩子并非其目的 ⇒ 属顺带丢失，非有意废弃）。
+    //   而本核的 DatabaseScript 仍挂这个钩子（DatabaseScript.h:108 虚函数 + ScriptMgr.h:754 +
+    //   DatabaseScript.cpp:60，调用点 WorldSession.cpp:895-897）：
+    //       uint32 statementIndex = CHAR_UPD_ACCOUNT_ONLINE;   // 核心默认值
+    //       uint32 statementParam = GetAccountId();
+    //       sScriptMgr->OnDatabaseSelectIndexLogout(_player, statementIndex, statementParam);
+    //   没有本 override 时会走核心默认值，即只把【账号】标为在线状态；
+    //   本 override 改发 CHAR_UPD_CHAR_OFFLINE + 角色 GUID（CharacterDatabase.h:285），
+    //   正是 mod-playerbots 用来把机器人【角色】标记为离线的语句
+    //   （本核 DatabaseScript.cpp:59 的注释也明确写着该钩子的用途）。
+    void OnDatabaseSelectIndexLogout(Player* player, uint32& statementIndex, uint32& statementParam) override
+    {
+        statementIndex = CHAR_UPD_CHAR_OFFLINE;
+        statementParam = player->GetGUID().GetCounter();
+    }
+    // End By leewheel
 
     void OnDatabaseGetDBRevision(std::map<std::string, std::string>& revisions) override
     {
