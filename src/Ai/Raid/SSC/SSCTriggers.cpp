@@ -125,7 +125,10 @@ bool TheLurkerBelowMeleeCannotReachTargetTrigger::IsActiveInEncounter()
     if (!target || bot->IsWithinMeleeRange(target))
         return false;
 
-    Unit* lurker = AI_VALUE2(Unit*, "find target", "the lurker below");
+    // By leewheel 2026-09-19 合并上游 the-lab：规则第 97 条，机器人策略里的 boss 名称必须用 entry。
+    //   "the lurker below" ⇒ 21217（同文件 139 行的 Leotheras 已是 "21215"，此处补齐一致性）
+    Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
+    // End By leewheel
     return lurker && !IsLurkerSpouting(lurker);
 }
 

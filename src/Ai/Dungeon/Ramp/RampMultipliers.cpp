@@ -17,6 +17,20 @@
 using namespace EncounterHelpers;
 using namespace RampShared;
 
+// By leewheel 2026-09-19 合并上游 the-lab（2b15a2fb..799274b4）：上游把本模块的 HFR/（地狱火城墙，
+//   我方已在提交 31446315 完成 entry 化）整体删除并重写为同目录 Ramp/；重写时 Boss 名称又被写回
+//   英文字符串，我方 entry 化成果随之丢失。按项目规则第 97 条（机器人策略里的 Boss 名称一律用
+//   entry，不得依赖客户端本地化名称，否则中文客户端下 find target 永远命中不到），此处把本文件
+//   全部 "find target" 参数补回 entry。映射取自被我方 entry 化过的旧文件
+//   modules/mod-playerbots/src/Ai/Dungeon/HFR/HFR*.cpp（提交 31446315）：
+//     "hellfire watcher"   => 17309   （原 HFR/HFRActions.cpp:21）
+//     "fiendish hound"     => 17280   （原 HFR/HFRActions.cpp:60）
+//     "omor the unscarred" => 17308   （原 HFR/HFRMultipliers.cpp:21）
+//     "vazruden"           => 17537   （原 HFR/HFRActions.cpp:96）
+//     "nazan"              => 17536   （原 HFR/HFRMultipliers.cpp:67）
+//   注意：本文件里的 "tremor totem" 等法术名是【法术名与 AI 关键字】，不是 Boss 名，保持英文。
+// End By leewheel
+
 // Omor the Unscarred
 
 float OmorTreacheryAuraFleeFromPlayersMultiplier::GetValue(Action* action)
@@ -35,7 +49,7 @@ float OmorTreacheryAuraFleeFromPlayersMultiplier::GetValue(Action* action)
     if (!isMovementSpell && !dynamic_cast<MovementAction*>(action))
         return 1.0f;
 
-    Unit* omor = AI_VALUE2(Unit*, "find target", "omor the unscarred");
+    Unit* omor = AI_VALUE2(Unit*, "find target", "17308");
 
     // If Omor isn't found, allow all actions
     if (!omor)
@@ -87,7 +101,7 @@ float NazanSetTremorTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
     return nazan && !nazan->IsFlying() ? 0.0f : 1.0f;
 }
 
@@ -107,7 +121,7 @@ float NazanSetFireResistanceTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
     return nazan && !nazan->IsFlying() ? 0.0f : 1.0f;
 }
 
@@ -130,6 +144,6 @@ float NazanSetFireResistanceAuraMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
     return nazan && !nazan->IsFlying() ? 0.0f : 1.0f;
 }
