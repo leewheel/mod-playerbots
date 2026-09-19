@@ -39,7 +39,8 @@
 #include "Ai/Dungeon/TbcDungeonActionContext.h"
 #include "Ai/Dungeon/WotlkDungeonActionContext.h"
 
-void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Action>& actionContexts)
+void AiObjectContext::BuildSharedActionContexts(
+    SharedNamedObjectContextList<Action>& actionContexts)
 {
     actionContexts.Add(new ActionContext());
     actionContexts.Add(new ChatActionContext());
@@ -80,6 +81,7 @@ void AiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Act
     actionContexts.Add(new TbcDungeonMechanarActionContext());
     actionContexts.Add(new TbcDungeonUnderbogActionContext());
     actionContexts.Add(new TbcDungeonMagistersTerraceActionContext());
+    actionContexts.Add(new TbcDungeonHellfireRampartsActionContext());
     actionContexts.Add(new WotlkDungeonUKActionContext());
     actionContexts.Add(new WotlkDungeonNexActionContext());
     actionContexts.Add(new WotlkDungeonANActionContext());

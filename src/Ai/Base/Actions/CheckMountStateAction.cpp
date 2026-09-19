@@ -5,13 +5,13 @@
  */
 
 #include "CheckMountStateAction.h"
+#include "PlayerbotsDatabase.h"
 #include "AreaDefines.h"
 #include "BattleGroundTactics.h"
 #include "BattlegroundEY.h"
 #include "BattlegroundWS.h"
 #include "DBCStores.h"
 #include "Event.h"
-#include "ItemCountValue.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
@@ -21,71 +21,8 @@
 static constexpr uint32 SPELL_COLD_WEATHER_FLYING = 54197;
 static constexpr float PARACHUTE_LAND_THRESHOLD = 15.0f;
 
-// By leewheel 2026-07-18
-// 硬编码坐骑法术数组：机器人上坐骑时如果没有坐骑法术，从数组中随机取一个补学
-// 地面坐骑：EffectAura_2=32(SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED)
-// 飞行坐骑：EffectAura_2=207(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED)
-static const uint32 groundMountSpells[] = {
-    1700012, 1700013, 1700014, 1700015, 1700016, 1700024, 1700025, 1700026,
-    1700027, 1700028, 1700029, 1700033, 1700038, 1700039, 1700040, 1700041,
-    1700042, 1700043, 1700044, 1700045, 1700046, 1700047, 1700049, 1700054,
-    1700056, 1700057, 1700058, 1700060, 1700069, 1700070, 1700071, 1700073,
-    1700074, 1700075, 1700076, 1700077, 1700078, 1700079, 1700080, 1700081,
-    1700082, 1700083, 1700084, 1700085, 1700086, 1700087, 1700088, 1700089,
-    1700095, 1700096, 1700097, 1700098, 1700099, 1700100, 1700101, 1700103,
-    1700104, 1700105, 1700106, 1700107, 1700109, 1700110, 1700111, 1700113,
-    1700114, 1700115, 1700116, 1700128, 1700129, 1700130, 1700135, 1700136,
-    1700137, 1700138, 1700140, 1700141, 1700142, 1700147, 1700148, 1700149,
-    1700150, 1700151, 1700152, 1700153, 1700154, 1700155, 1700156, 1700163,
-    1700165, 1700166, 1700167, 1700168, 1700169, 1700170, 1700171, 1700172,
-    1700173, 1700174, 1700175, 1700179, 1700184, 1700197, 1700198, 1700199,
-    1700200, 1700201, 1700202, 1700203, 1700204, 1700205, 1700206, 1700207,
-    1700208, 1700217, 1700218, 1700219, 1700220, 1700226, 1700227, 1700228,
-    1700229, 1700230, 1700231, 1700232, 1700235, 1700236, 1700237, 1700238,
-    1700239, 1700240, 1700241, 1700242, 1700243, 1700244, 1700245, 1700246,
-    1700247, 1700248, 1700249, 1700250, 1700251, 1700252, 1700253, 1700254,
-    1700255, 1700256, 1700257, 1700258, 1700260, 1700261, 1700262, 1700263,
-    1700264, 1700265, 1700266, 1700267, 1700268, 1700269, 1700270, 1700271,
-    1700272, 1700273, 1700274, 1700275, 1700276, 1700280, 1700281, 1700282,
-    1700287, 1700288, 1700289, 1700290, 1700291, 1700292, 1700293, 1700294,
-    1700307, 1700308, 1700318, 1700319, 1700320, 1700321, 1700323, 1700326,
-    1700328, 1700329, 1700331, 1700332, 1700333, 1700337, 1700338, 1700339,
-    1700340, 1700341, 1700342, 1700344, 1700345, 1700348, 1700349, 1700359,
-    1700360, 1700361, 1700362, 1700363, 1700364, 1700365, 1700366, 1700367,
-    1700368, 1700369, 1700370, 1700371, 1700372, 1700373, 1700374, 1700375,
-    1700376, 1700377, 1700378, 1700379, 1700380, 1700381, 1700387, 1700388,
-    1700389, 1700390, 1700391, 1700392, 1700393, 1700394, 1700395, 1700396,
-    1700397, 1700398, 1700399, 1700400, 1700401
-};
-static const uint32 flightMountSpells[] = {
-    1700001, 1700002, 1700003, 1700004, 1700005, 1700006, 1700007, 1700008,
-    1700009, 1700010, 1700011, 1700017, 1700018, 1700019, 1700020, 1700021,
-    1700022, 1700023, 1700030, 1700031, 1700032, 1700034, 1700035, 1700036,
-    1700037, 1700048, 1700050, 1700051, 1700052, 1700053, 1700055, 1700059,
-    1700061, 1700062, 1700063, 1700064, 1700065, 1700066, 1700067, 1700068,
-    1700072, 1700090, 1700091, 1700092, 1700093, 1700094, 1700102, 1700108,
-    1700112, 1700117, 1700118, 1700119, 1700120, 1700121, 1700122, 1700123,
-    1700124, 1700125, 1700126, 1700127, 1700131, 1700132, 1700133, 1700134,
-    1700139, 1700143, 1700144, 1700145, 1700146, 1700157, 1700158, 1700159,
-    1700160, 1700161, 1700162, 1700164, 1700176, 1700177, 1700178, 1700180,
-    1700181, 1700182, 1700183, 1700185, 1700186, 1700187, 1700188, 1700189,
-    1700190, 1700192, 1700193, 1700194, 1700195, 1700196, 1700209, 1700210,
-    1700211, 1700212, 1700213, 1700214, 1700215, 1700216, 1700221, 1700222,
-    1700223, 1700224, 1700225, 1700233, 1700234, 1700259, 1700277, 1700278,
-    1700279, 1700283, 1700284, 1700285, 1700286, 1700295, 1700296, 1700297,
-    1700298, 1700299, 1700300, 1700301, 1700302, 1700303, 1700304, 1700305,
-    1700306, 1700309, 1700310, 1700311, 1700312, 1700313, 1700314, 1700315,
-    1700316, 1700317, 1700322, 1700324, 1700325, 1700327, 1700330, 1700334,
-    1700335, 1700336, 1700343, 1700346, 1700347, 1700350, 1700351, 1700352,
-    1700353, 1700354, 1700355, 1700356, 1700357, 1700358, 1700382, 1700383,
-    1700384, 1700385, 1700386, 1700402, 1700403, 1700404, 1700405, 1700406,
-    1700407, 1700408, 1700409, 1700410, 1700411, 1700412
-};
-// End By leewheel
-
-// Define the static map / init bool for caching bot preferred mount data globally
+// Preferred mounts per bot, loaded once at startup by LoadPreferredMounts()
 std::unordered_map<uint32, PreferredMountCache> CheckMountStateAction::mountCache;
-bool CheckMountStateAction::preferredMountTableChecked = false;
 
 MountData CollectMountData(Player const* bot)
 {
@@ -295,37 +232,6 @@ bool CheckMountStateAction::Mount()
     if (TryForms(master, masterMountType, masterSpeed))
         return true;
 
-    // By leewheel 2026-07-18
-    // 补学：如果机器人没有对应类型的坐骑法术，直接从硬编码数组中随机取一个学习
-    // 学习失败就重新再学，直到学会
-    {
-        auto checkIt = mountData.allSpells.find(masterMountType);
-        bool hasMount = (checkIt != mountData.allSpells.end() && !checkIt->second.empty());
-        if (!hasMount)
-        {
-            const uint32* mountArray = (masterMountType == 0) ? groundMountSpells : flightMountSpells;
-            uint32 mountArraySize = (masterMountType == 0) ?
-                (sizeof(groundMountSpells) / sizeof(groundMountSpells[0])) :
-                (sizeof(flightMountSpells) / sizeof(flightMountSpells[0]));
-            for (uint32 attempt = 0; attempt < 10 && mountArraySize > 0; ++attempt)
-            {
-                uint32 index = urand(0, mountArraySize - 1);
-                uint32 spell = mountArray[index];
-                if (bot->HasSpell(spell))
-                    break;
-                bot->learnSpell(spell);
-                if (bot->HasSpell(spell))
-                {
-                    LOG_INFO("playerbots", "机器人 {} 上坐骑时补学坐骑法术 {}。", bot->GetName(), spell);
-                    break;
-                }
-            }
-            // 补学后重新收集坐骑数据
-            mountData = CollectMountData(bot);
-        }
-    }
-    // End By leewheel
-
     // Try random mount
     auto spellsIt = mountData.allSpells.find(masterMountType);
     if (spellsIt != mountData.allSpells.end())
@@ -336,9 +242,6 @@ bool CheckMountStateAction::Mount()
     }
 
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", "mount");
-    // By leewheel 2026-09-04 防悬空崩溃: 缓存物品列表先过滤失效指针再取用
-    // End By leewheel
-    items = InventoryItemValueBase::FilterLive(bot, items);
     if (!items.empty())
         return UseItemAuto(*items.begin());
 
@@ -387,6 +290,8 @@ void CheckMountStateAction::CompleteDismount(Player* bot)
     bot->SetFallInformation(0, startZ);
     fallInfo.pos.Relocate(x, y, groundZ);
     bot->HandleFall(fallInfo);
+    // Re-anchor at the ground: Player::IsFalling() compares standing Z to this, so startZ reads as a fall.
+    bot->SetFallInformation(0, groundZ);
     bot->RemoveUnitMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_FALLING_FAR);
 }
 
@@ -437,69 +342,58 @@ bool CheckMountStateAction::TryForms(Player* master, int32 masterMountType, int3
     return false;
 }
 
+void CheckMountStateAction::LoadPreferredMounts()
+{
+    mountCache.clear();
+
+    PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_PREFERRED_MOUNTS);
+    PreparedQueryResult result = PlayerbotsDatabase.Query(stmt);
+    if (!result)
+        return;
+
+    uint32 totalResults = 0;
+    do
+    {
+        Field* fields = result->Fetch();
+        uint32 guid = fields[0].Get<uint32>();
+        uint32 spellId = fields[1].Get<uint32>();
+        uint32 mountType = fields[2].Get<uint32>();
+
+        if (mountType == 0)
+            mountCache[guid].groundMounts.push_back(spellId);
+        else if (mountType == 1)
+            mountCache[guid].flightMounts.push_back(spellId);
+
+        totalResults++;
+    } while (result->NextRow());
+
+    LOG_INFO("playerbots", "Preferred mounts initialized | Total records: {}", totalResults);
+}
+
 bool CheckMountStateAction::TryPreferredMount(Player* master) const
 {
     uint32 botGUID = bot->GetGUID().GetRawValue();
 
-    // Build cache (only once)
-    if (!preferredMountTableChecked)
-    {
-        // Verify preferred mounts table existance in the database
-        QueryResult checkTable = PlayerbotsDatabase.Query(
-            "SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_schema = 'acore_playerbots' AND table_name = 'playerbots_preferred_mounts')");
+    // mountCache is filled once on the world thread at startup and only read afterwards
+    auto itr = mountCache.find(botGUID);
+    if (itr == mountCache.end())
+        return false;
 
-        if (checkTable && checkTable->Fetch()[0].Get<uint32>() == 1)
-        {
-            preferredMountTableChecked = true;
-
-            // Cache all mounts of both types globally, for all entries
-            QueryResult result = PlayerbotsDatabase.Query("SELECT guid, spellid, type FROM playerbots_preferred_mounts");
-
-            if (result)
-            {
-                uint32 totalResults = 0;
-                while (auto row = result->Fetch())
-                {
-                    uint32 guid = row[0].Get<uint32>();
-                    uint32 spellId = row[1].Get<uint32>();
-                    uint32 mountType = row[2].Get<uint32>();
-
-                    if (mountType == 0)
-                        mountCache[guid].groundMounts.push_back(spellId);
-
-                    else if (mountType == 1)
-                        mountCache[guid].flightMounts.push_back(spellId);
-
-                    totalResults++;
-
-                    result->NextRow();
-                }
-                LOG_INFO("playerbots", "Preferred mounts initialized | Total records: {}", totalResults);
-            }
-        }
-        else // If the SQL table is missing, log an error and return false
-        {
-            preferredMountTableChecked = true;
-
-            LOG_DEBUG("playerbots", "Preferred mounts SQL table playerbots_preferred_mounts does not exist!");
-
-            return false;
-        }
-    }
+    PreferredMountCache const& preferred = itr->second;
 
     // Pick a random preferred mount from the selection, if available
     uint32 chosenMountId = 0;
 
-    if (GetMountType(master) == 0 && !mountCache[botGUID].groundMounts.empty())
+    if (GetMountType(master) == 0 && !preferred.groundMounts.empty())
     {
-        uint32 index = urand(0, mountCache[botGUID].groundMounts.size() - 1);
-        chosenMountId = mountCache[botGUID].groundMounts[index];
+        uint32 index = urand(0, preferred.groundMounts.size() - 1);
+        chosenMountId = preferred.groundMounts[index];
     }
 
-    else if (GetMountType(master) == 1 && !mountCache[botGUID].flightMounts.empty())
+    else if (GetMountType(master) == 1 && !preferred.flightMounts.empty())
     {
-        uint32 index = urand(0, mountCache[botGUID].flightMounts.size() - 1);
-        chosenMountId = mountCache[botGUID].flightMounts[index];
+        uint32 index = urand(0, preferred.flightMounts.size() - 1);
+        chosenMountId = preferred.flightMounts[index];
     }
 
     // No suitable preferred mount found
@@ -528,15 +422,6 @@ bool CheckMountStateAction::TryPreferredMount(Player* master) const
     return false;
 }
 
-// By leewheel 2026-07-18
-// 修复：机器人跟随主控移动时无法上坐骑的问题
-// 原因：StopMoving() 只是发送停止移动包，服务端需要下一个tick才更新 isMoving() 状态，
-//       所以紧接着的 CanCastSpell() 检查时 bot->isMoving() 仍为 true，导致 CanCastSpell 返回 false。
-//       结果：地面坐骑时间歇性失败（有时1个上、有时3个上、有时全不上）。
-//       飞行坐骑不受影响，因为飞行区域机器人通常已经停下。
-// 修复：StopMoving 后清除移动状态标志，使 CanCastSpell 通过移动检查。
-// 2026-09-04 合并brighton-chi/the-lab：参数声明随上游改为east-const风格，与头文件声明保持一致，逻辑不变。
-// End By leewheel
 bool CheckMountStateAction::TryRandomMountFiltered(std::map<int32, std::vector<uint32>> const& spells, int32 masterSpeed) const
 {
     for (auto it = spells.rbegin(); it != spells.rend(); ++it)
@@ -552,13 +437,7 @@ bool CheckMountStateAction::TryRandomMountFiltered(std::map<int32, std::vector<u
         {
             // Required here as otherwise bots won't mount in BGs due to them constant moving
             if (bot->isMoving())
-            {
                 bot->StopMoving();
-                // By leewheel 2026-07-18
-                // StopMoving 后立即清除移动状态标志，否则 CanCastSpell 仍认为机器人在移动
-                bot->ClearUnitState(UNIT_STATE_MOVING);
-                // End By leewheel
-            }
 
             uint32 index = urand(0, ids.size() - 1);
 
@@ -567,15 +446,6 @@ bool CheckMountStateAction::TryRandomMountFiltered(std::map<int32, std::vector<u
                 botAI->CastSpell(ids[index], bot);
                 return true;
             }
-            // By leewheel 2026-07-18
-            // 如果 CanCastSpell 仍因移动检查失败，直接尝试施法（坐骑法术不会因移动而真正失败）
-            // 坐骑法术施放时会自动让机器人停下来
-            else if (bot->HasSpell(ids[index]) && !bot->HasSpellCooldown(ids[index]))
-            {
-                botAI->CastSpell(ids[index], bot);
-                return true;
-            }
-            // End By leewheel
         }
     }
     return false;

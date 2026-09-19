@@ -5,6 +5,7 @@
  */
 
 #include "GuildTaskMgr.h"
+#include "PlayerbotsDatabase.h"
 #include "ChatHelper.h"
 #include "Group.h"
 #include "GuildMgr.h"
@@ -655,7 +656,8 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* /* handler */, char const* 
 
     if (cmd == "reset")
     {
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_guild_tasks");
+        // By leewheel 2026-09-19 采用上游 prepared statement 写法；日志文本按项目规则保持中文
+        PlayerbotsDatabase.Execute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_GUILD_TASKS_ALL));
         LOG_INFO("playerbots", "所有玩家的公会任务已重置");
         return true;
     }

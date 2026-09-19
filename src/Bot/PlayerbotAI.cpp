@@ -264,6 +264,11 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (bot->IsInCombat())
         m_lastCombatTime = time(nullptr);
 
+    // Bots send no movement opcodes, so m_lastFallZ stays frozen and Player::IsFalling() (a Z test
+    // against it) blocks LFG teleports. Unit::IsFalling() is the flag test, so real falls keep theirs.
+    if (!bot->Unit::IsFalling())
+        bot->SetFallInformation(0, bot->GetPositionZ());
+
     // Handle cheat options (set bot health and power if cheats are enabled)
     if (bot->IsAlive() &&
         (static_cast<uint32>(GetCheat()) > 0 || static_cast<uint32>(sPlayerbotAIConfig.botCheatMask) > 0))
@@ -1670,14 +1675,12 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
 {
     static const std::vector<std::string> allInstanceStrategies =
     {
-        "aq20", "blacktemple", "bwl", "karazhan", "gruulslair", "hyjal", "icc", "magtheridon",
-        "moltencore", "naxx", "onyxia", "rs", "ssc", "sunwell", "tbc-ac", "tbc-hfr", "tbc-mech",
-        // By leewheel 2026-09-16 新增破碎大厅（Hellfire Citadel: Shattered Halls, map 540）
+        "aq20", "blacktemple", "bwl", "gruulslair", "hyjal", "icc", "karazhan", "magtheridon",
+        "moltencore", "naxx", "onyxia", "rs", "ssc", "sunwell", "tbc-ac", "tbc-mech", "tbc-mgt",
+        "tbc-ramp", "tbc-seth", "tbc-ub", "tempestkeep", "ulduar", "voa", "wotlk-an", "wotlk-cos",
+        // By leewheel 2026-09-19 保留我方独有内容：破碎大厅（Hellfire Citadel: Shattered Halls, map 540）
         "tbc-sh",
         // End By leewheel
-        // By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游新增"tbc-mgt"(魔导师平台),
-        // 保留本分支"vanilla naxx"与下方中文映射表。
-        "tbc-mgt", "tbc-seth", "tbc-ub", "tempestkeep", "ulduar", "voa", "wotlk-an", "wotlk-cos",
         "wotlk-dtk", "wotlk-eoe", "wotlk-fos", "wotlk-gd", "wotlk-hol", "wotlk-hos", "wotlk-nex",
         "wotlk-occ", "wotlk-ok", "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up",
         "wotlk-vh", "zulaman",
@@ -1709,7 +1712,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         {"tbc-ub",        "幽暗沼泽"},
         // By leewheel 2026-09-16 新增破碎大厅（Hellfire Citadel: Shattered Halls）
         {"tbc-sh",        "破碎大厅"},
-        {"tbc-hfr",       "地狱火城墙"},
+        // By leewheel 2026-09-19 合并上游 the-lab：上游已把地狱火城墙策略由 "tbc-hfr" 改名为 "tbc-ramp"
+        //   （HFR/ 目录整体重写为 Ramp/），本中文映射键同步改名，否则 1927 行按策略名查中文会落空。
+        {"tbc-ramp",      "地狱火城墙"},
         // End By leewheel
         // By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游新增MGT策略, 补充中文映射
         {"tbc-mgt",       "魔导师平台"},
@@ -1785,7 +1790,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             strategyName = "tbc-sh";
             break;
         case 543:
-            strategyName = "tbc-hfr";  // Hellfire Citadel: Hellfire Ramparts
+            strategyName = "tbc-ramp";  // Hellfire Citadel: Hellfire Ramparts
             break;
         case 544:
             strategyName = "magtheridon";  // Magtheridon's Lair

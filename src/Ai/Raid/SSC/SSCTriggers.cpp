@@ -60,10 +60,10 @@ bool HydrossTheUnstableTankNeedsAggroUponPhaseChangeTrigger::IsActiveInEncounter
         AI_VALUE2(Unit*, "find target", "21216");
 }
 
-// Non-hunter DPS only. The phase tank's swap action and the healers' casts must not be stopped,
-// add tanks are on the spawns, and a hunter's auto-shot with Misdirection up is the hand-off.
 bool HydrossTheUnstableAggroResetsUponPhaseChangeTrigger::IsActiveInEncounter()
 {
+    // By leewheel 2026-09-19 按项目规则第97条：boss 名统一用 NPC entry（Hydross the Unstable = 21216），
+    // 不用英文名；同时保留我方既有的"排除猎人"判定（猎人靠宠物抗性与距离处理，不参与此触发）。
     return PlayerbotAI::IsDps(bot) && bot->getClass() != CLASS_HUNTER &&
         AI_VALUE2(Unit*, "find target", "21216");
 }
@@ -96,7 +96,6 @@ bool TheLurkerBelowRangedShouldSpreadTrigger::IsActiveInEncounter()
         IsLurkerSurfacedAndCalm(AI_VALUE2(Unit*, "find target", "21217"));
 }
 
-// Only the three guardian tanks, and only when all three exist
 bool TheLurkerBelowIsSubmergedTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsTank(bot))
@@ -108,6 +107,26 @@ bool TheLurkerBelowIsSubmergedTrigger::IsActiveInEncounter()
 
     std::vector<Player*> const tanks = GetLurkerGuardianTanks(bot);
     return std::find(tanks.begin(), tanks.end(), bot) != tanks.end();
+}
+
+// Bots are unable to move across the water via ReachMeleeAction. Only bots with charge moves can
+// cross onto the isles to attack Ambushers during the submerge phase. They are then stuck there
+// until their charge comes off of cooldown. To resolve, issue a direct move to a land position.
+bool TheLurkerBelowMeleeCannotReachTargetTrigger::IsActiveInEncounter()
+{
+    if (!PlayerbotAI::IsMelee(bot))
+        return false;
+
+    // A melee bot with a target out of melee range that is neither moving nor casting is stuck.
+    if (bot->isMoving() || bot->IsNonMeleeSpellCast(false))
+        return false;
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target || bot->IsWithinMeleeRange(target))
+        return false;
+
+    Unit* lurker = AI_VALUE2(Unit*, "find target", "the lurker below");
+    return lurker && !IsLurkerSpouting(lurker);
 }
 
 // Leotheras the Blind
@@ -140,7 +159,7 @@ bool LeotherasTheBlindOnlyWarlockShouldTankDemonFormTrigger::IsActiveInEncounter
     if (HasInnerDemon(bot))
         return false;
 
-    // If there is no Warlock tank, then traditional tanks will have to do it.
+    // If there is no Warlock tank, then traditional tanks will have to tank the demon form.
     if (!GetLeotherasWarlockTank(bot))
         return false;
 
@@ -185,9 +204,6 @@ bool LeotherasTheBlindTooManyChaosBlastStacksTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "21215"))
         return false;
 
-    if (HasInnerDemon(bot))
-        return false;
-
     if (!HasTooManyChaosBlastStacks(bot))
         return false;
 
@@ -217,7 +233,7 @@ bool LeotherasTheBlindInFinalPhaseTrigger::IsActiveInEncounter()
     return IsLeotherasFinalPhase(bot);
 }
 
-bool LeotherasTheBlindWarlockTankNeedsAggroTrigger::IsActiveInEncounter()
+bool LeotherasTheBlindHunterShouldMisdirectDemonFormTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
@@ -225,7 +241,10 @@ bool LeotherasTheBlindWarlockTankNeedsAggroTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "21215"))
         return false;
 
-    return !HasInnerDemon(bot);
+    if (HasInnerDemon(bot))
+        return false;
+
+    return GetActiveLeotherasDemon(bot);
 }
 
 bool LeotherasTheBlindShouldManageDpsWaitTimersTrigger::IsActiveInEncounter()

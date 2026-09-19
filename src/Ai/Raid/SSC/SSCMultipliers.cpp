@@ -58,7 +58,7 @@ float UnderbogColossusEscapeToxicPoolMultiplier::GetValue(Action* action)
     if (bot->GetMapId() != SSC_MAP_ID)
         return 1.0f;
 
-    // A bot that has just left combat will otherwise sit down to drink in a 2k/s pool
+    // Stop bots from sitting and drinking in a toxic pool. Come on...
     if (dynamic_cast<DrinkAction*>(action) || dynamic_cast<EatAction*>(action))
         return IsNearToxicPool(botAI, TOXIC_POOL_HOLDING_RADIUS) ? 0.0f : 1.0f;
 
@@ -91,15 +91,76 @@ float SscControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
     if (vashj && GetLadyVashjPhase(vashj) != 1)
         return 0.0f;
 
+    // By leewheel 2026-09-19 合并上游 the-lab：采纳上游新增的「莱欧瑟拉斯处于术士T+内魔阶段时不误导」判定，
+    //   并按规则第 97 条把上游的英文首领名改成 entry：
+    //   leotheras the blind=21215(盲眼者莱欧瑟拉斯) / fathom-lord karathress=21214(深水领主卡拉瑟雷斯)
+    //   / hydross the unstable=21216(不稳定的海度斯)。
+    if (AI_VALUE2(Unit*, "find target", "21215") &&
+        GetLeotherasWarlockTank(bot) && GetActiveLeotherasDemon(bot))
+    {
+        return 0.0f;
+    }
+
     return AI_VALUE2(Unit*, "find target", "21214") ||
         AI_VALUE2(Unit*, "find target", "21216") ? 0.0f : 1.0f;
+    // End By leewheel
+}
+
+// Cooldowns are held until each boss is settled: the phase and add gates where a boss has them,
+// and 95% health everywhere else. Trash is left alone.
+float SscDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
+{
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (!IsDpsCooldownAction(bot, action))
+        return 1.0f;
+
+    bool const isBloodlust = IsBloodlustAction(bot, action);
+
+    // By leewheel 2026-09-19 合并上游 the-lab：本函数为上游新增，按规则第 97 条把首领名改为 entry：
+    //   lady vashj=21212(瓦丝琪) / morogrim tidewalker=21213(莫洛格里·踏潮者)
+    //   tidewalker lurker=21920(踏潮潜伏者) / fathom-lord karathress=21214(深水领主卡拉瑟雷斯)
+    //   fathom-guard tidalvess=21965(深水卫士泰达维斯) / hydross the unstable=21216(不稳定的海度斯)
+    //   the lurker below=21217(鱼斯拉) / leotheras the blind=21215(盲眼者莱欧瑟拉斯)。
+    if (Unit* vashj = AI_VALUE2(Unit*, "find target", "21212"))
+    {
+        int8 const phase = GetLadyVashjPhase(vashj);
+        if (phase == 3)
+            return 1.0f;
+
+        // Bloodlust/Heroism are phase 3 only; other dps cooldowns can be used from phase 2
+        return !isBloodlust && phase == 2 ? 1.0f : 0.0f;
+    }
+
+    if (Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213"))
+    {
+        // Bloodlust/Heroism are for the murloc waves
+        if (isBloodlust)
+            return AI_VALUE2(Unit*, "find target", "21920") ? 1.0f : 0.0f;
+
+        return tidewalker->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+    }
+
+    if (AI_VALUE2(Unit*, "find target", "21214"))
+    {
+        // Tidalvess is the first kill target; once he is down the rest of the fight is open
+        Unit* tidalvess = AI_VALUE2(Unit*, "find target", "21965");
+        return tidalvess && tidalvess->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+    }
+
+    for (char const* name : { "21216", "21217", "21215" })
+    {
+        if (Unit* boss = AI_VALUE2(Unit*, "find target", name))
+            return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+    }
+    // End By leewheel
+
+    return 1.0f;
 }
 
 // Hydross the Unstable <Duke of Currents>
 
-// The tank waiting out the other phase must neither close on Hydross nor taunt him. The taunt
-// matters: "has aggro" is false for an explicit main tank whenever Hydross is on the nature tank,
-// so the stock "lose aggro" taunt would drag him back across the line.
 float HydrossTheUnstableDisableOffPhaseTankActionsMultiplier::GetValueInEncounter(Action* action)
 {
     if (!PlayerbotAI::IsTank(bot))
@@ -121,8 +182,6 @@ float HydrossTheUnstableDisableOffPhaseTankActionsMultiplier::GetValueInEncounte
     return IsHydrossInNaturePhase(hydross) && PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
 }
 
-// The phase tanks are driven entirely by the position-and-swap action; everyone else keeps the
-// natural assist logic, with Hydross excluded for the add tanks in AppendTargetExclusions.
 float HydrossTheUnstableDisablePhaseTankAssistMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -137,9 +196,7 @@ float HydrossTheUnstableDisablePhaseTankAssistMultiplier::GetValueInEncounter(Ac
     return AI_VALUE2(Unit*, "find target", "21216") ? 0.0f : 1.0f;
 }
 
-// Hold DPS from one second after the 100% mark lands (the tank is walking Hydross to the line and
-// has stopped attacking) until five seconds after the phase flips (threat has just been reset).
-// The current phase tank and the add tanks are exempt; heals always go through.
+// Phase changes reset threat. Hold DPS from 1s after Marks hit 100% until 5s post-phase change.
 float HydrossTheUnstableWaitForDpsMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<CastSpellAction*>(action) && !dynamic_cast<AttackAction*>(action))
@@ -148,7 +205,6 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValueInEncounter(Action* action
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    // The tank that just handed Hydross over walks home through this window
     if (dynamic_cast<HydrossTheUnstablePositionAndSwapTanksAction*>(action))
         return 1.0f;
 
@@ -161,13 +217,12 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValueInEncounter(Action* action
 
     bool const frostPhase = IsHydrossInFrostPhase(hydross);
     if (PlayerbotAI::IsTank(bot) &&
-        (frostPhase ? PlayerbotAI::IsMainTank(bot) : PlayerbotAI::IsAssistTankOfIndex(bot, 0, true)))
+        (frostPhase ?
+            PlayerbotAI::IsMainTank(bot) : PlayerbotAI::IsAssistTankOfIndex(bot, 0, true)))
     {
         return 1.0f;
     }
 
-    // The timer for the change *out of* the current phase is the live one; the tracker erases the
-    // other on entering the phase.
     std::unordered_map<uint32, uint32> const& phaseStartTimer =
         frostPhase ? hydrossFrostDpsWaitTimer : hydrossNatureDpsWaitTimer;
     std::unordered_map<uint32, uint32> const& handOverTimer =
@@ -228,11 +283,12 @@ float TheLurkerBelowMaintainRangedSpreadMultiplier::GetValueInEncounter(Action* 
     return AI_VALUE2(Unit*, "find target", "21217") ? 0.0f : 1.0f;
 }
 
-// A guardian tank holding a live claim neither assists, spreads, taunts nor AoE-threats onto
-// anyone else's guardian. A tank whose claim is gone falls back to natural tank assist.
 float TheLurkerBelowTanksFocusAssignedGuardianMultiplier::GetValueInEncounter(Action* action)
 {
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT || !PlayerbotAI::IsTank(bot))
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
     if (!dynamic_cast<TankAssistAction*>(action) &&
@@ -295,7 +351,9 @@ float LeotherasTheBlindDisableTankActionsMultiplier::GetValueInEncounter(Action*
     // Keep Berserk until Phase 3 in case the bear gets Inner Demon.
     if (bot->getClass() == CLASS_DRUID && dynamic_cast<CastBerserkAction*>(action) &&
         !GetPhase3LeotherasDemon(bot))
+    {
         return 0.0f;
+    }
 
     return 1.0f;
 }
@@ -305,7 +363,7 @@ float LeotherasTheBlindFocusOnInnerDemonMultiplier::GetValueInEncounter(Action* 
     if (!HasInnerDemon(bot))
         return 1.0f;
 
-    if (dynamic_cast<DpsAssistAction*>(action) || dynamic_cast<TankAssistAction*>(action))
+    if (action->getThreatType() == Action::ActionThreatType::Aoe)
         return 0.0f;
 
     if (bot->getClass() == CLASS_DRUID &&
@@ -316,11 +374,16 @@ float LeotherasTheBlindFocusOnInnerDemonMultiplier::GetValueInEncounter(Action* 
         return 0.0f;
     }
 
-    Creature* innerDemon = GetPersonalInnerDemon(botAI);
-    if (!innerDemon)
-        return 1.0f;
-
-    return action->GetTarget() == innerDemon ? 1.0f : 0.0f; // NEED TO CONFIRM IF THIS WORKS INSTEAD OF SUPPRESSING TYPES OF SPELLS
+    return dynamic_cast<DpsAssistAction*>(action) ||
+        dynamic_cast<TankAssistAction*>(action) ||
+        dynamic_cast<CastHealingSpellAction*>(action) ||
+        dynamic_cast<CastCureSpellAction*>(action) ||
+        dynamic_cast<CurePartyMemberAction*>(action) ||
+        dynamic_cast<CastBuffSpellAction*>(action) ||
+        dynamic_cast<ResurrectPartyMemberAction*>(action) ||
+        dynamic_cast<PartyMemberActionNameSupport*>(action) ||
+        dynamic_cast<CastDebuffSpellOnAttackerAction*>(action) ||
+        dynamic_cast<CastDebuffSpellOnMeleeAttackerAction*>(action) ? 0.0f : 1.0f;
 }
 
 float LeotherasTheBlindMeleeAvoidChaosBlastMultiplier::GetValueInEncounter(Action* action)
@@ -336,6 +399,9 @@ float LeotherasTheBlindMeleeAvoidChaosBlastMultiplier::GetValueInEncounter(Actio
     {
         return 1.0f;
     }
+
+    if (dynamic_cast<LeotherasTheBlindDestroyInnerDemonAction*>(action))
+        return 1.0f;
 
     if (!HasTooManyChaosBlastStacks(bot))
         return 1.0f;
@@ -367,7 +433,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
         if (PlayerbotAI::IsTank(bot))
             return 1.0f;
 
-        constexpr uint32 dpsWaitMsHumanoidPhase = 5 * IN_MILLISECONDS;
+        constexpr uint32 dpsWaitMsHumanoidPhase = 3 * IN_MILLISECONDS;
         auto it = leotherasHumanoidPhaseDpsWaitTimer.find(instanceId);
         if (it == leotherasHumanoidPhaseDpsWaitTimer.end())
             return 0.0f;
@@ -408,18 +474,31 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     return 1.0f;
 }
 
-// Don't use Bloodlust/Heroism before Leotheras activates
-float LeotherasTheBlindDelayBloodlustAndHeroismMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsBloodlustAction(bot, action))
-        return 1.0f;
-
-    Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215");
-    return leotheras && IsSpellbinderPhase(leotheras) ? 0.0f : 1.0f;
-}
+// By leewheel 2026-09-19 合并上游 the-lab：上游统一的 SscDelayDpsCooldownsMultiplier 已覆盖
+//   「莱欧瑟拉斯 95% 血量前不开 dps 大招」，故按「有上游就不留自建」删除本分支自建的
+//   LeotherasTheBlindDelayBloodlustAndHeroismMultiplier（其 .h 声明与 SSCStrategy.cpp 注册均为上游版，已同步移除）。
+//   上游此处的注释块原样保留。
+// End By leewheel
+// This multiplier is not needed right now because Soulshatter is cast only when there are
+// multiple enemies. That's probably not the right approach and should be fixed, so this multiplier
+// remains here but commented out in anticipation of a future correction to Soulshatter usage.
+// float LeotherasTheBlindDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(
+//     Action* action)
+// {
+//     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+//         return 1.0f;
+//
+//     if (bot->getClass() != CLASS_WARLOCK)
+//         return 1.0f;
+//
+//     if (!dynamic_cast<CastSoulshatterAction*>(action))
+//         return 1.0f;
+//
+//     if (!AI_VALUE2(Unit*, "find target", "21215"))
+//         return 1.0f;
+//
+//     return IsLeotherasWarlockTank(bot) && GetActiveLeotherasDemon(bot) ? 0.0f : 1.0f;
+// }
 
 // Fathom-Lord Karathress
 
@@ -497,21 +576,10 @@ float FathomLordKarathressMaintainPositionMultiplier::GetValueInEncounter(Action
 
 // Morogrim Tidewalker
 
-// Use Bloodlust/Heroism after the first Murloc spawn
-float MorogrimTidewalkerDelayBloodlustAndHeroismMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsBloodlustAction(bot, action))
-        return 1.0f;
-
-    if (!AI_VALUE2(Unit*, "find target", "21213"))
-        return 1.0f;
-
-    return AI_VALUE2(Unit*, "find target", "21920") ? 1.0f : 0.0f;
-}
-
+// By leewheel 2026-09-19 合并上游 the-lab：上游统一的 SscDelayDpsCooldownsMultiplier
+//   已覆盖「踏潮者（21213）的嗜血/英勇只在鱼人波(21920)开」，故按「有上游就不留自建」删除
+//   本分支自建的 MorogrimTidewalkerDelayBloodlustAndHeroismMultiplier。
+// End By leewheel
 float MorogrimTidewalkerDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
 {
     if (!PlayerbotAI::IsMainTank(bot))
@@ -545,36 +613,10 @@ float MorogrimTidewalkerMaintainPhase2StackingMultiplier::GetValueInEncounter(Ac
 
 // Lady Vashj <Coilfang Matron>
 
-// Wait until phase 3 to use Bloodlust/Heroism
-// Don't use other major cooldowns in Phase 1, either
-float LadyVashjDelayCooldownsMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsDpsCooldownAction(bot, action))
-        return 1.0f;
-
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    if (!vashj)
-        return 1.0f;
-
-    int8 phase = GetLadyVashjPhase(vashj);
-    if (phase == 3)
-        return 1.0f;
-
-    // Bloodlust/Heroism are phase 3 only
-    if (bot->getClass() != CLASS_SHAMAN &&
-        (dynamic_cast<CastBloodlustAction*>(action) ||
-         dynamic_cast<CastHeroismAction*>(action)))
-    {
-        return 0.0f;
-    }
-
-    // Other dps cooldowns can be used in phase 2 or 3
-    return phase == 2 ? 1.0f : 0.0f;
-}
-
+// By leewheel 2026-09-19 合并上游 the-lab：上游统一的 SscDelayDpsCooldownsMultiplier
+//   已覆盖「瓦丝琪（21212）阶段门控：3 阶段全开、2 阶段仅非嗜血大招」，故按「有上游就不留自建」删除
+//   本分支自建的 LadyVashjDelayCooldownsMultiplier。
+// End By leewheel
 float LadyVashjSetGroundingTotemMultiplier::GetValueInEncounter(Action* action)
 {
     if (bot->getClass() != CLASS_SHAMAN)

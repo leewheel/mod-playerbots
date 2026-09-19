@@ -8,9 +8,9 @@
 #define PLAYERBOTS_TBCDUNGEONTRIGGERCONTEXT_H
 
 #include "ACTriggerContext.h"
-#include "HFRTriggerContext.h"
 #include "MechTriggerContext.h"
 #include "MgTTriggerContext.h"
+#include "RampTriggerContext.h"
 #include "SethTriggerContext.h"
 // By leewheel 2026-09-16 新增破碎大厅（map 540）触发上下文
 #include "SHTriggerContext.h"

@@ -5,7 +5,6 @@
  */
 
 #include "SSCActions.h"
-#include "AiFactory.h"
 #include "Corpse.h"
 #include "EncounterHelpers.h"
 #include "LootAction.h"
@@ -15,6 +14,12 @@
 #include "RtiTargetValue.h"
 #include "SSCHelpers.h"
 #include <algorithm>
+#include <cmath>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <unordered_map>
+#include <utility>
 
 using namespace SscHelpers;
 using namespace EncounterHelpers;
@@ -55,46 +60,25 @@ bool SscResetEncounterStatesAction::Execute(Event /*event*/)
 
 // Trash Mobs
 
-// Move straight out of the toxic pool left behind by some colossi upon death. The pool is centred
-// on the corpse, and while that corpse exists it is still the bot's "current target", which
-// FleePosition would steer around rather than away from. Nothing else needs to redirect the bot
-// mid-escape (the multiplier suppresses all other movement inside the holding radius), so the
-// step can be large.
 bool UnderbogColossusEscapeToxicPoolAction::Execute(Event /*event*/)
 {
     Position pool;
     if (!GetToxicPoolPosition(botAI, pool))
         return false;
 
-    // The colossi stand on boardwalks over the lake; a player's pathfinder treats the water as
-    // reachable, so the ring point and the landing must both be on dry ground
-    auto const isDryGround = [this](float x, float y) { return IsDryGround(bot, x, y); };
-
-    // Short enough that a straight step follows the curve of the walk
     constexpr float moveDist = 5.0f;
     float stepX;
     float stepY;
     float stepZ;
-    if (!FindHazardEscapeStep(bot, pool, moveDist, stepX, stepY, stepZ, isDryGround))
-    {
-        LOG_DEBUG("playerbots", "toxic pool: {} found no dry escape step from ({:.1f}, {:.1f})",
-            bot->GetName(), pool.GetPositionX(), pool.GetPositionY());
+    if (!FindHazardEscapeStep(bot, pool, moveDist, stepX, stepY, stepZ))
         return false;
-    }
 
-    if (!MoveTo(
-            SSC_MAP_ID, stepX, stepY, stepZ, false, false, false, false,
-            MovementPriority::MOVEMENT_COMBAT, true, false))
-    {
-        LOG_DEBUG("playerbots", "toxic pool: {} MoveTo refused step ({:.1f}, {:.1f}, {:.1f})",
-            bot->GetName(), stepX, stepY, stepZ);
-        return false;
-    }
-
-    return true;
+    return MoveTo(
+        SSC_MAP_ID, stepX, stepY, stepZ, false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-bool GreyheartTidecallerMarkWaterElementalTotemAction::Execute(Event /*event*/) // Deleted GetFirstAliveUnitByEntry, remains in helpers. Can FindNearestCreature get this totem?
+bool GreyheartTidecallerMarkWaterElementalTotemAction::Execute(Event /*event*/)
 {
     constexpr float searchRadius = 20.0f;
     Creature* totem =
@@ -126,19 +110,21 @@ bool SscMisdirectTargetToTankAction::Execute(Event /*event*/)
 
 // Hydross the Unstable <Duke of Currents>
 
-// Tank Hydross during my phase; once my mark is maxed and the hand-over timer has run, walk him to
-// the other tank's position. During the other phase, wait at my own position.
 bool HydrossTheUnstablePositionAndSwapTanksAction::Execute(Event /*event*/)
 {
     Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
     if (!hydross)
         return false;
 
-    bool const myPhase = _frostTank ? IsHydrossInFrostPhase(hydross) : IsHydrossInNaturePhase(hydross);
+    bool const myPhase = _frostTank ?
+        IsHydrossInFrostPhase(hydross) : IsHydrossInNaturePhase(hydross);
     bool const markMaxed =
         _frostTank ? HasMarkOfHydrossAt100Percent(bot) : HasMarkOfCorruptionAt100Percent(bot);
-    Position const& myPosition = _frostTank ? HYDROSS_FROST_TANK_POSITION : HYDROSS_NATURE_TANK_POSITION;
-    Position const& otherPosition = _frostTank ? HYDROSS_NATURE_TANK_POSITION : HYDROSS_FROST_TANK_POSITION;
+
+    Position const& myPosition = _frostTank ?
+        HYDROSS_FROST_TANK_POSITION : HYDROSS_NATURE_TANK_POSITION;
+    Position const& otherPosition = _frostTank ?
+        HYDROSS_NATURE_TANK_POSITION : HYDROSS_FROST_TANK_POSITION;
     std::unordered_map<uint32, uint32> const& handOverTimer =
         _frostTank ? hydrossChangeToNaturePhaseTimer : hydrossChangeToFrostPhaseTimer;
 
@@ -169,8 +155,7 @@ bool HydrossTheUnstablePositionAndSwapTanksAction::Execute(Event /*event*/)
     return true;
 }
 
-bool HydrossTheUnstablePositionAndSwapTanksAction::StepTo(
-    Position const& position, Unit* hydross)
+bool HydrossTheUnstablePositionAndSwapTanksAction::StepTo(Position const& position, Unit* hydross)
 {
     constexpr float arrivalDist = 2.0f;
     float moveX;
@@ -219,7 +204,6 @@ bool HydrossTheUnstableMisdirectBossToTankAction::Execute(Event /*event*/)
     return botAI->CanCastSpell("steady shot", hydross) && botAI->CastSpell("steady shot", hydross);
 }
 
-// Ends the auto-attack already running, which a multiplier cannot; WaitForDps keeps it from restarting
 bool HydrossTheUnstableStopDpsUponPhaseChangeAction::Execute(Event /*event*/)
 {
     Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
@@ -233,7 +217,7 @@ bool HydrossTheUnstableStopDpsUponPhaseChangeAction::Execute(Event /*event*/)
 
     bool shouldStopDps = false;
 
-    // 1 second after 100% Mark of Hydross, stop DPS
+    // 1 second after 100% Mark of Hydross, stop dps.
     auto itNature = hydrossChangeToNaturePhaseTimer.find(instanceId);
     if (itNature != hydrossChangeToNaturePhaseTimer.end() &&
         getMSTimeDiff(itNature->second, now) >= phaseEndStopMs)
@@ -241,15 +225,15 @@ bool HydrossTheUnstableStopDpsUponPhaseChangeAction::Execute(Event /*event*/)
         shouldStopDps = true;
     }
 
-    // Keep DPS stopped for 5 seconds after transition into nature phase
+    // Keep dps stopped for 5 seconds after transitioning into nature phase.
     auto itNatureDps = hydrossNatureDpsWaitTimer.find(instanceId);
     if (itNatureDps != hydrossNatureDpsWaitTimer.end() &&
         getMSTimeDiff(itNatureDps->second, now) < phaseStartStopMs)
     {
-        shouldStopDps = true;
+        shouldStopDps = bot->getClass() != CLASS_HUNTER ? true : false;
     }
 
-    // 1 second after 100% Mark of Corruption, stop DPS
+    // 1 second after 100% Mark of Corruption, stop dps.
     auto itFrost = hydrossChangeToFrostPhaseTimer.find(instanceId);
     if (itFrost != hydrossChangeToFrostPhaseTimer.end() &&
         getMSTimeDiff(itFrost->second, now) >= phaseEndStopMs)
@@ -257,12 +241,12 @@ bool HydrossTheUnstableStopDpsUponPhaseChangeAction::Execute(Event /*event*/)
         shouldStopDps = true;
     }
 
-    // Keep DPS stopped for 5 seconds after transition into frost phase
+    // Keep dps stopped for 5 seconds after transitioning into frost phase.
     auto itFrostDps = hydrossFrostDpsWaitTimer.find(instanceId);
     if (itFrostDps != hydrossFrostDpsWaitTimer.end() &&
         getMSTimeDiff(itFrostDps->second, now) < phaseStartStopMs)
     {
-        shouldStopDps = true;
+        shouldStopDps = bot->getClass() != CLASS_HUNTER ? true : false;
     }
 
     if (!shouldStopDps)
@@ -312,18 +296,14 @@ bool HydrossTheUnstableManageTimersAction::Execute(Event /*event*/)
 
 // The Lurker Below
 
-// Run around Lurker to stay clear of Spout. The 3s wind-up pins his facing to the victim, so the
-// safe arc behind him is fixed: a bot already in it holds its bearing and only trims its radius,
-// a bot in front heads for the nearer edge of the arc the short way. Once the aura is up the beam
-// sweeps at 0.4 rad/s, faster than any bot on the ring: running against it closes at 0.75 rad/s
-// and meets the beam every ~8s, running with it costs at most one crossing and then never again.
-// So from then on the spin decides the direction and everyone simply keeps running.
+// Runnin', runnin', runnin', I'm runnin' over here, run, run, run-run, run.
 bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
 {
     Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
     if (!lurker)
         return false;
 
+    // Randomize the radius for each bot so the running looks a bit more natural.
     uint32 const seed = bot->GetGUID().GetCounter();
     float const runRadius = LURKER_SPOUT_RUN_RADIUS_MIN +
         (LURKER_SPOUT_RUN_RADIUS_MAX - LURKER_SPOUT_RUN_RADIUS_MIN) * (seed % 100) / 100.0f;
@@ -331,7 +311,6 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
     float const distance = bot->GetExactDist2d(lurker);
     float const botAngle = std::atan2(
         bot->GetPositionY() - lurker->GetPositionY(), bot->GetPositionX() - lurker->GetPositionX());
-    // Bearing relative to his facing; pi is directly behind
     float const relative = Position::NormalizeOrientation(botAngle - lurker->GetOrientation());
     bool const inArc =
         std::fabs(relative - static_cast<float>(M_PI)) <= LURKER_SPOUT_RUN_ARC_HALF_WIDTH;
@@ -340,13 +319,22 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
     float const lurkerY = lurker->GetPositionY();
     float const lurkerZ = lurker->GetPositionZ();
 
-    // Spinning: steps with the spin. Radius is corrected alongside, a step's worth at a time.
+    // Lurker is spinning. The only nuance is that bots will not advance more than 30 degrees
+    // past directly behind the boss as Sprinting/Spirit Walking can otherwise lap the spin.
     if (int8 const spin = GetLurkerSpoutSpin(lurker))
     {
+        float const aheadOfBeam = spin > 0 ? relative : 2.0f * static_cast<float>(M_PI) - relative;
+        float const room =
+            static_cast<float>(M_PI) + LURKER_SPOUT_RUN_OVERTAKE_MARGIN - aheadOfBeam;
+        float const stepAngle = std::min(LURKER_SPOUT_RUN_STEP / runRadius, room);
+        constexpr float minStep = 2.0f;
+        if (stepAngle * runRadius < minStep)
+            return false;
+
         float const radialStep = std::clamp(
             runRadius - distance, -LURKER_SPOUT_RUN_STEP, LURKER_SPOUT_RUN_STEP);
         float const moveRadius = distance + radialStep;
-        float const moveAngle = botAngle + spin * LURKER_SPOUT_RUN_STEP / runRadius;
+        float const moveAngle = botAngle + spin * stepAngle;
 
         bot->CastStop();
         return MoveTo(
@@ -355,7 +343,8 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
             MovementPriority::MOVEMENT_FORCED, true, false);
     }
 
-    // Wind-up, already behind him: hold the bearing, trim the radius
+    // Lurker is winding-up, bot is behind the boss: Get to the right radius and wait for the
+    // direction of the spin to be determined.
     if (inArc)
     {
         if (std::fabs(distance - runRadius) < LURKER_SPOUT_RUN_RADIAL_DEADZONE)
@@ -367,9 +356,9 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
             MovementPriority::MOVEMENT_FORCED, true, false);
     }
 
-    // Wind-up, in front: one far move to the nearer arc edge, issued below the spinning moves'
-    // priority so the first of those goes through without waiting out this one's lock. Checked
-    // to set off the short way; if the walkway that way is cut, a step towards the edge instead.
+    // Lurker is winding-up, bot is in front of the boss: One far move to the nearer arc edge so the
+    // bot is not in front of the boss when the Spout starts, whatever direction it goes. This has
+    // to be a lower movement priority than the run during the spin phase.
     int8 const direction = relative < M_PI ? 1 : -1;
     float const edgeAngle = lurker->GetOrientation() + static_cast<float>(M_PI) -
         direction * LURKER_SPOUT_RUN_ARC_HALF_WIDTH;
@@ -384,23 +373,17 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
     {
         return MoveTo(
             SSC_MAP_ID, edgeX, edgeY, lurkerZ, false, false, false, false,
-            MovementPriority::MOVEMENT_FORCED, true, false);
+            MovementPriority::MOVEMENT_COMBAT, true, false);
     }
 
     float const stepAngle = botAngle + direction * LURKER_SPOUT_RUN_STEP / runRadius;
     return MoveTo(
         SSC_MAP_ID, lurkerX + runRadius * std::cos(stepAngle),
         lurkerY + runRadius * std::sin(stepAngle), lurkerZ, false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED, true, false);
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
-// Reach closes on Lurker for the pickup; only once he is on the tank does this walk him to the
-// spot, as a single direct move rather than steps (the spot lies past spillover on the walkway,
-// and each short step into it was refused). The run-around outranks the move if a Spout starts en
-// route. From some pickup sides the spot is cut off by a gap in the walkway; a move there would end
-// at the gap, out of range, and Lurker would swing at whoever is in range instead. So the move is
-// only issued if its path arrives; otherwise the tank stays where reach left him, in range, since
-// Lurker's 22y reach makes anywhere on the ring a tanking spot.
+// Position the main tank in front of a pillar.
 bool TheLurkerBelowPositionMainTankAction::Execute(Event /*event*/)
 {
     Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
@@ -434,7 +417,7 @@ bool TheLurkerBelowPositionMainTankAction::Execute(Event /*event*/)
         false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
-// Assign ranged positions within a 120-degree arc behind Lurker
+// Assign ranged positions within a 120-degree arc behind Lurker.
 bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
 {
     Unit* lurker = AI_VALUE2(Unit*, "find target", "21217");
@@ -472,7 +455,7 @@ bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
             std::distance(rangedMembers.begin(), findIt) : 0;
 
         constexpr float arcSpan = 2.0f * M_PI / 3.0f;
-        constexpr float arcCenter = 2.262f;
+        constexpr float arcCenter = 2.262f; // measured in game to be across from the main tank
         constexpr float arcStart = arcCenter - arcSpan / 2.0f;
 
         float angle = (count == 1) ? arcCenter :
@@ -499,15 +482,13 @@ bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
         return false;
     }
 
-    // A bot knocked into the pool by Whirl cannot step out: a step point over the water has no
-    // walkable height and MoveTo refuses it. Move to the spot itself instead, which the
-    // pathfinder reaches by swimming to shore.
+    // Incremental movement does not work if the bot is in the water (there is no walkable height
+    // and MoveTo returns false). Therefore, this block calls a MoveTo directly to the position.
     if (!IsDryGround(bot, moveX, moveY))
     {
         return MoveTo(
-            SSC_MAP_ID, position.GetPositionX(), position.GetPositionY(),
-            position.GetPositionZ(), false, false, false, false,
-            MovementPriority::MOVEMENT_COMBAT, true, false);
+            SSC_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
+            false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
     }
 
     return MoveTo(
@@ -515,13 +496,9 @@ bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-// By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游 e8ac948a「forget trying to dive for lurker」——
-//   上游已放弃 TheLurkerBelowRangedHoldStationAction::Execute / Dive 的"站位下潜"方案，
-//   本条冲突以删除我方保留的这两个实现收尾（若保留会因 .h 声明与 Strategy 注册已删而编译失败）。
-// End By leewheel 2026-09-13
-// During the submerge phase the main tank and the first two assist tanks each claim one Coilfang
-// Guardian off the shared sorted list, taunt it off whoever it aggroed onto, and hold it away from
-// the other two. The Ambushers are left to natural targeting. Mirrors the Kil'jaeden hands pattern.
+// During the submerge phase, the main tank and the first two assist tanks each grab one Coilfang
+// Guardian. This runs only if there are at least three bot tanks. Otherwise, normal tank assist is
+// relied on to pick up the Guardians.
 bool TheLurkerBelowTanksPickUpAddsAction::Execute(Event /*event*/)
 {
     std::vector<Unit*> const guardians = GetLurkerGuardians(botAI);
@@ -542,14 +519,12 @@ bool TheLurkerBelowTanksPickUpAddsAction::Execute(Event /*event*/)
     if (AI_VALUE(Unit*, "current target") != guardian)
         return Attack(guardian);
 
-    // The stock "lose aggro" taunt treats a guardian on another tank as held, so taunt explicitly
     if (guardian->GetVictim() == bot)
         return false;
 
     return CastTauntOn(botAI, guardian);
 }
 
-// Keep my existing claim while that guardian lives; otherwise take the first one no other tank holds
 ObjectGuid TheLurkerBelowTanksPickUpAddsAction::ClaimGuardianForTank(
     std::vector<Unit*> const& guardians, size_t myIndex)
 {
@@ -587,10 +562,32 @@ ObjectGuid TheLurkerBelowTanksPickUpAddsAction::ClaimGuardianForTank(
     return assignedGuid;
 }
 
+bool TheLurkerBelowMeleeMoveDirectlyToTargetAction::Execute(Event /*event*/)
+{
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target)
+        return false;
+
+    if (bot->IsWithinMeleeRange(target))
+        return false;
+
+    // MoveTo rejects any destination over water (no map height), so the destination has to be dry
+    // land. The Ambushers sometimes chill at the edge of their islets so we issue the move to stop
+    // right on top of them. When returning to Lurker, target the move at the walkway instead.
+    bool const isAmbusher = target->GetEntry() == Id(SscNpcs::NPC_COILFANG_AMBUSHER);
+    float const targetDistance = isAmbusher ? 0.0f : LURKER_SPOUT_RUN_RADIUS_MAX;
+    float const angle = target->GetAngle(bot);
+    float const destX = target->GetPositionX() + std::cos(angle) * targetDistance;
+    float const destY = target->GetPositionY() + std::sin(angle) * targetDistance;
+
+    return MoveTo(
+        SSC_MAP_ID, destX, destY, target->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
+}
+
 // Leotheras the Blind
 
-// Warlock tank action--see GetLeotherasWarlockTank in RaidSSCHelpers.cpp
-// Use tank strategy for Demon Form and DPS strategy for Human Form
+// Warlock tank action: see GetLeotherasWarlockTank in SSCHelpers.cpp.
 bool LeotherasTheBlindWarlockTankAttackBossAction::Execute(Event /*event*/)
 {
     Creature* leotherasDemon = GetActiveLeotherasDemon(bot);
@@ -601,8 +598,8 @@ bool LeotherasTheBlindWarlockTankAttackBossAction::Execute(Event /*event*/)
         botAI->CastSpell("searing pain", leotherasDemon);
 }
 
-// Stop melee tanks from attacking upon transformation so they don't take aggro
-// Applies only if there is a Warlock tank present
+// Stop melee tanks from attacking upon transformation so they don't take aggro.
+// Applies only if there is a Warlock tank present.
 bool LeotherasTheBlindMeleeTanksDontAttackDemonFormAction::Execute(Event /*event*/)
 {
     bot->AttackStop();
@@ -627,32 +624,26 @@ bool LeotherasTheBlindPositionRangedAction::Execute(Event /*event*/)
             return true;
     }
 
-    if (!GetActiveLeotherasDemon(bot))
+    Creature* leotherasDemon = GetActiveLeotherasDemon(bot);
+    if (!leotherasDemon)
         return false;
 
-    constexpr float searchRadius = 10.0f;
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, searchRadius);
-    if (!nearestPlayer)
-        return false;
+    // Chaos Blast splashes 8y around whoever the demon is on: the Warlock tank, or a DPS who has
+    // pulled aggro
+    constexpr float safeDistFromBlast = 10.0f;
+    Unit* warlockTank = GetLeotherasWarlockTank(bot);
+    for (Unit* blastTarget : { warlockTank, leotherasDemon->GetVictim() })
+    {
+        if (!blastTarget || blastTarget == bot ||
+            bot->GetExactDist2d(blastTarget) >= safeDistFromBlast)
+        {
+            continue;
+        }
 
-    Player* warlockTank = GetLeotherasWarlockTank(bot);
-    float safeDistance = std::numeric_limits<float>::max();
-    uint32 minInterval = std::numeric_limits<uint32>::max();
-    if (warlockTank != bot && warlockTank == nearestPlayer)
-    {
-        safeDistance = 10.0f;
-        minInterval = 0;
-    }
-    else
-    {
-        safeDistance = 5.0f;
-        minInterval = 1000;
+        return FleePosition(blastTarget->GetPosition(), safeDistFromBlast, 0);
     }
 
-    if (bot->GetExactDist2d(nearestPlayer) >= safeDistance)
-        return false;
-
-    return FleePosition(nearestPlayer->GetPosition(), safeDistance, minInterval);
+    return false;
 }
 
 bool LeotherasTheBlindRunAwayFromWhirlwindAction::Execute(Event /*event*/)
@@ -681,7 +672,7 @@ bool LeotherasTheBlindMeleeDpsRunAwayFromBossAction::Execute(Event /*event*/)
         return true;
     }
 
-    Creature* leotherasDemon = GetPhase2LeotherasDemon(bot);
+    Creature* leotherasDemon = GetActiveLeotherasDemon(bot);
     if (!leotherasDemon)
         return false;
 
@@ -877,7 +868,8 @@ bool LeotherasTheBlindMisdirectBossToWarlockTankAction::Execute(Event /*event*/)
         botAI->CastSpell("steady shot", leotherasDemon);
 }
 
-// This does not pause DPS after a Whirlwind, which is also an aggro wipe
+// Whirlwind resets threat on every tick, so the humanoid timer is withheld while it runs and
+// restarts on the first tick after it ends.
 bool LeotherasTheBlindManageDpsWaitTimersAction::Execute(Event /*event*/)
 {
     Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215");
@@ -891,7 +883,11 @@ bool LeotherasTheBlindManageDpsWaitTimersAction::Execute(Event /*event*/)
 
     if (IsLeotherasHumanoidPhase(bot))
     {
-        changed |= leotherasHumanoidPhaseDpsWaitTimer.try_emplace(instanceId, now).second;
+        if (IsLeotherasChannelingWhirlwind(leotheras))
+            changed |= leotherasHumanoidPhaseDpsWaitTimer.erase(instanceId) > 0;
+        else
+            changed |= leotherasHumanoidPhaseDpsWaitTimer.try_emplace(instanceId, now).second;
+
         changed |= leotherasDemonPhaseDpsWaitTimer.erase(instanceId) > 0;
         changed |= leotherasFinalPhaseDpsWaitTimer.erase(instanceId) > 0;
     }

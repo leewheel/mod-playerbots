@@ -11,7 +11,6 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include <array>
-#include <functional>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -108,6 +107,7 @@ enum class SscNpcs : uint32
     NPC_TAINTED_SPAWN_OF_HYDROSS = 22036,
 
     // The Lurker Below
+    NPC_COILFANG_AMBUSHER        = 21865,
     NPC_COILFANG_GUARDIAN        = 21873,
 
     // Leotheras the Blind
@@ -147,12 +147,12 @@ inline constexpr float TOXIC_POOL_SEARCH_RADIUS = TOXIC_POOL_HOLDING_RADIUS + 2.
 
 std::vector<Position> const& GetCachedHazardPositions(PlayerbotAI* botAI, std::string const& value);
 // A step out of a circular hazard. Directions fan out from straight-away in fine steps; the first
-// landing point that passes isAcceptable, is reachable, and is farther from the hazard than the bot
+// landing point that is dry ground, is reachable, and is farther from the hazard than the bot
 // wins. Unlike Hyjal's ring-based GetHazardEscapeStep this needs no clear point at the ring: a
 // narrow curved boardwalk still offers two dry directions whatever the ring looks like.
 bool FindHazardEscapeStep(
     Player* bot, Position const& hazard, float moveDist, float& stepX, float& stepY,
-    float& stepZ, std::function<bool(float, float)> const& isAcceptable = {});
+    float& stepZ);
 // True where the map has ground above any liquid at x/y. A player counts water as reachable, so
 // the pathfinder alone lets an escape step off a boardwalk into the lake.
 bool IsDryGround(Player* bot, float x, float y);
@@ -210,6 +210,9 @@ inline constexpr float LURKER_SPOUT_RUN_ARC_HALF_WIDTH = static_cast<float>(M_PI
 // off the right way; the spin, when the beam is live, uses steps.
 inline constexpr float LURKER_SPOUT_RUN_STEP = 7.0f;
 inline constexpr float LURKER_SPOUT_RUN_RADIAL_DEADZONE = 2.0f;
+// A bot faster than the beam (Sprint, Dash, cat form) may run this far past directly-behind, in
+// the spin direction, before it waits for the beam; further and it laps round into the front.
+inline constexpr float LURKER_SPOUT_RUN_OVERTAKE_MARGIN = static_cast<float>(M_PI) / 6.0f;
 
 // True if a navmesh path from the bot to x/y sets off around Lurker in the given angular
 // direction (+1 counter-clockwise, -1 clockwise).

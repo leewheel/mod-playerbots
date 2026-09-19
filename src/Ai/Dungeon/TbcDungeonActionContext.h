@@ -8,9 +8,9 @@
 #define PLAYERBOTS_TBCDUNGEONACTIONCONTEXT_H
 
 #include "ACActionContext.h"
-#include "HFRActionContext.h"
 #include "MechActionContext.h"
 #include "MgTActionContext.h"
+#include "RampActionContext.h"
 #include "SethActionContext.h"
 // By leewheel 2026-09-16 新增破碎大厅（map 540）动作上下文
 #include "SHActionContext.h"

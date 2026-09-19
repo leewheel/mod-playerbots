@@ -58,6 +58,9 @@ public:
         creators["the lurker below is submerged"] =
             &RaidSscTriggerContext::the_lurker_below_is_submerged;
 
+        creators["the lurker below melee cannot reach target"] =
+            &RaidSscTriggerContext::the_lurker_below_melee_cannot_reach_target;
+
         // Leotheras the Blind
         creators["leotheras the blind demon form should be tanked by warlock"] =
             &RaidSscTriggerContext::leotheras_the_blind_demon_form_should_be_tanked_by_warlock;
@@ -80,8 +83,8 @@ public:
         creators["leotheras the blind in final phase"] =
             &RaidSscTriggerContext::leotheras_the_blind_in_final_phase;
 
-        creators["leotheras the blind warlock tank needs aggro"] =
-            &RaidSscTriggerContext::leotheras_the_blind_warlock_tank_needs_aggro;
+        creators["leotheras the blind hunter should misdirect demon form"] =
+            &RaidSscTriggerContext::leotheras_the_blind_hunter_should_misdirect_demon_form;
 
         creators["leotheras the blind should manage dps wait timers"] =
             &RaidSscTriggerContext::leotheras_the_blind_should_manage_dps_wait_timers;
@@ -196,6 +199,9 @@ private:
     static Trigger* the_lurker_below_is_submerged(PlayerbotAI* botAI) {
         return new TheLurkerBelowIsSubmergedTrigger(botAI);
     }
+    static Trigger* the_lurker_below_melee_cannot_reach_target(PlayerbotAI* botAI) {
+        return new TheLurkerBelowMeleeCannotReachTargetTrigger(botAI);
+    }
 
     // Leotheras the Blind
     static Trigger* leotheras_the_blind_demon_form_should_be_tanked_by_warlock(PlayerbotAI* botAI) {
@@ -219,8 +225,8 @@ private:
     static Trigger* leotheras_the_blind_in_final_phase(PlayerbotAI* botAI) {
         return new LeotherasTheBlindInFinalPhaseTrigger(botAI);
     }
-    static Trigger* leotheras_the_blind_warlock_tank_needs_aggro(PlayerbotAI* botAI) {
-        return new LeotherasTheBlindWarlockTankNeedsAggroTrigger(botAI);
+    static Trigger* leotheras_the_blind_hunter_should_misdirect_demon_form(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindHunterShouldMisdirectDemonFormTrigger(botAI);
     }
     static Trigger* leotheras_the_blind_should_manage_dps_wait_timers(PlayerbotAI* botAI) {
         return new LeotherasTheBlindShouldManageDpsWaitTimersTrigger(botAI);
