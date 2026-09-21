@@ -1076,6 +1076,23 @@ std::string ChatHelper::ResolveChatCommandAlias(std::string const& command)
         {"取消猫形态", "cancel cat form"},
         {"取消枭兽形态", "cancel moonkin form"},
         {"取消水栖形态", "cancel aquatic form"},
+
+        // ==================== 副本清理（mod-dungeon-clear）====================
+        // By leewheel 2026-09-21 给 mod-dungeon-clear 的机器人聊天命令加中文别名。
+        //   表的匹配是「整串精确匹配」，故中文别名整条写全（含空格）。
+        //   英文原名（dc on / dc off / dungeon clear on / …）继续可用，中英共存。
+        {"清副本 开启", "dc on"},
+        {"清副本 开始", "dc on"},
+        {"开始清副本", "dc on"},
+        {"清副本 关闭", "dc off"},
+        {"清副本 停止", "dc off"},
+        {"停止清副本", "dc off"},
+        {"清副本 暂停", "dc pause"},
+        {"清副本 跳过", "dc skip"},
+        {"清副本 拉怪", "dc pull"},
+        {"清副本 状态", "dc status"},
+        {"清副本 首领", "dc bosses"},
+        // End By leewheel
     };
 
     for (auto const& [zh, en] : aliases)
