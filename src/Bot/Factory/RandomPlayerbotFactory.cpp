@@ -133,27 +133,34 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
 
     std::vector<uint8> skinColors, facialHairTypes;
     std::vector<std::pair<uint8, uint8>> faces, hairs;
+    // By leewheel 2026-09-22 合并Acore上游 798d926a7：
+    //   上游本提交重命名了 CharSectionsEntry 的字段（DBCStructure.h），字段顺序与含义完全不变：
+    //     Race -> RaceID、Gender -> SexID、GenType -> BaseSection（CharSectionType）、
+    //     Type -> VariationIndex、Color -> ColorIndex。
+    //   本模块是唯一消费方，此处同步改用新字段名；DBC fmt 串 "diiixxxiii" 双方一致，
+    //   字段偏移未变，因此仅改名、行为不受影响。
     for (CharSectionsEntry const* charSection : sCharSectionsStore)
     {
-        if (charSection->Race != race || charSection->Gender != gender)
+        if (charSection->RaceID != race || charSection->SexID != gender)
             continue;
 
-        switch (charSection->GenType)
+        switch (charSection->BaseSection)
         {
             case SECTION_TYPE_SKIN:
-                skinColors.push_back(charSection->Color);
+                skinColors.push_back(charSection->ColorIndex);
                 break;
             case SECTION_TYPE_FACE:
-                faces.push_back(std::pair<uint8, uint8>(charSection->Type, charSection->Color));
+                faces.push_back(std::pair<uint8, uint8>(charSection->VariationIndex, charSection->ColorIndex));
                 break;
             case SECTION_TYPE_FACIAL_HAIR:
-                facialHairTypes.push_back(charSection->Type);
+                facialHairTypes.push_back(charSection->VariationIndex);
                 break;
             case SECTION_TYPE_HAIR:
-                hairs.push_back(std::pair<uint8, uint8>(charSection->Type, charSection->Color));
+                hairs.push_back(std::pair<uint8, uint8>(charSection->VariationIndex, charSection->ColorIndex));
                 break;
         }
     }
+    // End By leewheel
 
     //uint8 skinColor = skinColors[urand(0, skinColors.size() - 1)]; //not used, line marked for removal.
     if (faces.empty() || hairs.empty())
