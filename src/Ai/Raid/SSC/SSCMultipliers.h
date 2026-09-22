@@ -241,11 +241,21 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class FathomLordKarathressKeepSpitfireTotemTargetMultiplier : public SscEncounterMultiplier
+class FathomLordKarathressNoCastingWhileLiftedMultiplier : public SscEncounterMultiplier
 {
 public:
-    FathomLordKarathressKeepSpitfireTotemTargetMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(botAI, "fathom-lord karathress keep spitfire totem target") {}
+    FathomLordKarathressNoCastingWhileLiftedMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "fathom-lord karathress no casting while lifted") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class FathomLordKarathressKeepTargetOutOfSightMultiplier : public SscEncounterMultiplier
+{
+public:
+    FathomLordKarathressKeepTargetOutOfSightMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "fathom-lord karathress keep target out of sight") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

@@ -724,23 +724,57 @@ float FathomLordKarathressMaintainPositionMultiplier::GetValueInEncounter(Action
     if (!PlayerbotAI::IsAssistHealOfIndex(bot, 0, true))
         return 1.0f;
 
-    if (!dynamic_cast<ReachTargetAction*>(action))
+    if (!dynamic_cast<MovementAction*>(action) ||
+        dynamic_cast<FathomLordKarathressPositionCaribdisTankHealerAction*>(action) ||
+        dynamic_cast<FathomLordKarathressDropFromCycloneAction*>(action))
+    {
         return 1.0f;
+    }
 
+    // By leewheel 2026-09-23 合并brighton the-lab 356c39f4（flk testing / more flk testing）：
+    //   上游本处把拼错的 "fathom-guard caribis" 修正为 "fathom-guard caribdis"（BASE 里少一个 d，
+    //   该行永远匹配不到目标 ⇒ 本 multiplier 恒返回 1.0f）。我方早在其前就已按规则第 97 条
+    //   entry 化成 21964=深水卫士卡里布迪斯，语义与上游的修复完全一致，故沿用我方 entry 写法。
+    //   上游同函数上方把 dynamic_cast<ReachTargetAction*> 扩成 MovementAction + 两个排除项的
+    //   结构改动已原样采纳（见上方代码）。
     return AI_VALUE2(Unit*, "find target", "21964") ? 0.0f : 1.0f;
+    // End By leewheel
 }
 
-// The ledge between Sharkkis and Karathress breaks line of sight to a totem at his feet while
-// melee climb it. That makes the totem an invalid target, and the drop hands the bot back to
-// Sharkkis until the totem is in sight again from the bottom. The totem stays the target as long
-// as it stands.
-float FathomLordKarathressKeepSpitfireTotemTargetMultiplier::GetValueInEncounter(Action* action)
+// Player point movement neither launches nor continues while a cast is up, and a bot lifted by a
+// Cyclone still has its target in range, so it would cast its way through every attempt to bring
+// it down. Casting is held for the length of the Cyclone aura, which covers the tosses and the
+// drop that follows.
+float FathomLordKarathressNoCastingWhileLiftedMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!dynamic_cast<CastSpellAction*>(action))
+        return 1.0f;
+
+    return bot->HasAura(Id(SscSpells::SPELL_CYCLONE)) ? 0.0f : 1.0f;
+}
+
+// A target out of line of sight is invalid, and the drop hands the bot back to whatever is in
+// sight from where it stands. The ledge between Sharkkis and Karathress does that to a totem at
+// his feet while melee climb it, and the walk out to Caribdis does it to her. Both stay the
+// target as long as they stand.
+float FathomLordKarathressKeepTargetOutOfSightMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<DropTargetAction*>(action))
         return 1.0f;
 
-    Unit* totem = GetSpitfireTotem(bot);
-    return totem && AI_VALUE(Unit*, "current target") == totem ? 0.0f : 1.0f;
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target)
+        return 1.0f;
+
+    if (target == GetSpitfireTotem(bot))
+        return 0.0f;
+
+    // By leewheel 2026-09-23 合并brighton the-lab 356c39f4：上游把本 multiplier 由
+    //   KeepSpitfireTotemTarget 扩成 KeepTargetOutOfSight —— 出视线的目标（本体在脚边的图腾、
+    //   或拉到视线外的卡里布迪斯）都不该被 DropTargetAction 丢掉。按规则第 97 条 entry 化：
+    //   fathom-guard caribdis = 21964（深水卫士卡里布迪斯）。
+    return target == AI_VALUE2(Unit*, "find target", "21964") ? 0.0f : 1.0f;
+    // End By leewheel
 }
 
 // Morogrim Tidewalker

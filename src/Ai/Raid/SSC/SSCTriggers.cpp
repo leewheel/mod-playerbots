@@ -312,6 +312,20 @@ bool FathomLordKarathressShouldManageDpsTimerTrigger::IsActiveInEncounter()
         AI_VALUE2(Unit*, "find target", "21214");
 }
 
+// Only the bots close enough to Caribdis for a Cyclone to be summoned on them need the spread
+bool FathomLordKarathressRangedShouldSpreadTrigger::IsActiveInEncounter()
+{
+    if (!PlayerbotAI::IsRanged(bot))
+        return false;
+
+    // By leewheel 2026-09-23 合并brighton the-lab 356c39f4：上游新增本触发器 —— 旋风会点名
+    //   卡里布迪斯施法距离内的随机玩家、并波及自身 4 码，只有 45 码内的范围职业需要散开。
+    //   按规则第 97 条 entry 化：fathom-guard caribdis = 21964（深水卫士卡里布迪斯）。
+    Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
+    // End By leewheel
+    return caribdis && bot->IsWithinDist(caribdis, CARIBDIS_CYCLONE_SUMMON_RANGE);
+}
+
 // The aura outlasts the knockback arc by a few seconds, which is the window for the drop
 bool FathomLordKarathressLiftedByCycloneTrigger::IsActiveInEncounter()
 {
