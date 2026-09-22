@@ -12,6 +12,7 @@
 #include "Playerbots.h"
 #include "SSCValueContext.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <list>
@@ -21,8 +22,18 @@ using namespace EncounterHelpers;
 namespace SscHelpers
 {
 
+// General
 
-// Trash
+Creature* GetCachedCreature(Player* bot, char const* value)
+{
+    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
+    if (!botAI)
+        return nullptr;
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    Creature* creature = botAI->GetCreature(AI_VALUE(ObjectGuid, value));
+    return creature && creature->IsAlive() ? creature : nullptr;
+}
 
 std::vector<Position> const& GetCachedHazardPositions(PlayerbotAI* botAI, std::string const& value)
 {
@@ -80,6 +91,8 @@ bool IsDryGround(Player* bot, float x, float y)
     constexpr float clearance = 0.5f;
     return liquid.Level <= INVALID_HEIGHT || ground > liquid.Level - clearance;
 }
+
+// Trash
 
 bool GetToxicPoolPosition(PlayerbotAI* botAI, Position& toxicPool)
 {
@@ -291,8 +304,28 @@ bool CastTauntOn(PlayerbotAI* botAI, Unit* target)
 // Leotheras the Blind
 
 std::unordered_map<uint32, uint32> leotherasHumanoidPhaseDpsWaitTimer;
+std::unordered_map<uint32, uint32> leotherasWhirlwindEndTime;
 std::unordered_map<uint32, uint32> leotherasDemonPhaseDpsWaitTimer;
 std::unordered_map<uint32, uint32> leotherasFinalPhaseDpsWaitTimer;
+
+ObjectGuid FindLeotherasGuid(Player* bot)
+{
+    Creature* leotheras =
+        bot->FindNearestCreature(Id(SscNpcs::NPC_LEOTHERAS_THE_BLIND), LEOTHERAS_SEARCH_DISTANCE);
+    return leotheras ? leotheras->GetGUID() : ObjectGuid::Empty;
+}
+
+ObjectGuid FindShadowOfLeotherasGuid(Player* bot)
+{
+    Creature* shadow =
+        bot->FindNearestCreature(Id(SscNpcs::NPC_SHADOW_OF_LEOTHERAS), LEOTHERAS_SEARCH_DISTANCE);
+    return shadow ? shadow->GetGUID() : ObjectGuid::Empty;
+}
+
+Creature* GetLeotheras(Player* bot)
+{
+    return GetCachedCreature(bot, "ssc leotheras");
+}
 
 bool IsSpellbinderPhase(Unit* leotheras)
 {
@@ -301,9 +334,7 @@ bool IsSpellbinderPhase(Unit* leotheras)
 
 Creature* GetActiveLeotherasHumanoid(Player* bot)
 {
-    Creature* leotheras =
-        bot->FindNearestCreature(Id(SscNpcs::NPC_LEOTHERAS_THE_BLIND), LEOTHERAS_SEARCH_DISTANCE);
-
+    Creature* leotheras = GetLeotheras(bot);
     if (!leotheras || IsSpellbinderPhase(leotheras))
         return nullptr;
 
@@ -320,9 +351,7 @@ bool IsLeotherasHumanoidPhase(Player* bot)
 
 Creature* GetPhase2LeotherasDemon(Player* bot)
 {
-    Creature* leotheras =
-        bot->FindNearestCreature(Id(SscNpcs::NPC_LEOTHERAS_THE_BLIND), LEOTHERAS_SEARCH_DISTANCE);
-
+    Creature* leotheras = GetLeotheras(bot);
     if (leotheras && leotheras->HasAura(Id(SscSpells::SPELL_METAMORPHOSIS)))
         return leotheras;
 
@@ -336,8 +365,7 @@ bool IsLeotherasDemonPhase(Player* bot)
 
 Creature* GetPhase3LeotherasDemon(Player* bot)
 {
-    return bot->FindNearestCreature(
-        Id(SscNpcs::NPC_SHADOW_OF_LEOTHERAS), LEOTHERAS_SEARCH_DISTANCE);
+    return GetCachedCreature(bot, "ssc shadow of leotheras");
 }
 
 bool IsLeotherasFinalPhase(Player* bot)
@@ -434,6 +462,122 @@ Creature* GetPersonalInnerDemon(PlayerbotAI* botAI)
 // Fathom-Lord Karathress
 
 std::unordered_map<uint32, uint32> karathressDpsWaitTimer;
+
+ObjectGuid FindSpitfireTotemGuid(Player* bot)
+{
+    Creature* totem =
+        bot->FindNearestCreature(Id(SscNpcs::NPC_SPITFIRE_TOTEM), SPITFIRE_TOTEM_SEARCH_DISTANCE);
+    return totem ? totem->GetGUID() : ObjectGuid::Empty;
+}
+
+Creature* GetSpitfireTotem(Player* bot)
+{
+    return GetCachedCreature(bot, "ssc spitfire totem");
+}
+
+namespace
+{
+
+struct CouncilAssignment
+{
+    char const* name;
+    int8 assistTankIndex; // -1 for the main tank
+};
+
+constexpr std::array<CouncilAssignment, 4> KARATHRESS_COUNCIL = {{
+    { "fathom-lord karathress", -1 },
+    { "fathom-guard caribdis", 0 },
+    { "fathom-guard sharkkis", 1 },
+    { "fathom-guard tidalvess", 2 },
+}};
+
+Player* GetCouncilTank(Player* bot, int8 assistTankIndex)
+{
+    return assistTankIndex < 0 ? GetGroupMainTank(bot) : GetGroupAssistTank(bot, assistTankIndex);
+}
+
+} // end anonymous namespace
+
+Unit* GetAssignedCouncilMember(PlayerbotAI* botAI)
+{
+    Player* tank = botAI->GetBot();
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    for (CouncilAssignment const& assignment : KARATHRESS_COUNCIL)
+    {
+        bool const assigned = assignment.assistTankIndex < 0 ?
+            PlayerbotAI::IsMainTank(tank) :
+            PlayerbotAI::IsAssistTankOfIndex(tank, assignment.assistTankIndex, false);
+        if (assigned)
+            return AI_VALUE2(Unit*, "find target", assignment.name);
+    }
+
+    return nullptr;
+}
+
+bool IsHoldingAnotherTanksCouncilMember(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    for (CouncilAssignment const& assignment : KARATHRESS_COUNCIL)
+    {
+        Unit* member = AI_VALUE2(Unit*, "find target", assignment.name);
+        if (!member || member->GetVictim() != bot)
+            continue;
+
+        // Both lookups return living tanks only: nobody waits on a tank who cannot come
+        Player* tank = GetCouncilTank(bot, assignment.assistTankIndex);
+        if (tank && tank != bot)
+            return true;
+    }
+
+    return false;
+}
+
+bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range)
+{
+    Player* bot = botAI->GetBot();
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    Unit* ownMember = GetAssignedCouncilMember(botAI);
+    for (CouncilAssignment const& assignment : KARATHRESS_COUNCIL)
+    {
+        Unit* member = AI_VALUE2(Unit*, "find target", assignment.name);
+        if (member && member != ownMember && bot->IsWithinDist(member, range))
+            return true;
+    }
+
+    return false;
+}
+
+// Sharkkis's tank holds his pets too. A pet on somebody else comes first, then Sharkkis, then a
+// pet that is already on the tank; null once none of them is left.
+Unit* GetSharkkisTankTarget(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    Unit* heldPet = nullptr;
+    for (auto const& [guid, ref] : bot->GetThreatMgr().GetThreatenedByMeList())
+    {
+        Unit* pet = ref->GetOwner();
+        if (!pet || !pet->IsAlive())
+            continue;
+
+        uint32 const entry = pet->GetEntry();
+        if (entry != Id(SscNpcs::NPC_FATHOM_LURKER) && entry != Id(SscNpcs::NPC_FATHOM_SPOREBAT))
+            continue;
+
+        if (pet->GetVictim() != bot)
+            return pet;
+
+        heldPet = pet;
+    }
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：上游新增本 helper，按规则第 97 条 entry 化
+    //   （fathom-guard sharkkis = 21966）。
+    if (Unit* sharkkis = AI_VALUE2(Unit*, "find target", "21966"))
+        return sharkkis;
+
+    return heldPet;
+}
 
 // Morogrim Tidewalker
 

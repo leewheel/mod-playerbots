@@ -20,6 +20,7 @@
 #include "NonCombatActions.h"
 #include "PaladinActions.h"
 #include "Playerbots.h"
+#include "PriestActions.h"
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "SSCActions.h"
@@ -47,6 +48,22 @@ bool IsBloodlustAction(Player* bot, Action* action)
 {
     return bot->getClass() == CLASS_SHAMAN &&
         (dynamic_cast<CastBloodlustAction*>(action) || dynamic_cast<CastHeroismAction*>(action));
+}
+
+// The taunts that take more than the tank's own target
+bool IsAoeTauntAction(Player* bot, Action* action)
+{
+    switch (bot->getClass())
+    {
+        case CLASS_DRUID:
+            return dynamic_cast<CastChallengingRoarAction*>(action);
+        case CLASS_PALADIN:
+            return dynamic_cast<CastRighteousDefenseAction*>(action);
+        case CLASS_WARRIOR:
+            return dynamic_cast<CastChallengingShoutAction*>(action);
+        default:
+            return false;
+    }
 }
 
 } // end anonymous namespace
@@ -91,14 +108,19 @@ float SscControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
     if (vashj && GetLadyVashjPhase(vashj) != 1)
         return 0.0f;
 
-    // By leewheel 2026-09-19 合并上游 the-lab：采纳上游新增的「莱欧瑟拉斯处于术士T+内魔阶段时不误导」判定，
-    //   并按规则第 97 条把上游的英文首领名改成 entry：
-    //   leotheras the blind=21215(盲眼者莱欧瑟拉斯) / fathom-lord karathress=21214(深水领主卡拉瑟雷斯)
-    //   / hydross the unstable=21216(不稳定的海度斯)。
-    if (AI_VALUE2(Unit*, "find target", "21215") &&
-        GetLeotherasWarlockTank(bot) && GetActiveLeotherasDemon(bot))
+    // By leewheel 2026-09-19 / 2026-09-22 合并上游 the-lab：采纳上游"先取莱欧瑟拉斯、再统一判定"的结构
+    //   （块内需要用 leotheras 变量做 IsLeotherasChannelingWhirlwind 判定），并按规则第 97 条 entry 化：
+    //   leotheras the blind=21215(盲眼者莱欧瑟拉斯)。
+    if (Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215"))
     {
-        return 0.0f;
+        if (HasInnerDemon(bot))
+            return 0.0f;
+
+        if (IsLeotherasChannelingWhirlwind(leotheras))
+            return 0.0f;
+
+        if (GetLeotherasWarlockTank(bot) && GetActiveLeotherasDemon(bot))
+            return 0.0f;
     }
 
     return AI_VALUE2(Unit*, "find target", "21214") ||
@@ -106,11 +128,9 @@ float SscControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
     // End By leewheel
 }
 
-// Cooldowns are held until each boss is settled: the phase and add gates where a boss has them,
-// and 95% health everywhere else. Trash is left alone.
-float SscDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
+float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
 {
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+    if (bot->GetMapId() != SSC_MAP_ID || botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
     if (!IsDpsCooldownAction(bot, action))
@@ -129,13 +149,13 @@ float SscDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
         if (phase == 3)
             return 1.0f;
 
-        // Bloodlust/Heroism are phase 3 only; other dps cooldowns can be used from phase 2
+        // Bloodlust/Heroism are phase 3 only; other dps cooldowns can be used from phase 2.
         return !isBloodlust && phase == 2 ? 1.0f : 0.0f;
     }
 
     if (Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213"))
     {
-        // Bloodlust/Heroism are for the murloc waves
+        // Bloodlust/Heroism are for the murloc waves.
         if (isBloodlust)
             return AI_VALUE2(Unit*, "find target", "21920") ? 1.0f : 0.0f;
 
@@ -144,17 +164,23 @@ float SscDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
 
     if (AI_VALUE2(Unit*, "find target", "21214"))
     {
-        // Tidalvess is the first kill target; once he is down the rest of the fight is open
+        // Tidalvess is the first kill target; once he is down the rest of the fight is open.
+        // By leewheel 2026-09-22 按规则第 97 条 entry 化：fathom-guard tidalvess = 21965。
         Unit* tidalvess = AI_VALUE2(Unit*, "find target", "21965");
         return tidalvess && tidalvess->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
+    // By leewheel 2026-09-22 保留我方 entry 列表（上游为 the lurker below / hydross the unstable 两名，
+    //   我方多列 21215(莱欧瑟拉斯) —— 与下方 GetLeotheras(bot) 分支等价、不改变行为，只是提前一层判定）。
     for (char const* name : { "21216", "21217", "21215" })
     {
         if (Unit* boss = AI_VALUE2(Unit*, "find target", name))
             return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
     // End By leewheel
+
+    if (Unit* leotheras = GetLeotheras(bot))
+        return leotheras->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 
     return 1.0f;
 }
@@ -274,8 +300,7 @@ float TheLurkerBelowMaintainRangedSpreadMultiplier::GetValueInEncounter(Action* 
         return 1.0f;
 
     if (!dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<FleeAction*>(action) &&
-        !IsRepositionAction(bot, action))
+        !dynamic_cast<FleeAction*>(action) && !IsRepositionAction(bot, action))
     {
         return 1.0f;
     }
@@ -345,8 +370,26 @@ float LeotherasTheBlindDisableTankActionsMultiplier::GetValueInEncounter(Action*
     if (!AI_VALUE2(Unit*, "find target", "21215"))
         return 1.0f;
 
-    if (GetPhase2LeotherasDemon(bot) && dynamic_cast<AttackAction*>(action))
+    // Auto-attack only while the Warlock has him: abilities would spend the rage being banked for
+    // an Inner Demon, and the target choosers would take the tanks off him
+    if (GetPhase2LeotherasDemon(bot) &&
+        (dynamic_cast<TankAssistAction*>(action) ||
+         (dynamic_cast<CastSpellAction*>(action) &&
+          !dynamic_cast<CastDireBearFormAction*>(action) &&
+          !dynamic_cast<CastBearFormAction*>(action))))
+    {
         return 0.0f;
+    }
+
+    if (bot->getClass() == CLASS_WARRIOR && GetActiveLeotherasDemon(bot))
+    {
+        Player* warlockTank = GetLeotherasWarlockTank(bot);
+        if (!warlockTank)
+            return 1.0f;
+
+        if (dynamic_cast<CastVigilanceAction*>(action) && action->GetTarget() == warlockTank)
+            return 0.0f;
+    }
 
     // Keep Berserk until Phase 3 in case the bear gets Inner Demon.
     if (bot->getClass() == CLASS_DRUID && dynamic_cast<CastBerserkAction*>(action) &&
@@ -366,22 +409,107 @@ float LeotherasTheBlindFocusOnInnerDemonMultiplier::GetValueInEncounter(Action* 
     if (action->getThreatType() == Action::ActionThreatType::Aoe)
         return 0.0f;
 
-    if (bot->getClass() == CLASS_DRUID &&
-        (dynamic_cast<CastDireBearFormAction*>(action) ||
-         dynamic_cast<CastBearFormAction*>(action) ||
-         dynamic_cast<CastTreeFormAction*>(action)))
+    // Don't waste time moving. Just kill the Inner Demon asap.
+    if (dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<LeotherasTheBlindDestroyInnerDemonAction*>(action) &&
+        !dynamic_cast<LeotherasTheBlindMeleeRunAwayFromChaosBlastAction*>(action) &&
+        !dynamic_cast<LeotherasTheBlindPositionRangedAction*>(action) &&
+        !dynamic_cast<MeleeAction*>(action))
     {
         return 0.0f;
     }
 
+    if (IsRepositionAction(bot, action))
+        return 0.0f;
+
+    // Per class: spells that prevent attacking or drop threat, AoEs with no threat type, useless
+    // spells, and spells that need to be blocked to facilitate the custom Inner Demon action.
+    switch (bot->getClass())
+    {
+        case CLASS_DRUID:
+            if (dynamic_cast<CastTreeFormAction*>(action))
+                return 0.0f;
+            break;
+
+        case CLASS_HUNTER:
+            if (dynamic_cast<CastDeterrenceAction*>(action) ||
+                dynamic_cast<CastFeignDeathAction*>(action) ||
+                dynamic_cast<CastWingClipAction*>(action) ||
+                dynamic_cast<CastFreezingTrap*>(action) ||
+                dynamic_cast<CastExplosiveTrapAction*>(action) ||
+                dynamic_cast<CastImmolationTrapAction*>(action) ||
+                dynamic_cast<CastAspectOfTheHawkAction*>(action) ||
+                dynamic_cast<CastAspectOfTheWildAction*>(action) ||
+                dynamic_cast<CastAspectOfTheDragonhawkAction*>(action) ||
+                dynamic_cast<CastAspectOfThePackAction*>(action) ||
+                dynamic_cast<CastAspectOfTheCheetahAction*>(action) ||
+                dynamic_cast<CastAspectOfTheMonkeyAction*>(action))
+            {
+                return 0.0f;
+            }
+            break;
+
+        case CLASS_MAGE:
+            if (dynamic_cast<CastIceBlockAction*>(action) ||
+                dynamic_cast<CastInvisibilityAction*>(action))
+            {
+                return 0.0f;
+            }
+            break;
+
+        case CLASS_PALADIN:
+            if (dynamic_cast<CastDivineShieldAction*>(action))
+                return 0.0f;
+            break;
+
+        case CLASS_PRIEST:
+            if (dynamic_cast<CastFadeAction*>(action))
+                return 0.0f;
+            break;
+
+        case CLASS_ROGUE:
+            if (dynamic_cast<CastFeintAction*>(action) || dynamic_cast<CastVanishAction*>(action))
+                return 0.0f;
+            break;
+
+        case CLASS_WARLOCK:
+            if (dynamic_cast<CastCurseOfDoomAction*>(action))
+                return 0.0f;
+            break;
+
+        case CLASS_WARRIOR:
+            if (dynamic_cast<CastThunderClapAction*>(action) ||
+                dynamic_cast<CastCleaveAction*>(action) ||
+                dynamic_cast<CastChallengingShoutAction*>(action) ||
+                dynamic_cast<CastDemoralizingShoutAction*>(action) ||
+                dynamic_cast<CastDemoralizingShoutWithoutLifeTimeCheckAction*>(action) ||
+                dynamic_cast<CastShockwaveAction*>(action) ||
+                dynamic_cast<CastPiercingHowlAction*>(action) ||
+                dynamic_cast<CastIntimidatingShoutAction*>(action) ||
+                dynamic_cast<CastSweepingStrikesAction*>(action) ||
+                dynamic_cast<CastVigilanceAction*>(action))
+            {
+                return 0.0f;
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    // Exclude abilities with a target that isn't the bot or the Inner Demon, plus self heals.
     return dynamic_cast<DpsAssistAction*>(action) ||
         dynamic_cast<TankAssistAction*>(action) ||
+        dynamic_cast<CastSnareSpellAction*>(action) ||
         dynamic_cast<CastHealingSpellAction*>(action) ||
         dynamic_cast<CastCureSpellAction*>(action) ||
         dynamic_cast<CurePartyMemberAction*>(action) ||
-        dynamic_cast<CastBuffSpellAction*>(action) ||
         dynamic_cast<ResurrectPartyMemberAction*>(action) ||
         dynamic_cast<PartyMemberActionNameSupport*>(action) ||
+        dynamic_cast<MainTankActionNameSupport*>(action) ||
+        dynamic_cast<GroupBuffSpellAction*>(action) ||
+        dynamic_cast<CastProtectSpellAction*>(action) ||
+        dynamic_cast<CastInnervateOnHealerAction*>(action) ||
         dynamic_cast<CastDebuffSpellOnAttackerAction*>(action) ||
         dynamic_cast<CastDebuffSpellOnMeleeAttackerAction*>(action) ? 0.0f : 1.0f;
 }
@@ -433,12 +561,19 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
         if (PlayerbotAI::IsTank(bot))
             return 1.0f;
 
-        constexpr uint32 dpsWaitMsHumanoidPhase = 3 * IN_MILLISECONDS;
         auto it = leotherasHumanoidPhaseDpsWaitTimer.find(instanceId);
-        if (it == leotherasHumanoidPhaseDpsWaitTimer.end())
+        if (it == leotherasHumanoidPhaseDpsWaitTimer.end() ||
+            getMSTimeDiff(it->second, now) < LEOTHERAS_HUMANOID_DPS_WAIT_MS)
+        {
             return 0.0f;
+        }
 
-        return getMSTimeDiff(it->second, now) < dpsWaitMsHumanoidPhase ? 0.0f : 1.0f;
+        // Hold only after the Whirlwind ends; ranged keep attacking from outside it
+        auto whirlwind = leotherasWhirlwindEndTime.find(instanceId);
+        if (whirlwind == leotherasWhirlwindEndTime.end() || now < whirlwind->second)
+            return 1.0f;
+
+        return now - whirlwind->second < LEOTHERAS_HUMANOID_DPS_WAIT_MS ? 0.0f : 1.0f;
     }
 
     Player* warlockTank = GetLeotherasWarlockTank(bot);
@@ -450,12 +585,11 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
         if (!warlockTank && PlayerbotAI::IsTank(bot))
             return 1.0f;
 
-        constexpr uint32 dpsWaitMsDemonPhase = 12 * IN_MILLISECONDS;
         auto it = leotherasDemonPhaseDpsWaitTimer.find(instanceId);
         if (it == leotherasDemonPhaseDpsWaitTimer.end())
             return 0.0f;
 
-        return getMSTimeDiff(it->second, now) < dpsWaitMsDemonPhase ? 0.0f : 1.0f;
+        return getMSTimeDiff(it->second, now) < LEOTHERAS_DEMON_DPS_WAIT_MS ? 0.0f : 1.0f;
     }
 
     if (IsLeotherasFinalPhase(bot))
@@ -463,42 +597,38 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
         if (warlockTank == bot || PlayerbotAI::IsTank(bot))
             return 1.0f;
 
-        constexpr uint32 dpsWaitMsFinalPhase = 8 * IN_MILLISECONDS;
         auto it = leotherasFinalPhaseDpsWaitTimer.find(instanceId);
         if (it == leotherasFinalPhaseDpsWaitTimer.end())
             return 0.0f;
 
-        return getMSTimeDiff(it->second, now) < dpsWaitMsFinalPhase ? 0.0f : 1.0f;
+        return getMSTimeDiff(it->second, now) < LEOTHERAS_FINAL_DPS_WAIT_MS ? 0.0f : 1.0f;
     }
 
     return 1.0f;
 }
 
-// By leewheel 2026-09-19 合并上游 the-lab：上游统一的 SscDelayDpsCooldownsMultiplier 已覆盖
-//   「莱欧瑟拉斯 95% 血量前不开 dps 大招」，故按「有上游就不留自建」删除本分支自建的
-//   LeotherasTheBlindDelayBloodlustAndHeroismMultiplier（其 .h 声明与 SSCStrategy.cpp 注册均为上游版，已同步移除）。
-//   上游此处的注释块原样保留。
-// End By leewheel
-// This multiplier is not needed right now because Soulshatter is cast only when there are
-// multiple enemies. That's probably not the right approach and should be fixed, so this multiplier
-// remains here but commented out in anticipation of a future correction to Soulshatter usage.
-// float LeotherasTheBlindDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(
-//     Action* action)
-// {
-//     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-//         return 1.0f;
-//
-//     if (bot->getClass() != CLASS_WARLOCK)
-//         return 1.0f;
-//
-//     if (!dynamic_cast<CastSoulshatterAction*>(action))
-//         return 1.0f;
-//
-//     if (!AI_VALUE2(Unit*, "find target", "21215"))
-//         return 1.0f;
-//
-//     return IsLeotherasWarlockTank(bot) && GetActiveLeotherasDemon(bot) ? 0.0f : 1.0f;
-// }
+// By leewheel 2026-09-22 合并brighton the-lab a5541bb4：上游本次【重新启用】本 multiplier
+//   （新注释：Soulshatter 需至少两个攻击者才可放，终阶段正是如此，用来让术士T 不把暗影的仇恨丢掉）。
+//   我方 2026-09-19 曾按"上游 SscDelayDpsCooldownsMultiplier 已覆盖"将其实现注释停用，
+//   现随上游恢复（.h 声明与 SSCStrategy.cpp 注册已由本次合并自动带回）；
+//   目标查找按规则第 97 条 entry 化（leotheras the blind = 21215）。
+float LeotherasTheBlindDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(
+    Action* action)
+{
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (bot->getClass() != CLASS_WARLOCK)
+        return 1.0f;
+
+    if (!dynamic_cast<CastSoulshatterAction*>(action))
+        return 1.0f;
+
+    if (!AI_VALUE2(Unit*, "find target", "21215"))
+        return 1.0f;
+
+    return IsLeotherasWarlockTank(bot) && GetActiveLeotherasDemon(bot) ? 0.0f : 1.0f;
+}
 
 // Fathom-Lord Karathress
 
@@ -507,14 +637,24 @@ float FathomLordKarathressDisableTankActionsMultiplier::GetValueInEncounter(Acti
     if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
-    if (!dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<AvoidAoeAction*>(action) &&
-        !IsTauntAction(bot, action) && !IsAoeThreatAction(bot, action))
-    {
+    // By leewheel 2026-09-22 按规则第 97 条 entry 化：fathom-lord karathress = 21214。
+    if (!AI_VALUE2(Unit*, "find target", "21214"))
         return 1.0f;
-    }
 
-    return AI_VALUE2(Unit*, "find target", "21214") ? 0.0f : 1.0f;
+    // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：采纳上游新增的坦克动作豁免
+    //   （阵型移动/躲 AOE 一律放行；AoE 仇恨与 AoE 嘲讽只在隔壁议会成员够近时才压住，
+    //    单体嘲讽始终放行 —— 用于把跟错坦克的卫士、失控的宠物、被打飞的卫士拉回来）。
+    if (dynamic_cast<CombatFormationMoveAction*>(action) || dynamic_cast<AvoidAoeAction*>(action))
+        return 0.0f;
+
+    // Single-target taunts land on the tank's own target and are how a guard that latched onto
+    // the wrong tank, a loose pet or a knocked-off guard is taken back. AoE threat and the AoE
+    // taunts are held only while somebody else's council member is close enough to be caught.
+    if (IsAoeThreatAction(bot, action) || IsAoeTauntAction(bot, action))
+        return IsAnotherCouncilMemberWithin(botAI, KARATHRESS_AOE_THREAT_CLEARANCE) ?
+            0.0f : 1.0f;
+
+    return 1.0f;
 }
 
 float FathomLordKarathressDisableAutoTargetMultiplier::GetValueInEncounter(Action* action)
@@ -542,15 +682,17 @@ float FathomLordKarathressDisableAoeMultiplier::GetValueInEncounter(Action* acti
 
 float FathomLordKarathressWaitForDpsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (PlayerbotAI::IsTank(bot))
+    // Normally I don't blanket exempt healers as a role and instead only let healing spells through
+    // only, but this is a pretty chaotic pull so I don't want to limit healers' abilities.
+    if (!PlayerbotAI::IsDps(bot))
         return 1.0f;
 
     if (!dynamic_cast<CastSpellAction*>(action) && !dynamic_cast<AttackAction*>(action))
         return 1.0f;
 
-    if (dynamic_cast<CastHealingSpellAction*>(action))
-        return 1.0f;
-
+    // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：上游删去冗余的 CastHealingSpellAction 豁免
+    //   （函数开头已对所有非 DPS/治疗者 return 1.0f，治疗者根本走不到这里），行为不变；
+    //   目标查找按规则第 97 条 entry 化（fathom-lord karathress = 21214）。
     Unit* karathress = AI_VALUE2(Unit*, "find target", "21214");
     if (!karathress)
         return 1.0f;
@@ -559,8 +701,7 @@ float FathomLordKarathressWaitForDpsMultiplier::GetValueInEncounter(Action* acti
     if (it == karathressDpsWaitTimer.end())
         return 0.0f;
 
-    constexpr uint32 dpsWaitMs = 12 * IN_MILLISECONDS;
-    return getMSTimeDiff(it->second, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(it->second, getMSTime()) < KARATHRESS_DPS_WAIT_MS ? 0.0f : 1.0f;
 }
 
 float FathomLordKarathressMaintainPositionMultiplier::GetValueInEncounter(Action* action)
@@ -568,10 +709,38 @@ float FathomLordKarathressMaintainPositionMultiplier::GetValueInEncounter(Action
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (!dynamic_cast<FollowAction*>(action) && !dynamic_cast<FleeAction*>(action))
+    // By leewheel 2026-09-22 按规则第 97 条 entry 化：fathom-lord karathress = 21214。
+    if (!AI_VALUE2(Unit*, "find target", "21214"))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "21214") ? 0.0f : 1.0f;
+    // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：采纳上游新增的站位维持豁免
+    //   （跟随/逃跑放行；只有 Caribdis 的治疗者、且是 Reach 目标动作时才压住），
+    //   并按规则第 97 条 entry 化：fathom-guard caribdis = 21964
+    //   （上游原文误拼为 "fathom-guard caribis"，用 entry 后该笔误自然消除）。
+    if (dynamic_cast<FollowAction*>(action) || dynamic_cast<FleeAction*>(action))
+        return 0.0f;
+
+    // Caribdis healer needs to maintain position.
+    if (!PlayerbotAI::IsAssistHealOfIndex(bot, 0, true))
+        return 1.0f;
+
+    if (!dynamic_cast<ReachTargetAction*>(action))
+        return 1.0f;
+
+    return AI_VALUE2(Unit*, "find target", "21964") ? 0.0f : 1.0f;
+}
+
+// The ledge between Sharkkis and Karathress breaks line of sight to a totem at his feet while
+// melee climb it. That makes the totem an invalid target, and the drop hands the bot back to
+// Sharkkis until the totem is in sight again from the bottom. The totem stays the target as long
+// as it stands.
+float FathomLordKarathressKeepSpitfireTotemTargetMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!dynamic_cast<DropTargetAction*>(action))
+        return 1.0f;
+
+    Unit* totem = GetSpitfireTotem(bot);
+    return totem && AI_VALUE(Unit*, "current target") == totem ? 0.0f : 1.0f;
 }
 
 // Morogrim Tidewalker

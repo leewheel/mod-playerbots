@@ -18,6 +18,7 @@ using namespace SscHelpers;
 using namespace EncounterHelpers;
 
 // General
+
 bool SscNoEncounterInProgressTrigger::IsActive()
 {
     return !IsEncounterInProgress(bot, SSC_MAP_ID);
@@ -32,7 +33,10 @@ bool UnderbogColossusInToxicPoolTrigger::IsActive()
 
 bool GreyheartTidecallerWaterElementalTotemSpawnedTrigger::IsActive()
 {
-    return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "21229");
+    // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：采纳上游把判定改为"机制跟踪者"
+    //   （IsMechanicTrackerBot），并按规则第 97 条 entry 化：greyheart tidecaller = 21229(暗心唤潮者)。
+    return IsMechanicTrackerBot(bot, SSC_MAP_ID) &&
+        AI_VALUE2(Unit*, "find target", "21229");
 }
 
 // Hydross the Unstable <Duke of Currents>
@@ -178,9 +182,6 @@ bool LeotherasTheBlindRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (!leotheras || IsSpellbinderPhase(leotheras))
         return false;
 
-    if (HasInnerDemon(bot))
-        return false;
-
     return !IsLeotherasChannelingWhirlwind(leotheras);
 }
 
@@ -279,7 +280,7 @@ bool FathomLordKarathressPullingBossesTrigger::IsActiveInEncounter()
     return tidalvess && tidalvess->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
 }
 
-bool FathomLordKarathressDeterminingKillOrderTrigger::IsActiveInEncounter() // All I have to get healers into combat is non-combat engine exception from dps assist. will it work?
+bool FathomLordKarathressDeterminingKillOrderTrigger::IsActiveInEncounter()
 {
     if (PlayerbotAI::IsHeal(bot))
         return false;
@@ -293,10 +294,13 @@ bool FathomLordKarathressDeterminingKillOrderTrigger::IsActiveInEncounter() // A
     if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, false))
         return !AI_VALUE2(Unit*, "find target", "21964");
 
+    // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：采纳上游用 GetSharkkisTankTarget()
+    //   （先接手咬住本坦的深水潜伏者/孢子蝠，再回落到沙克基斯），并把 indexLivingOnly 由 true 改回
+    //   上游的 false；目标查找按规则第 97 条 entry 化：fathom-guard tidalvess = 21965。
     if (PlayerbotAI::IsAssistTankOfIndex(bot, 1, false))
-        return !AI_VALUE2(Unit*, "find target", "21966");
+        return !GetSharkkisTankTarget(botAI);
 
-    if (PlayerbotAI::IsAssistTankOfIndex(bot, 2, true))
+    if (PlayerbotAI::IsAssistTankOfIndex(bot, 2, false))
         return !AI_VALUE2(Unit*, "find target", "21965");
 
     return false;
@@ -306,6 +310,12 @@ bool FathomLordKarathressShouldManageDpsTimerTrigger::IsActiveInEncounter()
 {
     return IsMechanicTrackerBot(bot, SSC_MAP_ID) &&
         AI_VALUE2(Unit*, "find target", "21214");
+}
+
+// The aura outlasts the knockback arc by a few seconds, which is the window for the drop
+bool FathomLordKarathressLiftedByCycloneTrigger::IsActiveInEncounter()
+{
+    return bot->HasAura(Id(SscSpells::SPELL_CYCLONE));
 }
 
 // Morogrim Tidewalker

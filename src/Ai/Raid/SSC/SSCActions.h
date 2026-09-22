@@ -174,11 +174,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class LeotherasTheBlindMeleeTanksDontAttackDemonFormAction : public Action
+class LeotherasTheBlindTanksBuildRageOnDemonFormAction : public AttackAction
 {
 public:
-    LeotherasTheBlindMeleeTanksDontAttackDemonFormAction(PlayerbotAI* botAI)
-        : Action(botAI, "leotheras the blind melee tanks don't attack demon form") {}
+    LeotherasTheBlindTanksBuildRageOnDemonFormAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "leotheras the blind tanks build rage on demon form") {}
     bool Execute(Event event) override;
 };
 
@@ -190,11 +190,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class LeotherasTheBlindMeleeDpsRunAwayFromBossAction : public MovementAction
+class LeotherasTheBlindMeleeRunAwayFromChaosBlastAction : public MovementAction
 {
 public:
-    LeotherasTheBlindMeleeDpsRunAwayFromBossAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "leotheras the blind melee dps run away from boss") {}
+    LeotherasTheBlindMeleeRunAwayFromChaosBlastAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "leotheras the blind melee run away from chaos blast") {}
     bool Execute(Event event) override;
 };
 
@@ -208,17 +208,23 @@ public:
 private:
     bool HandleFeralTankStrategy(Unit* innerDemon);
     bool HandleHealerStrategy(Unit* innerDemon);
+    bool HandleHunterStrategy(Unit* innerDemon);
 };
 
-class LeotherasTheBlindFinalPhaseAssignDpsPriorityAction : public AttackAction
+class LeotherasTheBlindFinalPhaseAttackBossAction : public AttackAction
 {
 public:
-    LeotherasTheBlindFinalPhaseAssignDpsPriorityAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "leotheras the blind final phase assign dps priority") {}
+    LeotherasTheBlindFinalPhaseAttackBossAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "leotheras the blind final phase attack boss") {}
     bool Execute(Event event) override;
+};
 
-private:
-    bool MoveLeotherasFromWarlockTank();
+class LeotherasTheBlindFinalPhaseSeparateBossFromDemonAction : public MovementAction
+{
+public:
+    LeotherasTheBlindFinalPhaseSeparateBossFromDemonAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "leotheras the blind final phase separate boss from demon") {}
+    bool Execute(Event event) override;
 };
 
 class LeotherasTheBlindMisdirectBossToWarlockTankAction : public Action
@@ -276,6 +282,14 @@ class FathomLordKarathressManageDpsTimerAction : public Action
 public:
     FathomLordKarathressManageDpsTimerAction(PlayerbotAI* botAI)
         : Action(botAI, "fathom-lord karathress manage dps timer") {}
+    bool Execute(Event event) override;
+};
+
+class FathomLordKarathressDropFromCycloneAction : public MovementAction
+{
+public:
+    FathomLordKarathressDropFromCycloneAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "fathom-lord karathress drop from cyclone") {}
     bool Execute(Event event) override;
 };
 

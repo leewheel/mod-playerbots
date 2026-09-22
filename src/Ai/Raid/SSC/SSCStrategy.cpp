@@ -67,7 +67,7 @@ void RaidSscStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("leotheras the blind warlock tank attack boss", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("leotheras the blind only warlock should tank demon form", {
-        NextAction("leotheras the blind melee tanks don't attack demon form", ACTION_RAID) }));
+        NextAction("leotheras the blind tanks build rage on demon form", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("leotheras the blind ranged should spread", {
         NextAction("leotheras the blind position ranged", ACTION_RAID) }));
@@ -76,13 +76,14 @@ void RaidSscStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("leotheras the blind run away from whirlwind", ACTION_EMERGENCY + 1) }));
 
     triggers.push_back(new TriggerNode("leotheras the blind too many chaos blast stacks", {
-        NextAction("leotheras the blind melee dps run away from boss", ACTION_EMERGENCY + 8) }));
+        NextAction("leotheras the blind melee run away from chaos blast", ACTION_EMERGENCY + 8) }));
 
     triggers.push_back(new TriggerNode("leotheras the blind inner demon has awakened", {
         NextAction("leotheras the blind destroy inner demon", ACTION_EMERGENCY + 7) }));
 
     triggers.push_back(new TriggerNode("leotheras the blind in final phase", {
-        NextAction("leotheras the blind final phase assign dps priority", ACTION_RAID + 1) }));
+        NextAction("leotheras the blind final phase separate boss from demon", ACTION_RAID + 2),
+        NextAction("leotheras the blind final phase attack boss", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("leotheras the blind hunter should misdirect demon form", {
         NextAction("leotheras the blind misdirect boss to warlock tank", ACTION_RAID + 2) }));
@@ -105,6 +106,9 @@ void RaidSscStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode("fathom-lord karathress should manage dps timer", {
         NextAction("fathom-lord karathress manage dps timer", ACTION_EMERGENCY + 10) }));
+
+    triggers.push_back(new TriggerNode("fathom-lord karathress lifted by cyclone", {
+        NextAction("fathom-lord karathress drop from cyclone", ACTION_EMERGENCY + 9) }));
 
     // Morogrim Tidewalker
     triggers.push_back(new TriggerNode("morogrim tidewalker should be tanked", {
@@ -180,7 +184,7 @@ void RaidSscStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new LeotherasTheBlindMeleeAvoidChaosBlastMultiplier(botAI));
     multipliers.push_back(new LeotherasTheBlindFocusOnInnerDemonMultiplier(botAI));
     multipliers.push_back(new LeotherasTheBlindWaitForDpsMultiplier(botAI));
-    // multipliers.push_back(new LeotherasTheBlindDisableWarlockTankSoulshatterMultiplier(botAI));
+    multipliers.push_back(new LeotherasTheBlindDisableWarlockTankSoulshatterMultiplier(botAI));
 
     // Fathom-Lord Karathress
     multipliers.push_back(new FathomLordKarathressDisableTankActionsMultiplier(botAI));
@@ -188,6 +192,7 @@ void RaidSscStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new FathomLordKarathressDisableAoeMultiplier(botAI));
     multipliers.push_back(new FathomLordKarathressWaitForDpsMultiplier(botAI));
     multipliers.push_back(new FathomLordKarathressMaintainPositionMultiplier(botAI));
+    multipliers.push_back(new FathomLordKarathressKeepSpitfireTotemTargetMultiplier(botAI));
 
     // Morogrim Tidewalker
     multipliers.push_back(new MorogrimTidewalkerDisableTankActionsMultiplier(botAI));
@@ -205,11 +210,30 @@ void RaidSscStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 
 void RaidSscStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExclusionType /*type*/)
 {
+    Player* bot = botAI->GetBot();
+    if (bot->GetMapId() != SSC_MAP_ID)
+        return;
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+
     // Tanks other than the designated Frost and Nature tanks must pick up adds only.
-    if (IsHydrossAddTank(botAI->GetBot()))
+    if (IsHydrossAddTank(bot))
     {
-        AiObjectContext* context = botAI->GetAiObjectContext();
+        // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：删去本块内重复的
+        //   AiObjectContext* context 声明（函数开头已有同名变量，此处属 shadow 冗余），
+        //   并按规则第 97 条 entry 化：hydross the unstable = 21216。
         if (Unit* hydross = AI_VALUE2(Unit*, "find target", "21216"))
             exclusions.insert(hydross->GetGUID());
     }
+
+    // Leotheras is immune until the Greyheart Spellbinders are killed.
+    Unit* leotheras = GetLeotheras(bot);
+    if (leotheras && IsSpellbinderPhase(leotheras))
+        exclusions.insert(leotheras->GetGUID());
+
+    // Vashj is immune behind Magic Barrier during Phase 2.
+    // By leewheel 2026-09-22 按规则第 97 条 entry 化：lady vashj = 21212(瓦丝琪)。
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (vashj && vashj->HasAura(Id(SscSpells::SPELL_MAGIC_BARRIER)))
+        exclusions.insert(vashj->GetGUID());
 }

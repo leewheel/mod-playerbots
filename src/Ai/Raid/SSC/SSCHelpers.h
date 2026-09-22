@@ -64,6 +64,9 @@ enum class SscSpells : uint32
     SPELL_CHAOS_BLAST            = 37675,
     SPELL_INSIDIOUS_WHISPER      = 37676,
 
+    // Fathom-Lord Karathress
+    SPELL_CYCLONE                = 38517, // 4 yd feather fall + knockback every 1s, 5s aura
+
     // Lady Vashj <Coilfang Matron>
     SPELL_FEAR_WARD              =  6346,
     SPELL_MAGIC_BARRIER          = 38112,
@@ -72,9 +75,9 @@ enum class SscSpells : uint32
     SPELL_ENTANGLE               = 38316,
 
     // Druid
-    SPELL_CAT_FORM               =   768,
     SPELL_BEAR_FORM              =  5487,
     SPELL_DIRE_BEAR_FORM         =  9634,
+    SPELL_FAERIE_FIRE_FERAL      = 16857,
     SPELL_TREE_OF_LIFE           = 33891,
     SPELL_DRUID_BERSERK          = 50334,
 
@@ -95,6 +98,9 @@ enum class SscSpells : uint32
 
     // Warlock
     SPELL_CURSE_OF_EXHAUSTION    = 18223,
+
+    // Warrior
+    SPELL_VIGILANCE              = 50720,
 };
 
 enum class SscNpcs : uint32
@@ -117,6 +123,8 @@ enum class SscNpcs : uint32
 
     // Fathom-Lord Karathress
     NPC_SPITFIRE_TOTEM           = 22091,
+    NPC_FATHOM_LURKER            = 22119,
+    NPC_FATHOM_SPOREBAT          = 22120,
 
     // Lady Vashj <Coilfang Matron>
     NPC_WORLD_INVISIBLE_TRIGGER  = 12999,
@@ -136,25 +144,23 @@ enum class SscItems : uint32
 };
 
 inline constexpr uint32 SSC_MAP_ID = 548;
-inline constexpr uint32 HAZARD_CACHE_INTERVAL = 200;
+inline constexpr uint32 HAZARD_CACHE_INTERVAL_MS = 200;
+
+Creature* GetCachedCreature(Player* bot, char const* value);
 
 // Trash
 
 // 25y radius + ~2y player CombatReach; see the Hyjal D&D note on persistent ground AoE range in AC.
 inline constexpr float TOXIC_POOL_HAZARD_RADIUS = 27.0f;
-inline constexpr float TOXIC_POOL_HOLDING_RADIUS = TOXIC_POOL_HAZARD_RADIUS + 5.0f; // For multiplier
-inline constexpr float TOXIC_POOL_SEARCH_RADIUS = TOXIC_POOL_HOLDING_RADIUS + 2.0f; // 2y margin for hazard search
+inline constexpr float TOXIC_POOL_HOLDING_RADIUS = TOXIC_POOL_HAZARD_RADIUS + 5.0f;
+inline constexpr float TOXIC_POOL_SEARCH_RADIUS = TOXIC_POOL_HOLDING_RADIUS + 2.0f;
 
 std::vector<Position> const& GetCachedHazardPositions(PlayerbotAI* botAI, std::string const& value);
-// A step out of a circular hazard. Directions fan out from straight-away in fine steps; the first
-// landing point that is dry ground, is reachable, and is farther from the hazard than the bot
-// wins. Unlike Hyjal's ring-based GetHazardEscapeStep this needs no clear point at the ring: a
-// narrow curved boardwalk still offers two dry directions whatever the ring looks like.
+// A step out of a circular hazard.
 bool FindHazardEscapeStep(
     Player* bot, Position const& hazard, float moveDist, float& stepX, float& stepY,
     float& stepZ);
-// True where the map has ground above any liquid at x/y. A player counts water as reachable, so
-// the pathfinder alone lets an escape step off a boardwalk into the lake.
+// True where the map has ground above any liquid at x/y.
 bool IsDryGround(Player* bot, float x, float y);
 bool GetToxicPoolPosition(PlayerbotAI* botAI, Position& toxicPool);
 bool IsNearToxicPool(PlayerbotAI* botAI, float radius);
@@ -201,17 +207,10 @@ inline constexpr float LURKER_RANGED_SAFE_DISTANCE = LURKER_WHIRL_RADIUS + 2.0f;
 inline constexpr float LURKER_SPOUT_RUN_RADIUS_MIN = 19.0f;
 inline constexpr float LURKER_SPOUT_RUN_RADIUS_MAX = 21.0f;
 inline constexpr float LURKER_SPOUT_RUN_ARC_HALF_WIDTH = static_cast<float>(M_PI) / 3.0f;
-// Two movement regimes, each used where its failure does not bite. A short step that crosses
-// spillover on the walkway is detoured around it and re-targeted from mid-detour next tick, so the
-// bot dithers at the puddle; but a blocked step is refused, never re-routed. A far target is
-// reached by a path on which the puddle is a kink; but if the walkway ahead has a gap the
-// pathfinder reaches the same target the long way round. So the wind-up, when nothing is firing
-// and the bot in the mouth must get clear fast, uses one far move to the arc edge, checked to set
-// off the right way; the spin, when the beam is live, uses steps.
 inline constexpr float LURKER_SPOUT_RUN_STEP = 7.0f;
 inline constexpr float LURKER_SPOUT_RUN_RADIAL_DEADZONE = 2.0f;
-// A bot faster than the beam (Sprint, Dash, cat form) may run this far past directly-behind, in
-// the spin direction, before it waits for the beam; further and it laps round into the front.
+// A bot may run this far past directly behind Lurker, in the spin direction, before it stops.
+// This is to prevent the very intelligent bots from lapping Lurker and getting blasted.
 inline constexpr float LURKER_SPOUT_RUN_OVERTAKE_MARGIN = static_cast<float>(M_PI) / 6.0f;
 
 // True if a navmesh path from the bot to x/y sets off around Lurker in the given angular
@@ -223,7 +222,7 @@ bool DoesPathArrive(Player* bot, float x, float y, float z, float tolerance);
 // Submerge: three Coilfang Guardians, one each for the main tank and the first two assist tanks.
 // The guardians are found by a sorted, cached grid search so every tank sees the same list in the
 // same order (summon GUIDs are sequential, so sorted is spawn order).
-inline constexpr uint32 LURKER_GUARDIAN_CACHE_INTERVAL = 200;
+inline constexpr uint32 LURKER_GUARDIAN_CACHE_INTERVAL_MS = 200;
 inline constexpr float LURKER_GUARDIAN_SEARCH_RADIUS = 100.0f;
 
 // The script sets REACT_PASSIVE on the first tick of the Spout wind-up and REACT_AGGRESSIVE when
@@ -243,11 +242,20 @@ bool CastTauntOn(PlayerbotAI* botAI, Unit* target);
 // Leotheras the Blind
 
 inline constexpr float LEOTHERAS_SEARCH_DISTANCE = 100.0f;
+inline constexpr uint32 LEOTHERAS_CACHE_INTERVAL_MS = 200;
+inline constexpr uint32 LEOTHERAS_HUMANOID_DPS_WAIT_MS = 3 * IN_MILLISECONDS;
+inline constexpr uint32 LEOTHERAS_DEMON_DPS_WAIT_MS = 10 * IN_MILLISECONDS;
+inline constexpr uint32 LEOTHERAS_FINAL_DPS_WAIT_MS = 5 * IN_MILLISECONDS;
 
 extern std::unordered_map<uint32, uint32> leotherasHumanoidPhaseDpsWaitTimer;
+// When the current Whirlwind will end, from the aura's remaining duration.
+extern std::unordered_map<uint32, uint32> leotherasWhirlwindEndTime;
 extern std::unordered_map<uint32, uint32> leotherasDemonPhaseDpsWaitTimer;
 extern std::unordered_map<uint32, uint32> leotherasFinalPhaseDpsWaitTimer;
 
+ObjectGuid FindLeotherasGuid(Player* bot);
+ObjectGuid FindShadowOfLeotherasGuid(Player* bot);
+Creature* GetLeotheras(Player* bot);
 bool IsSpellbinderPhase(Unit* leotheras);
 Creature* GetActiveLeotherasHumanoid(Player* bot);
 bool IsLeotherasHumanoidPhase(Player* bot);
@@ -268,11 +276,34 @@ Creature* GetPersonalInnerDemon(PlayerbotAI* botAI);
 inline Position const KARATHRESS_TANK_POSITION = { 474.403f, -531.118f, -7.548f };
 inline Position const TIDALVESS_TANK_POSITION = { 511.282f, -501.162f, -13.158f };
 inline Position const SHARKKIS_TANK_POSITION = { 508.057f, -541.109f, -10.133f };
-inline Position const CARIBDIS_TANK_POSITION = { 464.462f, -475.820f, -13.158f };
-inline Position const CARIBDIS_HEALER_POSITION = { 466.203f, -503.201f, -13.158f };
+inline Position const CARIBDIS_TANK_POSITION = /*{ 464.462f, -475.820f, -13.158f };*/ { 462.72876f, -482.8895f, -13.158224f };
+inline Position const CARIBDIS_HEALER_POSITION = /*{ 466.203f, -503.201f, -13.158f };*/ { 475.181f, -507.385f, -13.158f };
 inline Position const CARIBDIS_RANGED_DPS_POSITION = { 463.197f, -501.190f, -13.158f };
 
+// Every living guard buffs Karathress at 75%, so he is held above this while one still stands
+inline constexpr float KARATHRESS_BLESSING_HOLD_HEALTH_PCT = 80.0f;
+// Widest tank AoE is Death and Decay at 10 yd
+inline constexpr float KARATHRESS_AOE_THREAT_CLEARANCE = 15.0f;
+// One toss leaves a bot about 1.5 yd up; navmesh Z sits well under 1 yd off the floor
+inline constexpr float CYCLONE_DROP_HEIGHT = 1.0f;
+inline constexpr float SPITFIRE_TOTEM_SEARCH_DISTANCE = 75.0f;
+inline constexpr uint32 SPITFIRE_TOTEM_CACHE_INTERVAL_MS = 200;
+inline constexpr uint32 KARATHRESS_DPS_WAIT_MS = 12 * IN_MILLISECONDS;
+
 extern std::unordered_map<uint32, uint32> karathressDpsWaitTimer;
+
+// Totems cannot hold a threat list, so the Spitfire Totem is found by entry and cached as
+// "ssc spitfire totem".
+ObjectGuid FindSpitfireTotemGuid(Player* bot);
+Creature* GetSpitfireTotem(Player* bot);
+Unit* GetSharkkisTankTarget(PlayerbotAI* botAI);
+// Karathress belongs to the main tank; Caribdis, Sharkkis and Tidalvess to the assist tanks in
+// that order
+Unit* GetAssignedCouncilMember(PlayerbotAI* botAI);
+// A guard that latched onto the wrong tank on the pull is peeled by its own tank, so the tank
+// holding it must not walk off with it
+bool IsHoldingAnotherTanksCouncilMember(PlayerbotAI* botAI);
+bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range);
 
 // Morogrim Tidewalker
 
