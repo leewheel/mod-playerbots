@@ -287,6 +287,10 @@ public:
         // By leewheel 2026-08-31: 主坦克是真实玩家时的兜底标骷髅触发器
         creators["fallback mark skull"] = &TriggerContext::fallback_mark_skull;
 
+        // By leewheel 2026-09-22: 月亮（CC 目标）标记触发器
+        // （月亮标记的生命周期维护不设专用触发器，改挂在通用 "often" 上，见 AutoTankMarkStrategy.cpp）
+        creators["main tank can mark moon"] = &TriggerContext::main_tank_can_mark_moon;
+
         // By leewheel 2026-07-15: 逃跑怪优先集火触发器
         creators["fleeing target"] = &TriggerContext::fleeing_target;
     }
@@ -528,6 +532,8 @@ private:
 
     // By leewheel 2026-08-31: 主坦克是真实玩家时的兜底标骷髅触发器
     static Trigger* fallback_mark_skull(PlayerbotAI* botAI) { return new FallbackMarkSkullTrigger(botAI); }
+    // By leewheel 2026-09-22: 月亮（CC 目标）标记触发器
+    static Trigger* main_tank_can_mark_moon(PlayerbotAI* botAI) { return new MainTankMarkMoonTrigger(botAI); }
     // By leewheel 2026-07-15
     static Trigger* fleeing_target(PlayerbotAI* botAI) { return new FleeingTargetTrigger(botAI); }
     static Trigger* low_breath(PlayerbotAI* ai) { return new LowBreathTrigger(ai); }

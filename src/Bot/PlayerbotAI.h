@@ -16,6 +16,9 @@
 #include "Item.h"
 #include "NewRpgInfo.h"
 #include "NewRpgStrategy.h"
+// By leewheel 2026-09-22: 自动坦克标记的月亮（CC）状态需要 ObjectGuid 的完整定义（作成员变量用），
+// 这里显式包含，避免依赖 Item.h / WorldPacket.h 的间接包含顺序。
+#include "ObjectGuid.h"
 #include "PlayerbotAIBase.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotSecurity.h"
@@ -613,6 +616,18 @@ public:
     std::unordered_set<uint32> lowPriorityQuest;
     time_t bgReleaseAttemptTime = 0;
     ForceRebuffState forceRebuff;
+
+    // By leewheel 2026-09-22: 坦克自动标记 —— 月亮（CC 目标）标记的生命周期状态。
+    //   参考 mod-playerbots-dungeon-lead 的 DungeonLeadState.ccGuid / ccMarkedTs /
+    //   ccMarkedAbsoluteTs / ccLandedTold，改为按坦克 Bot 自身保存（该状态只服务
+    //   本 Bot 的自动标记，不需要全局管理器，也不需要加锁）。
+    //   由 AutoTankMarkActions.cpp 的 MarkMoonTargetAction 写入、
+    //   CheckCcMarkAction 读取并决定何时释放月亮标记。
+    ObjectGuid autoTankMarkCcGuid;          // 本 Bot 当前打上的月亮标记目标
+    uint32 autoTankMarkCcMarkedTs = 0;      // 宽限窗起点（每次落地控制/未进战斗都会重置）
+    uint32 autoTankMarkCcAbsoluteTs = 0;    // 绝对上限起点（标记落地时刻，不重置）
+    bool autoTankMarkCcLandedTold = false;  // 是否已记录过"控制落地"（供日志去重）
+    // End By leewheel
 
     // Schedules a callback to run once after <delayMs> milliseconds.
     void AddTimedEvent(std::function<void()> callback, uint32 delayMs);

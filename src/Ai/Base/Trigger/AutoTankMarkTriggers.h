@@ -57,4 +57,23 @@ public:
     bool IsActive() override;
 };
 
+// By leewheel 2026-09-22: 主坦克自动标记月亮（CC 目标）触发器
+// 参考 mod-playerbots-dungeon-lead 的月亮标记机制：给首领身边那只"需要被控制"的精英
+// 打月亮，德鲁伊/术士等 CC 职业会以它为目标（rti cc 默认值就是 moon）。
+// 条件：配置开启 + 非战场/竞技场 + 是主坦克 + 队伍里有能控的职业 + 战斗中 + 月亮槽位可用
+class MainTankMarkMoonTrigger : public Trigger
+{
+public:
+    MainTankMarkMoonTrigger(PlayerbotAI* botAI) : Trigger(botAI, "main tank can mark moon") {}
+
+    bool IsActive() override;
+};
+
+// By leewheel 2026-09-22: 月亮标记的生命周期维护不单独设触发器 ——
+//   参考 mod-playerbots-dungeon-lead 的做法，用上游通用的 "often"（RandomTrigger 5%）
+//   限流，把动作直接挂在 "often" 上（见 AutoTankMarkStrategy.cpp）。
+//   理由：维护动作需要"被标怪未进战斗"期间也能跑，且绝不能在每 tick 抢占战斗动作；
+//   "often" 天然满足这两点，而一个"只要月亮被占用就持续激活"的专用触发器会一直
+//   参与优先级竞争，反而可能饿死真正的战斗动作。
+
 #endif

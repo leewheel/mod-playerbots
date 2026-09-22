@@ -41,6 +41,19 @@ static bool IsMarkSlotAvailable(PlayerbotAI* botAI, Group* group, uint8 iconInde
     return !unit || !unit->IsAlive() || !unit->IsInWorld() || unit->IsPlayer();
 }
 
+// By leewheel 2026-09-22: 槽位是否已被一只"存活的怪"占用（IsMarkSlotAvailable 的反面）。
+// 用于"月亮跟随骷髅"与"月亮生命周期维护"两处：只有骷髅真的指向一只活怪时才标月亮，
+// 只有月亮真的指向一只活怪时才需要跑维护逻辑。
+static bool IsMarkSlotOccupied(PlayerbotAI* botAI, Group* group, uint8 iconIndex)
+{
+    ObjectGuid const guid = group->GetTargetIcon(iconIndex);
+    if (guid.IsEmpty())
+        return false;
+
+    Unit* unit = botAI->GetUnit(guid);
+    return unit && unit->IsAlive() && unit->IsInWorld() && !unit->IsPlayer();
+}
+
 bool MainTankMarkSkullTrigger::IsActive()
 {
     if (!sPlayerbotAIConfig.autoTankMarkEnabled)
@@ -176,4 +189,37 @@ bool FallbackMarkSkullTrigger::IsActive()
         return false;
 
     return IsMarkSlotAvailable(botAI, group, RtiTargetValue::skullIndex);
+}
+
+// By leewheel 2026-09-22: 主坦克自动标记月亮（CC 目标）
+// 参考 mod-playerbots-dungeon-lead：月亮是"给首领身边那只精英上控制"的从属语义，
+// 因此要求骷髅已经指向一只活怪（先有主目标、再谈控制目标）。
+bool MainTankMarkMoonTrigger::IsActive()
+{
+    if (!sPlayerbotAIConfig.autoTankMarkEnabled)
+        return false;
+
+    if (!IsMarkAllowed(bot))
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    if (!botAI->IsMainTank(bot))
+        return false;
+
+    // 月亮跟随骷髅：骷髅还没指向活怪（尚未开怪 / 骷髅已清）时不标月亮
+    if (!IsMarkSlotOccupied(botAI, group, RtiTargetValue::skullIndex))
+        return false;
+
+    // 月亮槽位必须可用（空 或 指向已死亡/消失目标）
+    if (!IsMarkSlotAvailable(botAI, group, RtiTargetValue::moonIndex))
+        return false;
+
+    // 战斗中才触发（与 NoRtiTrigger 一致，不依赖 attackers 列表）
+    if (!bot->IsInCombat())
+        return false;
+
+    return true;
 }

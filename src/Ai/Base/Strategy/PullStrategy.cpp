@@ -215,8 +215,11 @@ float PullMultiplier::GetValue(Action* action)
         actionName == "follow" ||
         actionName == "set facing" ||
         // By leewheel 2026-08-31: 硬性规则 —— 拉怪窗口期也必须能立即标记骷髅/叉叉、转移逃跑怪
+        // By leewheel 2026-09-22: 月亮标记（CC 目标）与其生命周期维护同样属于"指挥类"动作，一并放行
         actionName == "mark skull target" ||
         actionName == "mark cross target" ||
+        actionName == "mark moon target" ||
+        actionName == "check cc mark" ||
         actionName == "fallback mark skull" ||
         actionName == "prioritize fleeing target" ||
         actionName == "surface for breath")
@@ -256,7 +259,9 @@ float MagePullMultiplier::GetValue(Action* action)
         name == "return to pull position" || name == "follow" ||
         name == "set facing" || name == "change strategy" ||
         // By leewheel 2026-08-31: 同 PullMultiplier —— 拉怪窗口期允许标记
+        // By leewheel 2026-09-22: 补月亮标记与生命周期维护
         name == "mark skull target" || name == "mark cross target" ||
+        name == "mark moon target" || name == "check cc mark" ||
         name == "fallback mark skull" || name == "prioritize fleeing target")
         return 1.0f;
 
