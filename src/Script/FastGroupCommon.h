@@ -263,7 +263,14 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
     std::set<uint8>& usedClasses);
 
 // 主组队函数（ChatHandler 可选，为 nullptr 时不发送聊天消息）
-bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* handler = nullptr);
+// By leewheel 2026-09-23 新增 exactTotalMembers 参数：
+//   0（默认）= 沿用 FastGroupConfigs 档位的固定人数（原行为，.fastgroup 命令族完全不变）；
+//   >0      = 按调用方给定的精确总人数组队（坦克/治疗/输出按档位比例缩放），
+//             供 AutoJoinRaid（团本浏览器自动组队）按"该副本实际人数上限"组队使用。
+//   动机：档位只有 5/10/25/40，而上层需要 15 人这类非档位人数（如上层黑石塔 15 人）；
+//         若强行归入 25 人档，会自动组 25 人而实例只放 15 人，反而制造新的不一致。
+bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* handler = nullptr, uint32 exactTotalMembers = 0);
+// End By leewheel
 
 // By leewheel 2026-07-08
 // 为队伍中所有成员分配LFG角色（坦克/治疗/输出），并发送 SMSG_LFG_ROLE_CHOSEN 包

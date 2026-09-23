@@ -82,20 +82,43 @@ static uint32 GetRaidMaxPlayers(uint32 dungeonId)
     if (dungeon->type != lfg::LFG_TYPE_RAID)
         return 0;
 
-    // 通过地图 ID 查找 MapEntry，获取 maxPlayers
+    // By leewheel 2026-09-23 人数上限必须与核心同源（修「显示 15 人本、自动组队只组 10 人」）
+    //   原有实现直接取 MapEntry::maxPlayers（Map.dbc 第 65 列），
+    //   而核心判定「实际能进几人」用的是 InstanceMap::GetMaxPlayers()（Map.cpp:2472）：
+    //       MapDifficulty::maxPlayers 优先 → 回退 MapEntry::maxPlayers
+    //   两者不同源 ⇒ 自动组队人数 ≠ 实际可进人数。玩家侧表现为
+    //     「上层黑石塔显示 15 人本，通过团队浏览器却只能进 10 个人」。
+    //
+    //   服务端 ClientData\dbc 实测落差（Map.dbc[65] / MapDifficulty[21]，均为难度 0）：
+    //     map 229 上层黑石塔   10 / 15   ← 玩家本次反馈
+    //     map 309 祖尔格拉布   25 / 10
+    //     map 249 奥妮克希亚   40 / 10
+    //     map 533 纳克萨玛斯   25 / 10
+    //   注意落差在两个方向都有：229 是"组少了"，309/249/533 是"组多了"（组了也进不去）。
+    //
+    //   现改为与 InstanceMap::GetMaxPlayers() 完全同源，保证
+    //   「客户端界面显示的人数 = 自动组队人数 = 服务端实际可进人数」三者一致。
+    MapDifficulty const* mapDiff = GetMapDifficultyData(dungeon->map, Difficulty(dungeon->difficulty));
+    if (mapDiff && mapDiff->maxPlayers)
+    {
+        return mapDiff->maxPlayers;
+    }
+
+    // MapDifficulty 无该难度记录时，才回退 Map.dbc 第 65 列（与核心同顺序）
     MapEntry const* mapEntry = sMapStore.LookupEntry(dungeon->map);
     if (mapEntry && mapEntry->maxPlayers > 0)
     {
         return mapEntry->maxPlayers;
     }
 
-    // 如果 MapEntry 没有有效的 maxPlayers，使用难度来判断
+    // 两者都没有有效值时，按难度兜底
     // RAID_DIFFICULTY_25MAN_NORMAL = 1, RAID_DIFFICULTY_25MAN_HEROIC = 3
     // RAID_DIFFICULTY_MASK_25MAN = 1
     if (dungeon->difficulty & RAID_DIFFICULTY_MASK_25MAN)
         return 25;
     else
         return 10;
+    // End By leewheel
 }
 
 // ============================================================
@@ -242,7 +265,13 @@ public:
         handler.PSendSysMessage("|cff00ff00[自动加入团本] 检测到您在团本浏览器中，正在自动组建 {} 人团队...|r", maxPlayers);
 
         // 调用 DoFastGroup 组建团队
-        bool success = DoFastGroup(player, configIndex, &handler);
+        // By leewheel 2026-09-23 第 4 参传入精确人数：
+        //   configIndex 只是"角色比例档位"（5/10/25/40 四档），若不带精确人数，
+        //   15 人上限的副本会被归入 25 人档而实际组 25 个机器人 ⇒ 实例只放行 15 人，
+        //   玩家侧又变成「自动组了 25 人却进不去」。传 maxPlayers 让组队人数
+        //   严格等于该副本人数上限，与客户端界面显示值、服务端放行值三者一致。
+        bool success = DoFastGroup(player, configIndex, &handler, maxPlayers);
+        // End By leewheel
 
         if (success)
         {

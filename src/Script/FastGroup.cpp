@@ -48,6 +48,10 @@
 #include "FastGroupCommon.h"
 // End By leewheel
 
+//By leewheel 2026-09-22 特殊机器人「赵与风」：25% 概率编入队伍 + 独立策略「全需求」
+#include "ZhaoYufeng.h"
+//End By leewheel
+
 #include <unordered_set>
 #include <map>
 #include <set>
@@ -855,12 +859,43 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
 //  By leewheel 2026-07-07：从 ExecuteFastGroup 重命名为 DoFastGroup，
 //  ChatHandler 参数改为可选（默认 nullptr），供 AutoJoinRaid 调用。
 // ============================================================
-bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* handler)
+bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* handler, uint32 exactTotalMembers)
 {
     if (!master)
         return false;
 
     const FastGroupConfig& config = FastGroupConfigs[configIndex];
+
+    // By leewheel 2026-09-23 精确人数支持（与核心「副本人数上限」同源）
+    //   背景与必要性：
+    //     FastGroupConfigs 只有 5/10/25/40 四档固定人数，而上层 AutoJoinRaid
+    //     （玩家在团本浏览器里选团本 → 机器人自动组队）需要按"该副本实际人数上限"组队。
+    //     例：上层黑石塔(229) 上限 15 人，若按 15 归入 25 人档就会组 25 人，
+    //     而实例只放行 15 人 —— 反而制造出新的「显示 = 实际」不一致。
+    //   规则：
+    //     exactTotalMembers == 0 或与档位人数相同时，完全沿用档位（.fastgroup 命令族行为不变）；
+    //     否则以精确人数为准，坦克/治疗按档位比例缩放（各自至少 1），输出位取剩余，
+    //     保证 tanks + heals + dps == exactTotalMembers（含玩家自身）。
+    uint32 useTotalMembers = config.totalMembers;
+    uint32 useTanks = config.tanks;
+    uint32 useHeals = config.heals;
+    uint32 useDps   = config.dps;
+    if (exactTotalMembers > 0 && exactTotalMembers != config.totalMembers)
+    {
+        // 四舍五入的整数写法，避免为一个算式额外引入 <cmath>
+        auto scaleCount = [](uint32 base, uint32 want, uint32 from) -> uint32
+        {
+            return (base * want + from / 2) / from;
+        };
+        useTotalMembers = exactTotalMembers;
+        useTanks = scaleCount(config.tanks, useTotalMembers, config.totalMembers);
+        useHeals = scaleCount(config.heals, useTotalMembers, config.totalMembers);
+        if (useTanks < 1) useTanks = 1;
+        if (useHeals < 1) useHeals = 1;
+        uint32 const used = useTanks + useHeals;
+        useDps = (useTotalMembers > used) ? (useTotalMembers - used) : 0;
+    }
+    // End By leewheel
 
     // 战斗中无法使用
     if (master->IsInCombat())
@@ -883,7 +918,7 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
     }
 
     if (handler)
-        handler->PSendSysMessage("|cff00ff00[快速组队] 正在组建 {} 人队伍...|r", config.totalMembers);
+        handler->PSendSysMessage("|cff00ff00[快速组队] 正在组建 {} 人队伍...|r", useTotalMembers);
 
     // 分析玩家自身的角色定位
     FastGroupRole playerRole = GetPlayerRole(master);
@@ -895,9 +930,9 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
             master->GetName(), GetRoleNameCN(playerRole), targetLevel);
 
     // 计算需要补充的各角色数量（扣除玩家自身）
-    uint32 needTanks = config.tanks;
-    uint32 needHeals = config.heals;
-    uint32 needDps   = config.dps;
+    uint32 needTanks = useTanks;
+    uint32 needHeals = useHeals;
+    uint32 needDps   = useDps;
 
     switch (playerRole)
     {
@@ -944,6 +979,46 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
         for (auto& d : dps)
             allBots.push_back(d);
     }
+
+    //By leewheel 2026-09-22 特殊机器人「赵与风」
+    //  需求：玩家组团本（快速组队）时，有 25% 概率组到「赵与风」。
+    //  说明：
+    //    1. 每次组队独立掷骰一次（RollChance，默认 25%，可用 AiPlayerbot.ZhaoYufeng.Chance 配置）；
+    //    2. 他是战士，走狂暴输出，因此占用一个输出位（needDps 扣 1，避免队伍超编）；
+    //    3. 他若正在别人的队伍里则自动跳过，保证同一时间只出现在一支队伍中；
+    //    4. 他可能处于离线状态，此处只登记候选，实际召唤与等级/装备整备
+    //       仍由下方统一的 AddPlayerBot + PendingBotSetup 流程完成。
+    if (needDps > 0)
+    {
+        sZhaoYufengMgr.EnsureLoaded();
+        if (sZhaoYufengMgr.RollChance())
+        {
+            ZhaoYufengEntry const* zyfEntry = sZhaoYufengMgr.GetEntryForTeam(teamId);
+            if (zyfEntry && usedGuids.find(zyfEntry->guid.GetCounter()) == usedGuids.end())
+            {
+                BotCandidate zyfCandidate;
+                zyfCandidate.guid        = zyfEntry->guid;
+                zyfCandidate.name        = sZhaoYufengMgr.GetName();
+                zyfCandidate.race        = zyfEntry->race;
+                zyfCandidate.accountId   = zyfEntry->accountId;
+                zyfCandidate.playerClass = zyfEntry->playerClass;
+                zyfCandidate.role        = FG_ROLE_DPS;
+                zyfCandidate.specTab     = 1;   // 战士：1 = 狂暴（输出）
+
+                allBots.push_back(zyfCandidate);
+                usedGuids.insert(zyfEntry->guid.GetCounter());
+                ++gotDps;
+                --needDps;
+
+                if (handler)
+                    handler->PSendSysMessage("|cffff8000[快速组队] 命中 25%%：赵与风加入了队伍！|r");
+
+                LOG_INFO("playerbots", "赵与风：已编入玩家 {} 的队伍（快速组队/团本，总人数 {}）。",
+                    master->GetName(), useTotalMembers);
+            }
+        }
+    }
+    //End By leewheel
 
     if (allBots.empty())
     {
@@ -1048,7 +1123,7 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
     }
 
     LOG_INFO("playerbots", "快速组队：玩家 {} 组建 {} 人队伍，召唤了 {} 个机器人。",
-        master->GetName(), config.totalMembers, addedBotGuids.size());
+        master->GetName(), useTotalMembers, addedBotGuids.size());
 
     return true;
 }
@@ -1701,6 +1776,13 @@ public:
         if (botAI)
             botAI->ResetStrategies(false);
         // End By leewheel
+
+        //By leewheel 2026-09-22 特殊机器人「赵与风」
+        //  上面刚做过 ResetStrategies（会清掉自定义策略），此处显式补挂独立策略「全需求」，
+        //  与 RandomPlayerbotMgr::OnBotLoginInternal 中的兜底挂载互为双保险。
+        if (sZhaoYufengMgr.IsZhaoYufeng(player))
+            sZhaoYufengMgr.ApplyAlwaysNeed(player);
+        //End By leewheel
 
         //By leewheel 2026-08-05 修复：野性德鲁伊被快速组队分配坦克职责时策略错误
         //  原因：AiFactory::AddDefaultCombatStrategies 对野性德鲁伊按形态判断，
