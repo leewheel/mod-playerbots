@@ -9,6 +9,7 @@
 #include "EncounterHelpers.h"
 #include "LootAction.h"
 #include "LootObjectStack.h"
+#include "MotionMaster.h"
 #include "MoveSpline.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
@@ -1060,18 +1061,37 @@ bool FathomLordKarathressTanksPositionTargetsAction::Execute(Event /*event*/)
 
 // Caribdis's tank spot is far away so a dedicated healer is needed
 // Use the assistant flag to select the healer
+// Her tank stands on her, so seeing her is seeing the tank. Out of sight the walk goes on until
+// she is in sight, as it does for ranged; in sight it closes only to the healing distance.
 bool FathomLordKarathressPositionCaribdisTankHealerAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-09-23 合并brighton the-lab 356c39f4（flk testing）：上游把本动作由
-    //   "沿 CARIBDIS_HEALER_POSITION 走固定点" 改为 "贴住卡里布迪斯本体、用 ReachCombatTo 保持
-    //   CARIBDIS_HEALER_DISTANCE(32码)"，因为治疗者跟着她跑才能覆盖到任意拉怪位置。
+    // By leewheel 2026-09-23 合并brighton the-lab 356c39f4 与 8a778540：
+    //   2026-09-22 上游已把本动作由"沿 CARIBDIS_HEALER_POSITION 走固定点"改为
+    //   "贴住卡里布迪斯本体"（治疗者跟着她跑才能覆盖到任意拉怪位置）；
+    //   2026-09-23 上游再进一步：只有在【看不到她】或【超出 CARIBDIS_HEALER_MAX_DISTANCE】
+    //   时才移动，且改为沿路径逐段靠近（GetPathStepTowardUnit + CARIBDIS_APPROACH_STOP_DISTANCE），
+    //   不再直接 ReachCombatTo —— 她常被拉出房间视线，直奔目标会被拒。
     //   按规则第 97 条 entry 化：fathom-guard caribdis = 21964（深水卫士卡里布迪斯）。
     Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
     // End By leewheel
-    if (!caribdis || bot->IsWithinCombatRange(caribdis, CARIBDIS_HEALER_MAX_DISTANCE))
+    if (!caribdis)
         return false;
 
-    return ReachCombatTo(caribdis, CARIBDIS_HEALER_DISTANCE);
+    bool const inSight = bot->IsWithinLOSInMap(caribdis);
+    if (inSight && bot->IsWithinDist(caribdis, CARIBDIS_HEALER_MAX_DISTANCE))
+        return false;
+
+    float const stopDistance =
+        inSight ? CARIBDIS_HEALER_DISTANCE : CARIBDIS_APPROACH_STOP_DISTANCE;
+
+    float stepX;
+    float stepY;
+    if (!GetPathStepTowardUnit(bot, caribdis, stopDistance, stepX, stepY))
+        return false;
+
+    return MoveTo(
+        SSC_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
 // Misdirect priority: (1) Caribdis tank, (2) Tidalvess tank, (3) Sharkkis tank
@@ -1141,36 +1161,23 @@ bool FathomLordKarathressMisdirectBossesToTanksAction::Execute(Event /*event*/)
 // to get her down than real players (standard is ranged DPS help with Sharkkis first)
 bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-    /* constexpr float searchRadius = 75.0f;
-    Creature* totem = bot->FindNearestCreature(Id(SscNpcs::NPC_SPITFIRE_TOTEM), searchRadius);
-    if (totem && PlayerbotAI::IsMelee(bot) && PlayerbotAI::IsDps(bot))
-    {
-        if (MarkTargetWithSkull(bot, totem))
-            return true;
-
-        if (AI_VALUE(Unit*, "current target") != totem)
-            return Attack(totem);
-
-        // Direct movement order due to path between Sharkkis and totem sometimes being screwy
-        if (bot->IsWithinMeleeRange(totem))
-            return false;
-
-        return MoveTo(SSC_MAP_ID, totem->GetPositionX(), totem->GetPositionY(),
-            bot->GetPositionZ(), false, false, false, true,
-            MovementPriority::MOVEMENT_COMBAT, true, false);
-    } */
-
     Unit* target = nullptr;
 
     // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：采纳上游把 totem/tidalvess/caribdis
     //   提到块首统一解析（Karathress 在泰达维斯死后继承图腾，故图腾全程排第一），并按规则第 97 条
     //   entry 化：fathom-guard tidalvess=21965 / fathom-guard caribdis=21964。
     //   （角色门控仍由下方 else-if 各自判断，行为不变。）
+    //   2026-09-23 上游补注（原文 for melee and for the ranged near it）：该"图腾优先"对
+    //   "图腾附近的远程"同样适用 —— 选择条件改为 ShouldAttackSpitfireTotem（近战总打；远程只在
+    //   SPITFIRE_TOTEM_RANGED_ATTACK_DISTANCE 内才打，避免泰达维斯死后每次掉图腾就把打她的人叫回房间）；
+    //   骷髅标记也加了条件（无图腾、或当前目标就是图腾时才打），否则会把骷髅翻到远程正在打的目标上。
+    // Karathress inherits the totem when Tidalvess dies, so it stays first for the whole fight,
+    // for melee and for the ranged near it
     Unit* totem = GetSpitfireTotem(bot);
     Unit* tidalvess = AI_VALUE2(Unit*, "find target", "21965");
     Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
 
-    if (totem)
+    if (ShouldAttackSpitfireTotem(bot, totem))
     {
         target = totem;
     }
@@ -1216,16 +1223,14 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     if (!target)
         return false;
 
-    if (AI_VALUE(Unit*, "current target") != target)
-    {
-        // Caribdis is tanked out of sight of the room. Attack refuses a target out of line of
-        // sight, so she is approached along the path first; once she is in sight the normal
-        // acquisition and reach take over.
-        if (target == caribdis && !bot->IsWithinLOSInMap(caribdis))
-            return ApproachCaribdis(caribdis);
+    // Caribdis is tanked out of sight of the room. Attack refuses a target out of line of sight,
+    // and a bot that loses sight of her after acquiring her is still in range, so nothing else
+    // walks it back: she is approached along the path whenever she is out of sight.
+    if (target == caribdis && !bot->IsWithinLOSInMap(caribdis))
+        return ApproachCaribdis(caribdis);
 
+    if (AI_VALUE(Unit*, "current target") != target)
         return Attack(target);
-    }
 
     if (target == caribdis)
     {
@@ -1236,31 +1241,21 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
         if (bot->IsWithinDist(caribdis, CARIBDIS_RANGED_MIN_DISTANCE))
             return FleePosition(caribdis->GetPosition(), CARIBDIS_RANGED_MIN_DISTANCE);
     }
-    else if (MarkTargetWithSkull(bot, target))
+    // While a totem stands, skull stays on it: ranged out of its reach are on something else, and
+    // marking that would flip the skull against the bots on the totem
+    else if ((!totem || target == totem) && MarkTargetWithSkull(bot, target))
     {
         return true;
     }
 
     return false;
-
-    /* if (!caribdis)
-        return false;
-
-    Position const& position = CARIBDIS_RANGED_DPS_POSITION;
-    if (bot->GetExactDist2d(position) <= 2.0f)
-        return false;
-
-    constexpr float spreadDistance = 8.0f;
-    return MoveInside(
-        SSC_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        spreadDistance, MovementPriority::MOVEMENT_COMBAT); */
 }
 
 bool FathomLordKarathressAssignDpsPriorityAction::ApproachCaribdis(Unit* caribdis)
 {
     float stepX;
     float stepY;
-    if (!GetPathStepTowardUnit(bot, caribdis, botAI->GetRange("spell"), stepX, stepY))
+    if (!GetPathStepTowardUnit(bot, caribdis, CARIBDIS_APPROACH_STOP_DISTANCE, stepX, stepY))
         return false;
 
     return MoveTo(
@@ -1291,13 +1286,25 @@ bool FathomLordKarathressSpreadRangedAction::Execute(Event /*event*/)
 // beneath it once the last arc has finished.
 bool FathomLordKarathressDropFromCycloneAction::Execute(Event /*event*/)
 {
-    if (!bot->movespline->Finalized())
-        return false;
+    // The knockback builds its spline from wherever the bot is, and mid-air that raycast fails:
+    // the spline never finishes, so its generator is never popped off the controlled slot, and a
+    // bot with that slot taken refuses every move it is given. It is cleared by hand here, at any
+    // height: a bot left just above the floor would otherwise keep it for good.
+    MotionMaster* mm = bot->GetMotionMaster();
+    if (mm->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == EFFECT_MOTION_TYPE)
+    {
+        mm->Clear();
+        bot->StopMoving();
+    }
 
     float const x = bot->GetPositionX();
     float const y = bot->GetPositionY();
     float const floorZ = bot->GetMapHeight(x, y, bot->GetPositionZ(), true, MAX_FALL_DISTANCE);
+
     if (floorZ <= INVALID_HEIGHT || bot->GetPositionZ() - floorZ <= CYCLONE_DROP_HEIGHT)
+        return false;
+
+    if (!bot->movespline->Finalized())
         return false;
 
     // Exact waypoint: a pathed move searches for a route from the bot's own position first, and a
@@ -1324,79 +1331,52 @@ bool MorogrimTidewalkerMoveBossToTankPositionAction::Execute(Event /*event*/)
         return false;
 
     if (tidewalker->GetHealthPct() > TIDEWALKER_PHASE_2_HEALTH_PCT + 2.0f)
-        return MoveToPhase1TankPosition();
+        return MoveToPhase1TankPosition(tidewalker);
 
-    return MoveToPhase2TankPosition();
+    return MoveToPhase2TankPosition(tidewalker);
 }
 
 // Phase 1: tank position is up against the Northeast pillar
-bool MorogrimTidewalkerMoveBossToTankPositionAction::MoveToPhase1TankPosition()
+bool MorogrimTidewalkerMoveBossToTankPositionAction::MoveToPhase1TankPosition(Unit* tidewalker)
 {
-    const Position& phase1 = TIDEWALKER_PHASE_1_TANK_POSITION;
-    float distToPhase1 = bot->GetExactDist2d(phase1.GetPositionX(), phase1.GetPositionY());
-    if (distToPhase1 > 1.0f)
-    {
-        float dX = phase1.GetPositionX() - bot->GetPositionX();
-        float dY = phase1.GetPositionY() - bot->GetPositionY();
-        float moveDist = std::min(5.0f, distToPhase1);
-        float moveX = bot->GetPositionX() + (dX / distToPhase1) * moveDist;
-        float moveY = bot->GetPositionY() + (dY / distToPhase1) * moveDist;
-
-        return MoveTo(SSC_MAP_ID, moveX, moveY, phase1.GetPositionZ(), false, false,
-                      false, false, MovementPriority::MOVEMENT_COMBAT, true, true);
-    }
-
-    return false;
+    constexpr float arrivalDist = 1.0f;
+    return StepTowardPosition(TIDEWALKER_PHASE_1_TANK_POSITION, arrivalDist, tidewalker);
 }
 
 // Phase 2: move in two steps to get around the pillar and back up into the Northeast corner
-bool MorogrimTidewalkerMoveBossToTankPositionAction::MoveToPhase2TankPosition()
+bool MorogrimTidewalkerMoveBossToTankPositionAction::MoveToPhase2TankPosition(Unit* tidewalker)
 {
-    const Position& phase2 = TIDEWALKER_PHASE_2_TANK_POSITION;
-    const Position& transition = TIDEWALKER_PHASE_TRANSITION_WAYPOINT;
-
     auto itStep = tidewalkerTankStep.find(bot->GetGUID());
     uint8 step = (itStep != tidewalkerTankStep.end()) ? itStep->second : 0;
 
     if (step == 0)
     {
-        float distToTransition =
-            bot->GetExactDist2d(transition.GetPositionX(), transition.GetPositionY());
+        // Advances on arrival only: a refused step returns false as well
+        Position const& transition = TIDEWALKER_PHASE_TRANSITION_WAYPOINT;
+        constexpr float transitionArrivalDist = 2.0f;
+        if (bot->GetExactDist2d(transition) > transitionArrivalDist)
+            return StepTowardPosition(transition, transitionArrivalDist, tidewalker);
 
-        if (distToTransition > 2.0f)
-        {
-            float dX = transition.GetPositionX() - bot->GetPositionX();
-            float dY = transition.GetPositionY() - bot->GetPositionY();
-            float moveDist = std::min(5.0f, distToTransition);
-            float moveX = bot->GetPositionX() + (dX / distToTransition) * moveDist;
-            float moveY = bot->GetPositionY() + (dY / distToTransition) * moveDist;
-
-            return MoveTo(SSC_MAP_ID, moveX, moveY, transition.GetPositionZ(), false, false,
-                          false, false, MovementPriority::MOVEMENT_COMBAT, true, true);
-        }
-        else
-            tidewalkerTankStep.try_emplace(bot->GetGUID(), 1);
+        tidewalkerTankStep.try_emplace(bot->GetGUID(), 1);
     }
 
-    if (step == 1)
-    {
-        float distToPhase2 =
-            bot->GetExactDist2d(phase2.GetPositionX(), phase2.GetPositionY());
+    constexpr float arrivalDist = 1.0f;
+    return StepTowardPosition(TIDEWALKER_PHASE_2_TANK_POSITION, arrivalDist, tidewalker);
+}
 
-        if (distToPhase2 > 1.0f)
-        {
-            float dX = phase2.GetPositionX() - bot->GetPositionX();
-            float dY = phase2.GetPositionY() - bot->GetPositionY();
-            float moveDist = std::min(5.0f, distToPhase2);
-            float moveX = bot->GetPositionX() + (dX / distToPhase2) * moveDist;
-            float moveY = bot->GetPositionY() + (dY / distToPhase2) * moveDist;
+// Walks backwards only when the position lies away from the boss, so the tank keeps facing him
+bool MorogrimTidewalkerMoveBossToTankPositionAction::StepTowardPosition(
+    Position const& position, float arrivalDist, Unit* tidewalker)
+{
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, position, arrivalDist, tidewalker, moveX, moveY, backwards))
+        return false;
 
-            return MoveTo(SSC_MAP_ID, moveX, moveY, phase2.GetPositionZ(), false, false,
-                          false, false, MovementPriority::MOVEMENT_COMBAT, true, true);
-        }
-    }
-
-    return false;
+    return MoveTo(
+        SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
 // Ranged stack behind the boss in the Northeast corner in phase 2
@@ -1426,7 +1406,7 @@ bool MorogrimTidewalkerPhase2RepositionRangedAction::Execute(Event /*event*/)
             float moveX = bot->GetPositionX() + (dX / distToTransition) * moveDist;
             float moveY = bot->GetPositionY() + (dY / distToTransition) * moveDist;
 
-            return MoveTo(SSC_MAP_ID, moveX, moveY, transition.GetPositionZ(), false, false,
+            return MoveTo(SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
                           false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
         }
         else
@@ -1449,7 +1429,7 @@ bool MorogrimTidewalkerPhase2RepositionRangedAction::Execute(Event /*event*/)
             float moveX = bot->GetPositionX() + (dX / distToPhase2) * moveDist;
             float moveY = bot->GetPositionY() + (dY / distToPhase2) * moveDist;
 
-            return MoveTo(SSC_MAP_ID, moveX, moveY, phase2.GetPositionZ(), false, false,
+            return MoveTo(SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
                           false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
         }
     }

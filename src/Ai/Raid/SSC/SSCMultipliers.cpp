@@ -17,6 +17,7 @@
 #include "HunterActions.h"
 #include "LootAction.h"
 #include "MageActions.h"
+#include "MoveSpline.h"
 #include "NonCombatActions.h"
 #include "PaladinActions.h"
 #include "Playerbots.h"
@@ -75,7 +76,7 @@ float UnderbogColossusEscapeToxicPoolMultiplier::GetValue(Action* action)
     if (bot->GetMapId() != SSC_MAP_ID)
         return 1.0f;
 
-    // Stop bots from sitting and drinking in a toxic pool. Come on...
+    // Don't sit and drink in a toxic pool. Come on...
     if (dynamic_cast<DrinkAction*>(action) || dynamic_cast<EatAction*>(action))
         return IsNearToxicPool(botAI, TOXIC_POOL_HOLDING_RADIUS) ? 0.0f : 1.0f;
 
@@ -612,7 +613,11 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
 //   我方 2026-09-19 曾按"上游 SscDelayDpsCooldownsMultiplier 已覆盖"将其实现注释停用，
 //   现随上游恢复（.h 声明与 SSCStrategy.cpp 注册已由本次合并自动带回）；
 //   目标查找按规则第 97 条 entry 化（leotheras the blind = 21215）。
-float LeotherasTheBlindDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(
+//   2026-09-23 上游 8a778540 再把类名由 ...DisableWarlockTankSoulshatterMultiplier 改为
+//   ...DisableTankSoulshatterMultiplier（限制范围由"术士T"泛化为"坦克"），
+//   触发名同步为 "leotheras the blind disable tank soulshatter"；.h 声明与 SSCStrategy.cpp
+//   注册均已由本次自动合并带回，故此处定义必须同名，否则声明与定义不匹配。
+float LeotherasTheBlindDisableTankSoulshatterMultiplier::GetValueInEncounter(
     Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -651,8 +656,10 @@ float FathomLordKarathressDisableTankActionsMultiplier::GetValueInEncounter(Acti
     // the wrong tank, a loose pet or a knocked-off guard is taken back. AoE threat and the AoE
     // taunts are held only while somebody else's council member is close enough to be caught.
     if (IsAoeThreatAction(bot, action) || IsAoeTauntAction(bot, action))
+    {
         return IsAnotherCouncilMemberWithin(botAI, KARATHRESS_AOE_THREAT_CLEARANCE) ?
             0.0f : 1.0f;
+    }
 
     return 1.0f;
 }
@@ -742,15 +749,59 @@ float FathomLordKarathressMaintainPositionMultiplier::GetValueInEncounter(Action
 }
 
 // Player point movement neither launches nor continues while a cast is up, and a bot lifted by a
-// Cyclone still has its target in range, so it would cast its way through every attempt to bring
-// it down. Casting is held for the length of the Cyclone aura, which covers the tosses and the
-// drop that follows.
+// Cyclone still has its target in range. Casting is held through the tosses, and through the drop
+// afterwards: a cast started on the way down stops the fall where it is, and by then the trigger
+// that issued it has nothing left to fire on.
 float FathomLordKarathressNoCastingWhileLiftedMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<CastSpellAction*>(action))
         return 1.0f;
 
-    return bot->HasAura(Id(SscSpells::SPELL_CYCLONE)) ? 0.0f : 1.0f;
+    if (bot->HasAura(Id(SscSpells::SPELL_CYCLONE)))
+        return 0.0f;
+
+    // Only a bot that is moving can be partway down, so the height is looked up for no one else
+    if (bot->movespline->Finalized())
+        return 1.0f;
+
+    float const floorZ = bot->GetMapHeight(
+        bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), true, MAX_FALL_DISTANCE);
+    return floorZ > INVALID_HEIGHT && bot->GetPositionZ() - floorZ > CYCLONE_DROP_HEIGHT ?
+        0.0f : 1.0f;
+}
+
+// The walk out to Caribdis is long and out of sight the whole way, and a bot spread out of sight
+// once there has the same walk back. Anything else that moves the bot pulls it the other way:
+// the spread, and the stock reach on whatever it was shooting before her. Only the walk itself
+// and the Cyclone drop are left running.
+float FathomLordKarathressApproachingCaribdisMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!dynamic_cast<MovementAction*>(action) ||
+        dynamic_cast<FathomLordKarathressAssignDpsPriorityAction*>(action) ||
+        dynamic_cast<FathomLordKarathressDropFromCycloneAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    // Healers are ranged too, but the walk is not theirs and they need to move freely
+    if (!PlayerbotAI::IsRanged(bot) || !PlayerbotAI::IsDps(bot))
+        return 1.0f;
+
+    // By leewheel 2026-09-23 合并 brighton the-lab 8a778540：本 multiplier 是上游本轮新增，
+    //   按规则第 97 条 entry 化：fathom-guard caribdis = 21964（深水卫士卡里布迪斯）、
+    //   fathom-guard tidalvess = 21965（深水卫士泰达维斯）。
+    Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
+    if (!caribdis)
+        return 1.0f;
+
+    // Only while she is the kill target: a totem in reach and Tidalvess come before her
+    if (ShouldAttackSpitfireTotem(bot, GetSpitfireTotem(bot)) ||
+        AI_VALUE2(Unit*, "find target", "21965"))
+    {
+        return 1.0f;
+    }
+
+    return bot->IsWithinLOSInMap(caribdis) ? 1.0f : 0.0f;
 }
 
 // A target out of line of sight is invalid, and the drop hands the bot back to whatever is in
@@ -788,30 +839,36 @@ float MorogrimTidewalkerDisableTankActionsMultiplier::GetValueInEncounter(Action
     if (!PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "21213"))
+    // By leewheel 2026-09-23 合并 brighton the-lab 8a778540：上游把本 multiplier 的判定顺序
+    //   反转为「先判动作类型、再查 boss」，并合并为单条 return，语义等价（我方原写法为
+    //   「先查 boss 存在、再判动作类型」）。取上游结构，按规则第 97 条 entry 化：
+    //   morogrim tidewalker = 21213（莫洛格里·踏潮者）。
+    if (!dynamic_cast<CombatFormationMoveAction*>(action))
         return 1.0f;
 
-    if (dynamic_cast<CombatFormationMoveAction*>(action))
-        return 0.0f;
-
-    return 1.0f;
+    return AI_VALUE2(Unit*, "find target", "21213") ? 0.0f : 1.0f;
+    // End By leewheel
 }
 
-float MorogrimTidewalkerMaintainPhase2StackingMultiplier::GetValueInEncounter(Action* action)
+// By leewheel 2026-09-23 合并 brighton the-lab 8a778540：上游把本 multiplier 由
+//   MorogrimTidewalkerMaintainPhase2StackingMultiplier 改名并重写为
+//   MorogrimTidewalkerStayStackedMultiplier —— 判定顺序反转为「先判动作类型、再查 boss」，
+//   并把硬编码的 25.0f 换成已有常量 TIDEWALKER_PHASE_2_HEALTH_PCT（SSCHelpers.h:334），
+//   语义完全一致。取上游实现，按规则第 97 条 entry 化：morogrim tidewalker = 21213。
+float MorogrimTidewalkerStayStackedMultiplier::GetValueInEncounter(Action* action)
 {
     if (!PlayerbotAI::IsRanged(bot))
         return 1.0f;
 
-    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
-    if (!tidewalker || tidewalker->GetHealthPct() > 25.0f)
+    if (!dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<FleeAction*>(action) && !IsRepositionAction(bot, action))
+    {
         return 1.0f;
+    }
 
-    if (dynamic_cast<CombatFormationMoveAction*>(action) ||
-        dynamic_cast<FleeAction*>(action) ||
-        IsRepositionAction(bot, action))
-        return 0.0f;
-
-    return 1.0f;
+    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
+    return tidewalker && tidewalker->GetHealthPct() <= TIDEWALKER_PHASE_2_HEALTH_PCT ? 0.0f : 1.0f;
+    // End By leewheel
 }
 
 // Lady Vashj <Coilfang Matron>

@@ -8,6 +8,7 @@
 #include "Corpse.h"
 #include "EncounterHelpers.h"
 #include "LootObjectStack.h"
+#include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "SSCActions.h"
@@ -326,10 +327,12 @@ bool FathomLordKarathressRangedShouldSpreadTrigger::IsActiveInEncounter()
     return caribdis && bot->IsWithinDist(caribdis, CARIBDIS_CYCLONE_SUMMON_RANGE);
 }
 
-// The aura outlasts the knockback arc by a few seconds, which is the window for the drop
+// A bot left hanging still has the knockback's generator in its controlled slot once the tosses
+// are over; while the aura is up, more tosses are coming and the arc is left to run
 bool FathomLordKarathressLiftedByCycloneTrigger::IsActiveInEncounter()
 {
-    return bot->HasAura(Id(SscSpells::SPELL_CYCLONE));
+    return !bot->HasAura(Id(SscSpells::SPELL_CYCLONE)) &&
+        bot->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == EFFECT_MOTION_TYPE;
 }
 
 // Morogrim Tidewalker

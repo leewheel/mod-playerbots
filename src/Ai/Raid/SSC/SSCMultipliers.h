@@ -178,12 +178,12 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class LeotherasTheBlindDisableWarlockTankSoulshatterMultiplier : public SscEncounterMultiplier
+class LeotherasTheBlindDisableTankSoulshatterMultiplier : public SscEncounterMultiplier
 {
 public:
-    LeotherasTheBlindDisableWarlockTankSoulshatterMultiplier(PlayerbotAI* botAI)
+    LeotherasTheBlindDisableTankSoulshatterMultiplier(PlayerbotAI* botAI)
         : SscEncounterMultiplier(
-            botAI, "leotheras the blind disable warlock tank soulshatter") {}
+            botAI, "leotheras the blind disable tank soulshatter") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -251,6 +251,16 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+class FathomLordKarathressApproachingCaribdisMultiplier : public SscEncounterMultiplier
+{
+public:
+    FathomLordKarathressApproachingCaribdisMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "fathom-lord karathress approaching caribdis") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 class FathomLordKarathressKeepTargetOutOfSightMultiplier : public SscEncounterMultiplier
 {
 public:
@@ -273,11 +283,11 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class MorogrimTidewalkerMaintainPhase2StackingMultiplier : public SscEncounterMultiplier
+class MorogrimTidewalkerStayStackedMultiplier : public SscEncounterMultiplier
 {
 public:
-    MorogrimTidewalkerMaintainPhase2StackingMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(botAI, "morogrim tidewalker maintain phase2 stacking") {}
+    MorogrimTidewalkerStayStackedMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "morogrim tidewalker stay stacked") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
