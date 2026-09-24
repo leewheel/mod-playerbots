@@ -1374,7 +1374,14 @@ bool MovementAction::Flee(Unit* target)
         }
     }
 
-    Unit* currentVictim = target->GetThreatMgr().GetCurrentVictim();
+    //By leewheel 20260924 修复「机器人逃跑导致 worldserver 断言崩溃」：
+    // 此处 target 可能是玩家 —— RunAwayAction 传的是 AI_VALUE("group leader")，FleeAction 传的是
+    // AI_VALUE("current target")（PVP 下同样是玩家）。而 ThreatManager::GetCurrentVictim() 在需要
+    // 重选目标时会走 UpdateVictim() -> ProcessAIUpdates()，其中 ASSERT_NOTNULL(_owner->ToCreature())
+    // 对玩家 owner 必然失败，直接把 worldserver 断言掉（玩家反馈：黑石塔上层机器人"逃跑失败"后崩溃）。
+    // 玩家 owner 的仇恨管理器本就不承担 CreatureAI 通知职责，故这里只对生物目标查询当前仇恨目标。
+    Unit* currentVictim = target->IsCreature() ? target->GetThreatMgr().GetCurrentVictim() : nullptr;
+    //End By leewheel
     if (currentVictim && currentVictim == bot)  // bot is target - try to flee to tank or master
     {
         if (Group* group = bot->GetGroup())
