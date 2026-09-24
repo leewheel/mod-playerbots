@@ -360,11 +360,21 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class MorogrimTidewalkerInPhase2Trigger : public SscEncounterTrigger
+class MorogrimTidewalkerRangedShouldStackTrigger : public SscEncounterTrigger
 {
 public:
-    MorogrimTidewalkerInPhase2Trigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "morogrim tidewalker in phase 2") {}
+    MorogrimTidewalkerRangedShouldStackTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "morogrim tidewalker ranged should stack") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class MorogrimTidewalkerHealerIsTooFarFromBossTrigger : public SscEncounterTrigger
+{
+public:
+    MorogrimTidewalkerHealerIsTooFarFromBossTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "morogrim tidewalker healer is too far from boss") {}
 
 protected:
     bool IsActiveInEncounter() override;

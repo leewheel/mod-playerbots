@@ -156,9 +156,12 @@ float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
 
     if (Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213"))
     {
-        // Bloodlust/Heroism are for the murloc waves.
+        // Bloodlust/Heroism are saved for the last phase, once the raid is stacked in the corner.
         if (isBloodlust)
-            return AI_VALUE2(Unit*, "find target", "21920") ? 1.0f : 0.0f;
+            // By leewheel 2026-09-24 合并 brighton 999582f7：嗜血判定由「潜伏者 21920 存在」
+            //   改为「踏潮者血量进入 P2 阈值」，采纳上游新设计（不再依赖 21920 存在性）。
+            // End By leewheel
+            return tidewalker->GetHealthPct() <= TIDEWALKER_PHASE_2_HEALTH_PCT ? 1.0f : 0.0f;
 
         return tidewalker->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
@@ -836,7 +839,7 @@ float FathomLordKarathressKeepTargetOutOfSightMultiplier::GetValueInEncounter(Ac
 // End By leewheel
 float MorogrimTidewalkerDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!PlayerbotAI::IsMainTank(bot))
+    if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
     // By leewheel 2026-09-23 合并 brighton the-lab 8a778540：上游把本 multiplier 的判定顺序
@@ -855,19 +858,30 @@ float MorogrimTidewalkerDisableTankActionsMultiplier::GetValueInEncounter(Action
 //   MorogrimTidewalkerStayStackedMultiplier —— 判定顺序反转为「先判动作类型、再查 boss」，
 //   并把硬编码的 25.0f 换成已有常量 TIDEWALKER_PHASE_2_HEALTH_PCT（SSCHelpers.h:334），
 //   语义完全一致。取上游实现，按规则第 97 条 entry 化：morogrim tidewalker = 21213。
+// By leewheel 2026-09-24 合并 brighton 999582f7：上游更新本 multiplier 语义并补充注释——
+//   只有已在集合点的 bot 才被按住，还在路上的 bot 保留其原有移动，
+//   避免无法执行的 stack 步骤把它卡死；判定改用 TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT
+//   （比 P2 血量阈值宽 2%）+ GetTidewalkerStackPoint 距离。
 float MorogrimTidewalkerStayStackedMultiplier::GetValueInEncounter(Action* action)
 {
     if (!PlayerbotAI::IsRanged(bot))
         return 1.0f;
 
-    if (!dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<FleeAction*>(action) && !IsRepositionAction(bot, action))
-    {
+    if (dynamic_cast<AttackAction*>(action))
         return 1.0f;
-    }
+
+    if (dynamic_cast<MorogrimTidewalkerStackRangedBehindBossAction*>(action))
+        return 1.0f;
+
+    if (!dynamic_cast<MovementAction*>(action) && !IsRepositionAction(bot, action))
+        return 1.0f;
 
     Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
-    return tidewalker && tidewalker->GetHealthPct() <= TIDEWALKER_PHASE_2_HEALTH_PCT ? 0.0f : 1.0f;
+    if (!tidewalker || tidewalker->GetHealthPct() > TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT)
+        return 1.0f;
+
+    return bot->GetExactDist(GetTidewalkerStackPoint(tidewalker)) <=
+        TIDEWALKER_RANGED_STACK_RADIUS ? 0.0f : 1.0f;
     // End By leewheel
 }
 
@@ -904,18 +918,20 @@ float LadyVashjMaintainPhase1RangedSpreadMultiplier::GetValueInEncounter(Action*
     if (!PlayerbotAI::IsRanged(bot))
         return 1.0f;
 
-    if (dynamic_cast<CombatFormationMoveAction*>(action) ||
-        dynamic_cast<FleeAction*>(action) ||
-        IsRepositionAction(bot, action))
-        return 0.0f;
-
-    if (Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-        !vashj || GetLadyVashjPhase(vashj) != 1)
+    // By leewheel 2026-09-24 合并 brighton 999582f7(fix old vashj multiplier bug)：
+    //   上游把本判定反转为「非 spread 类动作直接放行」，与旧写法逻辑等价但更直白，采纳上游结构。
+    // End By leewheel
+    if (!dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<FleeAction*>(action) && !IsRepositionAction(bot, action))
     {
         return 1.0f;
     }
 
-    return 1.0f;
+    // By leewheel 2026-09-24 合并 brighton 999582f7：上游此行用英文名 "lady vashj" 检索，
+    //   中文客户端下永远命中不到，按规则第 97 条 entry 化为 21212。
+    // End By leewheel
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && GetLadyVashjPhase(vashj) == 1 ? 0.0f : 1.0f;
 }
 
 float LadyVashjStaticChargeStayAwayFromGroupMultiplier::GetValueInEncounter(Action* action)

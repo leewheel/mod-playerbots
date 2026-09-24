@@ -264,7 +264,10 @@ bool PetitionTurnInAction::Execute(Event /*event*/)
             guild->HandleSetEmblem(emblemInfo); // official core handling
 
             // LANG_GUILD_VETERAN -> can invite
-            guild->HandleSetRankInfo(2, GR_RIGHT_GCHATLISTEN | GR_RIGHT_GCHATSPEAK | GR_RIGHT_INVITE);
+            // By leewheel 2026-09-24 合并 Acore 5c87f702f(92fed92ea session-less)：HandleSetRankInfo
+        //   签名改为 Optional 参数版 (rankId, name, rights, moneyPerDay)；本调用只设 rights，
+        //   name 传空（无值 → 不改名），语义与旧调用完全一致。
+        guild->HandleSetRankInfo(2, {}, Optional<uint32>(GR_RIGHT_GCHATLISTEN | GR_RIGHT_GCHATSPEAK | GR_RIGHT_INVITE));
         }
 
         return true;

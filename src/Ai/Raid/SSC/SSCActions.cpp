@@ -38,8 +38,6 @@ bool SscResetEncounterStatesAction::Execute(Event /*event*/)
     reset |= hasReachedVashjRangedPosition.erase(guid) > 0;
     reset |= intendedVashjCorePasserLineup.erase(guid) > 0;
     reset |= lastVashjCoreInInventoryTime.erase(guid) > 0;
-    reset |= tidewalkerTankStep.erase(guid) > 0;
-    reset |= tidewalkerRangedStep.erase(guid) > 0;
     reset |= lurkerRangedPositions.erase(guid) > 0;
 
     if (!IsMechanicTrackerBot(bot, SSC_MAP_ID))
@@ -1318,7 +1316,7 @@ bool FathomLordKarathressDropFromCycloneAction::Execute(Event /*event*/)
 
 // Separate tanking positions are used for phase 1 and phase 2 to address the Water Globule
 // mechanic in phase 2
-bool MorogrimTidewalkerMoveBossToTankPositionAction::Execute(Event /*event*/)
+bool MorogrimTidewalkerPositionMainTankAction::Execute(Event /*event*/)
 {
     Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
     if (!tidewalker)
@@ -1330,111 +1328,102 @@ bool MorogrimTidewalkerMoveBossToTankPositionAction::Execute(Event /*event*/)
     if (tidewalker->GetVictim() != bot || !bot->IsWithinMeleeRange(tidewalker))
         return false;
 
-    if (tidewalker->GetHealthPct() > TIDEWALKER_PHASE_2_HEALTH_PCT + 2.0f)
+    if (tidewalker->GetHealthPct() > TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT)
         return MoveToPhase1TankPosition(tidewalker);
 
     return MoveToPhase2TankPosition(tidewalker);
 }
 
 // Phase 1: tank position is up against the Northeast pillar
-bool MorogrimTidewalkerMoveBossToTankPositionAction::MoveToPhase1TankPosition(Unit* tidewalker)
+bool MorogrimTidewalkerPositionMainTankAction::MoveToPhase1TankPosition(Unit* tidewalker)
 {
     constexpr float arrivalDist = 1.0f;
-    return StepTowardPosition(TIDEWALKER_PHASE_1_TANK_POSITION, arrivalDist, tidewalker);
-}
-
-// Phase 2: move in two steps to get around the pillar and back up into the Northeast corner
-bool MorogrimTidewalkerMoveBossToTankPositionAction::MoveToPhase2TankPosition(Unit* tidewalker)
-{
-    auto itStep = tidewalkerTankStep.find(bot->GetGUID());
-    uint8 step = (itStep != tidewalkerTankStep.end()) ? itStep->second : 0;
-
-    if (step == 0)
-    {
-        // Advances on arrival only: a refused step returns false as well
-        Position const& transition = TIDEWALKER_PHASE_TRANSITION_WAYPOINT;
-        constexpr float transitionArrivalDist = 2.0f;
-        if (bot->GetExactDist2d(transition) > transitionArrivalDist)
-            return StepTowardPosition(transition, transitionArrivalDist, tidewalker);
-
-        tidewalkerTankStep.try_emplace(bot->GetGUID(), 1);
-    }
-
-    constexpr float arrivalDist = 1.0f;
-    return StepTowardPosition(TIDEWALKER_PHASE_2_TANK_POSITION, arrivalDist, tidewalker);
-}
-
-// Walks backwards only when the position lies away from the boss, so the tank keeps facing him
-bool MorogrimTidewalkerMoveBossToTankPositionAction::StepTowardPosition(
-    Position const& position, float arrivalDist, Unit* tidewalker)
-{
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetStepToPosition(bot, position, arrivalDist, tidewalker, moveX, moveY, backwards))
+    if (!GetStepToPosition(
+            bot, TIDEWALKER_PHASE_1_TANK_POSITION, arrivalDist, tidewalker, moveX, moveY,
+            backwards))
+    {
         return false;
+    }
 
     return MoveTo(
         SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
+// Phase 2: the path takes the tank around the pillar and back up into the Northeast corner. The
+// step is shortened when it runs away from the boss, since that one is walked backwards.
+bool MorogrimTidewalkerPositionMainTankAction::MoveToPhase2TankPosition(Unit* tidewalker)
+{
+    Position const& phase2 = TIDEWALKER_PHASE_2_TANK_POSITION;
+    constexpr float arrivalDist = 1.0f;
+
+    float stepX;
+    float stepY;
+    if (!GetPathStepTowardPoint(bot, phase2, arrivalDist, PATH_STEP_DISTANCE, stepX, stepY))
+        return false;
+
+    float const botX = bot->GetPositionX();
+    float const botY = bot->GetPositionY();
+    bool const backwards =
+        (stepX - botX) * (tidewalker->GetPositionX() - botX) +
+        (stepY - botY) * (tidewalker->GetPositionY() - botY) < 0.0f;
+
+    if (backwards && !GetPathStepTowardPoint(
+            bot, phase2, arrivalDist, PATH_BACKWARD_STEP_DISTANCE, stepX, stepY))
+    {
+        return false;
+    }
+
+    return MoveTo(
+        SSC_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
+}
+
 // Ranged stack behind the boss in the Northeast corner in phase 2
 // No corresponding method for melee since they will do so anyway
-bool MorogrimTidewalkerPhase2RepositionRangedAction::Execute(Event /*event*/)
+bool MorogrimTidewalkerStackRangedBehindBossAction::Execute(Event /*event*/)
 {
     Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
     if (!tidewalker)
         return false;
 
-    const Position& phase2 = TIDEWALKER_PHASE_2_RANGED_POSITION;
-    const Position& transition = TIDEWALKER_PHASE_TRANSITION_WAYPOINT;
+    // The point moves with him as the tank takes him to the corner, so ranged trail him there and
+    // are never between him and the tank
+    Position const behind = GetTidewalkerStackPoint(tidewalker);
 
-    auto itStep = tidewalkerRangedStep.find(bot->GetGUID());
-    uint8 step = (itStep != tidewalkerRangedStep.end()) ? itStep->second : 0;
-
-    if (step == 0)
+    float stepX;
+    float stepY;
+    if (!GetPathStepTowardPoint(
+            bot, behind, TIDEWALKER_RANGED_STACK_RADIUS, PATH_STEP_DISTANCE, stepX, stepY))
     {
-        float distToTransition =
-            bot->GetExactDist2d(transition.GetPositionX(), transition.GetPositionY());
-
-        if (distToTransition > 2.0f)
-        {
-            float dX = transition.GetPositionX() - bot->GetPositionX();
-            float dY = transition.GetPositionY() - bot->GetPositionY();
-            float moveDist = std::min(10.0f, distToTransition);
-            float moveX = bot->GetPositionX() + (dX / distToTransition) * moveDist;
-            float moveY = bot->GetPositionY() + (dY / distToTransition) * moveDist;
-
-            return MoveTo(SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                          false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
-        }
-        else
-        {
-            tidewalkerRangedStep.try_emplace(bot->GetGUID(), 1);
-            step = 1;
-        }
+        return false;
     }
 
-    if (step == 1)
-    {
-        float distToPhase2 =
-            bot->GetExactDist2d(phase2.GetPositionX(), phase2.GetPositionY());
+    return MoveTo(
+        SSC_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
+}
 
-        if (distToPhase2 > 1.0f)
-        {
-            float dX = phase2.GetPositionX() - bot->GetPositionX();
-            float dY = phase2.GetPositionY() - bot->GetPositionY();
-            float moveDist = std::min(10.0f, distToPhase2);
-            float moveX = bot->GetPositionX() + (dX / distToPhase2) * moveDist;
-            float moveY = bot->GetPositionY() + (dY / distToPhase2) * moveDist;
+// Brings back a healer that ended up far out, such as one carried off by Watery Grave. Healers
+// otherwise move as they normally would.
+bool MorogrimTidewalkerReturnHealerToBossAction::Execute(Event /*event*/)
+{
+    // By leewheel 2026-09-24 合并 brighton 999582f7：entry 化 morogrim tidewalker = 21213。
+    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
+    if (!tidewalker)
+        return false;
 
-            return MoveTo(SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-                          false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
-        }
-    }
+    float stepX;
+    float stepY;
+    if (!GetPathStepTowardUnit(bot, tidewalker, TIDEWALKER_HEALER_MAX_DISTANCE, stepX, stepY))
+        return false;
 
-    return false;
+    return MoveTo(
+        SSC_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
 // Lady Vashj <Coilfang Matron>

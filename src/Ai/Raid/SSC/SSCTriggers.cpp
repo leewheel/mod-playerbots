@@ -351,13 +351,28 @@ bool MorogrimTidewalkerShouldBeTankedTrigger::IsActiveInEncounter()
     return PlayerbotAI::IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "21213");
 }
 
-bool MorogrimTidewalkerInPhase2Trigger::IsActiveInEncounter()
+bool MorogrimTidewalkerRangedShouldStackTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
+    // By leewheel 2026-09-24 合并 brighton 999582f7：采纳上游——阈值改用
+    //   TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT（比 P2 血量阈值宽 2%、<= 比较），
+    //   并新增 P1 治疗集合距离 trigger；英文名按规则第 97 条 entry 化：morogrim tidewalker = 21213。
+    //   Ranged set off with the tank: behind him, they cannot get in front of him on the way
     Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
-    return tidewalker && tidewalker->GetHealthPct() < TIDEWALKER_PHASE_2_HEALTH_PCT;
+    return tidewalker && tidewalker->GetHealthPct() <= TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT;
+}
+
+// Phase 1 only: from the move to the corner on, healers are part of the ranged stack
+bool MorogrimTidewalkerHealerIsTooFarFromBossTrigger::IsActiveInEncounter()
+{
+    if (!PlayerbotAI::IsHeal(bot))
+        return false;
+
+    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
+    return tidewalker && tidewalker->GetHealthPct() > TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT &&
+        !bot->IsWithinDist(tidewalker, TIDEWALKER_HEALER_MAX_DISTANCE);
 }
 
 // Lady Vashj <Coilfang Matron>

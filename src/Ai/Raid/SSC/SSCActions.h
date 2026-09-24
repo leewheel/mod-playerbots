@@ -306,24 +306,31 @@ public:
 
 // Morogrim Tidewalker
 
-class MorogrimTidewalkerMoveBossToTankPositionAction : public AttackAction
+class MorogrimTidewalkerPositionMainTankAction : public AttackAction
 {
 public:
-    MorogrimTidewalkerMoveBossToTankPositionAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "morogrim tidewalker move boss to tank position") {}
+    MorogrimTidewalkerPositionMainTankAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "morogrim tidewalker position main tank") {}
     bool Execute(Event event) override;
 
 private:
     bool MoveToPhase1TankPosition(Unit* tidewalker);
     bool MoveToPhase2TankPosition(Unit* tidewalker);
-    bool StepTowardPosition(Position const& position, float arrivalDist, Unit* tidewalker);
 };
 
-class MorogrimTidewalkerPhase2RepositionRangedAction : public MovementAction
+class MorogrimTidewalkerStackRangedBehindBossAction : public MovementAction
 {
 public:
-    MorogrimTidewalkerPhase2RepositionRangedAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "morogrim tidewalker phase 2 reposition ranged") {}
+    MorogrimTidewalkerStackRangedBehindBossAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "morogrim tidewalker stack ranged behind boss") {}
+    bool Execute(Event event) override;
+};
+
+class MorogrimTidewalkerReturnHealerToBossAction : public MovementAction
+{
+public:
+    MorogrimTidewalkerReturnHealerToBossAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "morogrim tidewalker return healer to boss") {}
     bool Execute(Event event) override;
 };
 
