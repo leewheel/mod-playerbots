@@ -10,6 +10,7 @@
 #include "ItemUsageValue.h"
 #include "LootAction.h"
 #include "ObjectMgr.h"
+#include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
 
@@ -93,6 +94,18 @@ bool LootRollAction::Execute(Event /*event*/)
         else if (vote == GREED && !sPlayerbotAIConfig.lootGreedRollLevel)
             vote = PASS;
 
+        //By leewheel 2026-09-22 赵与风：独立策略"全需求"
+        //  需求来源：特殊机器人「赵与风」拥有独立策略——所有 Roll 的东西全需求。
+        //  语义：只要是可 Roll 的物品（且他本人被系统列入本次 Roll 的投票名单），一律投 NEED；
+        //  刻意放在 lootNeedRollLevel / lootGreedRollLevel 等全局配置判定之后，
+        //  使该策略不被服务器通用 Roll 策略覆盖（否则 lootNeedRollLevel=0 时会把他改回 PASS）。
+        if (botAI && (botAI->HasStrategy("always need", BOT_STATE_NON_COMBAT) ||
+                      botAI->HasStrategy("always need", BOT_STATE_COMBAT)))
+        {
+            vote = NEED;
+        }
+        //End By leewheel
+
         switch (group->GetLootMethod())
         {
             case MASTER_LOOT:
@@ -139,6 +152,15 @@ RollVote LootRollAction::CalculateRollVote(ItemTemplate const* proto, ItemUsage 
         default:
             break;
     }
+
+    //By leewheel 2026-09-22 赵与风：独立策略"全需求"
+    //  本函数同时被 MasterLootRollAction（队长分配）调用，此处判定可一并覆盖该路径。
+    if (botAI && (botAI->HasStrategy("always need", BOT_STATE_NON_COMBAT) ||
+                  botAI->HasStrategy("always need", BOT_STATE_COMBAT)))
+    {
+        return NEED;
+    }
+    //End By leewheel
 
     return StoreLootAction::IsLootAllowed(proto->ItemId, GET_PLAYERBOT_AI(bot)) ? needVote : PASS;
 }

@@ -8,6 +8,9 @@
 #define PLAYERBOTS_STRATEGYCONTEXT_H
 
 #include "AggressiveStrategy.h"
+//By leewheel 2026-09-22 赵与风专用策略：全需求（always need）
+#include "AlwaysNeedStrategy.h"
+//End By leewheel
 #include "AttackEnemyPlayersStrategy.h"
 #include "BattlegroundStrategy.h"
 #include "CastTimeStrategy.h"
@@ -144,6 +147,10 @@ public:
 
         // By leewheel 2026-07-15: 自动坦克标记策略
         creators["auto tank mark"] = &StrategyContext::auto_tank_mark;
+
+        //By leewheel 2026-09-22 赵与风专用策略：全需求（所有 Roll 一律 NEED）
+        creators["always need"] = &StrategyContext::always_need;
+        //End By leewheel
     }
 
 private:
@@ -153,6 +160,9 @@ private:
     static Strategy* mark_rti(PlayerbotAI* botAI) { return new MarkRtiStrategy(botAI); }
     // By leewheel 2026-07-15
     static Strategy* auto_tank_mark(PlayerbotAI* botAI) { return new AutoTankMarkStrategy(botAI); }
+    //By leewheel 2026-09-22 赵与风专用策略工厂
+    static Strategy* always_need(PlayerbotAI* botAI) { return new AlwaysNeedStrategy(botAI); }
+    //End By leewheel
     static Strategy* tell_target(PlayerbotAI* botAI) { return new TellTargetStrategy(botAI); }
     static Strategy* threat(PlayerbotAI* botAI) { return new ThreatStrategy(botAI); }
     static Strategy* focus(PlayerbotAI* botAI) { return new FocusStrategy(botAI); }

@@ -43,6 +43,9 @@
 #include "Unit.h"
 #include "World.h"
 #include "WorldSessionMgr.h"
+//By leewheel 2026-09-22 特殊机器人「赵与风」：随机本 25% 概率编入 + 独立策略「全需求」
+#include "ZhaoYufeng.h"
+//End By leewheel
 #include "WorldPacket.h"
 #include <algorithm>
 #include <boost/thread/thread.hpp>
@@ -1731,6 +1734,12 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     bool teamHasQueuedPlayer[2] = {false, false};
     // End By leewheel
 
+    //By leewheel 2026-09-22 赵与风：记录各阵营排队玩家的等级
+    //  用途：命中 25% 后把「赵与风」整备到可进入该玩家所选副本的等级段，
+    //        否则他会因 GetLfgValidDungeonsForBot 的等级过滤而永远无法入队。
+    uint32 teamQueuedLevel[2] = {0, 0};
+    //End By leewheel
+
     // By leewheel 2026-07-29
     // 诊断日志：显示 players 向量大小，定位 teamHasQueuedPlayer 始终为 false 的根因
     // By leewheel 2026-08-01
@@ -1768,6 +1777,11 @@ void RandomPlayerbotMgr::CheckLfgQueue()
             // By leewheel 2026-07-10
             teamHasQueuedPlayer[player->GetTeamId()] = true;
             // End By leewheel
+
+            //By leewheel 2026-09-22 赵与风：记录排队玩家等级（取同阵营最高者，作为整备目标等级）
+            if (player->GetLevel() > teamQueuedLevel[player->GetTeamId()])
+                teamQueuedLevel[player->GetTeamId()] = player->GetLevel();
+            //End By leewheel
 
             lfg::LfgDungeonSet const& dList = sLFGMgr->GetSelectedDungeons(player->GetGUID());
             for (lfg::LfgDungeonSet::const_iterator itr = dList.begin(); itr != dList.end(); ++itr)
@@ -1819,6 +1833,11 @@ void RandomPlayerbotMgr::CheckLfgQueue()
                 (pState != lfg::LFG_STATE_NONE && pState < lfg::LFG_STATE_DUNGEON))
             {
                 teamHasQueuedPlayer[player->GetTeamId()] = true;
+
+                //By leewheel 2026-09-22 赵与风：全服扫描路径同样记录排队玩家等级
+                if (player->GetLevel() > teamQueuedLevel[player->GetTeamId()])
+                    teamQueuedLevel[player->GetTeamId()] = player->GetLevel();
+                //End By leewheel
 
                 lfg::LfgDungeonSet const& dList = sLFGMgr->GetSelectedDungeons(player->GetGUID());
                 for (lfg::LfgDungeonSet::const_iterator itr = dList.begin(); itr != dList.end(); ++itr)
@@ -1884,7 +1903,17 @@ void RandomPlayerbotMgr::CheckLfgQueue()
         {
             // 记录排队开始时间（仅首次）
             if (lfgQueueStartTime[teamId] == 0)
+            {
                 lfgQueueStartTime[teamId] = time(nullptr);
+
+                //By leewheel 2026-09-22 赵与风：每个"排队会话"只在开始时掷一次骰
+                //  需求：玩家组随机本时有 25% 概率组到「赵与风」。
+                //  粒度刻意取"一次排队"而不是每 30 秒一轮——否则多轮累积会让实际概率
+                //  远高于配置的 25%。命中后由 ForceBotsJoinLfg 负责整备并入队。
+                sZhaoYufengMgr.EnsureLoaded();
+                sZhaoYufengMgr.BeginLfgPending(teamId, teamQueuedLevel[teamIdx]);
+                //End By leewheel
+            }
 
             uint32 waitTime = (uint32)(time(nullptr) - lfgQueueStartTime[teamId]);
             if (waitTime >= effectiveThreshold)
@@ -2013,6 +2042,54 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
     }
     if (dungeonSet.empty())
         return;
+
+    //By leewheel 2026-09-22 赵与风：把命中本次排队的「赵与风」编入随机本
+    //  流程：CheckLfgQueue 排队开始时掷骰命中 → 不在线则先召唤一次 →
+    //        在线且空闲则整备到排队玩家等级并输出入队 → 成功/超时后清除标记
+    if (sZhaoYufengMgr.IsLfgPending(teamId))
+    {
+        ObjectGuid const zyfGuid = sZhaoYufengMgr.GetLfgTarget(teamId);
+        Player* zyf = zyfGuid ? ObjectAccessor::FindConnectedPlayer(zyfGuid) : nullptr;
+
+        if (!zyf || !zyf->IsInWorld())
+        {
+            // 尚未上线：只主动召唤一次（AddPlayerBot 为异步，下一轮生效）
+            if (!sZhaoYufengMgr.HasLfgSummoned(teamId))
+            {
+                sZhaoYufengMgr.MarkLfgSummoned(teamId);
+                AddPlayerBot(zyfGuid, 0);
+                LOG_INFO("playerbots", "赵与风：{} 阵营命中的「赵与风」当前离线，已发起召唤。",
+                    teamId == TEAM_ALLIANCE ? "联盟" : "部落");
+            }
+            else if (sZhaoYufengMgr.IsLfgExpired(teamId))
+            {
+                sZhaoYufengMgr.ClearLfgPending(teamId);
+            }
+        }
+        else if (IsBotIdleForLfg(zyf))
+        {
+            // 先整备到排队玩家等级：SendLfgJoinPacket 内部会按等级过滤副本，等级不符则必然被挡下
+            uint32 const zyfTargetLevel = sZhaoYufengMgr.GetLfgTargetLevel(teamId);
+            if (zyfTargetLevel)
+                sZhaoYufengMgr.PrepareForLevel(zyf, zyfTargetLevel);
+
+            if (SendLfgJoinPacket(zyf, dungeonSet, lfg::PLAYER_ROLE_DAMAGE))
+            {
+                LOG_INFO("playerbots", "赵与风：已编入 {} 阵营的随机本队列（输出职责，等级 {}）。",
+                    teamId == TEAM_ALLIANCE ? "联盟" : "部落", zyfTargetLevel);
+                sZhaoYufengMgr.ClearLfgPending(teamId);
+            }
+            else if (sZhaoYufengMgr.IsLfgExpired(teamId))
+            {
+                sZhaoYufengMgr.ClearLfgPending(teamId);
+            }
+        }
+        else if (sZhaoYufengMgr.IsLfgExpired(teamId))
+        {
+            sZhaoYufengMgr.ClearLfgPending(teamId);
+        }
+    }
+    //End By leewheel
 
     // 目标：队列中保持的bot角色数量（不含真实玩家）
     const int TARGET_TANKS = 2;
@@ -4348,6 +4425,13 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
     {
         bot->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
     }
+
+    //By leewheel 2026-09-22 赵与风：兜底挂载独立策略「全需求」
+    //  说明：这是他每次上线时（无论由随机池、快速组队还是随机本召唤上线）的最后一道保障，
+    //        确保"所有 Roll 一律需求"的策略始终生效。
+    if (sZhaoYufengMgr.IsZhaoYufeng(bot))
+        sZhaoYufengMgr.ApplyAlwaysNeed(bot);
+    //End By leewheel
 }
 
 void RandomPlayerbotMgr::OnPlayerLogin(Player* player)

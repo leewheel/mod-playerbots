@@ -636,6 +636,10 @@ void AddSC_FishingParty();
 
 void AddSC_randombot_level_mgr();
 
+//By leewheel 2026-09-22 - 特殊机器人「赵与风」（战士，组随机本/团本时 25% 概率被组到，全需求）
+void AddSC_ZhaoYufeng();
+//End By leewheel
+
 void AddPlayerbotsScripts()
 {
     new PlayerbotsBattlefieldScript();
@@ -684,4 +688,8 @@ void AddPlayerbotsScripts()
     //End By leewheel
 
     AddSC_randombot_level_mgr();
+
+    //By leewheel 2026-09-22 - 特殊机器人「赵与风」
+    AddSC_ZhaoYufeng();
+    //End By leewheel
 }

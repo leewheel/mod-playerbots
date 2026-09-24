@@ -340,6 +340,20 @@ AiPlayerbot.LootRollRecipe = 0
 # Default: 0 (disabled)
 AiPlayerbot.LootRollDisenchant = 0
 
+#
+#    By leewheel 2026-09-22 特殊机器人「赵与风」
+#        一个名字叫「赵与风」的战士机器人：玩家组随机本（LFG）或团本（快速组队命令）时，
+#        有 25% 概率被组进队伍；他拥有独立策略——所有 Roll 的东西一律需求。
+#        角色来源：启动时从随机机器人账号中征用一名战士并改名（联盟/部落各一位），
+#        不会新建账号，也不会触碰真实玩家的角色。
+#        Enabled  是否启用本系统（0 关闭，1 启用）
+#        Chance   每次组队被编入队伍的概率（百分比，默认 25）
+#        Name     机器人名字（默认 赵与风；改名仅对"尚未征用"的阵营生效，已征用的角色沿用现名）
+#
+AiPlayerbot.ZhaoYufeng.Enabled = 1
+AiPlayerbot.ZhaoYufeng.Chance = 25
+AiPlayerbot.ZhaoYufeng.Name = 赵与风
+
 # A list of GameObject GUIDs that bots will not interact with.
 # List of default GUIDs:
 # QuestItems:
