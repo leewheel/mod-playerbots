@@ -42,8 +42,8 @@ public:
         creators["hydross the unstable stop dps upon phase change"] =
             &RaidSscActionContext::hydross_the_unstable_stop_dps_upon_phase_change;
 
-        creators["hydross the unstable manage timers"] =
-            &RaidSscActionContext::hydross_the_unstable_manage_timers;
+        creators["hydross the unstable manage phase timers"] =
+            &RaidSscActionContext::hydross_the_unstable_manage_phase_timers;
 
         // The Lurker Below
         creators["the lurker below run around behind boss"] =
@@ -124,8 +124,8 @@ public:
         creators["morogrim tidewalker stack ranged behind boss"] =
             &RaidSscActionContext::morogrim_tidewalker_stack_ranged_behind_boss;
 
-        creators["morogrim tidewalker return healer to boss"] =
-            &RaidSscActionContext::morogrim_tidewalker_return_healer_to_boss;
+        creators["morogrim tidewalker return to boss"] =
+            &RaidSscActionContext::morogrim_tidewalker_return_to_boss;
 
         // Lady Vashj <Coilfang Matron>
         creators["lady vashj main tank position boss"] =
@@ -133,6 +133,15 @@ public:
 
         creators["lady vashj phase 1 spread ranged in arc"] =
             &RaidSscActionContext::lady_vashj_phase_1_spread_ranged_in_arc;
+
+        creators["lady vashj assign cluster slots"] =
+            &RaidSscActionContext::lady_vashj_assign_cluster_slots;
+
+        creators["lady vashj phase 2 position in cluster"] =
+            &RaidSscActionContext::lady_vashj_phase_2_position_in_cluster;
+
+        creators["lady vashj phase 3 position ranged"] =
+            &RaidSscActionContext::lady_vashj_phase_3_position_ranged;
 
         creators["lady vashj set grounding totem in main tank group"] =
             &RaidSscActionContext::lady_vashj_set_grounding_totem_in_main_tank_group;
@@ -146,26 +155,44 @@ public:
         creators["lady vashj assign phase 2 and phase 3 dps priority"] =
             &RaidSscActionContext::lady_vashj_assign_phase_2_and_phase_3_dps_priority;
 
-        creators["lady vashj misdirect strider to first assist tank"] =
-            &RaidSscActionContext::lady_vashj_misdirect_strider_to_first_assist_tank;
+        creators["lady vashj tank attack and position strider"] =
+            &RaidSscActionContext::lady_vashj_tank_attack_and_position_strider;
 
-        creators["lady vashj tank attack and move away strider"] =
-            &RaidSscActionContext::lady_vashj_tank_attack_and_move_away_strider;
+        creators["lady vashj position coilfang elite"] =
+            &RaidSscActionContext::lady_vashj_position_coilfang_elite;
+
+        creators["lady vashj tank wait in the middle"] =
+            &RaidSscActionContext::lady_vashj_tank_wait_in_the_middle;
+
+        creators["lady vashj assign tainted core looter"] =
+            &RaidSscActionContext::lady_vashj_assign_tainted_core_looter;
+
+        creators["lady vashj attack tainted elemental"] =
+            &RaidSscActionContext::lady_vashj_attack_tainted_elemental;
 
         creators["lady vashj loot tainted core"] =
             &RaidSscActionContext::lady_vashj_loot_tainted_core;
 
-        creators["lady vashj teleport to tainted elemental"] =
-            &RaidSscActionContext::lady_vashj_teleport_to_tainted_elemental;
-
         creators["lady vashj pass the tainted core"] =
             &RaidSscActionContext::lady_vashj_pass_the_tainted_core;
+
+        creators["lady vashj return to the ground"] =
+            &RaidSscActionContext::lady_vashj_return_to_the_ground;
+
+        creators["lady vashj command pet target"] =
+            &RaidSscActionContext::lady_vashj_command_pet_target;
 
         creators["lady vashj avoid toxic spores"] =
             &RaidSscActionContext::lady_vashj_avoid_toxic_spores;
 
-        creators["lady vashj use free action abilities"] =
-            &RaidSscActionContext::lady_vashj_use_free_action_abilities;
+        creators["lady vashj melee move around toxic spores"] =
+            &RaidSscActionContext::lady_vashj_melee_move_around_toxic_spores;
+
+        creators["lady vashj paladin use hand of freedom"] =
+            &RaidSscActionContext::lady_vashj_paladin_use_hand_of_freedom;
+
+        creators["lady vashj rogue use cloak of shadows"] =
+            &RaidSscActionContext::lady_vashj_rogue_use_cloak_of_shadows;
     }
 
 private:
@@ -200,8 +227,8 @@ private:
     static Action* hydross_the_unstable_stop_dps_upon_phase_change(PlayerbotAI* botAI) {
         return new HydrossTheUnstableStopDpsUponPhaseChangeAction(botAI);
     }
-    static Action* hydross_the_unstable_manage_timers(PlayerbotAI* botAI) {
-        return new HydrossTheUnstableManageTimersAction(botAI);
+    static Action* hydross_the_unstable_manage_phase_timers(PlayerbotAI* botAI) {
+        return new HydrossTheUnstableManagePhaseTimersAction(botAI);
     }
 
     // The Lurker Below
@@ -287,8 +314,8 @@ private:
     static Action* morogrim_tidewalker_stack_ranged_behind_boss(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerStackRangedBehindBossAction(botAI);
     }
-    static Action* morogrim_tidewalker_return_healer_to_boss(PlayerbotAI* botAI) {
-        return new MorogrimTidewalkerReturnHealerToBossAction(botAI);
+    static Action* morogrim_tidewalker_return_to_boss(PlayerbotAI* botAI) {
+        return new MorogrimTidewalkerReturnToBossAction(botAI);
     }
 
     // Lady Vashj <Coilfang Matron>
@@ -297,6 +324,15 @@ private:
     }
     static Action* lady_vashj_phase_1_spread_ranged_in_arc(PlayerbotAI* botAI) {
         return new LadyVashjPhase1SpreadRangedInArcAction(botAI);
+    }
+    static Action* lady_vashj_assign_cluster_slots(PlayerbotAI* botAI) {
+        return new LadyVashjAssignClusterSlotsAction(botAI);
+    }
+    static Action* lady_vashj_phase_2_position_in_cluster(PlayerbotAI* botAI) {
+        return new LadyVashjPhase2PositionInClusterAction(botAI);
+    }
+    static Action* lady_vashj_phase_3_position_ranged(PlayerbotAI* botAI) {
+        return new LadyVashjPhase3PositionRangedAction(botAI);
     }
     static Action* lady_vashj_set_grounding_totem_in_main_tank_group(PlayerbotAI* botAI) {
         return new LadyVashjSetGroundingTotemInMainTankGroupAction(botAI);
@@ -311,15 +347,20 @@ private:
     static Action* lady_vashj_assign_phase_2_and_phase_3_dps_priority(PlayerbotAI* botAI) {
         return new LadyVashjAssignPhase2AndPhase3DpsPriorityAction(botAI);
     }
-    static Action* lady_vashj_misdirect_strider_to_first_assist_tank(PlayerbotAI* botAI) {
-        return new SscMisdirectTargetToTankAction(
-            botAI, "lady vashj misdirect strider to first assist tank", "coilfang strider", 0);
+    static Action* lady_vashj_tank_attack_and_position_strider(PlayerbotAI* botAI) {
+        return new LadyVashjTankAttackAndPositionStriderAction(botAI);
     }
-    static Action* lady_vashj_tank_attack_and_move_away_strider(PlayerbotAI* botAI) {
-        return new LadyVashjTankAttackAndMoveAwayStriderAction(botAI);
+    static Action* lady_vashj_position_coilfang_elite(PlayerbotAI* botAI) {
+        return new LadyVashjPositionCoilfangEliteAction(botAI);
     }
-    static Action* lady_vashj_teleport_to_tainted_elemental(PlayerbotAI* botAI) {
-        return new LadyVashjTeleportToTaintedElementalAction(botAI);
+    static Action* lady_vashj_tank_wait_in_the_middle(PlayerbotAI* botAI) {
+        return new LadyVashjTankWaitInTheMiddleAction(botAI);
+    }
+    static Action* lady_vashj_assign_tainted_core_looter(PlayerbotAI* botAI) {
+        return new LadyVashjAssignTaintedCoreLooterAction(botAI);
+    }
+    static Action* lady_vashj_attack_tainted_elemental(PlayerbotAI* botAI) {
+        return new LadyVashjAttackTaintedElementalAction(botAI);
     }
     static Action* lady_vashj_loot_tainted_core(PlayerbotAI* botAI) {
         return new LadyVashjLootTaintedCoreAction(botAI);
@@ -327,11 +368,23 @@ private:
     static Action* lady_vashj_pass_the_tainted_core(PlayerbotAI* botAI) {
         return new LadyVashjPassTheTaintedCoreAction(botAI);
     }
+    static Action* lady_vashj_return_to_the_ground(PlayerbotAI* botAI) {
+        return new LadyVashjReturnToTheGroundAction(botAI);
+    }
+    static Action* lady_vashj_command_pet_target(PlayerbotAI* botAI) {
+        return new LadyVashjCommandPetTargetAction(botAI);
+    }
     static Action* lady_vashj_avoid_toxic_spores(PlayerbotAI* botAI) {
         return new LadyVashjAvoidToxicSporesAction(botAI);
     }
-    static Action* lady_vashj_use_free_action_abilities(PlayerbotAI* botAI) {
-        return new LadyVashjUseFreeActionAbilitiesAction(botAI);
+    static Action* lady_vashj_melee_move_around_toxic_spores(PlayerbotAI* botAI) {
+        return new LadyVashjMeleeMoveAroundToxicSporesAction(botAI);
+    }
+    static Action* lady_vashj_paladin_use_hand_of_freedom(PlayerbotAI* botAI) {
+        return new LadyVashjPaladinUseHandOfFreedomAction(botAI);
+    }
+    static Action* lady_vashj_rogue_use_cloak_of_shadows(PlayerbotAI* botAI) {
+        return new LadyVashjRogueUseCloakOfShadowsAction(botAI);
     }
 };
 

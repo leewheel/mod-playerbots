@@ -120,7 +120,7 @@ float SscControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
         if (IsLeotherasChannelingWhirlwind(leotheras))
             return 0.0f;
 
-        if (GetLeotherasWarlockTank(bot) && GetActiveLeotherasDemon(bot))
+        if (GetActiveLeotherasDemon(botAI) && GetLeotherasWarlockTank(bot))
             return 0.0f;
     }
 
@@ -168,7 +168,7 @@ float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
 
     if (AI_VALUE2(Unit*, "find target", "21214"))
     {
-        // Tidalvess is the first kill target; once he is down the rest of the fight is open.
+// Tidalvess is the first kill target; once he is down the rest of the fight is open.
         // By leewheel 2026-09-22 按规则第 97 条 entry 化：fathom-guard tidalvess = 21965。
         Unit* tidalvess = AI_VALUE2(Unit*, "find target", "21965");
         return tidalvess && tidalvess->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
@@ -183,7 +183,7 @@ float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
     }
     // End By leewheel
 
-    if (Unit* leotheras = GetLeotheras(bot))
+    if (Unit* leotheras = GetLeotheras(botAI))
         return leotheras->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 
     return 1.0f;
@@ -269,7 +269,8 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValueInEncounter(Action* action
 
     auto itHandOver = handOverTimer.find(instanceId);
     bool const aboutToChange =
-        itHandOver != handOverTimer.end() && getMSTimeDiff(itHandOver->second, now) >= handOverWaitMs;
+        itHandOver != handOverTimer.end() &&
+        getMSTimeDiff(itHandOver->second, now) >= handOverWaitMs;
 
     return justChanged || aboutToChange ? 0.0f : 1.0f;
 }
@@ -376,7 +377,7 @@ float LeotherasTheBlindDisableTankActionsMultiplier::GetValueInEncounter(Action*
 
     // Auto-attack only while the Warlock has him: abilities would spend the rage being banked for
     // an Inner Demon, and the target choosers would take the tanks off him
-    if (GetPhase2LeotherasDemon(bot) &&
+    if (GetPhase2LeotherasDemon(botAI) &&
         (dynamic_cast<TankAssistAction*>(action) ||
          (dynamic_cast<CastSpellAction*>(action) &&
           !dynamic_cast<CastDireBearFormAction*>(action) &&
@@ -385,19 +386,17 @@ float LeotherasTheBlindDisableTankActionsMultiplier::GetValueInEncounter(Action*
         return 0.0f;
     }
 
-    if (bot->getClass() == CLASS_WARRIOR && GetActiveLeotherasDemon(bot))
+    if (bot->getClass() == CLASS_WARRIOR && dynamic_cast<CastVigilanceAction*>(action) &&
+        GetActiveLeotherasDemon(botAI))
     {
         Player* warlockTank = GetLeotherasWarlockTank(bot);
-        if (!warlockTank)
-            return 1.0f;
-
-        if (dynamic_cast<CastVigilanceAction*>(action) && action->GetTarget() == warlockTank)
+        if (warlockTank && action->GetTarget() == warlockTank)
             return 0.0f;
     }
 
     // Keep Berserk until Phase 3 in case the bear gets Inner Demon.
     if (bot->getClass() == CLASS_DRUID && dynamic_cast<CastBerserkAction*>(action) &&
-        !GetPhase3LeotherasDemon(bot))
+        !GetPhase3LeotherasDemon(botAI))
     {
         return 0.0f;
     }
@@ -538,7 +537,7 @@ float LeotherasTheBlindMeleeAvoidChaosBlastMultiplier::GetValueInEncounter(Actio
     if (!HasTooManyChaosBlastStacks(bot))
         return 1.0f;
 
-    Creature* leotherasDemon = GetActiveLeotherasDemon(bot);
+    Creature* leotherasDemon = GetActiveLeotherasDemon(botAI);
     return leotherasDemon && leotherasDemon->GetVictim() != bot ? 0.0f : 1.0f;
 }
 
@@ -560,7 +559,7 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     uint32 const instanceId = leotheras->GetInstanceId();
     uint32 const now = getMSTime();
 
-    if (IsLeotherasHumanoidPhase(bot))
+    if (IsLeotherasHumanoidPhase(botAI))
     {
         if (PlayerbotAI::IsTank(bot))
             return 1.0f;
@@ -572,7 +571,6 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
             return 0.0f;
         }
 
-        // Hold only after the Whirlwind ends; ranged keep attacking from outside it
         auto whirlwind = leotherasWhirlwindEndTime.find(instanceId);
         if (whirlwind == leotherasWhirlwindEndTime.end() || now < whirlwind->second)
             return 1.0f;
@@ -580,13 +578,12 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
         return now - whirlwind->second < LEOTHERAS_HUMANOID_DPS_WAIT_MS ? 0.0f : 1.0f;
     }
 
-    Player* warlockTank = GetLeotherasWarlockTank(bot);
-    if (IsLeotherasDemonPhase(bot))
+    if (IsLeotherasDemonPhase(botAI))
     {
-        if (warlockTank == bot)
+        if (IsLeotherasWarlockTank(bot))
             return 1.0f;
 
-        if (!warlockTank && PlayerbotAI::IsTank(bot))
+        if (PlayerbotAI::IsTank(bot) && !GetLeotherasWarlockTank(bot))
             return 1.0f;
 
         auto it = leotherasDemonPhaseDpsWaitTimer.find(instanceId);
@@ -596,9 +593,9 @@ float LeotherasTheBlindWaitForDpsMultiplier::GetValueInEncounter(Action* action)
         return getMSTimeDiff(it->second, now) < LEOTHERAS_DEMON_DPS_WAIT_MS ? 0.0f : 1.0f;
     }
 
-    if (IsLeotherasFinalPhase(bot))
+    if (IsLeotherasFinalPhase(botAI))
     {
-        if (warlockTank == bot || PlayerbotAI::IsTank(bot))
+        if (PlayerbotAI::IsTank(bot) || IsLeotherasWarlockTank(bot))
             return 1.0f;
 
         auto it = leotherasFinalPhaseDpsWaitTimer.find(instanceId);
@@ -635,7 +632,7 @@ float LeotherasTheBlindDisableTankSoulshatterMultiplier::GetValueInEncounter(
     if (!AI_VALUE2(Unit*, "find target", "21215"))
         return 1.0f;
 
-    return IsLeotherasWarlockTank(bot) && GetActiveLeotherasDemon(bot) ? 0.0f : 1.0f;
+    return GetActiveLeotherasDemon(botAI) && IsLeotherasWarlockTank(bot) ? 0.0f : 1.0f;
 }
 
 // Fathom-Lord Karathress
@@ -655,9 +652,7 @@ float FathomLordKarathressDisableTankActionsMultiplier::GetValueInEncounter(Acti
     if (dynamic_cast<CombatFormationMoveAction*>(action) || dynamic_cast<AvoidAoeAction*>(action))
         return 0.0f;
 
-    // Single-target taunts land on the tank's own target and are how a guard that latched onto
-    // the wrong tank, a loose pet or a knocked-off guard is taken back. AoE threat and the AoE
-    // taunts are held only while somebody else's council member is close enough to be caught.
+    // Hold AoE threat and taunts only when another tank's target is close enough to be hit.
     if (IsAoeThreatAction(bot, action) || IsAoeTauntAction(bot, action))
     {
         return IsAnotherCouncilMemberWithin(botAI, KARATHRESS_AOE_THREAT_CLEARANCE) ?
@@ -692,8 +687,6 @@ float FathomLordKarathressDisableAoeMultiplier::GetValueInEncounter(Action* acti
 
 float FathomLordKarathressWaitForDpsMultiplier::GetValueInEncounter(Action* action)
 {
-    // Normally I don't blanket exempt healers as a role and instead only let healing spells through
-    // only, but this is a pretty chaotic pull so I don't want to limit healers' abilities.
     if (!PlayerbotAI::IsDps(bot))
         return 1.0f;
 
@@ -751,10 +744,8 @@ float FathomLordKarathressMaintainPositionMultiplier::GetValueInEncounter(Action
     // End By leewheel
 }
 
-// Player point movement neither launches nor continues while a cast is up, and a bot lifted by a
-// Cyclone still has its target in range. Casting is held through the tosses, and through the drop
-// afterwards: a cast started on the way down stops the fall where it is, and by then the trigger
-// that issued it has nothing left to fire on.
+// Hold casts through the Cyclone and the drop after it. Point moves stall mid-cast, so a cast on
+// the way down leaves the bot stuck in the air.
 float FathomLordKarathressNoCastingWhileLiftedMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<CastSpellAction*>(action))
@@ -773,10 +764,8 @@ float FathomLordKarathressNoCastingWhileLiftedMultiplier::GetValueInEncounter(Ac
         0.0f : 1.0f;
 }
 
-// The walk out to Caribdis is long and out of sight the whole way, and a bot spread out of sight
-// once there has the same walk back. Anything else that moves the bot pulls it the other way:
-// the spread, and the stock reach on whatever it was shooting before her. Only the walk itself
-// and the Cyclone drop are left running.
+// Out of sight of Caribdis, only the walk to her and the Cyclone drop can move the bot. Spread
+// and the stock reach on its old target would just pull it back.
 float FathomLordKarathressApproachingCaribdisMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<MovementAction*>(action) ||
@@ -798,8 +787,10 @@ float FathomLordKarathressApproachingCaribdisMultiplier::GetValueInEncounter(Act
         return 1.0f;
 
     // Only while she is the kill target: a totem in reach and Tidalvess come before her
-    if (ShouldAttackSpitfireTotem(bot, GetSpitfireTotem(bot)) ||
+// By leewheel 2026-09-26 合并brighton: GetSpitfireTotem签名收botAI(与定义一致), 查找entry化(21965)
+    if (ShouldAttackSpitfireTotem(bot, GetSpitfireTotem(botAI)) ||
         AI_VALUE2(Unit*, "find target", "21965"))
+    // End By leewheel
     {
         return 1.0f;
     }
@@ -807,11 +798,9 @@ float FathomLordKarathressApproachingCaribdisMultiplier::GetValueInEncounter(Act
     return bot->IsWithinLOSInMap(caribdis) ? 1.0f : 0.0f;
 }
 
-// A target out of line of sight is invalid, and the drop hands the bot back to whatever is in
-// sight from where it stands. The ledge between Sharkkis and Karathress does that to a totem at
-// his feet while melee climb it, and the walk out to Caribdis does it to her. Both stay the
-// target as long as they stand.
-float FathomLordKarathressKeepTargetOutOfSightMultiplier::GetValueInEncounter(Action* action)
+// Keep the totem and Caribdis targeted when LoS breaks (the ledge, the walk out to her).
+// Otherwise the bot drops them and grabs whatever it can see.
+float FathomLordKarathressDontDropOutOfSightTargetMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<DropTargetAction*>(action))
         return 1.0f;
@@ -820,7 +809,7 @@ float FathomLordKarathressKeepTargetOutOfSightMultiplier::GetValueInEncounter(Ac
     if (!target)
         return 1.0f;
 
-    if (target == GetSpitfireTotem(bot))
+    if (target == GetSpitfireTotem(botAI))
         return 0.0f;
 
     // By leewheel 2026-09-23 合并brighton the-lab 356c39f4：上游把本 multiplier 由
@@ -896,21 +885,28 @@ float LadyVashjSetGroundingTotemMultiplier::GetValueInEncounter(Action* action)
     if (bot->getClass() != CLASS_SHAMAN)
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "21212"))
+// By leewheel 2026-09-26 合并brighton: 采纳brighton图腾动作限定+声明vashj(公共尾部需用vashj), 查找entry化(21212)
+    if (!dynamic_cast<CastWindfuryTotemAction*>(action) &&
+        !dynamic_cast<SetWindfuryTotemAction*>(action) &&
+        !dynamic_cast<CastWrathOfAirTotemAction*>(action) &&
+        !dynamic_cast<SetWrathOfAirTotemAction*>(action) &&
+        !dynamic_cast<CastNatureResistanceTotemAction*>(action) &&
+        !dynamic_cast<SetNatureResistanceTotemAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj)
+        return 1.0f;
+    // End By leewheel
+
+    // Shock Blast is cast in phases 1 and 3 only
+    int8 const phase = GetLadyVashjPhase(vashj);
+    if (phase != 1 && phase != 3)
         return 1.0f;
 
-    if (!IsMainTankInSameSubgroup(bot))
-        return 1.0f;
-
-    if (dynamic_cast<CastWindfuryTotemAction*>(action) ||
-        dynamic_cast<SetWindfuryTotemAction*>(action) ||
-        dynamic_cast<CastWrathOfAirTotemAction*>(action) ||
-        dynamic_cast<SetWrathOfAirTotemAction*>(action) ||
-        dynamic_cast<CastNatureResistanceTotemAction*>(action) ||
-        dynamic_cast<SetNatureResistanceTotemAction*>(action))
-        return 0.0f;
-
-    return 1.0f;
+    return GetVashjGroundingShaman(bot) == bot ? 0.0f : 1.0f;
 }
 
 float LadyVashjMaintainPhase1RangedSpreadMultiplier::GetValueInEncounter(Action* action)
@@ -936,20 +932,24 @@ float LadyVashjMaintainPhase1RangedSpreadMultiplier::GetValueInEncounter(Action*
 
 float LadyVashjStaticChargeStayAwayFromGroupMultiplier::GetValueInEncounter(Action* action)
 {
-    if (PlayerbotAI::IsMainTank(bot) || !bot->HasAura(Id(SscSpells::SPELL_STATIC_CHARGE)))
+    // Only melee need holding back from a charged tank. Everyone else still has to reach targets to
+    // heal or cast, and ReachPartyMemberToHealAction is a ReachTargetAction.
+    if (!PlayerbotAI::IsMelee(bot) && !HasStaticCharge(bot))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "21212"))
+// By leewheel 2026-09-26 合并brighton: 采纳动作类型限定(仅抑制移动/追杀类action)
+    if (!dynamic_cast<ReachTargetAction*>(action) &&
+        !dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<FollowAction*>(action) &&
+        !dynamic_cast<CastKillingSpreeAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action))
+    {
         return 1.0f;
+    }
+    // End By leewheel
 
-    if (dynamic_cast<CombatFormationMoveAction*>(action) ||
-        dynamic_cast<ReachTargetAction*>(action) ||
-        dynamic_cast<FollowAction*>(action) ||
-        dynamic_cast<CastKillingSpreeAction*>(action) ||
-        dynamic_cast<CastReachTargetSpellAction*>(action))
-        return 0.0f;
-
-    return 1.0f;
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && ShouldAvoidVashjStaticCharge(bot, vashj) ? 0.0f : 1.0f;
 }
 
 // Bots should not loot the core with normal looting logic
@@ -994,7 +994,7 @@ float LadyVashjCorePassersPrioritizePositioningMultiplier::GetValueInEncounter(A
         return 0.0f;
 
     // The designated looter must stay on the Tainted Elemental until it has the core.
-    if (botAI->HasCheat(BotCheatMask::raid) && bot == coreHandlers[0] && !hasCore(bot) &&
+    if (bot == coreHandlers[0] && !hasCore(bot) &&
         dynamic_cast<LadyVashjAssignPhase2AndPhase3DpsPriorityAction*>(action))
     {
         constexpr float corpseSearchRadius = 30.0f;
@@ -1003,14 +1003,14 @@ float LadyVashjCorePassersPrioritizePositioningMultiplier::GetValueInEncounter(A
             return 0.0f;
     }
 
-    // First and second passers block movement when the looter teleports to the elemental
+// First and second passers block movement when the looter teleports to the elemental
     Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
     if (tainted && coreHandlers[0] && coreHandlers[0]->GetExactDist2d(tainted) < 5.0f &&
         (bot == coreHandlers[1] || bot == coreHandlers[2]) &&
         (dynamic_cast<MovementAction*>(action) &&
          !dynamic_cast<LadyVashjPassTheTaintedCoreAction*>(action)))
         return 0.0f;
-
+    // End By leewheel
     // If any prior handler (including self) recently had the core, block other movement
     if (AnyRecentCoreInInventory(botAI, bot) &&
         dynamic_cast<MovementAction*>(action) &&
@@ -1031,7 +1031,7 @@ float LadyVashjDisableAutoTargetAndMoveMultiplier::GetValueInEncounter(Action *a
     if (dynamic_cast<AvoidAoeAction*>(action))
         return 0.0f;
 
-    int8 phase = GetLadyVashjPhase(vashj);
+    int8 const phase = GetLadyVashjPhase(vashj);
 
     if (phase == 2)
     {
@@ -1056,6 +1056,32 @@ float LadyVashjDisableAutoTargetAndMoveMultiplier::GetValueInEncounter(Action *a
         if (enchanted && AI_VALUE(Unit*, "current target") == enchanted &&
             dynamic_cast<CastDebuffSpellOnAttackerAction*>(action))
             return 0.0f;
+
+        // Cluster ranged shoot from their slots. Only those sent after a Tainted Elemental walk
+        // to it, and those stepping in to cast range of a Strider.
+        if (PlayerbotAI::IsRangedDps(bot) &&
+            (dynamic_cast<ReachTargetAction*>(action) ||
+             dynamic_cast<CombatFormationMoveAction*>(action) ||
+             IsRepositionAction(bot, action)))
+        {
+            bool const stepsInToStrider = dynamic_cast<ReachTargetAction*>(action) &&
+                IsVashjStriderToStepInTo(bot, AI_VALUE(Unit*, "current target"));
+            if (!stepsInToStrider)
+            {
+                Unit* tainted = AI_VALUE2(Unit*, "find target", "tainted elemental");
+                if (!tainted || !IsVashjTaintedElementalKiller(bot, tainted))
+                    return 0.0f;
+            }
+        }
+
+        // Cluster healers heal from their slots too
+        if (PlayerbotAI::IsHeal(bot) &&
+            (dynamic_cast<ReachTargetAction*>(action) ||
+             dynamic_cast<CombatFormationMoveAction*>(action)) &&
+            GetVashjClusterSlot(bot).cluster >= 0)
+        {
+            return 0.0f;
+        }
     }
 
     if (phase == 3)
@@ -1089,7 +1115,7 @@ float LadyVashjDisableAutoTargetAndMoveMultiplier::GetValueInEncounter(Action *a
 
 float LadyVashjSaveHandOfFreedomMultiplier::GetValueInEncounter(Action *action)
 {
-    if (botAI->GetState() != BOT_STATE_NON_COMBAT)
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
     if (bot->getClass() != CLASS_PALADIN)
@@ -1100,4 +1126,31 @@ float LadyVashjSaveHandOfFreedomMultiplier::GetValueInEncounter(Action *action)
 
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     return vashj && GetLadyVashjPhase(vashj) == 3 ? 0.0f : 1.0f;
+}
+
+// Near a pool, only the melee spore action moves melee dps. Stock reach-melee would take them
+// straight back through it.
+float LadyVashjMeleeControlSporeAvoidanceMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    if (dynamic_cast<LadyVashjMeleeMoveAroundToxicSporesAction*>(action) ||
+        dynamic_cast<LadyVashjAssignPhase2AndPhase3DpsPriorityAction*>(action) ||
+        dynamic_cast<LadyVashjSetGroundingTotemInMainTankGroupAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    if (!IsVashjRingMelee(bot))
+        return 1.0f;
+
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 3)
+        return 1.0f;
+
+    return IsNearToxicSpores(botAI, bot, TOXIC_SPORES_MELEE_CONTROL_RADIUS) ? 0.0f : 1.0f;
 }

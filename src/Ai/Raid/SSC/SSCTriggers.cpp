@@ -5,14 +5,13 @@
  */
 
 #include "SSCTriggers.h"
-#include "Corpse.h"
 #include "EncounterHelpers.h"
-#include "LootObjectStack.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "SSCActions.h"
 #include "SSCHelpers.h"
+#include "TemporarySummon.h"
 #include <algorithm>
 
 using namespace SscHelpers;
@@ -34,18 +33,21 @@ bool UnderbogColossusInToxicPoolTrigger::IsActive()
 
 bool GreyheartTidecallerWaterElementalTotemSpawnedTrigger::IsActive()
 {
-    // By leewheel 2026-09-22 合并brighton the-lab a5541bb4：采纳上游把判定改为"机制跟踪者"
+// By leewheel 2026-09-22 合并brighton the-lab a5541bb4：采纳上游把判定改为"机制跟踪者"
     //   （IsMechanicTrackerBot），并按规则第 97 条 entry 化：greyheart tidecaller = 21229(暗心唤潮者)。
     return IsMechanicTrackerBot(bot, SSC_MAP_ID) &&
         AI_VALUE2(Unit*, "find target", "21229");
+    // End By leewheel
 }
 
 // Hydross the Unstable <Duke of Currents>
 
 bool HydrossTheUnstableShouldBeTankedByFrostTankTrigger::IsActiveInEncounter()
 {
+// By leewheel 2026-09-26 合并brighton: 保留本地entry化(21216)
     return PlayerbotAI::IsMainTank(bot) &&
         AI_VALUE2(Unit*, "find target", "21216");
+    // End By leewheel
 }
 
 bool HydrossTheUnstableShouldBeTankedByNatureTankTrigger::IsActiveInEncounter()
@@ -56,7 +58,10 @@ bool HydrossTheUnstableShouldBeTankedByNatureTankTrigger::IsActiveInEncounter()
 
 bool HydrossTheUnstableRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "21216");
+// By leewheel 2026-09-26 合并brighton: 采纳冰霜阶段判定, entry化(21216)
+    return PlayerbotAI::IsRanged(bot) &&
+        IsHydrossInFrostPhase(AI_VALUE2(Unit*, "find target", "21216"));
+    // End By leewheel
 }
 
 bool HydrossTheUnstableTankNeedsAggroUponPhaseChangeTrigger::IsActiveInEncounter()
@@ -122,7 +127,7 @@ bool TheLurkerBelowMeleeCannotReachTargetTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsMelee(bot))
         return false;
 
-    // A melee bot with a target out of melee range that is neither moving nor casting is stuck.
+    // Consider the bot stuck if it is not moving or casting even with a target out of melee range.
     if (bot->isMoving() || bot->IsNonMeleeSpellCast(false))
         return false;
 
@@ -139,7 +144,7 @@ bool TheLurkerBelowMeleeCannotReachTargetTrigger::IsActiveInEncounter()
 
 // Leotheras the Blind
 
-bool LeotherasTheBlindDemonFormShouldBeTankedByWarlockTrigger::IsActiveInEncounter()
+bool LeotherasTheBlindWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_WARLOCK)
         return false;
@@ -147,13 +152,13 @@ bool LeotherasTheBlindDemonFormShouldBeTankedByWarlockTrigger::IsActiveInEncount
     if (!AI_VALUE2(Unit*, "find target", "21215"))
         return false;
 
-    if (!IsLeotherasWarlockTank(bot))
-        return false;
-
     if (HasInnerDemon(bot))
         return false;
 
-    return GetActiveLeotherasDemon(bot);
+    if (!GetActiveLeotherasDemon(botAI))
+        return false;
+
+    return IsLeotherasWarlockTank(bot);
 }
 
 bool LeotherasTheBlindOnlyWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
@@ -167,11 +172,11 @@ bool LeotherasTheBlindOnlyWarlockShouldTankDemonFormTrigger::IsActiveInEncounter
     if (HasInnerDemon(bot))
         return false;
 
-    // If there is no Warlock tank, then traditional tanks will have to tank the demon form.
-    if (!GetLeotherasWarlockTank(bot))
+    if (!GetPhase2LeotherasDemon(botAI))
         return false;
 
-    return GetPhase2LeotherasDemon(bot);
+    // If there is no Warlock tank, then traditional tanks will have to tank the demon form.
+    return GetLeotherasWarlockTank(bot);
 }
 
 bool LeotherasTheBlindRangedShouldSpreadTrigger::IsActiveInEncounter()
@@ -212,7 +217,7 @@ bool LeotherasTheBlindTooManyChaosBlastStacksTrigger::IsActiveInEncounter()
     if (!HasTooManyChaosBlastStacks(bot))
         return false;
 
-    Creature* leotherasDemon = GetActiveLeotherasDemon(bot);
+    Creature* leotherasDemon = GetActiveLeotherasDemon(botAI);
     return leotherasDemon && leotherasDemon->GetVictim() != bot;
 }
 
@@ -232,10 +237,10 @@ bool LeotherasTheBlindInFinalPhaseTrigger::IsActiveInEncounter()
     if (HasInnerDemon(bot))
         return false;
 
-    if (IsLeotherasWarlockTank(bot))
+    if (!IsLeotherasFinalPhase(botAI))
         return false;
 
-    return IsLeotherasFinalPhase(bot);
+    return !IsLeotherasWarlockTank(bot);
 }
 
 bool LeotherasTheBlindHunterShouldMisdirectDemonFormTrigger::IsActiveInEncounter()
@@ -249,7 +254,7 @@ bool LeotherasTheBlindHunterShouldMisdirectDemonFormTrigger::IsActiveInEncounter
     if (HasInnerDemon(bot))
         return false;
 
-    return GetActiveLeotherasDemon(bot);
+    return GetActiveLeotherasDemon(botAI);
 }
 
 bool LeotherasTheBlindShouldManageDpsWaitTimersTrigger::IsActiveInEncounter()
@@ -313,26 +318,38 @@ bool FathomLordKarathressShouldManageDpsTimerTrigger::IsActiveInEncounter()
         AI_VALUE2(Unit*, "find target", "21214");
 }
 
-// Only the bots close enough to Caribdis for a Cyclone to be summoned on them need the spread
 bool FathomLordKarathressRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    // By leewheel 2026-09-23 合并brighton the-lab 356c39f4：上游新增本触发器 —— 旋风会点名
+// By leewheel 2026-09-23 合并brighton the-lab 356c39f4：上游新增本触发器 —— 旋风会点名
     //   卡里布迪斯施法距离内的随机玩家、并波及自身 4 码，只有 45 码内的范围职业需要散开。
     //   按规则第 97 条 entry 化：fathom-guard caribdis = 21964（深水卫士卡里布迪斯）。
     Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
     // End By leewheel
     return caribdis && bot->IsWithinDist(caribdis, CARIBDIS_CYCLONE_SUMMON_RANGE);
+    // By leewheel 2026-09-26
 }
 
 // A bot left hanging still has the knockback's generator in its controlled slot once the tosses
 // are over; while the aura is up, more tosses are coming and the arc is left to run
 bool FathomLordKarathressLiftedByCycloneTrigger::IsActiveInEncounter()
 {
-    return !bot->HasAura(Id(SscSpells::SPELL_CYCLONE)) &&
-        bot->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_CONTROLLED) == EFFECT_MOTION_TYPE;
+    if (bot->HasAura(Id(SscSpells::SPELL_CYCLONE)) ||
+        bot->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_CONTROLLED) != EFFECT_MOTION_TYPE)
+    {
+        return false;
+    }
+
+    // Only a bot left well off the floor. Any other knockback, such as Knock Away from Sharkkis's
+    // pets (a flat shove topping out under half a yard), is left to run its course.
+    float const floorZ = bot->GetMapHeight(
+        bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), true, MAX_FALL_DISTANCE);
+    if (floorZ <= INVALID_HEIGHT || bot->GetPositionZ() - floorZ <= CYCLONE_DROP_HEIGHT)
+        return false;
+
+    return AI_VALUE2(Unit*, "find target", "fathom-lord karathress");
 }
 
 // Morogrim Tidewalker
@@ -356,23 +373,25 @@ bool MorogrimTidewalkerRangedShouldStackTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    // By leewheel 2026-09-24 合并 brighton 999582f7：采纳上游——阈值改用
+// By leewheel 2026-09-24 合并 brighton 999582f7：采纳上游——阈值改用
     //   TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT（比 P2 血量阈值宽 2%、<= 比较），
     //   并新增 P1 治疗集合距离 trigger；英文名按规则第 97 条 entry 化：morogrim tidewalker = 21213。
     //   Ranged set off with the tank: behind him, they cannot get in front of him on the way
     Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
+    // End By leewheel
     return tidewalker && tidewalker->GetHealthPct() <= TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT;
 }
 
-// Phase 1 only: from the move to the corner on, healers are part of the ranged stack
-bool MorogrimTidewalkerHealerIsTooFarFromBossTrigger::IsActiveInEncounter()
+// Phase 1 only. To keep bots from chasing murlocs across the room, which is particularly prone to
+// happening with bots that leave Watery Graves right as murlocs spawn.
+bool MorogrimTidewalkerTooFarFromBossTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsHeal(bot))
+    if (PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
     return tidewalker && tidewalker->GetHealthPct() > TIDEWALKER_PHASE_2_MOVE_HEALTH_PCT &&
-        !bot->IsWithinDist(tidewalker, TIDEWALKER_HEALER_MAX_DISTANCE);
+        bot->GetExactDist(tidewalker) >= TIDEWALKER_MAX_DISTANCE_FROM_BOSS;
 }
 
 // Lady Vashj <Coilfang Matron>
@@ -386,7 +405,7 @@ bool LadyVashjShouldBeTankedTrigger::IsActiveInEncounter()
     if (!vashj)
         return false;
 
-    int8 phase = GetLadyVashjPhase(vashj);
+    int8 const phase = GetLadyVashjPhase(vashj);
     return phase == 1 || phase == 3;
 }
 
@@ -395,8 +414,42 @@ bool LadyVashjRangedShouldSpreadInPhase1Trigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
+// By leewheel 2026-09-26 合并brighton: 采纳brighton拆分设计(Phase1 spread/簇位抱簇/Phase3定位4触发器), vashj查找entry化(21212)
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    return vashj && GetLadyVashjPhase(vashj) == 1;
+    if (!vashj || GetLadyVashjPhase(vashj) != 1)
+        return false;
+
+    return !HasStaticCharge(bot);
+}
+
+bool LadyVashjClusterSlotsNeedHoldersTrigger::IsActiveInEncounter()
+{
+    if (!IsMechanicTrackerBot(bot, SSC_MAP_ID))
+        return false;
+
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && GetLadyVashjPhase(vashj) == 2 && HasVashjClusterVacancy(bot);
+}
+
+bool LadyVashjShouldHoldClusterInPhase2Trigger::IsActiveInEncounter()
+{
+    if (!PlayerbotAI::IsRangedDps(bot) && !PlayerbotAI::IsHeal(bot))
+        return false;
+
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && GetLadyVashjPhase(vashj) == 2;
+}
+
+// Hunters are left free to go after Sporebats, and the Static Charge action moves a holder on its
+// own.
+bool LadyVashjRangedShouldPositionInPhase3Trigger::IsActiveInEncounter()
+{
+    if (!PlayerbotAI::IsRanged(bot) || bot->getClass() == CLASS_HUNTER || HasStaticCharge(bot))
+        return false;
+
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && GetLadyVashjPhase(vashj) == 3;
+    // End By leewheel
 }
 
 bool LadyVashjShamanShouldGroundShockBlastTrigger::IsActiveInEncounter()
@@ -408,44 +461,30 @@ bool LadyVashjShamanShouldGroundShockBlastTrigger::IsActiveInEncounter()
     if (!vashj)
         return false;
 
-    int8 phase = GetLadyVashjPhase(vashj);
+    int8 const phase = GetLadyVashjPhase(vashj);
     if (phase != 1 && phase != 3)
         return false;
 
-    return IsMainTankInSameSubgroup(bot);
+    return GetVashjGroundingShaman(bot) == bot;
 }
 
 bool LadyVashjStaticChargeOnGroupMemberTrigger::IsActiveInEncounter()
 {
-    if (!AI_VALUE2(Unit*, "find target", "21212"))
-        return false;
-
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (member && member->HasAura(Id(SscSpells::SPELL_STATIC_CHARGE)))
-            return true;
-    }
-
-    return false;
+// By leewheel 2026-09-26 合并brighton: 采纳ShouldAvoidVashjStaticCharge辅助实现, 查找entry化(21212)
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && ShouldAvoidVashjStaticCharge(bot, vashj);
+    // End By leewheel
 }
 
-bool LadyVashjPullingBossInPhase1AndPhase3Trigger::IsActiveInEncounter()
+bool LadyVashjPullingBossTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
+// By leewheel 2026-09-26 合并brighton: 采纳简化健康判定(BOSS_ENGAGED_HEALTH_PCT), 查找entry化(21212)
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    if (!vashj)
-        return false;
-
-    return (vashj->GetHealthPct() <= 100.0f && vashj->GetHealthPct() > 90.0f) ||
-           (!vashj->HasUnitState(UNIT_STATE_ROOT) && vashj->GetHealthPct() <= 50.0f &&
-            vashj->GetHealthPct() > 40.0f);
+    return vashj && vashj->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
+    // End By leewheel
 }
 
 bool LadyVashjAddsSpawnInPhase2AndPhase3Trigger::IsActiveInEncounter()
@@ -457,67 +496,119 @@ bool LadyVashjAddsSpawnInPhase2AndPhase3Trigger::IsActiveInEncounter()
     if (!vashj)
         return false;
 
-    int8 phase = GetLadyVashjPhase(vashj);
+    int8 const phase = GetLadyVashjPhase(vashj);
     return phase == 2 || phase == 3;
 }
 
+// Strider actions are predicated on the fact that you will have only one Strider up at once.
+// If you have more than one up at a time, you likely do not have the DPS to complete the fight.
 bool LadyVashjCoilfangStriderIsApproachingTrigger::IsActiveInEncounter()
 {
-    return AI_VALUE2(Unit*, "find target", "22056");
+// By leewheel 2026-09-26 合并brighton: 采纳IsTank门槛, 查找entry化(22056)
+    return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "22056");
+    // End By leewheel
 }
 
-// Striders are not tankable without a cheat to block Fear so there is no point in misdirecting
-// if raid cheats are not enabled. Unlike a boss pull, a strider already on its tank needs nothing.
-bool LadyVashjHunterShouldMisdirectStriderTrigger::IsActiveInEncounter()
+bool LadyVashjCoilfangEliteShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_HUNTER || !botAI->HasCheat(BotCheatMask::raid))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    Unit* strider = AI_VALUE2(Unit*, "find target", "22056");
-    if (!strider)
+// By leewheel 2026-09-26 合并brighton: 采纳"当前目标为coilfang精英且打bot"语义
+    Unit* elite = AI_VALUE(Unit*, "current target");
+    if (!elite || elite->GetEntry() != Id(SscNpcs::NPC_COILFANG_ELITE) ||
+        elite->GetVictim() != bot)
+    {
         return false;
+    }
+    // End By leewheel
 
-    Player* firstAssistTank = GetGroupAssistTank(bot, 0);
-    return firstAssistTank && strider->GetVictim() != firstAssistTank;
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && GetLadyVashjPhase(vashj) == 2;
 }
 
-bool LadyVashjTaintedElementalCheatTrigger::IsActiveInEncounter()
+// Idle means not on an Elite, a Strider, or an Enchanted within the tank leash.
+bool LadyVashjTankIsIdleAwayFromTheMiddleTrigger::IsActiveInEncounter()
 {
-    if (!botAI->HasCheat(BotCheatMask::raid))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "21212"))
-        return false;
-
-    bool taintedPresent = false;
-    if (AI_VALUE2(Unit*, "find target", "22009"))
+// By leewheel 2026-09-26 合并brighton: 采纳"phase2且距boss≥VASHJ_IDLE_TANK_DISTANCE即空闲"语义(与上方注释一致), 查找entry化(21212)
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 2 ||
+        bot->GetExactDist(vashj) < VASHJ_IDLE_TANK_DISTANCE)
     {
-        taintedPresent = true;
+        return false;
     }
-    else
+    // End By leewheel
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target || !target->IsAlive())
+        return true;
+
+    switch (target->GetEntry())
     {
-        GuidVector corpses = AI_VALUE(GuidVector, "nearest corpses");
-        for (auto const& guid : corpses)
-        {
-            LootObject loot(bot, guid);
-            WorldObject* object = loot.GetWorldObject(bot);
-            if (!object)
-                continue;
-
-            if (Creature* creature = object->ToCreature();
-                creature->GetEntry() == Id(SscNpcs::NPC_TAINTED_ELEMENTAL) && !creature->IsAlive())
-            {
-                taintedPresent = true;
-                break;
-            }
-        }
+        case Id(SscNpcs::NPC_COILFANG_ELITE):
+        case Id(SscNpcs::NPC_COILFANG_STRIDER):
+            return false;
+        case Id(SscNpcs::NPC_ENCHANTED_ELEMENTAL):
+            return vashj->GetExactDist2d(target) > VASHJ_TANK_LEASH_DISTANCE;
+        default:
+            return true;
     }
+}
 
-    if (!taintedPresent)
+// Only a new elemental, or a looter who died on the way, needs a looter chosen.
+bool LadyVashjTaintedElementalNeedsLooterTrigger::IsActiveInEncounter()
+{
+    if (!IsMechanicTrackerBot(bot, SSC_MAP_ID))
         return false;
 
-    return GetDesignatedCoreLooter(botAI, bot) == bot &&
-           !bot->HasItemCount(Id(SscItems::ITEM_TAINTED_CORE), 1, false);
+    Unit* tainted = AI_VALUE2(Unit*, "find target", "tainted elemental");
+    if (!tainted)
+        return false;
+
+    auto it = vashjTaintedCoreLooter.find(bot->GetInstanceId());
+    if (it == vashjTaintedCoreLooter.end() || it->second.tainted != tainted->GetGUID())
+        return true;
+
+    Player* looter = ObjectAccessor::GetPlayer(*bot, it->second.looter);
+    return !looter || !looter->IsAlive();
+}
+
+// The looter and the two ranged dps closest to the elemental.
+bool LadyVashjBotShouldAttackTaintedElementalTrigger::IsActiveInEncounter()
+{
+    if (PlayerbotAI::IsTank(bot))
+        return false;
+
+    Unit* tainted = AI_VALUE2(Unit*, "find target", "tainted elemental");
+    return tainted && (GetDesignatedCoreLooter(botAI, bot) == bot ||
+        IsVashjTaintedElementalKiller(bot, tainted));
+}
+
+// Stays true on the corpse until the core is looted.
+bool LadyVashjBotIsTaintedCoreLooterTrigger::IsActiveInEncounter()
+{
+    if (PlayerbotAI::IsTank(bot) || GetDesignatedCoreLooter(botAI, bot) != bot)
+        return false;
+
+    Creature* tainted = GetVashjTaintedElemental(bot);
+    bool const hasCore = bot->HasItemCount(Id(SscItems::ITEM_TAINTED_CORE), 1, false);
+
+    // TEMP LOG
+    if (hasCore && TaintedLogFirstTime(bot, "core"))
+    {
+        LOG_INFO("playerbots", "[SSC tainted] +{}ms looter {} has the core",
+            TaintedLogElapsedMs(bot), bot->GetName());
+    }
+    if (!tainted && TaintedLogFirstTime(bot, "gone"))
+    {
+        LOG_INFO("playerbots", "[SSC tainted] +{}ms elemental gone, core looted: {}",
+            TaintedLogElapsedMs(bot), TaintedLogSeen(bot, "core") ? "yes" : "NO");
+    }
+
+    return tainted && !hasCore;
 }
 
 bool LadyVashjTaintedCoreWasLootedTrigger::IsActiveInEncounter()
@@ -530,12 +621,15 @@ bool LadyVashjTaintedCoreWasLootedTrigger::IsActiveInEncounter()
 
     bool isCoreHandler = false;
     for (Player* handler : coreHandlers)
+    {
         if (handler == bot)
             isCoreHandler = true;
+    }
 
     if (!isCoreHandler)
         return false;
 
+// By leewheel 2026-09-26 合并brighton: 保留本地"首二传包手就位"早退块
     // First and second passers move to positions as soon as the elemental appears
     Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
     if (tainted && coreHandlers[0] && coreHandlers[0]->GetExactDist2d(tainted) < 5.0f &&
@@ -543,29 +637,101 @@ bool LadyVashjTaintedCoreWasLootedTrigger::IsActiveInEncounter()
         return true;
 
     // Main logic: run if core is in play for this bot or a prior handler
+    // End By leewheel
     return AnyRecentCoreInInventory(botAI, bot);
 }
 
-bool LadyVashjInPhase3Trigger::IsActiveInEncounter()
+bool LadyVashjPetShouldSwitchTargetTrigger::IsActiveInEncounter()
 {
+    Guardian* pet = bot->GetGuardianPet();
+    if (!pet || !pet->IsAlive() || pet->HasReactState(REACT_PASSIVE))
+        return false;
+
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    return vashj && GetLadyVashjPhase(vashj) == 3;
+    if (!vashj)
+        return false;
+
+    int8 const phase = GetLadyVashjPhase(vashj);
+    if (phase != 2 && phase != 3)
+        return false;
+
+    if (Unit* target = GetVashjPetTarget(botAI, pet, vashj))
+        return pet->GetVictim() != target;
+
+    // Nothing worth attacking, so only a pet still on an immune Vashj needs calling back
+    return pet->GetVictim() == vashj;
+}
+
+// Bots going after Sporebats sometimes walk up into the air, or end up on the pipes above the
+// dais. A bot never falls on its own, so it stays up there.
+bool LadyVashjBotIsAboveTheGroundTrigger::IsActiveInEncounter()
+{
+// By leewheel 2026-09-26 合并brighton: 采纳"高于地面高度"判定+BotIsInToxicSpores/MeleeNearToxicSpores新增触发器, vashj查找entry化(21212)
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 3)
+        return false;
+
+    // Search down from the dais, not from the bot, so a bot on the pipes still reads as high
+    float const floorZ = bot->GetMapHeight(
+        bot->GetPositionX(), bot->GetPositionY(), VASHJ_PLATFORM_CENTER_POSITION.GetPositionZ());
+    return floorZ > INVALID_HEIGHT && bot->GetPositionZ() - floorZ > 1.5f;
+}
+
+// Melee dps have their own trigger, below.
+bool LadyVashjBotIsInToxicSporesTrigger::IsActiveInEncounter()
+{
+    if (IsVashjRingMelee(bot))
+        return false;
+
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 3)
+        return false;
+
+    float const radius = vashj->GetVictim() == bot ?
+        TOXIC_SPORES_TANK_AVOID_RADIUS : TOXIC_SPORES_AVOID_RADIUS;
+    return IsNearToxicSpores(botAI, bot, radius);
+}
+
+bool LadyVashjMeleeNearToxicSporesTrigger::IsActiveInEncounter()
+{
+    if (!IsVashjRingMelee(bot))
+        return false;
+
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && GetLadyVashjPhase(vashj) == 3 &&
+        IsNearToxicSpores(botAI, bot, TOXIC_SPORES_MELEE_CONTROL_RADIUS);
+    // End By leewheel
 }
 
 bool LadyVashjEntangleOnMeleeTrigger::IsActiveInEncounter()
 {
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    if (!vashj || GetLadyVashjPhase(vashj) != 3)
+// By leewheel 2026-09-26 合并brighton: 采纳Paladin门槛+phase1/3允许(与注释一致), vashj查找entry化(21212)
+    if (bot->getClass() != CLASS_PALADIN)
         return false;
+
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj)
+        return false;
+
+    int8 const phase = GetLadyVashjPhase(vashj);
+    if (phase != 1 && phase != 3)
+        return false;
+    // End By leewheel
 
     Group* group = bot->GetGroup();
     if (!group)
         return false;
 
+    // In phase 1 only a melee holding Static Charge needs freeing, and never her target, who
+    // doesn't move for it. The stock Hand of Freedom takes the nearest rooted member otherwise.
+    Unit* vashjVictim = vashj->GetVictim();
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
         if (!member || !member->HasAura(Id(SscSpells::SPELL_ENTANGLE)))
+            continue;
+
+        if (phase == 1 && (member == vashjVictim || !HasStaticCharge(member)))
             continue;
 
         if (PlayerbotAI::IsMelee(member))
@@ -573,4 +739,9 @@ bool LadyVashjEntangleOnMeleeTrigger::IsActiveInEncounter()
     }
 
     return false;
+}
+
+bool LadyVashjRogueHasStaticChargeTrigger::IsActiveInEncounter()
+{
+    return bot->getClass() == CLASS_ROGUE && HasStaticCharge(bot);
 }

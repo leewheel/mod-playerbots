@@ -40,7 +40,7 @@ void RaidSscStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("hydross the unstable stop dps upon phase change", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("hydross the unstable should manage phase timers", {
-        NextAction("hydross the unstable manage timers", ACTION_EMERGENCY + 10) }));
+        NextAction("hydross the unstable manage phase timers", ACTION_EMERGENCY + 10) }));
 
     // The Lurker Below
     triggers.push_back(new TriggerNode("the lurker below spout is active", {
@@ -62,7 +62,7 @@ void RaidSscStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     // Leotheras the Blind
     triggers.push_back(new TriggerNode(
-        "leotheras the blind demon form should be tanked by warlock", {
+        "leotheras the blind warlock should tank demon form", {
         NextAction("leotheras the blind warlock tank attack boss", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("leotheras the blind only warlock should tank demon form", {
@@ -119,8 +119,8 @@ void RaidSscStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("morogrim tidewalker ranged should stack", {
         NextAction("morogrim tidewalker stack ranged behind boss", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("morogrim tidewalker healer is too far from boss", {
-        NextAction("morogrim tidewalker return healer to boss", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("morogrim tidewalker too far from boss", {
+        NextAction("morogrim tidewalker return to boss", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("morogrim tidewalker pulling boss", {
         NextAction("morogrim tidewalker misdirect boss to main tank", ACTION_RAID) }));
@@ -132,17 +132,31 @@ void RaidSscStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("lady vashj ranged should spread in phase 1", {
         NextAction("lady vashj phase 1 spread ranged in arc", ACTION_RAID) }));
 
+    triggers.push_back(new TriggerNode("lady vashj cluster slots need holders", {
+        NextAction("lady vashj assign cluster slots", ACTION_EMERGENCY + 14) }));
+
+    triggers.push_back(new TriggerNode("lady vashj should hold cluster in phase 2", {
+        NextAction("lady vashj phase 2 position in cluster", ACTION_RAID + 1) }));
+
+    triggers.push_back(new TriggerNode("lady vashj ranged should position in phase 3", {
+        NextAction("lady vashj phase 3 position ranged", ACTION_RAID) }));
+
     triggers.push_back(new TriggerNode("lady vashj shaman should ground shock blast", {
         NextAction("lady vashj set grounding totem in main tank group", ACTION_EMERGENCY + 1) }));
 
     triggers.push_back(new TriggerNode("lady vashj static charge on group member", {
         NextAction("lady vashj static charge move away from group", ACTION_EMERGENCY + 7) }));
 
-    triggers.push_back(new TriggerNode("lady vashj pulling boss in phase 1 and phase 3", {
+    triggers.push_back(new TriggerNode("lady vashj pulling boss", {
         NextAction("lady vashj misdirect boss to main tank", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("lady vashj tainted elemental cheat", {
-        NextAction("lady vashj teleport to tainted elemental", ACTION_EMERGENCY + 12),
+    triggers.push_back(new TriggerNode("lady vashj tainted elemental needs looter", {
+        NextAction("lady vashj assign tainted core looter", ACTION_EMERGENCY + 13) }));
+
+    triggers.push_back(new TriggerNode("lady vashj bot should attack tainted elemental", {
+        NextAction("lady vashj attack tainted elemental", ACTION_EMERGENCY + 12) }));
+
+    triggers.push_back(new TriggerNode("lady vashj bot is tainted core looter", {
         NextAction("lady vashj loot tainted core", ACTION_EMERGENCY + 11) }));
 
     triggers.push_back(new TriggerNode("lady vashj tainted core was looted", {
@@ -152,16 +166,31 @@ void RaidSscStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("lady vashj assign phase 2 and phase 3 dps priority", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("lady vashj coilfang strider is approaching", {
-        NextAction("lady vashj tank attack and move away strider", ACTION_EMERGENCY + 1) }));
+        NextAction("lady vashj tank attack and position strider", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("lady vashj hunter should misdirect strider", {
-        NextAction("lady vashj misdirect strider to first assist tank", ACTION_EMERGENCY + 2) }));
+    triggers.push_back(new TriggerNode("lady vashj coilfang elite should be tanked", {
+        NextAction("lady vashj position coilfang elite", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("lady vashj in phase 3", {
+    triggers.push_back(new TriggerNode("lady vashj tank is idle away from the middle", {
+        NextAction("lady vashj tank wait in the middle", ACTION_RAID - 1) }));
+
+    triggers.push_back(new TriggerNode("lady vashj pet should switch target", {
+        NextAction("lady vashj command pet target", ACTION_RAID + 2) }));
+
+    triggers.push_back(new TriggerNode("lady vashj bot is above the ground", {
+        NextAction("lady vashj return to the ground", ACTION_EMERGENCY + 9) }));
+
+    triggers.push_back(new TriggerNode("lady vashj bot is in toxic spores", {
         NextAction("lady vashj avoid toxic spores", ACTION_EMERGENCY + 6) }));
 
+    triggers.push_back(new TriggerNode("lady vashj melee near toxic spores", {
+        NextAction("lady vashj melee move around toxic spores", ACTION_EMERGENCY + 6) }));
+
     triggers.push_back(new TriggerNode("lady vashj entangle on melee", {
-        NextAction("lady vashj use free action abilities", ACTION_EMERGENCY + 8) }));
+        NextAction("lady vashj paladin use hand of freedom", ACTION_EMERGENCY + 8) }));
+
+    triggers.push_back(new TriggerNode("lady vashj rogue has static charge", {
+        NextAction("lady vashj rogue use cloak of shadows", ACTION_EMERGENCY + 8) }));
 }
 
 void RaidSscStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
@@ -199,7 +228,7 @@ void RaidSscStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new FathomLordKarathressMaintainPositionMultiplier(botAI));
     multipliers.push_back(new FathomLordKarathressNoCastingWhileLiftedMultiplier(botAI));
     multipliers.push_back(new FathomLordKarathressApproachingCaribdisMultiplier(botAI));
-    multipliers.push_back(new FathomLordKarathressKeepTargetOutOfSightMultiplier(botAI));
+    multipliers.push_back(new FathomLordKarathressDontDropOutOfSightTargetMultiplier(botAI));
 
     // Morogrim Tidewalker
     multipliers.push_back(new MorogrimTidewalkerDisableTankActionsMultiplier(botAI));
@@ -213,6 +242,7 @@ void RaidSscStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new LadyVashjCorePassersPrioritizePositioningMultiplier(botAI));
     multipliers.push_back(new LadyVashjDisableAutoTargetAndMoveMultiplier(botAI));
     multipliers.push_back(new LadyVashjSaveHandOfFreedomMultiplier(botAI));
+    multipliers.push_back(new LadyVashjMeleeControlSporeAvoidanceMultiplier(botAI));
 }
 
 namespace
@@ -233,10 +263,9 @@ void AppendHydrossAddTankExclusions(
 }
 
 // Leotheras is immune until the Greyheart Spellbinders are killed.
-void AppendLeotherasTheBlindSpellbinderPhaseExclusions(
-    Player* bot, AiObjectContext* context, GuidSet& exclusions)
+void AppendLeotherasTheBlindSpellbinderPhaseExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
-    Unit* leotheras = GetLeotheras(bot);
+    Unit* leotheras = GetLeotheras(botAI);
     if (leotheras && IsSpellbinderPhase(leotheras))
         exclusions.insert(leotheras->GetGUID());
 }
@@ -258,12 +287,11 @@ void AppendMorogrimTidewalkerMurlocExclusions(
     if (!tidewalker)
         return;
 
-    constexpr float eligibleDistance = 50.0f;
     for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* unit = botAI->GetUnit(guid);
         if (unit && unit->GetEntry() == Id(SscNpcs::NPC_TIDEWALKER_LURKER) &&
-            unit->GetExactDist2d(tidewalker) > eligibleDistance)
+            unit->GetExactDist2d(tidewalker) > TIDEWALKER_MURLOC_MAX_TARGET_DISTANCE)
         {
             exclusions.insert(guid);
         }
@@ -285,7 +313,7 @@ void RaidSscStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExc
     //   Vashj Generator 阶段排除。采纳上游结构；各函数内的英文名已在下方按规则第 97 条 entry 化。
     // End By leewheel
     AppendHydrossAddTankExclusions(bot, context, exclusions);
-    AppendLeotherasTheBlindSpellbinderPhaseExclusions(bot, context, exclusions);
+    AppendLeotherasTheBlindSpellbinderPhaseExclusions(botAI, exclusions);
     AppendMorogrimTidewalkerMurlocExclusions(botAI, context, exclusions);
     AppendLadyVashjGeneratorPhaseExclusions(context, exclusions);
 }

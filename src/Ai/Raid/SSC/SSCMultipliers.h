@@ -261,11 +261,11 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class FathomLordKarathressKeepTargetOutOfSightMultiplier : public SscEncounterMultiplier
+class FathomLordKarathressDontDropOutOfSightTargetMultiplier : public SscEncounterMultiplier
 {
 public:
-    FathomLordKarathressKeepTargetOutOfSightMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(botAI, "fathom-lord karathress keep target out of sight") {}
+    FathomLordKarathressDontDropOutOfSightTargetMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "fathom-lord karathress don't drop out of sight target") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -360,6 +360,16 @@ class LadyVashjSaveHandOfFreedomMultiplier : public SscEncounterMultiplier
 public:
     LadyVashjSaveHandOfFreedomMultiplier(PlayerbotAI* botAI)
         : SscEncounterMultiplier(botAI, "lady vashj save hand of freedom") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class LadyVashjMeleeControlSporeAvoidanceMultiplier : public SscEncounterMultiplier
+{
+public:
+    LadyVashjMeleeControlSporeAvoidanceMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "lady vashj melee control spore avoidance") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

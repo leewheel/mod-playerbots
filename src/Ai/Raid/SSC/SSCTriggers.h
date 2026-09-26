@@ -184,12 +184,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class LeotherasTheBlindDemonFormShouldBeTankedByWarlockTrigger : public SscEncounterTrigger
+class LeotherasTheBlindWarlockShouldTankDemonFormTrigger : public SscEncounterTrigger
 {
 public:
-    LeotherasTheBlindDemonFormShouldBeTankedByWarlockTrigger(PlayerbotAI* botAI)
+    LeotherasTheBlindWarlockShouldTankDemonFormTrigger(PlayerbotAI* botAI)
         : SscEncounterTrigger(
-            botAI, "leotheras the blind demon form should be tanked by warlock") {}
+            botAI, "leotheras the blind warlock should tank demon form") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -370,11 +370,11 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class MorogrimTidewalkerHealerIsTooFarFromBossTrigger : public SscEncounterTrigger
+class MorogrimTidewalkerTooFarFromBossTrigger : public SscEncounterTrigger
 {
 public:
-    MorogrimTidewalkerHealerIsTooFarFromBossTrigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "morogrim tidewalker healer is too far from boss") {}
+    MorogrimTidewalkerTooFarFromBossTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "morogrim tidewalker too far from boss") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -402,6 +402,36 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
+class LadyVashjClusterSlotsNeedHoldersTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjClusterSlotsNeedHoldersTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj cluster slots need holders") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjShouldHoldClusterInPhase2Trigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjShouldHoldClusterInPhase2Trigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj should hold cluster in phase 2") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjRangedShouldPositionInPhase3Trigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjRangedShouldPositionInPhase3Trigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj ranged should position in phase 3") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 class LadyVashjShamanShouldGroundShockBlastTrigger : public SscEncounterTrigger
 {
 public:
@@ -422,11 +452,11 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class LadyVashjPullingBossInPhase1AndPhase3Trigger : public SscEncounterTrigger
+class LadyVashjPullingBossTrigger : public SscEncounterTrigger
 {
 public:
-    LadyVashjPullingBossInPhase1AndPhase3Trigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "lady vashj pulling boss in phase 1 and phase 3") {}
+    LadyVashjPullingBossTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj pulling boss") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -452,21 +482,51 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class LadyVashjHunterShouldMisdirectStriderTrigger : public SscEncounterTrigger
+class LadyVashjCoilfangEliteShouldBeTankedTrigger : public SscEncounterTrigger
 {
 public:
-    LadyVashjHunterShouldMisdirectStriderTrigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "lady vashj hunter should misdirect strider") {}
+    LadyVashjCoilfangEliteShouldBeTankedTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj coilfang elite should be tanked") {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class LadyVashjTaintedElementalCheatTrigger : public SscEncounterTrigger
+class LadyVashjTankIsIdleAwayFromTheMiddleTrigger : public SscEncounterTrigger
 {
 public:
-    LadyVashjTaintedElementalCheatTrigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "lady vashj tainted elemental cheat") {}
+    LadyVashjTankIsIdleAwayFromTheMiddleTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj tank is idle away from the middle") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjTaintedElementalNeedsLooterTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjTaintedElementalNeedsLooterTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj tainted elemental needs looter") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjBotShouldAttackTaintedElementalTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjBotShouldAttackTaintedElementalTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj bot should attack tainted elemental") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjBotIsTaintedCoreLooterTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjBotIsTaintedCoreLooterTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj bot is tainted core looter") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -482,11 +542,41 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class LadyVashjInPhase3Trigger : public SscEncounterTrigger
+class LadyVashjPetShouldSwitchTargetTrigger : public SscEncounterTrigger
 {
 public:
-    LadyVashjInPhase3Trigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "lady vashj in phase 3") {}
+    LadyVashjPetShouldSwitchTargetTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj pet should switch target") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjBotIsAboveTheGroundTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjBotIsAboveTheGroundTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj bot is above the ground") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjBotIsInToxicSporesTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjBotIsInToxicSporesTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj bot is in toxic spores") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjMeleeNearToxicSporesTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjMeleeNearToxicSporesTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj melee near toxic spores") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -497,6 +587,16 @@ class LadyVashjEntangleOnMeleeTrigger : public SscEncounterTrigger
 public:
     LadyVashjEntangleOnMeleeTrigger(PlayerbotAI* botAI)
         : SscEncounterTrigger(botAI, "lady vashj entangle on melee") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjRogueHasStaticChargeTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjRogueHasStaticChargeTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj rogue has static charge") {}
 
 protected:
     bool IsActiveInEncounter() override;

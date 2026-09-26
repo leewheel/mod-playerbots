@@ -543,7 +543,7 @@ bool MuruCastStunOnBerserkerAction::Execute(Event /*event*/)
     if (!berserker)
         return false;
 
-    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
+// By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
     auto const castStun = [&](uint32 spellId)
     {
         return botAI->CanCastSpell(spellId, berserker) && botAI->CastSpell(spellId, berserker);
@@ -581,7 +581,7 @@ bool MuruInterruptFelFireballAction::Execute(Event /*event*/)
     if (!furyMage)
         return false;
 
-    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
+// By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
     auto const castInterrupt = [&](uint32 spellId)
     {
         return botAI->CanCastSpell(spellId, furyMage) && botAI->CastSpell(spellId, furyMage);
