@@ -1799,6 +1799,7 @@ bool LadyVashjAssignPhase2AndPhase3DpsPriorityAction::Execute(Event /*event*/)
 {
     Position const& center = VASHJ_PLATFORM_CENTER_POSITION;
 
+    // By leewheel 2026-09-26 合并brighton: boss查找entry化 "lady vashj"→21212
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
@@ -2059,6 +2060,7 @@ bool LadyVashjTankAttackAndPositionStriderAction::Execute(Event /*event*/)
     if (!strider)
         return false;
 
+    // By leewheel 2026-09-26 合并brighton: boss查找entry化 "lady vashj"→21212
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
@@ -2123,6 +2125,7 @@ bool LadyVashjTankAttackAndPositionStriderAction::MoveStriderToHoldPosition(Unit
 // Walks a path, which goes round the generators.
 bool LadyVashjTankWaitInTheMiddleAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-09-26 合并brighton: boss查找entry化 "lady vashj"→21212
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj)
         return false;
