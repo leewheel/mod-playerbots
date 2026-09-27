@@ -20,7 +20,11 @@ bool LootRollAction::Execute(Event /*event*/)
     if (!group)
         return false;
 
-    std::vector<Roll const*> rolls = group->GetRolls();
+    // By leewheel 2026-09-27 合并brighton合并后编译错误：核心 Group::Rolls = std::vector<Roll*>
+    //   （Group.h:195），GetRolls() 返回 std::vector<Roll*>，不能直接构造成 std::vector<Roll const*>。
+    //   改用 auto / 核心类型，下放 for 循环里 Roll* 会隐式转 const。
+    std::vector<Roll*> rolls = group->GetRolls();
+    // End By leewheel
     bool voted = false;
     for (Roll const* roll : rolls)
     {

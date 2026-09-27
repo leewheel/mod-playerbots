@@ -66,7 +66,10 @@ constexpr uint32 SPELL_TITAN_GRIP = 49152;
 constexpr uint32 SPELL_DK_FROST_PRESENCE = 48263;
 constexpr uint32 SPELL_GRAVITY_LAPSE_TK = 39432;
 constexpr uint32 SPELL_GRAVITY_LAPSE_MGT = 44226;
-constexpr uint32 VEHICLE_FLAG_FIXED_POSITION = 0x00200000;
+// By leewheel 2026-09-27 编译错误 C2872：此处局部 constexpr VEHICLE_FLAG_FIXED_POSITION 与核心
+//   VehicleDefines.h:48 的 enum VehicleFlags 成员重名，构成二义性。已删除本行，改用核心
+//   VehicleFlags::VEHICLE_FLAG_FIXED_POSITION（见下方两处用法）。
+// End By leewheel
 }
 
 std::vector<std::string> PlayerbotAI::dispel_whitelist = {
@@ -4382,7 +4385,7 @@ bool PlayerbotAI::IsInVehicle(bool canControl, bool canCast, bool canAttack, boo
         return true;
 
     if (canControl)
-        return seat->CanControl() && !(vehicle->GetVehicleInfo()->m_flags & VEHICLE_FLAG_FIXED_POSITION);
+        return seat->CanControl() && !(vehicle->GetVehicleInfo()->m_flags & VehicleFlags::VEHICLE_FLAG_FIXED_POSITION);
 
     if (canCast)
         return (seat->m_flags & VEHICLE_SEAT_FLAG_CAN_CAST) != 0;
@@ -4394,7 +4397,7 @@ bool PlayerbotAI::IsInVehicle(bool canControl, bool canCast, bool canAttack, boo
         return (seat->m_flags & VEHICLE_SEAT_FLAG_ALLOW_TURNING) != 0;
 
     if (fixed)
-        return (vehicle->GetVehicleInfo()->m_flags & VEHICLE_FLAG_FIXED_POSITION) != 0;
+        return (vehicle->GetVehicleInfo()->m_flags & VehicleFlags::VEHICLE_FLAG_FIXED_POSITION) != 0;
 
     return false;
 }

@@ -389,10 +389,9 @@ void PlayerbotHolder::HandleBotPackets(WorldSession* session)
         ClientOpcodeHandler const* opHandle = opcodeTable[opcode];
         if (!opHandle)
         {
-// By leewheel 2026-09-27 合并brighton the-lab：日志文案保留本地中文，且保留 delete packet 防止泄漏
-            //   （brighton 侧仅改日志为英文，未释放 packet）
+// By leewheel 2026-09-27 合并brighton the-lab：日志文案保留本地中文。循环变量是
+            //   std::unique_ptr<WorldPacket>（brighton 接入核心新接口），RAII 超出作用域自释放，无需也不可 delete。
             LOG_ERROR("playerbots", "机器人会话 {} 队列中存在未处理的 opcode {}，数据包已丢弃。", session->GetAccountId(), static_cast<uint32>(opcode));
-            delete packet;
             // End By leewheel
             continue;
         }
