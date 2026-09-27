@@ -1441,7 +1441,9 @@ bool MorogrimTidewalkerReturnToBossAction::Execute(Event /*event*/)
 
 bool LadyVashjMainTankPositionBossAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-09-27 合并brighton后补标记：boss 查找统一用 entry（Lady Vashj=21212）
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    // End By leewheel
     if (!vashj)
         return false;
 
@@ -1657,7 +1659,9 @@ bool LadyVashjPhase2PositionInClusterAction::Execute(Event /*event*/)
 // spore catches fewer of them.
 bool LadyVashjPhase3PositionRangedAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-09-27 合并brighton后补标记：boss 查找统一用 entry（Lady Vashj=21212）
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    // End By leewheel
     if (!vashj)
         return false;
 
@@ -1723,7 +1727,9 @@ bool LadyVashjSetGroundingTotemInMainTankGroupAction::Execute(Event /*event*/)
     if (bot->GetDistance(mainTank) > distFromTank)
     {
         // Don't walk back in while Static Charge is keeping this bot clear of somebody
+        // By leewheel 2026-09-27 合并brighton后补标记：boss 查找统一用 entry（Lady Vashj=21212）
         Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+        // End By leewheel
         if (vashj && ShouldAvoidVashjStaticCharge(bot, vashj))
             return false;
 
@@ -2416,7 +2422,9 @@ bool LadyVashjLootTaintedCoreAction::Execute(Event /*event*/)
 
 bool LadyVashjPassTheTaintedCoreAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-09-27 合并brighton后补标记：boss 查找统一用 entry（Lady Vashj=21212）
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    // End By leewheel
     if (!vashj)
         return false;
 
@@ -2891,7 +2899,9 @@ bool LadyVashjPassTheTaintedCoreAction::UseCoreOnNearestGenerator(uint32 instanc
 bool LadyVashjCommandPetTargetAction::Execute(Event /*event*/)
 {
     Guardian* pet = bot->GetGuardianPet();
+    // By leewheel 2026-09-27 合并brighton后补标记：boss 查找统一用 entry（Lady Vashj=21212）
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    // End By leewheel
     if (!pet || !vashj)
         return false;
 
@@ -3107,7 +3117,9 @@ bool LadyVashjRangedReachAroundToxicSporesAction::Execute(Event /*event*/)
 
 bool LadyVashjPaladinUseHandOfFreedomAction::Execute(Event /*event*/)
 {
+    // By leewheel 2026-09-27 合并brighton后补标记：boss 查找统一用 entry（Lady Vashj=21212）
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    // End By leewheel
     if (!vashj)
         return false;
 
