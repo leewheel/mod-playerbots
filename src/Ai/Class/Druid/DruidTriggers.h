@@ -17,7 +17,8 @@
 #include "Trigger.h"
 #include <set>
 
-constexpr uint32 AURA_OMEN_OF_CLARITY = 16864;
+inline constexpr uint32 AURA_OMEN_OF_CLARITY = 16864;
+inline constexpr uint32 SPELL_TREE_OF_LIFE = 33891;
 
 class PlayerbotAI;
 
@@ -444,12 +445,12 @@ public:
     }
 };
 
-// Blanketing keeps the Druid in Tree Form between HoT refreshes, so healer dps must be disabled
-// when the blanketing strategy is active and the Druid is in a group.
-class DruidHealerShouldAttackTrigger : public HealerShouldAttackTrigger
+// Blanketing and healer dps compete for a druid in tree form, so healer dps does not take effect
+// for a grouped resto druid with tree form.
+class HealerShouldAttackAndNotBlanketingTrigger : public HealerShouldAttackTrigger
 {
 public:
-    DruidHealerShouldAttackTrigger(PlayerbotAI* botAI) : HealerShouldAttackTrigger(botAI) {}
+    HealerShouldAttackAndNotBlanketingTrigger(PlayerbotAI* botAI) : HealerShouldAttackTrigger(botAI) {}
 
     std::string const getName() override { return "healer should attack and not blanketing"; }
     bool IsActive() override;
@@ -461,7 +462,11 @@ public:
     BlanketHotTrigger(PlayerbotAI* botAI, std::string const& name, std::string const& spell)
         : Trigger(botAI, name), _spell(spell) {}
 
-    Value<Unit*>* GetTargetValue() override;
+    // By leewheel 2026-09-27 合并 brighton fa573dd3：上游把 BlanketHotTrigger 的目标接口由
+    //   GetTargetValue()(返回 Value) 重构为 GetTarget()(直接返回 Unit)，DruidTriggers.cpp:47 实现已同批改为
+    //   BlanketHotTrigger::GetTarget()，此处必须跟上游否则声明与定义不匹配。
+    // End By leewheel
+    Unit* GetTarget() override;
     bool IsActive() override;
 
 private:

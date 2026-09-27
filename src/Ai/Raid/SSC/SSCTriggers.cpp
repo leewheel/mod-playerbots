@@ -349,7 +349,7 @@ bool FathomLordKarathressLiftedByCycloneTrigger::IsActiveInEncounter()
     if (floorZ <= INVALID_HEIGHT || bot->GetPositionZ() - floorZ <= CYCLONE_DROP_HEIGHT)
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "fathom-lord karathress");
+    return AI_VALUE2(Unit*, "find target", "21214");
 }
 
 // Morogrim Tidewalker
@@ -535,7 +535,7 @@ bool LadyVashjCoilfangEliteShouldBeTankedTrigger::IsActiveInEncounter()
     return vashj && GetLadyVashjPhase(vashj) == 2;
 }
 
-// Idle means not on an Elite, a Strider, or an Enchanted within the tank leash.
+// Idle means not on an Elite, a Strider, or an Enchanted near her.
 bool LadyVashjTankIsIdleAwayFromTheMiddleTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsTank(bot))
@@ -560,19 +560,28 @@ bool LadyVashjTankIsIdleAwayFromTheMiddleTrigger::IsActiveInEncounter()
         case Id(SscNpcs::NPC_COILFANG_STRIDER):
             return false;
         case Id(SscNpcs::NPC_ENCHANTED_ELEMENTAL):
-            return vashj->GetExactDist2d(target) > VASHJ_TANK_LEASH_DISTANCE;
+            return vashj->GetExactDist2d(target) > VASHJ_ENCHANTED_NEAR_HER_DISTANCE;
         default:
             return true;
     }
 }
 
 // Only a new elemental, or a looter who died on the way, needs a looter chosen.
+// Phase 2 only, as are the attack and loot triggers below: a core looted in phase 3 has no
+// generator left, and its Paralyze would root the looter.
 bool LadyVashjTaintedElementalNeedsLooterTrigger::IsActiveInEncounter()
 {
     if (!IsMechanicTrackerBot(bot, SSC_MAP_ID))
         return false;
 
-    Unit* tainted = AI_VALUE2(Unit*, "find target", "tainted elemental");
+    // By leewheel 2026-09-27 合并 brighton fa573dd3 后补齐 entry 化（本文件共 6 处）：
+    //   lady vashj = 21212（瓦丝琪）、tainted elemental = 22009（被污染的元素）、
+    //   fathom-lord karathress = 21214（深水领主卡拉瑟雷斯），均查库核定。
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 2)
+        return false;
+
+    Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
     if (!tainted)
         return false;
 
@@ -584,27 +593,35 @@ bool LadyVashjTaintedElementalNeedsLooterTrigger::IsActiveInEncounter()
     return !looter || !looter->IsAlive();
 }
 
-// The looter and the two ranged dps closest to the elemental.
+// The ranged dps of the cluster nearest the elemental. Its looter waits beside it instead (see
+// the loot action).
 bool LadyVashjBotShouldAttackTaintedElementalTrigger::IsActiveInEncounter()
 {
     if (PlayerbotAI::IsTank(bot))
         return false;
 
-    Unit* tainted = AI_VALUE2(Unit*, "find target", "tainted elemental");
-    return tainted && (GetDesignatedCoreLooter(botAI, bot) == bot ||
-        IsVashjTaintedElementalKiller(bot, tainted));
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 2)
+        return false;
+
+    Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
+    return tainted && IsVashjTaintedElementalKiller(bot, tainted);
 }
 
-// Stays true on the corpse until the core is looted.
+// From the looter's pick until the core is taken from the corpse.
 bool LadyVashjBotIsTaintedCoreLooterTrigger::IsActiveInEncounter()
 {
     if (PlayerbotAI::IsTank(bot) || GetDesignatedCoreLooter(botAI, bot) != bot)
         return false;
 
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 2)
+        return false;
+
     Creature* tainted = GetVashjTaintedElemental(bot);
-    bool const hasCore = bot->HasItemCount(Id(SscItems::ITEM_TAINTED_CORE), 1, false);
 
     // TEMP LOG
+    bool const hasCore = bot->HasItemCount(Id(SscItems::ITEM_TAINTED_CORE), 1, false);
     if (hasCore && TaintedLogFirstTime(bot, "core"))
     {
         LOG_INFO("playerbots", "[SSC tainted] +{}ms looter {} has the core",
@@ -616,7 +633,16 @@ bool LadyVashjBotIsTaintedCoreLooterTrigger::IsActiveInEncounter()
             TaintedLogElapsedMs(bot), TaintedLogSeen(bot, "core") ? "yes" : "NO");
     }
 
-    return tainted && !hasCore;
+    return tainted && (tainted->IsAlive() || GetTaintedCoreLootSlot(tainted) >= 0);
+}
+
+// A core still held when phase 3 starts, say from a stalled chain, has no generator left, and its
+// Paralyze roots the holder until it leaves the bags.
+bool LadyVashjBotHoldsTaintedCoreInPhase3Trigger::IsActiveInEncounter()
+{
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    return vashj && GetLadyVashjPhase(vashj) == 3 &&
+        bot->HasItemCount(Id(SscItems::ITEM_TAINTED_CORE), 1, false);
 }
 
 bool LadyVashjTaintedCoreWasLootedTrigger::IsActiveInEncounter()
@@ -637,14 +663,19 @@ bool LadyVashjTaintedCoreWasLootedTrigger::IsActiveInEncounter()
     if (!isCoreHandler)
         return false;
 
-// By leewheel 2026-09-26 合并brighton: 保留本地"首二传包手就位"早退块
+// By leewheel 2026-09-27 合并 brighton fa573dd3：本块三处并存——①上游本链新增的 TaintedLogGenerators
+//   临时调试调用（上游标注 TEMP LOG，随上游去留）；②保留本地"首二传包手就位"早退块（我方逻辑，
+//   基点 605d9a9e 与新旧上游链均无此块）；③上游注释措辞（句尾加句点）。
+// End By leewheel
+    TaintedLogGenerators(bot); // TEMP LOG
+
     // First and second passers move to positions as soon as the elemental appears
     Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
     if (tainted && coreHandlers[0] && coreHandlers[0]->GetExactDist2d(tainted) < 5.0f &&
         (bot == coreHandlers[1] || bot == coreHandlers[2]))
         return true;
 
-    // Main logic: run if core is in play for this bot or a prior handler
+    // Main logic: run if core is in play for this bot or a prior handler.
     // End By leewheel
     return AnyRecentCoreInInventory(botAI, bot);
 }
@@ -718,7 +749,9 @@ bool LadyVashjMeleeNearToxicSporesTrigger::IsActiveInEncounter()
 
 bool LadyVashjRangedReachBlockedByToxicSporesTrigger::IsActiveInEncounter()
 {
-    return IsVashjRangedReachBlockedBySpores(botAI, bot);
+    Unit* target;
+    float range;
+    return GetVashjReachBlockedBySpores(botAI, bot, target, range);
 }
 
 bool LadyVashjEntangleOnMeleeTrigger::IsActiveInEncounter()

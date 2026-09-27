@@ -63,7 +63,8 @@ bool BwlBroodlordRangedTooCloseTrigger::IsActive()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "broodlord lashlayer"))
+    // By leewheel 2026-09-27 按规则第 97 条 entry 化：broodlord lashlayer = 12017（勒什雷尔，查库核定）
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "12017"))
     {
         // In case the bot pulled aggro, prevent it from kiting the boss through the room.
         if (boss->GetVictim() != bot)
@@ -96,7 +97,8 @@ bool BwlAfflictionBronzeTrigger::IsActive()
 bool BwlNefarianPositioningTrigger::IsActive()
 {
     // Prevent non-tanks from rotating the boss while the tanks gain threat.
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "nefarian"))
+    // By leewheel 2026-09-27 按规则第 97 条 entry 化：nefarian = 11583（奈法利安，查库核定）
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "11583"))
         return boss->GetVictim() != bot;
     return false;
 }

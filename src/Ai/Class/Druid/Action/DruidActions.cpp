@@ -260,18 +260,19 @@ bool CastRejuvenationOnNotFullAction::isUseful()
 
 // --- Blanket HoT actions ---
 
-Unit* BlanketHotTargetValue::Calculate()
+ObjectGuid BlanketHotTargetValue::Calculate()
 {
     Group* group = bot->GetGroup();
     if (!group)
-        return nullptr;
+        return ObjectGuid::Empty;
 
     auto eligible = [&](Player* member) -> bool
     {
         return member && member->IsAlive() &&
                !member->IsGameMaster() &&
                bot->GetDistance2d(member) <= sPlayerbotAIConfig.spellDistance &&
-               !botAI->HasAura(qualifier, member, false, true);
+               !botAI->HasAura(qualifier, member, false, true) &&
+               bot->IsWithinLOSInMap(member);
     };
 
     Player* firstMelee  = nullptr;
@@ -284,7 +285,7 @@ Unit* BlanketHotTargetValue::Calculate()
             continue;
 
         if (PlayerbotAI::IsTank(member))
-            return member;
+            return member->GetGUID();
         else if (!firstMelee && PlayerbotAI::IsMelee(member) && !PlayerbotAI::IsTank(member))
             firstMelee = member;
         else if (!firstRanged && PlayerbotAI::IsRanged(member))
@@ -294,10 +295,15 @@ Unit* BlanketHotTargetValue::Calculate()
             break;
     }
 
-    if (firstMelee) return firstMelee;
-    return firstRanged;
+    if (firstMelee)
+        return firstMelee->GetGUID();
+
+    if (firstRanged)
+        return firstRanged->GetGUID();
+
+    return ObjectGuid::Empty;
 }
 
-Value<Unit*>* CastBlanketHotAction::GetTargetValue() { return context->GetValue<Unit*>("blanket hot target", spell); }
+Unit* CastBlanketHotAction::GetTarget() { return botAI->GetUnit(AI_VALUE2(ObjectGuid, "blanket hot target", spell)); }
 
 bool CastBlanketHotAction::isUseful() { return GetTarget() != nullptr; }

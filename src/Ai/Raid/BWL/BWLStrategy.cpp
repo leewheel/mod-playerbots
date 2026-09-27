@@ -92,7 +92,8 @@ void RaidBwlStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExc
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    if (Unit* broodlord = AI_VALUE2(Unit*, "find target", "broodlord lashlayer"))
+    // By leewheel 2026-09-27 按规则第 97 条 entry 化：broodlord lashlayer = 12017（勒什雷尔，查库核定）
+    if (Unit* broodlord = AI_VALUE2(Unit*, "find target", "12017"))
     {
         Unit* bossVictim = broodlord->GetVictim();
         Player* bossVictimPlayer = bossVictim ? bossVictim->ToPlayer() : nullptr;

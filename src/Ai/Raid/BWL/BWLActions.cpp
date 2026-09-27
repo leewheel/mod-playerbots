@@ -268,7 +268,8 @@ bool BwlVaelastraszMoveAwayAction::MoveAlongFleeDirection(Unit const* boss, floa
 
 bool BwlBroodlordRangedMoveAwayAction::Execute(Event /*event*/)
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "broodlord lashlayer"))
+    // By leewheel 2026-09-27 按规则第 97 条 entry 化：broodlord lashlayer = 12017（勒什雷尔，查库核定）
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "12017"))
     {
         float distToTravel = BROODLORD_SAFE_DISTANCE - bot->GetDistance2d(boss);
         if (distToTravel > 0.0f)
