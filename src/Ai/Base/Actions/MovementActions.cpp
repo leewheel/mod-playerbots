@@ -49,7 +49,7 @@ MovementAction::MovementAction(PlayerbotAI* botAI, std::string const name) : Act
 void MovementAction::CreateWp(Player* wpOwner, float x, float y, float z, float o, uint32 entry, bool important)
 {
     float dist = wpOwner->GetDistance(x, y, z);
-    float delay = 1000.0f * dist / wpOwner->GetSpeed(MOVE_RUN) + sPlayerbotAIConfig.reactDelay;
+    float delay = IN_MILLISECONDS * dist / wpOwner->GetSpeed(MOVE_RUN) + sPlayerbotAIConfig.reactDelay;
 
     // if (!important)
     // delay *= 0.25;
@@ -202,7 +202,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
         {
             DoMovePoint(vehicleBase, x, y, z, generatePath, backwards);
             float speed = backwards ? vehicleBase->GetSpeed(MOVE_RUN_BACK) : vehicleBase->GetSpeed(MOVE_RUN);
-            float delay = 1000.0f * (distance / speed);
+            float delay = IN_MILLISECONDS * (distance / speed);
             if (lessDelay)
             {
                 delay -= botAI->GetReactDelay();
@@ -224,7 +224,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
             // bot->CastStop();
 
             DoMovePoint(bot, x, y, z, generatePath, backwards);
-            float delay = 1000.0f * MoveDelay(distance, backwards);
+            float delay = IN_MILLISECONDS * MoveDelay(distance, backwards);
             if (lessDelay)
             {
                 delay -= botAI->GetReactDelay();
@@ -251,7 +251,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
             // bot->CastStop();
 
             DoMovePoint(bot, x, y, modifiedZ, generatePath, backwards);
-            float delay = 1000.0f * MoveDelay(distance, backwards);
+            float delay = IN_MILLISECONDS * MoveDelay(distance, backwards);
             if (lessDelay)
             {
                 delay -= botAI->GetReactDelay();
@@ -289,7 +289,8 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
     //     if (AI_VALUE(LastMovement&, "last movement").nextTeleport > now) // We can not teleport yet. Wait.
     //     {
     //         LOG_DEBUG("playerbots", "AI_VALUE(LastMovement&, \"last movement\").nextTeleport > now");
-    //         botAI->SetNextCheckDelay((AI_VALUE(LastMovement&, "last movement").nextTeleport - now) * 1000);
+    //         botAI->SetNextCheckDelay(
+    //             (AI_VALUE(LastMovement&, "last movement").nextTeleport - now) * IN_MILLISECONDS);
     //         return true;
     //     }
     // }
@@ -1319,7 +1320,7 @@ float MovementAction::MoveDelay(float distance, bool backwards)
 // TODO should this be removed? (or modified to use "last movement" value?)
 void MovementAction::WaitForReach(float distance)
 {
-    float delay = 1000.0f * MoveDelay(distance);
+    float delay = IN_MILLISECONDS * MoveDelay(distance);
 
     if (delay > sPlayerbotAIConfig.maxWaitForMove)
         delay = sPlayerbotAIConfig.maxWaitForMove;
@@ -2621,7 +2622,7 @@ bool TankFaceAction::Execute(Event /*event*/)
 
 bool RearFlankAction::isUseful()
 {
-    Unit* target = AI_VALUE(Unit*, "current target");
+    Unit const* target = GetTarget();
     if (!target)
         return false;
 
@@ -2636,7 +2637,7 @@ bool RearFlankAction::isUseful()
 
 bool RearFlankAction::Execute(Event /*event*/)
 {
-    Unit* target = AI_VALUE(Unit*, "current target");
+    Unit const* target = GetTarget();
     if (!target)
         return false;
 
@@ -2659,6 +2660,11 @@ bool RearFlankAction::Execute(Event /*event*/)
 
     return MoveTo(bot->GetMapId(), destination->GetPositionX(), destination->GetPositionY(),
                   destination->GetPositionZ(), false, false, false, true, MovementPriority::MOVEMENT_COMBAT);
+}
+
+Unit* BossRearFlankAction::GetTarget()
+{
+    return AI_VALUE2(Unit*, "find target", bossName);
 }
 
 bool DisperseSetAction::Execute(Event event)

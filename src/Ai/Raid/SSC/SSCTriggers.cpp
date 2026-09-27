@@ -487,16 +487,24 @@ bool LadyVashjPullingBossTrigger::IsActiveInEncounter()
     // End By leewheel
 }
 
+// Healers only in phase 3, so healer dps has a target there and never picks a Sporebat, which
+// walks them up into the air. In phase 2 they hold their cluster slots.
 bool LadyVashjAddsSpawnInPhase2AndPhase3Trigger::IsActiveInEncounter()
 {
+// By leewheel 2026-09-27 合并brighton the-lab：brighton 用名字 "lady vashj"，
+    //   按规则第97条 entry 化保留 "21212"（Lady Vashj）。
     if (PlayerbotAI::IsHeal(bot))
         return false;
 
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    // End By leewheel
     if (!vashj)
         return false;
 
     int8 const phase = GetLadyVashjPhase(vashj);
+    if (PlayerbotAI::IsHeal(bot))
+        return phase == 3;
+
     return phase == 2 || phase == 3;
 }
 
@@ -687,8 +695,13 @@ bool LadyVashjBotIsInToxicSporesTrigger::IsActiveInEncounter()
     if (!vashj || GetLadyVashjPhase(vashj) != 3)
         return false;
 
-    float const radius = vashj->GetVictim() == bot ?
-        TOXIC_SPORES_TANK_AVOID_RADIUS : TOXIC_SPORES_AVOID_RADIUS;
+    bool const tanking = vashj->GetVictim() == bot;
+
+    // Shielded bots walk through on their way; her tank's radius is for the melee behind her
+    if (!tanking && bot->isMoving() && CanWalkThroughToxicSpores(bot))
+        return false;
+
+    float const radius = tanking ? TOXIC_SPORES_TANK_AVOID_RADIUS : TOXIC_SPORES_AVOID_RADIUS;
     return IsNearToxicSpores(botAI, bot, radius);
 }
 
@@ -701,6 +714,11 @@ bool LadyVashjMeleeNearToxicSporesTrigger::IsActiveInEncounter()
     return vashj && GetLadyVashjPhase(vashj) == 3 &&
         IsNearToxicSpores(botAI, bot, TOXIC_SPORES_MELEE_CONTROL_RADIUS);
     // End By leewheel
+}
+
+bool LadyVashjRangedReachBlockedByToxicSporesTrigger::IsActiveInEncounter()
+{
+    return IsVashjRangedReachBlockedBySpores(botAI, bot);
 }
 
 bool LadyVashjEntangleOnMeleeTrigger::IsActiveInEncounter()

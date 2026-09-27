@@ -86,6 +86,8 @@ bool KarazhanSetTremorTotemAction::Execute(Event /*event*/)
     //  上游在KaraActions.h一并删除了KarazhanCastFearProtectionSpellAction类，
     //  本地旧写法里祭司走恐惧结界的分支实际上被萨满专属触发器门控，属死代码，故一并移除。
     //  颤地图腾的目标与Nightbane飞行高度校验已上移到上层触发器部门，此处直接施放即可。
+    //By leewheel 2026-09-27 合并brighton the-lab：brighton 内联 Id(...)，本分支提取 constexpr 局部，
+    //  语义完全等价，保留本地写法。
     constexpr uint32 tremorTotem = Id(KaraSpells::SPELL_TREMOR_TOTEM);
     return botAI->CanCastSpell(tremorTotem, bot) && botAI->CastSpell(tremorTotem, bot);
     // End By leewheel

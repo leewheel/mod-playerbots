@@ -50,10 +50,20 @@ float KarazhanSetTremorTotemMultiplier::GetValue(Action* action)
     if (nightbane && nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
         return 0.0f;
 
-    if (AI_VALUE2(Unit*, "find target", "15547"))
+// By leewheel 2026-09-27 合并brighton the-lab：brighton 用名字，本分支按规则 entry 化
+    //   （17225=Nightbane, 15547=Spectral Charger, 17521=Big Bad Wolf, 15550=Attumen? 17521=大灰狼），
+    //   采纳 upstream 查三个坐骑/狼判定的逻辑并 entry 化。
+    if (AI_VALUE2(Unit*, "find target", "15547") ||
+        AI_VALUE2(Unit*, "find target", "17521") ||
+        AI_VALUE2(Unit*, "find target", "17225"))
+    {
         return 0.0f;
+    }
 
-    return AI_VALUE2(Unit*, "find target", "17521") ? 0.0f : 1.0f;
+// By leewheel 2026-09-27 合并brighton the-lab：除上述三个命中减速外其余返回 1（采纳 upstream，
+    //   HEAD 在第53行三个判定后此处的 17521 复查属于冗余，舍去）
+    return 1.0f;
+    // End By leewheel
 }
 
 // Attumen the Huntsman

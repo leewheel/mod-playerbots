@@ -11,6 +11,7 @@
 #include "CharacterCache.h"
 #include "CharacterPackets.h"
 #include "Common.h"
+#include "Containers.h"
 #include "DatabaseEnv.h"
 #include "Define.h"
 #include "Group.h"
@@ -36,8 +37,10 @@
 #include <cstdio>
 #include <cstring>
 #include <iomanip>
+#include <memory>
 #include <openssl/sha.h>
 #include <string>
+#include <vector>
 #include <unordered_set>
 
 namespace PlayerbotCmd
@@ -99,7 +102,10 @@ private:
 };
 
 std::unordered_set<ObjectGuid> BotInitGuard::botsBeingInitialized;
-std::unordered_map<ObjectGuid, uint32> PlayerbotHolder::botLoading;
+std::unordered_map<ObjectGuid, PendingBotLogin> PlayerbotHolder::botLoading;
+// By leewheel 2026-09-27 合并brighton the-lab：采纳上游 PendingBotLogin 架构（见上），
+//   本地 botLoadingTime 超时兜底保留，供 RandomPlayerbotMgr 定时清理卡死条目。
+// End By leewheel
 std::unordered_map<ObjectGuid, time_t> PlayerbotHolder::botLoadingTime;
 
 PlayerbotHolder::PlayerbotHolder() : PlayerbotAIBase(false) {}
@@ -173,9 +179,9 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
             return;
         }
         uint32 loadingForMaster = 0;
-        for (auto const& [guid, acctId] : botLoading)
+        for (auto const& [guid, pending] : botLoading)
         {
-            if (acctId == masterAccountId)
+            if (pending.masterAccountId == masterAccountId)
                 ++loadingForMaster;
         }
         uint32 count = mgr->GetPlayerbotsCount() + loadingForMaster;
@@ -201,13 +207,21 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
         return;
     }
 
-    botLoading.emplace(playerGuid, masterAccountId);
-    botLoadingTime[playerGuid] = time(nullptr);
+// By leewheel 2026-09-27 合并brighton the-lab：采纳上游 PendingBotLogin——创建 botSession 提前入 map，
+    //   由 UpdatePendingLogins 统一管理其生命周期（避免在查询回调栈内析构 session）。
+    WorldSession* botSession =
+        new WorldSession(accountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING, time_t(0),
+                         sWorld->GetDefaultDbcLocale(), 0, false, false, 0);
+    // End By leewheel
 
-    // Always login in with world session to avoid race condition
-    sWorld->AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(holder))
+    botLoading.emplace(playerGuid, PendingBotLogin{masterAccountId, botSession, false});
+    // By leewheel 2026-09-27 保留本地超时兜底：记录入队时间，超时（60s）由 RandomPlayerbotMgr 清理
+    botLoadingTime[playerGuid] = time(nullptr);
+    // End By leewheel
+
+    botSession->AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(holder))
         .AfterComplete(
-            [](SQLQueryHolderBase const& queryHolder)
+            [botSession](SQLQueryHolderBase const& queryHolder)
             {
                 PlayerbotLoginQueryHolder const& holder = static_cast<PlayerbotLoginQueryHolder const&>(queryHolder);
                 uint32 masterAccountId = holder.GetMasterAccountId();
@@ -220,24 +234,72 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
 
                     if (masterPlayer)
                     {
-                        PlayerbotHolder* mgr = PlayerbotsMgr::instance().GetPlayerbotMgr(masterPlayer);
-
-                        if (mgr != nullptr)
+                        if (PlayerbotHolder* mgr = PlayerbotsMgr::instance().GetPlayerbotMgr(masterPlayer))
                         {
-                            mgr->HandlePlayerBotLoginCallback(holder);
-
+                            mgr->HandlePlayerBotLoginCallback(holder, botSession);
                             return;
                         }
 
-                        PlayerbotHolder::botLoading.erase(holder.GetGuid());
+// By leewheel 2026-09-27 合并brighton the-lab：master 丢失 manager 时置 failed 交由
+                        //   UpdatePendingLogins 清理 session（而非在回调栈内 erase），同时清本地超时记录
+                        AbandonPendingLogin(holder.GetGuid());
                         PlayerbotHolder::botLoadingTime.erase(holder.GetGuid());
-
+                        // End By leewheel
                         return;
                     }
                 }
 
-                RandomPlayerbotMgr ::instance().HandlePlayerBotLoginCallback(holder);
+                RandomPlayerbotMgr::instance().HandlePlayerBotLoginCallback(holder, botSession);
             });
+}
+
+void PlayerbotHolder::AbandonPendingLogin(ObjectGuid guid)
+{
+    auto itr = botLoading.find(guid);
+    if (itr != botLoading.end())
+        itr->second.failed = true;
+}
+
+void PlayerbotHolder::UpdatePendingLogins()
+{
+    if (botLoading.empty())
+        return;
+
+    // Callbacks erase or flag their own entry, so iterate over a snapshot of the keys
+    std::vector<ObjectGuid> guids;
+    guids.reserve(botLoading.size());
+    for (auto const& [guid, pending] : botLoading)
+        guids.push_back(guid);
+
+    for (ObjectGuid const& guid : guids)
+    {
+        auto itr = botLoading.find(guid);
+        if (itr == botLoading.end())
+            continue;
+
+        WorldSession* session = itr->second.session;
+        if (!itr->second.failed)
+            session->ProcessQueryCallbacks();  // may complete the login (entry erased) or flag it failed
+
+        itr = botLoading.find(guid);
+        if (itr == botLoading.end() || !itr->second.failed)
+            continue;
+
+        // Safe here: the processor has returned, nothing of the session is on the stack
+        session->LogoutPlayer(true);
+        delete session;
+        botLoading.erase(itr);
+    }
+}
+
+void PlayerbotHolder::ClearPendingLogins()
+{
+    for (auto const& [guid, pending] : botLoading)
+    {
+        pending.session->LogoutPlayer(true);
+        delete pending.session;
+    }
+    botLoading.clear();
 }
 
 bool PlayerbotHolder::IsAccountLinked(uint32 accountId, uint32 linkedAccountId)
@@ -248,19 +310,13 @@ bool PlayerbotHolder::IsAccountLinked(uint32 accountId, uint32 linkedAccountId)
     return PlayerbotsDatabase.Query(stmt) != nullptr;
 }
 
-void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder const& holder)
+void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder const& holder, WorldSession* botSession)
 {
     //By leewheel 2026年9月1日 诊断日志（已注释，老大要求去掉刷屏）
     uint32 botAccountId = holder.GetAccountId();
-    ObjectGuid botGuid = holder.GetGuid();
-    //LOG_INFO("playerbots", "机器人登录诊断: 进入 HandlePlayerBotLoginCallback accountId={} guid={}", botAccountId, botGuid.GetCounter());
-    //End By leewheel
-
-    // At login DBC locale should be what the server is set to use by default (as spells etc are hardcoded to ENUS this
-    // allows channels to work as intended)
-    WorldSession* botSession =
-        new WorldSession(botAccountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING, time_t(0),
-                         sWorld->GetDefaultDbcLocale(), 0, false, false, 0, true);
+    // By leewheel 2026-09-27 合并brighton the-lab：botSession 已在 AddPlayerBot 创建并经参数传入，
+    //   此处不再重复 new（HEAD 旧逻辑在回调内新建 session 会造成与 botLoading 里记录的 session 不一致）
+    // End By leewheel
 
     //By leewheel 2026年9月1日 诊断日志（已注释，老大要求去掉刷屏）
     //LOG_INFO("playerbots", "机器人登录诊断: 即将调用 HandlePlayerLoginFromDB guid={}", botGuid.GetCounter());
@@ -275,12 +331,13 @@ void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder con
     if (!bot)
     {
         // Debug log
-        LOG_DEBUG("mod-playerbots", "无法加载账号 ID {} 的机器人玩家", botAccountId);
-        botSession->LogoutPlayer(true);
-        delete botSession;
-        PlayerbotHolder::botLoading.erase(holder.GetGuid());
+        LOG_DEBUG("mod-playerbots", "Bot player could not be loaded for account ID: {}", botAccountId);
+        // By leewheel 2026-09-27 合并brighton the-lab：此分支运行在 botSession 自己的回调处理栈内，
+        //   直接 LogoutPlayer+delete 会双重析构/线程不安全，置 failed 交由 UpdatePendingLogins 延迟清理。
+        //   同时清除本地超时兜底记录，避免 RandomPlayerbotMgr 误伤已入队的其他条目。
+        AbandonPendingLogin(holder.GetGuid());
         PlayerbotHolder::botLoadingTime.erase(holder.GetGuid());
-
+        // End By leewheel
         return;
     }
 
@@ -307,6 +364,8 @@ void PlayerbotHolder::UpdateSessions()
     for (PlayerBotMap::const_iterator itr = GetPlayerBotsBegin(); itr != GetPlayerBotsEnd(); ++itr)
     {
         Player* const bot = itr->second;
+        // Nothing else drives a headless session's async query, transaction and holder callbacks
+        bot->GetSession()->ProcessQueryCallbacks();
         if (bot->IsBeingTeleported())
         {
             PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
@@ -324,19 +383,20 @@ void PlayerbotHolder::UpdateSessions()
 
 void PlayerbotHolder::HandleBotPackets(WorldSession* session)
 {
-    WorldPacket* packet;
-    while (session->GetPacketQueue().next(packet))
+    while (std::unique_ptr<WorldPacket> packet = session->NextQueuedPacket())
     {
         OpcodeClient opcode = static_cast<OpcodeClient>(packet->GetOpcode());
         ClientOpcodeHandler const* opHandle = opcodeTable[opcode];
         if (!opHandle)
         {
+// By leewheel 2026-09-27 合并brighton the-lab：日志文案保留本地中文，且保留 delete packet 防止泄漏
+            //   （brighton 侧仅改日志为英文，未释放 packet）
             LOG_ERROR("playerbots", "机器人会话 {} 队列中存在未处理的 opcode {}，数据包已丢弃。", session->GetAccountId(), static_cast<uint32>(opcode));
             delete packet;
+            // End By leewheel
             continue;
         }
         opHandle->Call(session, *packet);
-        delete packet;
     }
 }
 
@@ -725,7 +785,10 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
                     //Currently in magons TBC, if you switch zones, then you join "Trade - <zone>" and "GuildRecruitment - <zone>"
                     //which is a core bug, should be "Trade - City" and "GuildRecruitment - City" in both 1.12 and TBC
                     //but if you (actual player) logout in a city and log back in - you join "City" versions
-                    snprintf(new_channel_name_buf, 100, channel->pattern[locale], GET_PLAYERBOT_AI(bot)->GetLocalizedAreaName(GetAreaEntryByAreaID(3459)).c_str());
+                    constexpr uint32 AREA_ID_CITY = 3459;
+                    std::string const cityName =
+                        GET_PLAYERBOT_AI(bot)->GetLocalizedAreaName(sAreaTableStore.LookupEntry(AREA_ID_CITY));
+                    snprintf(new_channel_name_buf, 100, channel->pattern[locale], cityName.c_str());
                     new_channel = cMgr->GetJoinChannel(new_channel_name_buf, channel->ChannelID);
                     break;
                 }
@@ -1129,16 +1192,23 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
     {
         if (GET_PLAYERBOT_AI(master))
         {
+// By leewheel 2026-09-27 合并brighton the-lab：self 命令消息文案保留本地简体中文
             messages.push_back("已禁用玩家机器人AI");
+            // End By leewheel
             delete GET_PLAYERBOT_AI(master);
+
+            if (master->isTaxiCheater())
+                master->SetTaxiCheater(false);
         }
         else if (sPlayerbotAIConfig.selfBotLevel == 0)
+// By leewheel 2026-09-27 合并brighton the-lab：文案保留本地简体中文
             messages.push_back("自我机器人功能已禁用");
         else if (sPlayerbotAIConfig.selfBotLevel == 1 && !master->CanBeGameMaster())
             messages.push_back("你没有权限启用玩家机器人AI");
         else
         {
             messages.push_back("已启用玩家机器人AI");
+            // End By leewheel
             PlayerbotsMgr::instance().AddPlayerbotData(master, true);
             GET_PLAYERBOT_AI(master)->SetMaster(master);
             PlayerbotRepository::instance().Load(GET_PLAYERBOT_AI(master));
@@ -1261,23 +1331,49 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         }
         uint8 teamId = master->GetTeamId(true);
         std::unordered_set<ObjectGuid> const& guidCache = sRandomPlayerbotMgr.addclassCache[RandomPlayerbotMgr::GetTeamClassIdx(teamId == TEAM_ALLIANCE, claz)];
-        for (ObjectGuid const& guid: guidCache)
+        // By leewheel 2026-09-27 合并brighton the-lab：采纳上游重构——pickFirstEligible 返回候选 guid，
+        //   再按 addClassRandomCharacter 配置决定是否随机洗牌；消息文案保留本地简体中文。
+        auto const pickFirstEligible = [&](auto const& pool) -> ObjectGuid
         {
-            // If the user requested a specific gender, skip any character that doesn't match.
-            if (gender != -1 && GetOfflinePlayerGender(guid) != gender)
-                continue;
-            if (botLoading.find(guid) != botLoading.end())
-                continue;
-            if (ObjectAccessor::FindConnectedPlayer(guid))
-                continue;
-            uint32 guildId = sCharacterCache->GetCharacterGuildIdByGuid(guid);
-            if (guildId && PlayerbotGuildMgr::instance().IsRealGuild(guildId))
-                continue;
-            AddPlayerBot(guid, master->GetSession()->GetAccountId());
-            messages.push_back("已添加职业 " + std::string(charname));
+            for (ObjectGuid const& guid : pool)
+            {
+                // If the user requested a specific gender, skip any character that doesn't match.
+                if (gender != -1 && GetOfflinePlayerGender(guid) != gender)
+                    continue;
+                if (botLoading.find(guid) != botLoading.end())
+                    continue;
+                if (ObjectAccessor::FindConnectedPlayer(guid))
+                    continue;
+                uint32 guildId = sCharacterCache->GetCharacterGuildIdByGuid(guid);
+                if (guildId && PlayerbotGuildMgr::instance().IsRealGuild(guildId))
+                    continue;
+                return guid;
+            }
+            return ObjectGuid::Empty;
+        };
+
+        // The cache is an unordered_set: its iteration order does not change between calls, so the first
+        // eligible character is always the same one. Walk a shuffled copy when a random one is wanted,
+        // and the cache itself otherwise, so the default path copies nothing.
+        ObjectGuid picked = ObjectGuid::Empty;
+        if (sPlayerbotAIConfig.addClassRandomCharacter)
+        {
+            std::vector<ObjectGuid> candidates(guidCache.begin(), guidCache.end());
+            Acore::Containers::RandomShuffle(candidates);
+            picked = pickFirstEligible(candidates);
+        }
+        else
+            picked = pickFirstEligible(guidCache);
+
+        if (picked.IsEmpty())
+        {
+            messages.push_back("添加职业失败，没有可用角色！");
             return messages;
         }
-        messages.push_back("添加职业失败，没有可用角色！");
+
+        AddPlayerBot(picked, master->GetSession()->GetAccountId());
+        messages.push_back("已添加职业 " + std::string(charname));
+        // End By leewheel
         return messages;
     }
 

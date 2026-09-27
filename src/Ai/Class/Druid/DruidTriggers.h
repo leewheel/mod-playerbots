@@ -24,13 +24,14 @@ class PlayerbotAI;
 class MarkOfTheWildOnPartyTrigger : public BuffOnPartyTrigger
 {
 public:
-    MarkOfTheWildOnPartyTrigger(PlayerbotAI* botAI) : BuffOnPartyTrigger(botAI, "mark of the wild", 4 * 2000) {}
+    MarkOfTheWildOnPartyTrigger(PlayerbotAI* botAI)
+        : BuffOnPartyTrigger(botAI, "mark of the wild", 8 * IN_MILLISECONDS) {}
 };
 
 class MarkOfTheWildTrigger : public BuffTrigger
 {
 public:
-    MarkOfTheWildTrigger(PlayerbotAI* botAI) : BuffTrigger(botAI, "mark of the wild", 4 * 2000) {}
+    MarkOfTheWildTrigger(PlayerbotAI* botAI) : BuffTrigger(botAI, "mark of the wild", 8 * IN_MILLISECONDS) {}
 
     bool IsActive() override;
 };
@@ -38,7 +39,7 @@ public:
 class ThornsOnPartyTrigger : public BuffOnPartyTrigger
 {
 public:
-    ThornsOnPartyTrigger(PlayerbotAI* botAI) : BuffOnPartyTrigger(botAI, "thorns", 2 * 2000) {}
+    ThornsOnPartyTrigger(PlayerbotAI* botAI) : BuffOnPartyTrigger(botAI, "thorns", 4 * IN_MILLISECONDS) {}
 
     bool IsActive() override;
 };
@@ -46,13 +47,13 @@ public:
 class ThornsOnMainTankTrigger : public BuffOnMainTankTrigger
 {
 public:
-    ThornsOnMainTankTrigger(PlayerbotAI* botAI) : BuffOnMainTankTrigger(botAI, "thorns", false, 2 * 2000) {}
+    ThornsOnMainTankTrigger(PlayerbotAI* botAI) : BuffOnMainTankTrigger(botAI, "thorns", false, 4 * IN_MILLISECONDS) {}
 };
 
 class ThornsTrigger : public BuffTrigger
 {
 public:
-    ThornsTrigger(PlayerbotAI* botAI) : BuffTrigger(botAI, "thorns", 2 * 2000) {}
+    ThornsTrigger(PlayerbotAI* botAI) : BuffTrigger(botAI, "thorns", 4 * IN_MILLISECONDS) {}
 
     bool IsActive() override;
 };
@@ -441,6 +442,30 @@ public:
     {
         return !botAI->HasStrategy("healer dps", BOT_STATE_COMBAT);
     }
+};
+
+// Blanketing keeps the Druid in Tree Form between HoT refreshes, so healer dps must be disabled
+// when the blanketing strategy is active and the Druid is in a group.
+class DruidHealerShouldAttackTrigger : public HealerShouldAttackTrigger
+{
+public:
+    DruidHealerShouldAttackTrigger(PlayerbotAI* botAI) : HealerShouldAttackTrigger(botAI) {}
+
+    std::string const getName() override { return "healer should attack and not blanketing"; }
+    bool IsActive() override;
+};
+
+class BlanketHotTrigger : public Trigger
+{
+public:
+    BlanketHotTrigger(PlayerbotAI* botAI, std::string const& name, std::string const& spell)
+        : Trigger(botAI, name), _spell(spell) {}
+
+    Value<Unit*>* GetTargetValue() override;
+    bool IsActive() override;
+
+private:
+    std::string _spell;
 };
 
 class ProwlTrigger : public Trigger

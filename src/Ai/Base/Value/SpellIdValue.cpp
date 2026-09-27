@@ -67,8 +67,10 @@ std::string GetLocalizedSpellName(SpellInfo const* spellInfo)
     return spellInfo->SpellName[0] ? spellInfo->SpellName[0] : "";
 }
 }  // namespace
-
 SpellIdValue::SpellIdValue(PlayerbotAI* botAI) : CalculatedValue<uint32>(botAI, "spell id", 20 * 1000) {}
+// By leewheel 2026-09-27 合并brighton the-lab：brighton侧构造函数用 20*IN_MILLISECONDS，
+//   与本分支 20*1000 语义完全等价（IN_MILLISECONDS==1），保留本地性能优化实现。
+// End By leewheel
 
 VehicleSpellIdValue::VehicleSpellIdValue(PlayerbotAI* botAI) : CalculatedValue<uint32>(botAI, "vehicle spell id") {}
 

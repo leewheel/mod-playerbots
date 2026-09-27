@@ -16,9 +16,17 @@ class ChatHandler;
 class PlayerbotAI;
 class PlayerbotLoginQueryHolder;
 class WorldPacket;
+class WorldSession;
 
 typedef std::map<ObjectGuid, Player*> PlayerBotMap;
 typedef std::map<std::string, std::set<std::string> > PlayerBotErrorMap;
+
+struct PendingBotLogin
+{
+    uint32 masterAccountId = 0;
+    WorldSession* session = nullptr;
+    bool failed = false;  // torn down by UpdatePendingLogins(), never inside the session's own callback
+};
 
 class PlayerbotHolder : public PlayerbotAIBase
 {
@@ -28,7 +36,7 @@ public:
 
     void AddPlayerBot(ObjectGuid guid, uint32 masterAccountId);
     bool IsAccountLinked(uint32 accountId, uint32 masterAccountId);
-    void HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder const& holder);
+    void HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder const& holder, WorldSession* botSession);
 
     void LogoutPlayerBot(ObjectGuid guid);
     void DisablePlayerBot(ObjectGuid guid);
@@ -41,6 +49,8 @@ public:
     void UpdateAIInternal([[maybe_unused]] uint32 elapsed, [[maybe_unused]] bool minimal = false) override{};
     void UpdateSessions();
     void HandleBotPackets(WorldSession* session);
+    static void UpdatePendingLogins();  // world thread, once per tick
+    static void ClearPendingLogins();   // shutdown, outside any callback
 
     void LogoutAllBots();
     void OnBotLogin(Player* const bot);
@@ -59,10 +69,13 @@ protected:
     virtual void OnBotLoginInternal(Player* const bot) = 0;
 
     PlayerBotMap playerBots;
-    static std::unordered_map<ObjectGuid, uint32> botLoading;
-    // By leewheel 2026-09-01 修复：botLoading 无超时机制——若某 bot 的登录异步回调丢失/异常，
-    //   它会永久驻留 botLoading，AddPlayerBot 因首行重复检查直接 return（看似"已入队"），
-    //   但 bot 永远登录不上，还阻塞整个登录循环。记录每个 bot 的入队时间，超时强制清除。
+    // By leewheel 2026-09-27 合并brighton the-lab：采纳上游新登录架构
+    //   PendingBotLogin（记录 session + failed 由 UpdatePendingLogins 定时清理）。
+    static void AbandonPendingLogin(ObjectGuid guid);
+    static std::unordered_map<ObjectGuid, PendingBotLogin> botLoading;
+    // 本地超时兜底（保留）：brighton 的 UpdatePendingLogins 只在 session 有可处理回调时
+    //   才进展，对"异步查询回调异常/丢失、永不返回"的条目没有强制清除；此处记录入队时间，
+    //   供 RandomPlayerbotMgr 定时把超时（60s）条目踢出 botLoading，避免登录循环卡死。
     // End By leewheel
     static std::unordered_map<ObjectGuid, time_t> botLoadingTime;
 };

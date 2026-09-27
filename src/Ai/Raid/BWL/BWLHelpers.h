@@ -42,6 +42,12 @@ namespace BlackwingLairHelpers
 
     enum class BlackwingLairNPCs : uint32
     {
+        // Broodlord Lashlayer
+        NPC_CORRUPTED_RED_WHELP = 14022,
+        NPC_CORRUPTED_GREEN_WHELP = 14023,
+        NPC_CORRUPTED_BLUE_WHELP = 14024,
+        NPC_CORRUPTED_BRONZE_WHELP = 14025,
+
         // Trash
         NPC_DEATH_TALON_WYRMGUARD = 12460,
 
@@ -54,7 +60,7 @@ namespace BlackwingLairHelpers
         NPC_BANSHEE = 400152,          // 女妖/织魂者
     };
 
-    // 自定义Boss: Valthorax — 法术ID
+// 自定义Boss: Valthorax — 法术ID
     // By leewheel 2026-09-04 合并brighton-chi/the-lab: 保留本分支自定义Boss定义, 函数签名随上游east-const风格。
     enum ValthoraxSpells
     {
@@ -68,12 +74,15 @@ namespace BlackwingLairHelpers
 
     // 自定义Boss名字（数据库中的creature_template.name）
     static constexpr const char* BOSS_NAME_VALTHORAX = "死亡使者瓦索拉克斯";
-    //End By leewheel
+    // by leewheel 2026-09-27 合并brighton the-lab：补回上游 BRoodlord 安全距离常量（Triggers 引用）
+    constexpr float BROODLORD_SAFE_DISTANCE = 18.0f;
+    // End By leewheel
 
     bool IsActiveSuppressionDeviceInRange(GameObject const* go, Player const* bot);
     bool AreRazorgoreEggsAlive(PlayerbotAI* botAI);
     bool IsRazorgoreOffTank(Player* bot);
     bool IsNonBABotNearPosition(Player const* bot, Position const& position, float distance);
+    bool IsCorruptedWhelp(Unit const* unit);
 }
 
 #endif

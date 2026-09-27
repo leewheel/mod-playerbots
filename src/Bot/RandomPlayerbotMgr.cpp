@@ -742,6 +742,12 @@ bool RandomPlayerbotMgr::IsAccountType(uint32 accountId, uint8 accountType)
     return PlayerbotsDatabase.Query(stmt) != nullptr;
 }
 
+bool RandomPlayerbotMgr::IsAddClassAccount(uint32 accountId) const
+{
+    return std::find(addClassTypeAccounts.begin(), addClassTypeAccounts.end(), accountId) !=
+           addClassTypeAccounts.end();
+}
+
 // Logs-in bots in 4 phases. Phase 1 logs Alliance bots up to how much is expected according to the faction ratio,
 // and Phase 2 logs-in the remainder Horde bots to reach the total maxAllowedBotCount. If maxAllowedBotCount is not
 // reached after Phase 2, the function goes back to log-in Alliance bots and reach maxAllowedBotCount. This is done
@@ -814,6 +820,9 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
             //   （worldserver 100% ACCESS_VIOLATION）。
             //   这里改用主项目核心已注册的三列版专用语句，列顺序 guid / class / race 与下方读取一一对应。
             CharacterDatabasePreparedStatement* stmt =
+                // By leewheel 2026-09-27 合并brighton the-lab：brighton 用核心 CHAR_SEL_ACCOUNT_INFO_CHARS
+                //   （列序 0=guid,1=name,2=level,3=race,4=class），本分支自建 CHAR_SEL_PBOT_CHARS_CLASS_RACE_BY_ACCOUNT_ID
+                //   （三列 guid/class/race）语义等价且列索引与下方读取一一对应，核心两条语句均已注册，保留本地专语句。
                 CharacterDatabase.GetPreparedStatement(CHAR_SEL_PBOT_CHARS_CLASS_RACE_BY_ACCOUNT_ID);
             // End By leewheel
             stmt->SetData(0, accountId);
@@ -827,6 +836,8 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
                 CharacterInfo info;
                 // By leewheel 2026-08-29 - 列索引与三列专用语句严格对应：0=guid, 1=class, 2=race
                 info.guid = fields[0].Get<uint32>();
+// By leewheel 2026-09-27 合并brighton the-lab：列索引与保留的本分支三列专语句严格对应
+                //   （0=guid, 1=class, 2=race），不采纳 brighton 的五列表读取。
                 info.rClass = fields[1].Get<uint8>();
                 info.rRace = fields[2].Get<uint8>();
                 // End By leewheel

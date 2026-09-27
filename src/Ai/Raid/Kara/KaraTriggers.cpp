@@ -18,8 +18,6 @@ using namespace EncounterHelpers;
 
 // General
 
-// This will return true during Terestian Illhoof. It's not a problem as there is nothing to be
-// cleared that relates to him, but it is something to keep in mind going forward.
 bool KarazhanNoEncounterInProgressTrigger::IsActive()
 {
     return !IsEncounterInProgress(bot, KARA_MAP_ID);
@@ -34,6 +32,8 @@ bool KarazhanEnemiesCastFearTrigger::IsActive()
     if (AI_VALUE2(bool, "has totem", "tremor totem"))
         return false;
 
+// By leewheel 2026-09-27 合并brighton the-lab：brighton 用名字（nightbane/spectral charger/大灰狼/roar），
+    //   本分支已按规则第97条 entry 化（17225=Nightbane, 15547=Spectral Charger, 17521=Big Bad Wolf），保留。
     Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
     return (nightbane && nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z) ||
         AI_VALUE2(Unit*, "find target", "15547") ||
