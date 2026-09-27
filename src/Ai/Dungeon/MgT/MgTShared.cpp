@@ -134,8 +134,11 @@ enum MgTKaelSpells : uint32
     SPELL_POWER_FEEDBACK        = 44233,
 };
 
-constexpr char const* SELIN_NAME = "selin fireheart";
-constexpr char const* KAEL_NAME  = "kael'thas sunstrider";
+// By leewheel 2026-09-28 规则第 97 条：boss 检索由英文名改 entry（查库核定：塞林·火心 24723 /
+//   凯尔萨斯·逐日者 24664）。库内基础名已中文化，英文原名无对应行，名字检索必然落空。
+// End By leewheel
+constexpr char const* SELIN_NAME = "24723";
+constexpr char const* KAEL_NAME  = "24664";
 
 constexpr float ROOM_X_MIN = 218.0f;
 constexpr float ROOM_X_MAX = 260.0f;

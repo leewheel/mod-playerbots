@@ -636,48 +636,69 @@ bool LadyVashjBotIsTaintedCoreLooterTrigger::IsActiveInEncounter()
     return tainted && (tainted->IsAlive() || GetTaintedCoreLootSlot(tainted) >= 0);
 }
 
-// A core still held when phase 3 starts, say from a stalled chain, has no generator left, and its
-// Paralyze roots the holder until it leaves the bags.
-bool LadyVashjBotHoldsTaintedCoreInPhase3Trigger::IsActiveInEncounter()
+// A core with nowhere to go: in phase 3, with no generator left; from a chain that found no way; or
+// still held when the next core is ready to loot. Its Paralyze roots the holder until it leaves the
+// bags.
+bool LadyVashjBotShouldDestroyTaintedCoreTrigger::IsActiveInEncounter()
 {
+    // By leewheel 2026-09-28 合并 brighton 219cd311（vashj 传核链重做）：采纳上游"核无处可去"判定
+    //   ——阶段3 或无路可走的链、或下一颗核已可拾取时仍持核者销毁；按规则第 97 条 entry 化：lady vashj = 21212。
+    // End By leewheel
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    return vashj && GetLadyVashjPhase(vashj) == 3 &&
-        bot->HasItemCount(Id(SscItems::ITEM_TAINTED_CORE), 1, false);
+    int8 const phase = GetLadyVashjPhase(vashj);
+    if (phase == 3)
+        return HasTaintedCore(bot);
+
+    if (phase != 2)
+        return false;
+
+    // In phase 2 only a member of this chain or the one it replaced can hold a core
+    VashjCoreChain const* chain = GetVashjCoreChain(bot);
+    if (!chain)
+        return false;
+
+    ObjectGuid const guid = bot->GetGUID();
+    bool const member = chain->start == guid || GetVashjCoreCatcherIndex(*chain, bot) >= 0 ||
+        std::find(chain->earlier.begin(), chain->earlier.end(), guid) != chain->earlier.end();
+    if (!member)
+        return false;
+
+    if (!chain->failed)
+    {
+        Creature* next = GetVashjTaintedElemental(bot);
+        if (!next || next->IsAlive() || GetTaintedCoreLootSlot(next) < 0)
+            return false;
+    }
+
+    return HasTaintedCore(bot);
 }
 
-bool LadyVashjTaintedCoreWasLootedTrigger::IsActiveInEncounter()
+// The chain's start or one of its catchers, while it holds the core or is due at its spot.
+bool LadyVashjBotIsInTaintedCoreChainTrigger::IsActiveInEncounter()
 {
+    // By leewheel 2026-09-28 合并 brighton 219cd311（vashj 传核链重做）：整体改用上游 VashjCoreChain 判定。
+    //   我方上一版"首二传包手就位"早退块（击杀者之外的包手提前就位 + 就位前不移动）已由上游
+    //   catcher.prepositions（非击杀者 = 预先就位）+ readyDelay（urand(1000,2000) 放行）等价覆盖，
+    //   语义不回退；上游 TaintedLogGenerators 临时调试调用保留。规则第 97 条：lady vashj = 21212。
+    // End By leewheel
+    VashjCoreChain const* chain = GetVashjCoreChain(bot);
+    if (!chain || chain->failed)
+        return false;
+
+    int8 const index = GetVashjCoreCatcherIndex(*chain, bot);
+    if (index < 0 && chain->start != bot->GetGUID())
+        return false;
+
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (!vashj || GetLadyVashjPhase(vashj) != 2)
         return false;
 
-    auto coreHandlers = GetCoreHandlers(botAI, bot);
-
-    bool isCoreHandler = false;
-    for (Player* handler : coreHandlers)
-    {
-        if (handler == bot)
-            isCoreHandler = true;
-    }
-
-    if (!isCoreHandler)
-        return false;
-
-// By leewheel 2026-09-27 合并 brighton fa573dd3：本块三处并存——①上游本链新增的 TaintedLogGenerators
-//   临时调试调用（上游标注 TEMP LOG，随上游去留）；②保留本地"首二传包手就位"早退块（我方逻辑，
-//   基点 605d9a9e 与新旧上游链均无此块）；③上游注释措辞（句尾加句点）。
-// End By leewheel
     TaintedLogGenerators(bot); // TEMP LOG
 
-    // First and second passers move to positions as soon as the elemental appears
-    Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
-    if (tainted && coreHandlers[0] && coreHandlers[0]->GetExactDist2d(tainted) < 5.0f &&
-        (bot == coreHandlers[1] || bot == coreHandlers[2]))
+    if (HasTaintedCore(bot))
         return true;
 
-    // Main logic: run if core is in play for this bot or a prior handler.
-    // End By leewheel
-    return AnyRecentCoreInInventory(botAI, bot);
+    return index >= 0 && IsVashjCoreCatcherActive(bot, *chain, index);
 }
 
 bool LadyVashjPetShouldSwitchTargetTrigger::IsActiveInEncounter()

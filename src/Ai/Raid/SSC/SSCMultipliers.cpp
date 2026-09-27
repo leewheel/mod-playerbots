@@ -952,10 +952,12 @@ float LadyVashjStaticChargeStayAwayFromGroupMultiplier::GetValueInEncounter(Acti
     return vashj && ShouldAvoidVashjStaticCharge(bot, vashj) ? 0.0f : 1.0f;
 }
 
-// Bots should not loot the core with normal looting logic
+// Bots should not loot the core with normal looting logic. Both the walk to a corpse and opening
+// it: a bot in the non-combat engine mid-fight runs the loot strategy, and one already beside the
+// corpse needs no walk.
 float LadyVashjDoNotLootTheTaintedCoreMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!dynamic_cast<LootAction*>(action))
+    if (!dynamic_cast<LootAction*>(action) && !dynamic_cast<OpenLootAction*>(action))
         return 1.0f;
 
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
@@ -973,29 +975,27 @@ float LadyVashjCorePassersPrioritizePositioningMultiplier::GetValueInEncounter(A
     if (dynamic_cast<WipeAction*>(action))
         return 1.0f;
 
-    auto coreHandlers = GetCoreHandlers(botAI, bot);
-
-    bool isCoreHandler = false;
-    for (int i = 0; i < static_cast<int>(coreHandlers.size()); ++i)
-    {
-        if (coreHandlers[i] && coreHandlers[i] == bot)
-            isCoreHandler = true;
-    }
-    if (!isCoreHandler)
+    // Only the chain's start and catchers are held here
+    VashjCoreChain const* chain = GetVashjCoreChain(bot);
+    if (!chain)
         return 1.0f;
 
-    auto hasCore = [](Player* player)
-    {
-        return player && player->HasItemCount(Id(SscItems::ITEM_TAINTED_CORE), 1, false);
-    };
+    int8 const index = GetVashjCoreCatcherIndex(*chain, bot);
+    if (index < 0 && chain->start != bot->GetGUID())
+        return 1.0f;
 
-    // If the bot actually has the core, only allow core handling
-    if (hasCore(bot) && !dynamic_cast<LadyVashjPassTheTaintedCoreAction*>(action))
-        return 0.0f;
+    bool const isPass = dynamic_cast<LadyVashjPassTheTaintedCoreAction*>(action);
+
+    // A holder only passes, uses or destroys the core
+    if (HasTaintedCore(bot))
+    {
+        return isPass || dynamic_cast<LadyVashjDestroyTaintedCoreAction*>(action) ?
+            1.0f : 0.0f;
+    }
 
     // The designated looter must stay on the Tainted Elemental until it has the core.
-    if (bot == coreHandlers[0] && !hasCore(bot) &&
-        dynamic_cast<LadyVashjAssignPhase2AndPhase3DpsPriorityAction*>(action))
+    if (dynamic_cast<LadyVashjAssignPhase2AndPhase3DpsPriorityAction*>(action) &&
+        GetDesignatedCoreLooter(botAI, bot) == bot)
     {
         constexpr float corpseSearchRadius = 30.0f;
         if (AI_VALUE2(Unit*, "find target", "22009") ||
@@ -1003,19 +1003,16 @@ float LadyVashjCorePassersPrioritizePositioningMultiplier::GetValueInEncounter(A
             return 0.0f;
     }
 
-// First and second passers block movement when the looter teleports to the elemental
-    Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
-    if (tainted && coreHandlers[0] && coreHandlers[0]->GetExactDist2d(tainted) < 5.0f &&
-        (bot == coreHandlers[1] || bot == coreHandlers[2]) &&
-        (dynamic_cast<MovementAction*>(action) &&
-         !dynamic_cast<LadyVashjPassTheTaintedCoreAction*>(action)))
-        return 0.0f;
+    // By leewheel 2026-09-28 合并 brighton 219cd311（vashj 传核链重做）：采纳上游"就位中的包手不做其他
+    //   移动"判定，取代我方旧版（首二传包手在拾取者贴近元素时锁定移动 + AnyRecentCoreInInventory）——
+    //   新机制由 catcher.prepositions/readyDelay 统一表达，语义等价且不回退。
     // End By leewheel
-    // If any prior handler (including self) recently had the core, block other movement
-    if (AnyRecentCoreInInventory(botAI, bot) &&
-        dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<LadyVashjPassTheTaintedCoreAction*>(action))
+    // A catcher on its way to, or standing on, its spot moves for nothing else
+    if (!isPass && index >= 0 && dynamic_cast<MovementAction*>(action) &&
+        IsVashjCoreCatcherActive(bot, *chain, index))
+    {
         return 0.0f;
+    }
 
     return 1.0f;
 }

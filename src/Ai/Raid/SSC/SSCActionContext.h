@@ -312,7 +312,9 @@ private:
     // Morogrim Tidewalker
     static Action* morogrim_tidewalker_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
         return new SscMisdirectTargetToTankAction(
-            botAI, "morogrim tidewalker misdirect boss to main tank", "morogrim tidewalker");
+            // By leewheel 2026-09-28 规则第 97 条：boss 检索用 entry（莫洛格里姆·踏潮者=21213，查库核定）
+            // End By leewheel
+            botAI, "morogrim tidewalker misdirect boss to main tank", "21213");
     }
     static Action* morogrim_tidewalker_position_main_tank(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerPositionMainTankAction(botAI);
@@ -348,7 +350,9 @@ private:
     }
     static Action* lady_vashj_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
         return new SscMisdirectTargetToTankAction(
-            botAI, "lady vashj misdirect boss to main tank", "lady vashj");
+            // By leewheel 2026-09-28 规则第 97 条：boss 检索用 entry（瓦丝琪=21212，查库核定）
+            // End By leewheel
+            botAI, "lady vashj misdirect boss to main tank", "21212");
     }
     static Action* lady_vashj_assign_phase_2_and_phase_3_dps_priority(PlayerbotAI* botAI) {
         return new LadyVashjAssignPhase2AndPhase3DpsPriorityAction(botAI);
