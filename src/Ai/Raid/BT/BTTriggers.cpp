@@ -34,7 +34,7 @@ bool HighWarlordNajentusPullingBossTrigger::IsActive()
     return najentus && najentus->GetHealthPct() > 95.0f;
 }
 
-bool HighWarlordNajentusBossEngagedByTanksTrigger::IsActive()
+bool HighWarlordNajentusShouldBeTankedTrigger::IsActive()
 {
     return botAI->IsTank(bot) &&
            AI_VALUE2(Unit*, "find target", "22887");
@@ -195,7 +195,7 @@ bool TeronGorefiendPullingBossTrigger::IsActive()
     return gorefiend && gorefiend->GetHealthPct() > 95.0f;
 }
 
-bool TeronGorefiendBossEngagedByTanksTrigger::IsActive()
+bool TeronGorefiendShouldBeTankedTrigger::IsActive()
 {
     return botAI->IsTank(bot) &&
            AI_VALUE2(Unit*, "find target", "22871");
@@ -281,7 +281,7 @@ bool GurtoggBloodboilPullingBossTrigger::IsActive()
     return GetMSTimeDiffToNow(it->second) < engageWindowMs;
 }
 
-bool GurtoggBloodboilBossEngagedByTanksTrigger::IsActive()
+bool GurtoggBloodboilShouldBeTankedTrigger::IsActive()
 {
     if (!botAI->IsTank(bot))
         return false;
@@ -403,7 +403,7 @@ bool MotherShahrazPullingBossTrigger::IsActive()
     return shahraz && shahraz->GetHealthPct() > 95.0f;
 }
 
-bool MotherShahrazBossEngagedByTanksTrigger::IsActive()
+bool MotherShahrazShouldBeTankedTrigger::IsActive()
 {
     if (!botAI->IsTank(bot))
         return false;

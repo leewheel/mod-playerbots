@@ -27,10 +27,8 @@
 #include "SSCActions.h"
 #include "SSCHelpers.h"
 #include "ShamanActions.h"
-#include "Timer.h"
 #include "WarlockActions.h"
 #include "WarriorActions.h"
-#include "WipeAction.h"
 #include <algorithm>
 
 using namespace SscHelpers;
@@ -39,19 +37,17 @@ using namespace EncounterHelpers;
 namespace
 {
 
+bool IsEnchantedElemental(Unit* unit)
+{
+    return unit && unit->GetEntry() == Id(SscNpcs::NPC_ENCHANTED_ELEMENTAL);
+}
+
 bool IsRepositionAction(Player* bot, Action* action)
 {
     return (bot->getClass() == CLASS_HUNTER && dynamic_cast<CastDisengageAction*>(action)) ||
         (bot->getClass() == CLASS_MAGE && dynamic_cast<CastBlinkBackAction*>(action));
 }
 
-bool IsBloodlustAction(Player* bot, Action* action)
-{
-    return bot->getClass() == CLASS_SHAMAN &&
-        (dynamic_cast<CastBloodlustAction*>(action) || dynamic_cast<CastHeroismAction*>(action));
-}
-
-// The taunts that take more than the tank's own target
 bool IsAoeTauntAction(Player* bot, Action* action)
 {
     switch (bot->getClass())
@@ -65,6 +61,12 @@ bool IsAoeTauntAction(Player* bot, Action* action)
         default:
             return false;
     }
+}
+
+bool IsMeleeReachSpell(Player* bot, Action* action)
+{
+    return dynamic_cast<CastReachTargetSpellAction*>(action) ||
+        (bot->getClass() == CLASS_ROGUE && dynamic_cast<CastKillingSpreeAction*>(action));
 }
 
 } // end anonymous namespace
@@ -137,7 +139,8 @@ float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-    bool const isBloodlust = IsBloodlustAction(bot, action);
+    bool const isBloodlust = bot->getClass() == CLASS_SHAMAN &&
+        (dynamic_cast<CastBloodlustAction*>(action) || dynamic_cast<CastHeroismAction*>(action));
 
     // By leewheel 2026-09-19 合并上游 the-lab：本函数为上游新增，按规则第 97 条把首领名改为 entry：
     //   lady vashj=21212(瓦丝琪) / morogrim tidewalker=21213(莫洛格里·踏潮者)
@@ -206,10 +209,9 @@ float HydrossTheUnstableDisableOffPhaseTankActionsMultiplier::GetValueInEncounte
     if (!hydross)
         return 1.0f;
 
-    if (IsHydrossInFrostPhase(hydross) && PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
-        return 0.0f;
-
-    return IsHydrossInNaturePhase(hydross) && PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
+    bool const offPhaseTank =
+        IsHydrossInFrostPhase(hydross) ? IsHydrossNatureTank(bot) : IsHydrossFrostTank(bot);
+    return offPhaseTank ? 0.0f : 1.0f;
 }
 
 float HydrossTheUnstableDisablePhaseTankAssistMultiplier::GetValueInEncounter(Action* action)
@@ -238,41 +240,30 @@ float HydrossTheUnstableWaitForDpsMultiplier::GetValueInEncounter(Action* action
     if (dynamic_cast<HydrossTheUnstablePositionAndSwapTanksAction*>(action))
         return 1.0f;
 
-    if (IsHydrossAddTank(bot))
-        return 1.0f;
-
+    // By leewheel 2026-09-29 合并brighton 07e47c61: 上游新增 GetHydrossDpsHoldWindow 统一判定
+    //   停手窗口（接管旧 4 timer 语义），弃用 IsHydrossAddTank 早退；保留 rule81 entry 化 21216
+    // End By leewheel
     Unit* hydross = AI_VALUE2(Unit*, "find target", "21216");
-    if (!hydross)
+    if (!hydross || GetHydrossDpsHoldWindow(hydross) == HydrossDpsHoldWindow::None)
         return 1.0f;
 
-    bool const frostPhase = IsHydrossInFrostPhase(hydross);
+    // The tank waiting for its phase is held; the phase tank and add tanks carry on.
     if (PlayerbotAI::IsTank(bot) &&
-        (frostPhase ?
-            PlayerbotAI::IsMainTank(bot) : PlayerbotAI::IsAssistTankOfIndex(bot, 0, true)))
+        !(IsHydrossInFrostPhase(hydross) ? IsHydrossNatureTank(bot) : IsHydrossFrostTank(bot)))
     {
         return 1.0f;
     }
 
-    std::unordered_map<uint32, uint32> const& phaseStartTimer =
-        frostPhase ? hydrossFrostDpsWaitTimer : hydrossNatureDpsWaitTimer;
-    std::unordered_map<uint32, uint32> const& handOverTimer =
-        frostPhase ? hydrossChangeToNaturePhaseTimer : hydrossChangeToFrostPhaseTimer;
+    // Spells cast on the raid don't touch Hydross. Totems are the exception, as some attack.
+    if (bot->getClass() == CLASS_SHAMAN && dynamic_cast<CastTotemAction*>(action))
+        return 0.0f;
 
-    uint32 const instanceId = hydross->GetInstanceId();
-    uint32 const now = getMSTime();
-    constexpr uint32 handOverWaitMs = 1 * IN_MILLISECONDS;
-    constexpr uint32 phaseStartWaitMs = 5 * IN_MILLISECONDS;
-
-    auto itStart = phaseStartTimer.find(instanceId);
-    bool const justChanged =
-        itStart == phaseStartTimer.end() || getMSTimeDiff(itStart->second, now) < phaseStartWaitMs;
-
-    auto itHandOver = handOverTimer.find(instanceId);
-    bool const aboutToChange =
-        itHandOver != handOverTimer.end() &&
-        getMSTimeDiff(itHandOver->second, now) >= handOverWaitMs;
-
-    return justChanged || aboutToChange ? 0.0f : 1.0f;
+    bool const castOnRaid = dynamic_cast<CastBuffSpellAction*>(action) ||
+        dynamic_cast<CastCureSpellAction*>(action) ||
+        dynamic_cast<CurePartyMemberAction*>(action) ||
+        dynamic_cast<ResurrectPartyMemberAction*>(action) ||
+        dynamic_cast<CastProtectSpellAction*>(action);
+    return castOnRaid ? 1.0f : 0.0f;
 }
 
 // The Lurker Below
@@ -283,9 +274,7 @@ float TheLurkerBelowStayAwayFromSpoutMultiplier::GetValueInEncounter(Action* act
         return 1.0f;
 
     if (!dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action) &&
-        !IsRepositionAction(bot, action) &&
-        (bot->getClass() != CLASS_ROGUE || !dynamic_cast<CastKillingSpreeAction*>(action)))
+        !IsMeleeReachSpell(bot, action) && !IsRepositionAction(bot, action))
     {
         return 1.0f;
     }
@@ -301,6 +290,9 @@ float TheLurkerBelowStayAwayFromSpoutMultiplier::GetValueInEncounter(Action* act
 
 float TheLurkerBelowMaintainRangedSpreadMultiplier::GetValueInEncounter(Action* action)
 {
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
     if (!PlayerbotAI::IsRanged(bot))
         return 1.0f;
 
@@ -332,13 +324,13 @@ float TheLurkerBelowTanksFocusAssignedGuardianMultiplier::GetValueInEncounter(Ac
     if (instanceIt == lurkerGuardianTankAssignments.end())
         return 1.0f;
 
-    std::vector<Player*> const tanks = GetLurkerGuardianTanks(bot);
-    auto const myIt = std::find(tanks.begin(), tanks.end(), bot);
-    if (myIt == tanks.end())
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target || !target->IsAlive())
         return 1.0f;
 
-    Unit* guardian = botAI->GetUnit(instanceIt->second[std::distance(tanks.begin(), myIt)]);
-    return guardian && guardian->IsAlive() ? 0.0f : 1.0f;
+    auto const& assignments = instanceIt->second;
+    return std::find(assignments.begin(), assignments.end(), target->GetGUID()) !=
+        assignments.end() ? 0.0f : 1.0f;
 }
 
 // Leotheras the Blind
@@ -406,6 +398,9 @@ float LeotherasTheBlindDisableTankActionsMultiplier::GetValueInEncounter(Action*
 
 float LeotherasTheBlindFocusOnInnerDemonMultiplier::GetValueInEncounter(Action* action)
 {
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
     if (!HasInnerDemon(bot))
         return 1.0f;
 
@@ -415,7 +410,7 @@ float LeotherasTheBlindFocusOnInnerDemonMultiplier::GetValueInEncounter(Action* 
     // Don't waste time moving. Just kill the Inner Demon asap.
     if (dynamic_cast<MovementAction*>(action) &&
         !dynamic_cast<LeotherasTheBlindDestroyInnerDemonAction*>(action) &&
-        !dynamic_cast<LeotherasTheBlindMeleeRunAwayFromChaosBlastAction*>(action) &&
+        !dynamic_cast<LeotherasTheBlindMeleeRunFromChaosBlastAction*>(action) &&
         !dynamic_cast<LeotherasTheBlindPositionRangedAction*>(action) &&
         !dynamic_cast<MeleeAction*>(action))
     {
@@ -522,11 +517,8 @@ float LeotherasTheBlindMeleeAvoidChaosBlastMultiplier::GetValueInEncounter(Actio
     if (!PlayerbotAI::IsMelee(bot))
         return 1.0f;
 
-    if (!dynamic_cast<AttackAction*>(action) &&
-        !dynamic_cast<ReachTargetAction*>(action) &&
-        !dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action) &&
-        (bot->getClass() != CLASS_ROGUE || !dynamic_cast<CastKillingSpreeAction*>(action)))
+    if (!dynamic_cast<AttackAction*>(action) && !dynamic_cast<ReachTargetAction*>(action) &&
+        !dynamic_cast<CombatFormationMoveAction*>(action) && !IsMeleeReachSpell(bot, action))
     {
         return 1.0f;
     }
@@ -639,6 +631,9 @@ float LeotherasTheBlindDisableTankSoulshatterMultiplier::GetValueInEncounter(
 
 float FathomLordKarathressDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
 {
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
     if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
@@ -653,13 +648,10 @@ float FathomLordKarathressDisableTankActionsMultiplier::GetValueInEncounter(Acti
         return 0.0f;
 
     // Hold AoE threat and taunts only when another tank's target is close enough to be hit.
-    if (IsAoeThreatAction(bot, action) || IsAoeTauntAction(bot, action))
-    {
-        return IsAnotherCouncilMemberWithin(botAI, KARATHRESS_AOE_THREAT_CLEARANCE) ?
-            0.0f : 1.0f;
-    }
+    if (!IsAoeThreatAction(bot, action) && !IsAoeTauntAction(bot, action))
+        return 1.0f;
 
-    return 1.0f;
+    return IsAnotherCouncilMemberWithin(botAI, KARATHRESS_AOE_THREAT_CLEARANCE) ? 0.0f : 1.0f;
 }
 
 float FathomLordKarathressDisableAutoTargetMultiplier::GetValueInEncounter(Action* action)
@@ -675,6 +667,9 @@ float FathomLordKarathressDisableAutoTargetMultiplier::GetValueInEncounter(Actio
 
 float FathomLordKarathressDisableAoeMultiplier::GetValueInEncounter(Action* action)
 {
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
     if (!PlayerbotAI::IsDps(bot))
         return 1.0f;
 
@@ -723,7 +718,6 @@ float FathomLordKarathressMaintainPositionMultiplier::GetValueInEncounter(Action
     if (dynamic_cast<FollowAction*>(action) || dynamic_cast<FleeAction*>(action))
         return 0.0f;
 
-    // Caribdis healer needs to maintain position.
     if (!PlayerbotAI::IsAssistHealOfIndex(bot, 0, true))
         return 1.0f;
 
@@ -751,6 +745,10 @@ float FathomLordKarathressNoCastingWhileLiftedMultiplier::GetValueInEncounter(Ac
     if (!dynamic_cast<CastSpellAction*>(action))
         return 1.0f;
 
+    // By leewheel 2026-09-29 合并brighton 07e47c61: 按规则第 97 条 entry 化 = 21214
+    if (!AI_VALUE2(Unit*, "find target", "21214"))
+        return 1.0f;
+
     if (bot->HasAura(Id(SscSpells::SPELL_CYCLONE)))
         return 0.0f;
 
@@ -768,6 +766,9 @@ float FathomLordKarathressNoCastingWhileLiftedMultiplier::GetValueInEncounter(Ac
 // and the stock reach on its old target would just pull it back.
 float FathomLordKarathressApproachingCaribdisMultiplier::GetValueInEncounter(Action* action)
 {
+    if (!PlayerbotAI::IsRangedDps(bot))
+        return 1.0f;
+
     if (!dynamic_cast<MovementAction*>(action) ||
         dynamic_cast<FathomLordKarathressAssignDpsPriorityAction*>(action) ||
         dynamic_cast<FathomLordKarathressDropFromCycloneAction*>(action))
@@ -775,19 +776,14 @@ float FathomLordKarathressApproachingCaribdisMultiplier::GetValueInEncounter(Act
         return 1.0f;
     }
 
-    // Healers are ranged too, but the walk is not theirs and they need to move freely
-    if (!PlayerbotAI::IsRanged(bot) || !PlayerbotAI::IsDps(bot))
-        return 1.0f;
-
-    // By leewheel 2026-09-23 合并 brighton the-lab 8a778540：本 multiplier 是上游本轮新增，
-    //   按规则第 97 条 entry 化：fathom-guard caribdis = 21964（深水卫士卡里布迪斯）、
-    //   fathom-guard tidalvess = 21965（深水卫士泰达维斯）。
+    // By leewheel 2026-09-29 合并brighton 07e47c61: 上游审计后删除"治疗不走位"早退 gate
+    //   （7bfc29f7 引入、本轮有意移除），采纳上游；保留 rule81 entry 化 21964/21965
+    // End By leewheel
     Unit* caribdis = AI_VALUE2(Unit*, "find target", "21964");
     if (!caribdis)
         return 1.0f;
 
-    // Only while she is the kill target: a totem in reach and Tidalvess come before her
-// By leewheel 2026-09-26 合并brighton: GetSpitfireTotem签名收botAI(与定义一致), 查找entry化(21965)
+    // Only while she is the kill target. A totem in reach and Tidalvess come before her.
     if (ShouldAttackSpitfireTotem(bot, GetSpitfireTotem(botAI)) ||
         AI_VALUE2(Unit*, "find target", "21965"))
     // End By leewheel
@@ -822,24 +818,22 @@ float FathomLordKarathressDontDropOutOfSightTargetMultiplier::GetValueInEncounte
 
 // Morogrim Tidewalker
 
-// By leewheel 2026-09-19 合并上游 the-lab：上游统一的 SscDelayDpsCooldownsMultiplier
-//   已覆盖「踏潮者（21213）的嗜血/英勇只在鱼人波(21920)开」，故按「有上游就不留自建」删除
-//   本分支自建的 MorogrimTidewalkerDelayBloodlustAndHeroismMultiplier。
+// By leewheel 2026-09-29 合并brighton 07e47c61: 上游把 DisableTankActions 重写为
+//   DisableTankFace（判定从 CombatFormationMove 收窄为 TankFaceAction，头文件与注册同步），
+//   函数体随上游；保留 rule81 entry 化 21213。
 // End By leewheel
-float MorogrimTidewalkerDisableTankActionsMultiplier::GetValueInEncounter(Action* action)
+float MorogrimTidewalkerDisableTankFaceMultiplier::GetValueInEncounter(Action* action)
 {
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
     if (!PlayerbotAI::IsTank(bot))
         return 1.0f;
 
-    // By leewheel 2026-09-23 合并 brighton the-lab 8a778540：上游把本 multiplier 的判定顺序
-    //   反转为「先判动作类型、再查 boss」，并合并为单条 return，语义等价（我方原写法为
-    //   「先查 boss 存在、再判动作类型」）。取上游结构，按规则第 97 条 entry 化：
-    //   morogrim tidewalker = 21213（莫洛格里·踏潮者）。
-    if (!dynamic_cast<CombatFormationMoveAction*>(action))
+    if (!dynamic_cast<TankFaceAction*>(action))
         return 1.0f;
 
     return AI_VALUE2(Unit*, "find target", "21213") ? 0.0f : 1.0f;
-    // End By leewheel
 }
 
 // By leewheel 2026-09-23 合并 brighton the-lab 8a778540：上游把本 multiplier 由
@@ -853,6 +847,9 @@ float MorogrimTidewalkerDisableTankActionsMultiplier::GetValueInEncounter(Action
 //   （比 P2 血量阈值宽 2%）+ GetTidewalkerStackPoint 距离。
 float MorogrimTidewalkerStayStackedMultiplier::GetValueInEncounter(Action* action)
 {
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
     if (!PlayerbotAI::IsRanged(bot))
         return 1.0f;
 
@@ -934,15 +931,13 @@ float LadyVashjStaticChargeStayAwayFromGroupMultiplier::GetValueInEncounter(Acti
 {
     // Only melee need holding back from a charged tank. Everyone else still has to reach targets to
     // heal or cast, and ReachPartyMemberToHealAction is a ReachTargetAction.
-    if (!PlayerbotAI::IsMelee(bot) && !HasStaticCharge(bot))
+    if (!PlayerbotAI::IsMelee(bot) && !HasVashjStaticCharge(bot))
         return 1.0f;
 
 // By leewheel 2026-09-26 合并brighton: 采纳动作类型限定(仅抑制移动/追杀类action)
     if (!dynamic_cast<ReachTargetAction*>(action) &&
         !dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<FollowAction*>(action) &&
-        !dynamic_cast<CastKillingSpreeAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action))
+        !dynamic_cast<FollowAction*>(action) && !IsMeleeReachSpell(bot, action))
     {
         return 1.0f;
     }
@@ -952,11 +947,12 @@ float LadyVashjStaticChargeStayAwayFromGroupMultiplier::GetValueInEncounter(Acti
     return vashj && ShouldAvoidVashjStaticCharge(bot, vashj) ? 0.0f : 1.0f;
 }
 
-// Bots should not loot the core with normal looting logic. Both the walk to a corpse and opening
-// it: a bot in the non-combat engine mid-fight runs the loot strategy, and one already beside the
-// corpse needs no walk.
+// Bots should not loot the core with normal looting logic.
 float LadyVashjDoNotLootTheTaintedCoreMultiplier::GetValueInEncounter(Action* action)
 {
+    if (botAI->GetState() == BOT_STATE_COMBAT)
+        return 1.0f;
+
     if (!dynamic_cast<LootAction*>(action) && !dynamic_cast<OpenLootAction*>(action))
         return 1.0f;
 
@@ -964,164 +960,186 @@ float LadyVashjDoNotLootTheTaintedCoreMultiplier::GetValueInEncounter(Action* ac
     return vashj && GetLadyVashjPhase(vashj) == 2 ? 0.0f : 1.0f;
 }
 
+// Chain members stay where the chain needs them: the looter beside the elemental until it has the
+// core, a holder (rooted anyway), and a catcher walking to or standing on its spot. Only what moves
+// them is held, movement actions and spells that carry the caster (charges, Disengage, Blink,
+// Killing Spree), so they still heal, cast and attack what is in reach. An AttackAction is a
+// MovementAction but only faces its target, so it goes through.
 float LadyVashjCorePassersPrioritizePositioningMultiplier::GetValueInEncounter(Action* action)
 {
+    // By leewheel 2026-09-29 合并brighton 07e47c61: 上游再次重写本 multiplier——链外成员先期
+    //   退出、攻击/传核/拾取动作豁免、isStart 以 GetAssignedTaintedElemental + IsTaintedCoreStillToLoot
+    //   判定、尾部收拢为单行 return；保留 rule81 entry 化 21212。
+    // End By leewheel
+    VashjCoreChain const* chain = GetVashjCoreChain(bot);
+    if (!chain)
+        return 1.0f;
+
+    int8 const index = GetVashjCoreCatcherIndex(*chain, bot);
+    bool const isStart = chain->start == bot->GetGUID();
+    if (index < 0 && !isStart)
+        return 1.0f;
+
+    if (dynamic_cast<AttackAction*>(action) ||
+        dynamic_cast<LadyVashjPassTheTaintedCoreAction*>(action) ||
+        dynamic_cast<LadyVashjLootTaintedCoreAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    if (!dynamic_cast<MovementAction*>(action) &&
+        !IsMeleeReachSpell(bot, action) && !IsRepositionAction(bot, action))
+    {
+        return 1.0f;
+    }
+
     if (Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
         !vashj || GetLadyVashjPhase(vashj) != 2)
     {
         return 1.0f;
     }
 
-    if (dynamic_cast<WipeAction*>(action))
-        return 1.0f;
-
-    // Only the chain's start and catchers are held here
-    VashjCoreChain const* chain = GetVashjCoreChain(bot);
-    if (!chain)
-        return 1.0f;
-
-    int8 const index = GetVashjCoreCatcherIndex(*chain, bot);
-    if (index < 0 && chain->start != bot->GetGUID())
-        return 1.0f;
-
-    bool const isPass = dynamic_cast<LadyVashjPassTheTaintedCoreAction*>(action);
-
-    // A holder only passes, uses or destroys the core
     if (HasTaintedCore(bot))
-    {
-        return isPass || dynamic_cast<LadyVashjDestroyTaintedCoreAction*>(action) ?
-            1.0f : 0.0f;
-    }
+        return 0.0f;
 
-    // The designated looter must stay on the Tainted Elemental until it has the core.
-    if (dynamic_cast<LadyVashjAssignPhase2AndPhase3DpsPriorityAction*>(action) &&
-        GetDesignatedCoreLooter(botAI, bot) == bot)
+    if (isStart)
     {
-        constexpr float corpseSearchRadius = 30.0f;
-        if (AI_VALUE2(Unit*, "find target", "22009") ||
-            bot->FindNearestCreature(Id(SscNpcs::NPC_TAINTED_ELEMENTAL), corpseSearchRadius, false))
+        Creature* tainted = GetAssignedTaintedElemental(bot);
+        if (tainted && IsTaintedCoreStillToLoot(tainted))
             return 0.0f;
     }
 
-    // By leewheel 2026-09-28 合并 brighton 219cd311（vashj 传核链重做）：采纳上游"就位中的包手不做其他
-    //   移动"判定，取代我方旧版（首二传包手在拾取者贴近元素时锁定移动 + AnyRecentCoreInInventory）——
-    //   新机制由 catcher.prepositions/readyDelay 统一表达，语义等价且不回退。
-    // End By leewheel
-    // A catcher on its way to, or standing on, its spot moves for nothing else
-    if (!isPass && index >= 0 && dynamic_cast<MovementAction*>(action) &&
-        IsVashjCoreCatcherActive(bot, *chain, index))
-    {
-        return 0.0f;
-    }
-
-    return 1.0f;
+    return index >= 0 && IsVashjCoreCatcherActive(bot, *chain, index) ? 0.0f : 1.0f;
 }
 
-// All of phases 2 and 3 require a custom movement and targeting system
-// So the standard target selection system must be disabled
-float LadyVashjDisableAutoTargetAndMoveMultiplier::GetValueInEncounter(Action *action)
+// Phases 2 and 3 have their own movement and targeting, so stock targeting and the stock moves that
+// would undo it are held.
+float LadyVashjPhase2DisableAutoTargetAndMoveMultiplier::GetValueInEncounter(Action* action)
 {
-    // By leewheel 2026-09-27 合并 brighton fa573dd3：采纳上游新增的六类动作门控判定
-    //   （assist/follow-flee/debuff-on-attacker/formation/reach/avoid-aoe，下游代码引用这些变量），
-    //   并按规则第 97 条 entry 化：lady vashj = 21212（瓦丝琪）。
+    // By leewheel 2026-09-29 合并brighton 07e47c61: 上游把动作门控重组为 isAlwaysBlocked 分组
+    //   （assist+follow+flee 合并），采纳上游；保留 rule81 entry 化 21212。
     // End By leewheel
-    bool const isAssist =
-        dynamic_cast<DpsAssistAction*>(action) || dynamic_cast<TankAssistAction*>(action);
-    bool const isFollowOrFlee =
+    bool const isAlwaysBlocked =
+        dynamic_cast<DpsAssistAction*>(action) || dynamic_cast<TankAssistAction*>(action) ||
         dynamic_cast<FollowAction*>(action) || dynamic_cast<FleeAction*>(action);
+    bool const isReachAction = dynamic_cast<ReachTargetAction*>(action);
+    bool const isHealSpell = dynamic_cast<CastHealingSpellAction*>(action);
     bool const isDebuffOnAttacker = dynamic_cast<CastDebuffSpellOnAttackerAction*>(action);
-    bool const isFormation = dynamic_cast<CombatFormationMoveAction*>(action);
-    bool const isReach = dynamic_cast<ReachTargetAction*>(action);
-    bool const isAvoidAoe = dynamic_cast<AvoidAoeAction*>(action);
-    if (!isAssist && !isFollowOrFlee && !isDebuffOnAttacker && !isFormation && !isReach &&
-        !isAvoidAoe && !dynamic_cast<CastHealingSpellAction*>(action) &&
-        !IsRepositionAction(bot, action))
+    bool const isCombatFormationAction = dynamic_cast<CombatFormationMoveAction*>(action);
+    bool const isDropTarget = dynamic_cast<DropTargetAction*>(action);
+    if (!isAlwaysBlocked && !isReachAction && !isHealSpell && !isDebuffOnAttacker &&
+        !isCombatFormationAction && !isDropTarget && !IsRepositionAction(bot, action))
     {
         return 1.0f;
     }
 
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    if (!vashj)
+    if (!vashj || GetLadyVashjPhase(vashj) != 2)
         return 1.0f;
 
-    if (isAvoidAoe)
+    // In either engine. The priority action gives every bot its targets, healers included, and
+    // its Attack() switches them into the combat engine; assist would only add targets the tiers
+    // don't allow, such as an Elite or Strider no tank has yet.
+    // Every bot has its own way back to its post: cluster slots, the idle tank's walk to her, and
+    // melee targets chosen by their distance from her
+    if (isAlwaysBlocked)
         return 0.0f;
 
-    int8 const phase = GetLadyVashjPhase(vashj);
+    // Healers keep their combat engine, where their healing is, while they have no target:
+    // dropping a missing target would switch them to the non-combat engine
+    if (isDropTarget)
+        return PlayerbotAI::IsHeal(bot) ? 0.0f : 1.0f;
 
-    if (phase == 2)
+    // Non-healers heal only as a non-combat action, and they sit in the non-combat engine while
+    // they wait for adds, at the start of phase 2 above all. It would only spend their mana.
+    if (isHealSpell)
+        return PlayerbotAI::IsHeal(bot) ? 1.0f : 0.0f;
+
+    if (isDebuffOnAttacker)
+        return IsEnchantedElemental(AI_VALUE(Unit*, "current target")) ? 0.0f : 1.0f;
+
+    // Only getting behind the target goes through, and not behind an Enchanted Elemental, where it
+    // gains nothing. The rest would pull bots off their posts, and tank facing doesn't work where a
+    // tanking position is set, as for Elites and Striders here.
+    if (isCombatFormationAction)
     {
-        if (isAssist && botAI->GetState() == BOT_STATE_COMBAT)
-            return 0.0f;
-
-        if (dynamic_cast<FleeAction*>(action))
-            return 0.0f;
-
-        if (dynamic_cast<FollowAction*>(action) && bot->GetExactDist2d(vashj) < 60.0f)
-            return 0.0f;
-
-        if (!PlayerbotAI::IsHeal(bot) && dynamic_cast<CastHealingSpellAction*>(action))
-            return 0.0f;
-
-        // By leewheel 2026-09-27 合并 brighton fa573dd3：采纳上游的 isDebuffOnAttacker 分组结构，
-        //   并按规则第 97 条 entry 化：enchanted elemental = 21958（魔化元素）。
+        // By leewheel 2026-09-29 合并brighton 07e47c61: 上游重写本分支为
+        //   "仅放行 SetBehindTargetAction 且当前目标非魔化元素"，取代我方旧版多段门控
+        //   （旧版 isAssist/Flee/Follow/治疗与 tainted 判定均已上移到 isAlwaysBlocked /
+        //   isHealSpell / isDebuffOnAttacker / 尾部 RangedDps 分支），采纳上游。
         // End By leewheel
-        if (isDebuffOnAttacker)
-        {
-            Unit* enchanted = AI_VALUE2(Unit*, "find target", "21958");
-            if (enchanted && AI_VALUE(Unit*, "current target") == enchanted)
-                return 0.0f;
-        }
-
-        // Cluster ranged shoot from their slots. Only those sent after a Tainted Elemental walk
-        // to it, and those stepping in to cast range of a Strider.
-        if ((isReach || isFormation || IsRepositionAction(bot, action)) &&
-            PlayerbotAI::IsRangedDps(bot))
-        {
-            bool const stepsInToStrider =
-                isReach && IsVashjStriderToStepInTo(bot, AI_VALUE(Unit*, "current target"));
-            if (!stepsInToStrider)
-            {
-                // By leewheel 2026-09-27 合并 brighton fa573dd3 后补齐 entry 化：
-                //   tainted elemental = 22009（被污染的元素，查库核定）。
-                Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
-                if (!tainted || !IsVashjTaintedElementalKiller(bot, tainted))
-                    return 0.0f;
-            }
-        }
-
-        // Cluster healers heal from their slots too
-        if ((isReach || isFormation) && PlayerbotAI::IsHeal(bot) &&
-            GetVashjClusterSlot(bot).cluster >= 0)
-        {
-            return 0.0f;
-        }
+        return dynamic_cast<SetBehindTargetAction*>(action) &&
+            !IsEnchantedElemental(AI_VALUE(Unit*, "current target")) ? 1.0f : 0.0f;
     }
 
-    if (phase == 3)
+    // Cluster ranged shoot from their slots. Only those sent after a Tainted Elemental walk to it,
+    // and those stepping in to cast range of a Strider.
+    if (PlayerbotAI::IsRangedDps(bot))
     {
-        if (isAssist && botAI->GetState() == BOT_STATE_COMBAT)
-            return 0.0f;
-
-        if (!isFollowOrFlee && !isDebuffOnAttacker && !isFormation)
+        if (isReachAction && IsTankedStriderInStepInReach(bot, AI_VALUE(Unit*, "current target")))
             return 1.0f;
 
-        Unit* enchanted = AI_VALUE2(Unit*, "find target", "21958");
-        Unit* strider = AI_VALUE2(Unit*, "find target", "22056");
-        Unit* elite = AI_VALUE2(Unit*, "find target", "22055");
-        if (enchanted || strider || elite)
-        {
-            if (isFollowOrFlee)
-                return 0.0f;
+        // By leewheel 2026-09-29 合并brighton 07e47c61: 上游改用
+        //   IsAssignedToAttackTaintedElemental 判定（取代旧 enchanted/strider/elite 三连查与
+        //   isFollowOrFlee 门控）；保留 rule81 entry 化 22009。
+        // End By leewheel
+        Unit* tainted = AI_VALUE2(Unit*, "find target", "22009");
+        return tainted && IsAssignedToAttackTaintedElemental(bot, tainted) ? 1.0f : 0.0f;
+    }
 
-            if (isDebuffOnAttacker && enchanted && AI_VALUE(Unit*, "current target") == enchanted)
-                return 0.0f;
-        }
-        else if (isFormation)
+    // Cluster healers heal from their slots too. Other healers still reach to heal, but never walk
+    // to a target, which healer dps or a priest's wand would.
+    if (isReachAction && PlayerbotAI::IsHeal(bot))
+    {
+        if (GetVashjClusterSlot(bot).cluster >= 0 ||
+            !dynamic_cast<ReachPartyMemberToHealAction*>(action))
+        {
             return 0.0f;
+        }
     }
 
     return 1.0f;
+}
+
+// The spore actions dodge pools, and bots move to their own targets.
+float LadyVashjPhase3DisableAutoTargetAndMoveMultiplier::GetValueInEncounter(Action* action)
+{
+    bool const isAssist =
+        dynamic_cast<DpsAssistAction*>(action) || dynamic_cast<TankAssistAction*>(action);
+    bool const isDebuffOnAttacker = dynamic_cast<CastDebuffSpellOnAttackerAction*>(action);
+
+    if (!isAssist && !isDebuffOnAttacker && !dynamic_cast<AvoidAoeAction*>(action) &&
+        !dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<FollowAction*>(action) && !dynamic_cast<FleeAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    // By leewheel 2026-09-29 合并brighton 07e47c61: 本 multiplier 为上游本轮新增，
+    //   按规则第 97 条 entry 化：lady vashj = 21212（瓦丝琪）。
+    // End By leewheel
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 3)
+        return 1.0f;
+
+    if (isAssist)
+        return botAI->GetState() == BOT_STATE_COMBAT ? 0.0f : 1.0f;
+
+    if (isDebuffOnAttacker)
+        return IsEnchantedElemental(AI_VALUE(Unit*, "current target")) ? 0.0f : 1.0f;
+
+    // Two combat formation moves are allowed:
+    // (1) Getting behind the target, except an Enchanted Elemental, where it is a waste of time.
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (dynamic_cast<SetBehindTargetAction*>(action))
+        return IsEnchantedElemental(target) ? 0.0f : 1.0f;
+
+    // (2) a tank turning an Elite away (Cleave), which works in Phase 3 only because Elites lost
+    // their hardcoded tanking positions.
+    if (dynamic_cast<TankFaceAction*>(action))
+        return target && target->GetEntry() == Id(SscNpcs::NPC_COILFANG_ELITE) ? 1.0f : 0.0f;
+
+    return 0.0f;
 }
 
 float LadyVashjSaveHandOfFreedomMultiplier::GetValueInEncounter(Action *action)
@@ -1156,11 +1174,14 @@ float LadyVashjMeleeControlSporeAvoidanceMultiplier::GetValueInEncounter(Action*
         return 1.0f;
     }
 
-    if (!IsVashjRingMelee(bot))
+    if (!PlayerbotAI::IsMelee(bot) || PlayerbotAI::IsTank(bot))
         return 1.0f;
 
+    // By leewheel 2026-09-29 合并brighton 07e47c61: 上游新增 IsVashjRingMelee 前置
+    //   （仅近战圈成员受毒孢子走位控制）；保留 rule81 entry 化 21212。
+    // End By leewheel
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    if (!vashj || GetLadyVashjPhase(vashj) != 3)
+    if (!vashj || GetLadyVashjPhase(vashj) != 3 || !IsVashjRingMelee(bot, vashj))
         return 1.0f;
 
     return IsNearToxicSpores(botAI, bot, TOXIC_SPORES_MELEE_CONTROL_RADIUS) ? 0.0f : 1.0f;
@@ -1171,11 +1192,16 @@ float LadyVashjMeleeControlSporeAvoidanceMultiplier::GetValueInEncounter(Action*
 float LadyVashjRangedDoNotReachThroughSporesMultiplier::GetValueInEncounter(Action* action)
 {
     bool const isHealerReach = dynamic_cast<ReachPartyMemberToHealAction*>(action);
-    if (!isHealerReach && !dynamic_cast<ReachSpellAction*>(action))
+    bool const isSpellReach = dynamic_cast<ReachSpellAction*>(action);
+
+    // The reach the helper below measures: a healer's reach-to-heal, anyone else's reach-spell
+    if (PlayerbotAI::IsHeal(bot) ? !isHealerReach : !isSpellReach)
         return 1.0f;
 
-    if (isHealerReach != PlayerbotAI::IsHeal(bot))
-        return 1.0f;
+    // By leewheel 2026-09-29 合并brighton 07e47c61: 按规则第 97 条 entry 化 = 21212
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    if (!vashj || GetLadyVashjPhase(vashj) != 3)
+        return false;
 
     Unit* target;
     float range;

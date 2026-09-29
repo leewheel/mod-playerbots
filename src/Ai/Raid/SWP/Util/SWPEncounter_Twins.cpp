@@ -98,7 +98,7 @@ bool HasClosedOnTankThreat(Unit* boss, Player* bot, float tankThreat, float thre
 } // end anonymous namespace
 
 std::unordered_map<uint32, EredarTwinsIncomingConflagrationState>
-	eredarTwinsIncomingConflagrationStates;
+    eredarTwinsIncomingConflagrationStates;
 
 std::unordered_map<uint32, EredarTwinsBlazeTargetState> eredarTwinsBlazeTargetStates;
 
@@ -194,12 +194,9 @@ Player* GetSacrolashTank(Player* bot, uint8 index)
         found = 1;
     }
 
-    for (uint8 assistIndex = 0;; ++assistIndex)
+    for (uint8 assistIndex = 0; Player* assistTank = GetGroupAssistTank(bot, assistIndex);
+         ++assistIndex)
     {
-        Player* assistTank = GetGroupAssistTank(bot, assistIndex);
-        if (!assistTank)
-            return nullptr;
-
         if (assistTank == alythessTank)
             continue;
 
@@ -208,6 +205,8 @@ Player* GetSacrolashTank(Player* bot, uint8 index)
 
         ++found;
     }
+
+    return nullptr;
 }
 
 // Sacrolash is held by every tank except the one assigned to Alythess.

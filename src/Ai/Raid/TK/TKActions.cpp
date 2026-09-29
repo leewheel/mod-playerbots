@@ -1893,31 +1893,26 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::AssistTankPicksUpPhoenix(Un
     return MoveFromGroup(safeDistance);
 }
 
-// Priority: (1) Kael with Shock Barrier (to interrupt Pyroblast), (2) Eggs (ranged only), (3) Kael
-// without Shock Barrier, and (4) Phoenixes but only for ranged during Kael's RP power-up scene.
-// Phoenixes kill themselves so having them included is only because bots have nothing else to do
-// during the scene.
+// Priority: (1) Kael with Shock Barrier (to interrupt Pyroblast), (2) Eggs (ranged only so melee
+// doesn't waste time or risk getting hit by Flame Strike running to them), (3) Kael without Shock
+// Barrier, and (4) Phoenixes (ranged when they have nothing to do during Kael's RP power-up scene).
 bool KaelthasSunstriderAssignFinalPhaseTargetAction::NonTanksAssignTargetAndAvoidPhoenixes()
 {
-    // Phoenixes that turn into eggs remain alive and on threat lists. They simply become
-    // unattackable and invisible on top of the egg.
-    //
-    // Silly AC bug: the "dead" phoenix keeps its Burn aura (36720) so the egg sits inside an active
-    // 8-yard, ~5k-per-2s Burn. The egg is therefore ranged-only, like the phoenix.
-    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游新增的 AC bug 说明注释，保留 rule81 entry 化
-    // （21362 = 凤凰 Phoenix；变量须留在函数级作用域，下方 target = phoenix 需要）
+    // When it "dies" and reverts to an egg, the Phoenix becomes invisible but remains alive on top
+    // of the egg with 1 HP. At that point, there should be no avoidance. The aura check is the
+    // most consistent as flags (like NON_ATTACKABLE) are not changed until 2s after Rebirth.
+    // By leewheel 2026-09-29 合并brighton 07e47c61：采纳上游新判定（余烬冲击 aura 比 NON_ATTACKABLE
+    //   旗标早 2 秒、更稳），保留 rule81 entry 化（21362 = 凤凰 Phoenix）
     Unit* phoenix = AI_VALUE2(Unit*, "find target", "21362");
-    if (phoenix && phoenix->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+    if (phoenix && phoenix->HasAura(Id(TkSpells::SPELL_EMBER_BLAST)))
         phoenix = nullptr;
 
     if (phoenix)
     {
         constexpr float safeDistance = 15.0f;
         float const currentDistance = bot->GetExactDist2d(phoenix);
-
-        // A Phoenix is survivable and a Flame Strike is not, so don't try to avoid Phoenixes when
-        // too close to a Flame Strike
         constexpr float flameStrikeRadius = 15.0f;
+
         if (currentDistance < safeDistance &&
             !GetNearestFlameStrikeInRadius(bot, flameStrikeRadius))
         {

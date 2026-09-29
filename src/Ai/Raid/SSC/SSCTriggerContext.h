@@ -33,11 +33,11 @@ public:
         creators["hydross the unstable should be tanked by nature tank"] =
             &RaidSscTriggerContext::hydross_the_unstable_should_be_tanked_by_nature_tank;
 
-        creators["hydross the unstable ranged should spread"] =
-            &RaidSscTriggerContext::hydross_the_unstable_ranged_should_spread;
+        creators["hydross the unstable ranged should spread in frost phase"] =
+            &RaidSscTriggerContext::hydross_the_unstable_ranged_should_spread_in_frost_phase;
 
-        creators["hydross the unstable tank needs aggro upon phase change"] =
-            &RaidSscTriggerContext::hydross_the_unstable_tank_needs_aggro_upon_phase_change;
+        creators["hydross the unstable should misdirect upon phase change"] =
+            &RaidSscTriggerContext::hydross_the_unstable_should_misdirect_upon_phase_change;
 
         creators["hydross the unstable aggro resets upon phase change"] =
             &RaidSscTriggerContext::hydross_the_unstable_aggro_resets_upon_phase_change;
@@ -55,8 +55,8 @@ public:
         creators["the lurker below ranged should spread"] =
             &RaidSscTriggerContext::the_lurker_below_ranged_should_spread;
 
-        creators["the lurker below is submerged"] =
-            &RaidSscTriggerContext::the_lurker_below_is_submerged;
+        creators["the lurker below guardians should be tanked"] =
+            &RaidSscTriggerContext::the_lurker_below_guardians_should_be_tanked;
 
         creators["the lurker below melee cannot reach target"] =
             &RaidSscTriggerContext::the_lurker_below_melee_cannot_reach_target;
@@ -99,8 +99,8 @@ public:
         creators["fathom-lord karathress pulling bosses"] =
             &RaidSscTriggerContext::fathom_lord_karathress_pulling_bosses;
 
-        creators["fathom-lord karathress determining kill order"] =
-            &RaidSscTriggerContext::fathom_lord_karathress_determining_kill_order;
+        creators["fathom-lord karathress should assign dps priority"] =
+            &RaidSscTriggerContext::fathom_lord_karathress_should_assign_dps_priority;
 
         creators["fathom-lord karathress should manage dps timer"] =
             &RaidSscTriggerContext::fathom_lord_karathress_should_manage_dps_timer;
@@ -218,11 +218,11 @@ private:
     static Trigger* hydross_the_unstable_should_be_tanked_by_nature_tank(PlayerbotAI* botAI) {
         return new HydrossTheUnstableShouldBeTankedByNatureTankTrigger(botAI);
     }
-    static Trigger* hydross_the_unstable_ranged_should_spread(PlayerbotAI* botAI) {
-        return new HydrossTheUnstableRangedShouldSpreadTrigger(botAI);
+    static Trigger* hydross_the_unstable_ranged_should_spread_in_frost_phase(PlayerbotAI* botAI) {
+        return new HydrossTheUnstableRangedShouldSpreadInFrostPhaseTrigger(botAI);
     }
-    static Trigger* hydross_the_unstable_tank_needs_aggro_upon_phase_change(PlayerbotAI* botAI) {
-        return new HydrossTheUnstableTankNeedsAggroUponPhaseChangeTrigger(botAI);
+    static Trigger* hydross_the_unstable_should_misdirect_upon_phase_change(PlayerbotAI* botAI) {
+        return new HydrossTheUnstableShouldMisdirectUponPhaseChangeTrigger(botAI);
     }
     static Trigger* hydross_the_unstable_aggro_resets_upon_phase_change(PlayerbotAI* botAI) {
         return new HydrossTheUnstableAggroResetsUponPhaseChangeTrigger(botAI);
@@ -241,8 +241,8 @@ private:
     static Trigger* the_lurker_below_ranged_should_spread(PlayerbotAI* botAI) {
         return new TheLurkerBelowRangedShouldSpreadTrigger(botAI);
     }
-    static Trigger* the_lurker_below_is_submerged(PlayerbotAI* botAI) {
-        return new TheLurkerBelowIsSubmergedTrigger(botAI);
+    static Trigger* the_lurker_below_guardians_should_be_tanked(PlayerbotAI* botAI) {
+        return new TheLurkerBelowGuardiansShouldBeTankedTrigger(botAI);
     }
     static Trigger* the_lurker_below_melee_cannot_reach_target(PlayerbotAI* botAI) {
         return new TheLurkerBelowMeleeCannotReachTargetTrigger(botAI);
@@ -287,8 +287,8 @@ private:
     static Trigger* fathom_lord_karathress_pulling_bosses(PlayerbotAI* botAI) {
         return new FathomLordKarathressPullingBossesTrigger(botAI);
     }
-    static Trigger* fathom_lord_karathress_determining_kill_order(PlayerbotAI* botAI) {
-        return new FathomLordKarathressDeterminingKillOrderTrigger(botAI);
+    static Trigger* fathom_lord_karathress_should_assign_dps_priority(PlayerbotAI* botAI) {
+        return new FathomLordKarathressShouldAssignDpsPriorityTrigger(botAI);
     }
     static Trigger* fathom_lord_karathress_should_manage_dps_timer(PlayerbotAI* botAI) {
         return new FathomLordKarathressShouldManageDpsTimerTrigger(botAI);
