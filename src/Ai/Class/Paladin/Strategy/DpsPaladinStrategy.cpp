@@ -165,4 +165,52 @@ void DpsPaladinStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             }
         )
     );
+
+    // By leewheel 2026-09-28 玩家反馈：带小号练级时圣骑士 bot（默认 dps 策略）战斗中不治疗队友，
+    // 只有脱战才加血——队伍治疗触发此前全在 heal/offheal 策略里，dps 策略一条没挂。
+    // 此处对齐 OffhealRetPaladinStrategy 的治疗触发组（优先级同款）：战斗中队友危急/低血/中血
+    // 均会读条治疗；10 级以下未学圣光闪现时，flash of light 动作经 ActionNodeFactory 自动回落圣光术
+    triggers.push_back(
+        new TriggerNode(
+            "party member critical health",
+            {
+                NextAction("holy shock on party", ACTION_CRITICAL_HEAL + 6),
+                NextAction("holy light on party", ACTION_CRITICAL_HEAL + 4)
+            }
+        )
+    );
+    triggers.push_back(
+        new TriggerNode(
+            "party member low health",
+            {
+                NextAction("holy light on party", ACTION_MEDIUM_HEAL + 5)
+            }
+        )
+    );
+    triggers.push_back(
+        new TriggerNode(
+            "party member medium health",
+            {
+                NextAction("flash of light on party", ACTION_LIGHT_HEAL + 8)
+            }
+        )
+    );
+    triggers.push_back(
+        new TriggerNode(
+            "party member to heal out of spell range",
+            {
+                NextAction("reach party member to heal", ACTION_EMERGENCY + 3)
+            }
+        )
+    );
+    // bot 自身低血也自保（与 OffhealRet 同款），避免战斗中自己残血只会硬扛
+    triggers.push_back(
+        new TriggerNode(
+            "low health",
+            {
+                NextAction("holy light", ACTION_CRITICAL_HEAL + 2)
+            }
+        )
+    );
+    // End By leewheel
 }
