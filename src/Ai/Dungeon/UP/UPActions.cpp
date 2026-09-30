@@ -6,6 +6,7 @@
 
 #include "UPActions.h"
 #include "Playerbots.h"
+#include "UPTriggers.h"
 
 bool AvoidFreezingCloudAction::Execute(Event /*event*/)
 {
@@ -43,7 +44,7 @@ bool AvoidFreezingCloudAction::Execute(Event /*event*/)
 
 bool AvoidSkadiWhirlwindAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26630");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "skadi the ruthless");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());

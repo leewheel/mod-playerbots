@@ -8,25 +8,21 @@
 #include "BTActions.h"
 #include "BTHelpers.h"
 #include "ChooseTargetActions.h"
-#include "DKActions.h"
-#include "DruidActions.h"
-#include "DruidBearActions.h"
 #include "DruidShapeshiftActions.h"
+#include "EncounterHelpers.h"
 #include "FollowActions.h"
 #include "HunterActions.h"
 #include "MageActions.h"
-#include "PaladinActions.h"
 #include "PriestActions.h"
-#include "RaidBossHelpers.h"
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "ShamanActions.h"
-#include "WarlockActions.h"
-#include "WarriorActions.h"
 #include "WipeAction.h"
 #include <array>
+#include <ctime>
 
 using namespace BlackTempleHelpers;
+using namespace EncounterHelpers;
 
 // General
 
@@ -37,11 +33,11 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValue(Action* action)
         return 1.0f;
 
     static constexpr std::array BlackTempleBosses = {
-        "22949", "22947", "22889", "22948",
-        "22871", "22898", "22939" };
+        "gathios the shatterer", "mother shahraz", "essence of suffering", "gurtogg bloodboil",
+        "teron gorefiend", "supremus", "high warlord naj'entus" };
 
     Unit* boss = nullptr;
-    for (const char* name : BlackTempleBosses)
+    for (char const* name : BlackTempleBosses)
     {
         if (Unit* candidate = AI_VALUE2(Unit*, "find target", name))
         {
@@ -60,7 +56,7 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValue(Action* action)
 
 float HighWarlordNajentusDisableCombatFormationMoveMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "22887"))
+    if (!AI_VALUE2(Unit*, "find target", "high warlord naj'entus"))
         return 1.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
@@ -76,7 +72,7 @@ float HighWarlordNajentusDisableCombatFormationMoveMultiplier::GetValue(Action* 
 
 float SupremusFocusOnAvoidanceInPhase2Multiplier::GetValue(Action* action)
 {
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "supremus");
     if (!supremus || supremus->GetVictim() != bot ||
         !supremus->HasAura(static_cast<uint32>(BlackTempleSpells::SPELL_SNARE_SELF)))
     {
@@ -96,7 +92,7 @@ float SupremusFocusOnAvoidanceInPhase2Multiplier::GetValue(Action* action)
 float SupremusHitboxIsBuggedMultiplier::GetValue(Action* action)
 {
     if (bot->getClass() != CLASS_ROGUE ||
-        !AI_VALUE2(Unit*, "find target", "22898"))
+        !AI_VALUE2(Unit*, "find target", "supremus"))
     {
         return 1.0f;
     }
@@ -111,7 +107,7 @@ float SupremusHitboxIsBuggedMultiplier::GetValue(Action* action)
 
 float TeronGorefiendControlMovementMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "22871"))
+    if (!AI_VALUE2(Unit*, "find target", "teron gorefiend"))
         return 1.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
@@ -165,7 +161,7 @@ float TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier::GetValue(Actio
 
 float TeronGorefiendDisableAttackingConstructsMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "22871"))
+    if (!AI_VALUE2(Unit*, "find target", "teron gorefiend"))
         return 1.0f;
 
     if (bot->GetVictim() != nullptr &&
@@ -191,7 +187,7 @@ float TeronGorefiendDisableAttackingConstructsMultiplier::GetValue(Action* actio
 
 float GurtoggBloodboilControlMovementMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "22948"))
+    if (!AI_VALUE2(Unit*, "find target", "gurtogg bloodboil"))
         return 1.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
@@ -222,7 +218,7 @@ float GurtoggBloodboilControlMovementMultiplier::GetValue(Action* action)
 
 float ReliquaryOfSoulsDontWasteHealingMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "23418"))
+    if (!AI_VALUE2(Unit*, "find target", "essence of suffering"))
         return 1.0f;
 
     if (dynamic_cast<CastPowerWordShieldOnAlmostFullHealthBelowAction*>(action) ||
@@ -246,7 +242,7 @@ float ReliquaryOfSoulsDontWasteHealingMultiplier::GetValue(Action* action)
 
 float MotherShahrazControlMovementMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "22947"))
+    if (!AI_VALUE2(Unit*, "find target", "mother shahraz"))
         return 1.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
@@ -268,7 +264,7 @@ float MotherShahrazControlMovementMultiplier::GetValue(Action* action)
 
 float MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "22947") ||
+    if (!AI_VALUE2(Unit*, "find target", "mother shahraz") ||
         !bot->HasAura(static_cast<uint32>(BlackTempleSpells::SPELL_FATAL_ATTRACTION)))
     {
         return 1.0f;
@@ -299,7 +295,7 @@ float IllidariCouncilDisableTankActionsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (AI_VALUE2(Unit*, "find target", "22949"))
+    if (AI_VALUE2(Unit*, "find target", "gathios the shatterer"))
         return 0.0f;
 
     return 1.0f;
@@ -307,7 +303,7 @@ float IllidariCouncilDisableTankActionsMultiplier::GetValue(Action* action)
 
 float IllidariCouncilControlMovementMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "22950"))
+    if (!AI_VALUE2(Unit*, "find target", "high nethermancer zerevor"))
         return 1.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
@@ -353,7 +349,7 @@ float IllidariCouncilControlMovementMultiplier::GetValue(Action* action)
 float IllidariCouncilControlMisdirectionMultiplier::GetValue(Action* action)
 {
     if (bot->getClass() != CLASS_HUNTER ||
-        !AI_VALUE2(Unit*, "find target", "22950"))
+        !AI_VALUE2(Unit*, "find target", "high nethermancer zerevor"))
     {
         return 1.0f;
     }
@@ -367,7 +363,7 @@ float IllidariCouncilControlMisdirectionMultiplier::GetValue(Action* action)
 float IllidariCouncilDisableIceBlockMultiplier::GetValue(Action* action)
 {
     if (bot->getClass() != CLASS_MAGE ||
-        !AI_VALUE2(Unit*, "find target", "22950"))
+        !AI_VALUE2(Unit*, "find target", "high nethermancer zerevor"))
     {
         return 1.0f;
     }
@@ -383,7 +379,7 @@ float IllidariCouncilDisableIceBlockMultiplier::GetValue(Action* action)
 
 float IllidariCouncilDisableArcaneShotOnZerevorMultiplier::GetValue(Action* action)
 {
-    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
+    Unit* zerevor = AI_VALUE2(Unit*, "find target", "high nethermancer zerevor");
     if (!zerevor)
         return 1.0f;
 
@@ -407,7 +403,7 @@ float IllidariCouncilWaitForDpsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
+    Unit* gathios = AI_VALUE2(Unit*, "find target", "gathios the shatterer");
     if (!gathios)
         return 1.0f;
 
@@ -438,7 +434,7 @@ float IllidanStormrageDelayDpsCooldownsMultiplier::GetValue(Action* action)
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan)
         return 1.0f;
 
@@ -463,12 +459,12 @@ float IllidanStormrageControlTankActionsMultiplier::GetValue(Action* action)
     if (!botAI->IsTank(bot))
         return 1.0f;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1)
         return 1.0f;
 
-    // if (dynamic_cast<TankFaceAction*>(action))
-    //    return 0.0f;
+    if (dynamic_cast<TankFaceAction*>(action))
+        return 0.0f;
 
     if (GetIllidanPhase(illidan) != 2)
         return 1.0f;
@@ -496,8 +492,7 @@ float IllidanStormrageControlTankActionsMultiplier::GetValue(Action* action)
             return 0.0f;
         }
 
-        if (dynamic_cast<TankFaceAction*>(action) ||
-            dynamic_cast<CastHealingSpellAction*>(action))
+        if (dynamic_cast<CastHealingSpellAction*>(action))
             return 0.0f;
     }
 
@@ -509,7 +504,7 @@ float IllidanStormrageDisableDefaultTargetingMultiplier::GetValue(Action* action
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1)
         return 1.0f;
 
@@ -551,7 +546,7 @@ float IllidanStormrageControlNonTankMovementMultiplier::GetValue(Action* action)
     if (botAI->IsTank(bot))
         return 1.0f;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1)
         return 1.0f;
 
@@ -595,7 +590,7 @@ float IllidanStormrageUseEarthbindTotemMultiplier::GetValue(Action* action)
     if (bot->getClass() != CLASS_SHAMAN)
         return 1.0f;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || GetIllidanPhase(illidan) == 2)
         return 1.0f;
 
@@ -612,7 +607,7 @@ float IllidanStormrageUseEarthbindTotemMultiplier::GetValue(Action* action)
 
 float IllidanStormrageWaitForDpsMultiplier::GetValue(Action* action)
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan)
         return 1.0f;
 
@@ -655,7 +650,7 @@ float IllidanStormrageWaitForDpsMultiplier::GetValue(Action* action)
         }
     }
 
-    if (AI_VALUE2(Unit*, "find target", "22997") &&
+    if (AI_VALUE2(Unit*, "find target", "flame of azzinoth") &&
         !botAI->IsAssistTankOfIndex(bot, 0, true) &&
         !botAI->IsAssistTankOfIndex(bot, 1, true))
     {

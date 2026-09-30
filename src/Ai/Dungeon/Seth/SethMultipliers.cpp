@@ -5,18 +5,19 @@
  */
 
 #include "SethMultipliers.h"
+#include "EncounterHelpers.h"
 #include "FollowActions.h"
 #include "GenericSpellActions.h"
 #include "HunterActions.h"
 #include "MageActions.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include "ReachTargetActions.h"
 #include "SethActions.h"
-#include "SethData.h"
+#include "SethShared.h"
 #include "ShamanActions.h"
 
-using namespace SethData;
+using namespace SethShared;
+using namespace EncounterHelpers;
 
 float SethekkProphetSetTremorTotemMultiplier::GetValue(Action* action)
 {
@@ -34,7 +35,7 @@ float SethekkProphetSetTremorTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    return AI_VALUE2(Unit*, "find target", "18328") ? 0.0f : 1.0f;
+    return AI_VALUE2(Unit*, "find target", "sethekk prophet") ? 0.0f : 1.0f;
 }
 
 float AnzuControlSpellCastingWithSpellBombMultiplier::GetValue(Action* action)
@@ -52,7 +53,7 @@ float AnzuControlSpellCastingWithSpellBombMultiplier::GetValue(Action* action)
         return 0.0f;
 
     // For healer
-    Player* mainTank = GetGroupMainTank(botAI, bot);
+    Player* mainTank = GetGroupMainTank(bot);
     if (!mainTank)
         return 1.0f;
 
@@ -73,11 +74,11 @@ float TalonKingIkissDelayBloodlustAndHeroismMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* ikiss = AI_VALUE2(Unit*, "find target", "18473");
+    Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
     if (!ikiss)
         return 1.0f;
 
-    return ikiss->GetHealthPct() > 95.0f ? 0.0f : 1.0f;
+    return ikiss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 }
 
 float TalonKingIkissControlMovementMultiplier::GetValue(Action* action)
@@ -102,7 +103,7 @@ float TalonKingIkissControlMovementMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* ikiss = AI_VALUE2(Unit*, "find target", "18473");
+    Unit* ikiss = AI_VALUE2(Unit*, "find target", "talon king ikiss");
     if (!ikiss)
         return 1.0f;
 

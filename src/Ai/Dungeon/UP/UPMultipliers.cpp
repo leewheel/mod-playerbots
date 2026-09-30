@@ -5,19 +5,18 @@
  */
 
 #include "UPMultipliers.h"
-#include "Action.h"
 #include "ChooseTargetActions.h"
-#include "GenericSpellActions.h"
 #include "MovementActions.h"
+#include "Playerbots.h"
 #include "UPActions.h"
 #include "UPTriggers.h"
 
 float SkadiMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26630");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "skadi the ruthless");
     if (!boss) { return 1.0f; }
 
-    Unit* bossMount = AI_VALUE2(Unit*, "find target", "26633");
+    Unit* bossMount = AI_VALUE2(Unit*, "find target", "grauf");
 
     if (!bossMount)
     // Actual bossfight (dismounted)
@@ -91,7 +90,7 @@ float SkadiMultiplier::GetValue(Action* action)
 
 float YmironMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26642");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "king ymiron");
     if (!boss) { return 1.0f; }
 
     if (boss->FindCurrentSpellBySpellId(SPELL_BANE) || boss->HasAura(SPELL_BANE))

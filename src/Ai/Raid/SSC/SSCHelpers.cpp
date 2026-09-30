@@ -9,7 +9,6 @@
 #include "Creature.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 
 namespace SerpentShrineCavernHelpers
 {
@@ -210,7 +209,7 @@ bool IsMainTankInSameSubgroup(PlayerbotAI* botAI, Player* bot)
 bool IsLadyVashjInPhase1(PlayerbotAI* botAI)
 {
     Unit* vashj =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "21212")->Get();
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "lady vashj")->Get();
 
     return vashj && vashj->GetHealthPct() > 70.0f;
 }
@@ -218,7 +217,7 @@ bool IsLadyVashjInPhase1(PlayerbotAI* botAI)
 bool IsLadyVashjInPhase2(PlayerbotAI* botAI)
 {
     Unit* vashj =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "21212")->Get();
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "lady vashj")->Get();
 
     return vashj && vashj->GetHealthPct() <= 70.0f && vashj->HasAura(SPELL_MAGIC_BARRIER);
 }
@@ -226,7 +225,7 @@ bool IsLadyVashjInPhase2(PlayerbotAI* botAI)
 bool IsLadyVashjInPhase3(PlayerbotAI* botAI)
 {
     Unit* vashj =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "21212")->Get();
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "lady vashj")->Get();
 
     return vashj && vashj->GetHealthPct() <= 70.0f && !vashj->HasAura(SPELL_MAGIC_BARRIER);
 }
@@ -457,7 +456,7 @@ std::array<Player*, 5> GetCoreHandlers(PlayerbotAI* botAI, Player* bot)
 bool AnyRecentCoreInInventory(PlayerbotAI* botAI, Player* bot)
 {
     Unit* vashj =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "21212")->Get();
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "lady vashj")->Get();
     if (!vashj)
         return false;
 
@@ -502,7 +501,7 @@ const std::vector<uint32> SHIELD_GENERATOR_DB_GUIDS =
 
 // Get the positions of all active Shield Generators by their database GUIDs
 std::vector<GeneratorInfo> GetAllGeneratorInfosByDbGuids(
-    Map* map, const std::vector<uint32>& generatorDbGuids)
+    Map* map, std::vector<uint32> const& generatorDbGuids)
 {
     std::vector<GeneratorInfo> generators;
     if (!map)
@@ -561,13 +560,13 @@ Unit* GetNearestActiveShieldGeneratorTriggerByEntry(Unit* reference)
     return nearest;
 }
 
-const GeneratorInfo* GetNearestGeneratorToBot(
-    Player* bot, const std::vector<GeneratorInfo>& generators)
+GeneratorInfo const* GetNearestGeneratorToBot(
+    Player* bot, std::vector<GeneratorInfo> const& generators)
 {
     if (!bot || generators.empty())
         return nullptr;
 
-    const GeneratorInfo* nearest = nullptr;
+    GeneratorInfo const* nearest = nullptr;
     float minDist = std::numeric_limits<float>::max();
 
     for (auto const& gen : generators)

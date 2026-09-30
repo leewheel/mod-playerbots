@@ -5,115 +5,124 @@
  */
 
 #include "GruulTriggers.h"
+#include "EncounterHelpers.h"
 #include "GruulHelpers.h"
 #include "Playerbots.h"
 
 using namespace GruulHelpers;
+using namespace EncounterHelpers;
 
 // General
 
-bool GruulsLairBotIsNotInCombatTrigger::IsActive()
+bool GruulsLairNoEncounterInProgressTrigger::IsActive()
 {
-    return bot->GetMapId() == GRUUL_MAP_ID && !AI_VALUE2(bool, "combat", "self target");
+    return !IsEncounterInProgress(bot, GRUUL_MAP_ID);
 }
 
-// High King Maulgar
+// High King Maulgar <Lord of the Ogres>
 
-bool HighKingMaulgarBossesEngagedByMeleeTanksTrigger::IsActive()
+bool HighKingMaulgarThreeOgresNeedMeleeTanksTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsTank(bot))
-        return false;
+    if (IsBlindeyeTank(bot))
+        return AI_VALUE2(Unit*, "find target", "blindeye the seer");
 
-    if (!AI_VALUE2(Unit*, "find target", "18831"))
-        return false;
+    if (IsOlmTank(bot))
+        return AI_VALUE2(Unit*, "find target", "olm the summoner");
 
-    return IsMaulgarTank(bot) || IsOlmTank(bot) || IsBlindeyeTank(bot);
+    return IsMaulgarTank(bot) && AI_VALUE2(Unit*, "find target", "high king maulgar");
 }
 
-bool HighKingMaulgarKroshEngagedByMageTankTrigger::IsActive()
+bool HighKingMaulgarKroshNeedsMageTankTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_MAGE)
-        return false;
-
-    return AI_VALUE2(Unit*, "find target", "18832") && GetKroshMageTank(bot) == bot;
+    return IsKroshMageTank(botAI) && AI_VALUE2(Unit*, "find target", "krosh firehand");
 }
 
-bool HighKingMaulgarKigglerEngagedByMoonkinTankTrigger::IsActive()
+bool HighKingMaulgarKigglerNeedsMoonkinTankTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_DRUID)
-        return false;
-
-    return AI_VALUE2(Unit*, "find target", "18835") &&
-        GetKigglerMoonkinTank(bot) == bot;
+    return IsKigglerMoonkinTank(botAI) && AI_VALUE2(Unit*, "find target", "kiggler the crazed");
 }
 
-bool HighKingMaulgarDeterminingKillOrderTrigger::IsActive()
+bool HighKingMaulgarDeterminingKillOrderTrigger::IsActiveInEncounter()
 {
-    if (!AI_VALUE2(Unit*, "find target", "18831"))
+    if (!AI_VALUE2(Unit*, "find target", "high king maulgar"))
         return false;
 
     if (IsMaulgarTank(bot))
         return false;
 
     if (IsOlmTank(bot))
-        return !AI_VALUE2(Unit*, "find target", "18834");
+        return !AI_VALUE2(Unit*, "find target", "olm the summoner");
 
     if (IsBlindeyeTank(bot))
-        return !AI_VALUE2(Unit*, "find target", "18836");
+        return !AI_VALUE2(Unit*, "find target", "blindeye the seer");
 
-    if (bot->getClass() == CLASS_MAGE && GetKroshMageTank(bot) == bot)
-        return !AI_VALUE2(Unit*, "find target", "18832");
+    if (IsKroshMageTank(botAI))
+        return !AI_VALUE2(Unit*, "find target", "krosh firehand");
 
-    if (bot->getClass() == CLASS_DRUID && GetKigglerMoonkinTank(bot) == bot)
-        return !AI_VALUE2(Unit*, "find target", "18835");
+    if (IsKigglerMoonkinTank(botAI))
+        return !AI_VALUE2(Unit*, "find target", "kiggler the crazed");
 
     return true;
 }
 
-bool HighKingMaulgarBossChannelingWhirlwindTrigger::IsActive()
+bool HighKingMaulgarChannelingWhirlwindTrigger::IsActiveInEncounter()
 {
-    Unit* maulgar = AI_VALUE2(Unit*, "find target", "18831");
+    Unit* maulgar = AI_VALUE2(Unit*, "find target", "high king maulgar");
     if (!maulgar || !maulgar->HasAura(Id(GruulSpells::SPELL_WHIRLWIND)))
         return false;
 
     return !IsMaulgarTank(bot);
 }
 
-bool HighKingMaulgarKroshCastsBlastWaveTrigger::IsActive()
+bool HighKingMaulgarShouldStandBackFromKroshTrigger::IsActiveInEncounter()
 {
-    if (!AI_VALUE2(Unit*, "find target", "18832"))
+    if (PlayerbotAI::IsTank(bot) || IsKroshMageTank(botAI))
         return false;
 
-    return !PlayerbotAI::IsTank(bot) && GetKroshMageTank(bot) != bot;
+    return AI_VALUE2(Unit*, "find target", "krosh firehand");
 }
 
-bool HighKingMaulgarWildFelStalkerSpawnedTrigger::IsActive()
+bool HighKingMaulgarWildFelStalkerSpawnedTrigger::IsActiveInEncounter()
 {
-    return bot->getClass() == CLASS_WARLOCK && AI_VALUE2(Unit*, "find target", "18847");
+    return bot->getClass() == CLASS_WARLOCK && !GetNearbyWildFelStalkers(botAI).empty();
 }
 
-bool HighKingMaulgarPullingOgreCouncilTrigger::IsActive()
+bool HighKingMaulgarPullingOgreCouncilTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* blindeye = AI_VALUE2(Unit*, "find target", "18836");
-    return blindeye && blindeye->GetHealthPct() > 80.0f;
+    Unit* blindeye = AI_VALUE2(Unit*, "find target", "blindeye the seer");
+    return blindeye && blindeye->GetHealthPct() > BLINDEYE_ENGAGED_HEALTH_PCT;
 }
 
 // Gruul the Dragonkiller
 
-bool GruulTheDragonkillerBossEngagedByTanksTrigger::IsActive()
+bool GruulTheDragonkillerShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "19044");
+    return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
 }
 
-bool GruulTheDragonkillerRangedShouldSpreadTrigger::IsActive()
+bool GruulTheDragonkillerRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "19044");
+    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
 }
 
-bool GruulTheDragonkillerIncomingShatterTrigger::IsActive()
+bool GruulTheDragonkillerInCaveInTrigger::IsActiveInEncounter()
 {
-    return bot->HasAura(Id(GruulSpells::SPELL_GROUND_SLAM));
+    Unit* gruul = AI_VALUE2(Unit*, "find target", "gruul the dragonkiller");
+    if (!gruul)
+        return false;
+
+    // The tank holding Gruul eats it. Moving him messes up the spread and puts other bots in
+    // danger.
+    if (gruul->GetVictim() == bot)
+        return false;
+
+    return IsInCaveIn(botAI);
+}
+
+bool GruulTheDragonkillerIncomingShatterTrigger::IsActiveInEncounter()
+{
+    return HasGroundSlam(bot);
 }

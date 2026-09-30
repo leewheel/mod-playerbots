@@ -26,10 +26,11 @@
 #include "Spell.h"
 #include "UseMeetingStoneAction.h"
 #include "WarriorActions.h"
+#include "WipeAction.h"
 
 float GrobbulusMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "15931");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "grobbulus");
     if (!boss)
         return 1.0f;
 
@@ -42,72 +43,59 @@ float GrobbulusMultiplier::GetValue(Action* action)
     return 1.0f;
 }
 
-//float HeiganDanceMultiplier::GetValue(Action* action)
-//{
-//    Unit* boss = AI_VALUE2(Unit*, "find target", "15936");
-//    if (!boss)
-//    {
-//        return 1.0f;
-//    }
-//    bool platform_phase = boss->IsWithinDist2d(2794.26f, -3706.67f, 10.0f);
-//    bool eruption_casting = false;
-//    if (boss->HasUnitState(UNIT_STATE_CASTING))
-//    {
-//        Spell* spell = boss->GetCurrentSpell(CURRENT_GENERIC_SPELL);
-//        if (!spell)
-//        {
-//            spell = boss->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
-//        }
-//        if (spell)
-//        {
-//            SpellInfo const* info = spell->GetSpellInfo();
-//            bool isEruption = NaxxSpellIds::MatchesAnySpellId(info, {NaxxSpellIds::Eruption10});
-//            if (!isEruption && info && info->SpellName[LOCALE_enUS])
-//            {
-//                // Fallback to name for custom spell data.
-//                isEruption = botAI->EqualLowercaseName(info->SpellName[LOCALE_enUS], "eruption");
-//            }
-//            if (isEruption)
-//            {
-//                eruption_casting = true;
-//            }
-//        }
-//    }
-//    if (dynamic_cast<CombatFormationMoveAction*>(action) ||
-//        dynamic_cast<CastDisengageAction*>(action) ||
-//        dynamic_cast<CastBlinkBackAction*>(action) )
-//    {
-//        return 0.0f;
-//    }
-//    if (!platform_phase && !eruption_casting)
-//    {
-//        return 1.0f;
-//    }
-//    if (dynamic_cast<HeiganDanceAction*>(action) || dynamic_cast<CurePartyMemberAction*>(action))
-//    {
-//        return 1.0f;
-//    }
-//    if (dynamic_cast<CastSpellAction*>(action) && !dynamic_cast<CastMeleeSpellAction*>(action))
-//    {
-//        CastSpellAction* spellAction = dynamic_cast<CastSpellAction*>(action);
-//        uint32 spellId = AI_VALUE2(uint32, "spell id", spellAction->getSpell());
-//        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
-//        if (!spellInfo)
-//        {
-//            return 0.0f;
-//        }
-//        uint32 castTime = spellInfo->CalcCastTime();
-//        if (castTime == 0 && !spellInfo->IsChanneled())
-//        {
-//            return 1.0f;
-//        }
-//    }
-//    return 0.0f;
-//}
+float HeiganDanceMultiplier::GetValue(Action* action)
+{
+    // Cheap action-type checks first; the encounter state is only looked up for actions we may have to block.
+    if (dynamic_cast<HeiganDanceAction*>(action) || dynamic_cast<CurePartyMemberAction*>(action) ||
+        dynamic_cast<WipeAction*>(action))
+        return 1.0f;
+
+    bool repositions = dynamic_cast<CombatFormationMoveAction*>(action) || dynamic_cast<FleeAction*>(action) ||
+                       dynamic_cast<CastDisengageAction*>(action) || dynamic_cast<CastBlinkBackAction*>(action);
+    bool moves = dynamic_cast<MovementAction*>(action) || dynamic_cast<CastReachTargetSpellAction*>(action);
+    auto* spellAction = dynamic_cast<CastSpellAction*>(action);
+    bool timedCast = spellAction && !dynamic_cast<CastMeleeSpellAction*>(action);
+    if (!repositions && !moves && !timedCast)
+        return 1.0f;
+
+    if (!helper.UpdateBossAI())
+        return 1.0f;
+
+    // Generic repositioning must never pull a bot off its safe spot or off the platform.
+    if (repositions)
+        return 0.0f;
+
+    // Ranged bots on the platform during the slow dance are free to act as usual.
+    if (!helper.ShouldDance())
+        return 1.0f;
+
+    // Dancing: only the dance moves us (charge/intercept/feral charge included - during the fast dance the boss
+    // stands in his Plague Cloud). Everything that is not a cast is fine (target selection, facing, ...).
+    if (moves)
+        return 0.0f;
+
+    // Casts are allowed while standing on the safe spot with enough time left before the next eruption.
+    uint32 spellId = AI_VALUE2(uint32, "spell id", spellAction->getSpell());
+    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+    if (!spellInfo)
+        return 1.0f;
+
+    uint32 castTime = spellInfo->CalcCastTime(bot);
+    if (spellInfo->IsChanneled())
+    {
+        int32 duration = spellInfo->GetDuration();
+        if (duration > 0)
+            castTime += uint32(duration);
+    }
+    if (castTime == 0)
+        return 1.0f;
+
+    return helper.CanStandStillFor(castTime + 500) ? 1.0f : 0.0f;
+}
 
 float LoathebGenericMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "16011");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "loatheb");
     if (!boss)
         return 1.0f;
 
@@ -151,8 +139,8 @@ float ThaddiusGenericMultiplier::GetValue(Action* action)
     }
     // die at the same time
     Unit* target = AI_VALUE(Unit*, "current target");
-    Unit* feugen = AI_VALUE2(Unit*, "find target", "15929");
-    Unit* stalagg = AI_VALUE2(Unit*, "find target", "15930");
+    Unit* feugen = AI_VALUE2(Unit*, "find target", "feugen");
+    Unit* stalagg = AI_VALUE2(Unit*, "find target", "stalagg");
     if (helper.IsPhasePet() && target && feugen && stalagg && target->GetHealthPct() <= 40 &&
         (feugen->GetHealthPct() >= target->GetHealthPct() + 3 || stalagg->GetHealthPct() >= target->GetHealthPct() + 3))
     {
@@ -236,7 +224,7 @@ float KelthuzadGenericMultiplier::GetValue(Action* action)
 
 float AnubrekhanGenericMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "15956");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "anub'rekhan");
     if (!boss)
         return 1.0f;
 
@@ -252,7 +240,7 @@ float AnubrekhanGenericMultiplier::GetValue(Action* action)
 
 float FourHorsemenGenericMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "16063");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "sir zeliek");
     if (!boss)
         return 1.0f;
 
@@ -265,7 +253,7 @@ float FourHorsemenGenericMultiplier::GetValue(Action* action)
 
 // float GothikGenericMultiplier::GetValue(Action* action)
 // {
-//     Unit* boss = AI_VALUE2(Unit*, "find target", "16060");
+//     Unit* boss = AI_VALUE2(Unit*, "find target", "gothik the harvester");
 //     if (!boss)
 //     {
 //         return 1.0f;

@@ -6,11 +6,12 @@
 
 #include "BWLActions.h"
 #include "BWLHelpers.h"
+#include "EncounterHelpers.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include "RtiTargetValue.h"
 
 using namespace BlackwingLairHelpers;
+using namespace EncounterHelpers;
 
 static constexpr float INCREMENTAL_MOVE_STEP_DISTANCE = 3.0f;
 
@@ -57,7 +58,7 @@ bool BwlTurnOffSuppressionDeviceAction::Execute(Event /*event*/)
 
 bool BwlRazorgoreAvoidAoeAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "12435");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "razorgore the untamed");
     if (!boss)
         return false;
 
@@ -106,7 +107,7 @@ bool BwlRazorgoreAvoidAoeAction::Execute(Event /*event*/)
 
 bool BwlRazorgoreMarkBossAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "12435");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "razorgore the untamed");
     if (!boss)
         return false;
 
@@ -117,7 +118,7 @@ bool BwlRazorgoreMarkBossAction::Execute(Event /*event*/)
             if (MarkTargetWithMoon(bot, boss))
                 return true;
 
-            SetRtiTarget(botAI, "moon", boss);
+            SetRtiTarget(botAI, "moon");
 
             if (AI_VALUE(Unit*, "current target") != boss)
                 return Attack(boss);
@@ -140,7 +141,7 @@ bool BwlRazorgoreMarkBossAction::isUseful()
 
 bool BwlVaelastraszMoveAwayAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "13020");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "vaelastrasz the corrupt");
 
     // Current target with Burning Adrenaline stays put when Vaelastrasz is alive.
     if (boss && boss->IsAlive() && boss->GetVictim() == bot)
@@ -153,15 +154,15 @@ bool BwlVaelastraszMoveAwayAction::Execute(Event /*event*/)
     return MoveAlongFleeDirection(boss, fleeX, fleeY);
 }
 
-bool BwlVaelastraszMoveAwayAction::CalculateFleeDirection(const Unit* boss, float& fleeX, float& fleeY) const
+bool BwlVaelastraszMoveAwayAction::CalculateFleeDirection(Unit const* boss, float& fleeX, float& fleeY) const
 {
     fleeX = 0.0f;
     fleeY = 0.0f;
     bool bossDead = !boss || !boss->IsAlive();
 
-    if (const Group* group = bot->GetGroup())
+    if (Group const* group = bot->GetGroup())
     {
-        for (const GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
+        for (GroupReference const* gref = group->GetFirstMember(); gref; gref = gref->next())
         {
             Player* p = gref->GetSource();
             if (!p || p == bot || !p->IsAlive() || p->GetMapId() != bot->GetMapId())
@@ -229,7 +230,7 @@ bool BwlVaelastraszMoveAwayAction::CalculateFleeDirection(const Unit* boss, floa
     return true;
 }
 
-bool BwlVaelastraszMoveAwayAction::MoveAlongFleeDirection(const Unit* boss, float fleeX, float fleeY)
+bool BwlVaelastraszMoveAwayAction::MoveAlongFleeDirection(Unit const* boss, float fleeX, float fleeY)
 {
     bool bossDead = !boss || !boss->IsAlive();
     float baseAngle = atan2(fleeY, fleeX);
@@ -272,7 +273,7 @@ bool BwlUseHourglassSandAction::Execute(Event /*event*/)
 
 bool BwlNefarianFearWardAction::Execute(Event /*event*/)
 {
-    Unit* nefarian = AI_VALUE2(Unit*, "find target", "11583");
+    Unit* nefarian = AI_VALUE2(Unit*, "find target", "nefarian");
     if (!nefarian)
         return false;
 

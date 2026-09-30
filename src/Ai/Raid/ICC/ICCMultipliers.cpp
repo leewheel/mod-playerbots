@@ -31,7 +31,7 @@
 // Lady Deathwhisper
 float IccLadyDeathwhisperMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36855");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "lady deathwhisper");
     if (!boss)
         return 1.0f;
 
@@ -66,7 +66,7 @@ float IccLadyDeathwhisperMultiplier::GetValue(Action* action)
 // dbs
 float IccAddsDbsMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "37813");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "deathbringer saurfang");
     if (!boss)
         return 1.0f;
 
@@ -148,7 +148,7 @@ float IccGunshipMultiplier::GetValue(Action* action)
 // Dogs
 float IccDogsMultiplier::GetValue(Action* action)
 {
-    if (!AI_VALUE2(Unit*, "find target", "37025") && !AI_VALUE2(Unit*, "find target", "37217"))
+    if (!AI_VALUE2(Unit*, "find target", "stinky") && !AI_VALUE2(Unit*, "find target", "precious"))
         return 1.0f;
 
     if (botAI->IsTank(bot))
@@ -178,7 +178,7 @@ float IccDogsMultiplier::GetValue(Action* action)
 // Festergut
 float IccFestergutMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36626");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "festergut");
     if (!boss)
         return 1.0f;
 
@@ -241,7 +241,7 @@ float IccFestergutMultiplier::GetValue(Action* action)
 // Rotface
 float IccRotfaceMultiplier::GetValue(Action* action)
 {
-    Unit* boss1 = AI_VALUE2(Unit*, "find target", "36627");
+    Unit* boss1 = AI_VALUE2(Unit*, "find target", "rotface");
     if (!boss1)
         return 1.0f;
 
@@ -314,13 +314,13 @@ float IccRotfaceMultiplier::GetValue(Action* action)
 // pp
 float IccAddsPutricideMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36678");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "professor putricide");
     if (!boss)
         return 1.0f;
-    Unit* boss1 = AI_VALUE2(Unit*, "find target", "36627");
+    Unit* boss1 = AI_VALUE2(Unit*, "find target", "rotface");
     if (boss1)
         return 1.0f;
-    Unit* boss2 = AI_VALUE2(Unit*, "find target", "36626");
+    Unit* boss2 = AI_VALUE2(Unit*, "find target", "festergut");
     if (boss2)
         return 1.0f;
 
@@ -448,7 +448,7 @@ float IccAddsPutricideMultiplier::GetValue(Action* action)
 // bpc
 float IccBpcAssistMultiplier::GetValue(Action* action)
 {
-    Unit* keleseth = AI_VALUE2(Unit*, "find target", "37972");
+    Unit* keleseth = AI_VALUE2(Unit*, "find target", "prince keleseth");
     if (!keleseth)
         return 1.0f;
 
@@ -585,7 +585,7 @@ float IccBpcAssistMultiplier::GetValue(Action* action)
         !dynamic_cast<ReachTargetAction*>(action))
         return 0.0f;
 
-    Unit* valanar = AI_VALUE2(Unit*, "find target", "37970");
+    Unit* valanar = AI_VALUE2(Unit*, "find target", "prince valanar");
     if (!valanar)
         return 1.0f;
 
@@ -643,7 +643,7 @@ float IccBpcAssistMultiplier::GetValue(Action* action)
 //BQL
 float IccBqlMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "37955");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "blood-queen lana'thel");
     if (!boss)
         return 1.0f;
 
@@ -986,7 +986,7 @@ float IccLichKingAddsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
     if (!boss)
         return 1.0f;
 
@@ -995,7 +995,7 @@ float IccLichKingAddsMultiplier::GetValue(Action* action)
         dynamic_cast<CastCleanseDiseaseOnPartyAction*>(action) ||
         dynamic_cast<CastCleanseSpiritCurseOnPartyAction*>(action) || dynamic_cast<CastCleanseSpiritAction*>(action))
     {
-        Unit* boss = AI_VALUE2(Unit*, "find target", "36597");
+        Unit* boss = AI_VALUE2(Unit*, "find target", "the lich king");
         if (!boss)
             return 1.0f;
 

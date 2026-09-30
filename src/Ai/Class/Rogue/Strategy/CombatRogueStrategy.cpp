@@ -4,13 +4,13 @@
  * or (at your option) any later version.
  */
 
-#include "DpsRogueStrategy.h"
+#include "CombatRogueStrategy.h"
 #include "Playerbots.h"
 
-class DpsRogueStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
+class CombatRogueStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
 {
 public:
-    DpsRogueStrategyActionNodeFactory()
+    CombatRogueStrategyActionNodeFactory()
     {
         creators["sinister strike"] = &sinister_strike;
         creators["kick"] = &kick;
@@ -61,12 +61,12 @@ private:
     }
 };
 
-DpsRogueStrategy::DpsRogueStrategy(PlayerbotAI* botAI) : MeleeCombatStrategy(botAI)
+CombatRogueStrategy::CombatRogueStrategy(PlayerbotAI* botAI) : GenericRogueStrategy(botAI)
 {
-    actionNodeFactories.Add(new DpsRogueStrategyActionNodeFactory());
+    actionNodeFactories.Add(new CombatRogueStrategyActionNodeFactory());
 }
 
-std::vector<NextAction> DpsRogueStrategy::getDefaultActions()
+std::vector<NextAction> CombatRogueStrategy::getDefaultActions()
 {
     return {
         NextAction("killing spree", ACTION_DEFAULT + 0.1f),
@@ -74,9 +74,9 @@ std::vector<NextAction> DpsRogueStrategy::getDefaultActions()
     };
 }
 
-void DpsRogueStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+void CombatRogueStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    MeleeCombatStrategy::InitTriggers(triggers);
+    GenericRogueStrategy::InitTriggers(triggers);
 
     triggers.push_back(
         new TriggerNode(
@@ -102,6 +102,15 @@ void DpsRogueStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             "slice and dice",
             {
                 NextAction("slice and dice", ACTION_HIGH + 5)
+            }
+        )
+    );
+
+    triggers.push_back(
+        new TriggerNode(
+            "riposte",
+            {
+                NextAction("riposte", ACTION_HIGH + 4)
             }
         )
     );

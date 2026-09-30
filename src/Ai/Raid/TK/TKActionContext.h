@@ -19,6 +19,9 @@ public:
         creators["tempest keep reset encounter states"] =
             &RaidTempestKeepActionContext::tempest_keep_reset_encounter_states;
 
+        creators["tempest keep clear stale falling flag"] =
+            &RaidTempestKeepActionContext::tempest_keep_clear_stale_falling_flag;
+
         // Trash
         creators["crimson hand centurion cast polymorph"] =
             &RaidTempestKeepActionContext::crimson_hand_centurion_cast_polymorph;
@@ -39,8 +42,8 @@ public:
         creators["al'ar assist tanks pick up embers"] =
             &RaidTempestKeepActionContext::alar_assist_tanks_pick_up_embers;
 
-        creators["al'ar ranged dps prioritize embers"] =
-            &RaidTempestKeepActionContext::alar_ranged_dps_prioritize_embers;
+        creators["al'ar assign non-tank target"] =
+            &RaidTempestKeepActionContext::alar_assign_non_tank_target;
 
         creators["al'ar jump from platform"] =
             &RaidTempestKeepActionContext::alar_jump_from_platform;
@@ -64,8 +67,8 @@ public:
         creators["void reaver use aggro dump ability"] =
             &RaidTempestKeepActionContext::void_reaver_use_aggro_dump_ability;
 
-        creators["void reaver keep ranged in goldilocks zone"] =
-            &RaidTempestKeepActionContext::void_reaver_keep_ranged_in_goldilocks_zone;
+        creators["void reaver ranged back off and spread"] =
+            &RaidTempestKeepActionContext::void_reaver_ranged_back_off_and_spread;
 
         creators["void reaver avoid arcane orb"] =
             &RaidTempestKeepActionContext::void_reaver_avoid_arcane_orb;
@@ -80,9 +83,6 @@ public:
         creators["high astromancer solarian target solarium priests"] =
             &RaidTempestKeepActionContext::high_astromancer_solarian_target_solarium_priests;
 
-        creators["high astromancer solarian cast fear ward on main tank"] =
-            &RaidTempestKeepActionContext::high_astromancer_solarian_cast_fear_ward_on_main_tank;
-
         // Kael'thas Sunstrider <Lord of the Blood Elves>
         creators["kael'thas sunstrider kite thaladred"] =
             &RaidTempestKeepActionContext::kaelthas_sunstrider_kite_thaladred;
@@ -92,9 +92,6 @@ public:
 
         creators["kael'thas sunstrider melee tanks position advisors"] =
             &RaidTempestKeepActionContext::kaelthas_sunstrider_melee_tanks_position_advisors;
-
-        creators["kael'thas sunstrider cast fear ward on sanguinar tank"] =
-            &RaidTempestKeepActionContext::kaelthas_sunstrider_cast_fear_ward_on_sanguinar_tank;
 
         creators["kael'thas sunstrider warlock tank position capernian"] =
             &RaidTempestKeepActionContext::kaelthas_sunstrider_warlock_tank_position_capernian;
@@ -126,14 +123,14 @@ public:
         creators["kael'thas sunstrider reequip gear"] =
             &RaidTempestKeepActionContext::kaelthas_sunstrider_reequip_gear;
 
-        creators["kael'thas sunstrider main tank position boss"] =
-            &RaidTempestKeepActionContext::kaelthas_sunstrider_main_tank_position_boss;
+        creators["kael'thas sunstrider tanks position boss"] =
+            &RaidTempestKeepActionContext::kaelthas_sunstrider_tanks_position_boss;
 
         creators["kael'thas sunstrider avoid flame strike"] =
             &RaidTempestKeepActionContext::kaelthas_sunstrider_avoid_flame_strike;
 
-        creators["kael'thas sunstrider handle phoenixes and eggs"] =
-            &RaidTempestKeepActionContext::kaelthas_sunstrider_handle_phoenixes_and_eggs;
+        creators["kael'thas sunstrider assign final phase target"] =
+            &RaidTempestKeepActionContext::kaelthas_sunstrider_assign_final_phase_target;
 
         creators["kael'thas sunstrider break mind control"] =
             &RaidTempestKeepActionContext::kaelthas_sunstrider_break_mind_control;
@@ -146,6 +143,9 @@ private:
     // General
     static Action* tempest_keep_reset_encounter_states(PlayerbotAI* botAI) {
         return new TempestKeepResetEncounterStatesAction(botAI);
+    }
+    static Action* tempest_keep_clear_stale_falling_flag(PlayerbotAI* botAI) {
+        return new TempestKeepClearStaleFallingFlagAction(botAI);
     }
 
     // Trash
@@ -169,8 +169,8 @@ private:
     static Action* alar_assist_tanks_pick_up_embers(PlayerbotAI* botAI) {
         return new AlarAssistTanksPickUpEmbersAction(botAI);
     }
-    static Action* alar_ranged_dps_prioritize_embers(PlayerbotAI* botAI) {
-        return new AlarRangedDpsPrioritizeEmbersAction(botAI);
+    static Action* alar_assign_non_tank_target(PlayerbotAI* botAI) {
+        return new AlarAssignNonTankTargetAction(botAI);
     }
     static Action* alar_jump_from_platform(PlayerbotAI* botAI) {
         return new AlarJumpFromPlatformAction(botAI);
@@ -195,8 +195,8 @@ private:
     static Action* void_reaver_use_aggro_dump_ability(PlayerbotAI* botAI) {
         return new VoidReaverUseAggroDumpAbilityAction(botAI);
     }
-    static Action* void_reaver_keep_ranged_in_goldilocks_zone(PlayerbotAI* botAI) {
-        return new VoidReaverKeepRangedInGoldilocksZoneAction(botAI);
+    static Action* void_reaver_ranged_back_off_and_spread(PlayerbotAI* botAI) {
+        return new VoidReaverRangedBackOffAndSpreadAction(botAI);
     }
     static Action* void_reaver_avoid_arcane_orb(PlayerbotAI* botAI) {
         return new VoidReaverAvoidArcaneOrbAction(botAI);
@@ -212,9 +212,6 @@ private:
     static Action* high_astromancer_solarian_target_solarium_priests(PlayerbotAI* botAI) {
         return new HighAstromancerSolarianTargetSolariumPriestsAction(botAI);
     }
-    static Action* high_astromancer_solarian_cast_fear_ward_on_main_tank(PlayerbotAI* botAI) {
-        return new HighAstromancerSolarianCastFearWardOnMainTankAction(botAI);
-    }
 
     // Kael'thas Sunstrider <Lord of the Blood Elves>
     static Action* kaelthas_sunstrider_kite_thaladred(PlayerbotAI* botAI) {
@@ -225,9 +222,6 @@ private:
     }
     static Action* kaelthas_sunstrider_melee_tanks_position_advisors(PlayerbotAI* botAI) {
         return new KaelthasSunstriderMeleeTanksPositionAdvisorsAction(botAI);
-    }
-    static Action* kaelthas_sunstrider_cast_fear_ward_on_sanguinar_tank(PlayerbotAI* botAI) {
-        return new KaelthasSunstriderCastFearWardOnSanguinarTankAction(botAI);
     }
     static Action* kaelthas_sunstrider_warlock_tank_position_capernian(PlayerbotAI* botAI) {
         return new KaelthasSunstriderWarlockTankPositionCapernianAction(botAI);
@@ -259,14 +253,14 @@ private:
     static Action* kaelthas_sunstrider_reequip_gear(PlayerbotAI* botAI) {
         return new KaelthasSunstriderReequipGearAction(botAI);
     }
-    static Action* kaelthas_sunstrider_main_tank_position_boss(PlayerbotAI* botAI) {
-        return new KaelthasSunstriderMainTankPositionBossAction(botAI);
+    static Action* kaelthas_sunstrider_tanks_position_boss(PlayerbotAI* botAI) {
+        return new KaelthasSunstriderTanksPositionBossAction(botAI);
     }
     static Action* kaelthas_sunstrider_avoid_flame_strike(PlayerbotAI* botAI) {
         return new KaelthasSunstriderAvoidFlameStrikeAction(botAI);
     }
-    static Action* kaelthas_sunstrider_handle_phoenixes_and_eggs(PlayerbotAI* botAI) {
-        return new KaelthasSunstriderHandlePhoenixesAndEggsAction(botAI);
+    static Action* kaelthas_sunstrider_assign_final_phase_target(PlayerbotAI* botAI) {
+        return new KaelthasSunstriderAssignFinalPhaseTargetAction(botAI);
     }
     static Action* kaelthas_sunstrider_break_mind_control(PlayerbotAI* botAI) {
         return new KaelthasSunstriderBreakMindControlAction(botAI);

@@ -5,10 +5,10 @@
  */
 
 #include "KaraActions.h"
+#include "EncounterHelpers.h"
 #include "KaraHelpers.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -19,6 +19,7 @@
 #include <string>
 
 using namespace KaraHelpers;
+using namespace EncounterHelpers;
 
 // General
 
@@ -30,13 +31,13 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
 
     if (isMechanicTracker)
     {
-        if (!AI_VALUE2(Unit*, "find target", "16151") &&
+        if (!AI_VALUE2(Unit*, "find target", "midnight") &&
             attumenDpsWaitTimer.erase(instanceId) > 0)
         {
             reset = true;
         }
 
-        if (!AI_VALUE2(Unit*, "find target", "17225"))
+        if (!AI_VALUE2(Unit*, "find target", "nightbane"))
         {
             if (nightbaneDpsWaitTimer.erase(instanceId) > 0)
                 reset = true;
@@ -46,7 +47,7 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "17521"))
+    if (!AI_VALUE2(Unit*, "find target", "the big bad wolf"))
     {
         Action* wolfAction = context->GetAction("big bad wolf little red riding hood run away");
         if (wolfAction &&
@@ -56,7 +57,7 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
         }
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "15689"))
+    if (!AI_VALUE2(Unit*, "find target", "netherspite"))
     {
         if (isMechanicTracker && netherspiteDpsWaitTimer.erase(instanceId) > 0)
             reset = true;
@@ -105,7 +106,7 @@ bool KarazhanCastFearProtectionSpellAction::Execute(Event /*event*/)
 
 bool KarazhanCastFearProtectionSpellAction::CastFearWardOnMainTank()
 {
-    Player* mainTank = GetGroupMainTank(botAI, bot);
+    Player* mainTank = GetGroupMainTank(bot);
     if (!mainTank || mainTank->HasAura(Id(KaraSpells::SPELL_FEAR_WARD)))
         return false;
 
@@ -117,7 +118,7 @@ bool KarazhanCastFearProtectionSpellAction::CastFearWardOnMainTank()
 
 bool KarazhanCastFearProtectionSpellAction::SetTremorTotem()
 {
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
     if (!nightbane || nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
         return false;
 
@@ -161,7 +162,7 @@ bool ManaWarpStunCreatureBeforeWarpBreachAction::Execute(Event /*event*/)
         "shockwave",
     };
 
-    for (const char* spell : spells)
+    for (char const* spell : spells)
     {
         if (botAI->CanCastSpell(spell, target) && botAI->CastSpell(spell, target))
             return true;
@@ -176,13 +177,13 @@ bool ManaWarpStunCreatureBeforeWarpBreachAction::Execute(Event /*event*/)
 // Unmounted Attumen's CombatReach is 1.5 yards
 bool AttumenTheHuntsmanHandlePhaseOneAction::Execute(Event /*event*/)
 {
-    Unit* midnight = AI_VALUE2(Unit*, "find target", "16151");
+    Unit* midnight = AI_VALUE2(Unit*, "find target", "midnight");
     if (!midnight)
         return false;
 
     if (PlayerbotAI::IsAssistTank(bot))
     {
-        Unit* attumen = AI_VALUE2(Unit*, "find target", "15550");
+        Unit* attumen = AI_VALUE2(Unit*, "find target", "attumen the huntsman");
         return attumen && AssistTankMoveAttumenFromGroup(midnight, attumen);
     }
 
@@ -208,7 +209,7 @@ bool AttumenTheHuntsmanHandlePhaseOneAction::AssistTankMoveAttumenFromGroup(
 
 bool AttumenTheHuntsmanHandlePhaseTwoAction::Execute(Event /*event*/)
 {
-    Unit* attumen = AI_VALUE2(Unit*, "find target", "15550");
+    Unit* attumen = AI_VALUE2(Unit*, "find target", "attumen the huntsman");
     if (!attumen)
         return false;
 
@@ -283,15 +284,15 @@ bool AttumenTheHuntsmanSetDpsTimerAction::Execute(Event /*event*/)
 bool MoroesMarkTargetAction::Execute(Event /*event*/)
 {
     static constexpr std::array moroesGuests = {
-        "19874",
-        "19875",
-        "19876",
-        "19877",
-        "19878",
-        "19879",
+        "baroness dorothea millstipe",
+        "lady catriona von'indi",
+        "lady keira berrybuck",
+        "baron rafe dreuger",
+        "lord robin daris",
+        "lord crispin ference",
     };
 
-    for (const char* name : moroesGuests)
+    for (char const* name : moroesGuests)
     {
         if (Unit* guest = AI_VALUE2(Unit*, "find target", name))
             return MarkTargetWithSkull(bot, guest);
@@ -305,7 +306,7 @@ bool MoroesMarkTargetAction::Execute(Event /*event*/)
 
 bool MaidenOfVirtueTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* maiden = AI_VALUE2(Unit*, "find target", "16457");
+    Unit* maiden = AI_VALUE2(Unit*, "find target", "maiden of virtue");
     if (!maiden)
         return false;
 
@@ -423,7 +424,7 @@ bool MaidenOfVirtueSetGroundingTotemAction::Execute(Event /*event*/)
 
 bool BigBadWolfPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* wolf = AI_VALUE2(Unit*, "find target", "17521");
+    Unit* wolf = AI_VALUE2(Unit*, "find target", "the big bad wolf");
     if (!wolf)
         return false;
 
@@ -479,11 +480,11 @@ bool BigBadWolfLittleRedRidingHoodRunAwayAction::Execute(Event /*event*/)
 
 bool RomuloAndJulianneMarkTargetAction::Execute(Event /*event*/)
 {
-    Unit* romulo = AI_VALUE2(Unit*, "find target", "17533");
+    Unit* romulo = AI_VALUE2(Unit*, "find target", "romulo");
     if (!romulo)
         return false;
 
-    Unit* julianne = AI_VALUE2(Unit*, "find target", "17534");
+    Unit* julianne = AI_VALUE2(Unit*, "find target", "julianne");
     if (!julianne)
         return false;
 
@@ -515,7 +516,7 @@ bool RomuloAndJulianneMarkTargetAction::Execute(Event /*event*/)
 
 bool WizardOfOzMarkTargetAction::Execute(Event /*event*/)
 {
-    for (const char* name : OZ_TARGETS)
+    for (char const* name : OZ_TARGETS)
     {
         if (Unit* target = AI_VALUE2(Unit*, "find target", name))
             return MarkTargetWithSkull(bot, target);
@@ -526,7 +527,7 @@ bool WizardOfOzMarkTargetAction::Execute(Event /*event*/)
 
 bool WizardOfOzScorchStrawmanAction::Execute(Event /*event*/)
 {
-    Unit* strawman = AI_VALUE2(Unit*, "find target", "17543");
+    Unit* strawman = AI_VALUE2(Unit*, "find target", "strawman");
     return strawman &&
         botAI->CanCastSpell("scorch", strawman) &&
         botAI->CastSpell("scorch", strawman);
@@ -536,13 +537,13 @@ bool WizardOfOzScorchStrawmanAction::Execute(Event /*event*/)
 
 bool TheCuratorMarkAstralFlareAction::Execute(Event /*event*/)
 {
-    Unit* flare = AI_VALUE2(Unit*, "find target", "17283");
+    Unit* flare = AI_VALUE2(Unit*, "find target", "astral flare");
     return flare && MarkTargetWithSkull(bot, flare);
 }
 
 bool TheCuratorPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* curator = AI_VALUE2(Unit*, "find target", "15691");
+    Unit* curator = AI_VALUE2(Unit*, "find target", "the curator");
     if (!curator)
         return false;
 
@@ -590,9 +591,9 @@ bool TheCuratorSpreadRangedAction::Execute(Event /*event*/)
 bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
 {
     static constexpr std::array illhoofTargets = {
-        "17256", "17229", "15688", };
+        "demon chains", "kil'rek", "terestian illhoof", };
 
-    for (const char* name : illhoofTargets)
+    for (char const* name : illhoofTargets)
     {
         if (Unit* target = AI_VALUE2(Unit*, "find target", name))
             return MarkTargetWithSkull(bot, target);
@@ -605,7 +606,7 @@ bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
 
 bool ShadeOfAranRunAwayFromArcaneExplosionAction::Execute(Event /*event*/)
 {
-    Unit* aran = AI_VALUE2(Unit*, "find target", "16524");
+    Unit* aran = AI_VALUE2(Unit*, "find target", "shade of aran");
     if (!aran)
         return false;
 
@@ -652,7 +653,7 @@ bool ShadeOfAranMarkConjuredElementalAction::Execute(Event /*event*/)
 
 bool ShadeOfAranRangedMaintainDistanceAction::Execute(Event /*event*/)
 {
-    Unit* aran = AI_VALUE2(Unit*, "find target", "16524");
+    Unit* aran = AI_VALUE2(Unit*, "find target", "shade of aran");
     if (!aran)
         return false;
 
@@ -719,7 +720,7 @@ bool NetherspiteBlockRedBeamAction::Execute(Event /*event*/)
         _redBeamMoveTimer = std::time(nullptr);
     }
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
     if (!netherspite)
         return false;
 
@@ -786,7 +787,7 @@ bool NetherspiteBlockBlueBeamAction::Execute(Event /*event*/)
     }
     _wasBlockingBlueBeam = true;
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
     if (!netherspite)
         return false;
 
@@ -838,7 +839,7 @@ bool NetherspiteBlockGreenBeamAction::Execute(Event /*event*/)
     }
     _wasBlockingGreenBeam = true;
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
     if (!netherspite)
         return false;
 
@@ -857,7 +858,7 @@ bool NetherspiteBlockGreenBeamAction::Execute(Event /*event*/)
 
 bool NetherspiteAvoidBeamAndVoidZoneAction::Execute(Event /*event*/)
 {
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
     if (!netherspite)
         return false;
 
@@ -996,7 +997,7 @@ bool NetherspiteBanishPhaseAvoidVoidZoneAction::Execute(Event /*event*/)
 
 bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
 {
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
     if (!netherspite)
         return false;
 
@@ -1044,7 +1045,7 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
 
 bool PrinceMalchezaarEnfeebledBotAvoidHazardAction::Execute(Event /*event*/)
 {
-    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "15690");
+    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "prince malchezaar");
     if (!malchezaar)
         return false;
 
@@ -1116,7 +1117,7 @@ bool PrinceMalchezaarEnfeebledBotAvoidHazardAction::Execute(Event /*event*/)
 
 bool PrinceMalchezaarNonTankAvoidInfernalAction::Execute(Event /*event*/)
 {
-    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "15690");
+    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "prince malchezaar");
     if (!malchezaar)
         return false;
 
@@ -1151,7 +1152,7 @@ bool PrinceMalchezaarNonTankAvoidInfernalAction::Execute(Event /*event*/)
 
 bool PrinceMalchezaarTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "15690");
+    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "prince malchezaar");
     if (!malchezaar)
         return false;
 
@@ -1201,7 +1202,7 @@ bool PrinceMalchezaarTanksPositionBossAction::Execute(Event /*event*/)
 
 bool NightbaneGroundPhaseTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
     if (!nightbane)
         return false;
 
@@ -1315,7 +1316,7 @@ bool NightbaneGroundPhaseCoordinateRangedMovementAction::Execute(Event /*event*/
 
 bool NightbaneGroundPhaseCoordinateRangedMovementAction::MoveRangedLeaderToSafeSpot()
 {
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
     if (!nightbane)
         return false;
 
@@ -1328,11 +1329,13 @@ bool NightbaneGroundPhaseCoordinateRangedMovementAction::MoveRangedLeaderToSafeS
     if (charredEarths.empty())
     {
         float const distToBoss = bot->GetExactDist2d(nightbane);
-        if (distToBoss >= minBossDist)
-            return false;
+        if (distToBoss < minBossDist)
+        {
+            bot->CastStop();
+            return MoveAway(nightbane, minBossDist - distToBoss, true);
+        }
 
-        bot->CastStop();
-        return MoveAway(nightbane, minBossDist - distToBoss, true);
+        return false;
     }
 
     constexpr float safeDistance = 12.0f;
@@ -1440,7 +1443,7 @@ bool NightbaneGroundPhaseCoordinateRangedMovementAction::StackOnRangedLeader(Pla
 
 bool NightbaneControlPetAggressionAction::Execute(Event /*event*/)
 {
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
     if (!nightbane)
         return false;
 
@@ -1454,7 +1457,6 @@ bool NightbaneControlPetAggressionAction::Execute(Event /*event*/)
     if (nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z && pet->GetReactState() != REACT_PASSIVE)
     {
         pet->AttackStop();
-        pet->CastStop();
         pet->SetReactState(REACT_PASSIVE);
     }
 
@@ -1466,7 +1468,7 @@ bool NightbaneControlPetAggressionAction::Execute(Event /*event*/)
 // This lasts for the first 35 seconds of the flight phase, after which Nightbane begins landing
 bool NightbaneFlightPhaseStackAndMoveAction::Execute(Event /*event*/)
 {
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
     if (!nightbane)
         return false;
 
@@ -1526,17 +1528,14 @@ bool NightbaneFlightPhaseStackAndMoveAction::Execute(Event /*event*/)
 bool NightbaneTeleportBackToTerraceAction::Execute(Event /*event*/)
 {
     Position const& position = NIGHTBANE_TELEPORT_POSITION;
-    bot->NearTeleportTo(
-        position.GetPositionX(), position.GetPositionY(),
+    return bot->TeleportTo(
+        KARA_MAP_ID, position.GetPositionX(), position.GetPositionY(),
         position.GetPositionZ(), bot->GetOrientation());
-
-    constexpr float zTolerance = 1.0f;
-    return std::fabs(bot->GetPositionZ() - NIGHTBANE_GROUND_Z) <= zTolerance;
 }
 
 bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
 {
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "17225");
+    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
     if (!nightbane)
         return false;
 

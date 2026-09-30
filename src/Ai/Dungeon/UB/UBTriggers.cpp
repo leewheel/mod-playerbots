@@ -12,15 +12,21 @@ using namespace UnderbogHungarfen;
 
 bool UBFoulSporesTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "17770");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "hungarfen");
     return boss && boss->HasAura(SPELL_FOUL_SPORES);
 }
 
 bool UBSporeCloudDangerTrigger::IsActive()
 {
-    if (!AI_VALUE2(Unit*, "find target", "17770"))
+    auto const& mushrooms = AI_VALUE_REF(GuidVector, "ub mushrooms");
+    return GetNearestDangerousMushroom(bot, mushrooms, MushroomDangerRange(bot)) != nullptr;
+}
+
+bool UBUnderbatLashTrigger::IsActive()
+{
+    if (PlayerbotAI::IsTank(bot))
         return false;
 
-    GuidVector const& mushrooms = AI_VALUE_REF(GuidVector, "ub mushrooms");
-    return GetNearestDangerousMushroom(bot, mushrooms, MushroomDangerRange(bot)) != nullptr;
+    auto const& attackers = AI_VALUE_REF(GuidVector, "attackers");
+    return GetNearestUnderbatInLashRange(bot, attackers) != nullptr;
 }

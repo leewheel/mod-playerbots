@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "LootAction.h"
@@ -47,18 +48,8 @@ bool LootAction::Execute(Event /*event*/)
 
 bool LootAction::isUseful()
 {
-    if (sPlayerbotAIConfig.freeMethodLoot || !bot->GetGroup() ||
-        bot->GetGroup()->GetLootMethod() != FREE_FOR_ALL || IsSelfBot(bot))
-    {
-        return true;
-    }
-
-    LootObjectStack* lootStack = AI_VALUE(LootObjectStack*, "available loot");
-    if (!lootStack)
-        return false;
-
-    LootObject nearest = lootStack->GetLoot(sPlayerbotAIConfig.lootDistance);
-    return !nearest.IsEmpty() && nearest.skillId != SKILL_NONE;
+    return sPlayerbotAIConfig.freeMethodLoot || !bot->GetGroup() ||
+    bot->GetGroup()->GetLootMethod() != FREE_FOR_ALL || IsSelfBot(bot);
 }
 
 enum ProfessionSpells
@@ -116,9 +107,16 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
         return true;
     }
 
+    // Everything below this point casts, and every opening or gathering spell has a cast
+    // time -- PlayerbotAI::CastSpell refuses outright while isMoving(). StopMoving() only
+    // asks the spline to end, so casting in the same tick burns the attempt and the bot
+    // walks off and comes back: measured at seven refused casts in one second, all with
+    // isMoving() still true. Stop, then retry on a later tick, standing still.
     if (bot->isMoving())
     {
         bot->StopMoving();
+        botAI->SetNextCheckDelay(sPlayerbotAIConfig.lootDelay);
+        return false;
     }
 
     if (creature)

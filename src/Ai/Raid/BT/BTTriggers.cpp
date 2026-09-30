@@ -8,11 +8,12 @@
 #include "AiFactory.h"
 #include "BTActions.h"
 #include "BTHelpers.h"
+#include "EncounterHelpers.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
 #include "SharedDefines.h"
 
 using namespace BlackTempleHelpers;
+using namespace EncounterHelpers;
 
 // General
 
@@ -29,20 +30,20 @@ bool HighWarlordNajentusPullingBossTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
+    Unit* najentus = AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
     return najentus && najentus->GetHealthPct() > 95.0f;
 }
 
 bool HighWarlordNajentusBossEngagedByTanksTrigger::IsActive()
 {
     return botAI->IsTank(bot) &&
-           AI_VALUE2(Unit*, "find target", "22887");
+           AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
 }
 
 bool HighWarlordNajentusCastsNeedleSpinesTrigger::IsActive()
 {
     return botAI->IsRanged(bot) &&
-           AI_VALUE2(Unit*, "find target", "22887");
+           AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
 }
 
 bool HighWarlordNajentusPlayerIsImpaledTrigger::IsActive()
@@ -50,7 +51,7 @@ bool HighWarlordNajentusPlayerIsImpaledTrigger::IsActive()
     if (botAI->IsTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "22887"))
+    if (!AI_VALUE2(Unit*, "find target", "high warlord naj'entus"))
         return false;
 
     Group* group = bot->GetGroup();
@@ -101,7 +102,7 @@ bool HighWarlordNajentusPlayerIsImpaledTrigger::IsActive()
 
 bool HighWarlordNajentusBossHasTidalShieldTrigger::IsActive()
 {
-    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
+    Unit* najentus = AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
     if (!najentus || !najentus->HasAura(
             static_cast<uint32>(BlackTempleSpells::SPELL_TIDAL_SHIELD)))
     {
@@ -119,7 +120,7 @@ bool SupremusPullingBossOrChangingPhaseTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "supremus");
     if (!supremus)
         return false;
 
@@ -139,14 +140,14 @@ bool SupremusBossEngagedByRangedTrigger::IsActive()
     if (!botAI->IsRanged(bot))
         return false;
 
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "supremus");
     return supremus && !supremus->HasAura(
                static_cast<uint32>(BlackTempleSpells::SPELL_SNARE_SELF));
 }
 
 bool SupremusBossIsFixatedOnBotTrigger::IsActive()
 {
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "supremus");
     return supremus && supremus->GetVictim() == bot &&
            supremus->HasAura(static_cast<uint32>(
                BlackTempleSpells::SPELL_SNARE_SELF));
@@ -154,14 +155,14 @@ bool SupremusBossIsFixatedOnBotTrigger::IsActive()
 
 bool SupremusVolcanoIsNearbyTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "22898") &&
+    return AI_VALUE2(Unit*, "find target", "supremus") &&
            HasSupremusVolcanoNearby(botAI, bot);
 }
 
 bool SupremusNeedToManagePhaseTimerTrigger::IsActive()
 {
     return IsMechanicTrackerBot(bot, BLACK_TEMPLE_MAP_ID) &&
-           AI_VALUE2(Unit*, "find target", "22898");
+           AI_VALUE2(Unit*, "find target", "supremus");
 }
 
 // Shade of Akama
@@ -187,7 +188,7 @@ bool TeronGorefiendPullingBossTrigger::IsActive()
         return false;
 
     Unit* gorefiend =
-        AI_VALUE2(Unit*, "find target", "22871");
+        AI_VALUE2(Unit*, "find target", "teron gorefiend");
 
     return gorefiend && gorefiend->GetHealthPct() > 95.0f;
 }
@@ -195,13 +196,13 @@ bool TeronGorefiendPullingBossTrigger::IsActive()
 bool TeronGorefiendBossEngagedByTanksTrigger::IsActive()
 {
     return botAI->IsTank(bot) &&
-           AI_VALUE2(Unit*, "find target", "22871");
+           AI_VALUE2(Unit*, "find target", "teron gorefiend");
 }
 
 bool TeronGorefiendBossEngagedByRangedTrigger::IsActive()
 {
     return botAI->IsRanged(bot) &&
-           AI_VALUE2(Unit*, "find target", "22871");
+           AI_VALUE2(Unit*, "find target", "teron gorefiend");
 }
 
 bool TeronGorefiendBossIsCastingShadowOfDeathTrigger::IsActive()
@@ -212,7 +213,7 @@ bool TeronGorefiendBossIsCastingShadowOfDeathTrigger::IsActive()
         return false;
     }
 
-    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "22871");
+    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "teron gorefiend");
     if (!gorefiend)
         return false;
 
@@ -266,7 +267,7 @@ bool GurtoggBloodboilPullingBossTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
     if (!gurtogg)
         return false;
 
@@ -283,7 +284,7 @@ bool GurtoggBloodboilBossEngagedByTanksTrigger::IsActive()
     if (!botAI->IsTank(bot))
         return false;
 
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
     return gurtogg && !gurtogg->HasAura(
         static_cast<uint32>(BlackTempleSpells::SPELL_BOSS_FEL_RAGE));
 }
@@ -293,7 +294,7 @@ bool GurtoggBloodboilBossCastsBloodboilTrigger::IsActive()
     if (!botAI->IsRanged(bot))
         return false;
 
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
     return gurtogg && !gurtogg->HasAura(
         static_cast<uint32>(BlackTempleSpells::SPELL_BOSS_FEL_RAGE));
 }
@@ -303,7 +304,7 @@ bool GurtoggBloodboilBotHasFelRageTrigger::IsActive()
     if (!botAI->IsRanged(bot))
         return false;
 
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
     if (!gurtogg || !gurtogg->HasAura(
             static_cast<uint32>(BlackTempleSpells::SPELL_BOSS_FEL_RAGE)))
     {
@@ -329,7 +330,7 @@ bool GurtoggBloodboilBotHasFelRageTrigger::IsActive()
 bool GurtoggBloodboilNeedToManagePhaseTimerTrigger::IsActive()
 {
     return IsMechanicTrackerBot(bot, BLACK_TEMPLE_MAP_ID) &&
-           AI_VALUE2(Unit*, "find target", "22948");
+           AI_VALUE2(Unit*, "find target", "gurtogg bloodboil");
 }
 
 // Reliquary of Souls
@@ -337,12 +338,12 @@ bool GurtoggBloodboilNeedToManagePhaseTimerTrigger::IsActive()
 bool ReliquaryOfSoulsAggroResetsUponPhaseChangeTrigger::IsActive()
 {
     return bot->getClass() == CLASS_HUNTER &&
-           AI_VALUE2(Unit*, "find target", "22856");
+           AI_VALUE2(Unit*, "find target", "reliquary of the lost");
 }
 
 bool ReliquaryOfSoulsEssenceOfSufferingFixatesOnClosestTargetTrigger::IsActive()
 {
-    return AI_VALUE2(Unit*, "find target", "23418");
+    return AI_VALUE2(Unit*, "find target", "essence of suffering");
 }
 
 bool ReliquaryOfSoulsEssenceOfSufferingDisablesHealingTrigger::IsActive()
@@ -356,7 +357,7 @@ bool ReliquaryOfSoulsEssenceOfSufferingDisablesHealingTrigger::IsActive()
         return false;
     }
 
-    return AI_VALUE2(Unit*, "find target", "23418");
+    return AI_VALUE2(Unit*, "find target", "essence of suffering");
 }
 
 bool ReliquaryOfSoulsEssenceOfDesireHasRuneShieldTrigger::IsActive()
@@ -364,7 +365,7 @@ bool ReliquaryOfSoulsEssenceOfDesireHasRuneShieldTrigger::IsActive()
     if (bot->getClass() != CLASS_MAGE)
         return false;
 
-    Unit* desire = AI_VALUE2(Unit*, "find target", "23419");
+    Unit* desire = AI_VALUE2(Unit*, "find target", "essence of desire");
     return desire && desire->HasAura(
         static_cast<uint32>(BlackTempleSpells::SPELL_RUNE_SHIELD));
 }
@@ -374,7 +375,7 @@ bool ReliquaryOfSoulsEssenceOfDesireCastingDeadenTrigger::IsActive()
     if (!botAI->IsTank(bot) || bot->getClass() != CLASS_WARRIOR)
         return false;
 
-    Unit* desire = AI_VALUE2(Unit*, "find target", "23419");
+    Unit* desire = AI_VALUE2(Unit*, "find target", "essence of desire");
     if (!desire || !desire->HasUnitState(UNIT_STATE_CASTING))
         return false;
 
@@ -396,7 +397,7 @@ bool MotherShahrazPullingBossTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* shahraz = AI_VALUE2(Unit*, "find target", "22947");
+    Unit* shahraz = AI_VALUE2(Unit*, "find target", "mother shahraz");
     return shahraz && shahraz->GetHealthPct() > 95.0f;
 }
 
@@ -405,7 +406,7 @@ bool MotherShahrazBossEngagedByTanksTrigger::IsActive()
     if (!botAI->IsTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "22947"))
+    if (!AI_VALUE2(Unit*, "find target", "mother shahraz"))
         return false;
 
     return !bot->HasAura(
@@ -417,11 +418,11 @@ bool MotherShahrazTanksArePositioningBossTrigger::IsActive()
     if (!botAI->IsMelee(bot) || !botAI->IsDps(bot))
         return false;
 
-    Unit* shahraz = AI_VALUE2(Unit*, "find target", "22947");
+    Unit* shahraz = AI_VALUE2(Unit*, "find target", "mother shahraz");
     if (!shahraz || shahraz->GetHealthPct() < 90.0f)
         return false;
 
-    TankPositionState tankState = GetShahrazTankPositionState(botAI, bot);
+    TankPositionState tankState = GetShahrazTankPositionState(bot);
     return tankState != TankPositionState::Positioned;
 }
 
@@ -430,7 +431,7 @@ bool MotherShahrazSinisterBeamKnocksBackPlayersTrigger::IsActive()
     if (!botAI->IsRanged(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "22947"))
+    if (!AI_VALUE2(Unit*, "find target", "mother shahraz"))
         return false;
 
     return !bot->HasAura(
@@ -450,14 +451,14 @@ bool IllidariCouncilPullingBossesTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
+    Unit* gathios = AI_VALUE2(Unit*, "find target", "gathios the shatterer");
     return gathios && gathios->GetHealthPct() > 95.0f;
 }
 
 bool IllidariCouncilGathiosEngagedByMainTankTrigger::IsActive()
 {
     return botAI->IsMainTank(bot) &&
-           AI_VALUE2(Unit*, "find target", "22949");
+           AI_VALUE2(Unit*, "find target", "gathios the shatterer");
 }
 
 bool IllidariCouncilGathiosCastingJudgementOfCommandTrigger::IsActive()
@@ -465,7 +466,7 @@ bool IllidariCouncilGathiosCastingJudgementOfCommandTrigger::IsActive()
     if (bot->getClass() != CLASS_WARRIOR || !botAI->IsMainTank(bot))
         return false;
 
-    Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
+    Unit* gathios = AI_VALUE2(Unit*, "find target", "gathios the shatterer");
     if (!gathios || !gathios->HasUnitState(UNIT_STATE_CASTING) || !gathios->HasAura(
             static_cast<uint32>(BlackTempleSpells::SPELL_SEAL_OF_COMMAND)))
     {
@@ -486,7 +487,7 @@ bool IllidariCouncilGathiosCastingJudgementOfCommandTrigger::IsActive()
 bool IllidariCouncilMalandeEngagedByFirstAssistTankTrigger::IsActive()
 {
     return botAI->IsAssistTankOfIndex(bot, 0, false) &&
-           AI_VALUE2(Unit*, "find target", "22951");
+           AI_VALUE2(Unit*, "find target", "lady malande");
 }
 
 bool IllidariCouncilDarkshadowEngagedBySecondAssistTankTrigger::IsActive()
@@ -494,7 +495,7 @@ bool IllidariCouncilDarkshadowEngagedBySecondAssistTankTrigger::IsActive()
     if (!botAI->IsAssistTankOfIndex(bot, 1, false))
         return false;
 
-    Unit* darkshadow = AI_VALUE2(Unit*, "find target", "22952");
+    Unit* darkshadow = AI_VALUE2(Unit*, "find target", "veras darkshadow");
     return darkshadow && !darkshadow->HasAura(
         static_cast<uint32>(BlackTempleSpells::SPELL_VANISH));
 }
@@ -504,13 +505,13 @@ bool IllidariCouncilZerevorEngagedByMageTankTrigger::IsActive()
     if (bot->getClass() != CLASS_MAGE || GetZerevorMageTank(bot) != bot)
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "22950");
+    return AI_VALUE2(Unit*, "find target", "high nethermancer zerevor");
 }
 
 bool IllidariCouncilMageTankNeedsDedicatedHealerTrigger::IsActive()
 {
     return botAI->IsAssistHealOfIndex(bot, 0, true) &&
-           AI_VALUE2(Unit*, "find target", "22950");
+           AI_VALUE2(Unit*, "find target", "high nethermancer zerevor");
 }
 
 bool IllidariCouncilZerevorCastsDangerousAoesTrigger::IsActive()
@@ -518,7 +519,7 @@ bool IllidariCouncilZerevorCastsDangerousAoesTrigger::IsActive()
     if (!botAI->IsRanged(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "22950"))
+    if (!AI_VALUE2(Unit*, "find target", "high nethermancer zerevor"))
         return false;
 
     return !HasDangerousCouncilAura(bot);
@@ -533,7 +534,7 @@ bool IllidariCouncilPetsScrewUpThePullTrigger::IsActive()
     if (!pet || !pet->IsAlive())
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "22949");
+    return AI_VALUE2(Unit*, "find target", "gathios the shatterer");
 }
 
 bool IllidariCouncilDeterminingDpsAssignmentsTrigger::IsActive()
@@ -541,7 +542,7 @@ bool IllidariCouncilDeterminingDpsAssignmentsTrigger::IsActive()
     if (botAI->IsHeal(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "22949"))
+    if (!AI_VALUE2(Unit*, "find target", "gathios the shatterer"))
         return false;
 
     if (botAI->IsMainTank(bot) || botAI->IsAssistTankOfIndex(bot, 0, false) ||
@@ -550,7 +551,7 @@ bool IllidariCouncilDeterminingDpsAssignmentsTrigger::IsActive()
         return false;
     }
 
-    Unit* darkshadow = AI_VALUE2(Unit*, "find target", "22952");
+    Unit* darkshadow = AI_VALUE2(Unit*, "find target", "veras darkshadow");
     if (botAI->IsTank(bot) && botAI->IsAssistTankOfIndex(bot, 1, false) &&
         darkshadow && !darkshadow->HasAura(
             static_cast<uint32>(BlackTempleSpells::SPELL_VANISH)))
@@ -564,7 +565,7 @@ bool IllidariCouncilDeterminingDpsAssignmentsTrigger::IsActive()
 bool IllidariCouncilNeedToManageDpsTimerTrigger::IsActive()
 {
     return IsMechanicTrackerBot(bot, BLACK_TEMPLE_MAP_ID) &&
-           AI_VALUE2(Unit*, "find target", "22949");
+           AI_VALUE2(Unit*, "find target", "gathios the shatterer");
 }
 
 // Illidan Stormrage <The Betrayer>
@@ -574,7 +575,7 @@ bool IllidanStormrageTankNeedsAggroTrigger::IsActive()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     return illidan && illidan->GetHealth() > 1;
 }
 
@@ -583,7 +584,7 @@ bool IllidanStormrageBossCastsFlameCrashInFrontOfMainTankTrigger::IsActive()
     if (!botAI->IsMainTank(bot))
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan)
         return false;
 
@@ -593,7 +594,7 @@ bool IllidanStormrageBossCastsFlameCrashInFrontOfMainTankTrigger::IsActive()
 
 bool IllidanStormrageBotHasParasiticShadowfiendTrigger::IsActive()
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1 ||
         illidan->GetVictim() == bot)
     {
@@ -628,7 +629,7 @@ bool IllidanStormrageParasiticShadowfiendsRunWildTrigger::IsActive()
     if (bot->getClass() != CLASS_SHAMAN)
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1 || GetIllidanPhase(illidan) == 2)
         return false;
 
@@ -650,13 +651,13 @@ bool IllidanStormrageBossSummonedFlamesOfAzzinothTrigger::IsActive()
         return false;
     }
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     return illidan && GetIllidanPhase(illidan) == 2;
 }
 
 bool IllidanStormragePetsDieToFireTrigger::IsActive()
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1)
         return false;
 
@@ -672,7 +673,7 @@ bool IllidanStormrageGrateIsSafeFromFlamesTrigger::IsActive()
         return false;
     }
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     return illidan && GetIllidanPhase(illidan) == 2;
 }
 
@@ -684,7 +685,7 @@ bool IllidanStormrageBotStruckByDarkBarrageTrigger::IsActive()
         return false;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "22917"))
+    if (!AI_VALUE2(Unit*, "find target", "illidan stormrage"))
         return false;
 
     if (botAI->HasAura("ice block", bot))
@@ -707,7 +708,7 @@ bool IllidanStormrageBossIsPreparingToLandTrigger::IsActive()
     if (botAI->IsMainTank(bot))
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     return illidan && GetIllidanPhase(illidan) == 0;
 }
 
@@ -716,7 +717,7 @@ bool IllidanStormrageBossDealsSplashDamageTrigger::IsActive()
     if (!botAI->IsRanged(bot))
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->HasAura
             (static_cast<uint32>(BlackTempleSpells::SPELL_CAGED)))
     {
@@ -736,7 +737,7 @@ bool IllidanStormrageThisExpansionHatesMeleeTrigger::IsActive()
     if (!botAI->IsMelee(bot))
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     return illidan && GetIllidanPhase(illidan) == 4;
 }
 
@@ -745,7 +746,7 @@ bool IllidanStormrageBossTransformsIntoDemonTrigger::IsActive()
     if (bot->getClass() != CLASS_WARLOCK)
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || GetIllidanPhase(illidan) != 4)
         return false;
 
@@ -757,7 +758,7 @@ bool IllidanStormrageBossSpawnsAddsTrigger::IsActive()
     if (botAI->IsHeal(bot))
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1)
         return false;
 
@@ -769,7 +770,7 @@ bool IllidanStormrageBossSpawnsAddsTrigger::IsActive()
 
 bool IllidanStormrageMaievPlacedShadowTrapTrigger::IsActive()
 {
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1 ||
         GetIllidanPhase(illidan) != 5)
     {
@@ -812,7 +813,7 @@ bool IllidanStormrageNeedToManageDpsTimerAndRtiTrigger::IsActive()
     if (!IsMechanicTrackerBot(bot, BLACK_TEMPLE_MAP_ID))
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     return illidan && illidan->GetHealth() > 1;
 }
 
@@ -823,7 +824,7 @@ bool IllidanStormrageNeedToClearHazardsBetweenPhasesTrigger::IsActive()
     if (!IsMechanicTrackerBot(bot, BLACK_TEMPLE_MAP_ID))
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan || illidan->GetHealth() == 1)
         return false;
 
@@ -836,7 +837,7 @@ bool IllidanStormrageCheatTrigger::IsActive()
     if (!botAI->HasCheat(BotCheatMask::raid) || !botAI->IsDps(bot))
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "illidan stormrage");
     if (!illidan)
         return false;
 

@@ -14,12 +14,58 @@
 
 // General
 
-class ZulamanMisdirectBossToMainTankAction : public Action
+class ZulAmanResetEncounterStatesAction : public Action
 {
 public:
-    ZulamanMisdirectBossToMainTankAction(
+    ZulAmanResetEncounterStatesAction(PlayerbotAI* botAI)
+        : Action(botAI, "zul'aman reset encounter states") {}
+    bool Execute(Event event) override;
+};
+
+class ZulAmanMisdirectBossToMainTankAction : public Action
+{
+public:
+    ZulAmanMisdirectBossToMainTankAction(
         PlayerbotAI* botAI, std::string const& name, std::string const& bossName)
         : Action(botAI, name), _bossName(bossName) {}
+    bool Execute(Event event) override;
+
+private:
+    std::string const _bossName;
+};
+
+class ZulAmanTanksPositionBossAction : public AttackAction
+{
+public:
+    ZulAmanTanksPositionBossAction(
+        PlayerbotAI* botAI, std::string const& name, std::string const& bossName,
+        Position const& position)
+        : AttackAction(botAI, name), _bossName(bossName), _position(position) {}
+    bool Execute(Event event) override;
+
+private:
+    std::string const _bossName;
+    Position const _position;
+};
+
+class ZulAmanSpreadRangedAction : public MovementAction
+{
+public:
+    ZulAmanSpreadRangedAction(
+        PlayerbotAI* botAI, std::string const& name, float minDistance)
+        : MovementAction(botAI, name), _minDistance(minDistance) {}
+    bool Execute(Event event) override;
+
+private:
+    float const _minDistance;
+};
+
+class ZulAmanRunAwayFromWhirlwindAction : public MovementAction
+{
+public:
+    ZulAmanRunAwayFromWhirlwindAction(
+        PlayerbotAI* botAI, std::string const& name, std::string const& bossName)
+        : MovementAction(botAI, name), _bossName(bossName) {}
     bool Execute(Event event) override;
 
 private:
@@ -38,22 +84,6 @@ public:
 
 // Akil'zon <Eagle Avatar>
 
-class AkilzonTanksPositionBossAction : public AttackAction
-{
-public:
-    AkilzonTanksPositionBossAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "akil'zon tanks position boss") {}
-    bool Execute(Event event) override;
-};
-
-class AkilzonSpreadRangedAction : public MovementAction
-{
-public:
-    AkilzonSpreadRangedAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "akil'zon spread ranged") {}
-    bool Execute(Event event) override;
-};
-
 class AkilzonMoveToEyeOfTheStormAction : public MovementAction
 {
 public:
@@ -62,11 +92,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class AkilzonManageElectricalStormTimerAction : public Action
+class AkilzonStartElectricalStormTimerAction : public Action
 {
 public:
-    AkilzonManageElectricalStormTimerAction(PlayerbotAI* botAI)
-        : Action(botAI, "akil'zon manage electrical storm timer") {}
+    AkilzonStartElectricalStormTimerAction(PlayerbotAI* botAI)
+        : Action(botAI, "akil'zon start electrical storm timer") {}
     bool Execute(Event event) override;
 };
 
@@ -78,29 +108,9 @@ public:
     NalorakkTanksPositionBossAction(PlayerbotAI* botAI)
         : AttackAction(botAI, "nalorakk tanks position boss") {}
     bool Execute(Event event) override;
-
-private:
-    bool MainTankPositionTrollForm(Unit* nalorakk);
-    bool FirstAssistTankPositionBearForm(Unit* nalorakk);
-};
-
-class NalorakkSpreadRangedAction : public MovementAction
-{
-public:
-    NalorakkSpreadRangedAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "nalorakk spread ranged") {}
-    bool Execute(Event event) override;
 };
 
 // Jan'alai <Dragonhawk Avatar>
-
-class JanalaiTanksPositionBossAction : public AttackAction
-{
-public:
-    JanalaiTanksPositionBossAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "jan'alai tanks position boss") {}
-    bool Execute(Event event) override;
-};
 
 class JanalaiSpreadRangedInCircleAction : public MovementAction
 {
@@ -128,14 +138,6 @@ public:
 
 // Halazzi <Lynx Avatar>
 
-class HalazziMainTankPositionBossAction : public AttackAction
-{
-public:
-    HalazziMainTankPositionBossAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "halazzi main tank position boss") {}
-    bool Execute(Event event) override;
-};
-
 class HalazziFirstAssistTankAttackSpiritLynxAction : public AttackAction
 {
 public:
@@ -144,11 +146,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class HalazziAssignDpsPriorityAction : public AttackAction
+class HalazziDpsAttackTotemAndBossAction : public AttackAction
 {
 public:
-    HalazziAssignDpsPriorityAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "halazzi assign dps priority") {}
+    HalazziDpsAttackTotemAndBossAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "halazzi dps attack totem and boss") {}
     bool Execute(Event event) override;
 };
 
@@ -162,22 +164,6 @@ public:
     bool Execute(Event event) override;
 };
 
-class HexLordMalacrassRunAwayFromWhirlwindAction : public MovementAction
-{
-public:
-    HexLordMalacrassRunAwayFromWhirlwindAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "hex lord malacrass run away from whirlwind") {}
-    bool Execute(Event event) override;
-};
-
-class HexLordMalacrassCastersStopAttackingAction : public Action
-{
-public:
-    HexLordMalacrassCastersStopAttackingAction(PlayerbotAI* botAI)
-        : Action(botAI, "hex lord malacrass casters stop attacking") {}
-    bool Execute(Event event) override;
-};
-
 class HexLordMalacrassMoveAwayFromFreezingTrapAction : public MovementAction
 {
 public:
@@ -187,35 +173,20 @@ public:
 };
 
 // Zul'jin
-class ZuljinTanksPositionBossAction : public AttackAction
+
+class ZuljinMassDispelCreepingParalysisAction : public Action
 {
 public:
-    ZuljinTanksPositionBossAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "zul'jin tanks position boss") {}
+    ZuljinMassDispelCreepingParalysisAction(PlayerbotAI* botAI)
+        : Action(botAI, "zul'jin mass dispel creeping paralysis") {}
     bool Execute(Event event) override;
 };
 
-class ZuljinRunAwayFromWhirlwindAction : public MovementAction
+class ZuljinPositionRangedForCyclonesAction : public MovementAction
 {
 public:
-    ZuljinRunAwayFromWhirlwindAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "zul'jin run away from whirlwind") {}
-    bool Execute(Event event) override;
-};
-
-class ZuljinAvoidCyclonesAction : public MovementAction
-{
-public:
-    ZuljinAvoidCyclonesAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "zul'jin avoid cyclones") {}
-    bool Execute(Event event) override;
-};
-
-class ZuljinSpreadRangedAction : public MovementAction
-{
-public:
-    ZuljinSpreadRangedAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "zul'jin spread ranged") {}
+    ZuljinPositionRangedForCyclonesAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "zul'jin position ranged for cyclones") {}
     bool Execute(Event event) override;
 };
 

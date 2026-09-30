@@ -5,60 +5,74 @@
  */
 
 #include "MagActions.h"
-#include "Creature.h"
+#include "EncounterHelpers.h"
 #include "MagHelpers.h"
+#include "MoveSpline.h"
 #include "ObjectAccessor.h"
-#include "ObjectGuid.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
-#include <algorithm>
+#include "RtiTargetValue.h"
+#include <cmath>
 #include <limits>
-#include <list>
 #include <vector>
 
 using namespace MagHelpers;
+using namespace EncounterHelpers;
+
+bool MagtheridonResetEncounterStatesAction::Execute(Event /*event*/)
+{
+    uint32 const instanceId = bot->GetInstanceId();
+
+    bool reset = false;
+    reset |= magDpsWaitTimer.erase(instanceId) > 0;
+    reset |= blastNovaTimer.erase(instanceId) > 0;
+    reset |= lastBlastNovaState.erase(instanceId) > 0;
+    reset |= ceilingCollapseApplied.erase(instanceId) > 0;
+    reset |= botToCubeAssignments.erase(instanceId) > 0;
+
+    if (!AI_VALUE2(bool, "combat", "self target"))
+        reset |= ClearTargetIcon(bot, RtiTargetValue::skullIndex);
+
+    return reset;
+}
 
 bool MagtheridonMainTankAttackFirstThreeChannelersAction::Execute(Event /*event*/)
 {
-    Creature* channeler = GetChanneler(bot, SOUTH_CHANNELER);
+    Creature* channeler = GetChanneler(bot, SOUTH_CHANNELER_DB_GUID);
     if (!channeler)
-        channeler = GetChanneler(bot, WEST_CHANNELER);
+        channeler = GetChanneler(bot, WEST_CHANNELER_DB_GUID);
     if (!channeler)
-        channeler = GetChanneler(bot, EAST_CHANNELER);
+        channeler = GetChanneler(bot, EAST_CHANNELER_DB_GUID);
 
     if (channeler)
-    {
-        if (AI_VALUE(Unit*, "current target") != channeler)
-            return Attack(channeler);
-        return false;
-    }
+        return AI_VALUE(Unit*, "current target") != channeler && Attack(channeler);
 
-    // After first three channelers are dead, wait for Magtheridon to activate
+    // After first three channelers are dead, wait for Magtheridon to activate.
     Position const& position = WAITING_FOR_MAGTHERIDON_POSITION;
     if (bot->GetExactDist2d(position) <= 2.0f)
     {
-        bot->SetFacingTo(position.GetOrientation());
+        if (std::fabs(bot->GetOrientation() - position.GetOrientation()) > 0.1f)
+            bot->SetFacingTo(position.GetOrientation());
+
         return true;
     }
 
     return MoveTo(
-        MAG_MAP_ID, position.GetPositionX(), position.GetPositionY(),
-        position.GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED);
+        MAG_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
+        false, false, false, false, MovementPriority::MOVEMENT_FORCED);
 }
 
 bool MagtheridonAssistTanksAttackLastTwoChannelersAction::Execute(Event /*event*/)
 {
     Creature* channeler = nullptr;
     Position position;
-    if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, false))
+    if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, true))
     {
-        channeler = GetChanneler(bot, NORTHWEST_CHANNELER);
+        channeler = GetChanneler(bot, NORTHWEST_CHANNELER_DB_GUID);
         position = NW_CHANNELER_TANK_POSITION;
     }
     else // PlayerbotAI::IsAssistTankOfIndex(bot, 1, true))
     {
-        channeler = GetChanneler(bot, NORTHEAST_CHANNELER);
+        channeler = GetChanneler(bot, NORTHEAST_CHANNELER_DB_GUID);
         position = NE_CHANNELER_TANK_POSITION;
     }
 
@@ -71,22 +85,19 @@ bool MagtheridonAssistTanksAttackLastTwoChannelersAction::Execute(Event /*event*
     if (channeler->GetVictim() != bot)
         return false;
 
-    float const distToPosition = bot->GetExactDist2d(position);
-    if (distToPosition <= 3.0f)
+    // Movement is intentionally forwards only, so no facing is passed.
+    constexpr float arrivalDist = 3.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, position, arrivalDist, nullptr, moveX, moveY, backwards))
         return false;
-
-    float const dX = position.GetPositionX() - bot->GetPositionX();
-    float const dY = position.GetPositionY() - bot->GetPositionY();
-    float const moveDist = std::min(distToPosition, 3.5f);
-    float const moveX = bot->GetPositionX() + (dX / distToPosition) * moveDist;
-    float const moveY = bot->GetPositionY() + (dY / distToPosition) * moveDist;
 
     return MoveTo(
         MAG_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+        false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-// Misdirect West & East Channelers to Main Tank
 bool MagtheridonMisdirectHellfireChannelersToMainTankAction::Execute(Event /*event*/)
 {
     Group* group = bot->GetGroup();
@@ -98,7 +109,7 @@ bool MagtheridonMisdirectHellfireChannelersToMainTankAction::Execute(Event /*eve
     {
         Player* member = ref->GetSource();
         if (member && member->IsAlive() && member->getClass() == CLASS_HUNTER &&
-            GET_PLAYERBOT_AI(member))
+            member->GetMapId() == MAG_MAP_ID && GET_PLAYERBOT_AI(member))
         {
             hunters.push_back(member);
         }
@@ -114,17 +125,17 @@ bool MagtheridonMisdirectHellfireChannelersToMainTankAction::Execute(Event /*eve
         }
     }
 
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    if (!mainTank)
+    Player* mainTank = GetGroupMainTank(bot);
+    if (!mainTank || !mainTank->IsAlive())
         return false;
 
-    Creature* targetChanneler = nullptr;
+    Creature* channeler = nullptr;
     if (hunterIndex == 0)
-        targetChanneler = GetChanneler(bot, WEST_CHANNELER);
+        channeler = GetChanneler(bot, WEST_CHANNELER_DB_GUID);
     else if (hunterIndex == 1)
-        targetChanneler = GetChanneler(bot, EAST_CHANNELER);
+        channeler = GetChanneler(bot, EAST_CHANNELER_DB_GUID);
 
-    if (!targetChanneler)
+    if (!channeler)
         return false;
 
     if (botAI->CanCastSpell("misdirection", mainTank))
@@ -133,24 +144,22 @@ bool MagtheridonMisdirectHellfireChannelersToMainTankAction::Execute(Event /*eve
     if (!bot->HasAura(Id(MagSpells::SPELL_MISDIRECTION)))
         return false;
 
-    if (botAI->CanCastSpell("steady shot", targetChanneler))
-        return botAI->CastSpell("steady shot", targetChanneler);
-
-    return false;
+    return botAI->CanCastSpell("steady shot", channeler) &&
+        botAI->CastSpell("steady shot", channeler);
 }
 
 bool MagtheridonAssignDpsPriorityAction::Execute(Event /*event*/)
 {
     Creature* channeler = nullptr;
-    if (Creature* channelerS = GetChanneler(bot, SOUTH_CHANNELER))
+    if (Creature* channelerS = GetChanneler(bot, SOUTH_CHANNELER_DB_GUID))
         channeler = channelerS;
-    else if (Creature* channelerW = GetChanneler(bot, WEST_CHANNELER))
+    else if (Creature* channelerW = GetChanneler(bot, WEST_CHANNELER_DB_GUID))
         channeler = channelerW;
-    else if (Creature* channelerE = GetChanneler(bot, EAST_CHANNELER))
+    else if (Creature* channelerE = GetChanneler(bot, EAST_CHANNELER_DB_GUID))
         channeler = channelerE;
-    else if (Creature* channelerNw = GetChanneler(bot, NORTHWEST_CHANNELER))
+    else if (Creature* channelerNw = GetChanneler(bot, NORTHWEST_CHANNELER_DB_GUID))
         channeler = channelerNw;
-    else if (Creature* channelerNe = GetChanneler(bot, NORTHEAST_CHANNELER))
+    else if (Creature* channelerNe = GetChanneler(bot, NORTHEAST_CHANNELER_DB_GUID))
         channeler = channelerNe;
 
     if (!channeler)
@@ -162,33 +171,22 @@ bool MagtheridonAssignDpsPriorityAction::Execute(Event /*event*/)
     return MarkTargetWithSkull(bot, channeler);
 }
 
-// Assign Burning Abyssals to Warlocks to Banish
-// Burning Abyssals in excess of Warlocks in party will be Feared
+// Establish a Banish rotation for Burning Abyssals and a Fear rotation with respect to any Burning
+// Abyssals that exceed the number of Warlocks in the raid.
 bool MagtheridonWarlockCcBurningAbyssalAction::Execute(Event /*event*/)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return false;
 
-    std::vector<Unit*> abyssals;
-    std::list<Creature*> creatureList;
-    constexpr float searchRadius = 100.0f;
-
-    bot->GetCreatureListWithEntryInGrid(
-        creatureList, Id(MagNpcs::NPC_BURNING_ABYSSAL), searchRadius);
-
-    for (Creature* creature : creatureList)
-    {
-        if (creature && creature->IsAlive())
-            abyssals.push_back(creature);
-    }
+    std::vector<Unit*> const abyssals = GetBurningAbyssals(botAI);
 
     std::vector<Player*> warlocks;
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
         if (member && member->IsAlive() && member->getClass() == CLASS_WARLOCK &&
-            GET_PLAYERBOT_AI(member))
+            member->GetMapId() == MAG_MAP_ID && GET_PLAYERBOT_AI(member))
         {
             warlocks.push_back(member);
         }
@@ -204,7 +202,10 @@ bool MagtheridonWarlockCcBurningAbyssalAction::Execute(Event /*event*/)
         }
     }
 
-    if (warlockIndex >= 0 && warlockIndex < static_cast<int>(abyssals.size()))
+    if (warlockIndex < 0)
+        return false;
+
+    if (warlockIndex < static_cast<int>(abyssals.size()))
     {
         Unit* assignedAbyssal = abyssals[warlockIndex];
         if (!botAI->HasAura("banish", assignedAbyssal) &&
@@ -214,7 +215,7 @@ bool MagtheridonWarlockCcBurningAbyssalAction::Execute(Event /*event*/)
         }
     }
 
-    for (size_t i = warlocks.size(); i < abyssals.size(); ++i)
+    for (size_t i = warlocks.size() + warlockIndex; i < abyssals.size(); i += warlocks.size())
     {
         Unit* excessAbyssal = abyssals[i];
         if (!botAI->HasAura("banish", excessAbyssal) &&
@@ -228,80 +229,60 @@ bool MagtheridonWarlockCcBurningAbyssalAction::Execute(Event /*event*/)
     return false;
 }
 
-// Main tank will back up to the Eastern point of the room
 bool MagtheridonMainTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
     if (!magtheridon)
         return false;
 
     if (AI_VALUE(Unit*, "current target") != magtheridon)
         return Attack(magtheridon);
 
+    constexpr float stopForHealHealthPct = 50.0f;
     if (magtheridon->GetVictim() != bot || !bot->IsWithinMeleeRange(magtheridon) ||
-        bot->GetHealthPct() < 50.0f)
+        bot->GetHealthPct() < stopForHealHealthPct)
     {
         return false;
     }
 
-    Position const& position = MAGTHERIDON_TANK_POSITION;
-
-    float const distToPosition = bot->GetExactDist2d(position);
-    if (distToPosition <= 3.0f)
+    constexpr float arrivalDist = 3.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(
+            bot, MAGTHERIDON_TANK_POSITION, arrivalDist, magtheridon, moveX, moveY, backwards))
+    {
         return false;
-
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-    float const toPosX = position.GetPositionX() - botX;
-    float const toPosY = position.GetPositionY() - botY;
-
-    float const toBossX = magtheridon->GetPositionX() - botX;
-    float const toBossY = magtheridon->GetPositionY() - botY;
-    bool const backwards = (toPosX * toBossX + toPosY * toBossY) < 0.0f;
-
-    float const maxMoveDist = backwards ? 2.25f : 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToPosition);
-    float const moveX = botX + (toPosX / distToPosition) * moveDist;
-    float const moveY = botY + (toPosY / distToPosition) * moveDist;
+    }
 
     return MoveTo(
         MAG_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-// Ranged stay away from Magtheridon and other players
-// Magtheridon's CombatReach is 12 yards and BoundingRadius is 4 yards
 bool MagtheridonSpreadRangedAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
     if (!magtheridon)
         return false;
 
-    if (IsCubeClicker(bot))
+    // This 20y flee is sort of a cheap way to stay out of Magtheridon's Cleave.
+    constexpr float safeDistFromBoss = 20.0f;
+    constexpr uint32 minInterval = 0;
+    if (bot->GetExactDist(magtheridon) < safeDistFromBoss &&
+        FleePosition(magtheridon->GetPosition(), safeDistFromBoss, minInterval))
     {
-        auto timerIt = blastNovaTimer.find(magtheridon->GetMap()->GetInstanceId());
-        if (timerIt != blastNovaTimer.end() &&
-            getMSTimeDiff(timerIt->second, getMSTime()) >= BLAST_NOVA_INTERIM_MS)
-        {
-            return false;
-        }
+        return true;
     }
-
-    constexpr float safeDistFromBoss = 10.0f;
-    float const currentDistance = bot->GetDistance2d(magtheridon);
-    if (currentDistance < safeDistFromBoss)
-        return MoveAway(magtheridon, safeDistFromBoss - currentDistance);
 
     constexpr float safeDistFromPlayer = 6.0f;
     Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
     return nearestPlayer && FleePosition(nearestPlayer->GetPosition(), safeDistFromPlayer);
 }
 
-// For bots that are assigned to click cubes
-// Magtheridon casts Blast Nova every 54.35 to 55.40s, with a 2s cast time
 bool MagtheridonUseManticronCubeAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
     if (!magtheridon)
         return false;
 
@@ -313,21 +294,21 @@ bool MagtheridonUseManticronCubeAction::Execute(Event /*event*/)
     if (!cube)
         return false;
 
-    // Release cubes after Blast Nova is interrupted
+    // Release cubes after Blast Nova is interrupted.
     if (HandleCubeRelease(magtheridon))
         return true;
 
-    // If Blast Nova is actively casting, always try to click the cube
+    // If Blast Nova is actively casting (2s cast), always try to click the cube.
     if (IsBlastNovaCasting(magtheridon))
-        return HandleCubeInteraction(*cubeInfo, cube);
+        return HandleCubeInteraction(cube);
 
-    // Otherwise, if Blast Nova is coming soon, move to and wait near the cube
+    // Otherwise, if Blast Nova is coming soon, move to and wait near the cube.
     return HandleWaitingPhase(*cubeInfo);
 }
 
 CubeInfo const* MagtheridonUseManticronCubeAction::GetAssignedCube()
 {
-    auto mapIt = botToCubeAssignments.find(bot->GetMap()->GetInstanceId());
+    auto mapIt = botToCubeAssignments.find(bot->GetInstanceId());
     if (mapIt == botToCubeAssignments.end())
         return nullptr;
 
@@ -343,30 +324,88 @@ bool MagtheridonUseManticronCubeAction::HandleCubeRelease(Unit* magtheridon)
         return false;
     }
 
-    uint32 delay = urand(200, 3000);
+    // Stagger releasing cube so the clickers do not do it on the same tick, which looks stupid.
+    constexpr uint32 minReleaseDelayMs = 400;
+    constexpr uint32 maxReleaseDelayMs = 1500;
+    uint32 const releaseDelay = urand(minReleaseDelayMs, maxReleaseDelayMs);
+
     botAI->AddTimedEvent(
         [this]
         {
             bot->CastStop();
         },
-        delay);
-    botAI->SetNextCheckDelay(delay + 50);
+        releaseDelay);
+
+    botAI->SetNextCheckDelay(releaseDelay + ONE_WORLD_UPDATE_MS);
     return true;
 }
 
-bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(const CubeInfo& cubeInfo)
+bool MagtheridonUseManticronCubeAction::HandleCubeInteraction(GameObject* cube)
 {
-    auto timerIt = blastNovaTimer.find(bot->GetMap()->GetInstanceId());
-    if (timerIt == blastNovaTimer.end() ||
-        getMSTimeDiff(timerIt->second, getMSTime()) < BLAST_NOVA_INTERIM_MS)
+    if (cube->IsAtInteractDistance(*bot, cube->GetInteractionDistance()))
     {
-        return false;
+        // If already clicked, don't let go!
+        if (bot->HasAura(Id(MagSpells::SPELL_SHADOW_GRASP)))
+            return true;
+
+        bot->StopMoving();
+        cube->Use(bot);
+        return true;
     }
 
-    constexpr float safeWaitDistance = 8.0f;
-
-    if (fabs(bot->GetDistance2d(cubeInfo.x, cubeInfo.y) - safeWaitDistance) <= 1.0f)
+    // If the bot is already moving, don't randomize another move.
+    if (!bot->movespline->Finalized())
         return true;
+
+    ObjectGuid const cubeGuid = cube->GetGUID();
+    // Stagger the run from the waiting spot so the clickers do not all move on the same tick, which
+    // looks stupid.
+    constexpr uint32 minRunDelayMs = 200;
+    constexpr uint32 maxRunDelayMs = 1000;
+    uint32 const runDelay = urand(minRunDelayMs, maxRunDelayMs);
+
+    botAI->AddTimedEvent(
+        [this, cubeGuid]
+        {
+            GameObject* cube = botAI->GetGameObject(cubeGuid);
+            if (!cube)
+                return;
+
+            float const targetDist = cube->GetInteractionDistance() - 0.5f;
+            float const angle = cube->GetAngle(bot);
+            float const destX = cube->GetPositionX() + std::cos(angle) * targetDist;
+            float const destY = cube->GetPositionY() + std::sin(angle) * targetDist;
+
+            bot->CastStop();
+            MoveTo(
+                MAG_MAP_ID, destX, destY, cube->GetPositionZ(), false, false, false, false,
+                MovementPriority::MOVEMENT_FORCED, true, false);
+        },
+        runDelay);
+
+    botAI->SetNextCheckDelay(runDelay + ONE_WORLD_UPDATE_MS);
+    return true;
+}
+
+bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(CubeInfo const& cubeInfo)
+{
+    auto timerIt = blastNovaTimer.find(bot->GetInstanceId());
+    if (timerIt == blastNovaTimer.end())
+        return false;
+
+    if (getMSTimeDiff(timerIt->second, getMSTime()) < BLAST_NOVA_INTERIM_MS)
+        return false;
+
+    // If a hazard appears at the waiting position, find a new waiting position at the same distance
+    // from the cube.
+    constexpr float safeWaitDistance = 10.0f;
+    bool const onRing =
+        fabs(bot->GetDistance2d(cubeInfo.x, cubeInfo.y) - safeWaitDistance) <= 1.0f;
+    bool const inHazard =
+        IsPositionInActiveDebris(botAI, bot->GetPositionX(), bot->GetPositionY()) ||
+        IsPositionInActiveConflagration(botAI, bot->GetPositionX(), bot->GetPositionY());
+    if (onRing && !inHazard)
+        return false;
 
     Position safePos;
     if (!FindSafePositionNearCube(cubeInfo, safeWaitDistance, safePos))
@@ -381,17 +420,19 @@ bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(const CubeInfo& cubeI
 bool MagtheridonUseManticronCubeAction::FindSafePositionNearCube(
     CubeInfo const& cubeInfo, float preferredDistance, Position& outPos)
 {
-    constexpr float angleStep = M_PI / 8.0f;
+    constexpr uint8 numAngles = 16;
+    constexpr float angleStep = 2.0f * M_PI / numAngles;
 
     Position debris;
-    bool const hasDebris = GetActiveDebrisPosition(bot, debris);
+    bool const hasDebris = GetActiveDebrisPosition(botAI, debris);
     std::vector<GameObject*> const blazes = GetActiveConflagrations(botAI);
 
     float minMoveDistance = std::numeric_limits<float>::max();
     bool foundSafe = false;
 
-    for (float angle = 0.0f; angle < 2.0f * M_PI; angle += angleStep)
+    for (uint8 i = 0; i < numAngles; ++i)
     {
+        float const angle = i * angleStep;
         float const x = cubeInfo.x + std::cos(angle) * preferredDistance;
         float const y = cubeInfo.y + std::sin(angle) * preferredDistance;
 
@@ -413,30 +454,6 @@ bool MagtheridonUseManticronCubeAction::FindSafePositionNearCube(
     return foundSafe;
 }
 
-bool MagtheridonUseManticronCubeAction::HandleCubeInteraction(
-    CubeInfo const& cubeInfo, GameObject* cube)
-{
-    constexpr float interactDistance = 1.0f;
-    float const cubeDist = bot->GetDistance2d(cubeInfo.x, cubeInfo.y);
-
-    if (cubeDist < interactDistance + 1.0f)
-    {
-        uint32 delay = urand(200, 1500);
-        botAI->AddTimedEvent(
-            [this, cube]
-            {
-                bot->StopMoving();
-                cube->Use(bot);
-            },
-            delay);
-        botAI->SetNextCheckDelay(delay + 50);
-        return true;
-    }
-
-    bot->CastStop();
-    return MoveTo(cube, interactDistance, MovementPriority::MOVEMENT_FORCED);
-}
-
 bool MagtheridonMoveOutOfDebrisAction::Execute(Event /*event*/)
 {
     Position safePos;
@@ -445,29 +462,31 @@ bool MagtheridonMoveOutOfDebrisAction::Execute(Event /*event*/)
 
     bot->CastStop();
     return MoveTo(
-        MAG_MAP_ID, safePos.GetPositionX(), safePos.GetPositionY(),
-        bot->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED, true, false);
+        MAG_MAP_ID, safePos.GetPositionX(), safePos.GetPositionY(), bot->GetPositionZ(),
+        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
 {
-    constexpr float maxSearchRadius = 20.0f;
+    constexpr float minSearchRadius = 2.0f;
     constexpr float distanceStep = 1.0f;
-    constexpr float angleStep = M_PI / 12.0f;
+    constexpr uint8 numDistSteps = 18;
+    constexpr uint8 numAngles = 24;
+    constexpr float angleStep = 2.0f * M_PI / numAngles;
 
     Position debris;
-    bool const hasDebris = GetActiveDebrisPosition(bot, debris);
+    bool const hasDebris = GetActiveDebrisPosition(botAI, debris);
     std::vector<GameObject*> const blazes = GetActiveConflagrations(botAI);
 
     float minMoveDistance = std::numeric_limits<float>::max();
     bool foundSafe = false;
 
-    // Need to remove float loop
-    for (float distance = 2.0f; distance <= maxSearchRadius; distance += distanceStep)
+    for (uint8 i = 0; i <= numDistSteps; ++i)
     {
-        for (float angle = 0.0f; angle < 2.0f * M_PI; angle += angleStep)
+        float const distance = minSearchRadius + i * distanceStep;
+        for (uint8 j = 0; j < numAngles; ++j)
         {
+            float const angle = j * angleStep;
             float const x = bot->GetPositionX() + distance * std::cos(angle);
             float const y = bot->GetPositionY() + distance * std::sin(angle);
 
@@ -479,7 +498,7 @@ bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
 
             float const moveDistance = bot->GetExactDist2d(x, y);
 
-            if (!foundSafe || moveDistance < minMoveDistance)
+            if (moveDistance < minMoveDistance)
             {
                 outPos = Position(x, y, bot->GetPositionZ());
                 minMoveDistance = moveDistance;
@@ -491,64 +510,53 @@ bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
     return foundSafe;
 }
 
-bool MagtheridonManageTimersAndAssignmentsAction::Execute(Event /*event*/)
+bool MagtheridonUpdateTimersAndAssignmentsAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
-    if (!magtheridon)
+    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
+    if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return false;
 
-    uint32 const instanceId = magtheridon->GetMap()->GetInstanceId();
+    uint32 const instanceId = magtheridon->GetInstanceId();
     uint32 const now = getMSTime();
 
     bool const isCasting = IsBlastNovaCasting(magtheridon);
-    if (isCasting && !lastBlastNovaState[instanceId])
+    bool& lastState = lastBlastNovaState.try_emplace(instanceId, false).first->second;
+    if (isCasting && !lastState)
         blastNovaTimer[instanceId] = now;
 
-    lastBlastNovaState[instanceId] = isCasting;
+    lastState = isCasting;
 
     bool updated = false;
+    updated |= blastNovaTimer.try_emplace(instanceId, now).second;
+    updated |= magDpsWaitTimer.try_emplace(instanceId, now).second;
 
-    if (IsMagtheridonActive(magtheridon))
+    if (magtheridon->GetHealthPct() < CEILING_COLLAPSE_HP_PCT &&
+        !ceilingCollapseApplied.contains(instanceId))
     {
-        updated |= blastNovaTimer.try_emplace(instanceId, now).second;
-        updated |= dpsWaitTimer.try_emplace(instanceId, now).second;
-
-        // Ceiling collapse at 30% HP delays scheduled abilities such as Blast Nova by 18s
-        if (magtheridon->GetHealthPct() < 30.0f && !ceilingCollapseApplied.contains(instanceId))
-        {
-            blastNovaTimer[instanceId] += 18 * IN_MILLISECONDS;
-            ceilingCollapseApplied.insert(instanceId);
-            updated = true;
-        }
-
-        updated |= NeedsCubeReassignment(instanceId) && AssignCubeClickers();
+        blastNovaTimer[instanceId] += CEILING_COLLAPSE_DELAY_MS;
+        ceilingCollapseApplied.insert(instanceId);
+        updated = true;
     }
-    else
-    {
-        updated |= blastNovaTimer.erase(instanceId) > 0;
-        updated |= dpsWaitTimer.erase(instanceId) > 0;
-        updated |= botToCubeAssignments.erase(instanceId) > 0;
-        updated |= ceilingCollapseApplied.erase(instanceId) > 0;
-        updated |= lastBlastNovaState.erase(instanceId) > 0;
-    }
+
+    updated |= NeedsCubeReassignment(instanceId) && AssignCubeClickers(instanceId, magtheridon);
 
     return updated;
 }
 
-bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers()
+bool MagtheridonUpdateTimersAndAssignmentsAction::AssignCubeClickers(
+    uint32 instanceId, Unit* magtheridon)
 {
-    uint32 const instanceId = bot->GetMap()->GetInstanceId();
     std::vector<CubeInfo> cubes = GetAllCubeInfosByDbGuids(bot->GetMap(), MANTICRON_CUBE_DB_GUIDS);
-
     auto& assignment = botToCubeAssignments[instanceId];
     Group* group = bot->GetGroup();
+
     if (!group || cubes.empty())
     {
         assignment.clear();
         return true;
     }
 
-    // Prune dead or absent players from the existing assignment
+    // Prune dead or absent players from the existing assignment.
     for (auto it = assignment.begin(); it != assignment.end(); )
     {
         Player* player = ObjectAccessor::FindPlayer(it->first);
@@ -558,7 +566,10 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers()
             ++it;
     }
 
-    // Fill unassigned cubes
+    // Get Magtheridon's victim outside of the assignment loops to exclude them from assignments.
+    Player* victim = magtheridon->GetVictim() ? magtheridon->GetVictim()->ToPlayer() : nullptr;
+
+    // Fill unassigned cubes.
     for (CubeInfo const& cube : cubes)
     {
         bool alreadyAssigned = false;
@@ -575,13 +586,13 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers()
 
         Player* candidate = nullptr;
 
-        // Pass 1: ranged DPS excluding warlocks
-        for (GroupReference* ref = group->GetFirstMember();
-             ref && !candidate; ref = ref->next())
+        // Pass 1: ranged DPS bots, excluding Warlocks.
+        for (GroupReference* ref = group->GetFirstMember(); ref && !candidate; ref = ref->next())
         {
             Player* member = ref->GetSource();
-            if (!member || !member->IsAlive() || !PlayerbotAI::IsRangedDps(member) ||
-                !GET_PLAYERBOT_AI(member) || member->getClass() == CLASS_WARLOCK)
+            if (!member || !member->IsAlive() || member->GetMapId() != MAG_MAP_ID ||
+                member->getClass() == CLASS_WARLOCK || !GET_PLAYERBOT_AI(member) ||
+                !PlayerbotAI::IsRangedDps(member))
             {
                 continue;
             }
@@ -592,15 +603,16 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers()
             candidate = member;
         }
 
-        // Pass 2: any non-tank bot
+        // Pass 2: any bot other than the main tank or whoever Magtheridon is attacking.
         if (!candidate)
         {
             for (GroupReference* ref = group->GetFirstMember();
                  ref && !candidate; ref = ref->next())
             {
                 Player* member = ref->GetSource();
-                if (!member || !member->IsAlive() || PlayerbotAI::IsTank(member) ||
-                    !GET_PLAYERBOT_AI(member))
+                if (!member || !member->IsAlive() || member->GetMapId() != MAG_MAP_ID ||
+                    !GET_PLAYERBOT_AI(member) || member == victim ||
+                    PlayerbotAI::IsMainTank(member))
                 {
                     continue;
                 }
@@ -619,7 +631,7 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers()
     return true;
 }
 
-bool MagtheridonManageTimersAndAssignmentsAction::NeedsCubeReassignment(uint32 instanceId)
+bool MagtheridonUpdateTimersAndAssignmentsAction::NeedsCubeReassignment(uint32 instanceId)
 {
     auto mapIt = botToCubeAssignments.find(instanceId);
     if (mapIt == botToCubeAssignments.end() || mapIt->second.empty())
@@ -628,23 +640,9 @@ bool MagtheridonManageTimersAndAssignmentsAction::NeedsCubeReassignment(uint32 i
     for (auto const& pair : mapIt->second)
     {
         Player* assigned = ObjectAccessor::FindPlayer(pair.first);
-        if (!assigned || !assigned->IsAlive())
+        if (!assigned || !assigned->IsAlive() || assigned->GetMapId() != MAG_MAP_ID)
             return true;
     }
 
     return false;
-}
-
-bool MagtheridonEraseTimersAndTrackersAction::Execute(Event /*event*/)
-{
-    uint32 const instanceId = bot->GetMap()->GetInstanceId();
-
-    bool erased = false;
-    erased |= blastNovaTimer.erase(instanceId) > 0;
-    erased |= dpsWaitTimer.erase(instanceId) > 0;
-    erased |= ceilingCollapseApplied.erase(instanceId) > 0;
-    erased |= lastBlastNovaState.erase(instanceId) > 0;
-    erased |= botToCubeAssignments.erase(instanceId) > 0;
-
-    return erased;
 }

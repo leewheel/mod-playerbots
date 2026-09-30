@@ -10,6 +10,8 @@
 #include "Spell.h"
 #include "Timer.h"
 #include "TKHelpers.h"
+#include <algorithm>
+#include <list>
 
 using namespace TkHelpers;
 
@@ -33,7 +35,7 @@ public:
         if (!target)
             return;
 
-        auto& orbs = voidReaverArcaneOrbs[caster->GetMap()->GetInstanceId()];
+        auto& orbs = voidReaverArcaneOrbs[caster->GetInstanceId()];
         uint32 const now = getMSTime();
 
         ArcaneOrbData orbData;

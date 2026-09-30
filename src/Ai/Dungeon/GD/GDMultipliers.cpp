@@ -11,40 +11,64 @@
 #include "GDTriggers.h"
 #include "GenericSpellActions.h"
 #include "MovementActions.h"
+#include "Playerbots.h"
+#include "ReachTargetActions.h"
 
 float SladranMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "29304");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "slad'ran");
     if (!boss) { return 1.0f; }
 
     if (boss->FindCurrentSpellBySpellId(SPELL_POISON_NOVA))
     {
-        if (dynamic_cast<MovementAction*>(action) && !dynamic_cast<AvoidPoisonNovaAction*>(action))
+        if (dynamic_cast<AvoidPoisonNovaAction*>(action)) { return 1.0f; }
+
+        if (dynamic_cast<MovementAction*>(action))
         {
             return 0.0f;
         }
     }
 
-    if (!botAI->IsDps(bot)) { return 1.0f; }
-
-    if (action->getThreatType() == Action::ActionThreatType::Aoe)
+    if (dynamic_cast<FleeAction*>(action) ||
+        dynamic_cast<RunAwayAction*>(action) ||
+        dynamic_cast<MoveRandomAction*>(action) ||
+        dynamic_cast<MoveFromGroupAction*>(action))
     {
         return 0.0f;
     }
 
-    Unit* snakeWrap = nullptr;
-    GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
-    for (auto& target : targets)
+    if (PlayerbotAI::IsTank(bot))
     {
-        Unit* unit = botAI->GetUnit(target);
-        if (unit && unit->GetEntry() == NPC_SNAKE_WRAP)
+        if (dynamic_cast<TankAssistAction*>(action))
         {
-            snakeWrap = unit;
-            break;
+            Unit* tankTarget = AI_VALUE(Unit*, "tank target");
+            if (tankTarget && GundrakSladran::IsAdd(tankTarget) &&
+                bot->GetExactDist2d(tankTarget) > GundrakSladran::TANK_PICKUP_YD)
+            {
+                return 0.0f;
+            }
         }
+
+        if (dynamic_cast<ReachTargetAction*>(action))
+        {
+            Unit* currentTarget = AI_VALUE(Unit*, "current target");
+            if (currentTarget && GundrakSladran::IsAdd(currentTarget) &&
+                bot->GetExactDist2d(currentTarget) > GundrakSladran::TANK_PICKUP_YD)
+            {
+                return 0.0f;
+            }
+        }
+
+        return 1.0f;
     }
-    // Prevent auto-target acquisition during snake wraps
-    if (snakeWrap && dynamic_cast<DpsAssistAction*>(action))
+
+    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
+        !dynamic_cast<SetBehindTargetAction*>(action))
+    {
+        return 0.0f;
+    }
+
+    if (dynamic_cast<DpsAssistAction*>(action) && GundrakSladran::GetAssignedSnakeWrap(botAI))
     {
         return 0.0f;
     }
@@ -54,7 +78,7 @@ float SladranMultiplier::GetValue(Action* action)
 
 float GaldarahMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "29306");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "gal'darah");
     if (!boss) { return 1.0f; }
 
     if (boss->HasAura(SPELL_WHIRLING_SLASH))

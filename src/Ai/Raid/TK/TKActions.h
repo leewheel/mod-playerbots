@@ -11,10 +11,9 @@
 #include "AttackAction.h"
 #include "MovementActions.h"
 #include "TKHelpers.h"
+#include <string>
 #include <utility>
 #include <vector>
-
-using namespace TkHelpers;
 
 // General
 
@@ -24,6 +23,28 @@ public:
     TempestKeepResetEncounterStatesAction(PlayerbotAI* botAI)
         : Action(botAI, "tempest keep reset encounter states") {}
     bool Execute(Event event) override;
+};
+
+class TempestKeepClearStaleFallingFlagAction : public Action
+{
+public:
+    TempestKeepClearStaleFallingFlagAction(PlayerbotAI* botAI)
+        : Action(botAI, "tempest keep clear stale falling flag") {}
+    bool Execute(Event event) override;
+};
+
+// For Void Reaver, Sanguinar, Telonicus, and Kael'thas.
+class TempestKeepTankPositionAction : public AttackAction
+{
+public:
+    TempestKeepTankPositionAction(PlayerbotAI* botAI, std::string const name)
+        : AttackAction(botAI, name) {}
+
+protected:
+    // shouldAttack is false for a tank that is not assigned to the target but that is included
+    // in the action solely to reposition if it ends up with aggro.
+    bool MoveToTankPosition(
+        Unit* target, Position const& position, float tolerance, bool shouldAttack = true);
 };
 
 // Trash
@@ -54,11 +75,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class AlarMeleeDpsMoveBetweenPlatformsAction : public AttackAction
+class AlarMeleeDpsMoveBetweenPlatformsAction : public MovementAction
 {
 public:
     AlarMeleeDpsMoveBetweenPlatformsAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "al'ar melee dps move between platforms") {}
+        : MovementAction(botAI, "al'ar melee dps move between platforms") {}
     bool Execute(Event event) override;
 };
 
@@ -82,11 +103,11 @@ private:
     bool HandlePhase2Embers(Event const& event);
 };
 
-class AlarRangedDpsPrioritizeEmbersAction : public AttackAction
+class AlarAssignNonTankTargetAction : public AttackAction
 {
 public:
-    AlarRangedDpsPrioritizeEmbersAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "al'ar ranged dps prioritize embers") {}
+    AlarAssignNonTankTargetAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "al'ar assign non-tank target") {}
     bool Execute(Event event) override;
 };
 
@@ -124,6 +145,11 @@ public:
 private:
     bool AvoidFlamePatch();
     bool HandleDiveBomb(Unit* alar);
+    Position FindSafestNearbyPosition(
+        std::vector<Unit*> const& flamePatches, float hazardRadius);
+    bool IsPathSafe(
+        Position const& start, Position const& end, std::vector<Unit*> const& flamePatches,
+        float hazardRadius);
 };
 
 class AlarManagePhaseTrackerAction : public Action
@@ -136,11 +162,11 @@ public:
 
 // Void Reaver
 
-class VoidReaverTanksPositionBossAction : public AttackAction
+class VoidReaverTanksPositionBossAction : public TempestKeepTankPositionAction
 {
 public:
     VoidReaverTanksPositionBossAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "void reaver tanks position boss") {}
+        : TempestKeepTankPositionAction(botAI, "void reaver tanks position boss") {}
     bool Execute(Event event) override;
 };
 
@@ -152,11 +178,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class VoidReaverKeepRangedInGoldilocksZoneAction : public MovementAction
+class VoidReaverRangedBackOffAndSpreadAction : public MovementAction
 {
 public:
-    VoidReaverKeepRangedInGoldilocksZoneAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "void reaver keep ranged in goldilocks zone") {}
+    VoidReaverRangedBackOffAndSpreadAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "void reaver ranged back off and spread") {}
     bool Execute(Event event) override;
 };
 
@@ -199,14 +225,6 @@ private:
         std::pair<Unit*, Unit*> const& priestsPair, std::vector<Player*> const& meleeMembers);
 };
 
-class HighAstromancerSolarianCastFearWardOnMainTankAction : public Action
-{
-public:
-    HighAstromancerSolarianCastFearWardOnMainTankAction(PlayerbotAI* botAI)
-        : Action(botAI, "high astromancer solarian cast fear ward on main tank") {}
-    bool Execute(Event event) override;
-};
-
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
 class KaelthasSunstriderKiteThaladredAction : public MovementAction
@@ -225,19 +243,12 @@ public:
     bool Execute(Event event) override;
 };
 
-class KaelthasSunstriderMeleeTanksPositionAdvisorsAction : public AttackAction
+class KaelthasSunstriderMeleeTanksPositionAdvisorsAction : public TempestKeepTankPositionAction
 {
 public:
     KaelthasSunstriderMeleeTanksPositionAdvisorsAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "kael'thas sunstrider melee tanks position advisors") {}
-    bool Execute(Event event) override;
-};
-
-class KaelthasSunstriderCastFearWardOnSanguinarTankAction : public Action
-{
-public:
-    KaelthasSunstriderCastFearWardOnSanguinarTankAction(PlayerbotAI* botAI)
-        : Action(botAI, "kael'thas sunstrider cast fear ward on sanguinar tank") {}
+        : TempestKeepTankPositionAction(
+              botAI, "kael'thas sunstrider melee tanks position advisors") {}
     bool Execute(Event event) override;
 };
 
@@ -318,10 +329,10 @@ public:
 private:
     struct WeaponInfo
     {
-        TkNpcs npcEntry;
-        TkItems itemId;
+        TkHelpers::TkNpcs npcEntry;
+        TkHelpers::TkItems itemId;
     };
-    bool ShouldBotLootWeapon(TkNpcs weaponEntry);
+    bool ShouldBotLootWeapon(TkHelpers::TkNpcs weaponEntry);
     bool LootWeapon(uint32 weaponEntry, uint32 itemId);
     bool EquipLegendaryWeapon(uint32 itemId);
 };
@@ -348,11 +359,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class KaelthasSunstriderMainTankPositionBossAction : public AttackAction
+class KaelthasSunstriderTanksPositionBossAction : public TempestKeepTankPositionAction
 {
 public:
-    KaelthasSunstriderMainTankPositionBossAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "kael'thas sunstrider main tank position boss") {}
+    KaelthasSunstriderTanksPositionBossAction(PlayerbotAI* botAI)
+        : TempestKeepTankPositionAction(botAI, "kael'thas sunstrider tanks position boss") {}
     bool Execute(Event event) override;
 };
 
@@ -364,16 +375,17 @@ public:
     bool Execute(Event event) override;
 };
 
-class KaelthasSunstriderHandlePhoenixesAndEggsAction : public AttackAction
+class KaelthasSunstriderAssignFinalPhaseTargetAction : public AttackAction
 {
 public:
-    KaelthasSunstriderHandlePhoenixesAndEggsAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "kael'thas sunstrider handle phoenixes and eggs") {}
+    KaelthasSunstriderAssignFinalPhaseTargetAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "kael'thas sunstrider assign final phase target") {}
     bool Execute(Event event) override;
 
 private:
-    bool AssistTanksPickUpPhoenixes();
-    bool NonTanksDestroyEggsAndAvoidPhoenixes();
+    Unit* GetAssignedPhoenix();
+    bool AssistTankPicksUpPhoenix(Unit* phoenix);
+    bool NonTanksAssignTargetAndAvoidPhoenixes();
 };
 
 class KaelthasSunstriderBreakMindControlAction : public AttackAction

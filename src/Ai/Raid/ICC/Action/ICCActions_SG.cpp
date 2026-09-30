@@ -66,7 +66,7 @@ Position SgSafeMeleeSpot(Unit const* boss)
 
 bool IccSindragosaGroupPositionAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
     if (!boss)
         return false;
 
@@ -195,7 +195,7 @@ bool IccSindragosaGroupPositionAction::HandleNonTankPositioning()
     // Last phase is owned by IccSindragosaMysticBuffetAction (LOS2 hide,
     // single skull). Multiplier branches evaluated earlier (heroic Unchained
     // Magic) can leak this action through in P3, so hard-stop it here.
-    Unit* const p3Boss = AI_VALUE2(Unit*, "find target", "36853");
+    Unit* const p3Boss = AI_VALUE2(Unit*, "find target", "sindragosa");
     if (p3Boss && p3Boss->HealthBelowPct(35))
         return false;
 
@@ -219,7 +219,7 @@ bool IccSindragosaGroupPositionAction::HandleNonTankPositioning()
     // Priority: if a tank is ice-tombed (ground phase), mark that tomb skull
     // immediately so the raid DPSes it and frees the tank. Any bot can issue
     // the mark — redundant SetTargetIcon calls are idempotent.
-    Unit* const bossForFlyCheck = AI_VALUE2(Unit*, "find target", "36853");
+    Unit* const bossForFlyCheck = AI_VALUE2(Unit*, "find target", "sindragosa");
     bool const bossGrounded = bossForFlyCheck &&
         bossForFlyCheck->GetExactDist2d(ICC_SINDRAGOSA_FLYING_POSITION.GetPositionX(),
                                          ICC_SINDRAGOSA_FLYING_POSITION.GetPositionY()) >= 30.0f;
@@ -266,7 +266,7 @@ bool IccSindragosaGroupPositionAction::HandleNonTankPositioning()
 
         if (tombs.empty())
         {
-            Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
+            Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
             if (boss && boss->IsAlive())
                 IccEnsureIconOn(bot, botAI, SKULL_ICON_INDEX, boss);
 
@@ -605,7 +605,7 @@ bool IccSindragosaHotAction::Execute(Event /*event*/)
     return false;
 }
 
-bool IccSindragosaFrostBeaconAction::HandleBeaconedPlayer(const Unit* boss)
+bool IccSindragosaFrostBeaconAction::HandleBeaconedPlayer(Unit const* boss)
 {
     // Phase 3 positioning (below 35% health, not flying)
     if (boss->HealthBelowPct(35) && !IsBossFlying(boss))
@@ -633,7 +633,7 @@ bool IccSindragosaFrostBeaconAction::HandleBeaconedPlayer(const Unit* boss)
     }
 
     std::sort(beaconedPlayers.begin(), beaconedPlayers.end(),
-              [](const Player* a, const Player* b) { return a->GetGUID() < b->GetGUID(); });
+              [](Player const* a, Player const* b) { return a->GetGUID() < b->GetGUID(); });
 
     // Find this bot's index
     auto const it = std::find(beaconedPlayers.begin(), beaconedPlayers.end(), bot);
@@ -662,14 +662,14 @@ bool IccSindragosaFrostBeaconAction::HandleBeaconedPlayer(const Unit* boss)
     }
 
     // Get tomb position and move if needed
-    static constexpr std::array<const Position*, 3> tombPositions = {
+    static constexpr std::array<Position const*, 3> tombPositions = {
         &ICC_SINDRAGOSA_THOMB1_POSITION, &ICC_SINDRAGOSA_THOMB2_POSITION, &ICC_SINDRAGOSA_THOMB3_POSITION};
 
-    const Position& tombPosition = *tombPositions[std::min(spot, tombPositions.size() - 1)];
+    Position const& tombPosition = *tombPositions[std::min(spot, tombPositions.size() - 1)];
     return MoveToPositionIfNeeded(tombPosition, TOMB_POSITION_TOLERANCE);
 }
 
-bool IccSindragosaFrostBeaconAction::HandleNonBeaconedPlayer(const Unit* boss)
+bool IccSindragosaFrostBeaconAction::HandleNonBeaconedPlayer(Unit const* boss)
 {
     // Collect beaconed players
     std::vector<Unit*> beaconedPlayers;
@@ -698,7 +698,7 @@ bool IccSindragosaFrostBeaconAction::HandleNonBeaconedPlayer(const Unit* boss)
             if (diff && (diff == RAID_DIFFICULTY_25MAN_NORMAL || diff == RAID_DIFFICULTY_25MAN_HEROIC))
                 is25Man = true;
 
-            const Position& safePosition = is25Man ? ICC_SINDRAGOSA_FBOMB_POSITION : ICC_SINDRAGOSA_FBOMB10_POSITION;
+            Position const& safePosition = is25Man ? ICC_SINDRAGOSA_FBOMB_POSITION : ICC_SINDRAGOSA_FBOMB10_POSITION;
 
             float const dist = bot->GetExactDist2d(safePosition.GetPositionX(), safePosition.GetPositionY());
             if (dist > MOVE_TOLERANCE)
@@ -738,7 +738,7 @@ bool IccSindragosaFrostBeaconAction::HandleNonBeaconedPlayer(const Unit* boss)
     return false;
 }
 
-bool IccSindragosaFrostBeaconAction::MoveToPositionIfNeeded(const Position& position, float tolerance)
+bool IccSindragosaFrostBeaconAction::MoveToPositionIfNeeded(Position const& position, float tolerance)
 {
     float const distance = bot->GetExactDist2d(position.GetPositionX(), position.GetPositionY());
     if (distance > tolerance)
@@ -748,7 +748,7 @@ bool IccSindragosaFrostBeaconAction::MoveToPositionIfNeeded(const Position& posi
     return distance <= tolerance;
 }
 
-bool IccSindragosaFrostBeaconAction::MoveToPosition(const Position& position)
+bool IccSindragosaFrostBeaconAction::MoveToPosition(Position const& position)
 {
     float posX = position.GetPositionX();
     float posY = position.GetPositionY();
@@ -760,7 +760,7 @@ bool IccSindragosaFrostBeaconAction::MoveToPosition(const Position& position)
                   true, false);
 }
 
-bool IccSindragosaFrostBeaconAction::IsBossFlying(const Unit* boss)
+bool IccSindragosaFrostBeaconAction::IsBossFlying(Unit const* boss)
 {
     return boss->GetExactDist2d(ICC_SINDRAGOSA_FLYING_POSITION.GetPositionX(),
                                 ICC_SINDRAGOSA_FLYING_POSITION.GetPositionY()) < 30.0f;
@@ -768,7 +768,7 @@ bool IccSindragosaFrostBeaconAction::IsBossFlying(const Unit* boss)
 
 bool IccSindragosaBlisteringColdAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
     if (!boss)
         return false;
 
@@ -816,7 +816,7 @@ bool IccSindragosaBlisteringColdAction::Execute(Event /*event*/)
 
 bool IccSindragosaUnchainedMagicAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
     if (!boss)
         return false;
 
@@ -838,7 +838,7 @@ bool IccSindragosaUnchainedMagicAction::Execute(Event /*event*/)
 
 bool IccSindragosaChilledToTheBoneAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
     if (!boss)
         return false;
 
@@ -861,7 +861,7 @@ bool IccSindragosaChilledToTheBoneAction::Execute(Event /*event*/)
 
 bool IccSindragosaMysticBuffetAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "36853");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "sindragosa");
     if (!boss || !bot || !bot->IsAlive())
         return false;
 

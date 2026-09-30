@@ -5,13 +5,13 @@
  */
 
 #include "TKHelpers.h"
-#include "LootObjectStack.h"
+#include "EncounterHelpers.h"
 #include "Playerbots.h"
-#include "RaidBossHelpers.h"
-#include "TKActions.h"
 #include "TKKaelthasBossAI.h"
 #include <limits>
 #include <list>
+
+using namespace EncounterHelpers;
 
 namespace TkHelpers
 {
@@ -24,10 +24,10 @@ std::pair<Unit*, Unit*> GetTargetUnitPair(PlayerbotAI* botAI, uint32 entry)
     Unit* highest = nullptr;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    for (auto const& targetGuid : AI_VALUE(GuidVector, "possible targets no los"))
+    for (ObjectGuid const targetGuid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* unit = botAI->GetUnit(targetGuid);
-        if (unit && unit->GetEntry() == entry)
+        if (unit && unit->IsAlive() && unit->GetEntry() == entry)
         {
             if (!lowest || unit->GetGUID().GetRawValue() < lowest->GetGUID().GetRawValue())
                 lowest = unit;
@@ -66,108 +66,28 @@ Player* GetNearestNonTankPlayerInRadius(Player* bot, float radius)
     return nearestPlayer;
 }
 
-std::vector<Unit*> GetAllHazardTriggers(Player* bot, uint32 npcEntry, float searchRadius)
+// Trash
+
+// "attackers" already drops polymorphed units so no check for it is necessary.
+Unit* GetCenturionCastingArcaneFlurry(PlayerbotAI* botAI)
 {
-    std::vector<Unit*> hazardTriggers;
-    std::list<Creature*> creatureList;
-    bot->GetCreatureListWithEntryInGrid(creatureList, npcEntry, searchRadius);
+    Unit* target = nullptr;
 
-    for (Creature* creature : creatureList)
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    for (ObjectGuid const attackerGuid : AI_VALUE(GuidVector, "attackers"))
     {
-        if (creature && creature->IsAlive())
-            hazardTriggers.push_back(creature);
-    }
-
-    return hazardTriggers;
-}
-
-Position FindSafestNearbyPosition(
-    Player* bot, std::vector<Unit*> const& hazards, float hazardRadius, Position const* center)
-{
-    constexpr float searchStep = M_PI / 12.0f;
-    constexpr float minDistance = 2.0f;
-    constexpr float distanceStep = 1.0f;
-    constexpr uint8 numAngles = 24;
-    constexpr uint8 numDistSteps = 28;
-
-    Position const searchCenter = center ? *center : bot->GetPosition();
-    Position bestPos = bot->GetPosition();
-    float minMoveDistance = std::numeric_limits<float>::max();
-    bool foundSafe = false;
-
-    for (uint8 i = 0; i <= numDistSteps; ++i)
-    {
-        float const distance = minDistance + i * distanceStep;
-        for (uint8 j = 0; j < numAngles; ++j)
+        Unit* attacker = botAI->GetUnit(attackerGuid);
+        if (!attacker || attacker->GetEntry() != Id(TkNpcs::NPC_CRIMSON_HAND_CENTURION) ||
+            !attacker->HasAura(Id(TkSpells::SPELL_ARCANE_FLURRY)))
         {
-            float const angle = j * searchStep;
-            float const x = searchCenter.GetPositionX() + distance * std::cos(angle);
-            float const y = searchCenter.GetPositionY() + distance * std::sin(angle);
-
-            bool isSafe = true;
-            for (Unit* hazard : hazards)
-            {
-                if (hazard->GetExactDist2d(x, y) < hazardRadius)
-                {
-                    isSafe = false;
-                    break;
-                }
-            }
-
-            if (!isSafe)
-                continue;
-
-            Position testPos(x, y, bot->GetPositionZ());
-
-            bool pathSafe = IsPathSafeFromHazards(
-                bot->GetPosition(), testPos, hazards, hazardRadius);
-            if (pathSafe || !foundSafe)
-            {
-                float moveDistance = bot->GetExactDist2d(x, y);
-
-                if (pathSafe && (!foundSafe || moveDistance < minMoveDistance))
-                {
-                    bestPos = testPos;
-                    minMoveDistance = moveDistance;
-                    foundSafe = true;
-                }
-                else if (!foundSafe && moveDistance < minMoveDistance)
-                {
-                    bestPos = testPos;
-                    minMoveDistance = moveDistance;
-                }
-            }
+            continue;
         }
 
-        if (foundSafe)
-            break;
+        if (!target || attacker->GetGUID() < target->GetGUID())
+            target = attacker;
     }
 
-    return bestPos;
-}
-
-bool IsPathSafeFromHazards(
-    Position const start, Position const end, std::vector<Unit*> const& hazards, float hazardRadius)
-{
-    constexpr uint8 numChecks = 10;
-    float dx = end.GetPositionX() - start.GetPositionX();
-    float dy = end.GetPositionY() - start.GetPositionY();
-
-    for (uint8 i = 1; i <= numChecks; ++i)
-    {
-        float ratio = static_cast<float>(i) / numChecks;
-        float checkX = start.GetPositionX() + dx * ratio;
-        float checkY = start.GetPositionY() + dy * ratio;
-
-        for (Unit* hazard : hazards)
-        {
-            float distToHazard = hazard->GetExactDist2d(checkX, checkY);
-            if (distToHazard < hazardRadius)
-                return false;
-        }
-    }
-
-    return true;
+    return target;
 }
 
 // Al'ar <Phoenix God>
@@ -175,6 +95,7 @@ bool IsPathSafeFromHazards(
 std::unordered_map<uint32, bool> lastRebirthState;
 std::unordered_map<uint32, bool> isAlarInPhase2;
 
+// Entry into phase 2 is measured as the moment that Rebirth (34342) finishes casting.
 bool IsAlarInPhase2(uint32 instanceId)
 {
     auto const it = isAlarInPhase2.find(instanceId);
@@ -263,48 +184,53 @@ int8 GetAlarPlatformIndex(Unit* alar)
     return locationIndex;
 }
 
-void GetClosestPlatformAndGround(Position botPos, int8& closestPlatform, Position& ground)
+// The nearest platform's index is also the ground (landing) spot beneath it.
+static_assert(ALAR_GROUND_POSITIONS.size() == ALAR_LANDING_PLATFORM_POSITIONS.size());
+
+Position const& GetClosestGroundPosition(Position const& botPos)
 {
-    float minDist = std::numeric_limits<float>::max();
-    closestPlatform = -1;
-    for (int8 i = 0; i < 4; ++i)
+    size_t closestPlatform = 0;
+    float minDistSq = botPos.GetExactDist2dSq(ALAR_LANDING_PLATFORM_POSITIONS[0]);
+
+    for (size_t i = 1; i < ALAR_LANDING_PLATFORM_POSITIONS.size(); ++i)
     {
-        float dist = botPos.GetExactDist2d(&ALAR_LANDING_PLATFORM_POSITIONS[i]);
-        if (dist < minDist)
+        float const distSq = botPos.GetExactDist2dSq(ALAR_LANDING_PLATFORM_POSITIONS[i]);
+        if (distSq < minDistSq)
         {
-            minDist = dist;
+            minDistSq = distSq;
             closestPlatform = i;
         }
     }
-    ground = ALAR_GROUND_POSITIONS[closestPlatform];
+
+    return ALAR_GROUND_POSITIONS[closestPlatform];
 }
 
-// Main tank rotates between W (where Al'ar initially lands) and NE platforms in Phase 1
-// and starts on Al'ar in Phase 2
+// The main tank rotates between the W (where Al'ar initially lands) and NE platforms in phase 1
+// and starts on Al'ar in phase 2.
 bool IsFirstAlarTank(Player* bot)
 {
     return PlayerbotAI::IsMainTank(bot);
 }
 
-// First assist tank rotates between NW and E platforms in Phase 1
+// The first assist tank rotates between the NW and E platforms in phase 1.
 bool IsSecondAlarTank(Player* bot)
 {
     return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 }
 
-// Second assist tank is the primary ember tank
+// The second assist tank is the primary ember tank.
 bool IsPrimaryEmberTank(Player* bot)
 {
-    return PlayerbotAI::IsAssistTankOfIndex(bot, 1, false);
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 1, true);
 }
 
-// When Al'ar melts the armor of whoever is tanking it, the other tank taunts, and the melted tank
-// picks up the 2nd Ember (the 2nd AT, who tanked Embers in phase 1, picks up the 1st Ember).
-Player* GetPhase2SecondEmberTank(Player* bot)
+// The secondary Ember Tank is needed only during phase 2, and it is initially the first assist
+// tank (i.e., the SecondAlarTank). When Al'ar melts the armor of the main tank, then the main
+// tank becomes the secondary Ember tank. The two tanks swap from then on.
+Player* GetSecondaryEmberTank(Player* bot)
 {
-    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-    Player* mainTank = GetGroupMainTank(botAI, bot);
-    Player* assistTank = GetGroupAssistTank(botAI, bot, 0);
+    Player* mainTank = GetGroupMainTank(bot);
+    Player* assistTank = GetGroupAssistTank(bot, 0);
 
     if (!mainTank || !assistTank)
         return nullptr;
@@ -315,11 +241,80 @@ Player* GetPhase2SecondEmberTank(Player* bot)
     return assistTank;
 }
 
+GuidVector FindFlamePatchGuids(Player* bot)
+{
+    std::list<Creature*> creatureList;
+    bot->GetCreatureListWithEntryInGrid(
+        creatureList, Id(TkNpcs::NPC_FLAME_PATCH), ALAR_FLAME_PATCH_SEARCH_DISTANCE);
+
+    GuidVector guids;
+    guids.reserve(creatureList.size());
+    for (Creature* creature : creatureList)
+    {
+        if (creature && creature->IsAlive())
+            guids.push_back(creature->GetGUID());
+    }
+
+    return guids;
+}
+
+std::vector<Unit*> GetFlamePatches(PlayerbotAI* botAI)
+{
+    GuidVector const& guids =
+        botAI->GetAiObjectContext()->GetValue<GuidVector>("tk flame patches")->RefGet();
+
+    std::vector<Unit*> flamePatches;
+    flamePatches.reserve(guids.size());
+    for (ObjectGuid const guid : guids)
+    {
+        Unit* flamePatch = botAI->GetUnit(guid);
+        if (flamePatch && flamePatch->IsAlive())
+            flamePatches.push_back(flamePatch);
+    }
+
+    return flamePatches;
+}
+
 // Void Reaver
 
 std::unordered_map<uint32, std::vector<ArcaneOrbData>> voidReaverArcaneOrbs;
 
+std::vector<Position> GetActiveArcaneOrbs(uint32 instanceId)
+{
+    std::vector<Position> activeOrbs;
+
+    auto const it = voidReaverArcaneOrbs.find(instanceId);
+    if (it == voidReaverArcaneOrbs.end())
+        return activeOrbs;
+
+    uint32 const now = getMSTime();
+    for (ArcaneOrbData const& orb : it->second)
+    {
+        if (getMSTimeDiff(orb.castTime, now) <= ARCANE_ORB_DURATION_MS)
+            activeOrbs.push_back(orb.destination);
+    }
+
+    return activeOrbs;
+}
+
+bool IsNearArcaneOrb(Player* bot, std::vector<Position> const& orbs, float radius)
+{
+    for (Position const& orb : orbs)
+    {
+        if (bot->GetExactDist2d(orb.GetPositionX(), orb.GetPositionY()) < radius)
+            return true;
+    }
+
+    return false;
+}
+
+bool IsNearActiveArcaneOrb(Player* bot, float radius)
+{
+    return IsNearArcaneOrb(bot, GetActiveArcaneOrbs(bot->GetInstanceId()), radius);
+}
+
 // High Astromancer Solarian
+
 bool HasWrathOfTheAstromancer(Player* bot)
 {
     return bot->HasAura(Id(TkSpells::SPELL_WRATH_OF_THE_ASTROMANCER));
@@ -330,32 +325,47 @@ bool HasWrathOfTheAstromancer(Player* bot)
 namespace
 {
 
-GuidVector const& GetDeadLegendaryWeaponGuids(PlayerbotAI* botAI)
+GuidVector const& GetLegendaryWeaponGuids(PlayerbotAI* botAI)
 {
-    return botAI->GetAiObjectContext()->GetValue<GuidVector>("tk dead legendary weapons")->RefGet();
+    return botAI->GetAiObjectContext()->GetValue<GuidVector>("tk legendary weapons")->RefGet();
 }
 
+Creature* GetLegendaryWeaponByState(PlayerbotAI* botAI, uint32 weaponEntry, bool alive)
+{
+    for (ObjectGuid const guid : GetLegendaryWeaponGuids(botAI))
+    {
+        Creature* weapon = botAI->GetCreature(guid);
+        if (weapon && weapon->GetEntry() == weaponEntry && weapon->IsAlive() == alive)
+            return weapon;
+    }
+
+    return nullptr;
 }
 
-std::unordered_map<uint32, time_t> advisorDpsWaitTimer;
+} // end anonymous namespace
 
-uint32 GetKaelthasPhase(Unit* kaelthas)
+std::unordered_map<uint32, uint32> advisorDpsWaitTimer;
+
+uint32 GetKaelthasTkPhase(Unit* kaelthas)
 {
     if (!kaelthas)
         return PHASE_NONE;
 
     boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI());
-    return kaelAI ? kaelAI->GetPhase() : PHASE_NONE;
+    return kaelAI ? kaelAI->GetPhase() : Id(PHASE_NONE);
 }
 
-Creature* GetPhoenixEgg(Player* bot)
+// The non-attackable unit flag covers the period in phase 1 before the advisor activates.
+// The ironically named "Permanent Feign Death" is the aura that advisors have when they are
+// "killed" in phase 1 until they are "resurrected" in phase 3.
+bool IsAdvisorActive(Unit* advisor)
 {
-    constexpr float searchRadius = 75.0f;
-    return bot->FindNearestCreature(Id(TkNpcs::NPC_PHOENIX_EGG), searchRadius, true);
+    return advisor && !advisor->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
+        !advisor->HasAura(Id(TkSpells::SPELL_PERMANENT_FEIGN_DEATH));
 }
 
-// (1) First priority is an assistant Warlock (real player or bot)
-// (2) If no assistant Warlock, then look for any Warlock bot
+// (1) First priority is an assistant Warlock (real player or bot).
+// (2) If no assistant Warlock, then look for any Warlock bot.
 Player* GetCapernianTank(Player* bot)
 {
     Group* group = bot->GetGroup();
@@ -383,9 +393,15 @@ Player* GetCapernianTank(Player* bot)
     return fallbackWarlock;
 }
 
-// One Hunter will start on Sanguinar in Phase 3 with melee to apply Armor Disruption
-// (1) First priority is an assistant Hunter (real player or bot)
-// (2) If no assistant Hunter, then look for any Hunter bot
+bool IsCapernianTank(Player* bot)
+{
+    return bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot;
+}
+
+// One Hunter will start on Sanguinar in phase 3 (with melee) to apply Armor Disruption from the
+// Netherstrand Longbow.
+// (1) First priority is an assistant Hunter (real player or bot).
+// (2) If no assistant Hunter, then look for any Hunter bot.
 bool IsSanguinarDebuffHunter(Player* bot)
 {
     if (bot->getClass() != CLASS_HUNTER)
@@ -416,12 +432,7 @@ bool IsSanguinarDebuffHunter(Player* bot)
     return fallbackHunter == bot;
 }
 
-bool IsFeigningDeath(Unit* advisor)
-{
-    return advisor && advisor->HasAura(Id(TkSpells::SPELL_PERMANENT_FEIGN_DEATH));
-}
-
-GuidVector FindDeadLegendaryWeaponGuids(Player* bot)
+GuidVector FindLegendaryWeaponGuids(Player* bot)
 {
     static std::vector<uint32> const weaponEntries = {
         Id(TkNpcs::NPC_STAFF_OF_DISINTEGRATION),
@@ -434,34 +445,60 @@ GuidVector FindDeadLegendaryWeaponGuids(Player* bot)
     };
 
     std::list<Creature*> weapons;
-    bot->GetCreatureListWithEntryInGrid(weapons, weaponEntries, LEGENDARY_WEAPON_SEARCH_RADIUS);
+    bot->GetCreatureListWithEntryInGrid(weapons, weaponEntries, KAELTHAS_ROOM_SEARCH_DISTANCE);
 
     GuidVector guids;
     guids.reserve(weapons.size());
     for (Creature* weapon : weapons)
     {
-        if (weapon && !weapon->IsAlive())
+        if (weapon)
             guids.push_back(weapon->GetGUID());
     }
 
     return guids;
 }
 
-bool IsAnyLegendaryWeaponDead(PlayerbotAI* botAI)
+Unit* GetLegendaryWeapon(PlayerbotAI* botAI, uint32 weaponEntry)
 {
-    return !GetDeadLegendaryWeaponGuids(botAI).empty();
+    return GetLegendaryWeaponByState(botAI, weaponEntry, true);
 }
 
 Creature* GetDeadLegendaryWeapon(PlayerbotAI* botAI, uint32 weaponEntry)
 {
-    for (ObjectGuid const guid : GetDeadLegendaryWeaponGuids(botAI))
+    return GetLegendaryWeaponByState(botAI, weaponEntry, false);
+}
+
+bool HasDeadLegendaryWeapon(PlayerbotAI* botAI)
+{
+    for (ObjectGuid const guid : GetLegendaryWeaponGuids(botAI))
     {
         Creature* weapon = botAI->GetCreature(guid);
-        if (weapon && weapon->GetEntry() == weaponEntry)
-            return weapon;
+        if (weapon && !weapon->IsAlive())
+            return true;
     }
 
-    return nullptr;
+    return false;
+}
+
+bool IsLegendaryWeaponItem(uint32 itemId)
+{
+    static constexpr std::array legendaryItems = {
+        TkItems::ITEM_WARP_SLICER,
+        TkItems::ITEM_INFINITY_BLADE,
+        TkItems::ITEM_STAFF_OF_DISINTEGRATION,
+        TkItems::ITEM_PHASESHIFT_BULWARK,
+        TkItems::ITEM_DEVASTATION,
+        TkItems::ITEM_COSMIC_INFUSER,
+        TkItems::ITEM_NETHERSTRAND_LONGBOW,
+    };
+
+    for (TkItems item : legendaryItems)
+    {
+        if (Id(item) == itemId)
+            return true;
+    }
+
+    return false;
 }
 
 bool HasEquippableItemForSlot(Player* bot, uint8 slot)
@@ -470,8 +507,8 @@ bool HasEquippableItemForSlot(Player* bot, uint8 slot)
     {
         uint8 bag = (i == 0) ? INVENTORY_SLOT_BAG_0 : (INVENTORY_SLOT_BAG_START + i - 1);
         uint8 startSlot = (bag == INVENTORY_SLOT_BAG_0) ? INVENTORY_SLOT_ITEM_START : 0;
-        uint8 endSlot = (bag == INVENTORY_SLOT_BAG_0) ? INVENTORY_SLOT_ITEM_END :
-            (bot->GetBagByPos(bag) ? bot->GetBagByPos(bag)->GetBagSize() : 0);
+        uint8 endSlot = (bag == INVENTORY_SLOT_BAG_0) ? uint8(INVENTORY_SLOT_ITEM_END)
+            : (bot->GetBagByPos(bag) ? bot->GetBagByPos(bag)->GetBagSize() : uint8(0));
 
         for (uint8 bagSlot = startSlot; bagSlot < endSlot; ++bagSlot)
         {
@@ -486,6 +523,23 @@ bool HasEquippableItemForSlot(Player* bot, uint8 slot)
     }
 
     return false;
+}
+
+Item* GetEquippedItemInSlot(Player* bot, uint8 slot, uint32 itemId)
+{
+    Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+    return item && item->GetEntry() == itemId ? item : nullptr;
+}
+
+Creature* GetNearestFlameStrikeInRadius(Player* bot, float radius)
+{
+    return bot->FindNearestCreature(Id(TkNpcs::NPC_FLAME_STRIKE_TRIGGER), radius);
+}
+
+Creature* GetPhoenixEgg(Player* bot)
+{
+    constexpr float searchRadius = 75.0f;
+    return bot->FindNearestCreature(Id(TkNpcs::NPC_PHOENIX_EGG), searchRadius);
 }
 
 }

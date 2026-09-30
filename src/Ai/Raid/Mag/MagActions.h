@@ -12,6 +12,14 @@
 #include "MagHelpers.h"
 #include "MovementActions.h"
 
+class MagtheridonResetEncounterStatesAction : public Action
+{
+public:
+    MagtheridonResetEncounterStatesAction(PlayerbotAI* botAI)
+        : Action(botAI, "magtheridon reset encounter states") {}
+    bool Execute(Event event) override;
+};
+
 class MagtheridonMainTankAttackFirstThreeChannelersAction : public AttackAction
 {
 public:
@@ -44,11 +52,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class MagtheridonWarlockCcBurningAbyssalAction : public AttackAction
+class MagtheridonWarlockCcBurningAbyssalAction : public Action
 {
 public:
     MagtheridonWarlockCcBurningAbyssalAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "magtheridon warlock cc burning abyssal") {}
+        : Action(botAI, "magtheridon warlock cc burning abyssal") {}
     bool Execute(Event event) override;
 };
 
@@ -89,30 +97,22 @@ public:
 private:
     MagHelpers::CubeInfo const* GetAssignedCube();
     bool HandleCubeRelease(Unit* magtheridon);
+    bool HandleCubeInteraction(GameObject* cube);
     bool HandleWaitingPhase(MagHelpers::CubeInfo const& cubeInfo);
-    bool HandleCubeInteraction(MagHelpers::CubeInfo const& cubeInfo, GameObject* cube);
     bool FindSafePositionNearCube(
         MagHelpers::CubeInfo const& cubeInfo, float preferredDistance, Position& outPos);
 };
 
-class MagtheridonManageTimersAndAssignmentsAction : public Action
+class MagtheridonUpdateTimersAndAssignmentsAction : public Action
 {
 public:
-    MagtheridonManageTimersAndAssignmentsAction(PlayerbotAI* botAI)
-        : Action(botAI, "magtheridon manage timers and assignments") {}
+    MagtheridonUpdateTimersAndAssignmentsAction(PlayerbotAI* botAI)
+        : Action(botAI, "magtheridon update timers and assignments") {}
     bool Execute(Event event) override;
 
 private:
-    bool AssignCubeClickers();
+    bool AssignCubeClickers(uint32 instanceId, Unit* magtheridon);
     bool NeedsCubeReassignment(uint32 instanceId);
-};
-
-class MagtheridonEraseTimersAndTrackersAction : public Action
-{
-public:
-    MagtheridonEraseTimersAndTrackersAction(PlayerbotAI* botAI)
-        : Action(botAI, "magtheridon erase timers and trackers") {}
-    bool Execute(Event event) override;
 };
 
 #endif

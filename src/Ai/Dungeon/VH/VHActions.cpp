@@ -6,11 +6,12 @@
 
 #include "VHActions.h"
 #include "Playerbots.h"
+#include "VHTriggers.h"
 
 bool AttackErekemAction::Execute(Event /*event*/)
 {
     // Focus boss first, adds after
-    Unit* boss = AI_VALUE2(Unit*, "find target", "29315");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "erekem");
     if (!boss) { return false; }
 
     if (AI_VALUE(Unit*, "current target") != boss)
@@ -22,7 +23,7 @@ bool AttackErekemAction::Execute(Event /*event*/)
 
 bool AttackIchorGlobuleAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "29313");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "ichoron");
     if (!boss) { return false; }
 
     Unit* currentTarget = AI_VALUE(Unit*, "current target");
@@ -67,7 +68,7 @@ bool AttackIchorGlobuleAction::Execute(Event /*event*/)
 
 bool AttackVoidSentryAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "29312");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "zuramat the obliterator");
     if (!boss) { return false; }
 
     Unit* currentTarget = AI_VALUE(Unit*, "current target");
@@ -99,9 +100,4 @@ bool AttackVoidSentryAction::Execute(Event /*event*/)
     }
 
     return false;
-}
-
-bool StopAttackAction::Execute(Event /*event*/)
-{
-    return bot->AttackStop();
 }
