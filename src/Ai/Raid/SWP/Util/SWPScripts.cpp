@@ -9,14 +9,12 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
-#include "SWPData.h"
-#include "SWPEncounter_Brut.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Kalec.h"
 #include "SWPEncounter_KJ.h"
-#include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
-#include <unordered_set>
+#include "SWPShared.h"
+#include <list>
 #include <vector>
 
 using namespace SwpHelpers;
@@ -97,7 +95,7 @@ void RequestInterruptForBotsNeedingFelmystFogMovement(Unit* contextUnit, Player*
         if (!botAI || !botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
             continue;
 
-        Unit* felmyst = PAI_VALUE2(Unit*, "find target", "25038");
+        Unit* felmyst = PAI_VALUE2(Unit*, "find target", "felmyst");
         if (!felmyst || !felmyst->IsFlying())
             continue;
 
@@ -106,14 +104,14 @@ void RequestInterruptForBotsNeedingFelmystFogMovement(Unit* contextUnit, Player*
             continue;
 
         Position ignored;
-        if (!TryGetFelmystFogSafeDestination(player, fogState.lane, ignored))
+        if (!TryGetFelmystFogCrossingDestination(player, fogState.lane, ignored))
             continue;
 
         botAI->RequestSpellInterrupt();
     }
 }
 
-void RequestInterruptForBotsWithDelayedFelmystEncapsulate(Creature* felmyst)
+void RequestInterruptForBotsWithFelmystEncapsulate(Creature* felmyst)
 {
     if (!felmyst || felmyst->IsFlying())
         return;
@@ -180,7 +178,7 @@ void RequestInterruptForEredarTwinsAlythessTargets(Creature* alythess)
     }
 }
 
-}
+} // end anonymous namespace
 
 class KalecgosPortalSpellListenerScript : public AllSpellScript
 {
@@ -315,6 +313,27 @@ public:
     }
 };
 
+class MuruVoidZoneSpellListenerScript : public AllSpellScript
+{
+public:
+    MuruVoidZoneSpellListenerScript() : AllSpellScript("MuruVoidZoneSpellListenerScript") {}
+
+    void OnSpellCast(
+        Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
+    {
+        if (spellInfo->Id != Id(SwpSpells::SPELL_ENTROPIUS_DARKNESS))
+            return;
+
+        Player* target = GetFirstPlayerSpellTarget(spell, caster);
+        if (!target)
+            return;
+
+        PlayerbotAI* botAI = GET_PLAYERBOT_AI(target);
+        if (botAI && botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
+            botAI->RequestSpellInterrupt();
+    }
+};
+
 class KiljaedenDarknessSpellListenerScript : public AllSpellScript
 {
 public:
@@ -338,7 +357,7 @@ public:
             if (!botAI || !botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
                 continue;
 
-            if (PAI_VALUE2(Unit*, "find target", "25315") != caster)
+            if (PAI_VALUE2(Unit*, "find target", "kil'jaeden") != caster)
                 continue;
 
             botAI->RequestSpellInterrupt();
@@ -360,7 +379,7 @@ public:
         {
             case Id(SwpNpcs::NPC_FELMYST):
                 RequestInterruptForBotsNeedingFelmystFogMovement(creature, nullptr);
-                RequestInterruptForBotsWithDelayedFelmystEncapsulate(creature);
+                RequestInterruptForBotsWithFelmystEncapsulate(creature);
                 break;
 
             case Id(SwpNpcs::NPC_GRAND_WARLOCK_ALYTHESS):
@@ -384,6 +403,9 @@ public:
         if (!creature || creature->GetEntry() != Id(SwpNpcs::NPC_ARMAGEDDON_TARGET))
             return;
 
+        if (kiljaedenTrackedArmageddonTargets.count(creature->GetGUID()))
+            return;
+
         bool hasSunwellStrategy = false;
         std::vector<PlayerbotAI*> botsToInterrupt;
         Map::PlayerList const& players = creature->GetMap()->GetPlayers();
@@ -398,22 +420,21 @@ public:
                 if (!player->IsAlive() || HasKiljaedenDragonAura(player))
                     continue;
 
-                if (creature->GetExactDist2d(player) > KILJAEDEN_ARMAGEDDON_SAFE_DISTANCE)
+                if (creature->GetExactDist2d(player) > ARMAGEDDON_SAFE_DISTANCE)
                     continue;
 
                 botsToInterrupt.push_back(botAI);
             }
         }
 
-        if (!hasSunwellStrategy ||
-            !kiljaedenTrackedArmageddonTargets.insert(creature->GetGUID()).second)
-        {
+        if (!hasSunwellStrategy)
             return;
-        }
+
+        kiljaedenTrackedArmageddonTargets.insert(creature->GetGUID());
 
         AddKiljaedenArmageddon(
             creature->GetInstanceId(), creature->GetPosition(),
-            KILJAEDEN_ARMAGEDDON_HAZARD_DURATION_MS, KILJAEDEN_ARMAGEDDON_SAFE_DISTANCE);
+            ARMAGEDDON_HAZARD_DURATION_MS, ARMAGEDDON_SAFE_DISTANCE);
 
         for (PlayerbotAI* botAI : botsToInterrupt)
             botAI->RequestSpellInterrupt();
@@ -428,12 +449,15 @@ public:
     }
 };
 
-void AddSC_SunwellPlateauBotScripts()
+void AddSC_SunwellBotScripts()
 {
+    // AllSpellScript
     new KalecgosPortalSpellListenerScript();
     new FelmystSpellListenerScript();
     new EredarTwinsSpellListenerScript();
+    new MuruVoidZoneSpellListenerScript();
     new KiljaedenDarknessSpellListenerScript();
+    // AllCreatureScript
     new SunwellBossUpdateScript();
     new KiljaedenArmageddonTargetCreatureScript();
 }

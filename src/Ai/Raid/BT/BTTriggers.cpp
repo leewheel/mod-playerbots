@@ -6,21 +6,21 @@
 
 #include "BTTriggers.h"
 #include "AiFactory.h"
-#include "BTActions.h"
 #include "BTHelpers.h"
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
 #include "SharedDefines.h"
+#include "Timer.h"
 
 using namespace BlackTempleHelpers;
 using namespace EncounterHelpers;
 
 // General
 
-bool BlackTempleBotIsNotInCombatTrigger::IsActive()
+// NEED TO ADJUST FOR ILLIDARI COUNCIL
+bool BlackTempleNoEncounterInProgressTrigger::IsActive()
 {
-    return bot->GetMapId() == BLACK_TEMPLE_MAP_ID &&
-           !AI_VALUE2(bool, "combat", "self target");
+    return !IsEncounterInProgress(bot, BLACK_TEMPLE_MAP_ID);
 }
 
 // High Warlord Naj'entus
@@ -34,7 +34,7 @@ bool HighWarlordNajentusPullingBossTrigger::IsActive()
     return najentus && najentus->GetHealthPct() > 95.0f;
 }
 
-bool HighWarlordNajentusBossEngagedByTanksTrigger::IsActive()
+bool HighWarlordNajentusShouldBeTankedTrigger::IsActive()
 {
     return botAI->IsTank(bot) &&
            AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
@@ -128,11 +128,13 @@ bool SupremusPullingBossOrChangingPhaseTrigger::IsActive()
     if (it == supremusPhaseTimer.end())
         return false;
 
-    const time_t now = time(nullptr);
-    const time_t elapsed = now - it->second;
+    constexpr uint32 activeWindowMs = 10 * IN_MILLISECONDS;
+    constexpr uint32 phaseCycleMs = 60 * IN_MILLISECONDS;
+    const uint32 elapsed = GetMSTimeDiffToNow(it->second);
 
     // Active during first 10 seconds, or during 60-70, 120-130, etc.
-    return (elapsed < 10) || ((elapsed % 60) < 10 && elapsed >= 60);
+    return (elapsed < activeWindowMs) ||
+           ((elapsed % phaseCycleMs) < activeWindowMs && elapsed >= phaseCycleMs);
 }
 
 bool SupremusBossEngagedByRangedTrigger::IsActive()
@@ -193,7 +195,7 @@ bool TeronGorefiendPullingBossTrigger::IsActive()
     return gorefiend && gorefiend->GetHealthPct() > 95.0f;
 }
 
-bool TeronGorefiendBossEngagedByTanksTrigger::IsActive()
+bool TeronGorefiendShouldBeTankedTrigger::IsActive()
 {
     return botAI->IsTank(bot) &&
            AI_VALUE2(Unit*, "find target", "teron gorefiend");
@@ -275,11 +277,11 @@ bool GurtoggBloodboilPullingBossTrigger::IsActive()
     if (it == gurtoggPhaseTimer.end())
         return false;
 
-    const time_t elapsed = std::time(nullptr) - it->second;
-    return elapsed < 10;
+    constexpr uint32 engageWindowMs = 10 * IN_MILLISECONDS;
+    return GetMSTimeDiffToNow(it->second) < engageWindowMs;
 }
 
-bool GurtoggBloodboilBossEngagedByTanksTrigger::IsActive()
+bool GurtoggBloodboilShouldBeTankedTrigger::IsActive()
 {
     if (!botAI->IsTank(bot))
         return false;
@@ -401,7 +403,7 @@ bool MotherShahrazPullingBossTrigger::IsActive()
     return shahraz && shahraz->GetHealthPct() > 95.0f;
 }
 
-bool MotherShahrazBossEngagedByTanksTrigger::IsActive()
+bool MotherShahrazShouldBeTankedTrigger::IsActive()
 {
     if (!botAI->IsTank(bot))
         return false;

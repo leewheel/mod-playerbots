@@ -9,10 +9,10 @@
 #include "KaraHelpers.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
+#include "RtiTargetValue.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <ctime>
 #include <limits>
 #include <list>
 #include <map>
@@ -25,110 +25,59 @@ using namespace EncounterHelpers;
 
 bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
 {
-    uint32 const instanceId = bot->GetMap()->GetInstanceId();
-    bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
+    uint32 const instanceId = bot->GetInstanceId();
     bool reset = false;
 
-    if (isMechanicTracker)
+    Action* redAction = context->GetAction("netherspite block red beam");
+    if (redAction &&
+        static_cast<NetherspiteBlockRedBeamAction*>(redAction)->ResetRedBeamState())
     {
-        if (!AI_VALUE2(Unit*, "find target", "midnight") &&
-            attumenDpsWaitTimer.erase(instanceId) > 0)
-        {
-            reset = true;
-        }
-
-        if (!AI_VALUE2(Unit*, "find target", "nightbane"))
-        {
-            if (nightbaneDpsWaitTimer.erase(instanceId) > 0)
-                reset = true;
-
-            if (nightbaneFlightPhaseStartTimer.erase(instanceId) > 0)
-                reset = true;
-        }
+        reset = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "the big bad wolf"))
+    Action* blueAction = context->GetAction("netherspite block blue beam");
+    if (blueAction &&
+        static_cast<NetherspiteBlockBlueBeamAction*>(blueAction)->ResetBlueBeamState())
     {
-        Action* wolfAction = context->GetAction("big bad wolf little red riding hood run away");
-        if (wolfAction &&
-            static_cast<BigBadWolfLittleRedRidingHoodRunAwayAction*>(wolfAction)->ResetRunIndex())
-        {
-            reset = true;
-        }
+        reset = true;
     }
 
-    if (!AI_VALUE2(Unit*, "find target", "netherspite"))
+    Action* greenAction = context->GetAction("netherspite block green beam");
+    if (greenAction &&
+        static_cast<NetherspiteBlockGreenBeamAction*>(greenAction)->ResetGreenBeamState())
     {
-        if (isMechanicTracker && netherspiteDpsWaitTimer.erase(instanceId) > 0)
-            reset = true;
-
-        Action* redAction = context->GetAction("netherspite block red beam");
-        if (redAction &&
-            static_cast<NetherspiteBlockRedBeamAction*>(redAction)->ResetRedBeamState())
-        {
-            reset = true;
-        }
-
-        Action* blueAction = context->GetAction("netherspite block blue beam");
-        if (blueAction &&
-            static_cast<NetherspiteBlockBlueBeamAction*>(blueAction)->ResetBlueBeamState())
-        {
-            reset = true;
-        }
-
-        Action* greenAction = context->GetAction("netherspite block green beam");
-        if (greenAction &&
-            static_cast<NetherspiteBlockGreenBeamAction*>(greenAction)->ResetGreenBeamState())
-        {
-            reset = true;
-        }
-
-        if (currentRedBlocker.erase(instanceId) > 0)
-            reset = true;
-
-        if (currentGreenBlocker.erase(instanceId) > 0)
-            reset = true;
-
-        if (currentBlueBlocker.erase(instanceId) > 0)
-            reset = true;
+        reset = true;
     }
+
+    reset |= currentRedBlocker.erase(instanceId) > 0;
+    reset |= currentGreenBlocker.erase(instanceId) > 0;
+    reset |= currentBlueBlocker.erase(instanceId) > 0;
+
+    Action* wolfAction = context->GetAction("big bad wolf little red riding hood run away");
+    if (wolfAction &&
+        static_cast<BigBadWolfLittleRedRidingHoodRunAwayAction*>(wolfAction)->ResetRunIndex())
+    {
+        reset = true;
+    }
+
+    if (!IsMechanicTrackerBot(bot, KARA_MAP_ID))
+        return reset;
+
+    if (!AI_VALUE2(bool, "combat", "self target"))
+        reset |= ClearTargetIcon(bot, RtiTargetValue::skullIndex);
+
+    reset |= attumenDpsWaitTimer.erase(instanceId) > 0;
+    reset |= netherspiteDpsWaitTimer.erase(instanceId) > 0;
+    reset |= nightbaneDpsWaitTimer.erase(instanceId) > 0;
+    reset |= nightbaneFlightPhaseStartTimer.erase(instanceId) > 0;
 
     return reset;
 }
 
-bool KarazhanCastFearProtectionSpellAction::Execute(Event /*event*/)
+bool KarazhanSetTremorTotemAction::Execute(Event /*event*/)
 {
-    if (bot->getClass() == CLASS_PRIEST)
-        return CastFearWardOnMainTank();
-
-    return SetTremorTotem();
-}
-
-bool KarazhanCastFearProtectionSpellAction::CastFearWardOnMainTank()
-{
-    Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank || mainTank->HasAura(Id(KaraSpells::SPELL_FEAR_WARD)))
-        return false;
-
-    if (!botAI->CanCastSpell(Id(KaraSpells::SPELL_FEAR_WARD), mainTank))
-        return false;
-
-    return botAI->CastSpell(Id(KaraSpells::SPELL_FEAR_WARD), mainTank);
-}
-
-bool KarazhanCastFearProtectionSpellAction::SetTremorTotem()
-{
-    Unit* nightbane = AI_VALUE2(Unit*, "find target", "nightbane");
-    if (!nightbane || nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
-        return false;
-
-    if (AI_VALUE2(bool, "has totem", "tremor totem"))
-        return false;
-
-    if (!botAI->CanCastSpell(Id(KaraSpells::SPELL_TREMOR_TOTEM), bot))
-        return false;
-
-    return botAI->CastSpell(Id(KaraSpells::SPELL_TREMOR_TOTEM), bot);
+    return botAI->CanCastSpell(Id(KaraSpells::SPELL_TREMOR_TOTEM), bot) &&
+        botAI->CastSpell(Id(KaraSpells::SPELL_TREMOR_TOTEM), bot);
 }
 
 // Trash
@@ -228,38 +177,28 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::CurrentTankPositionAttumen(Unit* at
         return false;
 
     Position const& position = ATTUMEN_TANK_POSITION;
-    float const distToPosition = bot->GetExactDist2d(position);
-    if (distToPosition <= 2.0f || !bot->IsWithinLOS(
+    if (!bot->IsWithinLOS(
             position.GetPositionX(), position.GetPositionY(), position.GetPositionZ()))
     {
         return false;
     }
 
-    float const posX = position.GetPositionX();
-    float const posY = position.GetPositionY();
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-
-    float const toPosX = posX - botX;
-    float const toPosY = posY - botY;
-    float const toBossX = attumen->GetPositionX() - botX;
-    float const toBossY = attumen->GetPositionY() - botY;
-    bool const backwards = (toPosX * toBossX + toPosY * toBossY) < 0.0f;
-
-    float const maxMoveDist = backwards ? 2.25f : 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToPosition);
-    float const moveX = botX + (toPosX / distToPosition) * moveDist;
-    float const moveY = botY + (toPosY / distToPosition) * moveDist;
+    constexpr float arrivalDist = 2.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, position, arrivalDist, attumen, moveX, moveY, backwards))
+        return false;
 
     return MoveTo(
-        KARA_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
+        KARA_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-// Mounted Attumen's CombatReach is 0 [sic] yards
+// Mounted Attumen's CombatReach is 0 yards so defaults to 1.5 yards
 bool AttumenTheHuntsmanHandlePhaseTwoAction::StackBehindAttumen(Unit* attumen)
 {
-    float const distanceBehind = bot->getClass() == CLASS_HUNTER? 8.0f : 2.0f;
+    float const distanceBehind = bot->getClass() == CLASS_HUNTER ? 8.0f : 2.0f;
     float const orientation = attumen->GetOrientation() + M_PI;
     float const rearX = attumen->GetPositionX() + std::cos(orientation) * distanceBehind;
     float const rearY = attumen->GetPositionY() + std::sin(orientation) * distanceBehind;
@@ -268,15 +207,14 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::StackBehindAttumen(Unit* attumen)
         return false;
 
     return MoveTo(
-        KARA_MAP_ID, rearX, rearY, attumen->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        KARA_MAP_ID, rearX, rearY, attumen->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 bool AttumenTheHuntsmanSetDpsTimerAction::Execute(Event /*event*/)
 {
-    uint32 const instanceId = bot->GetMap()->GetInstanceId();
-    time_t const now = std::time(nullptr);
-    return attumenDpsWaitTimer.try_emplace(instanceId, now).second;
+    uint32 const now = getMSTime();
+    return attumenDpsWaitTimer.try_emplace(bot->GetInstanceId(), now).second;
 }
 
 // Moroes
@@ -341,28 +279,15 @@ bool MaidenOfVirtueTankPositionBossAction::Execute(Event /*event*/)
         return false;
 
     Position const& position = MAIDEN_OF_VIRTUE_TANK_POSITION;
-    float const distToPosition = bot->GetExactDist2d(position);
-    if (distToPosition <= 2.0f)
+    constexpr float arrivalDist = 2.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, position, arrivalDist, maiden, moveX, moveY, backwards))
         return false;
 
-    float const posX = position.GetPositionX();
-    float const posY = position.GetPositionY();
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-    float const toPosX = posX - botX;
-    float const toPosY = posY - botY;
-
-    float const toBossX = maiden->GetPositionX() - botX;
-    float const toBossY = maiden->GetPositionY() - botY;
-    bool const backwards = (toPosX * toBossX + toPosY * toBossY) < 0.0f;
-
-    float const maxMoveDist = backwards ? 2.25f : 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToPosition);
-    float const moveX = botX + (toPosX / distToPosition) * moveDist;
-    float const moveY = botY + (toPosY / distToPosition) * moveDist;
-
     return MoveTo(
-        KARA_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
+        KARA_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -435,28 +360,15 @@ bool BigBadWolfPositionBossAction::Execute(Event /*event*/)
         return false;
 
     Position const& position = BIG_BAD_WOLF_TANK_POSITION;
-    float const distToPosition = bot->GetExactDist2d(position);
-    if (distToPosition <= 2.0f)
+    constexpr float arrivalDist = 2.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, position, arrivalDist, wolf, moveX, moveY, backwards))
         return false;
 
-    float const posX = position.GetPositionX();
-    float const posY = position.GetPositionY();
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-    float const toPosX = posX - botX;
-    float const toPosY = posY - botY;
-
-    float const toBossX = wolf->GetPositionX() - botX;
-    float const toBossY = wolf->GetPositionY() - botY;
-    bool const backwards = (toPosX * toBossX + toPosY * toBossY) < 0.0f;
-
-    float const maxMoveDist = backwards ? 2.25f : 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToPosition);
-    float const moveX = botX + (toPosX / distToPosition) * moveDist;
-    float const moveY = botY + (toPosY / distToPosition) * moveDist;
-
     return MoveTo(
-        KARA_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
+        KARA_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -529,8 +441,7 @@ bool WizardOfOzScorchStrawmanAction::Execute(Event /*event*/)
 {
     Unit* strawman = AI_VALUE2(Unit*, "find target", "strawman");
     return strawman &&
-        botAI->CanCastSpell("scorch", strawman) &&
-        botAI->CastSpell("scorch", strawman);
+        botAI->CanCastSpell("scorch", strawman) && botAI->CastSpell("scorch", strawman);
 }
 
 // The Curator
@@ -554,28 +465,15 @@ bool TheCuratorPositionBossAction::Execute(Event /*event*/)
         return false;
 
     Position const& position = THE_CURATOR_TANK_POSITION;
-    float const distToPosition = bot->GetExactDist2d(position);
-    if (distToPosition <= 2.0f)
+    constexpr float arrivalDist = 2.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, position, arrivalDist, curator, moveX, moveY, backwards))
         return false;
 
-    float const posX = position.GetPositionX();
-    float const posY = position.GetPositionY();
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-    float const toPosX = posX - botX;
-    float const toPosY = posY - botY;
-
-    float const toBossX = curator->GetPositionX() - botX;
-    float const toBossY = curator->GetPositionY() - botY;
-    bool const backwards = (toPosX * toBossX + toPosY * toBossY) < 0.0f;
-
-    float const maxMoveDist = backwards ? 2.25f : 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToPosition);
-    float const moveX = botX + (toPosX / distToPosition) * moveDist;
-    float const moveY = botY + (toPosY / distToPosition) * moveDist;
-
     return MoveTo(
-        KARA_MAP_ID, moveX, moveY, position.GetPositionZ(), false, false,
+        KARA_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
@@ -694,7 +592,7 @@ bool NetherspiteBlockRedBeamAction::Execute(Event /*event*/)
     {
         if (!_redBeamTimerWasSet)
         {
-            _redBeamMoveTimer = std::time(nullptr);
+            _redBeamMoveTimer = getMSTime();
             _redBeamTimerWasSet = true;
         }
     }
@@ -713,11 +611,11 @@ bool NetherspiteBlockRedBeamAction::Execute(Event /*event*/)
     }
     _wasBlockingRedBeam = true;
 
-    constexpr uint8 intervalSecs = 5;
-    if (_redBeamTimerWasSet && std::time(nullptr) - _redBeamMoveTimer >= intervalSecs)
+    constexpr uint32 intervalMs = 5 * IN_MILLISECONDS;
+    if (_redBeamTimerWasSet && GetMSTimeDiffToNow(_redBeamMoveTimer) >= intervalMs)
     {
         _lastBeamMoveSideways = !_lastBeamMoveSideways;
-        _redBeamMoveTimer = std::time(nullptr);
+        _redBeamMoveTimer = getMSTime();
     }
 
     Unit* netherspite = AI_VALUE2(Unit*, "find target", "netherspite");
@@ -933,7 +831,7 @@ bool NetherspiteAvoidBeamAndVoidZoneAction::Execute(Event /*event*/)
             float dy = candidateY - botY;
             float moveDistSq = dx*dx + dy*dy;
 
-            if (!found || moveDistSq < bestDistSq)
+            if (moveDistSq < bestDistSq)
             {
                 bestCandidate = Position(candidateX, candidateY, bot->GetPositionZ());
                 bestDistSq = moveDistSq;
@@ -1001,8 +899,8 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
     if (!netherspite)
         return false;
 
-    uint32 const instanceId = netherspite->GetMap()->GetInstanceId();
-    time_t const now = std::time(nullptr);
+    uint32 const instanceId = netherspite->GetInstanceId();
+    uint32 const now = getMSTime();
     bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
     bool didSomething = false;
 
@@ -1251,26 +1149,16 @@ bool NightbaneGroundPhaseTanksPositionBossAction::Execute(Event /*event*/)
         thetaN -= 2.0f * M_PI;
 
     float const thetaClamped = std::max(arcStart, std::min(arcEnd, thetaN));
-    float const destX = domeCenter.GetPositionX() + radius * cos(thetaClamped);
-    float const destY = domeCenter.GetPositionY() + radius * sin(thetaClamped);
-    float const distToPosition = bot->GetExactDist2d(destX, destY);
+    Position const destination(
+        domeCenter.GetPositionX() + radius * cos(thetaClamped),
+        domeCenter.GetPositionY() + radius * sin(thetaClamped), bot->GetPositionZ());
 
-    if (distToPosition <= 0.5f)
+    constexpr float arrivalDist = 0.5f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, destination, arrivalDist, nightbane, moveX, moveY, backwards))
         return false;
-
-    float const botX = bot->GetPositionX();
-    float const botY = bot->GetPositionY();
-    float const toPosX = destX - botX;
-    float const toPosY = destY - botY;
-
-    float const toBossX = nightbane->GetPositionX() - botX;
-    float const toBossY = nightbane->GetPositionY() - botY;
-    bool const backwards = (toPosX * toBossX + toPosY * toBossY) < 0.0f;
-
-    float const maxMoveDist = backwards ? 2.25f : 3.5f;
-    float const moveDist = std::min(maxMoveDist, distToPosition);
-    float const moveX = botX + (toPosX / distToPosition) * moveDist;
-    float const moveY = botY + (toPosY / distToPosition) * moveDist;
 
     return MoveTo(
         KARA_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
@@ -1329,13 +1217,11 @@ bool NightbaneGroundPhaseCoordinateRangedMovementAction::MoveRangedLeaderToSafeS
     if (charredEarths.empty())
     {
         float const distToBoss = bot->GetExactDist2d(nightbane);
-        if (distToBoss < minBossDist)
-        {
-            bot->CastStop();
-            return MoveAway(nightbane, minBossDist - distToBoss, true);
-        }
+        if (distToBoss >= minBossDist)
+            return false;
 
-        return false;
+        bot->CastStop();
+        return MoveAway(nightbane, minBossDist - distToBoss, true);
     }
 
     constexpr float safeDistance = 12.0f;
@@ -1452,12 +1338,17 @@ bool NightbaneControlPetAggressionAction::Execute(Event /*event*/)
         return false;
 
     if (nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z && pet->GetReactState() == REACT_PASSIVE)
+    {
         pet->SetReactState(REACT_DEFENSIVE);
+        return true;
+    }
 
     if (nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z && pet->GetReactState() != REACT_PASSIVE)
     {
         pet->AttackStop();
+        pet->CastStop();
         pet->SetReactState(REACT_PASSIVE);
+        return true;
     }
 
     return false;
@@ -1528,9 +1419,12 @@ bool NightbaneFlightPhaseStackAndMoveAction::Execute(Event /*event*/)
 bool NightbaneTeleportBackToTerraceAction::Execute(Event /*event*/)
 {
     Position const& position = NIGHTBANE_TELEPORT_POSITION;
-    return bot->TeleportTo(
-        KARA_MAP_ID, position.GetPositionX(), position.GetPositionY(),
+    bot->NearTeleportTo(
+        position.GetPositionX(), position.GetPositionY(),
         position.GetPositionZ(), bot->GetOrientation());
+
+    constexpr float zTolerance = 1.0f;
+    return std::fabs(bot->GetPositionZ() - NIGHTBANE_GROUND_Z) <= zTolerance;
 }
 
 bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
@@ -1539,8 +1433,8 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
     if (!nightbane)
         return false;
 
-    uint32 const instanceId = nightbane->GetMap()->GetInstanceId();
-    time_t const now = std::time(nullptr);
+    uint32 const instanceId = nightbane->GetInstanceId();
+    uint32 const now = getMSTime();
     bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
     bool didSomething = false;
 
@@ -1555,20 +1449,14 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
 
         if (isMechanicTracker)
         {
-            if (nightbaneFlightPhaseStartTimer.erase(instanceId) > 0)
-                didSomething = true;
-
-            if (nightbaneDpsWaitTimer.try_emplace(instanceId, now).second)
-                didSomething = true;
+            didSomething |= nightbaneFlightPhaseStartTimer.erase(instanceId) > 0;
+            didSomething |= nightbaneDpsWaitTimer.try_emplace(instanceId, now).second;
         }
     }
     else if (isMechanicTracker)
     {
-        if (nightbaneDpsWaitTimer.erase(instanceId) > 0)
-            didSomething = true;
-
-        if (nightbaneFlightPhaseStartTimer.try_emplace(instanceId, now).second)
-            didSomething = true;
+        didSomething |= nightbaneDpsWaitTimer.erase(instanceId) > 0;
+        didSomething |= nightbaneFlightPhaseStartTimer.try_emplace(instanceId, now).second;
     }
 
     return didSomething;

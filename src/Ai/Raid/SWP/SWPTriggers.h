@@ -7,23 +7,46 @@
 #ifndef PLAYERBOTS_SWPTRIGGERS_H
 #define PLAYERBOTS_SWPTRIGGERS_H
 
+#include "EncounterHelpers.h"
+#include "SWPShared.h"
 #include "Trigger.h"
+#include <string>
 
 // General
 
-class SunwellPlateauBotIsNotInCombatTrigger : public Trigger
+class SunwellEncounterTrigger : public Trigger
 {
 public:
-    SunwellPlateauBotIsNotInCombatTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "sunwell plateau bot is not in combat") {}
+    SunwellEncounterTrigger(PlayerbotAI* botAI, std::string const name, int32 checkInterval = 1)
+        : Trigger(botAI, name, checkInterval) {}
+
+    bool IsActive() final
+    {
+        return EncounterHelpers::IsEncounterInProgress(bot, SwpHelpers::SWP_MAP_ID) &&
+            IsActiveInEncounter();
+    }
+
+protected:
+    virtual bool IsActiveInEncounter() = 0;
+};
+
+class SunwellNoEncounterInProgressTrigger : public Trigger
+{
+public:
+    // Throttled to once per second. This trigger is true for all trash and downtime and, being
+    // for between-encounter clean-up, has no real urgency to it.
+    SunwellNoEncounterInProgressTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "sunwell no encounter in progress", 1000) {}
     bool IsActive() override;
 };
 
-class SunwellPlateauBotHasProtectiveAuraTrigger : public Trigger
+class SunwellAuraToRemoveTrigger : public Trigger
 {
 public:
-    SunwellPlateauBotHasProtectiveAuraTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "sunwell plateau bot has protective aura") {}
+    // Also throttled, though this can occur in combat (clear Ice Block and Divine Shield). A bit
+    // of a delay here feels more realistic anyway.
+    SunwellAuraToRemoveTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "sunwell aura to remove", 1000) {}
     bool IsActive() override;
 };
 
@@ -47,421 +70,550 @@ public:
 
 // Kalecgos
 
-class KalecgosShouldCommunicateBossHealthTrigger : public Trigger
+class KalecgosShouldCommunicateBossHealthTrigger : public SunwellEncounterTrigger
 {
 public:
     KalecgosShouldCommunicateBossHealthTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kalecgos should communicate boss health") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "kalecgos should communicate boss health") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KalecgosBossRequiresTankRotationTrigger : public Trigger
+class KalecgosPullingBossTrigger : public SunwellEncounterTrigger
 {
 public:
-    KalecgosBossRequiresTankRotationTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kalecgos boss requires tank rotation") {}
-    bool IsActive() override;
+    KalecgosPullingBossTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "kalecgos pulling boss") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KalecgosSpectralRiftIsOpenTrigger : public Trigger
+class KalecgosRequiresTankRotationTrigger : public SunwellEncounterTrigger
+{
+public:
+    KalecgosRequiresTankRotationTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "kalecgos requires tank rotation") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class KalecgosSpectralRiftIsOpenTrigger : public SunwellEncounterTrigger
 {
 public:
     KalecgosSpectralRiftIsOpenTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kalecgos spectral rift is open") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "kalecgos spectral rift is open") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KalecgosBotsTakeSplashDamageTrigger : public Trigger
+class KalecgosRangedShouldSpreadTrigger : public SunwellEncounterTrigger
 {
 public:
-    KalecgosBotsTakeSplashDamageTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kalecgos bots take splash damage") {}
-    bool IsActive() override;
+    KalecgosRangedShouldSpreadTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "kalecgos ranged should spread") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KalecgosBotHasTooManyArcaneBuffetStacksTrigger : public Trigger
+class KalecgosTooManyArcaneBuffetStacksTrigger : public SunwellEncounterTrigger
 {
 public:
-    KalecgosBotHasTooManyArcaneBuffetStacksTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kalecgos bot has too many arcane buffet stacks") {}
-    bool IsActive() override;
+    KalecgosTooManyArcaneBuffetStacksTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "kalecgos too many arcane buffet stacks") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KalecgosHumanoidKalecTanksSathrovarrTrigger : public Trigger
+class KalecgosHumanoidKalecTanksSathrovarrTrigger : public SunwellEncounterTrigger
 {
 public:
     KalecgosHumanoidKalecTanksSathrovarrTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kalecgos humanoid kalec tanks sathrovarr") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "kalecgos humanoid kalec tanks sathrovarr") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KalecgosBotsDontObserveGravityTrigger : public Trigger
+class KalecgosBotsDontObserveGravityTrigger : public SunwellEncounterTrigger
 {
 public:
     KalecgosBotsDontObserveGravityTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kalecgos bots don't observe gravity") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "kalecgos bots don't observe gravity") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
 // Brutallus
 
-class BrutallusPullingBossTrigger : public Trigger
+class BrutallusPullingBossTrigger : public SunwellEncounterTrigger
 {
 public:
     BrutallusPullingBossTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "brutallus pulling boss") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "brutallus pulling boss") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class BrutallusBossEngagedByTanksTrigger : public Trigger
+class BrutallusRequiresTwoTanksTrigger : public SunwellEncounterTrigger
 {
 public:
-    BrutallusBossEngagedByTanksTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "brutallus boss engaged by tanks") {}
-    bool IsActive() override;
+    BrutallusRequiresTwoTanksTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "brutallus requires two tanks") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class BrutallusMeleeShouldStandInPlaceTrigger : public Trigger
+class BrutallusMeleeShouldStandInPlaceTrigger : public SunwellEncounterTrigger
 {
 public:
     BrutallusMeleeShouldStandInPlaceTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "brutallus melee should stand in place") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "brutallus melee should stand in place") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class BrutallusRangedShouldSoakMeteorSlashTrigger : public Trigger
+class BrutallusRangedShouldSoakMeteorSlashTrigger : public SunwellEncounterTrigger
 {
 public:
     BrutallusRangedShouldSoakMeteorSlashTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "brutallus ranged should soak meteor slash") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "brutallus ranged should soak meteor slash") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class BrutallusBotIsBurningTrigger : public Trigger
+class BrutallusBurnOnNonTankTrigger : public SunwellEncounterTrigger
 {
 public:
-    BrutallusBotIsBurningTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "brutallus bot is burning") {}
-    bool IsActive() override;
+    BrutallusBurnOnNonTankTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "brutallus burn on non-tank") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
 // Felmyst
 
-class FelmystPullingBossTrigger : public Trigger
+class FelmystPullingBossTrigger : public SunwellEncounterTrigger
 {
 public:
     FelmystPullingBossTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst pulling boss") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "felmyst pulling boss") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystBossEngagedByMainTankOnGroundTrigger : public Trigger
+class FelmystGroundPhaseShouldBeTankedTrigger : public SunwellEncounterTrigger
 {
 public:
-    FelmystBossEngagedByMainTankOnGroundTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst boss engaged by main tank on ground") {}
-    bool IsActive() override;
+    FelmystGroundPhaseShouldBeTankedTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "felmyst ground phase should be tanked") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystRangedShouldSplitInThreeTrigger : public Trigger
+class FelmystRangedShouldPositionToDispelAndFleeTrigger : public SunwellEncounterTrigger
 {
 public:
-    FelmystRangedShouldSplitInThreeTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst ranged should split in three") {}
-    bool IsActive() override;
+    FelmystRangedShouldPositionToDispelAndFleeTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(
+            botAI, "felmyst ranged should position to dispel and flee") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystMeleeShouldStayTogetherTrigger : public Trigger
+class FelmystMeleeShouldStayTogetherTrigger : public SunwellEncounterTrigger
 {
 public:
     FelmystMeleeShouldStayTogetherTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst melee should stay together") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "felmyst melee should stay together") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystBotIsEncapsulatedTrigger : public Trigger
+class FelmystEncapsulateOnMageOrPaladinTrigger : public SunwellEncounterTrigger
 {
 public:
-    FelmystBotIsEncapsulatedTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst bot is encapsulated") {}
-    bool IsActive() override;
+    FelmystEncapsulateOnMageOrPaladinTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "felmyst encapsulate on mage or paladin") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystBotNearEncapsulatedPlayerTrigger : public Trigger
+class FelmystNearEncapsulatedPlayerTrigger : public SunwellEncounterTrigger
 {
 public:
-    FelmystBotNearEncapsulatedPlayerTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst bot near encapsulated player") {}
-    bool IsActive() override;
+    FelmystNearEncapsulatedPlayerTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "felmyst near encapsulated player") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystPlayerHasGasNovaTrigger : public Trigger
+class FelmystPlayerHasGasNovaTrigger : public SunwellEncounterTrigger
 {
 public:
     FelmystPlayerHasGasNovaTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst player has gas nova") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "felmyst player has gas nova") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystShouldAvoidDemonicVaporTrailsTrigger : public Trigger
+class FelmystShouldAvoidDemonicVaporTrailsTrigger : public SunwellEncounterTrigger
 {
 public:
     FelmystShouldAvoidDemonicVaporTrailsTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst should avoid demonic vapor trails") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "felmyst should avoid demonic vapor trails") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystBotIsDemonicVaporTargetTrigger : public Trigger
+class FelmystTargetedByDemonicVaporTrigger : public SunwellEncounterTrigger
 {
 public:
-    FelmystBotIsDemonicVaporTargetTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst bot is demonic vapor target") {}
-    bool IsActive() override;
+    FelmystTargetedByDemonicVaporTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "felmyst targeted by demonic vapor") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystFogOfCorruptionIsActiveTrigger : public Trigger
+class FelmystFogOfCorruptionIsActiveTrigger : public SunwellEncounterTrigger
 {
 public:
     FelmystFogOfCorruptionIsActiveTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst fog of corruption is active") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "felmyst fog of corruption is active") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystMeleeCannotReachBossTrigger : public Trigger
+class FelmystMeleeCannotReachFlyingBossTrigger : public SunwellEncounterTrigger
 {
 public:
-    FelmystMeleeCannotReachBossTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst melee cannot reach boss") {}
-    bool IsActive() override;
+    FelmystMeleeCannotReachFlyingBossTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "felmyst melee cannot reach flying boss") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystPlayerIsCharmedByFogTrigger : public Trigger
+class FelmystPlayerIsCharmedByFogTrigger : public SunwellEncounterTrigger
 {
 public:
     FelmystPlayerIsCharmedByFogTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst player is charmed by fog") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "felmyst player is charmed by fog") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class FelmystShouldHoldDpsWhileLandingTrigger : public Trigger
+class FelmystShouldHoldDpsWhileLandingTrigger : public SunwellEncounterTrigger
 {
 public:
     FelmystShouldHoldDpsWhileLandingTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "felmyst should hold dps while landing") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "felmyst should hold dps while landing") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
 // Eredar Twins
 
-class EredarTwinsMeleeIsAtBalconyTrigger : public Trigger
+class EredarTwinsMeleeIsAtBalconyTrigger : public SunwellEncounterTrigger
 {
 public:
     EredarTwinsMeleeIsAtBalconyTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins melee is at balcony") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "eredar twins melee is at balcony") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsPullingBossesTrigger : public Trigger
+class EredarTwinsShouldAnnounceAlythessTankTrigger : public SunwellEncounterTrigger
+{
+public:
+    EredarTwinsShouldAnnounceAlythessTankTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "eredar twins should announce alythess tank") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class EredarTwinsPullingBossesTrigger : public SunwellEncounterTrigger
 {
 public:
     EredarTwinsPullingBossesTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins pulling bosses") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "eredar twins pulling bosses") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsSacrolashEngagedByTwoTanksTrigger : public Trigger
+class EredarTwinsSacrolashRequiresTwoTanksTrigger : public SunwellEncounterTrigger
 {
 public:
-    EredarTwinsSacrolashEngagedByTwoTanksTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins sacrolash engaged by two tanks") {}
-    bool IsActive() override;
+    EredarTwinsSacrolashRequiresTwoTanksTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "eredar twins sacrolash requires two tanks") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsAlythessCastsBlazeOnTankTrigger : public Trigger
+class EredarTwinsAlythessCastsBlazeOnTankTrigger : public SunwellEncounterTrigger
 {
 public:
     EredarTwinsAlythessCastsBlazeOnTankTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins alythess casts blaze on tank") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "eredar twins alythess casts blaze on tank") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsBossesEngagedByRangedTrigger : public Trigger
+class EredarTwinsRangedNeedsLosTrigger : public SunwellEncounterTrigger
 {
 public:
-    EredarTwinsBossesEngagedByRangedTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins bosses engaged by ranged") {}
-    bool IsActive() override;
+    EredarTwinsRangedNeedsLosTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "eredar twins ranged needs los") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsOnlyOneBossRemainsTrigger : public Trigger
+class EredarTwinsOnlyAlythessRemainsTrigger : public SunwellEncounterTrigger
 {
 public:
-    EredarTwinsOnlyOneBossRemainsTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins only one boss remains") {}
-    bool IsActive() override;
+    EredarTwinsOnlyAlythessRemainsTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "eredar twins only alythess remains") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsBotHasTooManyFlameTouchedStacksTrigger : public Trigger
+class EredarTwinsTooManyFlameTouchedStacksTrigger : public SunwellEncounterTrigger
 {
 public:
-    EredarTwinsBotHasTooManyFlameTouchedStacksTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins bot has too many flame touched stacks") {}
-    bool IsActive() override;
+    EredarTwinsTooManyFlameTouchedStacksTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "eredar twins too many flame touched stacks") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsDeterminingDpsPriorityTrigger : public Trigger
+class EredarTwinsShouldFocusDpsTrigger : public SunwellEncounterTrigger
 {
 public:
-    EredarTwinsDeterminingDpsPriorityTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins determining dps priority") {}
-    bool IsActive() override;
+    EredarTwinsShouldFocusDpsTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "eredar twins should focus dps") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsBotHasConflagrationTrigger : public Trigger
+class EredarTwinsActiveConflagrationTargetTrigger : public SunwellEncounterTrigger
 {
 public:
-    EredarTwinsBotHasConflagrationTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins bot has conflagration") {}
-    bool IsActive() override;
+    EredarTwinsActiveConflagrationTargetTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "eredar twins active conflagration target") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class EredarTwinsSacrolashVictimHasConflagrationTrigger : public Trigger
+class EredarTwinsSacrolashVictimHasConflagrationTrigger : public SunwellEncounterTrigger
 {
 public:
     EredarTwinsSacrolashVictimHasConflagrationTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "eredar twins sacrolash victim has conflagration") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(
+            botAI, "eredar twins sacrolash victim has conflagration") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
 // M'uru
 
-class MuruVoidSentinelOrEntropiusHasAppearedTrigger : public Trigger
+class MuruHunterShouldMisdirectNewEnemyTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruVoidSentinelOrEntropiusHasAppearedTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru void sentinel or entropius has appeared") {}
-    bool IsActive() override;
+    MuruHunterShouldMisdirectNewEnemyTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "m'uru hunter should misdirect new enemy") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruBossTransformedIntoEntropiusTrigger : public Trigger
+class MuruTransformedIntoEntropiusTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruBossTransformedIntoEntropiusTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru boss transformed into entropius") {}
-    bool IsActive() override;
+    MuruTransformedIntoEntropiusTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "m'uru transformed into entropius") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruBossesEngagedByRangedTrigger : public Trigger
+class MuruRangedShouldStackOrSpreadTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruBossesEngagedByRangedTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru bosses engaged by ranged") {}
-    bool IsActive() override;
+    MuruRangedShouldStackOrSpreadTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "m'uru ranged should stack or spread") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruDeterminingDpsPriorityTrigger : public Trigger
+class MuruShouldAssignDpsPriorityTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruDeterminingDpsPriorityTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru determining dps priority") {}
-    bool IsActive() override;
+    MuruShouldAssignDpsPriorityTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "m'uru should assign dps priority") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruVoidSentinelPulsesShadowTrigger : public Trigger
+class MuruVoidSentinelShouldBeTankedTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruVoidSentinelPulsesShadowTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru void sentinel pulses shadow") {}
-    bool IsActive() override;
+    MuruVoidSentinelShouldBeTankedTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "m'uru void sentinel pulses shadow") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruAddsSpawnAtEntranceTrigger : public Trigger
+class MuruAddsSpawnAtEntranceTrigger : public SunwellEncounterTrigger
 {
 public:
     MuruAddsSpawnAtEntranceTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru adds spawn at entrance") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "m'uru adds spawn at entrance") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruDarkFiendsSpawnedTrigger : public Trigger
+class MuruDarkFiendsSpawnedTrigger : public SunwellEncounterTrigger
 {
 public:
     MuruDarkFiendsSpawnedTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru dark fiends spawned") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "m'uru dark fiends spawned") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruEntropiusSpawnsDarknessPoolsTrigger : public Trigger
-{
-public:
-    MuruEntropiusSpawnsDarknessPoolsTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru entropius spawns darkness pools") {}
-    bool IsActive() override;
-};
-
-class MuruDarknessIsComingTrigger : public Trigger
+class MuruDarknessIsComingTrigger : public SunwellEncounterTrigger
 {
 public:
     MuruDarknessIsComingTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru darkness is coming") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "m'uru darkness is coming") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruTheSingularityIsNearTrigger : public Trigger
+class MuruBerserkerHasFlurryTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruTheSingularityIsNearTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru the singularity is near") {}
-    bool IsActive() override;
+    MuruBerserkerHasFlurryTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "m'uru berserker has flurry") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruBerserkerIsBuffedWithFlurryTrigger : public Trigger
-{
-public:
-    MuruBerserkerIsBuffedWithFlurryTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru berserker is buffed with flurry") {}
-    bool IsActive() override;
-};
-
-class MuruFuryMageCastingFelFireballTrigger : public Trigger
+class MuruFuryMageCastingFelFireballTrigger : public SunwellEncounterTrigger
 {
 public:
     MuruFuryMageCastingFelFireballTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru fury mage casting fel fireball") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "m'uru fury mage casting fel fireball") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruFuryMageIsBuffedWithSpellFuryTrigger : public Trigger
+class MuruFuryMageHasSpellFuryTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruFuryMageIsBuffedWithSpellFuryTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru fury mage is buffed with spell fury") {}
-    bool IsActive() override;
+    MuruFuryMageHasSpellFuryTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "m'uru fury mage has spell fury") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruVoidSpawnAvailableForEnslaveTrigger : public Trigger
+class MuruVoidSpawnAvailableForEnslaveTrigger : public SunwellEncounterTrigger
 {
 public:
     MuruVoidSpawnAvailableForEnslaveTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru void spawn available for enslave") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "m'uru void spawn available for enslave") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class MuruWarlockHasEnslavedVoidSpawnTrigger : public Trigger
+class MuruWarlockHasEnslavedVoidSpawnTrigger : public SunwellEncounterTrigger
 {
 public:
     MuruWarlockHasEnslavedVoidSpawnTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "m'uru warlock has enslaved void spawn") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "m'uru warlock has enslaved void spawn") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class MuruEntropiusSummonsVoidZonesTrigger : public SunwellEncounterTrigger
+{
+public:
+    MuruEntropiusSummonsVoidZonesTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(
+            botAI, "m'uru entropius summons void zones") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class MuruTheSingularityIsNearTrigger : public SunwellEncounterTrigger
+{
+public:
+    MuruTheSingularityIsNearTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "m'uru the singularity is near") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
 // Kil'jaeden <The Deceiver>
 
-class KiljaedenEncounterHasBegunTrigger : public Trigger
+// Kil'jaeden is the one Sunwell encounter that does not report IN_PROGRESS on engage:
+// boss_kiljaeden does not chain BossAI::JustEngagedWith, and the controller sets the state only
+// once the first Hand of the Deceiver dies. The two triggers below are the ones that run before
+// that, so they cannot inherit from SunwellEncounterTrigger. Every trigger after them needs
+// Kil'jaeden himself so they can be subclassed.
+
+class KiljaedenShouldCoordinateOrbUseTrigger : public Trigger
 {
 public:
-    KiljaedenEncounterHasBegunTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden encounter has begun") {}
+    KiljaedenShouldCoordinateOrbUseTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "kil'jaeden should coordinate orb use") {}
     bool IsActive() override;
 };
 
@@ -473,68 +625,85 @@ public:
     bool IsActive() override;
 };
 
-class KiljaedenBossEngagedByTanksTrigger : public Trigger
+class KiljaedenTanksShouldHoldBossAndReflectionsTrigger : public SunwellEncounterTrigger
 {
 public:
-    KiljaedenBossEngagedByTanksTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden boss engaged by tanks") {}
-    bool IsActive() override;
+    KiljaedenTanksShouldHoldBossAndReflectionsTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(
+            botAI, "kil'jaeden tanks should hold boss and reflections") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KiljaedenBossEngagedByMeleeTrigger : public Trigger
+class KiljaedenMeleeShouldSplitIntoTwoGroupsTrigger : public SunwellEncounterTrigger
 {
 public:
-    KiljaedenBossEngagedByMeleeTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden boss engaged by melee") {}
-    bool IsActive() override;
+    KiljaedenMeleeShouldSplitIntoTwoGroupsTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "kil'jaeden melee should split into two groups") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KiljaedenBossEngagedByRangedTrigger : public Trigger
+class KiljaedenRangedShouldSpreadInTwoArcsTrigger : public SunwellEncounterTrigger
 {
 public:
-    KiljaedenBossEngagedByRangedTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden boss engaged by ranged") {}
-    bool IsActive() override;
+    KiljaedenRangedShouldSpreadInTwoArcsTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "kil'jaeden ranged should spread in two arcs") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KiljaedenBotHasFireBloomTrigger : public Trigger
+class KiljaedenFireBloomOnImmunityClassTrigger : public SunwellEncounterTrigger
 {
 public:
-    KiljaedenBotHasFireBloomTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden bot has fire bloom") {}
-    bool IsActive() override;
+    KiljaedenFireBloomOnImmunityClassTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "kil'jaeden fire bloom on immunity class") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KiljaedenSaysChaosDestructionOblivionTrigger : public Trigger
+class KiljaedenSaysChaosDestructionOblivionTrigger : public SunwellEncounterTrigger
 {
 public:
     KiljaedenSaysChaosDestructionOblivionTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden says: Chaos! Destruction! Oblivion!") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "kil'jaeden says: Chaos! Destruction! Oblivion!") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KiljaedenDragonOrbIsActiveTrigger : public Trigger
+class KiljaedenDragonOrbIsActiveTrigger : public SunwellEncounterTrigger
 {
 public:
     KiljaedenDragonOrbIsActiveTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden dragon orb is active") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "kil'jaeden dragon orb is active") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
-class KiljaedenBotHasStaleRootAfterDragonTrigger : public Trigger
-{
-public:
-    KiljaedenBotHasStaleRootAfterDragonTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden bot has stale root after dragon") {}
-    bool IsActive() override;
-};
-
-class KiljaedenBotControlsDragonTrigger : public Trigger
+class KiljaedenBotControlsDragonTrigger : public SunwellEncounterTrigger
 {
 public:
     KiljaedenBotControlsDragonTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "kil'jaeden bot controls dragon") {}
-    bool IsActive() override;
+        : SunwellEncounterTrigger(botAI, "kil'jaeden bot controls dragon") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class KiljaedenStaleRootAfterDragonTrigger : public SunwellEncounterTrigger
+{
+public:
+    KiljaedenStaleRootAfterDragonTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "kil'jaeden stale root after dragon") {}
+
+protected:
+    bool IsActiveInEncounter() override;
 };
 
 #endif

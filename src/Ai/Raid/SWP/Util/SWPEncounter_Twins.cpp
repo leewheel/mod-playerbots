@@ -7,14 +7,15 @@
 #include "SWPEncounter_Twins.h"
 #include "AiObjectContext.h"
 #include "CellImpl.h"
+#include "EncounterHelpers.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "NearestGameObjects.h"
 #include "Playerbots.h"
-#include "Spell.h"
 #include "ThreatManager.h"
-#include "Timer.h"
 #include <list>
+
+using namespace EncounterHelpers;
 
 namespace SwpHelpers
 {
@@ -24,7 +25,11 @@ namespace SwpHelpers
 namespace
 {
 
-std::unordered_map<ObjectGuid, ObjectGuid> alythessTankLastBlazeGuid;
+std::vector<Position> const& GetCachedBlazePositions(PlayerbotAI* botAI)
+{
+    return botAI->GetAiObjectContext()
+        ->GetValue<std::vector<Position>>("eredar twins blaze")->RefGet();
+}
 
 // Adjusted positions are to address the occasional bug (?) where Alythess moves
 Position GetAdjustedPosition(Unit* alythess, Position const& basePosition)
@@ -46,14 +51,62 @@ Position GetAdjustedPosition(Unit* alythess, Position const& basePosition)
     return { baseX + offsetX, baseY + offsetY, baseZ + offsetZ };
 }
 
+// If the main tank is not a Paladin tank, then this picks the present Paladin tank with the highest
+// max health.
+Player* FindBestPaladinTank(Player* bot)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return nullptr;
+
+    Player* best = nullptr;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive() || member->GetMapId() != SWP_MAP_ID ||
+            member->getClass() != CLASS_PALADIN || !PlayerbotAI::IsTank(member))
+        {
+            continue;
+        }
+
+        if (!best || member->GetMaxHealth() > best->GetMaxHealth() ||
+            (member->GetMaxHealth() == best->GetMaxHealth() &&
+             member->GetGUID() < best->GetGUID()))
+        {
+            best = member;
+        }
+    }
+
+    return best;
+}
+
+EredarTwinsTankAssignment const emptyTankAssignment;
+
+EredarTwinsTankAssignment const& GetTankAssignment(Player* bot)
+{
+    auto const itr = eredarTwinsTankAssignments.find(bot->GetInstanceId());
+    return itr != eredarTwinsTankAssignments.end() ? itr->second : emptyTankAssignment;
+}
+
+// Hold once the bot has closed to within the ratio of the lowest tank threat on that boss.
+bool HasClosedOnTankThreat(Unit* boss, Player* bot, float tankThreat, float threatHoldRatio)
+{
+    return tankThreat > 0.0f &&
+        boss->GetThreatMgr().GetThreat(bot) >= tankThreat * threatHoldRatio;
+}
+
 } // end anonymous namespace
 
 std::unordered_map<uint32, EredarTwinsIncomingConflagrationState>
-	eredarTwinsIncomingConflagrationStates;
+    eredarTwinsIncomingConflagrationStates;
 
 std::unordered_map<uint32, EredarTwinsBlazeTargetState> eredarTwinsBlazeTargetStates;
 
 std::unordered_map<uint32, uint32> eredarTwinsDpsHoldStartMs;
+
+std::unordered_map<uint32, EredarTwinsTankAssignment> eredarTwinsTankAssignments;
+
+std::unordered_map<ObjectGuid, ObjectGuid> alythessTankLastBlazeGuid;
 
 Position GetAlythessTankPosition(Unit* alythess, uint8 index)
 {
@@ -73,28 +126,125 @@ Position GetEredarTwinsP2RangedPosition(Unit* alythess)
     return GetAdjustedPosition(alythess, EREDAR_TWINS_P2_RANGED_POSITION);
 }
 
-bool IsAnySacrolashTank(Player* bot)
+void ResolveEredarTwinsTankAssignment(Player* bot)
 {
-    return PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 1, false);
+    if (GetTankAssignment(bot).source != AlythessTankSource::Unresolved)
+        return;
+
+    Player* mainTank = GetGroupMainTank(bot);
+
+    Player* alythessTank = nullptr;
+    AlythessTankSource source = AlythessTankSource::Unresolved;
+
+    if (mainTank && mainTank->getClass() == CLASS_PALADIN && PlayerbotAI::IsTank(mainTank))
+    {
+        alythessTank = mainTank;
+        source = AlythessTankSource::MainTankPaladin;
+    }
+    else if (Player* paladinTank = FindBestPaladinTank(bot))
+    {
+        alythessTank = paladinTank;
+        source = AlythessTankSource::PaladinTank;
+    }
+    else if (mainTank && PlayerbotAI::IsTank(mainTank))
+    {
+        alythessTank = mainTank;
+        source = AlythessTankSource::MainTankFallback;
+    }
+
+    if (!alythessTank)
+        return;
+
+    EredarTwinsTankAssignment& assignment = eredarTwinsTankAssignments[bot->GetInstanceId()];
+    assignment.alythessTankGuid = alythessTank->GetGUID();
+    assignment.source = source;
+}
+
+Player* GetAlythessTank(Player* bot)
+{
+    ObjectGuid const guid = GetTankAssignment(bot).alythessTankGuid;
+    return guid.IsEmpty() ? nullptr : ObjectAccessor::FindPlayer(guid);
 }
 
 bool IsAlythessTank(Player* bot)
 {
-    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, false);
+    return PlayerbotAI::IsTank(bot) && GetAlythessTank(bot) == bot;
 }
 
-bool ShouldHoldTwinThreat(
-    Player* bot, Unit* boss, float threatHoldRatio, bool (*isTwinTank)(Player*))
+AlythessTankSource GetAlythessTankSource(Player* bot)
 {
-    if (!boss || isTwinTank(bot))
+    return GetTankAssignment(bot).source;
+}
+
+// This ordering is needed only to determine Misdirection assignments.
+Player* GetSacrolashTank(Player* bot, uint8 index)
+{
+    Player* const alythessTank = GetAlythessTank(bot);
+
+    Player* mainTank = GetGroupMainTank(bot);
+    if (mainTank && (!PlayerbotAI::IsTank(mainTank) || mainTank == alythessTank))
+        mainTank = nullptr;
+
+    uint8 found = 0;
+    if (mainTank)
+    {
+        if (index == 0)
+            return mainTank;
+
+        found = 1;
+    }
+
+    for (uint8 assistIndex = 0; Player* assistTank = GetGroupAssistTank(bot, assistIndex);
+         ++assistIndex)
+    {
+        if (assistTank == alythessTank)
+            continue;
+
+        if (found == index)
+            return assistTank;
+
+        ++found;
+    }
+
+    return nullptr;
+}
+
+// Sacrolash is held by every tank except the one assigned to Alythess.
+bool IsAnySacrolashTank(Player* bot)
+{
+    return PlayerbotAI::IsTank(bot) && GetAlythessTank(bot) != bot;
+}
+
+// One tank holds Alythess, so her ceiling is read directly rather than scanned for.
+bool ShouldHoldAlythessThreat(Player* bot, Unit* alythess)
+{
+    if (PlayerbotAI::IsHeal(bot))
         return false;
 
-    float twinTankThreat = 0.0f;
-    float botThreat = 0.0f;
-    bool foundTwinTankThreat = false;
-    bool foundBotThreat = false;
+    Player* const alythessTank = GetAlythessTank(bot);
+    if (!alythessTank || alythessTank == bot || !alythessTank->IsAlive())
+        return false;
 
-    auto const threatList = boss->GetThreatMgr().GetUnsortedThreatList();
+    auto& threatMgr = alythess->GetThreatMgr();
+    if (!threatMgr.IsThreatenedBy(alythessTank))
+        return false;
+
+    return HasClosedOnTankThreat(
+        alythess, bot, threatMgr.GetThreat(alythessTank), ALYTHESS_THREAT_HOLD_RATIO);
+}
+
+bool ShouldHoldSacrolashThreat(Player* bot, Unit* sacrolash)
+{
+    if (PlayerbotAI::IsHeal(bot) || IsAnySacrolashTank(bot))
+        return false;
+
+    Player* const alythessTank = GetAlythessTank(bot);
+
+    float highestTankThreat = 0.0f;
+    float secondTankThreat = 0.0f;
+    uint8 tankCount = 0;
+
+    auto const threatList = sacrolash->GetThreatMgr().GetUnsortedThreatList();
     for (auto itr = threatList.begin(); itr != threatList.end(); ++itr)
     {
         ThreatReference const* threatRef = *itr;
@@ -102,51 +252,59 @@ bool ShouldHoldTwinThreat(
             continue;
 
         Unit* victim = threatRef->GetVictim();
-        if (!victim)
-            continue;
+        Player* threatPlayer = victim ? victim->ToPlayer() : nullptr;
 
-        Player* threatPlayer = victim->ToPlayer();
-        if (!threatPlayer || !threatPlayer->IsAlive())
-            continue;
-
-        float const threat = threatRef->GetThreat();
-
-        if (isTwinTank(threatPlayer) &&
-            (!foundTwinTankThreat || threat < twinTankThreat))
+        if (!threatPlayer || !threatPlayer->IsAlive() || threatPlayer == alythessTank ||
+            !PlayerbotAI::IsTank(threatPlayer))
         {
-            twinTankThreat = threat;
-            foundTwinTankThreat = true;
+            continue;
         }
 
-        if (threatPlayer == bot)
+        float const threat = threatRef->GetThreat();
+        ++tankCount;
+
+        if (threat > highestTankThreat)
         {
-            botThreat = threat;
-            foundBotThreat = true;
+            secondTankThreat = highestTankThreat;
+            highestTankThreat = threat;
+        }
+        else if (threat > secondTankThreat)
+        {
+            secondTankThreat = threat;
         }
     }
 
-    if (!foundTwinTankThreat || !foundBotThreat || twinTankThreat <= 0.0f)
+    if (!tankCount)
         return false;
 
-    return botThreat >= twinTankThreat * threatHoldRatio;
+    float const tankThreat = tankCount > 1 ? secondTankThreat : highestTankThreat;
+
+    return HasClosedOnTankThreat(sacrolash, bot, tankThreat, SACROLASH_THREAT_HOLD_RATIO);
 }
 
-bool IsAlythessTankPositionSafe(Player* bot, Position const& position)
+std::vector<Position> FindEredarTwinsBlazePositions(Player* bot)
 {
-    constexpr float blazeDangerRadius = 4.5f;
-    constexpr float blazeSearchRadius = 30.0f;
+    std::list<GameObject*> nearbyObjects;
+    AnyGameObjectInObjectRangeCheck check(bot, BLAZE_SEARCH_RADIUS);
+    Acore::GameObjectListSearcher<AnyGameObjectInObjectRangeCheck> searcher(
+        bot, nearbyObjects, check);
+    Cell::VisitObjects(bot, searcher, BLAZE_SEARCH_RADIUS);
 
-    std::list<GameObject*> targets;
-    AnyGameObjectInObjectRangeCheck u_check(bot, blazeSearchRadius);
-    Acore::GameObjectListSearcher<AnyGameObjectInObjectRangeCheck> searcher(bot, targets, u_check);
-    Cell::VisitObjects(bot, searcher, blazeSearchRadius);
-
-    for (GameObject* go : targets)
+    std::vector<Position> positions;
+    for (GameObject* nearbyObject : nearbyObjects)
     {
-        if (!go || go->GetEntry() != Id(SwpObjects::GO_BLAZE))
-            continue;
+        if (nearbyObject && nearbyObject->GetEntry() == Id(SwpObjects::GO_BLAZE))
+            positions.push_back(nearbyObject->GetPosition());
+    }
 
-        if (go->GetExactDist2d(position) <= blazeDangerRadius)
+    return positions;
+}
+
+bool IsAlythessTankPositionSafe(PlayerbotAI* botAI, Position const& position)
+{
+    for (Position const& blaze : GetCachedBlazePositions(botAI))
+    {
+        if (blaze.GetExactDist2d(position) <= BLAZE_DANGER_RADIUS)
             return false;
     }
 
@@ -160,9 +318,8 @@ bool ShouldAdvanceAlythessTankPosition(Unit* alythess, Player* bot)
 
     ObjectGuid const botGuid = bot->GetGUID();
 
-    GameObject* blazeObject = bot->FindNearestGameObject(
-        Id(SwpObjects::GO_BLAZE), EREDAR_TWINS_BLAZE_UNDERFOOT_RADIUS);
-
+    GameObject* blazeObject =
+        bot->FindNearestGameObject(Id(SwpObjects::GO_BLAZE), BLAZE_DANGER_RADIUS);
     if (!blazeObject)
     {
         alythessTankLastBlazeGuid.erase(botGuid);
@@ -188,10 +345,10 @@ void RecordIncomingEredarTwinsConflagrationTarget(Player* target)
         eredarTwinsIncomingConflagrationStates[target->GetInstanceId()];
 
     if (state.targetGuid != target->GetGUID())
-        state.delayMs = now + EREDAR_TWINS_CONFLAGRATION_DELAY_MS;
+        state.delayMs = now + CONFLAGRATION_DELAY_MS;
 
     state.targetGuid = target->GetGUID();
-    state.expireMs = now + EREDAR_TWINS_CONFLAGRATION_WINDOW_MS;
+    state.expireMs = now + CONFLAGRATION_WINDOW_MS;
 }
 
 Player* GetEredarTwinsConflagrationTarget(Player* bot)
@@ -244,7 +401,7 @@ Player* GetEredarTwinsBlazeTarget(Player* bot)
         return nullptr;
 
     EredarTwinsBlazeTargetState const& state = itr->second;
-    if (GetMSTimeDiffToNow(state.startMs) >= EREDAR_TWINS_BLAZE_TARGET_WINDOW_MS)
+    if (GetMSTimeDiffToNow(state.startMs) >= BLAZE_TARGET_WINDOW_MS)
     {
         eredarTwinsBlazeTargetStates.erase(itr);
         return nullptr;

@@ -6,7 +6,9 @@
 
 #include "SWPEncounter_Brut.h"
 #include "Playerbots.h"
+#include "SWPShared.h"
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 namespace SwpHelpers
@@ -14,27 +16,25 @@ namespace SwpHelpers
 
 // Note: Brutallus's CombatReach is 18.0f
 
-std::unordered_map<uint32, std::unordered_map<ObjectGuid, uint8>> brutallusRangedAssignments;
-std::unordered_map<uint32, std::unordered_map<ObjectGuid, uint8>> brutallusMeleeAssignments;
-std::unordered_map<uint32, std::unordered_map<ObjectGuid, uint8>> brutallusRangedBurnPadAssignments;
-std::unordered_map<ObjectGuid, BrutallusRangedBurnState> brutallusRangedBurnStates;
+std::unordered_map<uint32, BrutallusEncounterState> brutallusEncounterStates;
 
 namespace
 {
 
-bool IsBurnPadActive(ObjectGuid ownerGuid)
+bool IsBurnPadActive(BrutallusEncounterState const& state, ObjectGuid ownerGuid)
 {
-    auto const burnStateItr = brutallusRangedBurnStates.find(ownerGuid);
-    return burnStateItr != brutallusRangedBurnStates.end() &&
+    auto const burnStateItr = state.rangedBurnStates.find(ownerGuid);
+    return burnStateItr != state.rangedBurnStates.end() &&
         burnStateItr->second != BrutallusRangedBurnState::None;
 }
 
-bool TryGetBurnPadIndex(Player* bot, uint8 rangedIndex, uint8& padIndex)
+bool TryGetBurnPadIndex(
+    BrutallusEncounterState& state, Player* bot, uint8 rangedIndex, uint8& padIndex)
 {
-    auto& assignments = brutallusRangedBurnPadAssignments[bot->GetInstanceId()];
+    auto& assignments = state.rangedBurnPadAssignments;
     for (auto itr = assignments.begin(); itr != assignments.end();)
     {
-        if (itr->first != bot->GetGUID() && !IsBurnPadActive(itr->first))
+        if (itr->first != bot->GetGUID() && !IsBurnPadActive(state, itr->first))
         {
             itr = assignments.erase(itr);
             continue;
@@ -90,6 +90,19 @@ bool TryGetBurnPadIndex(Player* bot, uint8 rangedIndex, uint8& padIndex)
     return assignFromOrder(assistGroupPriority) || assignFromOrder(assistGroupOverflow);
 }
 
+bool ShouldRebuildAssignments(uint32& lastRebuildMs)
+{
+    uint32 const now = getMSTime();
+    if (lastRebuildMs &&
+        getMSTimeDiff(lastRebuildMs, now) < BRUTALLUS_ASSIGNMENT_REBUILD_INTERVAL_MS)
+    {
+        return false;
+    }
+
+    lastRebuildMs = now;
+    return true;
+}
+
 void PruneAssignments(
     std::unordered_map<ObjectGuid, uint8>& assignments,
     std::vector<ObjectGuid> const& eligibleGuids)
@@ -107,9 +120,12 @@ void PruneAssignments(
     }
 }
 
-void EnsureRangedAssignments(Group* group, Player* bot)
+void EnsureRangedAssignments(Group* group, BrutallusEncounterState& state)
 {
-    auto& assignments = brutallusRangedAssignments[bot->GetInstanceId()];
+    if (!ShouldRebuildAssignments(state.rangedAssignmentRebuildMs))
+        return;
+
+    auto& assignments = state.rangedAssignments;
 
     std::vector<ObjectGuid> eligibleGuids;
     std::vector<Player*> healers;
@@ -156,7 +172,6 @@ void EnsureRangedAssignments(Group* group, Player* bot)
             return;
         }
 
-        // If every slot is taken, double up (unlikely even though TBC hates melee, as there are 20)
         assignments[member->GetGUID()] =
             static_cast<uint8>(assignments.size() % BRUTALLUS_TOTAL_RANGED_POSITIONS);
     };
@@ -168,9 +183,12 @@ void EnsureRangedAssignments(Group* group, Player* bot)
         assignNextOpenSlot(member);
 }
 
-void EnsureMeleeAssignments(Group* group, Player* bot)
+void EnsureMeleeAssignments(Group* group, BrutallusEncounterState& state)
 {
-    auto& assignments = brutallusMeleeAssignments[bot->GetInstanceId()];
+    if (!ShouldRebuildAssignments(state.meleeAssignmentRebuildMs))
+        return;
+
+    auto& assignments = state.meleeAssignments;
 
     std::vector<ObjectGuid> eligibleGuids;
     std::vector<Player*> unassigned;
@@ -214,7 +232,6 @@ void EnsureMeleeAssignments(Group* group, Player* bot)
             return;
         }
 
-        // If every slot is taken, double up (unlikely since there are 14 and TBC hates melee)
         assignments[member->GetGUID()] =
             static_cast<uint8>(assignments.size() % BRUTALLUS_TOTAL_MELEE_POSITIONS);
     };
@@ -263,64 +280,23 @@ Position GetBrutallusPositionAtAngle(Player* bot, Unit* brutallus, float angle, 
     return { x, y, bot->GetPositionZ() };
 }
 
-float GetBrutallusCenteredArcSlotAngleOffset(uint8 slotIndex, uint8 slotCount, float arcWidth)
-{
-    if (slotCount <= 1)
-        return 0.0f;
-
-    float const angleStep = arcWidth / static_cast<float>(slotCount - 1);
-    if (slotCount % 2 == 1)
-    {
-        if (slotIndex == 0)
-            return 0.0f;
-
-        uint8 const stepIndex = (slotIndex + 1) / 2;
-        float angleOffset = angleStep * stepIndex;
-        if (slotIndex % 2 == 0)
-            angleOffset = -angleOffset;
-
-        return angleOffset;
-    }
-
-    float const halfStep = angleStep / 2.0f;
-    uint8 const pairIndex = slotIndex / 2;
-    float angleOffset = halfStep + angleStep * pairIndex;
-    if (slotIndex % 2 == 1)
-        angleOffset = -angleOffset;
-
-    return angleOffset;
-}
-
 bool TryGetBrutallusAssignedPositionIndex(Player* bot, uint8& positionIndex)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return false;
 
-    if (PlayerbotAI::IsRanged(bot))
-    {
-        EnsureRangedAssignments(group, bot);
+    bool const isRanged = PlayerbotAI::IsRanged(bot);
+    auto& state = brutallusEncounterStates[bot->GetInstanceId()];
 
-        auto const instanceItr = brutallusRangedAssignments.find(bot->GetInstanceId());
-        if (instanceItr == brutallusRangedAssignments.end())
-            return false;
+    if (isRanged)
+        EnsureRangedAssignments(group, state);
+    else
+        EnsureMeleeAssignments(group, state);
 
-        auto const assignmentItr = instanceItr->second.find(bot->GetGUID());
-        if (assignmentItr == instanceItr->second.end())
-            return false;
-
-        positionIndex = assignmentItr->second;
-        return true;
-    }
-
-    EnsureMeleeAssignments(group, bot);
-
-    auto const instanceItr = brutallusMeleeAssignments.find(bot->GetInstanceId());
-    if (instanceItr == brutallusMeleeAssignments.end())
-        return false;
-
-    auto const assignmentItr = instanceItr->second.find(bot->GetGUID());
-    if (assignmentItr == instanceItr->second.end())
+    auto& assignments = isRanged ? state.rangedAssignments : state.meleeAssignments;
+    auto const assignmentItr = assignments.find(bot->GetGUID());
+    if (assignmentItr == assignments.end())
         return false;
 
     positionIndex = assignmentItr->second;
@@ -343,7 +319,7 @@ bool TryGetBrutallusRangedPosition(
         GetBrutallusAssistTankAngle(brutallus, assistTank, mainTankAngle);
 
     float const tankAngle = isMainTankGroup ? mainTankAngle : assistTankAngle;
-    float const angleOffset = GetBrutallusCenteredArcSlotAngleOffset(
+    float const angleOffset = GetCenteredArcSlotAngleOffset(
         arcPositionIndex, BRUTALLUS_RANGED_POSITIONS_PER_GROUP,
         BRUTALLUS_RANGED_GROUP_ARC_WIDTH);
 
@@ -361,8 +337,11 @@ bool TryGetBrutallusBurnPadPosition(
         return false;
 
     uint8 padIndex = 0;
-    if (!TryGetBurnPadIndex(bot, rangedIndex, padIndex))
+    if (!TryGetBurnPadIndex(
+            brutallusEncounterStates[bot->GetInstanceId()], bot, rangedIndex, padIndex))
+    {
         return false;
+    }
 
     constexpr float degreeToRadian = M_PI / 180.0f;
     static constexpr std::array burnPadAngleOffsets = {
@@ -419,15 +398,16 @@ bool TryGetBrutallusLaneTraversalPosition(
 
 bool ReleaseBrutallusBurnPad(Player* bot)
 {
-    auto instanceItr = brutallusRangedBurnPadAssignments.find(bot->GetInstanceId());
-    if (instanceItr == brutallusRangedBurnPadAssignments.end())
+    auto const instanceItr = brutallusEncounterStates.find(bot->GetInstanceId());
+    if (instanceItr == brutallusEncounterStates.end())
         return false;
 
-    bool const erased = instanceItr->second.erase(bot->GetGUID()) > 0;
-    if (instanceItr->second.empty())
-        brutallusRangedBurnPadAssignments.erase(instanceItr);
+    return instanceItr->second.rangedBurnPadAssignments.erase(bot->GetGUID()) > 0;
+}
 
-    return erased;
+bool HasBrutallusBurn(Player* bot)
+{
+    return bot->HasAura(Id(SwpSpells::SPELL_BURN));
 }
 
 }

@@ -46,6 +46,44 @@
 #include <array>
 #include <utility>
 
+namespace
+{
+    // WotLK Eternal Belt Buckle mechanics
+    constexpr uint32 ITEM_ETERNAL_BELT_BUCKLE = 41611;  // Eternal Belt Buckle (consumable)
+    constexpr uint32 ENCHANT_SOCKET_BELT = 3729;        // "Socket Belt" -> adds 1 prismatic socket
+    constexpr uint8 ETERNAL_BELT_BUCKLE_LEVEL = 70;     // required level of the buckle
+}
+
+// A non-zero prismatic enchantment is the socket marker, so the belt already has its extra socket.
+static bool HasBeltBuckleSocket(Item* waist)
+{
+    return waist && waist->GetEnchantmentId(PRISMATIC_ENCHANTMENT_SLOT) != 0;
+}
+
+// Add the prismatic socket to a belt, granted free like the enchants and gems around it.
+static bool TryApplyBeltBuckle(Player* bot, Item* waist)
+{
+    if (!bot || !waist)
+        return false;
+    if (HasBeltBuckleSocket(waist))
+        return false;
+    if (bot->GetLevel() < ETERNAL_BELT_BUCKLE_LEVEL)
+        return false;
+
+    // The buckle is a WotLK item; leave it alone when the bot is held back to an earlier expansion.
+    if (sPlayerbotAIConfig.limitEnchantExpansion && bot->GetLevel() <= 70)
+        return false;
+
+    bot->ApplyEnchantment(waist, PRISMATIC_ENCHANTMENT_SLOT, false);
+    waist->SetEnchantment(PRISMATIC_ENCHANTMENT_SLOT, ENCHANT_SOCKET_BELT, 0, 0, bot->GetGUID());
+    bot->ApplyEnchantment(waist, PRISMATIC_ENCHANTMENT_SLOT, true);
+
+    if (bot->HasItemCount(ITEM_ETERNAL_BELT_BUCKLE, 1))
+        bot->DestroyItemCount(ITEM_ETERNAL_BELT_BUCKLE, 1, true);
+
+    return true;
+}
+
 const uint64 diveMask = (1LL << 7) | (1LL << 44) | (1LL << 37) | (1LL << 38) | (1LL << 26) | (1LL << 30) | (1LL << 27) |
                         (1LL << 33) | (1LL << 24) | (1LL << 34);
 
@@ -64,7 +102,8 @@ std::list<uint32> PlayerbotFactory::classQuestIds;
 std::list<uint32> PlayerbotFactory::specialQuestIds;
 std::vector<uint32> PlayerbotFactory::enchantSpellIdCache;
 std::vector<uint32> PlayerbotFactory::enchantGemIdCache;
-std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::trainerIdCache;
+std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::classTrainerIdCache;
+std::unordered_map<uint32, std::vector<uint32>> PlayerbotFactory::tradeskillTrainerIdCache;
 std::vector<uint32> PlayerbotFactory::ccBreakTrinketCache;
 
 namespace
@@ -2918,7 +2957,7 @@ bool PlayerbotFactory::CanEquipUnseenItem(uint8 slot, uint16& dest, uint32 item)
 {
     dest = 0;
 
-    if (Item* pItem = Item::CreateItem(item, 1, bot, false, 0, true))
+    if (Item* pItem = Item::CreateItem(item, 1, bot))
     {
         InventoryResult result = botAI ? botAI->CanEquipItem(slot, dest, pItem, true, true)
                                        : bot->CanEquipItem(slot, dest, pItem, true, true);
@@ -3274,9 +3313,6 @@ void PlayerbotFactory::UpdateTradeSkills()
 
 void PlayerbotFactory::InitSkills()
 {
-    //uint32 maxValue = level * 5; //not used, line marked for removal.
-    bot->UpdateSkillsForLevel();
-
     bot->SetSkill(SKILL_RIDING, 0, 0, 0);
     if (bot->GetLevel() >= sPlayerbotAIConfig.useGroundMountAtMinLevel)
         bot->learnSpell(33388);
@@ -3444,7 +3480,12 @@ void PlayerbotFactory::SetRandomSkill(uint16 id)
 
 void PlayerbotFactory::InitAvailableSpells()
 {
-    if (trainerIdCache[bot->getClass()].empty())
+    bool const includeTradeskills = sRandomPlayerbotMgr.IsRandomBot(bot);
+    std::unordered_map<uint32, std::vector<uint32>>& trainerIdCache =
+        includeTradeskills ? tradeskillTrainerIdCache : classTrainerIdCache;
+    std::vector<uint32>& trainerIds = trainerIdCache[bot->getClass()];
+
+    if (trainerIds.empty())
     {
         CreatureTemplateContainer const* creatureTemplateContainer = sObjectMgr->GetCreatureTemplates();
         for (CreatureTemplateContainer::const_iterator i = creatureTemplateContainer->begin();
@@ -3455,18 +3496,19 @@ void PlayerbotFactory::InitAvailableSpells()
             if (!trainer)
                 continue;
 
-            if (trainer->GetTrainerType() != Trainer::Type::Tradeskill &&
-                trainer->GetTrainerType() != Trainer::Type::Class)
+            Trainer::Type const trainerType = trainer->GetTrainerType();
+            if (trainerType != Trainer::Type::Class &&
+                !(includeTradeskills && trainerType == Trainer::Type::Tradeskill))
                 continue;
 
-            if (trainer->GetTrainerType() == Trainer::Type::Class &&
-                !trainer->IsTrainerValidForPlayer(bot))
+            if (trainerType == Trainer::Type::Class && !trainer->IsTrainerValidForPlayer(bot))
                 continue;
 
-            trainerIdCache[bot->getClass()].push_back(i->first);
+            trainerIds.push_back(i->first);
         }
     }
-    for (uint32 trainerId : trainerIdCache[bot->getClass()])
+
+    for (uint32 trainerId : trainerIds)
     {
         Trainer::Trainer* trainer = sObjectMgr->GetTrainer(trainerId);
 
@@ -5213,13 +5255,30 @@ void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
             item->SetEnchantment(PERM_ENCHANTMENT_SLOT, bestEnchantId, 0, 0, bot->GetGUID());
             bot->ApplyEnchantment(item, PERM_ENCHANTMENT_SLOT, true);
         }
+        // Before gemming: on the belt, make sure the buckle socket is there.
+        if (slot == EQUIPMENT_SLOT_WAIST)
+            TryApplyBeltBuckle(bot, item);
+
+        // HasSocket() covers both the template sockets and the one a buckle adds.
         if (!item->HasSocket())
             continue;
 
-        for (uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT + 3; ++enchant_slot)
+        // A buckle's gem goes into the first colourless template socket - see WorldSession::HandleSocketOpcode.
+        uint8 firstPrismatic = 0;
+        while (firstPrismatic < MAX_GEM_SOCKETS && item->GetTemplate()->Socket[firstPrismatic].Color)
+            ++firstPrismatic;
+
+        bool const hasPrismaticSocket = item->GetEnchantmentId(PRISMATIC_ENCHANTMENT_SLOT) != 0;
+
+        for (uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT + MAX_GEM_SOCKETS;
+             ++enchant_slot)
         {
-            uint8 socketColor = item->GetTemplate()->Socket[enchant_slot - SOCK_ENCHANTMENT_SLOT].Color;
-            if (!socketColor)
+            uint32 socketIndex = enchant_slot - SOCK_ENCHANTMENT_SLOT;
+            uint8 socketColor = item->GetTemplate()->Socket[socketIndex].Color;
+
+            // The buckle socket takes any gem the meta check below lets through.
+            bool const isPrismatic = !socketColor && hasPrismaticSocket && socketIndex == firstPrismatic;
+            if (!socketColor && !isPrismatic)
                 continue;
 
             int32 enchantIdChosen = -1;
@@ -5265,7 +5324,7 @@ void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
                     }
                 }
                 if (socketColor & gemProperties->color)
-                    score *= 1.2;
+                    score *= 1.2f;
                 if (score > bestGemScore)
                 {
                     enchantIdChosen = enchant_id;
