@@ -32,6 +32,7 @@
 #include "AscensionSpecialization.h"
 
 #include <algorithm>
+#include <numeric>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -98,6 +99,7 @@ struct CoaAbility
     uint32 dispelMask;
     uint32 firstSpellId;  // first rank: ranks of one spell replace each other
     uint32 purgeMask = 0;  // magic buffs and enrages it takes off an enemy (Purge, Tranquilizing Shot)
+    uint32 synergy = 0;   // a Wildcard Hero's: how well the rolled entry fits the rest of its build
 };
 
 struct ClassKit
@@ -942,11 +944,12 @@ std::unordered_map<ObjectGuid::LowType, std::shared_ptr<ClassKit const>> Wildcar
 std::shared_ptr<ClassKit const> BuildWildcardKit(Player const* bot)
 {
     auto kit = std::make_shared<ClassKit>();
-    for (uint32 spellId : WildcardBuildSpells(bot))
+    for (auto const& [spellId, synergy] : WildcardBuildSynergies(bot))
         if (SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId))
         {
             CoaAbility ability = { spellId, 0, 0, 0, info->GetFirstRankSpell()->Id };
             Classify(info, ability);
+            ability.synergy = synergy;
             kit->abilities.push_back(ability);
             kit->kinds |= ability.kind;
             kit->purgeMask |= ability.purgeMask;
@@ -988,6 +991,7 @@ struct Usable
     uint16 kind;
     uint32 dispelMask;
     uint32 purgeMask = 0;
+    uint32 synergy = 0;
 };
 
 // Active abilities the bot has reached and actually knows, for which `wanted(kind)` is true.
@@ -1015,9 +1019,9 @@ std::vector<Usable> KnownAbilities(Player* bot, Filter wanted)
 
         auto const [itr, inserted] = rankIndex.try_emplace(ability.firstSpellId, usable.size());
         if (inserted)
-            usable.push_back({ info, ability.kind, ability.dispelMask, ability.purgeMask });
+            usable.push_back({ info, ability.kind, ability.dispelMask, ability.purgeMask, ability.synergy });
         else
-            usable[itr->second] = { info, ability.kind, ability.dispelMask, ability.purgeMask };
+            usable[itr->second] = { info, ability.kind, ability.dispelMask, ability.purgeMask, ability.synergy };
     }
 
     return usable;
@@ -1087,6 +1091,48 @@ bool HasReadyAbility(PlayerbotAI* botAI, Player* bot, Filter wanted)
 }
 
 // Abilities worth using in the damage rotation.
+// Damage of its own on the hit, not only through an aura it leaves.
+bool HitsDirectly(SpellInfo const* info)
+{
+    for (SpellEffectInfo const& effect : info->Effects)
+        if (effect.Effect == SPELL_EFFECT_SCHOOL_DAMAGE || effect.Effect == SPELL_EFFECT_WEAPON_DAMAGE ||
+            effect.Effect == SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL || effect.Effect == SPELL_EFFECT_NORMALIZED_WEAPON_DMG ||
+            effect.Effect == SPELL_EFFECT_WEAPON_PERCENT_DAMAGE || effect.Effect == SPELL_EFFECT_HEALTH_LEECH)
+            return true;
+    return false;
+}
+
+// An attack whose point is the aura it keeps on the target: a damage over time or a debuff. A strike
+// with a side effect (the slow of Frostbolt) is not one.
+bool KeepsAuraOnTarget(SpellInfo const* info)
+{
+    if (HitsDirectly(info))
+        return false;
+    for (SpellEffectInfo const& effect : info->Effects)
+        if (effect.IsAura())
+            return true;
+    return false;
+}
+
+// 2: a cooldown longer than the global one; 1: an aura kept on the target; 0: everything else.
+uint8 AttackTier(SpellInfo const* info)
+{
+    if (std::max(info->RecoveryTime, info->CategoryRecoveryTime) > 1500)
+        return 2;
+    return KeepsAuraOnTarget(info) ? 1 : 0;
+}
+
+// The bot's own damage over time or debuff on the target with more than 3 seconds and all its stacks
+// left: casting it again only renews it.
+bool AuraStillRunning(Player* bot, SpellInfo const* info, Unit* target)
+{
+    if (!KeepsAuraOnTarget(info))
+        return false;
+    Aura const* aura = target->GetAura(info->Id, bot->GetGUID());
+    return aura && (aura->GetDuration() < 0 || aura->GetDuration() > 3000) &&
+           (info->StackAmount <= 1 || aura->GetStackAmount() >= info->StackAmount);
+}
+
 bool IsAttack(uint16 kind, bool tank)
 {
     // An ability none of the tests above recognised is a summon, a stance, a permanent self
@@ -2630,15 +2676,30 @@ public:
 
         time_t const now = time(nullptr);
 
-        // Rotate through the abilities, starting after the last one that went off, so a
-        // bot uses its whole kit instead of spamming the first ability that works.
-        for (size_t i = 0; i < usable.size(); ++i)
+        // Rotate through the abilities, starting after the last one that went off, so a bot uses its whole kit
+        // instead of spamming the first ability that works. A Wildcard Hero attacks by priority (shiro2448): abilities
+        // with a cooldown as soon as they are ready, an aura kept on the target (damage over time, a debuff) when it
+        // is not running, the rest fill in; within each, the abilities that fit its build best first.
+        bool const byPriority = IsWildcardHeroBot(bot);
+        std::vector<size_t> order(usable.size());
+        std::iota(order.begin(), order.end(), size_t(0));
+        auto const rank = [&](size_t index)
         {
-            size_t const index = (next + i) % usable.size();
+            return std::make_tuple(byPriority ? -int32(AttackTier(usable[index].info)) : 0,
+                                   byPriority ? -int64(usable[index].synergy) : int64(0),
+                                   (index + usable.size() - next % usable.size()) % usable.size());
+        };
+        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return rank(a) < rank(b); });
+
+        for (size_t index : order)
+        {
             SpellInfo const* info = usable[index].info;
 
             Strikes& strikes = failures[info->Id];
             if (strikes.benchedUntil > now)
+                continue;
+
+            if (byPriority && AuraStillRunning(bot, info, target))
                 continue;
 
             if (saveMana && info->PowerType == POWER_MANA && info->CalcPowerCost(bot, info->GetSchoolMask()) > 0)
@@ -2689,6 +2750,8 @@ private:
         if (saveMana)
             DropManaSpells(bot, usable);
         DropChannelBreakers(bot, usable);
+        if (IsWildcardHeroBot(bot))
+            return AttackByPriority(usable, target);
         if (usable.empty())
             return RecordUsage(USAGE_ATTACK, nullptr);
 
@@ -2703,6 +2766,43 @@ private:
                 [cast](Usable const& spell) { return spell.info == cast; });
             if (itr != usable.end())
                 next = start + size_t(std::distance(usable.begin(), itr)) + 1;
+        }
+
+        return RecordUsage(USAGE_ATTACK, cast);
+    }
+
+    // A Wildcard Hero, in the AiPlayerbot.CoaAttackLoop attack: by priority as in the loop below, through CastFirst.
+    bool AttackByPriority(std::vector<Usable> usable, Unit* target)
+    {
+        usable.erase(std::remove_if(usable.begin(), usable.end(),
+                         [this, target](Usable const& spell) { return AuraStillRunning(bot, spell.info, target); }),
+                     usable.end());
+        if (usable.empty())
+            return RecordUsage(USAGE_ATTACK, nullptr);
+
+        size_t const count = usable.size();
+        size_t const start = next % count;
+        std::vector<size_t> order(count);
+        std::iota(order.begin(), order.end(), size_t(0));
+        auto const rank = [&](size_t index)
+        {
+            return std::make_tuple(-int32(AttackTier(usable[index].info)), -int64(usable[index].synergy),
+                                   (index + count - start) % count);
+        };
+        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return rank(a) < rank(b); });
+
+        std::vector<Usable> ordered;
+        ordered.reserve(count);
+        for (size_t index : order)
+            ordered.push_back(usable[index]);
+
+        SpellInfo const* const cast = CastFirst(botAI, bot, ordered, target, USAGE_ATTACK);
+        if (cast)
+        {
+            auto const itr = std::find_if(usable.begin(), usable.end(),
+                [cast](Usable const& spell) { return spell.info == cast; });
+            if (itr != usable.end())
+                next = size_t(std::distance(usable.begin(), itr)) + 1;
         }
 
         return RecordUsage(USAGE_ATTACK, cast);
@@ -2741,6 +2841,7 @@ public:
         if (SavingManaForHeals(bot))
             DropManaSpells(bot, spells);
         DropChannelBreakers(bot, spells);
+        std::stable_sort(spells.begin(), spells.end(), [](Usable const& a, Usable const& b) { return a.synergy > b.synergy; });
 
         return RecordUsage(USAGE_AOE, CastFirst(botAI, bot, spells, target, LoopUsage(USAGE_AOE)));
     }
