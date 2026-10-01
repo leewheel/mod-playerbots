@@ -5,6 +5,9 @@
  */
 
 #include "TKStrategy.h"
+#include "AiObjectContext.h"
+#include "Playerbots.h"
+#include "TKHelpers.h"
 #include "TKMultipliers.h"
 
 void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
@@ -157,4 +160,52 @@ void RaidTempestKeepStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new KaelthasSunstriderPrepareForPhase3Multiplier(botAI));
     multipliers.push_back(new KaelthasSunstriderDelayCooldownsMultiplier(botAI));
     multipliers.push_back(new KaelthasSunstriderStaySpreadDuringGravityLapseMultiplier(botAI));
+}
+
+namespace
+{
+
+using namespace TkHelpers;
+
+void AppendKaelthasDevastationExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    if (!kaelthas)
+        return;
+
+    uint32 const phase = GetKaelthasTkPhase(kaelthas);
+    if (phase != PHASE_NONE && (phase < PHASE_WEAPONS || phase > PHASE_ALL_ADVISORS))
+        return;
+
+    constexpr float searchRadius = 75.0f;
+    if (Creature* axe = botAI->GetBot()->FindNearestCreature(
+            Id(TkNpcs::NPC_DEVASTATION), searchRadius))
+    {
+        exclusions.insert(axe->GetGUID());
+    }
+}
+
+void AppendEmberOfAlarExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    for (auto const& guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->GetEntry() == Id(TkNpcs::NPC_EMBER_OF_ALAR))
+            exclusions.insert(unit->GetGUID());
+    }
+}
+
+} // end anonymous namespace
+
+void RaidTempestKeepStrategy::AppendTargetExclusions(
+    GuidSet& exclusions, TargetValueExclusionType /*type*/)
+{
+    Player* bot = botAI->GetBot();
+    if (!PlayerbotAI::IsMelee(bot) || !PlayerbotAI::IsDps(bot))
+        return;
+
+    AppendKaelthasDevastationExclusions(botAI, exclusions);
+    AppendEmberOfAlarExclusions(botAI, exclusions);
 }

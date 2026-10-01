@@ -18,14 +18,14 @@ using namespace RampShared;
 bool GargolmarHellfireWatchersAreActiveTrigger::IsActive()
 {
     return  IsMechanicTrackerBot(bot, RAMP_MAP_ID) &&
-            AI_VALUE2(Unit*, "find target", "hellfire watcher");
+            AI_VALUE2(Unit*, "find target", "17309");
 }
 
 // Omor the Unscarred
 
 bool OmorTreacheryAuraTrigger::IsActive()
 {
-    if (!AI_VALUE2(Unit*, "find target", "omor the unscarred"))
+    if (!AI_VALUE2(Unit*, "find target", "17308"))
         return false;
 
     if (!helper.HasTreacheryAura(bot))
@@ -36,7 +36,7 @@ bool OmorTreacheryAuraTrigger::IsActive()
 
 bool OmorTankHasTreacheryAuraTrigger::IsActive()
 {
-    if (!AI_VALUE2(Unit*, "find target", "omor the unscarred"))
+    if (!AI_VALUE2(Unit*, "find target", "17308"))
         return false;
 
     Player* tank = GetGroupMainTank(bot);
@@ -51,31 +51,31 @@ bool OmorRangedSpreadTrigger::IsActive()
 {
     return  PlayerbotAI::IsRanged(bot) &&
             GetNearestPlayerInRadius(bot, OMOR_TREACHERY_AURA_SAFE_DISTANCE) &&
-            AI_VALUE2(Unit*, "find target", "omor the unscarred");
+            AI_VALUE2(Unit*, "find target", "17308");
 }
 
 bool OmorFiendishHoundIsActiveTrigger::IsActive()
 {
     return  IsMechanicTrackerBot(bot, RAMP_MAP_ID) &&
-            AI_VALUE2(Unit*, "find target", "fiendish hound");
+            AI_VALUE2(Unit*, "find target", "17280");
 }
 
 // Vazruden & Nazan
 
 bool VazrudenTankPositionBossTrigger::IsActive()
 {
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
 
     return
         PlayerbotAI::IsMainTank(bot) &&
-        AI_VALUE2(Unit*, "find target", "vazruden") &&
+        AI_VALUE2(Unit*, "find target", "17537") &&
         (!nazan || nazan->IsFlying());
 }
 
 bool VazrudenBossIsActiveTrigger::IsActive()
 {
     return  IsMechanicTrackerBot(bot, RAMP_MAP_ID) &&
-            AI_VALUE2(Unit*, "find target", "vazruden");
+            AI_VALUE2(Unit*, "find target", "17537");
 }
 
 bool NazanBossTremorTotemTrigger::IsActive()
@@ -83,7 +83,7 @@ bool NazanBossTremorTotemTrigger::IsActive()
     if (bot->getClass() != CLASS_SHAMAN)
         return false;
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
 
     if (!nazan || nazan->IsFlying())
         return false;
@@ -100,7 +100,7 @@ bool NazanBossFireResistanceTotemTrigger::IsActive()
     if (bot->getClass() != CLASS_SHAMAN)
         return false;
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
 
     if (!nazan || nazan->IsFlying())
         return false;
@@ -113,7 +113,7 @@ bool NazanBossFireResistanceAuraTrigger::IsActive()
     if (bot->getClass() != CLASS_PALADIN)
         return false;
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
 
     if (!nazan || nazan->IsFlying())
         return false;

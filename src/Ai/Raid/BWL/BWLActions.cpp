@@ -58,7 +58,7 @@ bool BwlTurnOffSuppressionDeviceAction::Execute(Event /*event*/)
 
 bool BwlRazorgoreAvoidAoeAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorgore the untamed");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "12435");
     if (!boss)
         return false;
 
@@ -107,7 +107,7 @@ bool BwlRazorgoreAvoidAoeAction::Execute(Event /*event*/)
 
 bool BwlRazorgoreMarkBossAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "razorgore the untamed");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "12435");
     if (!boss)
         return false;
 
@@ -141,7 +141,7 @@ bool BwlRazorgoreMarkBossAction::isUseful()
 
 bool BwlVaelastraszMoveAwayAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "vaelastrasz the corrupt");
+    Unit* boss = AI_VALUE2(Unit*, "find target", "13020");
 
     // Current target with Burning Adrenaline stays put when Vaelastrasz is alive.
     if (boss && boss->IsAlive() && boss->GetVictim() == bot)
@@ -268,7 +268,7 @@ bool BwlVaelastraszMoveAwayAction::MoveAlongFleeDirection(Unit const* boss, floa
 
 bool BwlBroodlordRangedMoveAwayAction::Execute(Event /*event*/)
 {
-    if (Unit* boss = AI_VALUE2(Unit*, "find target", "broodlord lashlayer"))
+    if (Unit* boss = AI_VALUE2(Unit*, "find target", "12017"))
     {
         float distToTravel = BROODLORD_SAFE_DISTANCE - bot->GetDistance2d(boss);
         if (distToTravel > 0.0f)

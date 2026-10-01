@@ -5,7 +5,9 @@
  */
 
 #include "RampMultipliers.h"
+#include "ChooseTargetActions.h"
 #include "EncounterHelpers.h"
+#include "MovementActions.h"
 #include "PaladinActions.h"
 #include "Playerbots.h"
 #include "RampActions.h"
@@ -35,7 +37,7 @@ float OmorTreacheryAuraFleeFromPlayersMultiplier::GetValue(Action* action)
     if (!isMovementSpell && !dynamic_cast<MovementAction*>(action))
         return 1.0f;
 
-    Unit* omor = AI_VALUE2(Unit*, "find target", "omor the unscarred");
+    Unit* omor = AI_VALUE2(Unit*, "find target", "17308");
 
     // If Omor isn't found, allow all actions
     if (!omor)
@@ -69,7 +71,43 @@ float OmorTreacheryAuraFleeFromPlayersMultiplier::GetValue(Action* action)
     return 1.0f;
 }
 
+float OmorTreacheryAuraFleeFromTankMultiplier::GetValue(Action* action)
+{
+    Player* tank = GetGroupMainTank(bot);
+    if (!tank || !helper.HasTreacheryAura(tank))
+        return 1.0f;
+
+    if (dynamic_cast<CastReachTargetSpellAction*>(action) ||
+        (dynamic_cast<MovementAction*>(action) &&
+         !dynamic_cast<OmorTreacheryAuraFleeFromTankAction*>(action)))
+        return 0.0f;
+
+    return 1.0f;
+}
+
 // Vazruden & Nazan
+
+float VazrudenDisableTankAssistMultiplier::GetValue(Action* action)
+{
+    if (!botAI->IsTank(bot) ||
+        !AI_VALUE2(Unit*, "find target", "17537"))
+        return 1.0f;
+
+    if (Unit* nazan = AI_VALUE2(Unit*, "find target", "17536"))
+    {
+        if (Creature* nazanCreature = nazan->ToCreature())
+        {
+            if (!nazanCreature->CanFly())
+                return 1.0f;
+        }
+    }
+
+    if (bot->GetVictim() != nullptr &&
+        dynamic_cast<TankAssistAction*>(action))
+        return 0.0f;
+
+    return 1.0f;
+}
 
 float NazanSetTremorTotemMultiplier::GetValue(Action* action)
 {
@@ -87,7 +125,7 @@ float NazanSetTremorTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
     return nazan && !nazan->IsFlying() ? 0.0f : 1.0f;
 }
 
@@ -107,7 +145,7 @@ float NazanSetFireResistanceTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
     return nazan && !nazan->IsFlying() ? 0.0f : 1.0f;
 }
 
@@ -130,6 +168,6 @@ float NazanSetFireResistanceAuraMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* nazan = AI_VALUE2(Unit*, "find target", "nazan");
+    Unit* nazan = AI_VALUE2(Unit*, "find target", "17536");
     return nazan && !nazan->IsFlying() ? 0.0f : 1.0f;
 }

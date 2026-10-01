@@ -25,7 +25,30 @@ private:
     OmorBossHelper helper;
 };
 
+class OmorTreacheryAuraFleeFromTankMultiplier : public Multiplier
+{
+public:
+    OmorTreacheryAuraFleeFromTankMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "omor treachery aura flee from tank")
+    {
+    }
+    float GetValue(Action* action) override;
+
+private:
+    OmorBossHelper helper;
+};
+
 // Vazruden & Nazan
+
+class VazrudenDisableTankAssistMultiplier : public Multiplier
+{
+public:
+    VazrudenDisableTankAssistMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "vazruden disable tank assist")
+    {
+    }
+    float GetValue(Action* action) override;
+};
 
 class NazanSetTremorTotemMultiplier : public Multiplier
 {

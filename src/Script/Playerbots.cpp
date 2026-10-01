@@ -27,7 +27,6 @@
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
 #include "ServerScript.h"
-#include "SessionScript.h"
 #include "WorldScript.h"
 #include "cmath"
 
@@ -129,8 +128,6 @@ public:
         PLAYERHOOK_ON_LOGIN,
         PLAYERHOOK_ON_BEFORE_LOGOUT,
         PLAYERHOOK_ON_AFTER_UPDATE,
-        PLAYERHOOK_ON_CREATURE_KILL_CREDIT,
-        PLAYERHOOK_ON_BEFORE_PETITION_SIGN,
         PLAYERHOOK_ON_BEFORE_CRITERIA_PROGRESS,
         PLAYERHOOK_ON_BEFORE_ACHI_COMPLETE,
         PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
@@ -143,7 +140,7 @@ public:
 
     void OnPlayerLogin(Player* player) override
     {
-        if (!player->GetSession()->IsHeadless())
+        if (!player->GetSession()->IsBot())
         {
             PlayerbotsMgr::instance().AddPlayerbotData(player, false);
             sRandomPlayerbotMgr.OnPlayerLogin(player);
@@ -180,21 +177,6 @@ public:
         }
 
         sRandomPlayerbotMgr.OnPlayerLogout(player);
-    }
-
-    void OnPlayerCreatureKillCredit(Player* player, Creature* killed) override
-    {
-        GuildTaskMgr::instance().CheckKillTask(player, killed);
-    }
-
-    void OnPlayerBeforePetitionSign(Player* player, ObjectGuid /*petitionGuid*/, bool& alreadySignedByAccount) override
-    {
-        if (!alreadySignedByAccount)
-            return;
-
-        // bots share accounts, so the same-account rule must not stop them from signing each other
-        if (PlayerbotsMgr::instance().GetPlayerbotAI(player) != nullptr)
-            alreadySignedByAccount = false;
     }
 
     bool OnPlayerBeforeTeleport(Player* /*player*/, uint32 /*mapid*/, float /*x*/, float /*y*/, float /*z*/,
@@ -361,7 +343,7 @@ public:
             return;
 
         // no XP multiplier, when player is no bot.
-        if (!player->GetSession()->IsHeadless() || !sRandomPlayerbotMgr.IsRandomBot(player))
+        if (!player->GetSession()->IsBot() || !sRandomPlayerbotMgr.IsRandomBot(player))
             return;
 
         // no XP multiplier, when bot is in a group with a real player.
@@ -373,7 +355,7 @@ public:
                 if (!member)
                     continue;
 
-                if (!member->GetSession()->IsHeadless())
+                if (!member->GetSession()->IsBot())
                     return;
             }
         }
@@ -404,25 +386,8 @@ class PlayerbotsServerScript : public ServerScript
 {
 public:
     PlayerbotsServerScript() : ServerScript("PlayerbotsServerScript", {
-        SERVERHOOK_ON_PACKET_SENT,
         SERVERHOOK_CAN_PACKET_RECEIVE
     }) {}
-
-    void OnPacketSent(WorldSession* session, WorldPacket const& packet) override
-    {
-        Player* player = session->GetPlayer();
-
-        if (player == nullptr)
-            return;
-
-        PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(player);
-
-        if (botAI != nullptr)
-            botAI->HandleBotOutgoingPacket(packet);
-
-        if (PlayerbotMgr* playerbotMgr = GET_PLAYERBOT_MGR(player))
-            playerbotMgr->HandleMasterOutgoingPacket(packet);
-    }
 
     bool CanPacketReceive(WorldSession* session, WorldPacket const& packet) override
     {
@@ -434,31 +399,45 @@ public:
     }
 };
 
-class PlayerbotsSessionScript : public SessionScript
+class PlayerbotsScript : public PlayerbotScript
 {
 public:
-    PlayerbotsSessionScript() : SessionScript("PlayerbotsSessionScript", {
-        SESSIONHOOK_ON_UPDATE
-    }) {}
+    PlayerbotsScript() : PlayerbotScript("PlayerbotsScript") {}
 
-    // Runs on the world thread for every real session: drains the packet queues of the bots it owns
-    void OnSessionUpdate(WorldSession* session, uint32 /*diff*/) override
+    bool OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& guidsList) override
     {
-        if (Player* player = session->GetPlayer())
-            if (PlayerbotMgr* playerbotMgr = GET_PLAYERBOT_MGR(player))
-                playerbotMgr->UpdateSessions();
+        bool nonBotFound = false;
+
+        for (ObjectGuid const& guid : guidsList.guids)
+        {
+            Player* player = ObjectAccessor::FindPlayer(guid);
+
+            if (guid.IsGroup() || (player && !PlayerbotsMgr::instance().GetPlayerbotAI(player)))
+            {
+                nonBotFound = true;
+                break;
+            }
+        }
+
+        return nonBotFound;
     }
-};
 
-class PlayerbotsAllMapScript : public AllMapScript
-{
-public:
-    PlayerbotsAllMapScript() : AllMapScript("PlayerbotsAllMapScript", {
-        ALLMAPHOOK_CAN_SEND_OBJECT_UPDATES_TO_PLAYER
-    }) {}
+    void OnPlayerbotCheckKillTask(Player* player, Unit* victim) override
+    {
+        if (player)
+            GuildTaskMgr::instance().CheckKillTask(player, victim);
+    }
 
-    // Bots have no client to render object updates; only self bots still need them
-    bool CanSendObjectUpdatesToPlayer(Map* /*map*/, Player* player) override
+    void OnPlayerbotCheckPetitionAccount(Player* player, bool& found) override
+    {
+        if (!found)
+            return;
+
+        if (PlayerbotsMgr::instance().GetPlayerbotAI(player) != nullptr)
+            found = false;
+    }
+
+    bool OnPlayerbotCheckUpdatesToSend(Player* player) override
     {
         PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(player);
 
@@ -467,27 +446,26 @@ public:
 
         return IsSelfBot(player);
     }
-};
 
-class PlayerbotsGlobalScript : public GlobalScript
-{
-public:
-    PlayerbotsGlobalScript() : GlobalScript("PlayerbotsGlobalScript", {
-        GLOBALHOOK_CAN_CREATE_LFG_PROPOSAL
-    }) {}
-
-    // Never form a dungeon group made only of bots
-    bool CanCreateLfgProposal(lfg::Lfg5Guids const& guids) override
+    void OnPlayerbotPacketSent(Player* player, WorldPacket const* packet) override
     {
-        for (ObjectGuid const& guid : guids.guids)
-        {
-            Player* player = ObjectAccessor::FindPlayer(guid);
+        if (player == nullptr)
+            return;
 
-            if (guid.IsGroup() || IsRealPlayer(player) || IsSelfBot(player))
-                return true;
-        }
+        PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(player);
 
-        return false;
+        if (botAI != nullptr)
+            botAI->HandleBotOutgoingPacket(*packet);
+
+        if (PlayerbotMgr* playerbotMgr = GET_PLAYERBOT_MGR(player))
+            playerbotMgr->HandleMasterOutgoingPacket(*packet);
+    }
+
+    void OnPlayerbotUpdateSessions(Player* player) override
+    {
+        if (player)
+            if (PlayerbotMgr* playerbotMgr = GET_PLAYERBOT_MGR(player))
+                playerbotMgr->UpdateSessions();
     }
 };
 
@@ -612,9 +590,7 @@ void AddPlayerbotsScripts()
     new PlayerbotsPlayerScript();
     new PlayerbotsMiscScript();
     new PlayerbotsServerScript();
-    new PlayerbotsSessionScript();
-    new PlayerbotsAllMapScript();
-    new PlayerbotsGlobalScript();
+    new PlayerbotsScript();
     new PlayerbotsWorldScript();
     new PlayerBotsBGScript();
     AddPlayerbotsSecureLoginScripts();

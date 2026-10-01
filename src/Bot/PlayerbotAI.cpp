@@ -65,7 +65,6 @@ constexpr uint32 SPELL_TITAN_GRIP = 49152;
 constexpr uint32 SPELL_DK_FROST_PRESENCE = 48263;
 constexpr uint32 SPELL_GRAVITY_LAPSE_TK = 39432;
 constexpr uint32 SPELL_GRAVITY_LAPSE_MGT = 44226;
-constexpr uint32 VEHICLE_FLAG_FIXED_POSITION = 0x00200000;
 }
 
 std::vector<std::string> PlayerbotAI::dispel_whitelist = {
@@ -1332,9 +1331,8 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
             bot->GetMotionMaster()->Clear();
 
             // Unit* currentTarget = GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
-            // Bots are client-controlled players, so opt past the guard that protects real clients.
-            bot->GetMotionMaster()->MoveKnockbackFrom(bot->GetPositionX() - vcos, bot->GetPositionY() - vsin,
-                                                      horizontalSpeed, verticalSpeed, true);
+            bot->GetMotionMaster()->MoveKnockbackFromForPlayer(bot->GetPositionX() - vcos, bot->GetPositionY() - vsin,
+                                                               horizontalSpeed, verticalSpeed);
 
             // bot->AddUnitMovementFlag(MOVEMENTFLAG_FALLING);
             // bot->AddUnitMovementFlag(MOVEMENTFLAG_FORWARD);
@@ -2476,7 +2474,7 @@ bool PlayerbotAI::IsBotMainTank(Player* player)
         return false;
 
     WorldSession* session = player->GetSession();
-    if (!session || !session->IsHeadless())
+    if (!session || !session->IsBot())
         return false;
 
     if (!IsTank(player))
@@ -2506,7 +2504,7 @@ bool PlayerbotAI::IsBotMainTank(Player* player)
         if (memberAssistTankIndex == botAssistTankIndex && player == member)
             return true;
 
-        if (memberAssistTankIndex < botAssistTankIndex && member->GetSession()->IsHeadless())
+        if (memberAssistTankIndex < botAssistTankIndex && member->GetSession()->IsBot())
             return false;
     }
 

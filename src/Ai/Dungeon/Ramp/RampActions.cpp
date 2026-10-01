@@ -18,7 +18,7 @@ using namespace EncounterHelpers;
 
 bool GargolmarMarkHellfireWatchersAction::Execute(Event /*event*/)
 {
-    Unit* watcher = AI_VALUE2(Unit*, "find target", "hellfire watcher");
+    Unit* watcher = AI_VALUE2(Unit*, "find target", "17309");
     if (!watcher)
         return false;
 
@@ -41,7 +41,7 @@ bool OmorTreacheryAuraFleeFromPlayersAction::Execute(Event /*event*/)
 // Nearby bots should flee from the tank if it has Treacherous Aura or Bane of Treachery
 bool OmorTreacheryAuraFleeFromTankAction::Execute(Event /*event*/)
 {
-    Unit* omor = AI_VALUE2(Unit*, "find target", "omor the unscarred");
+    Unit* omor = AI_VALUE2(Unit*, "find target", "17308");
 
     if (!omor)
         return false;
@@ -72,7 +72,7 @@ bool OmorRangedSpreadAction::Execute(Event /*event*/)
 // Mark Fiendish Hound with skull
 bool OmorMarkFiendishHoundAction::Execute(Event /*event*/)
 {
-    Unit* hound = AI_VALUE2(Unit*, "find target", "fiendish hound");
+    Unit* hound = AI_VALUE2(Unit*, "find target", "17280");
     if (!hound)
         return false;
 
@@ -84,7 +84,7 @@ bool OmorMarkFiendishHoundAction::Execute(Event /*event*/)
 // Tank Vazruden in the middle of the platform
 bool VazrudenTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* vazruden = AI_VALUE2(Unit*, "find target", "vazruden");
+    Unit* vazruden = AI_VALUE2(Unit*, "find target", "17537");
     if (!vazruden)
         return false;
 
@@ -114,7 +114,7 @@ bool VazrudenTankPositionBossAction::Execute(Event /*event*/)
 // Mark Vazruden with 'Skull'
 bool VazrudenMarkBossAction::Execute(Event /*event*/)
 {
-    Unit* vazruden = AI_VALUE2(Unit*, "find target", "vazruden");
+    Unit* vazruden = AI_VALUE2(Unit*, "find target", "17537");
     if (!vazruden)
         return false;
 

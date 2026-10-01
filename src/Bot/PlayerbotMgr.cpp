@@ -157,7 +157,7 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
 
     WorldSession* botSession =
         new WorldSession(accountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING, time_t(0),
-                         sWorld->GetDefaultDbcLocale(), 0, false, false, 0);
+                         sWorld->GetDefaultDbcLocale(), 0, false, false, 0, true);
 
     botLoading.emplace(playerGuid, PendingBotLogin{masterAccountId, botSession, false});
 
@@ -217,8 +217,8 @@ void PlayerbotHolder::UpdatePendingLogins()
             continue;
 
         WorldSession* session = itr->second.session;
-        if (!itr->second.failed)
-            session->ProcessQueryCallbacks();  // may complete the login (entry erased) or flag it failed
+        // The session's own update loop already pumps its query callbacks (WorldSessionMgr::UpdateSessions),
+        // which may complete the login (entry erased) or flag it failed.
 
         itr = botLoading.find(guid);
         if (itr == botLoading.end() || !itr->second.failed)
@@ -288,8 +288,6 @@ void PlayerbotHolder::UpdateSessions()
     for (PlayerBotMap::const_iterator itr = GetPlayerBotsBegin(); itr != GetPlayerBotsEnd(); ++itr)
     {
         Player* const bot = itr->second;
-        // Nothing else drives a headless session's async query, transaction and holder callbacks
-        bot->GetSession()->ProcessQueryCallbacks();
         if (bot->IsBeingTeleported())
         {
             PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
@@ -307,16 +305,19 @@ void PlayerbotHolder::UpdateSessions()
 
 void PlayerbotHolder::HandleBotPackets(WorldSession* session)
 {
-    while (std::unique_ptr<WorldPacket> packet = session->NextQueuedPacket())
+    WorldPacket* packet = nullptr;
+    while (session->GetPacketQueue().next(packet))
     {
         OpcodeClient opcode = static_cast<OpcodeClient>(packet->GetOpcode());
         ClientOpcodeHandler const* opHandle = opcodeTable[opcode];
         if (!opHandle)
         {
             LOG_ERROR("playerbots", "Unhandled opcode {} queued for bot session {}. Packet dropped.", static_cast<uint32>(opcode), session->GetAccountId());
+            delete packet;
             continue;
         }
         opHandle->Call(session, *packet);
+        delete packet;
     }
 }
 

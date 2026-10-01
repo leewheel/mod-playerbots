@@ -73,7 +73,7 @@ void RaidBwlStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExc
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    if (Unit* broodlord = AI_VALUE2(Unit*, "find target", "broodlord lashlayer"))
+    if (Unit* broodlord = AI_VALUE2(Unit*, "find target", "12017"))
     {
         Unit* bossVictim = broodlord->GetVictim();
         Player* bossVictimPlayer = bossVictim ? bossVictim->ToPlayer() : nullptr;
