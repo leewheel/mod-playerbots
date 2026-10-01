@@ -65,11 +65,11 @@ public:
         creators["leotheras the blind warlock should tank demon form"] =
             &RaidSscTriggerContext::leotheras_the_blind_warlock_should_tank_demon_form;
 
-        creators["leotheras the blind only warlock should tank demon form"] =
-            &RaidSscTriggerContext::leotheras_the_blind_only_warlock_should_tank_demon_form;
+        creators["leotheras the blind tanks should auto-attack demon form"] =
+            &RaidSscTriggerContext::leotheras_the_blind_tanks_should_auto_attack_demon_form;
 
-        creators["leotheras the blind ranged should spread"] =
-            &RaidSscTriggerContext::leotheras_the_blind_ranged_should_spread;
+        creators["leotheras the blind ranged should keep distance"] =
+            &RaidSscTriggerContext::leotheras_the_blind_ranged_should_keep_distance;
 
         creators["leotheras the blind channeling whirlwind"] =
             &RaidSscTriggerContext::leotheras_the_blind_channeling_whirlwind;
@@ -83,8 +83,14 @@ public:
         creators["leotheras the blind in final phase"] =
             &RaidSscTriggerContext::leotheras_the_blind_in_final_phase;
 
+        creators["leotheras the blind should separate boss from demon"] =
+            &RaidSscTriggerContext::leotheras_the_blind_should_separate_boss_from_demon;
+
         creators["leotheras the blind hunter should misdirect demon form"] =
             &RaidSscTriggerContext::leotheras_the_blind_hunter_should_misdirect_demon_form;
+
+        creators["leotheras the blind aggro resets"] =
+            &RaidSscTriggerContext::leotheras_the_blind_aggro_resets;
 
         creators["leotheras the blind should manage dps wait timers"] =
             &RaidSscTriggerContext::leotheras_the_blind_should_manage_dps_wait_timers;
@@ -96,8 +102,8 @@ public:
         creators["fathom-lord karathress should heal caribdis tank"] =
             &RaidSscTriggerContext::fathom_lord_karathress_should_heal_caribdis_tank;
 
-        creators["fathom-lord karathress pulling bosses"] =
-            &RaidSscTriggerContext::fathom_lord_karathress_pulling_bosses;
+        creators["fathom-lord karathress hunter should misdirect"] =
+            &RaidSscTriggerContext::fathom_lord_karathress_hunter_should_misdirect;
 
         creators["fathom-lord karathress should assign dps priority"] =
             &RaidSscTriggerContext::fathom_lord_karathress_should_assign_dps_priority;
@@ -115,8 +121,8 @@ public:
         creators["morogrim tidewalker should be tanked"] =
             &RaidSscTriggerContext::morogrim_tidewalker_should_be_tanked;
 
-        creators["morogrim tidewalker pulling boss"] =
-            &RaidSscTriggerContext::morogrim_tidewalker_pulling_boss;
+        creators["morogrim tidewalker hunter should misdirect"] =
+            &RaidSscTriggerContext::morogrim_tidewalker_hunter_should_misdirect;
 
         creators["morogrim tidewalker ranged should stack"] =
             &RaidSscTriggerContext::morogrim_tidewalker_ranged_should_stack;
@@ -140,19 +146,26 @@ public:
         creators["lady vashj ranged should position in phase 3"] =
             &RaidSscTriggerContext::lady_vashj_ranged_should_position_in_phase_3;
 
+        creators["lady vashj main tank needs grounding shaman"] =
+            &RaidSscTriggerContext::lady_vashj_main_tank_needs_grounding_shaman;
+
         creators["lady vashj shaman should ground shock blast"] =
             &RaidSscTriggerContext::lady_vashj_shaman_should_ground_shock_blast;
 
         creators["lady vashj static charge on group member"] =
             &RaidSscTriggerContext::lady_vashj_static_charge_on_group_member;
 
-        creators["lady vashj pulling boss"] = &RaidSscTriggerContext::lady_vashj_pulling_boss;
+        creators["lady vashj hunter should misdirect"] =
+            &RaidSscTriggerContext::lady_vashj_hunter_should_misdirect;
 
-        creators["lady vashj adds spawn in phase 2 and phase 3"] =
-            &RaidSscTriggerContext::lady_vashj_adds_spawn_in_phase_2_and_phase_3;
+        creators["lady vashj should assign target priority"] =
+            &RaidSscTriggerContext::lady_vashj_should_assign_target_priority;
 
-        creators["lady vashj coilfang strider is approaching"] =
-            &RaidSscTriggerContext::lady_vashj_coilfang_strider_is_approaching;
+        creators["lady vashj tank needs fear ward"] =
+            &RaidSscTriggerContext::lady_vashj_tank_needs_fear_ward;
+
+        creators["lady vashj coilfang strider should be tanked"] =
+            &RaidSscTriggerContext::lady_vashj_coilfang_strider_should_be_tanked;
 
         creators["lady vashj coilfang elite should be tanked"] =
             &RaidSscTriggerContext::lady_vashj_coilfang_elite_should_be_tanked;
@@ -163,26 +176,26 @@ public:
         creators["lady vashj tainted elemental needs looter"] =
             &RaidSscTriggerContext::lady_vashj_tainted_elemental_needs_looter;
 
-        creators["lady vashj bot should attack tainted elemental"] =
-            &RaidSscTriggerContext::lady_vashj_bot_should_attack_tainted_elemental;
+        creators["lady vashj should attack tainted elemental"] =
+            &RaidSscTriggerContext::lady_vashj_should_attack_tainted_elemental;
 
-        creators["lady vashj bot is tainted core looter"] =
-            &RaidSscTriggerContext::lady_vashj_bot_is_tainted_core_looter;
+        creators["lady vashj tainted core looter"] =
+            &RaidSscTriggerContext::lady_vashj_tainted_core_looter;
 
-        creators["lady vashj bot is in tainted core chain"] =
-            &RaidSscTriggerContext::lady_vashj_bot_is_in_tainted_core_chain;
+        creators["lady vashj core passing chain member"] =
+            &RaidSscTriggerContext::lady_vashj_core_passing_chain_member;
 
-        creators["lady vashj bot should destroy tainted core"] =
-            &RaidSscTriggerContext::lady_vashj_bot_should_destroy_tainted_core;
+        creators["lady vashj should destroy tainted core"] =
+            &RaidSscTriggerContext::lady_vashj_should_destroy_tainted_core;
 
         creators["lady vashj pet should switch target"] =
             &RaidSscTriggerContext::lady_vashj_pet_should_switch_target;
 
-        creators["lady vashj bot is above the ground"] =
-            &RaidSscTriggerContext::lady_vashj_bot_is_above_the_ground;
+        creators["lady vashj bot above the ground"] =
+            &RaidSscTriggerContext::lady_vashj_bot_above_the_ground;
 
-        creators["lady vashj bot is in toxic spores"] =
-            &RaidSscTriggerContext::lady_vashj_bot_is_in_toxic_spores;
+        creators["lady vashj bot in toxic spores"] =
+            &RaidSscTriggerContext::lady_vashj_bot_in_toxic_spores;
 
         creators["lady vashj melee near toxic spores"] =
             &RaidSscTriggerContext::lady_vashj_melee_near_toxic_spores;
@@ -193,8 +206,8 @@ public:
         creators["lady vashj entangle on melee"] =
             &RaidSscTriggerContext::lady_vashj_entangle_on_melee;
 
-        creators["lady vashj rogue has static charge"] =
-            &RaidSscTriggerContext::lady_vashj_rogue_has_static_charge;
+        creators["lady vashj static charge on rogue"] =
+            &RaidSscTriggerContext::lady_vashj_static_charge_on_rogue;
     }
 
 private:
@@ -252,11 +265,11 @@ private:
     static Trigger* leotheras_the_blind_warlock_should_tank_demon_form(PlayerbotAI* botAI) {
         return new LeotherasTheBlindWarlockShouldTankDemonFormTrigger(botAI);
     }
-    static Trigger* leotheras_the_blind_only_warlock_should_tank_demon_form(PlayerbotAI* botAI) {
-        return new LeotherasTheBlindOnlyWarlockShouldTankDemonFormTrigger(botAI);
+    static Trigger* leotheras_the_blind_tanks_should_auto_attack_demon_form(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindTanksShouldAutoAttackDemonFormTrigger(botAI);
     }
-    static Trigger* leotheras_the_blind_ranged_should_spread(PlayerbotAI* botAI) {
-        return new LeotherasTheBlindRangedShouldSpreadTrigger(botAI);
+    static Trigger* leotheras_the_blind_ranged_should_keep_distance(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindRangedShouldKeepDistanceTrigger(botAI);
     }
     static Trigger* leotheras_the_blind_channeling_whirlwind(PlayerbotAI* botAI) {
         return new LeotherasTheBlindChannelingWhirlwindTrigger(botAI);
@@ -270,8 +283,14 @@ private:
     static Trigger* leotheras_the_blind_in_final_phase(PlayerbotAI* botAI) {
         return new LeotherasTheBlindInFinalPhaseTrigger(botAI);
     }
+    static Trigger* leotheras_the_blind_should_separate_boss_from_demon(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindShouldSeparateBossFromDemonTrigger(botAI);
+    }
     static Trigger* leotheras_the_blind_hunter_should_misdirect_demon_form(PlayerbotAI* botAI) {
         return new LeotherasTheBlindHunterShouldMisdirectDemonFormTrigger(botAI);
+    }
+    static Trigger* leotheras_the_blind_aggro_resets(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindAggroResetsTrigger(botAI);
     }
     static Trigger* leotheras_the_blind_should_manage_dps_wait_timers(PlayerbotAI* botAI) {
         return new LeotherasTheBlindShouldManageDpsWaitTimersTrigger(botAI);
@@ -284,8 +303,9 @@ private:
     static Trigger* fathom_lord_karathress_should_heal_caribdis_tank(PlayerbotAI* botAI) {
         return new FathomLordKarathressShouldHealCaribdisTankTrigger(botAI);
     }
-    static Trigger* fathom_lord_karathress_pulling_bosses(PlayerbotAI* botAI) {
-        return new FathomLordKarathressPullingBossesTrigger(botAI);
+    static Trigger* fathom_lord_karathress_hunter_should_misdirect(PlayerbotAI* botAI) {
+        return new SscHunterShouldMisdirectTrigger(
+            botAI, "fathom-lord karathress hunter should misdirect", "fathom-guard tidalvess");
     }
     static Trigger* fathom_lord_karathress_should_assign_dps_priority(PlayerbotAI* botAI) {
         return new FathomLordKarathressShouldAssignDpsPriorityTrigger(botAI);
@@ -304,8 +324,9 @@ private:
     static Trigger* morogrim_tidewalker_should_be_tanked(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerShouldBeTankedTrigger(botAI);
     }
-    static Trigger* morogrim_tidewalker_pulling_boss(PlayerbotAI* botAI) {
-        return new MorogrimTidewalkerPullingBossTrigger(botAI);
+    static Trigger* morogrim_tidewalker_hunter_should_misdirect(PlayerbotAI* botAI) {
+        return new SscHunterShouldMisdirectTrigger(
+            botAI, "morogrim tidewalker hunter should misdirect", "morogrim tidewalker");
     }
     static Trigger* morogrim_tidewalker_ranged_should_stack(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerRangedShouldStackTrigger(botAI);
@@ -330,20 +351,27 @@ private:
     static Trigger* lady_vashj_ranged_should_position_in_phase_3(PlayerbotAI* botAI) {
         return new LadyVashjRangedShouldPositionInPhase3Trigger(botAI);
     }
+    static Trigger* lady_vashj_main_tank_needs_grounding_shaman(PlayerbotAI* botAI) {
+        return new LadyVashjMainTankNeedsGroundingShamanTrigger(botAI);
+    }
     static Trigger* lady_vashj_shaman_should_ground_shock_blast(PlayerbotAI* botAI) {
         return new LadyVashjShamanShouldGroundShockBlastTrigger(botAI);
     }
     static Trigger* lady_vashj_static_charge_on_group_member(PlayerbotAI* botAI) {
         return new LadyVashjStaticChargeOnGroupMemberTrigger(botAI);
     }
-    static Trigger* lady_vashj_pulling_boss(PlayerbotAI* botAI) {
-        return new LadyVashjPullingBossTrigger(botAI);
+    static Trigger* lady_vashj_hunter_should_misdirect(PlayerbotAI* botAI) {
+        return new SscHunterShouldMisdirectTrigger(
+            botAI, "lady vashj hunter should misdirect", "lady vashj");
     }
-    static Trigger* lady_vashj_adds_spawn_in_phase_2_and_phase_3(PlayerbotAI* botAI) {
-        return new LadyVashjAddsSpawnInPhase2AndPhase3Trigger(botAI);
+    static Trigger* lady_vashj_should_assign_target_priority(PlayerbotAI* botAI) {
+        return new LadyVashjShouldAssignTargetPriorityTrigger(botAI);
     }
-    static Trigger* lady_vashj_coilfang_strider_is_approaching(PlayerbotAI* botAI) {
-        return new LadyVashjCoilfangStriderIsApproachingTrigger(botAI);
+    static Trigger* lady_vashj_tank_needs_fear_ward(PlayerbotAI* botAI) {
+        return new LadyVashjTankNeedsFearWardTrigger(botAI);
+    }
+    static Trigger* lady_vashj_coilfang_strider_should_be_tanked(PlayerbotAI* botAI) {
+        return new LadyVashjCoilfangStriderShouldBeTankedTrigger(botAI);
     }
     static Trigger* lady_vashj_coilfang_elite_should_be_tanked(PlayerbotAI* botAI) {
         return new LadyVashjCoilfangEliteShouldBeTankedTrigger(botAI);
@@ -354,26 +382,26 @@ private:
     static Trigger* lady_vashj_tainted_elemental_needs_looter(PlayerbotAI* botAI) {
         return new LadyVashjTaintedElementalNeedsLooterTrigger(botAI);
     }
-    static Trigger* lady_vashj_bot_should_attack_tainted_elemental(PlayerbotAI* botAI) {
-        return new LadyVashjBotShouldAttackTaintedElementalTrigger(botAI);
+    static Trigger* lady_vashj_should_attack_tainted_elemental(PlayerbotAI* botAI) {
+        return new LadyVashjShouldAttackTaintedElementalTrigger(botAI);
     }
-    static Trigger* lady_vashj_bot_is_tainted_core_looter(PlayerbotAI* botAI) {
-        return new LadyVashjBotIsTaintedCoreLooterTrigger(botAI);
+    static Trigger* lady_vashj_tainted_core_looter(PlayerbotAI* botAI) {
+        return new LadyVashjTaintedCoreLooterTrigger(botAI);
     }
-    static Trigger* lady_vashj_bot_is_in_tainted_core_chain(PlayerbotAI* botAI) {
-        return new LadyVashjBotIsInTaintedCoreChainTrigger(botAI);
+    static Trigger* lady_vashj_core_passing_chain_member(PlayerbotAI* botAI) {
+        return new LadyVashjCorePassingChainMemberTrigger(botAI);
     }
-    static Trigger* lady_vashj_bot_should_destroy_tainted_core(PlayerbotAI* botAI) {
-        return new LadyVashjBotShouldDestroyTaintedCoreTrigger(botAI);
+    static Trigger* lady_vashj_should_destroy_tainted_core(PlayerbotAI* botAI) {
+        return new LadyVashjShouldDestroyTaintedCoreTrigger(botAI);
     }
     static Trigger* lady_vashj_pet_should_switch_target(PlayerbotAI* botAI) {
         return new LadyVashjPetShouldSwitchTargetTrigger(botAI);
     }
-    static Trigger* lady_vashj_bot_is_above_the_ground(PlayerbotAI* botAI) {
-        return new LadyVashjBotIsAboveTheGroundTrigger(botAI);
+    static Trigger* lady_vashj_bot_above_the_ground(PlayerbotAI* botAI) {
+        return new LadyVashjBotAboveTheGroundTrigger(botAI);
     }
-    static Trigger* lady_vashj_bot_is_in_toxic_spores(PlayerbotAI* botAI) {
-        return new LadyVashjBotIsInToxicSporesTrigger(botAI);
+    static Trigger* lady_vashj_bot_in_toxic_spores(PlayerbotAI* botAI) {
+        return new LadyVashjBotInToxicSporesTrigger(botAI);
     }
     static Trigger* lady_vashj_melee_near_toxic_spores(PlayerbotAI* botAI) {
         return new LadyVashjMeleeNearToxicSporesTrigger(botAI);
@@ -384,8 +412,8 @@ private:
     static Trigger* lady_vashj_entangle_on_melee(PlayerbotAI* botAI) {
         return new LadyVashjEntangleOnMeleeTrigger(botAI);
     }
-    static Trigger* lady_vashj_rogue_has_static_charge(PlayerbotAI* botAI) {
-        return new LadyVashjRogueHasStaticChargeTrigger(botAI);
+    static Trigger* lady_vashj_static_charge_on_rogue(PlayerbotAI* botAI) {
+        return new LadyVashjStaticChargeOnRogueTrigger(botAI);
     }
 };
 

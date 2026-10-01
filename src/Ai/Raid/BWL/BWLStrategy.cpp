@@ -88,7 +88,7 @@ void RaidBwlStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 
 void RaidBwlStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExclusionType type)
 {
-    if (type != TargetValueExclusionType::Tank)
+    if (type != TargetValueExclusionType::TankTarget)
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();

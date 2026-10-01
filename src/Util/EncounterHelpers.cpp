@@ -32,13 +32,9 @@ namespace EncounterHelpers
 
 // Calling InstanceScript::IsEncounterInProgress is a very cheap check to use as an initial gate
 // for triggers and multipliers that should run only during a boss fight. This will not work for
-// every single encounter, as some bosses are not scripted to report IN_PROGRESS (but at least in
-// TBC raids, that is rare: only Terestian Illhoof and Illidari Council do not). It's also possible
-// for a boss script to set IN_PROGRESS upon an event other than the pull; that's at least the case
-// with Kil'jaeden, who is set to IN_PROGRESS only after 1 of the 3 Hands of the Deceiver is killed
-// in phase 1. To avoid spamming this check across each trigger and multiplier, you can create a
-// derived class of Trigger or Multiplier to call this helper and then derive your triggers and
-// multipliers from the intermediate class.
+// every single encounter, as some bosses are not scripted to report IN_PROGRESS (though all TBC
+// raid bosses now do). It's also possible for a boss script to set IN_PROGRESS upon an event other
+// than the pull (e.g., Leotheras is set to IN_PROGRESS only after the Spellbinders are killed).
 bool IsEncounterInProgress(Player* bot, uint32 mapId)
 {
     if (bot->GetMapId() != mapId)
@@ -74,14 +70,11 @@ bool CanTakeStepTowards(
     if (candidateZ <= INVALID_HEIGHT)
         candidateZ = botZ;
 
-    // The 9th parameter of CanReachPositionAndGetValidCoords(), failOnSlopes, returns false for a
-    // non-walkable slope, but in my experience, walking downhill is always possible, and thus the
-    // check needlessly rejects descents. This variable gets around that problem.
     bool const failOnSlopes = candidateZ > botZ;
 
     // This helper will return false on collision rather than clamping to the contact point so that
     // the caller can try a different path. Clamping is useless for avoidance since the bot will die
-    // just the same if it is in the middle of a hazard vs. halfway out and returning true.
+    // just the same if it is in the middle of a hazard vs. halfway out and stuck returning true.
     float const requestedX = candidateX;
     float const requestedY = candidateY;
 
@@ -237,6 +230,8 @@ void SetRtiTarget(PlayerbotAI* botAI, std::string const& rtiName)
         rtiValue->Set(rtiName);
 }
 
+//By leewheel 20261002 恢复4参重载实现（合并时声明保留但实现缺失，致 worldserver LNK2019 无法解析外部符号）
+// 语义按 fork 注释：tracker 角色限定 DPS bot，且排除 exclude 成员；与历史 commit 68fae590 实现一致
 // Return the first alive DPS bot in the specified instance map, excluding any specified bot
 // Intended for purposes of storing and erasing timers and trackers in associative containers
 // Fork note: keeps the extended signature (botAI + optional exclude) so the mechanic tracker
@@ -266,8 +261,8 @@ bool IsMechanicTrackerBot(PlayerbotAI* botAI, Player* bot, uint32 mapId, Player*
     return false;
 }
 
-// 2-param overload for brighton-chi raid strategies (TK/SWP/HFR/Mag etc.)
-// Returns true if the bot is the first alive bot in the group on the given map
+// Return the first alive bot in the specified instance map for purposes of assigning
+// a single bot to manage associative containers, mark targets, etc.
 bool IsMechanicTrackerBot(Player* bot, uint32 mapId)
 {
     Group* group = bot->GetGroup();
@@ -277,8 +272,11 @@ bool IsMechanicTrackerBot(Player* bot, uint32 mapId)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || !member->IsAlive() || member->GetMapId() != mapId || !GET_PLAYERBOT_AI(member))
+        if (!member || !member->IsAlive() || member->GetMapId() != mapId ||
+            !GET_PLAYERBOT_AI(member))
+        {
             continue;
+        }
 
         return member == bot;
     }
@@ -286,8 +284,35 @@ bool IsMechanicTrackerBot(Player* bot, uint32 mapId)
     return false;
 }
 
-// Requires the main tank to be alive
-//By leewheel 2026-08-26 合并采用brighton简洁签名(本分支旧botAI参数为无用残留,函数体一致)
+// By leewheel 2026-10-02 合并brighton 07e47c61..beef2d08 补回：本 fork 扩展的 4 参重载
+//   （botAI + exclude，机制跟踪者限定 DPS，与 TK/SWP/ZA 行为一致；声明见 EncounterHelpers.h
+//   的 fork note）。解决 EncounterHelpers.cpp 冲突取上游版时被顺带覆盖，Seth/Kara 调用点
+//   （botAI, bot, mapId 三参形式）依赖它，缺实现即 LNK2019。实现体取自合并前 HEAD。
+bool IsMechanicTrackerBot(PlayerbotAI* botAI, Player* bot, uint32 mapId, Player* exclude)
+{
+    if (!botAI->IsDps(bot) || !bot->IsAlive() || bot->GetMapId() != mapId)
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive() || member->GetMapId() != mapId || member == exclude)
+            continue;
+
+        PlayerbotAI* memberAI = GET_PLAYERBOT_AI(member);
+        if (!memberAI || !memberAI->IsDps(member))
+            continue;
+
+        return member == bot;
+    }
+
+    return false;
+}
+// End By leewheel// Requires the main tank to be alive
 Player* GetGroupMainTank(Player* bot)
 {
     Group* group = bot->GetGroup();
@@ -307,9 +332,6 @@ Player* GetGroupMainTank(Player* bot)
 
     return nullptr;
 }
-
-// By leewheel 2026-08-30 合并上游：删除GetGroupMainTank/GetGroupAssistTank的3参兼容包装
-//   (调用点已全部改用上游2参签名)
 
 // Returns the alive assist tank of the specified index (0 = first, 1 = second, etc.)
 Player* GetGroupAssistTank(Player* bot, uint8 index)
@@ -347,29 +369,9 @@ Player* GetGroupAssistTank(Player* bot, uint8 index)
         }
     }
 
-    // If the index wasn't found among assistants, check the non-assistants that were saved
     uint8 nonAssistantIndex = index - assistantCount;
     if (nonAssistantIndex < nonAssistantTanks.size())
         return nonAssistantTanks[nonAssistantIndex];
-
-    return nullptr;
-}
-
-// By leewheel 2026-08-30 合并上游：删除3参兼容包装(调用点已全部改用2参签名)
-// 上游注释译：请勿使用，待所有调用点改造完成后此处将被移除。
-// Return the first matching alive unit from PossibleTargetsValue within .sightDistance from config
-// End By leewheel
-// Note that PossibleTargetsValue picks up only hostile units
-Unit* GetFirstAliveUnitByEntry(PlayerbotAI* botAI, uint32 entry)
-{
-    auto const& units =
-        botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
-    for (auto const& unitGuid : units)
-    {
-        Unit* unit = botAI->GetUnit(unitGuid);
-        if (unit && unit->IsAlive() && unit->GetEntry() == entry)
-            return unit;
-    }
 
     return nullptr;
 }
@@ -429,7 +431,8 @@ std::vector<Position> GetDynamicObjectPositions(Player* bot, float searchRadius,
     return dynObjs;
 }
 
-// 冰箱、圣盾术和/或暗影斗篷可用于抵消或无视多种危险的首领机制。
+// Ice Block, Divine Shield, and/or Cloak of Shadows can be used to nullify or ignore several
+// dangerous boss mechanics.
 uint32 GetSelfImmunitySpell(Player* bot)
 {
     constexpr uint32 iceBlock = 45438;

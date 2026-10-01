@@ -7,6 +7,7 @@
 // By leewheel 2026-08-30 合并上游：注册SWP/ZA新value context(RaidSunwellValueContext/RaidZulAmanValueContext,
 //   bombs等战斗机制values)，include列表随上游整理
 #include "AiObjectContext.h"
+#include "BTValueContext.h"
 #include "GDValueContext.h"
 #include "GruulValueContext.h"
 #include "HyjalValueContext.h"
@@ -25,6 +26,7 @@ void AiObjectContext::BuildSharedValueContexts(
     SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     valueContexts.Add(new ValueContext());
+    valueContexts.Add(new RaidBlackTempleValueContext());
     valueContexts.Add(new RaidGruulsLairValueContext());
     valueContexts.Add(new RaidHyjalValueContext());
     valueContexts.Add(new RaidMagtheridonValueContext());

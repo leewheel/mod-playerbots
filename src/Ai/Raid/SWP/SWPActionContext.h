@@ -33,8 +33,8 @@ public:
         creators["kalecgos announce boss health"] =
             &RaidSwpActionContext::kalecgos_announce_boss_health;
 
-        creators["kalecgos misdirect boss to main tank"] =
-            &RaidSwpActionContext::kalecgos_misdirect_boss_to_main_tank;
+        creators["kalecgos misdirect to main tank"] =
+            &RaidSwpActionContext::kalecgos_misdirect_to_main_tank;
 
         creators["kalecgos surface tank position dragon"] =
             &RaidSwpActionContext::kalecgos_surface_tank_position_dragon;
@@ -55,8 +55,8 @@ public:
             &RaidSwpActionContext::kalecgos_return_to_spectral_realm_ground;
 
         // Brutallus
-        creators["brutallus misdirect boss to main tank"] =
-            &RaidSwpActionContext::brutallus_misdirect_boss_to_main_tank;
+        creators["brutallus misdirect to main tank"] =
+            &RaidSwpActionContext::brutallus_misdirect_to_main_tank;
 
         creators["brutallus tanks position and swap"] =
             &RaidSwpActionContext::brutallus_tanks_position_and_swap;
@@ -71,8 +71,8 @@ public:
             &RaidSwpActionContext::brutallus_isolate_burn;
 
         // Felmyst
-        creators["felmyst misdirect boss to main tank"] =
-            &RaidSwpActionContext::felmyst_misdirect_boss_to_main_tank;
+        creators["felmyst misdirect to main tank"] =
+            &RaidSwpActionContext::felmyst_misdirect_to_main_tank;
 
         creators["felmyst main tank position boss on ground"] =
             &RaidSwpActionContext::felmyst_main_tank_position_boss_on_ground;
@@ -117,8 +117,8 @@ public:
         creators["eredar twins announce alythess tank"] =
             &RaidSwpActionContext::eredar_twins_announce_alythess_tank;
 
-        creators["eredar twins misdirect bosses to tanks"] =
-            &RaidSwpActionContext::eredar_twins_misdirect_bosses_to_tanks;
+        creators["eredar twins misdirect to tanks"] =
+            &RaidSwpActionContext::eredar_twins_misdirect_to_tanks;
 
         creators["eredar twins position sacrolash tanks"] =
             &RaidSwpActionContext::eredar_twins_position_sacrolash_tanks;
@@ -145,8 +145,8 @@ public:
             &RaidSwpActionContext::eredar_twins_move_away_from_sacrolash_victim;
 
         // M'uru
-        creators["m'uru misdirect enemies to tanks"] =
-            &RaidSwpActionContext::muru_misdirect_enemies_to_tanks;
+        creators["m'uru misdirect enemy to tank"] =
+            &RaidSwpActionContext::muru_misdirect_enemy_to_tank;
 
         creators["m'uru main tank pick up entropius"] =
             &RaidSwpActionContext::muru_main_tank_pick_up_entropius;
@@ -246,11 +246,9 @@ private:
     }
 
     // Kalecgos
-    static Action* kalecgos_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
-        // By leewheel 2026-09-10 合并brighton 5e3dac27: boss名按本地entry规则改写(卡雷苟斯24850)
-        return new SunwellMisdirectBossToMainTankAction(
-            botAI, "kalecgos misdirect boss to main tank", "24850");
-        // End By leewheel
+    static Action* kalecgos_misdirect_to_main_tank(PlayerbotAI* botAI) {
+        return new SunwellMisdirectToMainTankAction(
+            botAI, "kalecgos misdirect to main tank", "kalecgos");
     }
     static Action* kalecgos_announce_boss_health(PlayerbotAI* botAI) {
         return new KalecgosAnnounceBossHealthAction(botAI);
@@ -276,11 +274,9 @@ private:
     }
 
     // Brutallus
-    static Action* brutallus_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
-        // By leewheel 2026-09-10 合并brighton 5e3dac27: boss名按本地entry规则改写(布鲁塔卢斯24882)
-        return new SunwellMisdirectBossToMainTankAction(
-            botAI, "brutallus misdirect boss to main tank", "24882");
-        // End By leewheel
+    static Action* brutallus_misdirect_to_main_tank(PlayerbotAI* botAI) {
+        return new SunwellMisdirectToMainTankAction(
+            botAI, "brutallus misdirect to main tank", "brutallus");
     }
     static Action* brutallus_tanks_position_and_swap(PlayerbotAI* botAI) {
         return new BrutallusTanksPositionAndSwapAction(botAI);
@@ -296,11 +292,9 @@ private:
     }
 
     // Felmyst
-    static Action* felmyst_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
-        // By leewheel 2026-09-10 合并brighton 5e3dac27: boss名按本地entry规则改写(菲米丝25038)
-        return new SunwellMisdirectBossToMainTankAction(
-            botAI, "felmyst misdirect boss to main tank", "25038");
-        // End By leewheel
+    static Action* felmyst_misdirect_to_main_tank(PlayerbotAI* botAI) {
+        return new SunwellMisdirectToMainTankAction(
+            botAI, "felmyst misdirect to main tank", "felmyst");
     }
     static Action* felmyst_main_tank_position_boss_on_ground(PlayerbotAI* botAI) {
         return new FelmystMainTankPositionBossOnGroundAction(botAI);
@@ -346,8 +340,8 @@ private:
     static Action* eredar_twins_announce_alythess_tank(PlayerbotAI* botAI) {
         return new EredarTwinsAnnounceAlythessTankAction(botAI);
     }
-    static Action* eredar_twins_misdirect_bosses_to_tanks(PlayerbotAI* botAI) {
-        return new EredarTwinsMisdirectBossesToTanksAction(botAI);
+    static Action* eredar_twins_misdirect_to_tanks(PlayerbotAI* botAI) {
+        return new EredarTwinsMisdirectToTanksAction(botAI);
     }
     static Action* eredar_twins_position_sacrolash_tanks(PlayerbotAI* botAI) {
         return new EredarTwinsPositionSacrolashTanksAction(botAI);
@@ -376,8 +370,8 @@ private:
     }
 
     // M'uru
-    static Action* muru_misdirect_enemies_to_tanks(PlayerbotAI* botAI) {
-        return new MuruMisdirectEnemiesToTanksAction(botAI);
+    static Action* muru_misdirect_enemy_to_tank(PlayerbotAI* botAI) {
+        return new MuruMisdirectEnemyToTankAction(botAI);
     }
     static Action* muru_main_tank_pick_up_entropius(PlayerbotAI* botAI) {
         return new MuruMainTankPickUpEntropiusAction(botAI);

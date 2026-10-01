@@ -36,8 +36,8 @@ public:
         creators["hydross the unstable frost phase spread ranged"] =
             &RaidSscActionContext::hydross_the_unstable_frost_phase_spread_ranged;
 
-        creators["hydross the unstable misdirect boss to tank"] =
-            &RaidSscActionContext::hydross_the_unstable_misdirect_boss_to_tank;
+        creators["hydross the unstable misdirect to tank"] =
+            &RaidSscActionContext::hydross_the_unstable_misdirect_to_tank;
 
         creators["hydross the unstable stop dps upon phase change"] =
             &RaidSscActionContext::hydross_the_unstable_stop_dps_upon_phase_change;
@@ -62,14 +62,14 @@ public:
             &RaidSscActionContext::the_lurker_below_melee_move_directly_to_target;
 
         // Leotheras the Blind
-        creators["leotheras the blind warlock tank attack boss"] =
-            &RaidSscActionContext::leotheras_the_blind_warlock_tank_attack_boss;
+        creators["leotheras the blind warlock tank attack demon form"] =
+            &RaidSscActionContext::leotheras_the_blind_warlock_tank_attack_demon_form;
 
         creators["leotheras the blind tanks build rage on demon form"] =
             &RaidSscActionContext::leotheras_the_blind_tanks_build_rage_on_demon_form;
 
-        creators["leotheras the blind position ranged"] =
-            &RaidSscActionContext::leotheras_the_blind_position_ranged;
+        creators["leotheras the blind ranged keep distance"] =
+            &RaidSscActionContext::leotheras_the_blind_ranged_keep_distance;
 
         creators["leotheras the blind run away from whirlwind"] =
             &RaidSscActionContext::leotheras_the_blind_run_away_from_whirlwind;
@@ -86,8 +86,11 @@ public:
         creators["leotheras the blind final phase separate boss from demon"] =
             &RaidSscActionContext::leotheras_the_blind_final_phase_separate_boss_from_demon;
 
-        creators["leotheras the blind misdirect boss to warlock tank"] =
-            &RaidSscActionContext::leotheras_the_blind_misdirect_boss_to_warlock_tank;
+        creators["leotheras the blind misdirect demon form to tank"] =
+            &RaidSscActionContext::leotheras_the_blind_misdirect_demon_form_to_tank;
+
+        creators["leotheras the blind melee stop attacking"] =
+            &RaidSscActionContext::leotheras_the_blind_melee_stop_attacking;
 
         creators["leotheras the blind manage dps wait timers"] =
             &RaidSscActionContext::leotheras_the_blind_manage_dps_wait_timers;
@@ -99,8 +102,8 @@ public:
         creators["fathom-lord karathress position caribdis tank healer"] =
             &RaidSscActionContext::fathom_lord_karathress_position_caribdis_tank_healer;
 
-        creators["fathom-lord karathress misdirect bosses to tanks"] =
-            &RaidSscActionContext::fathom_lord_karathress_misdirect_bosses_to_tanks;
+        creators["fathom-lord karathress misdirect to tanks"] =
+            &RaidSscActionContext::fathom_lord_karathress_misdirect_to_tanks;
 
         creators["fathom-lord karathress assign dps priority"] =
             &RaidSscActionContext::fathom_lord_karathress_assign_dps_priority;
@@ -115,8 +118,8 @@ public:
             &RaidSscActionContext::fathom_lord_karathress_drop_from_cyclone;
 
         // Morogrim Tidewalker
-        creators["morogrim tidewalker misdirect boss to main tank"] =
-            &RaidSscActionContext::morogrim_tidewalker_misdirect_boss_to_main_tank;
+        creators["morogrim tidewalker misdirect to main tank"] =
+            &RaidSscActionContext::morogrim_tidewalker_misdirect_to_main_tank;
 
         creators["morogrim tidewalker position main tank"] =
             &RaidSscActionContext::morogrim_tidewalker_position_main_tank;
@@ -143,20 +146,26 @@ public:
         creators["lady vashj phase 3 position ranged"] =
             &RaidSscActionContext::lady_vashj_phase_3_position_ranged;
 
+        creators["lady vashj assign grounding shaman"] =
+            &RaidSscActionContext::lady_vashj_assign_grounding_shaman;
+
         creators["lady vashj set grounding totem in main tank group"] =
             &RaidSscActionContext::lady_vashj_set_grounding_totem_in_main_tank_group;
 
         creators["lady vashj static charge move away from group"] =
             &RaidSscActionContext::lady_vashj_static_charge_move_away_from_group;
 
-        creators["lady vashj misdirect boss to main tank"] =
-            &RaidSscActionContext::lady_vashj_misdirect_boss_to_main_tank;
+        creators["lady vashj misdirect to main tank"] =
+            &RaidSscActionContext::lady_vashj_misdirect_to_main_tank;
 
-        creators["lady vashj assign phase 2 and phase 3 dps priority"] =
-            &RaidSscActionContext::lady_vashj_assign_phase_2_and_phase_3_dps_priority;
+        creators["lady vashj assign target priority"] =
+            &RaidSscActionContext::lady_vashj_assign_target_priority;
 
-        creators["lady vashj tank attack and position strider"] =
-            &RaidSscActionContext::lady_vashj_tank_attack_and_position_strider;
+        creators["lady vashj tank apply fear ward"] =
+            &RaidSscActionContext::lady_vashj_tank_apply_fear_ward;
+
+        creators["lady vashj position coilfang strider"] =
+            &RaidSscActionContext::lady_vashj_position_coilfang_strider;
 
         creators["lady vashj position coilfang elite"] =
             &RaidSscActionContext::lady_vashj_position_coilfang_elite;
@@ -225,13 +234,16 @@ private:
             botAI, "hydross the unstable position nature tank", false);
     }
     static Action* hydross_the_unstable_frost_phase_spread_ranged(PlayerbotAI* botAI) {
-        return new HydrossTheUnstableFrostPhaseSpreadRangedAction(botAI);
+        return new SscSpreadRangedAction(
+            botAI, "hydross the unstable frost phase spread ranged",
+            SscHelpers::HYDROSS_FROST_RANGED_SPREAD_DISTANCE);
     }
-    static Action* hydross_the_unstable_misdirect_boss_to_tank(PlayerbotAI* botAI) {
-        return new HydrossTheUnstableMisdirectBossToTankAction(botAI);
+    static Action* hydross_the_unstable_misdirect_to_tank(PlayerbotAI* botAI) {
+        return new HydrossTheUnstableMisdirectToTankAction(botAI);
     }
     static Action* hydross_the_unstable_stop_dps_upon_phase_change(PlayerbotAI* botAI) {
-        return new HydrossTheUnstableStopDpsUponPhaseChangeAction(botAI);
+        return new SscStopAttackingAction(
+            botAI, "hydross the unstable stop dps upon phase change");
     }
     static Action* hydross_the_unstable_manage_phase_timers(PlayerbotAI* botAI) {
         return new HydrossTheUnstableManagePhaseTimersAction(botAI);
@@ -255,14 +267,14 @@ private:
     }
 
     // Leotheras the Blind
-    static Action* leotheras_the_blind_warlock_tank_attack_boss(PlayerbotAI* botAI) {
-        return new LeotherasTheBlindWarlockTankAttackBossAction(botAI);
+    static Action* leotheras_the_blind_warlock_tank_attack_demon_form(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindWarlockTankAttackDemonFormAction(botAI);
     }
     static Action* leotheras_the_blind_tanks_build_rage_on_demon_form(PlayerbotAI* botAI) {
         return new LeotherasTheBlindTanksBuildRageOnDemonFormAction(botAI);
     }
-    static Action* leotheras_the_blind_position_ranged(PlayerbotAI* botAI) {
-        return new LeotherasTheBlindPositionRangedAction(botAI);
+    static Action* leotheras_the_blind_ranged_keep_distance(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindRangedKeepDistanceAction(botAI);
     }
     static Action* leotheras_the_blind_run_away_from_whirlwind(PlayerbotAI* botAI) {
         return new LeotherasTheBlindRunAwayFromWhirlwindAction(botAI);
@@ -273,14 +285,17 @@ private:
     static Action* leotheras_the_blind_destroy_inner_demon(PlayerbotAI* botAI) {
         return new LeotherasTheBlindDestroyInnerDemonAction(botAI);
     }
-    static Action* leotheras_the_blind_misdirect_boss_to_warlock_tank(PlayerbotAI* botAI) {
-        return new LeotherasTheBlindMisdirectBossToWarlockTankAction(botAI);
+    static Action* leotheras_the_blind_misdirect_demon_form_to_tank(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindMisdirectDemonFormToTankAction(botAI);
     }
     static Action* leotheras_the_blind_final_phase_attack_boss(PlayerbotAI* botAI) {
         return new LeotherasTheBlindFinalPhaseAttackBossAction(botAI);
     }
     static Action* leotheras_the_blind_final_phase_separate_boss_from_demon(PlayerbotAI* botAI) {
         return new LeotherasTheBlindFinalPhaseSeparateBossFromDemonAction(botAI);
+    }
+    static Action* leotheras_the_blind_melee_stop_attacking(PlayerbotAI* botAI) {
+        return new SscStopAttackingAction(botAI, "leotheras the blind melee stop attacking");
     }
     static Action* leotheras_the_blind_manage_dps_wait_timers(PlayerbotAI* botAI) {
         return new LeotherasTheBlindManageDpsWaitTimersAction(botAI);
@@ -293,8 +308,8 @@ private:
     static Action* fathom_lord_karathress_position_caribdis_tank_healer(PlayerbotAI* botAI) {
         return new FathomLordKarathressPositionCaribdisTankHealerAction(botAI);
     }
-    static Action* fathom_lord_karathress_misdirect_bosses_to_tanks(PlayerbotAI* botAI) {
-        return new FathomLordKarathressMisdirectBossesToTanksAction(botAI);
+    static Action* fathom_lord_karathress_misdirect_to_tanks(PlayerbotAI* botAI) {
+        return new FathomLordKarathressMisdirectToTanksAction(botAI);
     }
     static Action* fathom_lord_karathress_assign_dps_priority(PlayerbotAI* botAI) {
         return new FathomLordKarathressAssignDpsPriorityAction(botAI);
@@ -303,18 +318,18 @@ private:
         return new FathomLordKarathressManageDpsTimerAction(botAI);
     }
     static Action* fathom_lord_karathress_spread_ranged(PlayerbotAI* botAI) {
-        return new FathomLordKarathressSpreadRangedAction(botAI);
+        return new SscSpreadRangedAction(
+            botAI, "fathom-lord karathress spread ranged",
+            SscHelpers::CARIBDIS_RANGED_SPREAD_DISTANCE);
     }
     static Action* fathom_lord_karathress_drop_from_cyclone(PlayerbotAI* botAI) {
         return new FathomLordKarathressDropFromCycloneAction(botAI);
     }
 
     // Morogrim Tidewalker
-    static Action* morogrim_tidewalker_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
-        return new SscMisdirectTargetToTankAction(
-            // By leewheel 2026-09-28 规则第 97 条：boss 检索用 entry（莫洛格里姆·踏潮者=21213，查库核定）
-            // End By leewheel
-            botAI, "morogrim tidewalker misdirect boss to main tank", "21213");
+    static Action* morogrim_tidewalker_misdirect_to_main_tank(PlayerbotAI* botAI) {
+        return new SscMisdirectToMainTankAction(
+            botAI, "morogrim tidewalker misdirect to main tank", "morogrim tidewalker");
     }
     static Action* morogrim_tidewalker_position_main_tank(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerPositionMainTankAction(botAI);
@@ -342,23 +357,27 @@ private:
     static Action* lady_vashj_phase_3_position_ranged(PlayerbotAI* botAI) {
         return new LadyVashjPhase3PositionRangedAction(botAI);
     }
+    static Action* lady_vashj_assign_grounding_shaman(PlayerbotAI* botAI) {
+        return new LadyVashjAssignGroundingShamanAction(botAI);
+    }
     static Action* lady_vashj_set_grounding_totem_in_main_tank_group(PlayerbotAI* botAI) {
         return new LadyVashjSetGroundingTotemInMainTankGroupAction(botAI);
     }
     static Action* lady_vashj_static_charge_move_away_from_group(PlayerbotAI* botAI) {
         return new LadyVashjStaticChargeMoveAwayFromGroupAction(botAI);
     }
-    static Action* lady_vashj_misdirect_boss_to_main_tank(PlayerbotAI* botAI) {
-        return new SscMisdirectTargetToTankAction(
-            // By leewheel 2026-09-28 规则第 97 条：boss 检索用 entry（瓦丝琪=21212，查库核定）
-            // End By leewheel
-            botAI, "lady vashj misdirect boss to main tank", "21212");
+    static Action* lady_vashj_misdirect_to_main_tank(PlayerbotAI* botAI) {
+        return new SscMisdirectToMainTankAction(
+            botAI, "lady vashj misdirect to main tank", "lady vashj");
     }
-    static Action* lady_vashj_assign_phase_2_and_phase_3_dps_priority(PlayerbotAI* botAI) {
-        return new LadyVashjAssignPhase2AndPhase3DpsPriorityAction(botAI);
+    static Action* lady_vashj_assign_target_priority(PlayerbotAI* botAI) {
+        return new LadyVashjAssignTargetPriorityAction(botAI);
     }
-    static Action* lady_vashj_tank_attack_and_position_strider(PlayerbotAI* botAI) {
-        return new LadyVashjTankAttackAndPositionStriderAction(botAI);
+    static Action* lady_vashj_tank_apply_fear_ward(PlayerbotAI* botAI) {
+        return new LadyVashjTankApplyFearWardAction(botAI);
+    }
+    static Action* lady_vashj_position_coilfang_strider(PlayerbotAI* botAI) {
+        return new LadyVashjPositionCoilfangStriderAction(botAI);
     }
     static Action* lady_vashj_position_coilfang_elite(PlayerbotAI* botAI) {
         return new LadyVashjPositionCoilfangEliteAction(botAI);

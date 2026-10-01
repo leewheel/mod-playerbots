@@ -29,11 +29,11 @@ public:
 
 // High Warlord Naj'entus
 
-class HighWarlordNajentusMisdirectBossToMainTankAction : public AttackAction
+class HighWarlordNajentusMisdirectToMainTankAction : public AttackAction
 {
 public:
-    HighWarlordNajentusMisdirectBossToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "high warlord naj'entus misdirect boss to main tank") {}
+    HighWarlordNajentusMisdirectToMainTankAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "high warlord naj'entus misdirect to main tank") {}
     bool Execute(Event event) override;
 };
 
@@ -49,7 +49,7 @@ class HighWarlordNajentusDisperseRangedAction : public MovementAction
 {
 public:
     HighWarlordNajentusDisperseRangedAction(
-        PlayerbotAI* botAI) : MovementAction(botAI, "naj'entus disperse ranged") {}
+        PlayerbotAI* botAI) : MovementAction(botAI, "high warlord naj'entus disperse ranged") {}
     bool Execute(Event event) override;
 };
 
@@ -71,11 +71,11 @@ public:
 
 // Supremus
 
-class SupremusMisdirectBossToMainTankAction : public AttackAction
+class SupremusMisdirectToTanksAction : public AttackAction
 {
 public:
-    SupremusMisdirectBossToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "supremus misdirect boss to main tank") {}
+    SupremusMisdirectToTanksAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "supremus misdirect to tanks") {}
     bool Execute(Event event) override;
 };
 
@@ -107,7 +107,6 @@ private:
         std::vector<Unit*> const& volcanos, float maxRadius, float hazardRadius);
     bool IsPathSafeFromVolcanos(Position const& start,
         Position const& end, std::vector<Unit*> const& volcanos, float hazardRadius);
-    std::vector<Unit*> GetAllSupremusVolcanos();
 };
 
 class SupremusManagePhaseTimerAction : public Action
@@ -130,11 +129,11 @@ public:
 
 // Teron Gorefiend
 
-class TeronGorefiendMisdirectBossToMainTankAction : public AttackAction
+class TeronGorefiendMisdirectToMainTankAction : public AttackAction
 {
 public:
-    TeronGorefiendMisdirectBossToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "teron gorefiend misdirect boss to main tank") {}
+    TeronGorefiendMisdirectToMainTankAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "teron gorefiend misdirect to main tank") {}
     bool Execute(Event event) override;
 };
 
@@ -180,11 +179,11 @@ public:
 
 // Gurtogg Bloodboil
 
-class GurtoggBloodboilMisdirectBossToMainTankAction : public AttackAction
+class GurtoggBloodboilMisdirectToMainTankAction : public AttackAction
 {
 public:
-    GurtoggBloodboilMisdirectBossToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "gurtogg bloodboil misdirect boss to main tank") {}
+    GurtoggBloodboilMisdirectToMainTankAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "gurtogg bloodboil misdirect to main tank") {}
     bool Execute(Event event) override;
 };
 
@@ -222,11 +221,11 @@ public:
 
 // Reliquary of Souls
 
-class ReliquaryOfSoulsMisdirectBossToMainTankAction : public AttackAction
+class ReliquaryOfSoulsMisdirectToMainTankAction : public AttackAction
 {
 public:
-    ReliquaryOfSoulsMisdirectBossToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "reliquary of souls misdirect boss to main tank") {}
+    ReliquaryOfSoulsMisdirectToMainTankAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "reliquary of souls misdirect to main tank") {}
     bool Execute(Event event) override;
 };
 
@@ -269,11 +268,11 @@ public:
 
 // Mother Shahraz
 
-class MotherShahrazMisdirectBossToMainTankAction : public AttackAction
+class MotherShahrazMisdirectToMainTankAction : public AttackAction
 {
 public:
-    MotherShahrazMisdirectBossToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "mother shahraz misdirect boss to main tank") {}
+    MotherShahrazMisdirectToMainTankAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "mother shahraz misdirect to main tank") {}
     bool Execute(Event event) override;
 };
 
@@ -314,11 +313,11 @@ private:
 
 // Illidari Council
 
-class IllidariCouncilMisdirectBossesToTanksAction : public AttackAction
+class IllidariCouncilMisdirectToTanksAction : public AttackAction
 {
 public:
-    IllidariCouncilMisdirectBossesToTanksAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "illidari council misdirect bosses to tanks") {}
+    IllidariCouncilMisdirectToTanksAction(
+        PlayerbotAI* botAI) : AttackAction(botAI, "illidari council misdirect to tanks") {}
     bool Execute(Event event) override;
 };
 
@@ -424,7 +423,7 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool MoveToShadowTrap(GameObject* trap);
+    bool MoveToShadowTrap(Unit* illidan, GameObject* trap);
     Position FindSafestNearbyPosition(
         std::vector<Unit*> const& flameCrashes, float maxRadius, float hazardRadius);
     bool IsPathSafeFromFlameCrashes(Position const& start,
@@ -439,8 +438,8 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool InfectedBotMoveFromGroup(Unit* illidan, Position const& targetPos);
-    bool FreezeTrapShadowfiend(Player* bot, Unit* illidan, Position const& targetPos);
+    bool InfectedBotMoveFromGroup(Position const& targetPos);
+    bool FreezeTrapShadowfiend(Position const& targetPos);
 };
 
 class IllidanStormrageSetEarthbindTotemAction : public Action
@@ -459,7 +458,7 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool RepositionToAvoidEyeBlast(Unit* illidan, BlackTempleHelpers::EyeBlastDangerArea const& dangerArea);
+    bool RepositionToAvoidEyeBlast(BlackTempleHelpers::EyeBlastDangerArea const& dangerArea);
     bool RepositionToAvoidBlaze(Unit* eastFlame, Unit* westFlame);
 };
 

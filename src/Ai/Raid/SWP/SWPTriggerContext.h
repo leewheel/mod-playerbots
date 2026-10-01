@@ -32,7 +32,8 @@ public:
         creators["kalecgos should communicate boss health"] =
             &RaidSwpTriggerContext::kalecgos_should_communicate_boss_health;
 
-        creators["kalecgos pulling boss"] = &RaidSwpTriggerContext::kalecgos_pulling_boss;
+        creators["kalecgos hunter should misdirect"] =
+            &RaidSwpTriggerContext::kalecgos_hunter_should_misdirect;
 
         creators["kalecgos requires tank rotation"] =
             &RaidSwpTriggerContext::kalecgos_requires_tank_rotation;
@@ -53,7 +54,8 @@ public:
             &RaidSwpTriggerContext::kalecgos_bots_dont_observe_gravity;
 
         // Brutallus
-        creators["brutallus pulling boss"] = &RaidSwpTriggerContext::brutallus_pulling_boss;
+        creators["brutallus hunter should misdirect"] =
+            &RaidSwpTriggerContext::brutallus_hunter_should_misdirect;
 
         creators["brutallus requires two tanks"] =
             &RaidSwpTriggerContext::brutallus_requires_two_tanks;
@@ -67,7 +69,8 @@ public:
         creators["brutallus burn on non-tank"] = &RaidSwpTriggerContext::brutallus_burn_on_non_tank;
 
         // Felmyst
-        creators["felmyst pulling boss"] = &RaidSwpTriggerContext::felmyst_pulling_boss;
+        creators["felmyst hunter should misdirect"] =
+            &RaidSwpTriggerContext::felmyst_hunter_should_misdirect;
 
         creators["felmyst ground phase should be tanked"] =
             &RaidSwpTriggerContext::felmyst_ground_phase_should_be_tanked;
@@ -112,8 +115,8 @@ public:
         creators["eredar twins should announce alythess tank"] =
             &RaidSwpTriggerContext::eredar_twins_should_announce_alythess_tank;
 
-        creators["eredar twins pulling bosses"] =
-            &RaidSwpTriggerContext::eredar_twins_pulling_bosses;
+        creators["eredar twins hunter should misdirect"] =
+            &RaidSwpTriggerContext::eredar_twins_hunter_should_misdirect;
 
         creators["eredar twins sacrolash requires two tanks"] =
             &RaidSwpTriggerContext::eredar_twins_sacrolash_requires_two_tanks;
@@ -140,8 +143,8 @@ public:
             &RaidSwpTriggerContext::eredar_twins_sacrolash_victim_has_conflagration;
 
         // M'uru
-        creators["m'uru void sentinel or entropius has appeared"] =
-            &RaidSwpTriggerContext::muru_void_sentinel_or_entropius_has_appeared;
+        creators["m'uru hunter should misdirect new enemy"] =
+            &RaidSwpTriggerContext::muru_hunter_should_misdirect_new_enemy;
 
         creators["m'uru transformed into entropius"] =
             &RaidSwpTriggerContext::muru_transformed_into_entropius;
@@ -152,8 +155,13 @@ public:
         creators["m'uru should assign dps priority"] =
             &RaidSwpTriggerContext::muru_should_assign_dps_priority;
 
-        creators["m'uru void sentinel pulses shadow"] =
-            &RaidSwpTriggerContext::muru_void_sentinel_pulses_shadow;
+        // By leewheel 2026-10-02 合并brighton the-lab 07e47c61..beef2d08: 上游此处键名为
+        //   "m'uru m'uru void sentinel should be tanked"（双前缀笔误），与策略注册名
+        //   "m'uru void sentinel should be tanked" 不一致会导致运行期找不到 creator，
+        //   修正为与 SWPStrategy.cpp 注册名一致。
+        creators["m'uru void sentinel should be tanked"] =
+            &RaidSwpTriggerContext::muru_void_sentinel_should_be_tanked;
+        // End By leewheel
 
         creators["m'uru adds spawn at entrance"] =
             &RaidSwpTriggerContext::muru_adds_spawn_at_entrance;
@@ -162,14 +170,14 @@ public:
 
         creators["m'uru darkness is coming"] = &RaidSwpTriggerContext::muru_darkness_is_coming;
 
-        creators["m'uru berserker is buffed with flurry"] =
-            &RaidSwpTriggerContext::muru_berserker_is_buffed_with_flurry;
+        creators["m'uru berserker has flurry"] =
+            &RaidSwpTriggerContext::muru_berserker_has_flurry;
 
         creators["m'uru fury mage casting fel fireball"] =
             &RaidSwpTriggerContext::muru_fury_mage_casting_fel_fireball;
 
-        creators["m'uru fury mage is buffed with spell fury"] =
-            &RaidSwpTriggerContext::muru_fury_mage_is_buffed_with_spell_fury;
+        creators["m'uru fury mage has spell fury"] =
+            &RaidSwpTriggerContext::muru_fury_mage_has_spell_fury;
 
         creators["m'uru void spawn available for enslave"] =
             &RaidSwpTriggerContext::muru_void_spawn_available_for_enslave;
@@ -177,8 +185,8 @@ public:
         creators["m'uru warlock has enslaved void spawn"] =
             &RaidSwpTriggerContext::muru_warlock_has_enslaved_void_spawn;
 
-        creators["m'uru entropius darkness pools spawn dark fiends"] =
-            &RaidSwpTriggerContext::muru_entropius_darkness_pools_spawn_dark_fiends;
+        creators["m'uru entropius summons void zones"] =
+            &RaidSwpTriggerContext::muru_entropius_summons_void_zones;
 
         creators["m'uru the singularity is near"] =
             &RaidSwpTriggerContext::muru_the_singularity_is_near;
@@ -233,8 +241,9 @@ private:
     }
 
     // Kalecgos
-    static Trigger* kalecgos_pulling_boss(PlayerbotAI* botAI) {
-        return new KalecgosPullingBossTrigger(botAI);
+    static Trigger* kalecgos_hunter_should_misdirect(PlayerbotAI* botAI) {
+        return new SunwellHunterShouldMisdirectTrigger(
+            botAI, "kalecgos hunter should misdirect", "kalecgos");
     }
     static Trigger* kalecgos_should_communicate_boss_health(PlayerbotAI* botAI) {
         return new KalecgosShouldCommunicateBossHealthTrigger(botAI);
@@ -259,8 +268,9 @@ private:
     }
 
     // Brutallus
-    static Trigger* brutallus_pulling_boss(PlayerbotAI* botAI) {
-        return new BrutallusPullingBossTrigger(botAI);
+    static Trigger* brutallus_hunter_should_misdirect(PlayerbotAI* botAI) {
+        return new SunwellHunterShouldMisdirectTrigger(
+            botAI, "brutallus hunter should misdirect", "brutallus");
     }
     static Trigger* brutallus_requires_two_tanks(PlayerbotAI* botAI) {
         return new BrutallusRequiresTwoTanksTrigger(botAI);
@@ -276,8 +286,8 @@ private:
     }
 
     // Felmyst
-    static Trigger* felmyst_pulling_boss(PlayerbotAI* botAI) {
-        return new FelmystPullingBossTrigger(botAI);
+    static Trigger* felmyst_hunter_should_misdirect(PlayerbotAI* botAI) {
+        return new FelmystHunterShouldMisdirectTrigger(botAI);
     }
     static Trigger* felmyst_ground_phase_should_be_tanked(PlayerbotAI* botAI) {
         return new FelmystGroundPhaseShouldBeTankedTrigger(botAI);
@@ -323,8 +333,9 @@ private:
     static Trigger* eredar_twins_should_announce_alythess_tank(PlayerbotAI* botAI) {
         return new EredarTwinsShouldAnnounceAlythessTankTrigger(botAI);
     }
-    static Trigger* eredar_twins_pulling_bosses(PlayerbotAI* botAI) {
-        return new EredarTwinsPullingBossesTrigger(botAI);
+    static Trigger* eredar_twins_hunter_should_misdirect(PlayerbotAI* botAI) {
+        return new SunwellHunterShouldMisdirectTrigger(
+            botAI, "eredar twins hunter should misdirect", "grand warlock alythess");
     }
     static Trigger* eredar_twins_sacrolash_requires_two_tanks(PlayerbotAI* botAI) {
         return new EredarTwinsSacrolashRequiresTwoTanksTrigger(botAI);
@@ -352,8 +363,8 @@ private:
     }
 
     // M'uru
-    static Trigger* muru_void_sentinel_or_entropius_has_appeared(PlayerbotAI* botAI) {
-        return new MuruVoidSentinelOrEntropiusHasAppearedTrigger(botAI);
+    static Trigger* muru_hunter_should_misdirect_new_enemy(PlayerbotAI* botAI) {
+        return new MuruHunterShouldMisdirectNewEnemyTrigger(botAI);
     }
     static Trigger* muru_transformed_into_entropius(PlayerbotAI* botAI) {
         return new MuruTransformedIntoEntropiusTrigger(botAI);
@@ -364,8 +375,8 @@ private:
     static Trigger* muru_should_assign_dps_priority(PlayerbotAI* botAI) {
         return new MuruShouldAssignDpsPriorityTrigger(botAI);
     }
-    static Trigger* muru_void_sentinel_pulses_shadow(PlayerbotAI* botAI) {
-        return new MuruVoidSentinelPulsesShadowTrigger(botAI);
+    static Trigger* muru_void_sentinel_should_be_tanked(PlayerbotAI* botAI) {
+        return new MuruVoidSentinelShouldBeTankedTrigger(botAI);
     }
     static Trigger* muru_adds_spawn_at_entrance(PlayerbotAI* botAI) {
         return new MuruAddsSpawnAtEntranceTrigger(botAI);
@@ -376,14 +387,14 @@ private:
     static Trigger* muru_darkness_is_coming(PlayerbotAI* botAI) {
         return new MuruDarknessIsComingTrigger(botAI);
     }
-    static Trigger* muru_berserker_is_buffed_with_flurry(PlayerbotAI* botAI) {
-        return new MuruBerserkerIsBuffedWithFlurryTrigger(botAI);
+    static Trigger* muru_berserker_has_flurry(PlayerbotAI* botAI) {
+        return new MuruBerserkerHasFlurryTrigger(botAI);
     }
     static Trigger* muru_fury_mage_casting_fel_fireball(PlayerbotAI* botAI) {
         return new MuruFuryMageCastingFelFireballTrigger(botAI);
     }
-    static Trigger* muru_fury_mage_is_buffed_with_spell_fury(PlayerbotAI* botAI) {
-        return new MuruFuryMageIsBuffedWithSpellFuryTrigger(botAI);
+    static Trigger* muru_fury_mage_has_spell_fury(PlayerbotAI* botAI) {
+        return new MuruFuryMageHasSpellFuryTrigger(botAI);
     }
     static Trigger* muru_void_spawn_available_for_enslave(PlayerbotAI* botAI) {
         return new MuruVoidSpawnAvailableForEnslaveTrigger(botAI);
@@ -391,8 +402,8 @@ private:
     static Trigger* muru_warlock_has_enslaved_void_spawn(PlayerbotAI* botAI) {
         return new MuruWarlockHasEnslavedVoidSpawnTrigger(botAI);
     }
-    static Trigger* muru_entropius_darkness_pools_spawn_dark_fiends(PlayerbotAI* botAI) {
-        return new MuruEntropiusDarknessPoolsSpawnDarkFiendsTrigger(botAI);
+    static Trigger* muru_entropius_summons_void_zones(PlayerbotAI* botAI) {
+        return new MuruEntropiusSummonsVoidZonesTrigger(botAI);
     }
     static Trigger* muru_the_singularity_is_near(PlayerbotAI* botAI) {
         return new MuruTheSingularityIsNearTrigger(botAI);

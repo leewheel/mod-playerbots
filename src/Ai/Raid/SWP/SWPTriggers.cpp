@@ -28,12 +28,14 @@ bool SunwellNoEncounterInProgressTrigger::IsActive()
     if (IsEncounterInProgress(bot, SWP_MAP_ID))
         return false;
 
-    // By leewheel 2026-08-29 合并：采用对侧增强判断(不在SUNWELL平台内视为非KJ战； hands空=未开战)，保留25588 entry语义
+    // Use a distance gate to avoid searching for Hands through the entire instance.
+    if (bot->GetMapId() != SWP_MAP_ID)
+        return false;
+
     if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
         return true;
 
     return AI_VALUE(GuidVector, "kiljaeden hands").empty();
-    // End By leewheel
 }
 
 bool SunwellAuraToRemoveTrigger::IsActive()
@@ -67,14 +69,21 @@ bool VolatileFiendSelfDestructsWhenNearTrigger::IsActive()
 
 bool ApocalypseGuardProtectedByInfernalDefenseTrigger::IsActive()
 {
-    // By leewheel 2026-09-10 合并brighton bc76de70(SWP apoc guard use exorcism):
-    // 采纳其新增的圣骑士支持(牧师/圣骑士均可对天启守卫使用神圣法术驱散),
-    // 但boss查找保留entry字符串"25593"(NPC_APOCALYPSE_GUARD)遵循项目规则
-    // End By leewheel
     if (bot->getClass() != CLASS_PALADIN && bot->getClass() != CLASS_PRIEST)
         return false;
 
     return AI_VALUE2(Unit*, "find target", "25593");
+}
+
+// Shared Bosses
+
+bool SunwellHunterShouldMisdirectTrigger::IsActiveInEncounter()
+{
+    if (bot->getClass() != CLASS_HUNTER)
+        return false;
+
+    Unit* boss = AI_VALUE2(Unit*, "find target", _bossName);
+    return boss && boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
 }
 
 // Kalecgos
@@ -112,17 +121,6 @@ bool KalecgosShouldCommunicateBossHealthTrigger::IsActiveInEncounter()
     }
 
     return bot == spectralBot || bot == surfaceBot;
-}
-
-bool KalecgosPullingBossTrigger::IsActiveInEncounter()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    // By leewheel 2026-08-30 合并上游：HP常量统一BOSS_ENGAGED_HEALTH_PCT；entry规则查怪(24850=kalecgos)
-    Unit* kalecgos = AI_VALUE2(Unit*, "find target", "24850");
-    return kalecgos && kalecgos->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
-    // End By leewheel
 }
 
 bool KalecgosRequiresTankRotationTrigger::IsActiveInEncounter()
@@ -200,17 +198,6 @@ bool KalecgosBotsDontObserveGravityTrigger::IsActiveInEncounter()
 
 // Brutallus
 
-bool BrutallusPullingBossTrigger::IsActiveInEncounter()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    // By leewheel 2026-08-30 合并上游：HP常量统一；entry规则查怪(24882=brutallus)
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
-    return brutallus && brutallus->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
-    // End By leewheel
-}
-
 bool BrutallusRequiresTwoTanksTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsTank(bot))
@@ -256,7 +243,7 @@ bool BrutallusBurnOnNonTankTrigger::IsActiveInEncounter()
 
 // Felmyst
 
-bool FelmystPullingBossTrigger::IsActiveInEncounter()
+bool FelmystHunterShouldMisdirectTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
@@ -401,7 +388,7 @@ bool FelmystShouldAvoidDemonicVaporTrailsTrigger::IsActiveInEncounter()
     if (!felmyst || !felmyst->IsFlying())
         return false;
 
-    if (GetFelmystDemonicVaporSummonedByBot(bot))
+    if (GetFelmystDemonicVaporSummonedBy(bot, bot))
         return false;
 
     FogOfCorruptionState fogState;
@@ -489,22 +476,8 @@ bool EredarTwinsShouldAnnounceAlythessTankTrigger::IsActiveInEncounter()
     if (itr != eredarTwinsTankAssignments.end() && itr->second.announcementMs)
         return false;
 
-    // By leewheel 2026-09-10 合并brighton ea343e67(fix twins bugs)时按项目entry规则修正历史遗留:
-    // boss名称一律用entry, 25166=高阶术士奥蕾塞丝(grand warlock alythess), 25165=萨洛拉丝女王(lady sacrolash)
-    // End By leewheel
     return AI_VALUE2(Unit*, "find target", "25166") ||
         AI_VALUE2(Unit*, "find target", "25165");
-}
-
-bool EredarTwinsPullingBossesTrigger::IsActiveInEncounter()
-{
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
-
-    // By leewheel 2026-08-30 合并上游：HP常量统一；entry规则查怪(25166=grand warlock alythess)
-    Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
-    return alythess && alythess->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
-    // End By leewheel
 }
 
 bool EredarTwinsSacrolashRequiresTwoTanksTrigger::IsActiveInEncounter()
@@ -596,7 +569,6 @@ bool EredarTwinsShouldFocusDpsTrigger::IsActiveInEncounter()
 
 bool EredarTwinsActiveConflagrationTargetTrigger::IsActiveInEncounter()
 {
-    // 合并brighton 2026-08-27: 新增潜行(消失)机器人排除逻辑; lady sacrolash按entry规则转25165 --By leewheel 2026年8月27日
     if (!AI_VALUE2(Unit*, "find target", "25165"))
         return false;
 
@@ -621,7 +593,7 @@ bool EredarTwinsSacrolashVictimHasConflagrationTrigger::IsActiveInEncounter()
 
 // M'uru
 
-bool MuruVoidSentinelOrEntropiusHasAppearedTrigger::IsActiveInEncounter()
+bool MuruHunterShouldMisdirectNewEnemyTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
@@ -649,7 +621,7 @@ bool MuruShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
     return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "25741");
 }
 
-bool MuruVoidSentinelPulsesShadowTrigger::IsActiveInEncounter()
+bool MuruVoidSentinelShouldBeTankedTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;
@@ -686,14 +658,12 @@ bool MuruDarkFiendsSpawnedTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_PRIEST && bot->getClass() != CLASS_SHAMAN)
         return false;
 
-// 合并brighton 2026-08-27: 增加m'uru存在判断(entry 25741)并改用FindNearestCreature搜索暗影恶魔 --By leewheel 2026年8月27日
     if (!AI_VALUE2(Unit*, "find target", "25741"))
         return false;
 
-    return bot->FindNearestCreature(Id(SwpNpcs::NPC_DARK_FIEND), DARK_FIEND_DISPEL_SEARCH_RADIUS);
+    return GetNearestMuruDarkFiend(botAI, DARK_FIEND_DISPEL_SEARCH_RADIUS);
 }
 
-// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名IsActiveInEncounter
 bool MuruDarknessIsComingTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsMelee(bot))
@@ -706,8 +676,7 @@ bool MuruDarknessIsComingTrigger::IsActiveInEncounter()
     return TryGetMuruDarknessActiveState(bot, muru);
 }
 
-// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名IsActiveInEncounter
-bool MuruBerserkerIsBuffedWithFlurryTrigger::IsActiveInEncounter()
+bool MuruBerserkerHasFlurryTrigger::IsActiveInEncounter()
 {
     // No stuns and can't be a Tauren. Too bad.
     if (bot->getClass() == CLASS_MAGE || bot->getClass() == CLASS_PRIEST ||
@@ -734,7 +703,7 @@ bool MuruFuryMageCastingFelFireballTrigger::IsActiveInEncounter()
     return FindMuruFuryMageToInterrupt(botAI);
 }
 
-bool MuruFuryMageIsBuffedWithSpellFuryTrigger::IsActiveInEncounter()
+bool MuruFuryMageHasSpellFuryTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_MAGE)
         return false;
@@ -771,22 +740,19 @@ bool MuruWarlockHasEnslavedVoidSpawnTrigger::IsActiveInEncounter()
     return charm && charm->IsAlive() && charm->GetEntry() == Id(SwpNpcs::NPC_VOID_SPAWN);
 }
 
-bool MuruEntropiusDarknessPoolsSpawnDarkFiendsTrigger::IsActiveInEncounter()
+bool MuruEntropiusSummonsVoidZonesTrigger::IsActiveInEncounter()
 {
-    // 合并brighton 2026-08-26: entropius/dark fiend按entry规则转25840/25744 --By leewheel 2026年8月26日
     if (!AI_VALUE2(Unit*, "find target", "25840"))
         return false;
 
     if (FindMuruVoidZoneToAvoid(botAI))
         return true;
 
-// 合并brighton 2026-08-27: 改用FindNearestCreature搜索暗影恶魔 --By leewheel 2026年8月27日
-    return bot->FindNearestCreature(Id(SwpNpcs::NPC_DARK_FIEND), DARK_FIEND_AVOID_SEARCH_RADIUS);
+    return GetNearestMuruDarkFiend(botAI, DARK_FIEND_AVOID_SEARCH_RADIUS);
 }
 
 bool MuruTheSingularityIsNearTrigger::IsActiveInEncounter()
 {
-    // 合并brighton 2026-08-26: entropius按entry规则转25840 --By leewheel 2026年8月26日
     Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
     if (!entropius)
         return false;
@@ -799,11 +765,6 @@ bool MuruTheSingularityIsNearTrigger::IsActiveInEncounter()
 
 bool KiljaedenShouldCoordinateOrbUseTrigger::IsActive()
 {
-    // By leewheel 2026-08-29 合并：采用对侧龙珠公告去重状态检查(afa0e30a orb announcements)
-    // By leewheel 2026-09-12 合并brighton b72069ab(trigger renames): 采纳其"平台范围 + hands向量"判定,
-    //   取代原先按 entry 25588(hand of the deceiver) 的单目标查找; 与相邻
-    //   KiljaedenHandsOfTheDeceiverAreActiveTrigger 写法保持一致, 也不再依赖英文名
-    // End By leewheel
     if (!IsMechanicTrackerBot(bot, SWP_MAP_ID))
         return false;
 
@@ -819,12 +780,10 @@ bool KiljaedenShouldCoordinateOrbUseTrigger::IsActive()
 
 bool KiljaedenHandsOfTheDeceiverAreActiveTrigger::IsActive()
 {
-    // By leewheel 2026-08-29 合并：采用对侧SUNWELL平台范围判断，hands值替代单目标查找
     if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
         return false;
 
     return !AI_VALUE(GuidVector, "kiljaeden hands").empty();
-    // End By leewheel
 }
 
 bool KiljaedenTanksShouldHoldBossAndReflectionsTrigger::IsActiveInEncounter()
@@ -945,12 +904,6 @@ bool KiljaedenDragonOrbIsActiveTrigger::IsActiveInEncounter()
     return result;
 }
 
-// By leewheel 2026-09-12 合并brighton b72069ab(KJ drake root madness + trigger renames):
-//   原先本处的 KiljaedenBotHasStaleRootAfterDragonTrigger 已被 brighton 撤销/并入:
-//   龙变身后"卡在原地"的判定改由 KiljaedenStaleRootAfterDragonTrigger 承担(见下方),
-//   其逻辑从"龙珠使用者 + IsRooted + 相位阈值"改为 HasUsedKiljaedenDragonOrb + HasStaleRootFlag,
-//   与新增的 ReleaseStaleRootFlag 释放机制配套; 此处整块随 brighton 删除
-// End By leewheel
 bool KiljaedenBotControlsDragonTrigger::IsActiveInEncounter()
 {
     if (!AI_VALUE2(Unit*, "find target", "25315"))

@@ -75,12 +75,6 @@ float SunwellControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
     if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
         return 1.0f;
 
-    // By leewheel 2026-09-11 合并brighton 9da3494f(swp consolidate misdirection multipliers):
-    // 采纳其重构(4个per-boss误导乘数统一为 SunwellControlMisdirectionMultiplier),
-    // 但boss名称按项目规则(AGENTS.md第81条)一律用entry:
-    // 25840=熵魔, 24850=卡雷苟斯, 24882=布鲁塔卢斯, 25166=高阶术士奥蕾塞丝,
-    // 25741=穆鲁, 25315=基尔加丹
-    // End By leewheel
     if (AI_VALUE2(Unit*, "find target", "25840"))
         return 1.0f;
 
@@ -90,6 +84,74 @@ float SunwellControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
         AI_VALUE2(Unit*, "find target", "25741") ||
         AI_VALUE2(Unit*, "find target", "25315") ? 0.0f : 1.0f;
 }
+
+// Not encounter gated because Kil'jaeden is not IN_PROGRESS until the first Hand of the Deceiver
+// dies (see SWPTriggers.h).
+float SunwellDelayDpsCooldownsMultiplier::GetValue(Action* action)
+{
+    if (bot->GetMapId() != SWP_MAP_ID || botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (!IsDpsCooldownAction(bot, action))
+        return 1.0f;
+
+    bool const isBloodlust = bot->getClass() == CLASS_SHAMAN &&
+        (dynamic_cast<CastHeroismAction*>(action) || dynamic_cast<CastBloodlustAction*>(action));
+
+    // Held for Sathrovarr, so only bots in the Spectral Realm use them.
+    if (AI_VALUE2(Unit*, "find target", "24850"))
+        return IsInSpectralRealm(bot) ? 1.0f : 0.0f;
+
+    if (Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882"))
+        return brutallus->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+
+    if (Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038"))
+    {
+        if (felmyst->IsFlying())
+            return 0.0f;
+
+        return felmyst->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+    }
+
+    if (AI_VALUE2(Unit*, "find target", "25166"))
+    {
+        Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
+        return sacrolash && sacrolash->GetHealthPct() > EREDAR_TWINS_MAX_DPS_HP_PERCENT ?
+            0.0f : 1.0f;
+    }
+
+    if (Unit* muru = AI_VALUE2(Unit*, "find target", "25741"))
+    {
+        Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+        if (entropius && entropius->GetHealthPct() < BOSS_ENGAGED_HEALTH_PCT)
+            return 1.0f;
+
+        // Bloodlust is saved for Entropius
+        if (isBloodlust)
+            return 0.0f;
+
+        // Other dps cooldowns can be used on M'uru after the pull
+        return muru->GetHealthPct() > MURU_MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
+    }
+
+    if (Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315"))
+    {
+        if (AI_VALUE2(Unit*, "find target", "25588"))
+            return 0.0f;
+
+        if (kiljaeden->GetHealthPct() <= KILJAEDEN_PHASE5_HP_THRESHOLD)
+            return 1.0f;
+
+        if (isBloodlust)
+            return 0.0f;
+
+        return kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD ? 0.0f : 1.0f;
+    }
+
+    return 1.0f;
+}
+
+// Kalecgos
 
 float KalecgosWaitToDecurseMultiplier::GetValueInEncounter(Action* action)
 {
@@ -159,7 +221,6 @@ float KalecgosRestrictTauntMultiplier::GetValueInEncounter(Action* action)
     if (!IsInSpectralRealm(bot))
         return FindKalecgosDesignatedTank(bot) == bot ? 1.0f : 0.0f;
 
-    // 合并brighton 2026-08-26: sathrovarr the corruptor按entry规则转24892 --By leewheel 2026年8月26日
     Unit* sathrovarr = AI_VALUE2(Unit*, "find target", "24892");
     if (!sathrovarr)
         return 1.0f;
@@ -211,23 +272,8 @@ float KalecgosEnterSpectralRiftMultiplier::GetValueInEncounter(Action* action)
     return botAI->GetGameObject(AI_VALUE(ObjectGuid, "kalecgos spectral rift")) ? 0.0f : 1.0f;
 }
 
-float KalecgosDelayCooldownsForSathrovarrMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsDpsCooldownAction(bot, action))
-        return 1.0f;
-
-    if (!AI_VALUE2(Unit*, "find target", "24850"))
-        return 1.0f;
-
-    return IsInSpectralRealm(bot) ? 1.0f : 0.0f;
-}
-
 // Brutallus
 
-// By leewheel 2026-09-11 合并brighton 9da3494f: 该 per-boss 误导乘数已并入 SunwellControlMisdirectionMultiplier, 此处随之删除
 float BrutallusControlMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -300,20 +346,6 @@ float BrutallusRestrictTauntMultiplier::GetValueInEncounter(Action* action)
 
     Player* playerVictim = victim->ToPlayer();
     return playerVictim && PlayerbotAI::IsTank(playerVictim) ? 0.0f : 1.0f;
-}
-
-float BrutallusDelayCooldownsMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsDpsCooldownAction(bot, action))
-        return 1.0f;
-
-    // By leewheel 2026-08-30 合并上游：HP常量统一BOSS_ENGAGED_HEALTH_PCT；entry规则查怪(24882=brutallus)
-    Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882");
-    return brutallus && brutallus->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
-    // End By leewheel
 }
 
 // Felmyst
@@ -460,24 +492,6 @@ float FelmystDontDotAddsMultiplier::GetValueInEncounter(Action* action)
     return action->GetTarget() == felmyst ? 1.0f : 0.0f;
 }
 
-float FelmystDelayCooldownsMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsDpsCooldownAction(bot, action))
-        return 1.0f;
-
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
-    if (!felmyst)
-        return 1.0f;
-
-    if (felmyst->IsFlying())
-        return 0.0f;
-
-    return felmyst->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
-}
-
 // Eredar Twins
 
 float EredarTwinsDisableAutoTargetingMultiplier::GetValueInEncounter(Action* action)
@@ -494,7 +508,6 @@ float EredarTwinsDisableAutoTargetingMultiplier::GetValueInEncounter(Action* act
     return AI_VALUE2(Unit*, "find target", "25166") ? 0.0f : 1.0f;
 }
 
-// By leewheel 2026-09-11 合并brighton 9da3494f: 该 per-boss 误导乘数已并入 SunwellControlMisdirectionMultiplier, 此处随之删除
 float EredarTwinsHoldDpsAtStartMultiplier::GetValueInEncounter(Action* action)
 {
     if (PlayerbotAI::IsTank(bot))
@@ -508,7 +521,7 @@ float EredarTwinsHoldDpsAtStartMultiplier::GetValueInEncounter(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    if (dynamic_cast<EredarTwinsMisdirectBossesToTanksAction*>(action))
+    if (dynamic_cast<EredarTwinsMisdirectToTanksAction*>(action))
         return 1.0f;
 
     if (PlayerbotAI::IsMelee(bot) && bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z)
@@ -610,10 +623,7 @@ float EredarTwinsIsolateConflagrationMultiplier::GetValueInEncounter(Action* act
     if (conflagTarget == bot)
         return bot->getClass() == CLASS_ROGUE && botAI->HasAura("vanish", bot) ? 1.0f : 0.0f;
 
-    // By leewheel 2026-09-04 合并冲突解决: 采纳brighton新增的IsAlythessTank豁免(双子的坦克继续本职工作),
-    //   但boss查找保留entry字符串"25165"遵循项目规则(boss名称一律用entry)
-    // End By leewheel
-    if (IsAlythessTank(bot)) // This bot needs to keep doing its job.
+    if (IsAlythessTank(bot))
         return 1.0f;
 
     // If Sacrolash's victim is targeted by Conflagration, block actions that move toward Sacrolash.
@@ -623,22 +633,6 @@ float EredarTwinsIsolateConflagrationMultiplier::GetValueInEncounter(Action* act
 
     Unit* victim = sacrolash->GetVictim();
     return victim && victim != bot && conflagTarget == victim ? 0.0f : 1.0f;
-}
-
-float EredarTwinsDelayCooldownsMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsDpsCooldownAction(bot, action))
-        return 1.0f;
-
-    Unit* alythess = AI_VALUE2(Unit*, "find target", "25166");
-    if (!alythess)
-        return 1.0f;
-
-    Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
-    return sacrolash && sacrolash->GetHealthPct() > EREDAR_TWINS_MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
 }
 
 // M'uru
@@ -671,7 +665,6 @@ float MuruDisableDefaultTargetingMultiplier::GetValueInEncounter(Action* action)
     return currentTarget && currentTarget->GetEntry() == Id(SwpNpcs::NPC_VOID_SPAWN) ? 0.0f : 1.0f;
 }
 
-// By leewheel 2026-09-11 合并brighton 9da3494f: 该 per-boss 误导乘数已并入 SunwellControlMisdirectionMultiplier, 此处随之删除
 float MuruControlMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -733,74 +726,15 @@ float MuruControlMovementMultiplier::GetValueInEncounter(Action* action)
     return PlayerbotAI::IsTank(bot) && !PeekMuruDarknessEarlyState(bot) ? 1.0f : 0.0f;
 }
 
-float MuruDelayCooldownsMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsDpsCooldownAction(bot, action))
-        return 1.0f;
-
-    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
-    if (!muru)
-        return 1.0f;
-
-    // By leewheel 2026-08-30 合并上游：HP常量统一；entry规则查怪(25840=entropius)
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
-    if (entropius && entropius->GetHealthPct() < BOSS_ENGAGED_HEALTH_PCT)
-        return 1.0f;
-
-    // Bloodlust is saved for Entropius
-    if (bot->getClass() == CLASS_SHAMAN &&
-        (dynamic_cast<CastHeroismAction*>(action) || dynamic_cast<CastBloodlustAction*>(action)))
-    {
-        return 0.0f;
-    }
-
-    // Other dps cooldowns can be used on M'uru after the pull
-    return muru->GetHealthPct() > MURU_MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
-}
-
 // Kil'jaeden <The Deceiver>
-
-float KiljaedenDelayCooldownsMultiplier::GetValue(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!IsDpsCooldownAction(bot, action))
-        return 1.0f;
-
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
-    if (!kiljaeden)
-        return 1.0f;
-
-    if (AI_VALUE2(Unit*, "find target", "25588"))
-        return 0.0f;
-
-    if (kiljaeden->GetHealthPct() <= KILJAEDEN_PHASE5_HP_THRESHOLD)
-        return 1.0f;
-
-    if (bot->getClass() == CLASS_SHAMAN &&
-        (dynamic_cast<CastHeroismAction*>(action) || dynamic_cast<CastBloodlustAction*>(action)))
-    {
-        return 0.0f;
-    }
-
-    return kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD ? 0.0f : 1.0f;
-}
 
 float KiljaedenSingleTargetHandsMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    // By leewheel 2026-08-29 合并：对侧新逻辑把Tanks版与DpsFocus版两乘数合并简化为本函数(lower complexity of hands actions)，
-    // 旧KiljaedenDpsFocusAssignedHandOnlyMultiplier实现一并移除(头文件本无声明)；手部目标控制交给新版ControlHands行动
-    // By leewheel 2026-09-10 合并brighton 5e3dac27：采纳其精简后的英文说明
     // The only Shaman spell classified as ActionThreatType::Aoe is Chain Lightning, which is a
     // strong single-target spell in addition to providing AoE damage.
-    // End By leewheel
     if (bot->getClass() == CLASS_SHAMAN)
         return 1.0f;
 
@@ -813,10 +747,8 @@ float KiljaedenSingleTargetHandsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    // By leewheel 2026-08-29 合并：采用对侧SUNWELL中心范围判断(不在平台内的bot不受限)
     if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
         return 1.0f;
-    // End By leewheel
 
     return AI_VALUE(GuidVector, "kiljaeden hands").empty() ? 1.0f : 0.0f;
 }

@@ -30,11 +30,11 @@ protected:
 
 // Trash
 
-class UnderbogColossusEscapeToxicPoolMultiplier : public Multiplier
+class UnderbogColossusHoldNearToxicPoolMultiplier : public Multiplier
 {
 public:
-    UnderbogColossusEscapeToxicPoolMultiplier(PlayerbotAI* botAI)
-        : Multiplier(botAI, "underbog colossus escape toxic pool") {}
+    UnderbogColossusHoldNearToxicPoolMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "underbog colossus hold near toxic pool") {}
     float GetValue(Action* action) override;
 };
 
@@ -181,8 +181,7 @@ class LeotherasTheBlindDisableTankSoulshatterMultiplier : public SscEncounterMul
 {
 public:
     LeotherasTheBlindDisableTankSoulshatterMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(
-            botAI, "leotheras the blind disable tank soulshatter") {}
+        : SscEncounterMultiplier(botAI, "leotheras the blind disable tank soulshatter") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -308,7 +307,7 @@ class LadyVashjMaintainPhase1RangedSpreadMultiplier : public SscEncounterMultipl
 {
 public:
     LadyVashjMaintainPhase1RangedSpreadMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(botAI, "lady vashj maintain phase1 ranged spread") {}
+        : SscEncounterMultiplier(botAI, "lady vashj maintain phase 1 ranged spread") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -334,11 +333,11 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class LadyVashjCorePassersPrioritizePositioningMultiplier : public SscEncounterMultiplier
+class LadyVashjCoreHandlersPrioritizePositioningMultiplier : public SscEncounterMultiplier
 {
 public:
-    LadyVashjCorePassersPrioritizePositioningMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(botAI, "lady vashj core passers prioritize positioning") {}
+    LadyVashjCoreHandlersPrioritizePositioningMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "lady vashj core handlers prioritize positioning") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

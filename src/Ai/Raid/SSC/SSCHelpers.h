@@ -8,6 +8,7 @@
 #define PLAYERBOTS_SSCHELPERS_H
 
 #include "Common.h"
+#include "ObjectDefines.h"
 #include "ObjectGuid.h"
 #include "Position.h"
 #include <array>
@@ -18,8 +19,6 @@
 #include <vector>
 
 class Creature;
-class GameObject;
-class Map;
 class Player;
 class PlayerbotAI;
 class Unit;
@@ -35,7 +34,7 @@ constexpr uint32 Id(T value)
 
 enum class SscSpells : uint32
 {
-    // Trash Mobs
+    // Trash
     SPELL_TOXIC_POOL             = 38718,
 
     // Hydross the Unstable <Duke of Currents>
@@ -60,7 +59,6 @@ enum class SscSpells : uint32
     // Leotheras the Blind
     SPELL_LEOTHERAS_BANISHED     = 37546,
     SPELL_WHIRLWIND              = 37640,
-    SPELL_WHIRLWIND_CHANNEL      = 37641,
     SPELL_METAMORPHOSIS          = 37673,
     SPELL_CHAOS_BLAST            = 37675,
     SPELL_INSIDIOUS_WHISPER      = 37676,
@@ -71,9 +69,10 @@ enum class SscSpells : uint32
     // Lady Vashj <Coilfang Matron>
     SPELL_FEAR_WARD              =  6346,
     SPELL_MAGIC_BARRIER          = 38112,
+    SPELL_TAINTED_CORE_PARALYZE  = 38132,
     SPELL_STATIC_CHARGE          = 38280,
     SPELL_ENTANGLE               = 38316,
-    SPELL_TOXIC_SPORES           = 38575, // the pool a Spore Drop Trigger lays
+    SPELL_TOXIC_SPORES           = 38575,
 
     // Druid
     SPELL_FAERIE_FIRE_FERAL      = 16857,
@@ -81,7 +80,8 @@ enum class SscSpells : uint32
     SPELL_DRUID_BERSERK          = 50334,
 
     // Hunter
-    SPELL_MISDIRECTION           = 35079,
+    SPELL_MISDIRECTION_CAST      = 34477,
+    SPELL_MISDIRECTION           = 35079, // the aura on the hunter
 
     // Paladin
     SPELL_DIVINE_SHIELD          =   642,
@@ -102,7 +102,7 @@ enum class SscSpells : uint32
 
 enum class SscNpcs : uint32
 {
-    // Trash Mobs
+    // Trash
     NPC_WATER_ELEMENTAL_TOTEM    = 22236,
 
     // The Lurker Below
@@ -123,10 +123,7 @@ enum class SscNpcs : uint32
     NPC_FATHOM_SPOREBAT          = 22120,
 
     // Lady Vashj <Coilfang Matron>
-    NPC_WORLD_INVISIBLE_TRIGGER  = 12999,
-    NPC_LADY_VASHJ               = 21212,
     NPC_ENCHANTED_ELEMENTAL      = 21958,
-    NPC_TAINTED_ELEMENTAL        = 22009,
     NPC_COILFANG_ELITE           = 22055,
     NPC_COILFANG_STRIDER         = 22056,
     NPC_TOXIC_SPOREBAT           = 22140,
@@ -164,6 +161,11 @@ bool GetPathStepTowardPoint(
     float& stepX, float& stepY);
 bool GetPathStepTowardUnit(
     Player* bot, Unit* target, float stopDistance, float& stepX, float& stepY);
+// The bot's angle on an arc arcSpan wide around arcCenter, with the group's ranged bots in the
+// instance spaced evenly along it in group order. False if there are none.
+bool GetRangedArcAngle(Player* bot, float arcCenter, float arcSpan, float& angle);
+// Every other living group member in the instance.
+std::vector<Unit*> GetOtherLivingGroupMembers(Player* bot);
 
 // Trash
 
@@ -174,9 +176,19 @@ inline constexpr float TOXIC_POOL_SEARCH_RADIUS = TOXIC_POOL_HOLDING_RADIUS + 2.
 
 bool GetToxicPoolPosition(PlayerbotAI* botAI, Position& toxicPool);
 bool IsNearToxicPool(PlayerbotAI* botAI, float radius);
-bool IsInToxicPool(PlayerbotAI* botAI);
+
+inline constexpr float WATER_ELEMENTAL_TOTEM_SEARCH_DISTANCE = 20.0f;
+inline constexpr uint32 WATER_ELEMENTAL_TOTEM_CACHE_INTERVAL_MS = 1000;
+
+ObjectGuid FindWaterElementalTotemGuid(Player* bot);
+Creature* GetWaterElementalTotem(PlayerbotAI* botAI);
+// True while skull is on a living Water Elemental Totem, so a second totem doesn't take it.
+bool IsSkullOnWaterElementalTotem(PlayerbotAI* botAI);
 
 // Hydross the Unstable <Duke of Currents>
+
+// Ranged spread this far apart in frost phase, to mitigate Water Tomb.
+inline constexpr float HYDROSS_FROST_RANGED_SPREAD_DISTANCE = 6.0f;
 
 inline Position const HYDROSS_FROST_TANK_POSITION =  { -236.669f, -358.352f, -0.828f };
 inline Position const HYDROSS_NATURE_TANK_POSITION = { -225.471f, -327.790f, -3.682f };
@@ -205,9 +217,9 @@ bool IsHydrossAddTank(Player* bot);
 bool IsHydrossInFrostPhase(Unit* hydross);
 bool IsHydrossInNaturePhase(Unit* hydross);
 HydrossDpsHoldWindow GetHydrossDpsHoldWindow(Unit* hydross);
-bool HasMarkOfHydrossAt100Percent(Player* bot);
+bool HasMarkOfHydrossAt100Percent(Player* player);
 bool HasNoMarkOfHydross(Player* bot);
-bool HasMarkOfCorruptionAt100Percent(Player* bot);
+bool HasMarkOfCorruptionAt100Percent(Player* player);
 bool HasNoMarkOfCorruption(Player* bot);
 
 // The Lurker Below
@@ -238,6 +250,7 @@ inline constexpr float LURKER_SPOUT_RUN_OVERTAKE_MARGIN = static_cast<float>(M_P
 // and claims another the same way if its own dies.
 inline constexpr size_t LURKER_GUARDIAN_TANK_COUNT = 3;
 inline constexpr uint32 LURKER_GUARDIAN_CACHE_INTERVAL_MS = 200;
+inline constexpr uint32 LURKER_GUARDIAN_TANK_CACHE_INTERVAL_MS = 1000;
 inline constexpr float LURKER_GUARDIAN_SEARCH_RADIUS = 100.0f;
 
 inline Position const LURKER_MAIN_TANK_POSITION = { 23.706f, -406.038f, -19.686f };
@@ -261,7 +274,10 @@ bool DoesPathArrive(Player* bot, float x, float y, float z, float tolerance);
 GuidVector FindLurkerGuardianGuids(Player* bot);
 std::vector<Unit*> GetLurkerGuardians(PlayerbotAI* botAI);
 // The Guardian tanks in index order; empty if there are fewer than 3 living tanks, humans included.
-std::vector<Player*> GetLurkerGuardianTanks(Player* bot);
+GuidVector FindLurkerGuardianTankGuids(Player* bot);
+// The bot's index among the Guardian tanks, from the "ssc lurker guardian tanks" value; -1 if it
+// isn't one.
+int8 GetLurkerGuardianTankIndex(PlayerbotAI* botAI);
 
 // Leotheras the Blind
 
@@ -270,12 +286,20 @@ inline constexpr uint32 LEOTHERAS_CACHE_INTERVAL_MS = 200;
 inline constexpr uint32 LEOTHERAS_HUMANOID_DPS_WAIT_MS = 3 * IN_MILLISECONDS;
 inline constexpr uint32 LEOTHERAS_DEMON_DPS_WAIT_MS = 10 * IN_MILLISECONDS;
 inline constexpr uint32 LEOTHERAS_FINAL_DPS_WAIT_MS = 5 * IN_MILLISECONDS;
+inline constexpr uint32 LEOTHERAS_WHIRLWIND_DPS_WAIT_MS = 3 * IN_MILLISECONDS;
+inline constexpr float LEOTHERAS_WHIRLWIND_SAFE_DISTANCE = 25.0f;
+// Ranged keep this far from the humanoid form, outside Whirlwind's 10 yd.
+inline constexpr float LEOTHERAS_RANGED_SAFE_DISTANCE = 15.0f;
+// Chaos Blast deals splash damage within 8y of the target.
+inline constexpr float LEOTHERAS_CHAOS_BLAST_SAFE_DISTANCE = 10.0f;
+// In the final phase, Leotheras's tank keeps him this far from the Shadow's target.
+inline constexpr float LEOTHERAS_SHADOW_SEPARATION_DISTANCE = 20.0f;
 
-extern std::unordered_map<uint32, uint32> leotherasHumanoidPhaseDpsWaitTimer;
+extern std::unordered_map<uint32, uint32> leotherasHumanoidPhaseStartTime;
 // When the current Whirlwind will end, determined by the aura's remaining duration.
 extern std::unordered_map<uint32, uint32> leotherasWhirlwindEndTime;
-extern std::unordered_map<uint32, uint32> leotherasDemonPhaseDpsWaitTimer;
-extern std::unordered_map<uint32, uint32> leotherasFinalPhaseDpsWaitTimer;
+extern std::unordered_map<uint32, uint32> leotherasDemonPhaseStartTime;
+extern std::unordered_map<uint32, uint32> leotherasFinalPhaseStartTime;
 
 ObjectGuid FindLeotherasGuid(Player* bot);
 ObjectGuid FindShadowOfLeotherasGuid(Player* bot);
@@ -283,14 +307,25 @@ Creature* GetLeotheras(PlayerbotAI* botAI);
 bool IsSpellbinderPhase(Unit* leotheras);
 Creature* GetActiveLeotherasHumanoid(PlayerbotAI* botAI);
 bool IsLeotherasHumanoidPhase(PlayerbotAI* botAI);
-Creature* GetPhase2LeotherasDemon(PlayerbotAI* botAI);
+Creature* GetLeotherasDemon(PlayerbotAI* botAI);
 bool IsLeotherasDemonPhase(PlayerbotAI* botAI);
-Creature* GetPhase3LeotherasDemon(PlayerbotAI* botAI);
+Creature* GetShadowOfLeotheras(PlayerbotAI* botAI);
 bool IsLeotherasFinalPhase(PlayerbotAI* botAI);
-Creature* GetActiveLeotherasDemon(PlayerbotAI* botAI);
+Creature* GetLeotherasDemonOrShadow(PlayerbotAI* botAI);
 Player* GetLeotherasWarlockTank(Player* bot);
 bool IsLeotherasWarlockTank(Player* bot);
 bool IsLeotherasChannelingWhirlwind(Unit* leotheras);
+// The humanoid form, if the bot is not his target and is closer than the ranged safe distance.
+Creature* GetLeotherasHumanoidToAvoid(PlayerbotAI* botAI);
+// The demon's target, if it isn't the bot and the bot is within Chaos Blast's splash of it.
+Unit* GetDemonTargetToAvoid(Player* bot, Unit* demon);
+// The demon form's target, or else the Warlock tank, if the bot is within Chaos Blast's splash.
+Unit* GetChaosBlastTargetToAvoid(PlayerbotAI* botAI);
+// The Shadow's target, if the bot is Leotheras's target and within the separation distance.
+Unit* GetShadowTargetToSeparateFrom(PlayerbotAI* botAI);
+// Threat resets at each phase change and on every Whirlwind tick, so damage is held at the
+// start of each phase and just after each Whirlwind.
+bool IsLeotherasDpsHoldActive(PlayerbotAI* botAI, Unit* leotheras);
 bool HasTooManyChaosBlastStacks(Player* bot);
 bool HasInnerDemon(Player* bot);
 Creature* GetPersonalInnerDemon(PlayerbotAI* botAI);
@@ -303,7 +338,7 @@ Creature* GetPersonalInnerDemon(PlayerbotAI* botAI);
 inline constexpr float CARIBDIS_HEALER_DISTANCE = 32.0f;
 inline constexpr float CARIBDIS_HEALER_MAX_DISTANCE = 35.0f;
 // Tidal Surge's range is 10 yards.
-inline constexpr float CARIBDIS_RANGED_MIN_DISTANCE = 12.0f;
+inline constexpr float CARIBDIS_TIDAL_SURGE_SAFE_DISTANCE = 12.0f;
 // Out of sight, range means nothing: a bot within spell range behind the pillar still cannot shoot,
 // so the walk goes on until she is in sight. This only stops it running into her.
 inline constexpr float CARIBDIS_APPROACH_STOP_DISTANCE = 5.0f;
@@ -332,14 +367,28 @@ inline Position const CARIBDIS_TANK_POSITION =   { 464.462f, -475.820f, -13.158f
 
 extern std::unordered_map<uint32, uint32> karathressDpsWaitTimer;
 
+struct KarathressCouncilAssignment
+{
+    char const* name;
+    int8 assistTankIndex; // -1 for the main tank
+};
+
+inline constexpr std::array KARATHRESS_COUNCIL = {
+    KarathressCouncilAssignment{ "fathom-lord karathress", -1 },
+    KarathressCouncilAssignment{ "fathom-guard caribdis", 0 },
+    KarathressCouncilAssignment{ "fathom-guard sharkkis", 1 },
+    KarathressCouncilAssignment{ "fathom-guard tidalvess", 2 },
+};
+
 ObjectGuid FindSpitfireTotemGuid(Player* bot);
 Creature* GetSpitfireTotem(PlayerbotAI* botAI);
 bool ShouldAttackSpitfireTotem(Player* bot, Unit* totem);
 Unit* GetSharkkisTankTarget(PlayerbotAI* botAI);
-Unit* GetAssignedCouncilMember(PlayerbotAI* botAI);
+// A Fathom Sporebat before a Fathom Lurker; null once none is left.
+Unit* GetSharkkisPet(Player* bot);
 // For a tank to move to its designated position, it must not only acquire its own target but not
 // be holding any other tank's target.
-bool IsHoldingAnotherTanksCouncilMember(PlayerbotAI* botAI);
+bool IsHoldingAnotherTanksCouncilMember(PlayerbotAI* botAI, Unit* ownTarget);
 bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range);
 
 // Morogrim Tidewalker
@@ -358,19 +407,20 @@ inline constexpr float TIDEWALKER_MURLOC_MAX_TARGET_DISTANCE = 50.0f;
 
 inline Position const TIDEWALKER_PHASE_1_TANK_POSITION = { 410.925f, -741.916f, -7.146f };
 inline Position const TIDEWALKER_PHASE_2_TANK_POSITION = { 446.571f, -767.155f, -7.144f };
-// The stack point is measured not based on Tidewalker but instead is computed by drawing a line
-// between the main tank and Tidewalker. This approach is cleaner during the phase transition.
-Position GetTidewalkerStackPoint(Unit* tidewalker);
+// 5 yd behind him, on the line from his victim through him (his facing if he has none).
+// Following the victim rather than his facing keeps the point steady while the tank walks him
+// to the corner.
+Position GetTidewalkerStackPoint(Unit const& tidewalker);
 
 // Lady Vashj <Coilfang Matron>
-
-inline constexpr float VASHJ_PLATFORM_CENTER_Z = 42.902f;
 
 inline Position const VASHJ_PLATFORM_CENTER_POSITION = { 29.634f, -923.541f, 42.902f };
 
 // The dais is a regular dodecagon on the platform center, corners every 30 degrees from due
 // north. This is the distance from the center to the middle of each edge.
 inline constexpr float VASHJ_DAIS_APOTHEM = 57.05f;
+// The foot of the stairs, measured the same way.
+inline constexpr float VASHJ_STAIR_BASE_DISTANCE = 90.19f;
 // The rock over the north edge of the dais, from the stair base up across the dais and back down.
 inline std::array const VASHJ_NORTH_ROCK = {
     Position{ 119.256f, -910.155f, 22.314f },
@@ -385,7 +435,13 @@ inline constexpr float VASHJ_NORTH_ROCK_CLEARANCE = 5.0f;
 // Where bots other than her tank stand or walk to dodge pools. The larger clearance is for her
 // path, not theirs, and in the notch west of the rock it rules out two thirds of the ring round
 // her.
-inline constexpr float VASHJ_STANDING_ROCK_CLEARANCE = 1.0f;
+inline constexpr float VASHJ_STANDING_ROCK_CLEARANCE = 2.0f;
+// Steps and spots keep this far inside the edge of the dais. Vashj trails her tank, so she
+// stays on the dais as long as it does. The margin is only slack for the notch the rock cuts
+// and for pathing near the edge.
+inline constexpr float VASHJ_DAIS_MARGIN = 1.0f;
+// A bot this far over the floor in phase 3, after a Sporebat or up on the pipes, is put back down.
+inline constexpr float VASHJ_ABOVE_GROUND_HEIGHT = 1.5f;
 
 // A pool hits anyone within 5 yd plus their own reach, about 6.5 yd for a player.
 inline constexpr float TOXIC_SPORES_HIT_RADIUS = 6.5f;
@@ -400,6 +456,13 @@ inline constexpr float TOXIC_SPORES_SEARCH_RADIUS = 50.0f;
 // can't walk them back through a pool on the way to their target.
 inline constexpr float TOXIC_SPORES_MELEE_CONTROL_RADIUS = 10.0f;
 
+// Phase 3 ranged stand out of Entangle's reach of her, and this far apart.
+inline constexpr float VASHJ_PHASE_3_RANGED_DISTANCE = 15.0f;
+inline constexpr float VASHJ_PHASE_3_RANGED_SPREAD_DISTANCE = 4.0f;
+
+// Static Charge pulses reach 10y from the holder's center.
+inline constexpr float VASHJ_STATIC_CHARGE_SAFE_DISTANCE = 11.0f;
+
 // For the "ssc vashj adds" value. Only which adds exist is cached, not what is read from them
 // (positions, health, victims).
 inline constexpr uint32 VASHJ_ADDS_CACHE_INTERVAL_MS = 200;
@@ -413,7 +476,7 @@ struct VashjAddGuids
     GuidVector sporebats;
 };
 
-// A target, for LadyVashjAssignPhase2AndPhase3DpsPriorityAction.
+// A target, for LadyVashjAssignTargetPriorityAction.
 enum class VashjTarget : uint8
 {
     TaintedElemental,
@@ -431,7 +494,7 @@ struct VashjTargetTier
     float maxDistanceFromVashj = std::numeric_limits<float>::max();
 };
 
-// What LadyVashjAssignPhase2AndPhase3DpsPriorityAction checks targets against, gathered each tick.
+// What LadyVashjAssignTargetPriorityAction checks targets against, gathered each tick.
 struct VashjTargetFacts
 {
     Unit* vashj = nullptr;
@@ -448,19 +511,18 @@ struct VashjTargetFacts
     // Phase 2: everyone but tanks leaves an Elite or Strider alone until a tank has it, so nobody
     // pulls one onto a cluster
     bool waitForTank = false;
-    // Phase 2: one tank per Elite or Strider, so the others stay free for the next ones. A new one
-    // goes to the nearest free tank, which is the one on the side it comes from while they wait
-    // in the middle.
+    // Tanks: one per Elite or Strider, so the others stay free for the next ones. A new one goes
+    // to the nearest free tank, which in phase 2 is the one on the side it comes from while they
+    // wait in the middle.
     bool oneTankEach = false;
     // Melee dps: the living Striders, whose Panic their targets must be clear of
     std::vector<Unit*> panicStriders;
 };
 
-// Phase 2 clusters of 3 ranged dps 52y out and a healer 40y out, numbered 1 to 4 in this order.
-// Every slot is 22y+ off the Elite and Strider spawns and the line they walk in on, since both
-// attack anyone within 20y of them, and 5y+ off the north rock.
 inline constexpr size_t VASHJ_CLUSTER_RANGED_SLOTS = 3;
 inline constexpr int8 VASHJ_CLUSTER_HEALER_SLOT = 3;
+// A holder within this of its slot, 2D, is there.
+inline constexpr float VASHJ_CLUSTER_ARRIVAL_DISTANCE = 2.0f;
 
 struct VashjCluster
 {
@@ -556,6 +618,10 @@ inline std::array const VASHJ_ELITE_TANK_POSITIONS = {
 inline constexpr float VASHJ_ENCHANTED_NEAR_HER_DISTANCE = 20.0f;
 // Tanks with nothing to tank in phase 2 wait within this of Vashj, to reach adds on any side.
 inline constexpr float VASHJ_IDLE_TANK_DISTANCE = 10.0f;
+// An Elite or Strider within this of its tank position, centre to spot, is there.
+inline constexpr float VASHJ_ADD_TANK_ARRIVAL_DISTANCE = 3.0f;
+// Phase 3: a tank takes its Strider this far from Vashj, where bots gather to kill elementals.
+inline constexpr float VASHJ_PHASE_3_STRIDER_DISTANCE_FROM_VASHJ = 28.0f;
 
 // Target tiers by phase and role, best first (GetVashjTargetTiers)
 // Striders need several ranged on them at once
@@ -581,7 +647,7 @@ inline std::vector<VashjTargetTier> const VASHJ_PHASE_2_TANK_TIERS = {
     VashjTargetTier{ VashjTarget::CoilfangElite },
     VashjTargetTier{ VashjTarget::EnchantedElemental, VASHJ_ENCHANTED_NEAR_HER_DISTANCE },
 };
-inline std::vector<VashjTargetTier> const VASHJ_PHASE_2_OTHER_TIERS = {
+inline std::vector<VashjTargetTier> const VASHJ_PHASE_2_HEALER_TIERS = {
     VashjTargetTier{ VashjTarget::EnchantedElemental },
     VashjTargetTier{ VashjTarget::CoilfangElite },
     VashjTargetTier{ VashjTarget::CoilfangStrider },
@@ -589,15 +655,10 @@ inline std::vector<VashjTargetTier> const VASHJ_PHASE_2_OTHER_TIERS = {
 inline std::vector<VashjTargetTier> const VASHJ_PHASE_3_MAIN_TANK_TIERS = {
     VashjTargetTier{ VashjTarget::LadyVashj },
 };
-inline std::vector<VashjTargetTier> const VASHJ_PHASE_3_FIRST_ASSIST_TANK_TIERS = {
+// Every tank but hers, one Elite or Strider each as in phase 2
+inline std::vector<VashjTargetTier> const VASHJ_PHASE_3_TANK_TIERS = {
     VashjTargetTier{ VashjTarget::CoilfangStrider },
     VashjTargetTier{ VashjTarget::CoilfangElite },
-    VashjTargetTier{ VashjTarget::EnchantedElemental },
-    VashjTargetTier{ VashjTarget::LadyVashj },
-};
-inline std::vector<VashjTargetTier> const VASHJ_PHASE_3_OTHER_TANK_TIERS = {
-    VashjTargetTier{ VashjTarget::CoilfangElite },
-    VashjTargetTier{ VashjTarget::CoilfangStrider },
     VashjTargetTier{ VashjTarget::EnchantedElemental },
     VashjTargetTier{ VashjTarget::LadyVashj },
 };
@@ -619,12 +680,6 @@ inline std::vector<VashjTargetTier> const VASHJ_PHASE_3_RANGED_TIERS = {
 inline std::vector<VashjTargetTier> const VASHJ_PHASE_3_MELEE_TIERS = {
     VashjTargetTier{ VashjTarget::EnchantedElemental, VASHJ_ENCHANTED_NEAR_HER_DISTANCE },
     VashjTargetTier{ VashjTarget::CoilfangElite },
-    VashjTargetTier{ VashjTarget::LadyVashj },
-};
-inline std::vector<VashjTargetTier> const VASHJ_PHASE_3_OTHER_TIERS = {
-    VashjTargetTier{ VashjTarget::EnchantedElemental },
-    VashjTargetTier{ VashjTarget::CoilfangElite },
-    VashjTargetTier{ VashjTarget::CoilfangStrider },
     VashjTargetTier{ VashjTarget::LadyVashj },
 };
 
@@ -659,7 +714,17 @@ inline std::array const VASHJ_SHIELD_GENERATOR_POSITIONS = {
     Position{  7.810f, -945.244f, 44.0f },
     Position{  7.417f, -901.109f, 44.0f },
 };
+// The Shield Generators' spawn ids
+inline constexpr std::array VASHJ_SHIELD_GENERATOR_SPAWN_IDS = {
+    uint32{ 47482 }, // NW
+    uint32{ 47483 }, // NE
+    uint32{ 47484 }, // SE
+    uint32{ 47485 }, // SW
+};
 
+// Within the server's INTERACTION_DISTANCE, with a margin. Edge to edge in 3D, as the server
+// measures it, so the height gap needs no check of its own.
+inline constexpr float VASHJ_CORE_LOOT_RANGE = INTERACTION_DISTANCE - 2.0f;
 // Throw Key reaches 40y edge to edge, about 43y centre to centre. Spots are planned this far
 // apart centre to centre, in 3D.
 inline constexpr float VASHJ_CORE_THROW_PLAN_DISTANCE = 40.0f;
@@ -676,6 +741,10 @@ inline constexpr float VASHJ_CORE_SPOT_GENERATOR_CLEARANCE = 5.0f;
 // Five covers every spawn and generator pair in an offline model of the dais; four missed the
 // farthest generator from two spawns.
 inline constexpr size_t VASHJ_CORE_MAX_CATCHERS = 5;
+// A catcher within this of its spot, 2D, is on it. The last one closer in, so it is sure to be
+// within use range of the generator.
+inline constexpr float VASHJ_CORE_SPOT_ARRIVAL_DISTANCE = 1.0f;
+inline constexpr float VASHJ_CORE_USE_SPOT_ARRIVAL_DISTANCE = 0.5f;
 
 struct VashjCoreCatcher
 {
@@ -694,19 +763,17 @@ struct VashjCoreCatcher
 
 // One core's way to a generator, per instance. Planned by the mechanic tracker bot when the looter
 // is picked; the holder plans it again from where it is rooted if the next throw can't be made.
-struct VashjCoreChain
+struct VashjCorePassingChain
 {
     ObjectGuid tainted;
     ObjectGuid generator;
     // Who throws to the first catcher: the looter, or the holder a new plan started from
-    ObjectGuid start;
+    ObjectGuid originBot;
     // In throw order; the last one uses the core on the generator. The first spot's bot is picked
     // with the plan, every later one's when the spot is released.
     std::vector<VashjCoreCatcher> catchers;
-    // Left out after its throws failed, when this plan replaced one
+    // Left out of every later plan of this chain once its throws failed
     ObjectGuid excluded;
-    // Members of earlier chains who still held a core when this one was planned
-    std::vector<ObjectGuid> earlier;
     // The highest catcher index that has held the core; those before it are done
     int8 reached = -1;
     // No way to a generator was found; the holder destroys the core
@@ -725,27 +792,29 @@ struct VashjCoreChain
 
 extern std::unordered_map<uint32, VashjClusterHolders> vashjClusterHolders;
 extern std::unordered_map<uint32, TaintedCoreLooter> vashjTaintedCoreLooter;
-extern std::unordered_map<uint32, VashjCoreChain> vashjCoreChains;
+extern std::unordered_map<uint32, VashjCorePassingChain> vashjCorePassingChains;
+extern std::unordered_map<uint32, ObjectGuid> vashjGroundingShaman;
 
 int8 GetLadyVashjPhase(Unit* vashj);
 std::vector<Position> const& GetToxicSporePositions(PlayerbotAI* botAI);
 VashjAddGuids FindVashjAddGuids(PlayerbotAI* botAI);
 // True if x/y is on the dais, at least margin inside its edge, and clear of the north rock by
 // rockClearance.
-bool IsOnVashjDais(
-    float x, float y, float margin, float rockClearance = VASHJ_NORTH_ROCK_CLEARANCE);
-// A step that leads away from every position given while staying on the dais. facing is optional,
-// for a tank: when the bot is its victim, a step leading away from it is walked backwards. spores
-// is optional too: when given, no step ends within sporeRadius of one.
+bool IsOnVashjDais(float x, float y, float margin, float rockClearance);
+// A step that leads away from every position given while staying on the dais and rockClearance
+// off the north rock: VASHJ_NORTH_ROCK_CLEARANCE for her tank, VASHJ_STANDING_ROCK_CLEARANCE for
+// anyone else. facing is optional, for a tank: when the bot is its victim, a step leading away
+// from it is walked backwards. spores is optional too: when given, no step ends within
+// sporeRadius of one.
 bool FindVashjDaisStepAwayFromPositions(
-    Player* bot, std::vector<Position> const& positions, Unit* facing, float& stepX, float& stepY,
-    float& stepZ, bool& backwards, std::vector<Position> const* spores = nullptr,
-    float sporeRadius = TOXIC_SPORES_AVOID_RADIUS);
+    Player* bot, std::vector<Position> const& positions, Unit* facing, float rockClearance,
+    float& stepX, float& stepY, float& stepZ, bool& backwards,
+    std::vector<Position> const* spores = nullptr, float sporeRadius = TOXIC_SPORES_AVOID_RADIUS);
 // The same, away from where each unit given stands now.
 bool FindVashjDaisStepAwayFromUnits(
-    Player* bot, std::vector<Unit*> const& units, Unit* facing, float& stepX, float& stepY,
-    float& stepZ, bool& backwards, std::vector<Position> const* spores = nullptr,
-    float sporeRadius = TOXIC_SPORES_AVOID_RADIUS);
+    Player* bot, std::vector<Unit*> const& units, Unit* facing, float rockClearance,
+    float& stepX, float& stepY, float& stepZ, bool& backwards,
+    std::vector<Position> const* spores = nullptr, float sporeRadius = TOXIC_SPORES_AVOID_RADIUS);
 // For her tank pinned by pools, where no single step gains on them: the spot up to 35y away,
 // TOXIC_SPORES_TANK_AVOID_RADIUS or more from every pool, cheapest to reach in a straight line
 // that stays on the dais, counting yards walked through a pool several times over.
@@ -756,7 +825,10 @@ bool HasVashjStaticCharge(Player* player);
 // their own movement, and while her target holds it, melee step away from it like everyone else.
 bool IsVashjRingMelee(Player* bot, Unit* vashj);
 // True if any pool is within radius of the bot.
-bool IsNearToxicSpores(PlayerbotAI* botAI, Player* bot, float radius);
+bool IsNearToxicSpores(PlayerbotAI* botAI, float radius);
+// True if the bot is in melee range of target, on the dais, and radius or more from every pool.
+bool IsInMeleeRangeClearOfSpores(
+    Player* bot, Unit* target, std::vector<Position> const& spores, float radius);
 // A Paladin under Divine Shield or a Priest under Dispersion, who may walk straight through pools
 // on the way somewhere, though not stop in one.
 bool CanWalkThroughToxicSpores(Player* bot);
@@ -777,35 +849,46 @@ bool GetStepOutOfNearestSpore(
 // straight walk to where it would be in range passes within TOXIC_SPORES_AVOID_RADIUS of a pool.
 // Stock reach would walk them into the pool and the spore action straight back out, over and
 // over. target and range are set to the reach's either way.
-bool GetVashjReachBlockedBySpores(PlayerbotAI* botAI, Player* bot, Unit*& target, float& range);
+bool GetVashjReachBlockedBySpores(PlayerbotAI* botAI, Unit*& target, float& range);
 // A step toward the point, 2y inside cast range of target, that is cheapest to reach in a straight
 // line: the distance plus several times the yards of the line within TOXIC_SPORES_AVOID_RADIUS of
 // a pool. The point is on the dais and clear of pools itself.
 bool GetStepToCastRangeAroundSpores(
     Player* bot, Unit* target, float castRange, std::vector<Position> const& spores, float& stepX,
     float& stepY, float& stepZ);
+// True if a phase 3 ranged bot is within VASHJ_PHASE_3_RANGED_DISTANCE of her, or within
+// VASHJ_PHASE_3_RANGED_SPREAD_DISTANCE of another member.
+bool IsVashjPhase3RangedTooClose(Player* bot, Unit* vashj);
 // True for any bot but Vashj's target that holds Static Charge, or while her target holds it.
 bool ShouldAvoidVashjStaticCharge(Player* bot, Unit* vashj);
-// The one Shaman bot that keeps Grounding Totem up for the main tank: the first alive in the
-// tank's subgroup. Grounding Totem Effect is a party aura, so no Shaman outside it can cover it.
+// True if the bot should step away from a Static Charge pulse: a holder other than her target
+// with anyone in reach of it, or anyone in reach of her charged target.
+bool IsInVashjStaticChargeReach(Player* bot, Unit* vashj);
+// The Entangled melee a Paladin frees, or nullptr. In phase 3, one in a pool, else one holding
+// Static Charge, the main tank first each time. In phase 1, only a Static Charge holder.
+Player* GetVashjHandOfFreedomTarget(PlayerbotAI* botAI, Unit* vashj);
+// The one Shaman bot that keeps Grounding Totem up for the main tank while alive and in the
+// instance, or nullptr. The mechanic tracker picks it with FindVashjGroundingShaman.
 Player* GetVashjGroundingShaman(Player* bot);
+// The first alive Shaman bot in the main tank's subgroup. Grounding Totem Effect is a party
+// aura, so no Shaman outside it can cover the tank.
+Player* FindVashjGroundingShaman(Player* bot);
 // Each cluster's first ranged slot, then each one's second and third, then the healers, the
 // clusters in VASHJ_CLUSTER_FILL_ORDER each time
 std::vector<VashjClusterSlot> GetVashjClusterFillOrder();
-// True if there is no holder table yet, or a holder is dead or gone from the instance.
+// True if the holder is alive and in the instance.
 bool IsLiveVashjClusterHolder(Player* bot, ObjectGuid guid);
+// True if there is no holder table yet, or a holder is dead or gone from the instance.
 bool HasVashjClusterVacancy(Player* bot);
 // From the holder table; cluster -1 if the bot holds no slot.
 VashjClusterSlot GetVashjClusterSlot(Player* bot);
-Position const& GetVashjClusterPosition(VashjClusterSlot const& slot);
-// The living ranged dps of a cluster, in slot order.
-std::vector<Player*> GetVashjClusterRanged(Player* bot, int8 cluster);
-// Nullptr if the cluster has no healer or it is dead.
-Player* GetVashjClusterHealer(Player* bot, int8 cluster);
+// The cluster slot to walk back to, or nullptr: none held, already there, or away on purpose
+// (the looter before the core is looted, a killer, a ranged stepped in to a Strider).
+Position const* GetVashjClusterPositionToReturnTo(Player* bot, Unit* currentTarget);
 // Skips a cluster whose straight line to the unit crosses the north rock.
 int8 GetNearestVashjCluster(Unit* unit);
-// The cluster's healer; else the healer of the nearest cluster that has one; else the closest
-// non-tank bot.
+// The cluster's healer; else the spare healer (no cluster slot) nearest the elemental, who rarely
+// gets there in time, so that core is given up; else the cluster's ranged dps nearest it.
 Player* FindTaintedCoreLooter(Player* bot, Unit* tainted, int8 cluster);
 // The Tainted Elemental the current looter was chosen for, alive or a corpse.
 Creature* GetAssignedTaintedElemental(Player* bot);
@@ -814,25 +897,26 @@ Creature* GetAssignedTaintedElemental(Player* bot);
 int8 GetTaintedCoreLootSlot(Creature* tainted);
 // From the elemental's spawn until its core is taken from the corpse.
 bool IsTaintedCoreStillToLoot(Creature* tainted);
-// True for the ranged dps of the cluster nearest the Tainted Elemental, other than its looter
-// (only matters when no cluster has a healer left and the looter is picked from the rest).
-bool IsAssignedToAttackTaintedElemental(Player* bot, Unit* tainted);
-// Chosen once per Tainted Elemental by the mechanic tracker bot via
+// The living Tainted Elemental the bot is assigned to attack, else nullptr: the ranged dps of
+// the cluster nearest it, its looter included.
+Creature* GetTaintedElementalToKill(Player* bot);
+// The looter the mechanic tracker bot chose for the current Tainted Elemental, via
 // LadyVashjAssignTaintedCoreLooterAction.
-Player* GetDesignatedCoreLooter(Player* bot);
+bool IsDesignatedCoreLooter(Player* bot);
 // The master's current target, unless a pet would be useless on it; then the Enchanted Elemental
 // nearest Vashj, or Vashj herself in phase 3. Nullptr when there is nothing worth attacking.
 Unit* GetVashjPetTarget(PlayerbotAI* botAI, Creature* pet, Unit* vashj);
 // True if a tank is the unit's victim.
 bool IsVashjAddHeldByTank(Unit* unit);
 // The bot's class taunt on target. False if it has none, or can't cast it now.
-bool CastTankTaunt(PlayerbotAI* botAI, Player* bot, Unit* target);
+bool CastTankTaunt(PlayerbotAI* botAI, Unit* target);
 // The tank an add belongs to, so each has only one: of the living tanks attacking it, the one it
 // is attacking, else the first in group order. Nullptr if no tank is attacking it.
 Player* GetVashjAddOwningTank(Player* bot, Unit* add);
-// True if no other living bot tank is nearer the add among those not holding an Elite or Strider
-// of their own.
-bool IsNearestFreeVashjTank(Player* bot, Unit* add);
+// True if no other living bot tank is nearer the add among those free to take it: not holding
+// an Elite or Strider of their own, and in phase 3 not Vashj's tank. In phase 3 a tank holding
+// only an Elite is free for a Strider.
+bool IsNearestFreeVashjTank(Player* bot, Unit* add, Unit* vashj, int8 phase);
 // The bot's target tiers for the phase, best first. killsTainted: one of the cluster sent after a
 // Tainted Elemental.
 std::vector<VashjTargetTier> const& GetVashjTargetTiers(Player* bot, int8 phase, bool killsTainted);
@@ -842,6 +926,13 @@ std::vector<VashjTargetTier> const& GetVashjTargetTiers(Player* bot, int8 phase,
 bool GetStepToBringTankedUnitTo(
     Player* bot, Unit* mob, Position const& spot, float arrivalDistance, float& stepX,
     float& stepY, bool& backwards);
+// The Strider hold and Elite tank position nearest the add.
+Position const& GetVashjStriderHoldPosition(Unit const& strider);
+Position const& GetVashjEliteTankPosition(Unit const& elite);
+// True if strider, the tank's current target, is a Strider it has work on: in phase 2, one on
+// it not yet at its hold; in phase 3, one to taunt off whoever has it, or one on it that is too
+// close to Vashj. Never for her tank in phase 3, who is on her.
+bool ShouldTankVashjStrider(Player* bot, Unit* strider, Unit* vashj, int8 phase);
 // True for a tanked Strider within VASHJ_STRIDER_STEP_IN_DISTANCE of the bot.
 bool IsTankedStriderInStepInReach(Player* bot, Unit* unit);
 // TEMP LOG (Tainted Elemental timing), remove after testing. Elapsed is from the looter pick.
@@ -853,39 +944,30 @@ bool TaintedLogSeen(Player* bot, char const* key);
 // At most once a second per bot and key.
 bool TaintedLogThrottle(Player* bot, char const* key);
 void TaintedLogThrow(Player* bot, Player* receiver, int catcher);
-void TaintedLogChain(Player* bot, VashjCoreChain const& chain, char const* what);
+void TaintedLogChain(Player* bot, VashjCorePassingChain const& chain, char const* what);
 // Logs when the number of usable generators changes.
 void TaintedLogGenerators(Player* bot);
+// By the core's Paralyze, which comes and goes with the core in the bags. Nothing else takes it
+// off: no dispel type or mechanic, it pierces immunities, and it can't be cancelled.
 bool HasTaintedCore(Player* player);
 // A new chain for the elemental, from where it stands to the nearest usable generator a route
-// reaches, with looter as its start. With no route yet, the looter plans again once it holds the
-// core.
-void PlanVashjCoreChain(Player* bot, Creature* tainted, Player* looter);
+// reaches, with looter as its origin bot. With no route yet, the looter plans again once it
+// holds the core.
+void PlanVashjCorePassingChain(Player* bot, Unit* tainted, Player* looter);
 // Plans the chain again from the holder, rooted where it stands, to the same generator if a route
-// still reaches it, else the nearest usable one that does. excluded gets no spot. Marks the chain
-// failed if there is no way, or after a few tries.
-bool ReplanVashjCoreChain(Player* holder, VashjCoreChain& chain, ObjectGuid excluded);
+// still reaches it, else the nearest usable one that does. excluded, when given, gets no spot in
+// this plan or any later one. Marks the chain failed if there is no way, or after a few tries.
+bool ReplanVashjCorePassingChain(Player* holder, VashjCorePassingChain& chain, ObjectGuid excluded);
 // Gives a catcher's spot to the nearest other bot that can take it.
-bool ReassignVashjCoreCatcher(Player* bot, VashjCoreChain& chain, size_t index);
+bool ReassignVashjCoreCatcher(Player* bot, VashjCorePassingChain& chain, size_t index);
 // Picks the nearest bot for a catcher's spot, from where the raid stands now, and lets it set out.
-void ReleaseVashjCoreCatcher(Player* bot, VashjCoreChain& chain, size_t index);
-VashjCoreChain* GetVashjCoreChain(Player* bot);
+void ReleaseVashjCoreCatcher(Player* bot, VashjCorePassingChain& chain, size_t index);
+VashjCorePassingChain* GetVashjCorePassingChain(Player* bot);
 // The bot's place among the chain's catchers, or -1.
-int8 GetVashjCoreCatcherIndex(VashjCoreChain const& chain, Player* bot);
-// True while the chain is under way: its elemental stands or lies unlooted, the core's last holder
-// or the one it was last thrown to has it, or a throw has just been made.
-bool IsVashjCoreChainLive(Player* bot, VashjCoreChain const& chain);
+int8 GetVashjCoreCatcherIndex(VashjCorePassingChain const& chain, Player* bot);
 // True while the catcher should be walking to or standing on its spot.
-bool IsVashjCoreCatcherActive(Player* bot, VashjCoreChain const& chain, int8 index);
-// The Shield Generators' spawn ids
-inline constexpr std::array SHIELD_GENERATOR_DB_GUIDS = {
-    uint32{ 47482 }, // NW
-    uint32{ 47483 }, // NE
-    uint32{ 47484 }, // SE
-    uint32{ 47485 }, // SW
-};
-// The generators not yet used.
-std::vector<GameObject*> GetUsableVashjGenerators(Map* map);
+bool IsVashjCoreCatcherActive(Player* bot, VashjCorePassingChain const& chain, int8 index);
+float GetVashjCoreSpotArrivalDistance(VashjCorePassingChain const& chain, int8 index);
 
 }
 

@@ -13,30 +13,25 @@
 #include <array>
 #include <cmath>
 #include <iterator>
-#include <list>
 #include <utility>
 #include <vector>
 
 using namespace SwpHelpers;
 using namespace EncounterHelpers;
 
-bool MuruMisdirectEnemiesToTanksAction::Execute(Event /*event*/)
+bool MuruMisdirectEnemyToTankAction::Execute(Event /*event*/)
 {
     Unit* enemy = nullptr;
-    Unit* tank = nullptr;
+    Player* tank = nullptr;
 
-    // By leewheel 2026-09-10 合并brighton 898e9d59(muru tweaks): 结构沿用其写法,
-    // 但boss名称按项目规则保留entry: 25772=虚空戒卫(void sentinel), 25840=熵魔(entropius)
-    // End By leewheel
-    Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
-
-    if (voidSentinel && voidSentinel->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT)
+    if (Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
+        voidSentinel && voidSentinel->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT)
     {
         enemy = voidSentinel;
         tank = GetGroupAssistTank(bot, 0);
     }
-    else if (entropius && entropius->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT)
+    else if (Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+        entropius && entropius->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT)
     {
         enemy = entropius;
         tank = GetGroupMainTank(bot);
@@ -45,13 +40,7 @@ bool MuruMisdirectEnemiesToTanksAction::Execute(Event /*event*/)
     if (!enemy || !tank || !tank->IsAlive())
         return false;
 
-    if (botAI->CanCastSpell("misdirection", tank))
-        return botAI->CastSpell("misdirection", tank);
-
-    if (!bot->HasAura(Id(SwpSpells::SPELL_MISDIRECTION)))
-        return false;
-
-    return botAI->CanCastSpell("steady shot", enemy) && botAI->CastSpell("steady shot", enemy);
+    return MisdirectTargetToTank(botAI, enemy, tank);
 }
 
 bool MuruMainTankPickUpEntropiusAction::Execute(Event /*event*/)
@@ -71,10 +60,16 @@ bool MuruPositionRangedByPhaseAction::Execute(Event /*event*/)
         _entropiusRangedPositionReached = false;
 
         Position const& position = MURU_STACK_POSITION;
-        constexpr float rangedGroupRadius = 2.0f;
-        return MoveInside(
-            SWP_MAP_ID, position.GetPositionX(), position.GetPositionY(),
-            position.GetPositionZ(), rangedGroupRadius, MovementPriority::MOVEMENT_COMBAT);
+        constexpr float rangedGroupRadius = 3.5f;
+        float moveX;
+        float moveY;
+        bool backwards;
+        if (!GetStepToPosition(bot, position, rangedGroupRadius, nullptr, moveX, moveY, backwards))
+            return false;
+
+        return MoveTo(
+            SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+            MovementPriority::MOVEMENT_COMBAT, true, false);
     }
 
     if (TryGetMuruDarknessActiveState(bot, muru))
@@ -99,9 +94,15 @@ bool MuruPositionRangedByPhaseAction::Execute(Event /*event*/)
             return false;
         }
 
-        return MoveInside(
-            SWP_MAP_ID, position.GetPositionX(), position.GetPositionY(),
-            position.GetPositionZ(), arrivalDistance, MovementPriority::MOVEMENT_COMBAT);
+        float moveX;
+        float moveY;
+        bool backwards;
+        if (!GetStepToPosition(bot, position, arrivalDistance, nullptr, moveX, moveY, backwards))
+            return false;
+
+        return MoveTo(
+            SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+            MovementPriority::MOVEMENT_COMBAT, true, false);
     }
 
     constexpr float safeDistFromPlayer = 4.0f;
@@ -381,9 +382,7 @@ bool MuruKillDarkFiendsWithDispelAction::Execute(Event /*event*/)
 
     Creature* darkFiendNearMuru = nullptr;
     constexpr float massDispelRange = 15.0f;
-    std::list<Creature*> darkFiends;
-    bot->GetCreatureListWithEntryInGrid(
-        darkFiends, Id(SwpNpcs::NPC_DARK_FIEND), DARK_FIEND_DISPEL_SEARCH_RADIUS);
+    std::vector<Creature*> const darkFiends = GetMuruDarkFiends(botAI);
 
     if (isMuruPhase)
     {
@@ -433,21 +432,23 @@ bool MuruKillDarkFiendsWithDispelAction::Execute(Event /*event*/)
     return false;
 }
 
-// 合并brighton 2026-08-26: MuruDontTouchTheDarkFiendAction/MuruFleeFromSingularityAction重复定义已删除,
-// 保留文件后部brighton版本(dark fiend/entropius已转entry 25744/25840) --By leewheel 2026年8月26日
 bool MuruTanksMoveSentinelToSafePositionAction::Execute(Event /*event*/)
 {
     Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
     if (!voidSentinel)
     {
-        Position const& waitPosition = MURU_STACK_POSITION;
         constexpr float arrivalDistance = 3.0f;
-        if (bot->GetExactDist2d(waitPosition) <= arrivalDistance)
+        float moveX;
+        float moveY;
+        bool backwards;
+        if (!GetStepToPosition(
+                bot, MURU_STACK_POSITION, arrivalDistance, nullptr, moveX, moveY, backwards))
+        {
             return false;
+        }
 
         return MoveTo(
-            SWP_MAP_ID, waitPosition.GetPositionX(), waitPosition.GetPositionY(),
-            waitPosition.GetPositionZ(), false, false, false, false,
+            SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
             MovementPriority::MOVEMENT_COMBAT, true, false);
     }
 
@@ -478,13 +479,19 @@ bool MuruTanksMoveSentinelToSafePositionAction::Execute(Event /*event*/)
 
 bool MuruSecondAssistTankGuardRangedAction::Execute(Event /*event*/)
 {
-    Position const& position = MURU_ENTRANCE_POSITION;
-    if (bot->GetExactDist2d(position) <= 1.0f)
+    constexpr float arrivalDist = 1.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(
+            bot, MURU_ENTRANCE_POSITION, arrivalDist, nullptr, moveX, moveY, backwards))
+    {
         return false;
+    }
 
     return MoveTo(
-        SWP_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+        SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
 bool MuruMeleeFleeTheDarknessAction::Execute(Event /*event*/)
@@ -515,11 +522,19 @@ bool MuruMeleeFleeTheDarknessAction::Execute(Event /*event*/)
         {
             Position const& holdingPosition = PlayerbotAI::IsAssistTankOfIndex(bot, 1, true) ?
                 entrancePosition : stackPosition;
-            constexpr float arrivalDistance = 1.0f;
+            constexpr float arrivalDistance = 2.5f;
+            float moveX;
+            float moveY;
+            bool backwards;
+            if (!GetStepToPosition(
+                    bot, holdingPosition, arrivalDistance, nullptr, moveX, moveY, backwards))
+            {
+                return false;
+            }
 
-            return MoveInside(
-                SWP_MAP_ID, holdingPosition.GetPositionX(), holdingPosition.GetPositionY(),
-                holdingPosition.GetPositionZ(), arrivalDistance, MovementPriority::MOVEMENT_FORCED);
+            return MoveTo(
+                SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+                MovementPriority::MOVEMENT_FORCED, true, false);
         }
 
         constexpr uint32 minInterval = 0;
@@ -529,50 +544,52 @@ bool MuruMeleeFleeTheDarknessAction::Execute(Event /*event*/)
         return FleePosition(muru->GetPosition(), MURU_DARKNESS_SAFE_DISTANCE, minInterval);
     }
 
-    constexpr float stackArrivalDistance = 3.0f;
-    return MoveInside(
-        SWP_MAP_ID, stackPosition.GetPositionX(), stackPosition.GetPositionY(),
-        stackPosition.GetPositionZ(), stackArrivalDistance, MovementPriority::MOVEMENT_FORCED);
+    constexpr float stackArrivalDistance = 4.5f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(
+            bot, stackPosition, stackArrivalDistance, nullptr, moveX, moveY, backwards))
+    {
+        return false;
+    }
+
+    return MoveTo(
+        SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-// 合并brighton 2026-08-27: MuruFleeFromSingularityAction重复定义已删除, 文件后部已有brighton版本(entropius已转entry 25840);
-// 且本次brighton将MuruCastStunOnShadowswordBerserkerAction重命名为MuruCastStunOnBerserkerAction --By leewheel 2026年8月27日
 bool MuruCastStunOnBerserkerAction::Execute(Event /*event*/)
 {
     Unit* berserker = FindMuruBerserkerToStun(botAI);
     if (!berserker)
         return false;
 
-// By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
-    auto const castStun = [&](uint32 spellId)
+    auto const castStun = [&](char const* spell)
     {
-        return botAI->CanCastSpell(spellId, berserker) && botAI->CastSpell(spellId, berserker);
+        return botAI->CanCastSpell(spell, berserker) && botAI->CastSpell(spell, berserker);
     };
 
     switch (bot->getClass())
     {
         case CLASS_DRUID:
-            return castStun(Id(SwpSpells::SPELL_BASH)) || castStun(Id(SwpSpells::SPELL_MAIM));
+            return castStun("bash") || castStun("maim");
 
         case CLASS_PALADIN:
-            return castStun(Id(SwpSpells::SPELL_HAMMER_OF_JUSTICE));
+            return castStun("hammer of justice");
 
         case CLASS_ROGUE:
-            return castStun(Id(SwpSpells::SPELL_KIDNEY_SHOT));
+            return castStun("kidney shot");
 
         case CLASS_WARLOCK:
-            return castStun(Id(SwpSpells::SPELL_SHADOWFURY));
+            return castStun("shadowfury");
 
         case CLASS_WARRIOR:
-            return castStun(Id(SwpSpells::SPELL_CONCUSSION_BLOW)) || castStun(Id(SwpSpells::SPELL_SHOCKWAVE));
+            return castStun("concussion blow") || castStun("shockwave");
 
         default:
-            // 牛头人种族技能
-            // By leewheel 2026-09-10 合并brighton 898e9d59: 采纳其种族判定(仅牛头人), 技能名保留entry
-            // End By leewheel
-            return bot->getRace() == RACE_TAUREN && castStun(Id(SwpSpells::SPELL_WAR_STOMP));
+            return bot->getRace() == RACE_TAUREN && castStun("war stomp");
     }
-    // End By leewheel
 }
 
 bool MuruInterruptFelFireballAction::Execute(Event /*event*/)
@@ -581,45 +598,43 @@ bool MuruInterruptFelFireballAction::Execute(Event /*event*/)
     if (!furyMage)
         return false;
 
-// By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
-    auto const castInterrupt = [&](uint32 spellId)
+    auto const castInterrupt = [&](char const* spell)
     {
-        return botAI->CanCastSpell(spellId, furyMage) && botAI->CastSpell(spellId, furyMage);
+        return botAI->CanCastSpell(spell, furyMage) && botAI->CastSpell(spell, furyMage);
     };
 
     switch (bot->getClass())
     {
         case CLASS_DEATH_KNIGHT:
-            return castInterrupt(Id(SwpSpells::SPELL_MIND_FREEZE)) || castInterrupt(Id(SwpSpells::SPELL_STRANGULATE));
+            return castInterrupt("mind freeze") || castInterrupt("strangulate");
 
         case CLASS_HUNTER:
-            return castInterrupt(Id(SwpSpells::SPELL_SILENCING_SHOT));
+            return castInterrupt("silencing shot");
 
         case CLASS_MAGE:
-            return castInterrupt(Id(SwpSpells::SPELL_COUNTERSPELL));
+            return castInterrupt("counterspell");
 
         case CLASS_PALADIN:
-            return castInterrupt(Id(SwpSpells::SPELL_AVENGERS_SHIELD));
+            return castInterrupt("avenger's shield");
 
         case CLASS_PRIEST:
-            return castInterrupt(Id(SwpSpells::SPELL_SILENCE));
+            return castInterrupt("silence");
 
         case CLASS_ROGUE:
-            return castInterrupt(Id(SwpSpells::SPELL_KICK));
+            return castInterrupt("kick");
 
         case CLASS_SHAMAN:
-            return castInterrupt(Id(SwpSpells::SPELL_WIND_SHEAR));
+            return castInterrupt("wind shear");
 
         case CLASS_WARLOCK:
-            return castInterrupt(Id(SwpSpells::SPELL_SPELL_LOCK));
+            return castInterrupt("spell lock");
 
         case CLASS_WARRIOR:
-            return castInterrupt(Id(SwpSpells::SPELL_PUMMEL)) || castInterrupt(Id(SwpSpells::SPELL_SHIELD_BASH));
+            return castInterrupt("pummel") || castInterrupt("shield bash");
 
         default:
             return false;
     }
-    // End By leewheel
 }
 
 bool MuruCastSpellStealOnSpellFuryAction::Execute(Event /*event*/)
@@ -717,9 +732,7 @@ bool MuruKeepDistanceFromDarkFiendsAction::Execute(Event /*event*/)
         return MoveAway(voidZone, VOID_ZONE_SAFE_DISTANCE - distFromVoidZone);
     }
 
-// 合并brighton 2026-08-27: 改用FindNearestCreature按NPC_DARK_FIEND搜索, 不再依赖find target --By leewheel 2026年8月27日
-    Creature* darkFiend =
-        bot->FindNearestCreature(Id(SwpNpcs::NPC_DARK_FIEND), DARK_FIEND_AVOID_SEARCH_RADIUS);
+    Creature* darkFiend = GetNearestMuruDarkFiend(botAI, DARK_FIEND_AVOID_SEARCH_RADIUS);
     if (!darkFiend)
         return false;
 
@@ -733,7 +746,6 @@ bool MuruKeepDistanceFromDarkFiendsAction::Execute(Event /*event*/)
 
 bool MuruEscapeTheSingularityAction::Execute(Event /*event*/)
 {
-    // 合并brighton 2026-08-26: entropius按entry规则转25840 --By leewheel 2026年8月26日
     Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
     if (!entropius)
         return false;
