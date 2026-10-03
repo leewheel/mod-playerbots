@@ -15,7 +15,7 @@ class RaidSscTriggerContext : public NamedObjectContext<Trigger>
 public:
     RaidSscTriggerContext()
     {
-        // General
+        // Shared
         creators["ssc no encounter in progress"] =
             &RaidSscTriggerContext::ssc_no_encounter_in_progress;
 
@@ -42,6 +42,9 @@ public:
         creators["hydross the unstable aggro resets upon phase change"] =
             &RaidSscTriggerContext::hydross_the_unstable_aggro_resets_upon_phase_change;
 
+        creators["hydross the unstable non-phase tank attacking"] =
+            &RaidSscTriggerContext::hydross_the_unstable_non_phase_tank_attacking;
+
         creators["hydross the unstable should manage phase timers"] =
             &RaidSscTriggerContext::hydross_the_unstable_should_manage_phase_timers;
 
@@ -61,7 +64,13 @@ public:
         creators["the lurker below melee cannot reach target"] =
             &RaidSscTriggerContext::the_lurker_below_melee_cannot_reach_target;
 
+        creators["the lurker below melee in water"] =
+            &RaidSscTriggerContext::the_lurker_below_melee_in_water;
+
         // Leotheras the Blind
+        creators["leotheras the blind ranged should spread upon pull"] =
+            &RaidSscTriggerContext::leotheras_the_blind_ranged_should_spread_upon_pull;
+
         creators["leotheras the blind warlock should tank demon form"] =
             &RaidSscTriggerContext::leotheras_the_blind_warlock_should_tank_demon_form;
 
@@ -114,21 +123,21 @@ public:
         creators["fathom-lord karathress ranged should spread"] =
             &RaidSscTriggerContext::fathom_lord_karathress_ranged_should_spread;
 
-        creators["fathom-lord karathress lifted by cyclone"] =
-            &RaidSscTriggerContext::fathom_lord_karathress_lifted_by_cyclone;
+        creators["fathom-lord karathress stuck midair after cyclone"] =
+            &RaidSscTriggerContext::fathom_lord_karathress_stuck_midair_after_cyclone;
 
         // Morogrim Tidewalker
         creators["morogrim tidewalker should be tanked"] =
             &RaidSscTriggerContext::morogrim_tidewalker_should_be_tanked;
-
-        creators["morogrim tidewalker hunter should misdirect"] =
-            &RaidSscTriggerContext::morogrim_tidewalker_hunter_should_misdirect;
 
         creators["morogrim tidewalker ranged should stack"] =
             &RaidSscTriggerContext::morogrim_tidewalker_ranged_should_stack;
 
         creators["morogrim tidewalker too far from boss"] =
             &RaidSscTriggerContext::morogrim_tidewalker_too_far_from_boss;
+
+        creators["morogrim tidewalker hunter should misdirect"] =
+            &RaidSscTriggerContext::morogrim_tidewalker_hunter_should_misdirect;
 
         // Lady Vashj <Coilfang Matron>
         creators["lady vashj should be tanked"] =
@@ -137,11 +146,11 @@ public:
         creators["lady vashj ranged should spread in phase 1"] =
             &RaidSscTriggerContext::lady_vashj_ranged_should_spread_in_phase_1;
 
-        creators["lady vashj cluster slots need holders"] =
-            &RaidSscTriggerContext::lady_vashj_cluster_slots_need_holders;
+        creators["lady vashj station slots need holders"] =
+            &RaidSscTriggerContext::lady_vashj_station_slots_need_holders;
 
-        creators["lady vashj should hold cluster in phase 2"] =
-            &RaidSscTriggerContext::lady_vashj_should_hold_cluster_in_phase_2;
+        creators["lady vashj should hold station in phase 2"] =
+            &RaidSscTriggerContext::lady_vashj_should_hold_station_in_phase_2;
 
         creators["lady vashj ranged should position in phase 3"] =
             &RaidSscTriggerContext::lady_vashj_ranged_should_position_in_phase_3;
@@ -211,7 +220,7 @@ public:
     }
 
 private:
-    // General
+    // Shared
     static Trigger* ssc_no_encounter_in_progress(PlayerbotAI* botAI) {
         return new SscNoEncounterInProgressTrigger(botAI);
     }
@@ -240,6 +249,9 @@ private:
     static Trigger* hydross_the_unstable_aggro_resets_upon_phase_change(PlayerbotAI* botAI) {
         return new HydrossTheUnstableAggroResetsUponPhaseChangeTrigger(botAI);
     }
+    static Trigger* hydross_the_unstable_non_phase_tank_attacking(PlayerbotAI* botAI) {
+        return new HydrossTheUnstableNonPhaseTankAttackingTrigger(botAI);
+    }
     static Trigger* hydross_the_unstable_should_manage_phase_timers(PlayerbotAI* botAI) {
         return new HydrossTheUnstableShouldManagePhaseTimersTrigger(botAI);
     }
@@ -260,8 +272,14 @@ private:
     static Trigger* the_lurker_below_melee_cannot_reach_target(PlayerbotAI* botAI) {
         return new TheLurkerBelowMeleeCannotReachTargetTrigger(botAI);
     }
+    static Trigger* the_lurker_below_melee_in_water(PlayerbotAI* botAI) {
+        return new TheLurkerBelowMeleeInWaterTrigger(botAI);
+    }
 
     // Leotheras the Blind
+    static Trigger* leotheras_the_blind_ranged_should_spread_upon_pull(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindRangedShouldSpreadUponPullTrigger(botAI);
+    }
     static Trigger* leotheras_the_blind_warlock_should_tank_demon_form(PlayerbotAI* botAI) {
         return new LeotherasTheBlindWarlockShouldTankDemonFormTrigger(botAI);
     }
@@ -316,23 +334,23 @@ private:
     static Trigger* fathom_lord_karathress_ranged_should_spread(PlayerbotAI* botAI) {
         return new FathomLordKarathressRangedShouldSpreadTrigger(botAI);
     }
-    static Trigger* fathom_lord_karathress_lifted_by_cyclone(PlayerbotAI* botAI) {
-        return new FathomLordKarathressLiftedByCycloneTrigger(botAI);
+    static Trigger* fathom_lord_karathress_stuck_midair_after_cyclone(PlayerbotAI* botAI) {
+        return new FathomLordKarathressStuckMidairAfterCycloneTrigger(botAI);
     }
 
     // Morogrim Tidewalker
     static Trigger* morogrim_tidewalker_should_be_tanked(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerShouldBeTankedTrigger(botAI);
     }
-    static Trigger* morogrim_tidewalker_hunter_should_misdirect(PlayerbotAI* botAI) {
-        return new SscHunterShouldMisdirectTrigger(
-            botAI, "morogrim tidewalker hunter should misdirect", "morogrim tidewalker");
-    }
     static Trigger* morogrim_tidewalker_ranged_should_stack(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerRangedShouldStackTrigger(botAI);
     }
     static Trigger* morogrim_tidewalker_too_far_from_boss(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerTooFarFromBossTrigger(botAI);
+    }
+    static Trigger* morogrim_tidewalker_hunter_should_misdirect(PlayerbotAI* botAI) {
+        return new SscHunterShouldMisdirectTrigger(
+            botAI, "morogrim tidewalker hunter should misdirect", "morogrim tidewalker");
     }
 
     // Lady Vashj <Coilfang Matron>
@@ -342,11 +360,11 @@ private:
     static Trigger* lady_vashj_ranged_should_spread_in_phase_1(PlayerbotAI* botAI) {
         return new LadyVashjRangedShouldSpreadInPhase1Trigger(botAI);
     }
-    static Trigger* lady_vashj_cluster_slots_need_holders(PlayerbotAI* botAI) {
-        return new LadyVashjClusterSlotsNeedHoldersTrigger(botAI);
+    static Trigger* lady_vashj_station_slots_need_holders(PlayerbotAI* botAI) {
+        return new LadyVashjStationSlotsNeedHoldersTrigger(botAI);
     }
-    static Trigger* lady_vashj_should_hold_cluster_in_phase_2(PlayerbotAI* botAI) {
-        return new LadyVashjShouldHoldClusterInPhase2Trigger(botAI);
+    static Trigger* lady_vashj_should_hold_station_in_phase_2(PlayerbotAI* botAI) {
+        return new LadyVashjShouldHoldStationInPhase2Trigger(botAI);
     }
     static Trigger* lady_vashj_ranged_should_position_in_phase_3(PlayerbotAI* botAI) {
         return new LadyVashjRangedShouldPositionInPhase3Trigger(botAI);

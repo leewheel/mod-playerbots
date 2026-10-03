@@ -15,7 +15,7 @@ class RaidSscActionContext : public NamedObjectContext<Action>
 public:
     RaidSscActionContext()
     {
-        // General
+        // Shared
         creators["ssc reset encounter states"] =
             &RaidSscActionContext::ssc_reset_encounter_states;
 
@@ -39,8 +39,8 @@ public:
         creators["hydross the unstable misdirect to tank"] =
             &RaidSscActionContext::hydross_the_unstable_misdirect_to_tank;
 
-        creators["hydross the unstable stop dps upon phase change"] =
-            &RaidSscActionContext::hydross_the_unstable_stop_dps_upon_phase_change;
+        creators["hydross the unstable stop attacking upon phase change"] =
+            &RaidSscActionContext::hydross_the_unstable_stop_attacking_upon_phase_change;
 
         creators["hydross the unstable manage phase timers"] =
             &RaidSscActionContext::hydross_the_unstable_manage_phase_timers;
@@ -61,7 +61,13 @@ public:
         creators["the lurker below melee move directly to target"] =
             &RaidSscActionContext::the_lurker_below_melee_move_directly_to_target;
 
+        creators["the lurker below melee get out of water"] =
+            &RaidSscActionContext::the_lurker_below_melee_get_out_of_water;
+
         // Leotheras the Blind
+        creators["leotheras the blind spread ranged upon pull"] =
+            &RaidSscActionContext::leotheras_the_blind_spread_ranged_upon_pull;
+
         creators["leotheras the blind warlock tank attack demon form"] =
             &RaidSscActionContext::leotheras_the_blind_warlock_tank_attack_demon_form;
 
@@ -114,13 +120,10 @@ public:
         creators["fathom-lord karathress spread ranged"] =
             &RaidSscActionContext::fathom_lord_karathress_spread_ranged;
 
-        creators["fathom-lord karathress drop from cyclone"] =
-            &RaidSscActionContext::fathom_lord_karathress_drop_from_cyclone;
+        creators["fathom-lord karathress drop to ground after cyclone"] =
+            &RaidSscActionContext::fathom_lord_karathress_drop_to_ground_after_cyclone;
 
         // Morogrim Tidewalker
-        creators["morogrim tidewalker misdirect to main tank"] =
-            &RaidSscActionContext::morogrim_tidewalker_misdirect_to_main_tank;
-
         creators["morogrim tidewalker position main tank"] =
             &RaidSscActionContext::morogrim_tidewalker_position_main_tank;
 
@@ -130,6 +133,9 @@ public:
         creators["morogrim tidewalker return to boss"] =
             &RaidSscActionContext::morogrim_tidewalker_return_to_boss;
 
+        creators["morogrim tidewalker misdirect to main tank"] =
+            &RaidSscActionContext::morogrim_tidewalker_misdirect_to_main_tank;
+
         // Lady Vashj <Coilfang Matron>
         creators["lady vashj main tank position boss"] =
             &RaidSscActionContext::lady_vashj_main_tank_position_boss;
@@ -137,11 +143,11 @@ public:
         creators["lady vashj phase 1 spread ranged in arc"] =
             &RaidSscActionContext::lady_vashj_phase_1_spread_ranged_in_arc;
 
-        creators["lady vashj assign cluster slots"] =
-            &RaidSscActionContext::lady_vashj_assign_cluster_slots;
+        creators["lady vashj assign station slots"] =
+            &RaidSscActionContext::lady_vashj_assign_station_slots;
 
-        creators["lady vashj phase 2 position in cluster"] =
-            &RaidSscActionContext::lady_vashj_phase_2_position_in_cluster;
+        creators["lady vashj phase 2 position at station"] =
+            &RaidSscActionContext::lady_vashj_phase_2_position_at_station;
 
         creators["lady vashj phase 3 position ranged"] =
             &RaidSscActionContext::lady_vashj_phase_3_position_ranged;
@@ -188,11 +194,11 @@ public:
         creators["lady vashj destroy tainted core"] =
             &RaidSscActionContext::lady_vashj_destroy_tainted_core;
 
-        creators["lady vashj return to the ground"] =
-            &RaidSscActionContext::lady_vashj_return_to_the_ground;
-
         creators["lady vashj command pet target"] =
             &RaidSscActionContext::lady_vashj_command_pet_target;
+
+        creators["lady vashj return to the ground"] =
+            &RaidSscActionContext::lady_vashj_return_to_the_ground;
 
         creators["lady vashj avoid toxic spores"] =
             &RaidSscActionContext::lady_vashj_avoid_toxic_spores;
@@ -211,7 +217,7 @@ public:
     }
 
 private:
-    // General
+    // Shared
     static Action* ssc_reset_encounter_states(PlayerbotAI* botAI) {
         return new SscResetEncounterStatesAction(botAI);
     }
@@ -241,9 +247,9 @@ private:
     static Action* hydross_the_unstable_misdirect_to_tank(PlayerbotAI* botAI) {
         return new HydrossTheUnstableMisdirectToTankAction(botAI);
     }
-    static Action* hydross_the_unstable_stop_dps_upon_phase_change(PlayerbotAI* botAI) {
+    static Action* hydross_the_unstable_stop_attacking_upon_phase_change(PlayerbotAI* botAI) {
         return new SscStopAttackingAction(
-            botAI, "hydross the unstable stop dps upon phase change");
+            botAI, "hydross the unstable stop attacking upon phase change");
     }
     static Action* hydross_the_unstable_manage_phase_timers(PlayerbotAI* botAI) {
         return new HydrossTheUnstableManagePhaseTimersAction(botAI);
@@ -265,8 +271,16 @@ private:
     static Action* the_lurker_below_melee_move_directly_to_target(PlayerbotAI* botAI) {
         return new TheLurkerBelowMeleeMoveDirectlyToTargetAction(botAI);
     }
+    static Action* the_lurker_below_melee_get_out_of_water(PlayerbotAI* botAI) {
+        return new TheLurkerBelowMeleeGetOutOfWaterAction(botAI);
+    }
 
     // Leotheras the Blind
+    static Action* leotheras_the_blind_spread_ranged_upon_pull(PlayerbotAI* botAI) {
+        return new SscSpreadRangedAction(
+            botAI, "leotheras the blind spread ranged upon pull",
+            SscHelpers::LEOTHERAS_RANGED_SPREAD_DISTANCE);
+    }
     static Action* leotheras_the_blind_warlock_tank_attack_demon_form(PlayerbotAI* botAI) {
         return new LeotherasTheBlindWarlockTankAttackDemonFormAction(botAI);
     }
@@ -285,14 +299,14 @@ private:
     static Action* leotheras_the_blind_destroy_inner_demon(PlayerbotAI* botAI) {
         return new LeotherasTheBlindDestroyInnerDemonAction(botAI);
     }
-    static Action* leotheras_the_blind_misdirect_demon_form_to_tank(PlayerbotAI* botAI) {
-        return new LeotherasTheBlindMisdirectDemonFormToTankAction(botAI);
-    }
     static Action* leotheras_the_blind_final_phase_attack_boss(PlayerbotAI* botAI) {
         return new LeotherasTheBlindFinalPhaseAttackBossAction(botAI);
     }
     static Action* leotheras_the_blind_final_phase_separate_boss_from_demon(PlayerbotAI* botAI) {
         return new LeotherasTheBlindFinalPhaseSeparateBossFromDemonAction(botAI);
+    }
+    static Action* leotheras_the_blind_misdirect_demon_form_to_tank(PlayerbotAI* botAI) {
+        return new LeotherasTheBlindMisdirectDemonFormToTankAction(botAI);
     }
     static Action* leotheras_the_blind_melee_stop_attacking(PlayerbotAI* botAI) {
         return new SscStopAttackingAction(botAI, "leotheras the blind melee stop attacking");
@@ -322,15 +336,11 @@ private:
             botAI, "fathom-lord karathress spread ranged",
             SscHelpers::CARIBDIS_RANGED_SPREAD_DISTANCE);
     }
-    static Action* fathom_lord_karathress_drop_from_cyclone(PlayerbotAI* botAI) {
-        return new FathomLordKarathressDropFromCycloneAction(botAI);
+    static Action* fathom_lord_karathress_drop_to_ground_after_cyclone(PlayerbotAI* botAI) {
+        return new FathomLordKarathressDropToGroundAfterCycloneAction(botAI);
     }
 
     // Morogrim Tidewalker
-    static Action* morogrim_tidewalker_misdirect_to_main_tank(PlayerbotAI* botAI) {
-        return new SscMisdirectToMainTankAction(
-            botAI, "morogrim tidewalker misdirect to main tank", "morogrim tidewalker");
-    }
     static Action* morogrim_tidewalker_position_main_tank(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerPositionMainTankAction(botAI);
     }
@@ -340,6 +350,10 @@ private:
     static Action* morogrim_tidewalker_return_to_boss(PlayerbotAI* botAI) {
         return new MorogrimTidewalkerReturnToBossAction(botAI);
     }
+    static Action* morogrim_tidewalker_misdirect_to_main_tank(PlayerbotAI* botAI) {
+        return new SscMisdirectToMainTankAction(
+            botAI, "morogrim tidewalker misdirect to main tank", "morogrim tidewalker");
+    }
 
     // Lady Vashj <Coilfang Matron>
     static Action* lady_vashj_main_tank_position_boss(PlayerbotAI* botAI) {
@@ -348,11 +362,11 @@ private:
     static Action* lady_vashj_phase_1_spread_ranged_in_arc(PlayerbotAI* botAI) {
         return new LadyVashjPhase1SpreadRangedInArcAction(botAI);
     }
-    static Action* lady_vashj_assign_cluster_slots(PlayerbotAI* botAI) {
-        return new LadyVashjAssignClusterSlotsAction(botAI);
+    static Action* lady_vashj_assign_station_slots(PlayerbotAI* botAI) {
+        return new LadyVashjAssignStationSlotsAction(botAI);
     }
-    static Action* lady_vashj_phase_2_position_in_cluster(PlayerbotAI* botAI) {
-        return new LadyVashjPhase2PositionInClusterAction(botAI);
+    static Action* lady_vashj_phase_2_position_at_station(PlayerbotAI* botAI) {
+        return new LadyVashjPhase2PositionAtStationAction(botAI);
     }
     static Action* lady_vashj_phase_3_position_ranged(PlayerbotAI* botAI) {
         return new LadyVashjPhase3PositionRangedAction(botAI);
@@ -400,11 +414,11 @@ private:
     static Action* lady_vashj_destroy_tainted_core(PlayerbotAI* botAI) {
         return new LadyVashjDestroyTaintedCoreAction(botAI);
     }
-    static Action* lady_vashj_return_to_the_ground(PlayerbotAI* botAI) {
-        return new LadyVashjReturnToTheGroundAction(botAI);
-    }
     static Action* lady_vashj_command_pet_target(PlayerbotAI* botAI) {
         return new LadyVashjCommandPetTargetAction(botAI);
+    }
+    static Action* lady_vashj_return_to_the_ground(PlayerbotAI* botAI) {
+        return new LadyVashjReturnToTheGroundAction(botAI);
     }
     static Action* lady_vashj_avoid_toxic_spores(PlayerbotAI* botAI) {
         return new LadyVashjAvoidToxicSporesAction(botAI);

@@ -85,32 +85,59 @@ float SunwellControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
         AI_VALUE2(Unit*, "find target", "25315") ? 0.0f : 1.0f;
 }
 
-// Not encounter gated because Kil'jaeden is not IN_PROGRESS until the first Hand of the Deceiver
-// dies (see SWPTriggers.h).
-float SunwellDelayDpsCooldownsMultiplier::GetValue(Action* action)
+float SunwellDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (bot->GetMapId() != SWP_MAP_ID || botAI->GetState() == BOT_STATE_NON_COMBAT)
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
+    // TEMP LOG (Kil'jaeden cooldown hold), remove after testing
+    if (getMSTimeDiff(_tempLogMs, getMSTime()) >= 1000)
+    {
+        _tempLogMs = getMSTime();
+        Unit* tempHand = AI_VALUE2(Unit*, "find target", "25588");
+        Unit* tempKiljaeden = AI_VALUE2(Unit*, "find target", "25315");
+        if (tempHand || tempKiljaeden)
+        {
+            LOG_INFO("playerbots",
+                "[SWP cooldowns] {} {}: hand {}, kil'jaeden {} (entry {}, {:.0f}%)",
+                bot->GetName(), action->getName(), tempHand ? "found" : "none",
+                tempKiljaeden ? "found" : "none", tempKiljaeden ? tempKiljaeden->GetEntry() : 0,
+                tempKiljaeden ? tempKiljaeden->GetHealthPct() : 0.0f);
+        }
+    }
+
+    // Kil'jaeden is summoned only when the last Hand dies.
+    if (AI_VALUE2(Unit*, "find target", "25588"))
+        return 0.0f;
+
     bool const isBloodlust = bot->getClass() == CLASS_SHAMAN &&
         (dynamic_cast<CastHeroismAction*>(action) || dynamic_cast<CastBloodlustAction*>(action));
 
-    // Held for Sathrovarr, so only bots in the Spectral Realm use them.
-    if (AI_VALUE2(Unit*, "find target", "24850"))
-        return IsInSpectralRealm(bot) ? 1.0f : 0.0f;
-
-    if (Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882"))
-        return brutallus->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
-
-    if (Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038"))
+    if (Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315"))
     {
-        if (felmyst->IsFlying())
+        if (kiljaeden->GetHealthPct() <= KILJAEDEN_PHASE5_HP_THRESHOLD)
+            return 1.0f;
+
+        if (isBloodlust)
             return 0.0f;
 
-        return felmyst->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+        return kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD ? 0.0f : 1.0f;
+    }
+
+    if (Unit* muru = AI_VALUE2(Unit*, "find target", "25741"))
+    {
+        Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+        if (entropius && entropius->GetHealthPct() < BOSS_ENGAGED_HEALTH_PCT)
+            return 1.0f;
+
+        if (isBloodlust) // Bloodlust is saved for Entropius.
+            return 0.0f;
+
+        // Other dps cooldowns can be used on M'uru after the pull.
+        return muru->GetHealthPct() > MURU_MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
     }
 
     if (AI_VALUE2(Unit*, "find target", "25166"))
@@ -120,33 +147,19 @@ float SunwellDelayDpsCooldownsMultiplier::GetValue(Action* action)
             0.0f : 1.0f;
     }
 
-    if (Unit* muru = AI_VALUE2(Unit*, "find target", "25741"))
+    if (Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038"))
     {
-        Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
-        if (entropius && entropius->GetHealthPct() < BOSS_ENGAGED_HEALTH_PCT)
-            return 1.0f;
-
-        // Bloodlust is saved for Entropius
-        if (isBloodlust)
+        if (felmyst->IsFlying())
             return 0.0f;
 
-        // Other dps cooldowns can be used on M'uru after the pull
-        return muru->GetHealthPct() > MURU_MAX_DPS_HP_PERCENT ? 0.0f : 1.0f;
+        return felmyst->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
-    if (Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315"))
-    {
-        if (AI_VALUE2(Unit*, "find target", "25588"))
-            return 0.0f;
+    if (Unit* brutallus = AI_VALUE2(Unit*, "find target", "24882"))
+        return brutallus->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 
-        if (kiljaeden->GetHealthPct() <= KILJAEDEN_PHASE5_HP_THRESHOLD)
-            return 1.0f;
-
-        if (isBloodlust)
-            return 0.0f;
-
-        return kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD ? 0.0f : 1.0f;
-    }
+    if (AI_VALUE2(Unit*, "find target", "24850")) // Use cooldowns against Sathrovarr only.
+        return IsInSpectralRealm(bot) ? 1.0f : 0.0f;
 
     return 1.0f;
 }
@@ -728,7 +741,7 @@ float MuruControlMovementMultiplier::GetValueInEncounter(Action* action)
 
 // Kil'jaeden <The Deceiver>
 
-float KiljaedenSingleTargetHandsMultiplier::GetValue(Action* action)
+float KiljaedenSingleTargetHandsMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -747,10 +760,7 @@ float KiljaedenSingleTargetHandsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
-        return 1.0f;
-
-    return AI_VALUE(GuidVector, "kiljaeden hands").empty() ? 1.0f : 0.0f;
+    return AI_VALUE2(Unit*, "find target", "25588") ? 0.0f : 1.0f;
 }
 
 float KiljaedenControlMovementAndTargetingMultiplier::GetValueInEncounter(Action* action)

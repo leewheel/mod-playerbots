@@ -23,19 +23,7 @@ using namespace EncounterHelpers;
 
 bool SunwellNoEncounterInProgressTrigger::IsActive()
 {
-    // InstanceScript reports IN_PROGRESS for every SWP boss from JustEngagedWith until kill/evade,
-    // except for Kil'jaeden, which does not commence until the first Hand dies.
-    if (IsEncounterInProgress(bot, SWP_MAP_ID))
-        return false;
-
-    // Use a distance gate to avoid searching for Hands through the entire instance.
-    if (bot->GetMapId() != SWP_MAP_ID)
-        return false;
-
-    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
-        return true;
-
-    return AI_VALUE(GuidVector, "kiljaeden hands").empty();
+    return !IsEncounterInProgress(bot, SWP_MAP_ID);
 }
 
 bool SunwellAuraToRemoveTrigger::IsActive()
@@ -341,13 +329,14 @@ bool FelmystMeleeShouldStayTogetherTrigger::IsActiveInEncounter()
 
 bool FelmystEncapsulateOnMageOrPaladinTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_MAGE && bot->getClass() != CLASS_PALADIN)
+    bool const isPaladin = bot->getClass() == CLASS_PALADIN;
+    if (!isPaladin && bot->getClass() != CLASS_MAGE)
         return false;
 
     if (!bot->HasAura(Id(SwpSpells::SPELL_ENCAPSULATE)))
         return false;
 
-    return !PlayerbotAI::IsMainTank(bot);
+    return isPaladin && !PlayerbotAI::IsMainTank(bot);
 }
 
 bool FelmystNearEncapsulatedPlayerTrigger::IsActiveInEncounter()
@@ -356,18 +345,8 @@ bool FelmystNearEncapsulatedPlayerTrigger::IsActiveInEncounter()
     if (!felmyst || felmyst->IsFlying())
         return false;
 
-    Player* encapsulateTarget = GetFelmystEncapsulateTarget(bot);
-    if (!encapsulateTarget || encapsulateTarget == bot)
-        return false;
-
-    if (PlayerbotAI::IsMainTank(bot))
-        return false;
-
-    FelmystGroundStack const botStack = GetClosestFelmystGroundStack(bot, felmyst, bot);
-    FelmystGroundStack const targetStack = GetClosestFelmystGroundStack(
-        bot, felmyst, encapsulateTarget);
-
-    return botStack != FelmystGroundStack::None && botStack == targetStack;
+    return ShouldMoveAwayFromFelmystEncapsulateTarget(
+        bot, felmyst, GetFelmystEncapsulateTarget(bot));
 }
 
 bool FelmystPlayerHasGasNovaTrigger::IsActiveInEncounter()
@@ -763,7 +742,7 @@ bool MuruTheSingularityIsNearTrigger::IsActiveInEncounter()
 
 // Kil'jaeden <The Deceiver>
 
-bool KiljaedenShouldCoordinateOrbUseTrigger::IsActive()
+bool KiljaedenShouldCoordinateOrbUseTrigger::IsActiveInEncounter()
 {
     if (!IsMechanicTrackerBot(bot, SWP_MAP_ID))
         return false;
@@ -772,18 +751,12 @@ bool KiljaedenShouldCoordinateOrbUseTrigger::IsActive()
     if (stateItr != kiljaedenEncounterStates.end() && stateItr->second.dragonOrbAnnouncementMs)
         return false;
 
-    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
-        return false;
-
-    return !AI_VALUE(GuidVector, "kiljaeden hands").empty();
+    return AI_VALUE2(Unit*, "find target", "25588");
 }
 
-bool KiljaedenHandsOfTheDeceiverAreActiveTrigger::IsActive()
+bool KiljaedenHandsOfTheDeceiverAreActiveTrigger::IsActiveInEncounter()
 {
-    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > SUNWELL_CENTER_RADIUS)
-        return false;
-
-    return !AI_VALUE(GuidVector, "kiljaeden hands").empty();
+    return AI_VALUE2(Unit*, "find target", "25588");
 }
 
 bool KiljaedenTanksShouldHoldBossAndReflectionsTrigger::IsActiveInEncounter()

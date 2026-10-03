@@ -12,7 +12,7 @@
 #include "Trigger.h"
 #include <string>
 
-// General
+// Shared
 
 class SscEncounterTrigger : public Trigger
 {
@@ -33,11 +33,24 @@ protected:
 class SscNoEncounterInProgressTrigger : public Trigger
 {
 public:
-    // Throttled to once per second. This trigger is true for all trash and downtime and, being
-    // for between-encounter clean-up, has no real urgency to it.
     SscNoEncounterInProgressTrigger(PlayerbotAI* botAI)
         : Trigger(botAI, "ssc no encounter in progress", 1000) {}
     bool IsActive() override;
+};
+
+// Used for Fathom-Lord Karathress, Morogrim Tidewalker, and Lady Vashj.
+class SscHunterShouldMisdirectTrigger : public SscEncounterTrigger
+{
+public:
+    SscHunterShouldMisdirectTrigger(
+        PlayerbotAI* botAI, std::string const& name, std::string const& bossName)
+        : SscEncounterTrigger(botAI, name), _bossName(bossName) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+
+private:
+    std::string const _bossName;
 };
 
 // Trash
@@ -56,24 +69,6 @@ public:
     GreyheartTidecallerWaterElementalTotemSpawnedTrigger(PlayerbotAI* botAI)
         : Trigger(botAI, "greyheart tidecaller water elemental totem spawned") {}
     bool IsActive() override;
-};
-
-// Shared Bosses
-
-// A Hunter while the named mob is untouched, so Misdirection goes out on the pull. Used for
-// Fathom-Lord Karathress (on Tidalvess), Morogrim Tidewalker and Lady Vashj.
-class SscHunterShouldMisdirectTrigger : public SscEncounterTrigger
-{
-public:
-    SscHunterShouldMisdirectTrigger(
-        PlayerbotAI* botAI, std::string const& name, std::string const& bossName)
-        : SscEncounterTrigger(botAI, name), _bossName(bossName) {}
-
-protected:
-    bool IsActiveInEncounter() override;
-
-private:
-    std::string const _bossName;
 };
 
 // Hydross the Unstable <Duke of Currents>
@@ -123,6 +118,16 @@ class HydrossTheUnstableAggroResetsUponPhaseChangeTrigger : public SscEncounterT
 public:
     HydrossTheUnstableAggroResetsUponPhaseChangeTrigger(PlayerbotAI* botAI)
         : SscEncounterTrigger(botAI, "hydross the unstable aggro resets upon phase change") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class HydrossTheUnstableNonPhaseTankAttackingTrigger : public SscEncounterTrigger
+{
+public:
+    HydrossTheUnstableNonPhaseTankAttackingTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "hydross the unstable non-phase tank attacking") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -190,16 +195,26 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-// Leotheras the Blind
-
-class LeotherasTheBlindTanksShouldAutoAttackDemonFormTrigger : public SscEncounterTrigger
+class TheLurkerBelowMeleeInWaterTrigger : public SscEncounterTrigger
 {
 public:
-    LeotherasTheBlindTanksShouldAutoAttackDemonFormTrigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "leotheras the blind tanks should auto-attack demon form") {}
+    TheLurkerBelowMeleeInWaterTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "the lurker below melee in water") {}
 
 protected:
     bool IsActiveInEncounter() override;
+};
+
+// Leotheras the Blind
+
+// Not encounter gated because the encounter does not start during the Spellbinder phase unless he
+// is hit by something (it's likely he'll get hit by an AoE spell in practice).
+class LeotherasTheBlindRangedShouldSpreadUponPullTrigger : public Trigger
+{
+public:
+    LeotherasTheBlindRangedShouldSpreadUponPullTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "leotheras the blind ranged should spread upon pull", 1000) {}
+    bool IsActive() override;
 };
 
 class LeotherasTheBlindWarlockShouldTankDemonFormTrigger : public SscEncounterTrigger
@@ -207,6 +222,16 @@ class LeotherasTheBlindWarlockShouldTankDemonFormTrigger : public SscEncounterTr
 public:
     LeotherasTheBlindWarlockShouldTankDemonFormTrigger(PlayerbotAI* botAI)
         : SscEncounterTrigger(botAI, "leotheras the blind warlock should tank demon form") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LeotherasTheBlindTanksShouldAutoAttackDemonFormTrigger : public SscEncounterTrigger
+{
+public:
+    LeotherasTheBlindTanksShouldAutoAttackDemonFormTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "leotheras the blind tanks should auto-attack demon form") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -355,11 +380,11 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class FathomLordKarathressLiftedByCycloneTrigger : public SscEncounterTrigger
+class FathomLordKarathressStuckMidairAfterCycloneTrigger : public SscEncounterTrigger
 {
 public:
-    FathomLordKarathressLiftedByCycloneTrigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "fathom-lord karathress lifted by cyclone") {}
+    FathomLordKarathressStuckMidairAfterCycloneTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "fathom-lord karathress stuck midair after cyclone", 1000) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -419,21 +444,21 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class LadyVashjClusterSlotsNeedHoldersTrigger : public SscEncounterTrigger
+class LadyVashjStationSlotsNeedHoldersTrigger : public SscEncounterTrigger
 {
 public:
-    LadyVashjClusterSlotsNeedHoldersTrigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "lady vashj cluster slots need holders", 1000) {}
+    LadyVashjStationSlotsNeedHoldersTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj station slots need holders", 1000) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class LadyVashjShouldHoldClusterInPhase2Trigger : public SscEncounterTrigger
+class LadyVashjShouldHoldStationInPhase2Trigger : public SscEncounterTrigger
 {
 public:
-    LadyVashjShouldHoldClusterInPhase2Trigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "lady vashj should hold cluster in phase 2") {}
+    LadyVashjShouldHoldStationInPhase2Trigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj should hold station in phase 2") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -559,21 +584,21 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class LadyVashjShouldDestroyTaintedCoreTrigger : public SscEncounterTrigger
-{
-public:
-    LadyVashjShouldDestroyTaintedCoreTrigger(PlayerbotAI* botAI)
-        : SscEncounterTrigger(botAI, "lady vashj should destroy tainted core") {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
-
 class LadyVashjCorePassingChainMemberTrigger : public SscEncounterTrigger
 {
 public:
     LadyVashjCorePassingChainMemberTrigger(PlayerbotAI* botAI)
         : SscEncounterTrigger(botAI, "lady vashj core passing chain member") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class LadyVashjShouldDestroyTaintedCoreTrigger : public SscEncounterTrigger
+{
+public:
+    LadyVashjShouldDestroyTaintedCoreTrigger(PlayerbotAI* botAI)
+        : SscEncounterTrigger(botAI, "lady vashj should destroy tainted core") {}
 
 protected:
     bool IsActiveInEncounter() override;

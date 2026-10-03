@@ -12,6 +12,8 @@
 #include "SSCHelpers.h"
 #include <string>
 
+// Shared
+
 class SscEncounterMultiplier : public Multiplier
 {
 public:
@@ -20,27 +22,15 @@ public:
 
     float GetValue(Action* action) final
     {
-        return EncounterHelpers::IsEncounterInProgress(bot, SscHelpers::SSC_MAP_ID)
-            ? GetValueInEncounter(action) : 1.0f;
+        return EncounterHelpers::IsEncounterInProgress(bot, SscHelpers::SSC_MAP_ID) ?
+            GetValueInEncounter(action) : 1.0f;
     }
 
 protected:
     virtual float GetValueInEncounter(Action* action) = 0;
 };
 
-// Trash
-
-class UnderbogColossusHoldNearToxicPoolMultiplier : public Multiplier
-{
-public:
-    UnderbogColossusHoldNearToxicPoolMultiplier(PlayerbotAI* botAI)
-        : Multiplier(botAI, "underbog colossus hold near toxic pool") {}
-    float GetValue(Action* action) override;
-};
-
-// Shared Bosses
-
-// For Lady Vashj, Fathom-Lord Karathress, Hydross, and Leotheras (Warlock tank).
+// For Lady Vashj, Fathom-Lord Karathress, Hydross, and Leotheras (to Warlock tank).
 class SscControlMisdirectionMultiplier : public SscEncounterMultiplier
 {
 public:
@@ -51,13 +41,34 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Not encounter gated because Leotheras is not set to engaged until the Spellbinders are killed.
+// Not encounter gated: Leotheras is set to engaged only once something hostile hits him, which may
+// not happen until the Spellbinders are dead.
 class SscDelayDpsCooldownsMultiplier : public Multiplier
 {
 public:
     SscDelayDpsCooldownsMultiplier(PlayerbotAI* botAI)
         : Multiplier(botAI, "ssc delay dps cooldowns") {}
 
+    float GetValue(Action* action) override;
+};
+
+class SscNoFishingDuringEncounterMultiplier : public SscEncounterMultiplier
+{
+public:
+    SscNoFishingDuringEncounterMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "ssc no fishing during encounter") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Trash
+
+class UnderbogColossusHoldNearToxicPoolMultiplier : public Multiplier
+{
+public:
+    UnderbogColossusHoldNearToxicPoolMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "underbog colossus hold near toxic pool") {}
     float GetValue(Action* action) override;
 };
 
@@ -105,11 +116,12 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class TheLurkerBelowMaintainRangedSpreadMultiplier : public SscEncounterMultiplier
+// Formation, flee, reposition and follow moves can walk a bot into the water.
+class TheLurkerBelowMaintainPositionsMultiplier : public SscEncounterMultiplier
 {
 public:
-    TheLurkerBelowMaintainRangedSpreadMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(botAI, "the lurker below maintain ranged spread") {}
+    TheLurkerBelowMaintainPositionsMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "the lurker below maintain positions") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -120,6 +132,39 @@ class TheLurkerBelowTanksFocusAssignedGuardianMultiplier : public SscEncounterMu
 public:
     TheLurkerBelowTanksFocusAssignedGuardianMultiplier(PlayerbotAI* botAI)
         : SscEncounterMultiplier(botAI, "the lurker below tanks focus assigned guardian") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class TheLurkerBelowDisableKillingSpreeMultiplier : public SscEncounterMultiplier
+{
+public:
+    TheLurkerBelowDisableKillingSpreeMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "the lurker below disable killing spree") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Until his tank has him on the spot he may still be turning, and behind him can be in the
+// water. On an islet melee don't move behind anything.
+class TheLurkerBelowMeleeWaitToSetBehindMultiplier : public SscEncounterMultiplier
+{
+public:
+    TheLurkerBelowMeleeWaitToSetBehindMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "the lurker below melee wait to set behind") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Reach melee's path walked melee off an islet into the water; the direct move does it instead.
+class TheLurkerBelowMeleeDisableReachMultiplier : public SscEncounterMultiplier
+{
+public:
+    TheLurkerBelowMeleeDisableReachMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "the lurker below melee disable reach") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -271,11 +316,11 @@ protected:
 
 // Morogrim Tidewalker
 
-class MorogrimTidewalkerDisableTankFaceMultiplier : public SscEncounterMultiplier
+class MorogrimTidewalkerControlMovementMultiplier : public SscEncounterMultiplier
 {
 public:
-    MorogrimTidewalkerDisableTankFaceMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(botAI, "morogrim tidewalker disable tank face") {}
+    MorogrimTidewalkerControlMovementMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "morogrim tidewalker control movement") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -323,11 +368,11 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class LadyVashjDoNotLootTheTaintedCoreMultiplier : public SscEncounterMultiplier
+class LadyVashjNoUnauthorizedLootingMultiplier : public SscEncounterMultiplier
 {
 public:
-    LadyVashjDoNotLootTheTaintedCoreMultiplier(PlayerbotAI* botAI)
-        : SscEncounterMultiplier(botAI, "lady vashj do not loot the tainted core") {}
+    LadyVashjNoUnauthorizedLootingMultiplier(PlayerbotAI* botAI)
+        : SscEncounterMultiplier(botAI, "lady vashj no unauthorized looting") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

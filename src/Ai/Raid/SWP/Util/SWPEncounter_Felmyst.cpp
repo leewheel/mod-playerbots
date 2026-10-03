@@ -77,7 +77,6 @@ bool TryGetGroundStackCenter(
             positionY = felmyst->GetPositionY() + behindDistance * std::sin(behindAngle);
             return true;
         }
-
         case FelmystGroundStack::Left:
         case FelmystGroundStack::Right:
         {
@@ -89,7 +88,6 @@ bool TryGetGroundStackCenter(
             positionY = felmyst->GetPositionY() + std::sin(sideAngle) * sideDistance;
             return true;
         }
-
         default:
             return false;
     }
@@ -117,12 +115,15 @@ FogLane GetFogLaneFromLocation(FogLocation location)
         case FogLocation::LeftTop:
         case FogLocation::RightTop:
             return FogLane::Top;
+
         case FogLocation::LeftMiddle:
         case FogLocation::RightMiddle:
             return FogLane::Middle;
+
         case FogLocation::LeftBottom:
         case FogLocation::RightBottom:
             return FogLane::Bottom;
+
         default:
             return FogLane::None;
     }
@@ -1280,6 +1281,20 @@ Player* GetFelmystEncapsulateTarget(Player* bot)
     }
 
     return closestTarget;
+}
+
+bool ShouldMoveAwayFromFelmystEncapsulateTarget(
+    Player* bot, Unit* felmyst, Player* encapsulateTarget)
+{
+    if (!felmyst || !encapsulateTarget || encapsulateTarget == bot ||
+        felmyst->GetVictim() == bot)
+    {
+        return false;
+    }
+
+    FelmystGroundStack const botStack = GetClosestFelmystGroundStack(bot, felmyst, bot);
+    return botStack != FelmystGroundStack::None &&
+        botStack == GetClosestFelmystGroundStack(bot, felmyst, encapsulateTarget);
 }
 
 bool DidEncapsulateOccurThisGroundPhase(Player* bot)

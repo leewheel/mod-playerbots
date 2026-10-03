@@ -1621,7 +1621,7 @@ bool IllidariCouncilManageDpsTimerAction::Execute(Event /*event*/)
 
 // Illidan Stormrage <The Betrayer>
 
-bool IllidanStormrageMisdirectToTankAction::Execute(Event /*event*/)
+bool IllidanStormrageMisdirectToTanksAction::Execute(Event /*event*/)
 {
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
@@ -1639,7 +1639,7 @@ bool IllidanStormrageMisdirectToTankAction::Execute(Event /*event*/)
     return phase == 4 && TryMisdirectToWarlockTank(illidan);
 }
 
-bool IllidanStormrageMisdirectToTankAction::TryMisdirectToFlameTanks(Group* group)
+bool IllidanStormrageMisdirectToTanksAction::TryMisdirectToFlameTanks(Group* group)
 {
     std::vector<Player*> hunters;
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
@@ -1724,7 +1724,7 @@ bool IllidanStormrageMisdirectToTankAction::TryMisdirectToFlameTanks(Group* grou
     return false;
 }
 
-bool IllidanStormrageMisdirectToTankAction::TryMisdirectToWarlockTank(Unit* illidan)
+bool IllidanStormrageMisdirectToTanksAction::TryMisdirectToWarlockTank(Unit* illidan)
 {
     if (!illidan)
         return false;
