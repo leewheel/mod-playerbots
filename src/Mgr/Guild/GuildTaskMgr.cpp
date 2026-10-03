@@ -617,11 +617,13 @@ uint32 GuildTaskMgr::GetTaskValue(uint32 owner, uint32 guildId, std::string cons
 
 uint32 GuildTaskMgr::SetTaskValue(uint32 owner, uint32 guildId, std::string const type, uint32 value, uint32 validIn)
 {
+    PlayerbotsDatabaseTransaction trans = PlayerbotsDatabase.BeginTransaction();
+
     PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_GUILD_TASKS);
     stmt->SetData(0, owner);
     stmt->SetData(1, guildId);
     stmt->SetData(2, type);
-    PlayerbotsDatabase.Execute(stmt);
+    trans->Append(stmt);
 
     if (value)
     {
@@ -632,8 +634,10 @@ uint32 GuildTaskMgr::SetTaskValue(uint32 owner, uint32 guildId, std::string cons
         stmt->SetData(3, validIn);
         stmt->SetData(4, type);
         stmt->SetData(5, value);
-        PlayerbotsDatabase.Execute(stmt);
+        trans->Append(stmt);
     }
+
+    PlayerbotsDatabase.DirectCommitTransaction(trans);
 
     return value;
 }
@@ -656,13 +660,15 @@ bool GuildTaskMgr::HandleConsoleCommand(ChatHandler* /* handler */, char const* 
 
     if (cmd == "reset")
     {
-        // By leewheel 2026-09-19 采用上游 prepared statement 写法；日志文本按项目规则保持中文
         // By leewheel 2026-09-19 库语义适配：PLAYERBOTS_DEL_GUILD_TASKS_ALL 在本核是 CONNECTION_SYNCH，
         //   而上游 ModuleDatabasePool 的 Execute(语句) 是【同步】语义（ModuleDatabasePool.h:38-41），
         //   本核 DatabaseWorkerPool 的 Execute(语句) 则是【异步】入队并要求 CONNECTION_ASYNC
         //   （DatabaseWorkerPool.h:95-97）。用异步 API 时该语句在异步连接上已被 PrepareStatement 置空
-        //   （MySQLConnection.cpp:510-514），执行即断言崩溃（MySQLConnection.cpp:210 ASSERT(m_mStmt)）。
+        //   （MySQLConnection.cpp:517-521），执行即断言崩溃（MySQLConnection.cpp:210 ASSERT(m_mStmt)）。
         //   GM 命令 "gtask reset" 也应立即重置完成，故改用同步 API。
+        // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418：上游本轮语句调用亦为 DirectExecute
+        //   （一致）；但其日志文本为英文 "Guild tasks were reset for all players"，按项目规则
+        //   （游戏内/log 输出必须中文）保留我方中文文本。
         PlayerbotsDatabase.DirectExecute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_GUILD_TASKS_ALL));
         // End By leewheel
         LOG_INFO("playerbots", "所有玩家的公会任务已重置");

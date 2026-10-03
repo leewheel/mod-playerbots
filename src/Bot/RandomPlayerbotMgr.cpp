@@ -629,6 +629,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
             //   则是【异步】入队并要求 CONNECTION_ASYNC（DatabaseWorkerPool.h:95-97）。
             //   PLAYERBOTS_INS_ACCOUNT_TYPE 在本核标记为 CONNECTION_SYNCH，用异步 API 会在异步连接上
             //   取不到该语句而断言崩溃（MySQLConnection.cpp:210 ASSERT(m_mStmt)），故改用同步 API。
+            // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418：上游本轮亦为 DirectExecute，保留。
             PlayerbotsDatabase.DirectExecute(stmt);
             // End By leewheel
             currentAssignments[accountId] = 0;
@@ -678,6 +679,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
                 stmt->SetData(1, accountId);
                 // By leewheel 2026-09-19 同上（理由见本文件 PLAYERBOTS_INS_ACCOUNT_TYPE 处说明）：
                 //   PLAYERBOTS_UPD_ACCOUNT_TYPE 为 CONNECTION_SYNCH，必须用同步 API。
+                // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418：上游本轮亦为 DirectExecute，保留。
                 PlayerbotsDatabase.DirectExecute(stmt);
                 // End By leewheel
                 currentAssignments[accountId] = 1;
@@ -709,6 +711,7 @@ void RandomPlayerbotMgr::AssignAccountTypes()
                 stmt->SetData(1, accountId);
                 // By leewheel 2026-09-19 同上（理由见本文件 PLAYERBOTS_INS_ACCOUNT_TYPE 处说明）：
                 //   PLAYERBOTS_UPD_ACCOUNT_TYPE 为 CONNECTION_SYNCH，必须用同步 API。
+                // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418：上游本轮亦为 DirectExecute，保留。
                 PlayerbotsDatabase.DirectExecute(stmt);
                 // End By leewheel
                 currentAssignments[accountId] = 2;
@@ -3291,6 +3294,7 @@ void RandomPlayerbotMgr::Init()
     stmt->SetData(0, std::string("add"));
     PlayerbotsDatabase.DirectExecute(stmt);
     // End By leewheel
+    // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418：上游本轮未改动此段（其侧为空），保留。
 }
 
 void RandomPlayerbotMgr::InitArenaTeams()

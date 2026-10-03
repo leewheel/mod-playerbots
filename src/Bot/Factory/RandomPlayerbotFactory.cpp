@@ -360,6 +360,8 @@ uint32 RandomPlayerbotFactory::CalculateTotalAccountCount()
             //   异步连接上取不到语句而断言崩溃（MySQLConnection.cpp:210 ASSERT(m_mStmt)）；
             //   且下方 358 行起的轮询（注释明确要求"等待 DB 反映变更"）依赖本 UPDATE 已落库，
             //   异步执行会让该轮询失去意义，故必须用同步 API。
+            // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418：上游本轮亦改为 DirectExecute
+            //   （其 ModuleDatabasePool 两种 API 都是同步语义），两侧代码一致，保留本注释。
             PlayerbotsDatabase.DirectExecute(stmt);
             // End By leewheel
             LOG_INFO("playerbots", "MaxRandomBots set to 0, any RNDbot accounts (type 1) will be unassigned (type 0)");
@@ -370,6 +372,7 @@ uint32 RandomPlayerbotFactory::CalculateTotalAccountCount()
             stmt->SetData(0, uint8(2));
             // By leewheel 2026-09-19 同上（理由见本函数上一个 DirectExecute 处）：
             //   PLAYERBOTS_UPD_ACCOUNT_TYPE_UNASSIGN 为 CONNECTION_SYNCH，且下方轮询依赖其已落库。
+            // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418：上游本轮亦改为 DirectExecute，保留。
             PlayerbotsDatabase.DirectExecute(stmt);
             // End By leewheel
             LOG_INFO("playerbots", "AddClassAccountPoolSize set to 0, any AddClass accounts (type 2) will be unassigned (type 0)");
@@ -529,15 +532,21 @@ void RandomPlayerbotFactory::CreateRandomBots()
 
         // First execute all the cleanup SQL commands
         // Clear playerbots_random_bots and playerbots_account_type
-        PlayerbotsDatabase.Execute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_RANDOM_BOTS));
-        // By leewheel 2026-09-19 合并上游 the-lab 时的库语义适配：
-        //   上一句 PLAYERBOTS_DEL_RANDOM_BOTS 在本核是 CONNECTION_ASYNC，用异步 Execute 正确；
-        //   但本句 PLAYERBOTS_DEL_ACCOUNT_TYPE 在本核是 CONNECTION_SYNCH，必须用同步 API
-        //   （本核 DatabaseWorkerPool.h:95-120：Execute 要求 ASYNC、DirectExecute 要求 SYNCH；
-        //   上游 ModuleDatabasePool 两者皆为同步语义）。若用异步 API，该语句在异步连接上会被
-        //   PrepareStatement 主动置空（MySQLConnection.cpp:510-514），执行即断言崩溃
-        //   （MySQLConnection.cpp:210 ASSERT(m_mStmt)）；且本段是"删除全部随机机器人"流程，
-        //   后续步骤依赖本删除已完成，同步语义才是正确行为。
+        // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418：两处均改为 DirectExecute。
+        //   本核 PlayerbotsDatabase 是 DatabaseWorkerPool 派生：DirectExecute 要求语句为
+        //   CONNECTION_SYNCH（DatabaseWorkerPool.h:118-120），而本句原先标记 CONNECTION_ASYNC ——
+        //   MySQLConnection::PrepareStatement 的校验是双向的（`m_connectionFlags & flags` 不成立即
+        //   m_stmts[index].reset()，MySQLConnection.cpp:517-521），故对异步语句调 DirectExecute 同样取不到
+        //   语句、同样会 ASSERT(m_mStmt) 崩溃（MySQLConnection.cpp:210）。
+        //   配套处置：主仓 src/server/database/Database/Implementation/PlayerbotsDatabase.cpp 已把
+        //   PLAYERBOTS_DEL_RANDOM_BOTS 的 flags 由 CONNECTION_ASYNC 改为 CONNECTION_BOTH
+        //   （与上游 #2830 同方向），两连接都准备该语句，Execute/DirectExecute 均可安全调用；
+        //   本核库文件属主仓、随主仓单独提交，不混提。
+        //   改成同步的收益：本段是"删除全部随机机器人"流程，后续 DirectExecute 的
+        //   playerbots_guild_tasks / playerbots_db_store 清理依赖本删除已完成，异步会有竞态。
+        //   ⚠️ 其余 23 条 CONNECTION_ASYNC 语句本轮不动；将来若要用 DirectExecute 调它们，
+        //   须同样先把对应 flags 改为 CONNECTION_BOTH。
+        PlayerbotsDatabase.DirectExecute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_RANDOM_BOTS));
         PlayerbotsDatabase.DirectExecute(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_DEL_ACCOUNT_TYPE));
         // End By leewheel
 
@@ -555,10 +564,10 @@ void RandomPlayerbotFactory::CreateRandomBots()
         std::this_thread::sleep_for(std::chrono::milliseconds(100));    // Extra 100ms fixed delay for safety.
 
         // Clean up orphaned entries in playerbots_guild_tasks
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_guild_tasks WHERE owner NOT IN (SELECT guid FROM " + characterDBName + ".characters)");
+        PlayerbotsDatabase.DirectExecute("DELETE FROM playerbots_guild_tasks WHERE owner NOT IN (SELECT guid FROM " + characterDBName + ".characters)");
 
         // Clean up orphaned entries in playerbots_db_store (explicit id list, no cross-database subquery)
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_db_store WHERE guid NOT IN (SELECT guid FROM " + characterDBName + ".characters WHERE account NOT IN (" + botAccountIds + "))");
+        PlayerbotsDatabase.DirectExecute("DELETE FROM playerbots_db_store WHERE guid NOT IN (SELECT guid FROM " + characterDBName + ".characters WHERE account NOT IN (" + botAccountIds + "))");
 
         // Clean up orphaned records in character-related tables
         CharacterDatabase.Execute("DELETE FROM arena_team_member WHERE guid NOT IN (SELECT guid FROM characters)");
@@ -631,7 +640,6 @@ void RandomPlayerbotFactory::CreateRandomBots()
         // After ALL deletions, make sure data is commited to DB
         LoginDatabase.Execute("COMMIT");
         CharacterDatabase.Execute("COMMIT");
-        PlayerbotsDatabase.Execute("COMMIT");
 
         // Wait for all pending database operations to complete
         while (LoginDatabase.QueueSize() || CharacterDatabase.QueueSize() || PlayerbotsDatabase.QueueSize())
@@ -643,7 +651,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
         // Flush tables to ensure all data in memory are written to disk
         LoginDatabase.Execute("FLUSH TABLES");
         CharacterDatabase.Execute("FLUSH TABLES");
-        PlayerbotsDatabase.Execute("FLUSH TABLES");
+        PlayerbotsDatabase.DirectExecute("FLUSH TABLES");
 
         LOG_INFO("playerbots", ">> Random bot accounts and data deleted in {} ms", GetMSTimeDiffToNow(timer));
         LOG_INFO("playerbots", "Please reset the AiPlayerbot.DeleteRandomBotAccounts to 0 and restart the server...");

@@ -92,6 +92,17 @@ public:
                                            : 0);
         playerbotLoader.AddDatabase(PlayerbotsDatabase, "Playerbots");
 
+        // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418（#2830 Align with async modular
+        //   database）：上游本轮把本函数整体改写为 ModuleDatabasePool 的自持连接流程
+        //   （SetConnectionInfo(WorkerThreads/SynchThreads) + PlayerbotsDatabase.Open() +
+        //   ModuleDBUpdater::Create/Populate/Update + PrepareStatements）。
+        //   【否决采纳，保留我方 DatabaseLoader 路径】理由见本函数上方那段总述：本核 PlayerbotsDatabase
+        //   是核心的 DatabaseWorkerPool<PlayerbotsDatabaseConnection>，含 24 条 CONNECTION_ASYNC 语句；
+        //   ModuleDatabasePool 的连接是同步的、要求语句全部 CONNECTION_SYNCH，照搬会让那 24 条在首次
+        //   使用时取不到语句而 ASSERT 崩溃（MySQLConnection.cpp:517-521 置空 + :210 断言），
+        //   随机机器人库/旅行节点/装备/稀有度/传送缓存会全部失效。
+        //   上游新增的 PlayerbotsDatabase.WorkerThreads / SynchThreads 两个配置项在本核不适用
+        //   （本核线程数由核心 DatabaseLoader 与 worldserver.conf 的连接串配置决定）。
         return playerbotLoader.Load();
     }
     // End By leewheel
