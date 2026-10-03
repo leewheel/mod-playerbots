@@ -86,10 +86,17 @@ public:
     //   语义与上游 ModuleDBUpdater 等价，但支持异步语句，且是本项目长期在跑的路径。
     bool OnModuleDatabasesLoading() override
     {
-        DatabaseLoader playerbotLoader("server.playerbots");
-        playerbotLoader.SetUpdateFlags(sConfigMgr->GetOption<bool>("Playerbots.Updates.EnableDatabases", true)
-                                           ? DatabaseLoader::DATABASE_PLAYERBOTS
-                                           : 0);
+        // By leewheel 2026-10-04 合并Liyunfan 7f12e89ee..f19a18799：核心 DatabaseLoader 本轮把
+        //   _updateFlags 改为 const 成员（构造时由 Updates.EnableDatabases × defaultUpdateMask 定值），
+        //   并删除了运行期 setter SetUpdateFlags() —— 故此处不再"构造后 |= DATABASE_PLAYERBOTS"，
+        //   改为把掩码直接作为构造参数 defaultUpdateMask 传入。
+        //   语义变化（是修正而非退化）：旧写法 _updateFlags 先被核心开关置 0、再 |= DATABASE_PLAYERBOTS，
+        //   等于绕过核心 Updates.EnableDatabases=false 的总开关仍去更新 playerbots 库；
+        //   新写法在核心关闭更新时即为 0，与核心开关一致。
+        DatabaseLoader playerbotLoader("server.playerbots",
+            sConfigMgr->GetOption<bool>("Playerbots.Updates.EnableDatabases", true)
+                ? DatabaseLoader::DATABASE_PLAYERBOTS
+                : 0);
         playerbotLoader.AddDatabase(PlayerbotsDatabase, "Playerbots");
 
         // By leewheel 2026-10-04 合并pbofficial c1de318e..037c01418（#2830 Align with async modular
