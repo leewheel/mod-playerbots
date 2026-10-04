@@ -69,7 +69,15 @@ constexpr uint32 SPELL_GRAVITY_LAPSE_MGT = 44226;
 // By leewheel 2026-09-27 编译错误 C2872：此处局部 constexpr VEHICLE_FLAG_FIXED_POSITION 与核心
 //   VehicleDefines.h:48 的 enum VehicleFlags 成员重名，构成二义性。已删除本行，改用核心
 //   VehicleFlags::VEHICLE_FLAG_FIXED_POSITION（见下方两处用法）。
-// End By leewheel
+// By leewheel 2026-10-04 合并Liyunfan 7f12e89ee..f19a18799：核心 VehicleDefines.h 的
+//   VEHICLE_FLAG_FIXED_POSITION 被上游 6fe64cb9b "Strip out things that are not needed anymore." 删除
+//   （其注释原文写着"Used for cannons, when they should be rooted (mod_playerbots, not sure this is
+//   still valid since its only used my playerbot)"—— 明确是 mod-playerbots 专用标志）。
+//   于是"改用核心枚举"这条路断了：VehicleFlags::VEHICLE_FLAG_FIXED_POSITION 不再存在。
+//   处置：恢复本行匿名 namespace 内的 constexpr（与 pbofficial 官方 master 的做法一致，
+//   官方同样把该常量定义在模块侧 PlayerbotAI.cpp 顶部），并把下方两处用法改回无限定名。
+//   再次出现 C2872 二义性的可能已不存在 —— 核心枚举里已无同名成员。
+constexpr uint32 VEHICLE_FLAG_FIXED_POSITION = 0x00200000;
 }
 
 std::vector<std::string> PlayerbotAI::dispel_whitelist = {
@@ -4385,7 +4393,7 @@ bool PlayerbotAI::IsInVehicle(bool canControl, bool canCast, bool canAttack, boo
         return true;
 
     if (canControl)
-        return seat->CanControl() && !(vehicle->GetVehicleInfo()->m_flags & VehicleFlags::VEHICLE_FLAG_FIXED_POSITION);
+        return seat->CanControl() && !(vehicle->GetVehicleInfo()->m_flags & VEHICLE_FLAG_FIXED_POSITION);
 
     if (canCast)
         return (seat->m_flags & VEHICLE_SEAT_FLAG_CAN_CAST) != 0;
@@ -4397,7 +4405,7 @@ bool PlayerbotAI::IsInVehicle(bool canControl, bool canCast, bool canAttack, boo
         return (seat->m_flags & VEHICLE_SEAT_FLAG_ALLOW_TURNING) != 0;
 
     if (fixed)
-        return (vehicle->GetVehicleInfo()->m_flags & VehicleFlags::VEHICLE_FLAG_FIXED_POSITION) != 0;
+        return (vehicle->GetVehicleInfo()->m_flags & VEHICLE_FLAG_FIXED_POSITION) != 0;
 
     return false;
 }
