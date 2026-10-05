@@ -25,8 +25,8 @@ public:
 
     float GetValue(Action* action) final
     {
-        return EncounterHelpers::IsEncounterInProgress(bot, KaraHelpers::KARA_MAP_ID)
-            ? GetValueInEncounter(action) : 1.0f;
+        return EncounterHelpers::IsEncounterInProgress(bot, KaraHelpers::KARA_MAP_ID) ?
+            GetValueInEncounter(action) : 1.0f;
     }
 
 protected:

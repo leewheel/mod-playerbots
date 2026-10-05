@@ -1363,7 +1363,7 @@ bool LadyVashjMainTankPositionBossAction::MoveToPhase1TankPosition(Unit* vashj)
 bool LadyVashjMainTankPositionBossAction::MoveAwayFromElementalsAndStriders(Unit* vashj)
 {
     constexpr float searchRadius = 25.0f;
-    VashjAddGuids const& adds = context->GetValue<VashjAddGuids>("ssc vashj adds")->RefGet();
+    auto const& adds = context->GetValue<VashjAddGuids>("ssc vashj adds")->RefGet();
 
     // Surge range is 5.5y from Vashj's center so this leaves some room.
     constexpr float safeDistance = 10.0f;
@@ -1714,7 +1714,6 @@ bool IsVashjTargetAllowed(
             if (unit->GetEntry() != Id(SscNpcs::NPC_TOXIC_SPOREBAT))
                 return false;
 
-            // Chasing a bat any higher, or off the dais, walks bots up into the air.
             constexpr float maxSporebatHeight = 40.0f;
             if (unit->GetPositionZ() - center.GetPositionZ() > maxSporebatHeight)
                 return false;
@@ -1824,7 +1823,7 @@ bool LadyVashjAssignTargetPriorityAction::Execute(Event /*event*/)
     if (facts.holdsStationSlot)
         facts.tainted = GetTaintedElementalToKill(bot);
 
-    VashjAddGuids const& adds = context->GetValue<VashjAddGuids>("ssc vashj adds")->RefGet();
+    auto const& adds = context->GetValue<VashjAddGuids>("ssc vashj adds")->RefGet();
     if (PlayerbotAI::IsMelee(bot) && PlayerbotAI::IsDps(bot))
     {
         for (ObjectGuid const& guid : adds.striders)
@@ -1889,7 +1888,7 @@ bool LadyVashjPositionCoilfangStriderAction::Execute(Event /*event*/)
 
     int8 const phase = GetLadyVashjPhase(vashj);
     Unit* strider = AI_VALUE(Unit*, "current target");
-    if (!ShouldTankVashjStrider(bot, strider, vashj, phase))
+    if (!ShouldPositionVashjStrider(bot, strider, vashj, phase))
         return false;
 
     // If the main tank is holding a Strider when entering phase 3, another tank must taunt it off

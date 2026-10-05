@@ -610,8 +610,11 @@ bool LadyVashjCoilfangStriderShouldBeTankedTrigger::IsActiveInEncounter()
     if (!strider || strider->GetEntry() != Id(SscNpcs::NPC_COILFANG_STRIDER))
         return false;
 
+// By leewheel 2026-10-05 合并brighton the-lab: 采纳上游函数重命名 ShouldTankVashjStrider→ShouldPositionVashjStrider
+    //   (上游已在 SSCHelpers.h/.cpp 完成重命名, 保留旧名会编译失败);
+    //   find target 保留本核 entry 规则 "21212"(铁律: find-target 一律 NPC entry, 与本文件另 6 处一致), 不采纳上游英文名 "lady vashj"
     Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    return vashj && ShouldTankVashjStrider(bot, strider, vashj, GetLadyVashjPhase(vashj));
+    return vashj && ShouldPositionVashjStrider(bot, strider, vashj, GetLadyVashjPhase(vashj));
 }
 
 bool LadyVashjCoilfangEliteShouldBeTankedTrigger::IsActiveInEncounter()
