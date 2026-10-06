@@ -108,7 +108,7 @@ Position const IC_CANNON_POS_HORDE2 = {1139.695f, -686.574f, 88.173f, 3.95f};
 Position const IC_CANNON_POS_ALLIANCE1 = {424.860f, -855.795f, 87.96f, 0.44f};
 Position const IC_CANNON_POS_ALLIANCE2 = {425.525f, -779.538f, 87.717f, 5.88f};
 
-Position const IC_GATE_ATTACK_POS_HORDE = {506.782f, -828.594f, 24.313f, 0.0f};
+Position const IC_GATE_ATTACK_POS_HORDE = {478.3f, -830.2f, 40.0f, 0.0f};  // z from the map at runtime
 Position const IC_GATE_ATTACK_POS_ALLIANCE = {1091.273f, -763.619f, 42.352f, 0.0f};
 
 enum BattleBotWsgWaitSpot
@@ -1312,8 +1312,14 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
     BattlegroundTypeId bgType = bg->GetBgTypeID();
     if (bgType == BATTLEGROUND_RB)
         bgType = bg->GetBgTypeID(true);
+//By leewheel 2026-10-06 合并 brighton the-lab: 本核已把本函数内的错误提示汉化，
+    //   但 usage 变量漏了（仍是英文），导致命令无参时回显英文、其它分支回显中文，不一致。
+    //   统一汉化，并把末尾的 return 改回 return usage（保留上游的变量复用结构）。
+    char const* usage = "用法: showpath(=[编号]) / showcreature=[编号] / showobject=[编号]";
     char* cmd = strtok((char*)args, " ");
     // char* charname = strtok(nullptr, " ");
+    if (!cmd)
+        return usage;
 
     if (!strncmp(cmd, "showpath", 8))
     {
@@ -1432,7 +1438,7 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
             num, o->GetPositionX(), o->GetPositionY(), o->GetPositionZ(), distance, exactDistance);
     }
 
-    return "用法: showpath(=[编号]) / showcreature=[编号] / showobject=[编号]";
+    return usage;
 }
 
 // Depends on OnBattlegroundStart in playerbots.cpp
@@ -1774,8 +1780,13 @@ bool BGTactics::Execute(Event /*event*/)
         //   改为：有活跃攻击目标（current target 非空）才阻断移动，否则即使战斗残留状态
         //   （刚杀死目标等）也允许走向岗位。参考 NPCBots：bot 边走边打，无目标时朝岗位前进。
         // End By leewheel
+        //By leewheel 2026-10-06 合并 brighton the-lab: 上游另加了 siegeDrive 例外
+        //   （载具司机已设好攻城位时仍继续开过去，武器照常开火）。该条件与本核的 activeTarget
+        //   判定互补、不是二选一 ⇒ 两者同时生效：既要求有活跃目标才阻断，又给载具司机留例外。
         Unit* activeTarget = AI_VALUE(Unit*, "current target");
-        if (inCombat && activeTarget && !PlayerHasFlag::IsCapturingFlag(bot))
+        bool const siegeDrive = botAI->IsInVehicle(true) &&
+                                context->GetValue<PositionMap&>("position")->Get()["bg siege"].isSet();
+        if (inCombat && activeTarget && !siegeDrive && !PlayerHasFlag::IsCapturingFlag(bot))
         {
             // bot->GetMotionMaster()->MovementExpired();
             return false;
@@ -1789,6 +1800,10 @@ bool BGTactics::Execute(Event /*event*/)
         if (bot->HasAura(BG_WS_SPELL_WARSONG_FLAG) || bot->HasAura(BG_WS_SPELL_SILVERWING_FLAG) ||
             bot->HasAura(BG_EY_NETHERSTORM_FLAG_SPELL))
             return false;
+
+        // EotS routes meet at the bases, bridges and center: head straight to the objective instead of a random route
+        if (bgType == BATTLEGROUND_EY)
+            return moveToObjective(true);
 
         if (!startNewPathBegin(*vPaths))
             return moveToObjective(true);
@@ -2349,6 +2364,9 @@ bool BGTactics::selectObjective(bool reset)
                 {
                     float rx, ry, rz;
                     bot->GetRandomPoint(origin, radius, rx, ry, rz);
+                    //By leewheel 2026-10-06 合并 brighton the-lab: 上游这里是无条件 target.Relocate(rx,ry,rz)，
+                    //   即恢复了本核已修掉的 Bug（GetRandomPoint 返回 invalid 高度时把 bot 传到 -500 虚空）。
+                    //   本核 SetSafePos 的语义（invalid 则回退到原点）才是正确的，保留本核判定。
                     if (rz != VMAP_INVALID_HEIGHT_VALUE)
                         target.Relocate(rx, ry, rz);
                     else
@@ -2373,6 +2391,15 @@ bool BGTactics::selectObjective(bool reset)
                 if (member && member->IsAlive() && member->GetMapId() == bot->GetMapId())
                     teamMembers.push_back(member);
             }
+
+            //By leewheel 2026-10-06 合并 brighton the-lab: 上游 #2857 在 WSG 段新增了
+            //   「按队伍策略算 defendersProhab 再内联展开攻防分支」的实现。本核不走那条路 ——
+            //   本核有完整的 NPCBots 四步优先级链（①旗手交旗 ②神水 ③狂暴 ④攻防配额），
+            //   其中第四步统一调用 AttackDefenseStep lambda（内部用节点图 CountRoleNear + 配额公式，
+            //   比上游的 urand 概率内联版更完整，且与本核 BgWanderGraph 节点体系配套）。
+            //   若保留上游那段，defendersProhab/isDefender 只服务于那段内联分支，会与 lambda 逻辑重复
+            //   且无人调用 lambda 的配额结果 ⇒ 采纳本核 AttackDefenseStep，丢弃上游内联展开。
+            // Retrieve role
             // NPCBots 的核算把自己也算进队伍总人数
             uint32 const teamSize = static_cast<uint32>(teamMembers.size()) + 1;
 
@@ -2561,7 +2588,9 @@ bool BGTactics::selectObjective(bool reset)
             }
             // ④ 攻防配额核算
             else
-                AttackDefenseStep();
+            //By leewheel 2026-10-06 合并 brighton the-lab: 见上方 AttackDefenseStep 处说明 ——
+            //   本核第四步走 AttackDefenseStep lambda（NPCBots 四步链 + 节点图配额），
+            //   丢弃上游 #2857 的 urand 概率内联展开版。
 
             // Save the final target position
             if (target.IsPositionValid())
@@ -2765,11 +2794,12 @@ bool BGTactics::selectObjective(bool reset)
                         bool isNeutral = state == BG_AB_NODE_STATE_NEUTRAL;
                         bool isEnemyOccupied = (team == TEAM_ALLIANCE && state == BG_AB_NODE_STATE_HORDE_OCCUPIED) ||
                                                (team == TEAM_HORDE && state == BG_AB_NODE_STATE_ALLY_OCCUPIED);
-                        bool isFriendlyContested =
-                            (team == TEAM_ALLIANCE && state == BG_AB_NODE_STATE_ALLY_CONTESTED) ||
-                            (team == TEAM_HORDE && state == BG_AB_NODE_STATE_HORDE_CONTESTED);
+                        // an enemy assault can be clicked back; our own assault can't
+                        bool isEnemyContested =
+                            (team == TEAM_ALLIANCE && state == BG_AB_NODE_STATE_HORDE_CONTESTED) ||
+                            (team == TEAM_HORDE && state == BG_AB_NODE_STATE_ALLY_CONTESTED);
 
-                        if (!(isNeutral || isEnemyOccupied || isFriendlyContested))
+                        if (!(isNeutral || isEnemyOccupied || isEnemyContested))
                             continue;
 
                         GameObject* go = bg->GetBGObject(nodeId * BG_AB_OBJECTS_PER_NODE);
@@ -2930,7 +2960,7 @@ bool BGTactics::selectObjective(bool reset)
                 if (!ownsAnyNode)
                 {
                     uint8 mostAllies = 0;
-                    for (auto const& [nodeId, _, __] : EY_AttackObjectives)
+                    for (auto const& [nodeId, _, areaTrigger] : EY_AttackObjectives)
                     {
                         auto it = EY_NodePositions.find(nodeId);
                         if (it == EY_NodePositions.end())
@@ -2941,11 +2971,20 @@ bool BGTactics::selectObjective(bool reset)
                         {
                             mostAllies = allies;
                             bestNodeId = nodeId;
+                            bestTrigger = areaTrigger;
                         }
                     }
                 }
 
-                if (bestNodeId != 0 && EY_NodePositions.contains(bestNodeId))
+//By leewheel 2026-10-06 合并 brighton the-lab: 采纳上游 #2860 的修法。
+                //   上游原话：Fel Reaver is point 0, so check the trigger。
+                //   根因：本核原来用 `if (bestNodeId != 0 ...)` 判定「是否选中了目标」，但 EotS 的
+                //   Fel Reaver 恰好是 0 号节点 —— 一旦评分最高的点是 Fel Reaver，bestNodeId 就是 0，
+                //   判定为「没选中目标」而整段跳过，旗手会站着不动不去点水晶（与 #2860 修的
+                //   "flag carriers skipping Fel Reaver" 是同一个 Bug）。
+                //   正解：bestNodeId 是节点 id（0 合法），bestTrigger 是 areaTrigger id（恒非 0），
+                //   用后者做「有无选中」判定才是无歧义的。
+                if (bestTrigger != 0 && EY_NodePositions.contains(bestNodeId))
                 {
                     Position const& targetPos = EY_NodePositions[bestNodeId];
                     float rx, ry, rz;
@@ -3008,7 +3047,6 @@ bool BGTactics::selectObjective(bool reset)
                     {
                         float rx, ry, rz;
                         bot->GetRandomPoint(p, 5.0f, rx, ry, rz);
-                        rz = bot->GetMap()->GetHeight(rx, ry, rz);
                         pos.Set(rx, ry, rz, bot->GetMapId());
                         foundObjective = true;
                     }
@@ -3155,7 +3193,6 @@ bool BGTactics::selectObjective(bool reset)
                             Position const& p = EY_NodePositions[chosenId];
                             float rx, ry, rz;
                             bot->GetRandomPoint(p, 5.0f, rx, ry, rz);
-                            rz = bot->GetMap()->GetHeight(rx, ry, rz);
                             pos.Set(rx, ry, rz, bot->GetMapId());
                             foundObjective = true;
                         }
@@ -3217,7 +3254,6 @@ bool BGTactics::selectObjective(bool reset)
                         Position const& p = EY_NodePositions[*bestNode];
                         float rx, ry, rz;
                         bot->GetRandomPoint(p, 5.0f, rx, ry, rz);
-                        rz = bot->GetMap()->GetHeight(rx, ry, rz);
                         pos.Set(rx, ry, rz, bot->GetMapId());
                         foundObjective = true;
                     }
@@ -3329,7 +3365,6 @@ bool BGTactics::selectObjective(bool reset)
                 Position camp = (team == TEAM_HORDE) ? EY_GY_CAMPING_ALLIANCE : EY_GY_CAMPING_HORDE;
                 float rx, ry, rz;
                 bot->GetRandomPoint(camp, 10.0f, rx, ry, rz);
-                rz = bot->GetMap()->GetHeight(rx, ry, rz);
                 pos.Set(rx, ry, rz, bot->GetMapId());
                 foundObjective = true;
             }
@@ -3342,6 +3377,12 @@ bool BGTactics::selectObjective(bool reset)
         case BATTLEGROUND_IC:
         {
             BattlegroundIC* isleOfConquestBG = (BattlegroundIC*)bg;
+            // the Horde siege spot's ground height, looked up once
+            static float const icParkZ = bg->GetBgMap()->GetHeight(IC_GATE_ATTACK_POS_HORDE.GetPositionX(),
+                                                                    IC_GATE_ATTACK_POS_HORDE.GetPositionY(), 60.0f);
+            Position icHordePark = IC_GATE_ATTACK_POS_HORDE;
+            if (icParkZ > INVALID_HEIGHT)
+                icHordePark.m_positionZ = icParkZ;
 
             uint32 role = context->GetValue<uint32>("bg role")->Get();
             bool inVehicle = botAI->IsInVehicle();
@@ -3397,18 +3438,21 @@ bool BGTactics::selectObjective(bool reset)
                         if (vehicleId == NPC_SIEGE_ENGINE_H)  // target gate directly if siege engine
                         {
                             BgObjective = gate;
+                            PositionInfo siegePos = context->GetValue<PositionMap&>("position")->Get()["bg siege"];
+                            siegePos.Set(gate->GetPositionX(), gate->GetPositionY(), gate->GetPositionZ(), bot->GetMapId());
+                            posMap["bg siege"] = siegePos;
                             // LOG_INFO("playerbots", "bot={} (in siege-engine) attack gate", bot->GetName());
                         }
                         else  // target gate directly at range if other vehicle
                         {
                             // just make bot stay where it is if already close
                             // (stops them shifting around between the random spots)
-                            if (bot->GetDistance(IC_GATE_ATTACK_POS_HORDE) < 8.0f)
+                            if (bot->GetDistance(icHordePark) < 8.0f)
                                 pos.Set(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId());
                             else
-                                pos.Set(IC_GATE_ATTACK_POS_HORDE.GetPositionX() + frand(-5.0f, +5.0f),
-                                        IC_GATE_ATTACK_POS_HORDE.GetPositionY() + frand(-5.0f, +5.0f),
-                                        IC_GATE_ATTACK_POS_HORDE.GetPositionZ(), bot->GetMapId());
+                                pos.Set(icHordePark.GetPositionX() + frand(-5.0f, +5.0f),
+                                        icHordePark.GetPositionY() + frand(-5.0f, +5.0f),
+                                        icHordePark.GetPositionZ(), bot->GetMapId());
                             posMap["bg objective"] = pos;
                             // set siege position
                             PositionInfo siegePos = context->GetValue<PositionMap&>("position")->Get()["bg siege"];
@@ -3492,12 +3536,12 @@ bool BGTactics::selectObjective(bool reset)
                 {
                     // just make bot stay where it is if already close
                     // (stops them shifting around between the random spots)
-                    if (bot->GetDistance(IC_GATE_ATTACK_POS_HORDE) < 8.0f)
+                    if (bot->GetDistance(icHordePark) < 8.0f)
                         pos.Set(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId());
                     else
-                        pos.Set(IC_GATE_ATTACK_POS_HORDE.GetPositionX() + frand(-5.0f, +5.0f),
-                                IC_GATE_ATTACK_POS_HORDE.GetPositionY() + frand(-5.0f, +5.0f),
-                                IC_GATE_ATTACK_POS_HORDE.GetPositionZ(), bot->GetMapId());
+                        pos.Set(icHordePark.GetPositionX() + frand(-5.0f, +5.0f),
+                                icHordePark.GetPositionY() + frand(-5.0f, +5.0f),
+                                icHordePark.GetPositionZ(), bot->GetMapId());
                     posMap["bg objective"] = pos;
                     // LOG_INFO("playerbots", "bot={} guard vehicles as they attack gate", bot->GetName());
                     return true;
@@ -3549,6 +3593,9 @@ bool BGTactics::selectObjective(bool reset)
                         if (vehicleId == NPC_SIEGE_ENGINE_A)  // target gate directly if siege engine
                         {
                             BgObjective = gate;
+                            PositionInfo siegePos = context->GetValue<PositionMap&>("position")->Get()["bg siege"];
+                            siegePos.Set(gate->GetPositionX(), gate->GetPositionY(), gate->GetPositionZ(), bot->GetMapId());
+                            posMap["bg siege"] = siegePos;
                             // LOG_INFO("playerbots", "bot={} (in siege-engine) attack gate", bot->GetName());
                         }
                         else  // target gate directly at range if other vehicle
@@ -3629,7 +3676,7 @@ bool BGTactics::selectObjective(bool reset)
                         auto const& objective =
                             IC_AttackObjectives[(i + role) %
                                                 len];  // use role to determine which objective checked first
-                        if (isleOfConquestBG->GetICNodePoint(objective.first).nodeState != NODE_STATE_CONTROLLED_H)
+                        if (isleOfConquestBG->GetICNodePoint(objective.first).nodeState != NODE_STATE_CONTROLLED_A)
                         {
                             if (GameObject* pGO = bg->GetBGObject(objective.second))
                             {
@@ -3866,6 +3913,8 @@ bool BGTactics::resetObjective()
     // Adjust role-change chance based on battleground type
     uint32 oddsToChangeRole = 1;  // default low
     BattlegroundTypeId bgType = bg->GetBgTypeID();
+    if (bgType == BATTLEGROUND_RB)
+        bgType = bg->GetBgTypeID(true);
 
     if (bgType == BATTLEGROUND_WS)
         oddsToChangeRole = 2;

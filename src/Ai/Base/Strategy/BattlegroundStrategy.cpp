@@ -87,6 +87,10 @@ void AlteracStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     // By leewheel 2026-09-01 修复 AV 战斗中岗位失效：原 alterac 策略只有 "alliance no snowfall gy"
     //   与 "timer bg"，岗位移动/刷新完全依赖 battleground 策略（NONCOMBAT 仅脱战引擎生效），
     //   战斗中岗位永不刷新。alterac 是 GENERIC 双引擎，补挂岗位链对齐 warsong。
+    // By leewheel 2026-10-06 合并 brighton the-lab: 上游 AlteracStrategy 里这三个 trigger 全没有
+    //   （连 "alliance no snowfall gy" 都没有，那是本核 2026-09-01 加的 AV 雪地墓地 trigger，
+    //   其实现 AllianceNoSnowfallGY::IsActive 在 PvpTriggers.cpp，已随上一轮合并保留）。
+    //   上游侧为空 ⇒ 整段保留本核，与 ArathiStrategy / EyeStrategy 的同类补挂保持一致。
     // End By leewheel
     triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
     triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));

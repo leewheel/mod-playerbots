@@ -102,6 +102,7 @@ private:
                          Event event, char const* pushType);
     // End By leewheel
     void Reset();
+    std::string const ResolveStrategyName(std::string const name);
     void ProcessTriggers(bool minimal);
     void PushDefaultActions();
     void PushAgain(ActionNode* actionNode, float relevance, Event event);

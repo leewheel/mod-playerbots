@@ -18,6 +18,8 @@
 #include "NewRpgStrategy.h"
 // By leewheel 2026-09-22: 自动坦克标记的月亮（CC）状态需要 ObjectGuid 的完整定义（作成员变量用），
 // 这里显式包含，避免依赖 Item.h / WorldPacket.h 的间接包含顺序。
+// By leewheel 2026-10-06 合并 brighton the-lab: 上游把这条注释删了，但 ObjectGuid.h 的**位置没动**
+//   （仍在 NewRpgStrategy.h 之后、PlayerbotAIBase.h 之前，与上游完全一致）⇒ 只是注释丢失，保留之。
 #include "ObjectGuid.h"
 #include "PlayerbotAIBase.h"
 #include "PlayerbotAIConfig.h"
@@ -35,7 +37,6 @@ class ExternalEventHelper;
 class Group;
 class Gameobject;
 class Item;
-class ObjectGuid;
 class Player;
 class PlayerbotMgr;
 class Spell;
@@ -364,24 +365,30 @@ private:
 class ChatCommandHolder
 {
 public:
-    ChatCommandHolder(std::string const command, Player* owner = nullptr, uint32 type = CHAT_MSG_WHISPER,
-                      time_t time = 0)
-        : command(command), owner(owner), type(type), time(time)
+    ChatCommandHolder(std::string const command, ObjectGuid owner, PlayerbotSecurityLevel requiredLevel,
+                      uint32 type = CHAT_MSG_WHISPER, time_t time = 0)
+        : command(command), owner(owner), requiredLevel(requiredLevel), type(type), time(time)
     {
     }
     ChatCommandHolder(ChatCommandHolder const& other)
-        : command(other.command), owner(other.owner), type(other.type), time(other.time)
+        : command(other.command),
+          owner(other.owner),
+          requiredLevel(other.requiredLevel),
+          type(other.type),
+          time(other.time)
     {
     }
 
     std::string const& GetCommand() { return command; }
-    Player* GetOwner() { return owner; }
+    ObjectGuid GetOwnerGuid() { return owner; }
+    PlayerbotSecurityLevel GetRequiredLevel() { return requiredLevel; }
     uint32& GetType() { return type; }
     time_t& GetTime() { return time; }
 
 private:
     std::string const command;
-    Player* owner;
+    ObjectGuid owner;
+    PlayerbotSecurityLevel requiredLevel;  // what the sender needed when the command was accepted
     uint32 type;
     time_t time;
 };
@@ -521,7 +528,7 @@ public:
     virtual bool HasAuraToDispel(Unit* player, uint32 dispelType);
     bool CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell = true, Item* itemTarget = nullptr,
                       Item* castItem = nullptr);
-    bool CanCastSpell(uint32 spellid, GameObject* goTarget, bool checkHasSpell = true);
+    bool CanCastSpell(uint32 spellid, GameObject* goTarget, bool checkHasSpell = true, Item* castItem = nullptr);
     bool CanCastSpell(uint32 spellid, float x, float y, float z, bool checkHasSpell = true,
                       Item* itemTarget = nullptr);
 

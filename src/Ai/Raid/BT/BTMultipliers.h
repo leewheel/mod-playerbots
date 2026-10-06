@@ -23,7 +23,7 @@ public:
     float GetValue(Action* action) final
     {
         return EncounterHelpers::IsEncounterInProgress(
-            bot, BlackTempleHelpers::BLACK_TEMPLE_MAP_ID) ? GetValueInEncounter(action) : 1.0f;
+            bot, BtHelpers::BT_MAP_ID) ? GetValueInEncounter(action) : 1.0f;
     }
 
 protected:
@@ -40,6 +40,18 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+// Trash
+
+// Not gated on an encounter: Reavers are trash.
+class ShadowmoonReaverHoldChargeBuildingSpellsMultiplier : public Multiplier
+{
+public:
+    ShadowmoonReaverHoldChargeBuildingSpellsMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "shadowmoon reaver hold charge building spells") {}
+
+    float GetValue(Action* action) override;
+};
+
 // High Warlord Naj'entus
 
 class HighWarlordNajentusDisableCombatFormationMoveMultiplier : public BlackTempleEncounterMultiplier
@@ -54,21 +66,46 @@ protected:
 
 // Supremus
 
-class SupremusFocusOnAvoidanceInPhase2Multiplier : public BlackTempleEncounterMultiplier
+class SupremusFocusOnAvoidanceInKitePhaseMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    SupremusFocusOnAvoidanceInPhase2Multiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "supremus focus on avoidance in phase 2") {}
+    SupremusFocusOnAvoidanceInKitePhaseMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "supremus focus on avoidance in kite phase") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class SupremusHitboxIsBuggedMultiplier : public BlackTempleEncounterMultiplier
+class SupremusDelayDpsCooldownsInKitePhaseMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    SupremusHitboxIsBuggedMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "supremus hitbox is bugged") {}
+    SupremusDelayDpsCooldownsInKitePhaseMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "supremus delay dps cooldowns in kite phase") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Supremus's bounding radius is 80 yd, far beyond his combat reach, and Killing Spree places the
+// rogue by bounding radius, so it takes the rogue well out of the fight.
+class SupremusDisableKillingSpreeMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    SupremusDisableKillingSpreeMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "supremus disable killing spree") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Shade of Akama
+
+// Walking up to the platform can lose sight of the target, which would otherwise drop it.
+class ShadeOfAkamaDontDropOutOfSightTargetMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    ShadeOfAkamaDontDropOutOfSightTargetMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "shade of akama don't drop out of sight target") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -96,12 +133,12 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier : public BlackTempleEncounterMultiplier
+class TeronGorefiendSpiritsAttackShadowyConstructsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier(PlayerbotAI* botAI)
+    TeronGorefiendSpiritsAttackShadowyConstructsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "teron gorefiend spirits attack only shadowy constructs") {}
+            botAI, "teron gorefiend spirits attack shadowy constructs") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -129,6 +166,18 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+// Non-tanks other than healers hold below the second tank's threat. No hold under Insignificance,
+// when no one gains threat.
+class GurtoggBloodboilHoldThreatMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    GurtoggBloodboilHoldThreatMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "gurtogg bloodboil hold threat") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 // Reliquary of Souls
 
 class ReliquaryOfSoulsDontWasteHealingMultiplier : public BlackTempleEncounterMultiplier
@@ -136,6 +185,30 @@ class ReliquaryOfSoulsDontWasteHealingMultiplier : public BlackTempleEncounterMu
 public:
     ReliquaryOfSoulsDontWasteHealingMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(botAI, "reliquary of souls don't waste healing") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Between essences: until one can be attacked, at the pull and while Enslaved Souls are up.
+class ReliquaryOfSoulsDelayDpsCooldownsBetweenEssencesMultiplier
+    : public BlackTempleEncounterMultiplier
+{
+public:
+    ReliquaryOfSoulsDelayDpsCooldownsBetweenEssencesMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+              botAI, "reliquary of souls delay dps cooldowns between essences") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Lets a mage steal Rune Shield before a Purge or Tranquilizing Shot removes it.
+class ReliquaryOfSoulsLetMagesStealRuneShieldMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    ReliquaryOfSoulsLetMagesStealRuneShieldMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "reliquary of souls let mages steal rune shield") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -153,12 +226,12 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier : public BlackTempleEncounterMultiplier
+class MotherShahrazFatalAttractionRunAwayMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier(PlayerbotAI* botAI)
+    MotherShahrazFatalAttractionRunAwayMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "mother shahraz bots with fatal attraction only run away") {}
+            botAI, "mother shahraz fatal attraction run away") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

@@ -12,6 +12,20 @@
 #include "ObjectGuid.h"
 #include "Value.h"
 
+// Trash
+
+class ShadowmoonReaversValue : public CalculatedValue<GuidVector>
+{
+public:
+    ShadowmoonReaversValue(PlayerbotAI* botAI)
+        : CalculatedValue<GuidVector>(
+              botAI, "shadowmoon reavers",
+              BtHelpers::SHADOWMOON_REAVER_CACHE_INTERVAL_MS) {}
+
+protected:
+    GuidVector Calculate() override { return BtHelpers::FindShadowmoonReaverGuids(botAI); }
+};
+
 // Supremus
 
 class SupremusVolcanoesValue : public CalculatedValue<GuidVector>
@@ -19,10 +33,38 @@ class SupremusVolcanoesValue : public CalculatedValue<GuidVector>
 public:
     SupremusVolcanoesValue(PlayerbotAI* botAI)
         : CalculatedValue<GuidVector>(
-              botAI, "supremus volcanoes", BlackTempleHelpers::SUPREMUS_VOLCANO_CACHE_INTERVAL_MS) {}
+              botAI, "supremus volcanoes", BtHelpers::SUPREMUS_VOLCANO_CACHE_INTERVAL_MS) {}
 
 protected:
-    GuidVector Calculate() override { return BlackTempleHelpers::FindSupremusVolcanoGuids(bot); }
+    GuidVector Calculate() override { return BtHelpers::FindSupremusVolcanoGuids(bot); }
+};
+
+// Shade of Akama
+
+class ShadeOfAkamaAddsValue : public CalculatedValue<GuidVector>
+{
+public:
+    ShadeOfAkamaAddsValue(PlayerbotAI* botAI)
+        : CalculatedValue<GuidVector>(
+              botAI, "shade of akama adds",
+              BtHelpers::SHADE_OF_AKAMA_ADD_CACHE_INTERVAL_MS) {}
+
+protected:
+    GuidVector Calculate() override { return BtHelpers::FindShadeOfAkamaAddGuids(botAI); }
+};
+
+// Gurtogg Bloodboil
+
+class GurtoggBloodboilSecondTankThreatValue : public FloatCalculatedValue
+{
+public:
+    GurtoggBloodboilSecondTankThreatValue(PlayerbotAI* botAI)
+        : FloatCalculatedValue(
+              botAI, "gurtogg bloodboil second tank threat",
+              BtHelpers::GURTOGG_TANK_THREAT_CACHE_INTERVAL_MS) {}
+
+protected:
+    float Calculate() override { return BtHelpers::FindGurtoggSecondTankThreat(botAI); }
 };
 
 // Illidari Council
@@ -33,10 +75,10 @@ public:
     IllidariCouncilZerevorMageTankValue(PlayerbotAI* botAI)
         : CalculatedValue<ObjectGuid>(
               botAI, "illidari council zerevor mage tank",
-              BlackTempleHelpers::ZEREVOR_MAGE_TANK_CACHE_INTERVAL_MS) {}
+              BtHelpers::ZEREVOR_MAGE_TANK_CACHE_INTERVAL_MS) {}
 
 protected:
-    ObjectGuid Calculate() override { return BlackTempleHelpers::FindZerevorMageTankGuid(bot); }
+    ObjectGuid Calculate() override { return BtHelpers::FindZerevorMageTankGuid(bot); }
 };
 
 // Illidan Stormrage <The Betrayer>
@@ -47,10 +89,10 @@ public:
     IllidanStormrageWarlockTankValue(PlayerbotAI* botAI)
         : CalculatedValue<ObjectGuid>(
               botAI, "illidan stormrage warlock tank",
-              BlackTempleHelpers::ILLIDAN_WARLOCK_TANK_CACHE_INTERVAL_MS) {}
+              BtHelpers::ILLIDAN_WARLOCK_TANK_CACHE_INTERVAL_MS) {}
 
 protected:
-    ObjectGuid Calculate() override { return BlackTempleHelpers::FindIllidanWarlockTankGuid(bot); }
+    ObjectGuid Calculate() override { return BtHelpers::FindIllidanWarlockTankGuid(bot); }
 };
 
 class IllidanStormrageBotWithParasiticShadowfiendValue : public CalculatedValue<ObjectGuid>
@@ -59,12 +101,12 @@ public:
     IllidanStormrageBotWithParasiticShadowfiendValue(PlayerbotAI* botAI)
         : CalculatedValue<ObjectGuid>(
               botAI, "illidan stormrage bot with parasitic shadowfiend",
-              BlackTempleHelpers::PARASITIC_SHADOWFIEND_CACHE_INTERVAL_MS) {}
+              BtHelpers::PARASITIC_SHADOWFIEND_CACHE_INTERVAL_MS) {}
 
 protected:
     ObjectGuid Calculate() override
     {
-        return BlackTempleHelpers::FindBotWithParasiticShadowfiendGuid(bot);
+        return BtHelpers::FindBotWithParasiticShadowfiendGuid(bot);
     }
 };
 
@@ -73,7 +115,11 @@ class RaidBlackTempleValueContext : public NamedObjectContext<UntypedValue>
 public:
     RaidBlackTempleValueContext()
     {
+        creators["shadowmoon reavers"] = &RaidBlackTempleValueContext::shadowmoon_reavers;
         creators["supremus volcanoes"] = &RaidBlackTempleValueContext::supremus_volcanoes;
+        creators["shade of akama adds"] = &RaidBlackTempleValueContext::shade_of_akama_adds;
+        creators["gurtogg bloodboil second tank threat"] =
+            &RaidBlackTempleValueContext::gurtogg_bloodboil_second_tank_threat;
         creators["illidari council zerevor mage tank"] =
             &RaidBlackTempleValueContext::illidari_council_zerevor_mage_tank;
         creators["illidan stormrage warlock tank"] =
@@ -83,9 +129,21 @@ public:
     }
 
 private:
+    static UntypedValue* shadowmoon_reavers(PlayerbotAI* botAI)
+    {
+        return new ShadowmoonReaversValue(botAI);
+    }
     static UntypedValue* supremus_volcanoes(PlayerbotAI* botAI)
     {
         return new SupremusVolcanoesValue(botAI);
+    }
+    static UntypedValue* shade_of_akama_adds(PlayerbotAI* botAI)
+    {
+        return new ShadeOfAkamaAddsValue(botAI);
+    }
+    static UntypedValue* gurtogg_bloodboil_second_tank_threat(PlayerbotAI* botAI)
+    {
+        return new GurtoggBloodboilSecondTankThreatValue(botAI);
     }
     static UntypedValue* illidari_council_zerevor_mage_tank(PlayerbotAI* botAI)
     {

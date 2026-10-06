@@ -302,58 +302,7 @@ bool FollowAction::CanDeadFollow(Unit* target)
 
     return true;
 }
-
-bool FleeToGroupLeaderAction::Execute(Event /*event*/)
-{
-    Unit* fTarget = AI_VALUE(Unit*, "group leader");
-    bool canFollow = Follow(fTarget);
-    if (!canFollow)
-    {
-        // botAI->SetNextCheckDelay(5000);
-        return false;
-    }
-
-    WorldPosition targetPos(fTarget);
-    WorldPosition bosPos(bot);
-    float distance = bosPos.fDist(targetPos);
-
-    if (distance < sPlayerbotAIConfig.reactDistance * 3)
-    {
-        if (!urand(0, 3))
-            botAI->TellMaster("我很近了，等我一下！");
-    }
-    else if (distance < 1000)
-    {
-        if (!urand(0, 10))
-            botAI->TellMaster("我正在前往你的位置。");
-    }
-    else if (!urand(0, 20))
-        botAI->TellMaster("我正在前往你的位置。");
-
-    botAI->SetNextCheckDelay(3000);
-
-    return true;
-}
-
-bool FleeToGroupLeaderAction::isUseful()
-{
-    if (!botAI->GetGroupLeader())
-        return false;
-
-    if (botAI->GetGroupLeader() == bot)
-        return false;
-
-    Unit* target = AI_VALUE(Unit*, "current target");
-    if (target && botAI->GetGroupLeader()->GetTarget() == target->GetGUID())
-        return false;
-
-    if (!botAI->HasStrategy("follow", BOT_STATE_NON_COMBAT))
-        return false;
-
-    Unit* fTarget = AI_VALUE(Unit*, "group leader");
-
-    if (!CanDeadFollow(fTarget))
-        return false;
-
-    return true;
-}
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游 #2825 Clean up fleeing v1 删除了
+//   FleeToGroupLeaderAction。本核 ActionContext 里 flee() 注册的是 MovementActions.cpp 的
+//   FleeAction（class FleeAction, action 名 "flee"），与本 action 无关；全仓检索确认
+//   FleeToGroupLeaderAction 无任何注册与引用 ⇒ 采纳上游删除，避免留下无入口的死代码。

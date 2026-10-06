@@ -32,16 +32,21 @@ bool OpenItemAction::Execute(Event /*event*/)
 
 void OpenItemAction::OpenItem(Item* item, uint8 bag, uint8 slot)
 {
+    ObjectGuid const itemGuid = item->GetGUID();
+    std::ostringstream out;
+    out << "Opened item: " << item->GetTemplate()->Name1;
+
     WorldPacket packet(CMSG_OPEN_ITEM);
     packet << bag << slot;
     bot->GetSession()->HandleOpenItemOpcode(packet);
 
     // Store the item GUID as the loot target
     LootObject lootObject;
-    lootObject.guid = item->GetGUID();
+    lootObject.guid = itemGuid;
     botAI->GetAiObjectContext()->GetValue<LootObject>("loot target")->Set(lootObject);
 
-    std::ostringstream out;
-    out << "已打开物品：" << item->GetTemplate()->Name1;
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游新增英文 "Opened item"，本核原有中文版
+    //   是重复的 std::ostringstream out 声明（自动合并两句都留了）⇒ out 只声明一次，中英合并为一句
+    out << "（已打开物品：" << item->GetTemplate()->Name1 << "）";
     botAI->TellMaster(out.str());
 }

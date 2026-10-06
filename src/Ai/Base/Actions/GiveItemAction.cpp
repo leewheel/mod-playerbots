@@ -38,12 +38,17 @@ bool GiveItemAction::Execute(Event /*event*/)
         InventoryResult msg = receiver->CanStoreItem(NULL_BAG, NULL_SLOT, dest, item, false);
         if (msg == EQUIP_ERR_OK)
         {
+            std::ostringstream out;
+            out << "Got " << chat->FormatItem(item->GetTemplate(), item->GetCount()) << " from " << bot->GetName();
+
             bot->MoveItemFromInventory(item->GetBagSlot(), item->GetSlot(), true);
             item->SetOwnerGUID(target->GetGUID());
             receiver->MoveItemToInventory(dest, item, true);
 
-            std::ostringstream out;
-            out << "从 " << bot->GetName() << " 获得 " << chat->FormatItem(item->GetTemplate(), item->GetCount());
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游新增英文 "Got X from Y"，本核原有中文版
+            //   是重复的 std::ostringstream out 声明（自动合并两句都留了）⇒ out 只声明一次，中英合并为一句
+            out << "（从 " << bot->GetName() << " 获得 "
+                << chat->FormatItem(item->GetTemplate(), item->GetCount()) << "）";
             receiverAi->TellMasterNoFacing(out.str());
         }
         else

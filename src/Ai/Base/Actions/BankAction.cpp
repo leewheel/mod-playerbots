@@ -40,12 +40,13 @@ bool BankAction::ExecuteBank(std::string const text, Unit* /*bank*/)
     bool result = false;
     if (text[0] == '-')
     {
-        std::vector<Item*> found = parseItems(text.substr(1), ITERATE_ITEMS_IN_BANK);
-        for (std::vector<Item*>::iterator i = found.begin(); i != found.end(); i++)
-        {
-            Item* item = *i;
-            result &= Withdraw(item->GetTemplate()->ItemId);
-        }
+        // A withdrawal can free a later entry, so read every id first.
+        std::vector<uint32> itemIds;
+        for (Item* item : parseItems(text.substr(1), ITERATE_ITEMS_IN_BANK))
+            itemIds.push_back(item->GetEntry());
+
+        for (uint32 const itemId : itemIds)
+            result &= Withdraw(itemId);
     }
     else
     {
@@ -80,19 +81,22 @@ bool BankAction::Withdraw(uint32 itemid)
         return false;
     }
 
+    std::ostringstream out;
+    out << "got " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount()) << " from bank";
+
     bot->RemoveItem(pItem->GetBagSlot(), pItem->GetSlot(), true);
     bot->StoreItem(dest, pItem, true);
 
-    std::ostringstream out;
-    out << "从银行取出 " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount());
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游新增了英文 TellMaster 输出，
+    //   而本核原有的中文输出版本是重复声明 std::ostringstream out（自动合并把两句都留下了）。
+    //   处置：out 只声明一次，英文为主句、中文为补充，保留上游逻辑同时不丢本核汉化信息。
+    out << "（从银行取出 " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount()) << "）";
     botAI->TellMaster(out.str());
     return true;
 }
 
 bool BankAction::Deposit(Item* pItem)
 {
-    std::ostringstream out;
-
     ItemPosCountVec dest;
     InventoryResult msg = bot->CanBankItem(NULL_BAG, NULL_SLOT, dest, pItem, false);
     if (msg != EQUIP_ERR_OK)
@@ -101,10 +105,14 @@ bool BankAction::Deposit(Item* pItem)
         return false;
     }
 
+    std::ostringstream out;
+    out << "put " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount()) << " to bank";
+
     bot->RemoveItem(pItem->GetBagSlot(), pItem->GetSlot(), true);
     bot->BankItem(dest, pItem, true);
 
-    out << "存入银行 " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount());
+//By leewheel 2026-10-06 合并 brighton the-lab: 同 Withdraw，out 只声明一次，英文为主句、中文为补充
+    out << "（存入银行 " << chat->FormatItem(pItem->GetTemplate(), pItem->GetCount()) << "）";
     botAI->TellMaster(out.str());
     return true;
 }

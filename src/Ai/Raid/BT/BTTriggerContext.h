@@ -19,6 +19,14 @@ public:
         creators["black temple no encounter in progress"] =
             &RaidBlackTempleTriggerContext::black_temple_no_encounter_in_progress;
 
+        // Trash
+        creators["sister of pleasure should be marked"] =
+            &RaidBlackTempleTriggerContext::sister_of_pleasure_should_be_marked;
+        creators["shadowmoon reaver wand builds charges"] =
+            &RaidBlackTempleTriggerContext::shadowmoon_reaver_wand_builds_charges;
+        creators["shadowmoon reaver should control caster pet"] =
+            &RaidBlackTempleTriggerContext::shadowmoon_reaver_should_control_caster_pet;
+
         // High Warlord Naj'entus
         creators["high warlord naj'entus hunter should misdirect"] =
             &RaidBlackTempleTriggerContext::high_warlord_najentus_hunter_should_misdirect;
@@ -26,11 +34,17 @@ public:
         creators["high warlord naj'entus should be tanked"] =
             &RaidBlackTempleTriggerContext::high_warlord_najentus_should_be_tanked;
 
-        creators["high warlord naj'entus casts needle spines"] =
-            &RaidBlackTempleTriggerContext::high_warlord_najentus_casts_needle_spines;
+        creators["high warlord naj'entus ranged should spread"] =
+            &RaidBlackTempleTriggerContext::high_warlord_najentus_ranged_should_spread;
 
-        creators["high warlord naj'entus player is impaled"] =
-            &RaidBlackTempleTriggerContext::high_warlord_najentus_player_is_impaled;
+        creators["high warlord naj'entus impaled player needs remover"] =
+            &RaidBlackTempleTriggerContext::high_warlord_najentus_impaled_player_needs_remover;
+
+        creators["high warlord naj'entus impaling spine on group member"] =
+            &RaidBlackTempleTriggerContext::high_warlord_najentus_impaling_spine_on_group_member;
+
+        creators["high warlord naj'entus needs spine thrower"] =
+            &RaidBlackTempleTriggerContext::high_warlord_najentus_needs_spine_thrower;
 
         creators["high warlord naj'entus has tidal shield"] =
             &RaidBlackTempleTriggerContext::high_warlord_najentus_has_tidal_shield;
@@ -48,12 +62,9 @@ public:
         creators["supremus near volcano"] =
             &RaidBlackTempleTriggerContext::supremus_near_volcano;
 
-        creators["supremus should manage phase timer"] =
-            &RaidBlackTempleTriggerContext::supremus_should_manage_phase_timer;
-
         // Shade of Akama
-        creators["shade of akama killing channelers starts phase 2"] =
-            &RaidBlackTempleTriggerContext::shade_of_akama_killing_channelers_starts_phase_2;
+        creators["shade of akama should prioritize channelers"] =
+            &RaidBlackTempleTriggerContext::shade_of_akama_should_prioritize_channelers;
 
         // Teron Gorefiend
         creators["teron gorefiend hunter should misdirect"] =
@@ -68,8 +79,8 @@ public:
         creators["teron gorefiend casts shadow of death"] =
             &RaidBlackTempleTriggerContext::teron_gorefiend_casts_shadow_of_death;
 
-        creators["teron gorefiend shadow of death"] =
-            &RaidBlackTempleTriggerContext::teron_gorefiend_shadow_of_death;
+        creators["teron gorefiend should position for vengeful spirit"] =
+            &RaidBlackTempleTriggerContext::teron_gorefiend_should_position_for_vengeful_spirit;
 
         creators["teron gorefiend transformed into vengeful spirit"] =
             &RaidBlackTempleTriggerContext::teron_gorefiend_transformed_into_vengeful_spirit;
@@ -81,24 +92,21 @@ public:
         creators["gurtogg bloodboil should be tanked"] =
             &RaidBlackTempleTriggerContext::gurtogg_bloodboil_should_be_tanked;
 
-        creators["gurtogg bloodboil casts bloodboil"] =
-            &RaidBlackTempleTriggerContext::gurtogg_bloodboil_casts_bloodboil;
+        creators["gurtogg bloodboil should position for bloodboil"] =
+            &RaidBlackTempleTriggerContext::gurtogg_bloodboil_should_position_for_bloodboil;
 
-        creators["gurtogg bloodboil fel rage on group member"] =
-            &RaidBlackTempleTriggerContext::gurtogg_bloodboil_fel_rage_on_group_member;
-
-        creators["gurtogg bloodboil should manage phase timer"] =
-            &RaidBlackTempleTriggerContext::gurtogg_bloodboil_should_manage_phase_timer;
+        creators["gurtogg bloodboil fel rage on bot"] =
+            &RaidBlackTempleTriggerContext::gurtogg_bloodboil_fel_rage_on_bot;
 
         // Reliquary of Souls
         creators["reliquary of souls hunter should misdirect"] =
             &RaidBlackTempleTriggerContext::reliquary_of_souls_hunter_should_misdirect;
 
-        creators["reliquary of souls essence of suffering fixates on closest target"] =
-            &RaidBlackTempleTriggerContext::reliquary_of_souls_essence_of_suffering_fixates_on_closest_target;
+        creators["reliquary of souls should position for suffering"] =
+            &RaidBlackTempleTriggerContext::reliquary_of_souls_should_position_for_suffering;
 
-        creators["reliquary of souls essence of suffering disables healing"] =
-            &RaidBlackTempleTriggerContext::reliquary_of_souls_essence_of_suffering_disables_healing;
+        creators["reliquary of souls healers should attack suffering"] =
+            &RaidBlackTempleTriggerContext::reliquary_of_souls_healers_should_attack_suffering;
 
         creators["reliquary of souls essence of desire has rune shield"] =
             &RaidBlackTempleTriggerContext::reliquary_of_souls_essence_of_desire_has_rune_shield;
@@ -216,6 +224,20 @@ private:
         return new BlackTempleNoEncounterInProgressTrigger(botAI);
     }
 
+    // Trash
+    static Trigger* sister_of_pleasure_should_be_marked(PlayerbotAI* botAI)
+    {
+        return new SisterOfPleasureShouldBeMarkedTrigger(botAI);
+    }
+    static Trigger* shadowmoon_reaver_wand_builds_charges(PlayerbotAI* botAI)
+    {
+        return new ShadowmoonReaverWandBuildsChargesTrigger(botAI);
+    }
+    static Trigger* shadowmoon_reaver_should_control_caster_pet(PlayerbotAI* botAI)
+    {
+        return new ShadowmoonReaverShouldControlCasterPetTrigger(botAI);
+    }
+
     // High Warlord Naj'entus
     static Trigger* high_warlord_najentus_hunter_should_misdirect(PlayerbotAI* botAI)
     {
@@ -226,13 +248,21 @@ private:
     {
         return new HighWarlordNajentusShouldBeTankedTrigger(botAI);
     }
-    static Trigger* high_warlord_najentus_casts_needle_spines(PlayerbotAI* botAI)
+    static Trigger* high_warlord_najentus_ranged_should_spread(PlayerbotAI* botAI)
     {
-        return new HighWarlordNajentusCastsNeedleSpinesTrigger(botAI);
+        return new HighWarlordNajentusRangedShouldSpreadTrigger(botAI);
     }
-    static Trigger* high_warlord_najentus_player_is_impaled(PlayerbotAI* botAI)
+    static Trigger* high_warlord_najentus_impaled_player_needs_remover(PlayerbotAI* botAI)
     {
-        return new HighWarlordNajentusPlayerIsImpaledTrigger(botAI);
+        return new HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger(botAI);
+    }
+    static Trigger* high_warlord_najentus_impaling_spine_on_group_member(PlayerbotAI* botAI)
+    {
+        return new HighWarlordNajentusImpalingSpineOnGroupMemberTrigger(botAI);
+    }
+    static Trigger* high_warlord_najentus_needs_spine_thrower(PlayerbotAI* botAI)
+    {
+        return new HighWarlordNajentusNeedsSpineThrowerTrigger(botAI);
     }
     static Trigger* high_warlord_najentus_has_tidal_shield(PlayerbotAI* botAI)
     {
@@ -242,7 +272,8 @@ private:
     // Supremus
     static Trigger* supremus_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new SupremusHunterShouldMisdirectTrigger(botAI);
+        return new BlackTempleHunterShouldMisdirectTrigger(
+            botAI, "supremus hunter should misdirect", "supremus");
     }
     static Trigger* supremus_ranged_should_spread(PlayerbotAI* botAI)
     {
@@ -256,15 +287,11 @@ private:
     {
         return new SupremusNearVolcanoTrigger(botAI);
     }
-    static Trigger* supremus_should_manage_phase_timer(PlayerbotAI* botAI)
-    {
-        return new SupremusShouldManagePhaseTimerTrigger(botAI);
-    }
 
     // Shade of Akama
-    static Trigger* shade_of_akama_killing_channelers_starts_phase_2(PlayerbotAI* botAI)
+    static Trigger* shade_of_akama_should_prioritize_channelers(PlayerbotAI* botAI)
     {
-        return new ShadeOfAkamaKillingChannelersStartsPhase2Trigger(botAI);
+        return new ShadeOfAkamaShouldPrioritizeChannelersTrigger(botAI);
     }
 
     // Teron Gorefiend
@@ -285,9 +312,9 @@ private:
     {
         return new TeronGorefiendCastsShadowOfDeathTrigger(botAI);
     }
-    static Trigger* teron_gorefiend_shadow_of_death(PlayerbotAI* botAI)
+    static Trigger* teron_gorefiend_should_position_for_vengeful_spirit(PlayerbotAI* botAI)
     {
-        return new TeronGorefiendShadowOfDeathTrigger(botAI);
+        return new TeronGorefiendShouldPositionForVengefulSpiritTrigger(botAI);
     }
     static Trigger* teron_gorefiend_transformed_into_vengeful_spirit(PlayerbotAI* botAI)
     {
@@ -297,23 +324,20 @@ private:
     // Gurtogg Bloodboil
     static Trigger* gurtogg_bloodboil_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new GurtoggBloodboilHunterShouldMisdirectTrigger(botAI);
+        return new BlackTempleHunterShouldMisdirectTrigger(
+            botAI, "gurtogg bloodboil hunter should misdirect", "gurtogg bloodboil");
     }
     static Trigger* gurtogg_bloodboil_should_be_tanked(PlayerbotAI* botAI)
     {
         return new GurtoggBloodboilShouldBeTankedTrigger(botAI);
     }
-    static Trigger* gurtogg_bloodboil_casts_bloodboil(PlayerbotAI* botAI)
+    static Trigger* gurtogg_bloodboil_should_position_for_bloodboil(PlayerbotAI* botAI)
     {
-        return new GurtoggBloodboilCastsBloodboilTrigger(botAI);
+        return new GurtoggBloodboilShouldPositionForBloodboilTrigger(botAI);
     }
-    static Trigger* gurtogg_bloodboil_fel_rage_on_group_member(PlayerbotAI* botAI)
+    static Trigger* gurtogg_bloodboil_fel_rage_on_bot(PlayerbotAI* botAI)
     {
-        return new GurtoggBloodboilFelRageOnGroupMemberTrigger(botAI);
-    }
-    static Trigger* gurtogg_bloodboil_should_manage_phase_timer(PlayerbotAI* botAI)
-    {
-        return new GurtoggBloodboilShouldManagePhaseTimerTrigger(botAI);
+        return new GurtoggBloodboilFelRageOnBotTrigger(botAI);
     }
 
     // Reliquary of Souls
@@ -321,13 +345,13 @@ private:
     {
         return new ReliquaryOfSoulsHunterShouldMisdirectTrigger(botAI);
     }
-    static Trigger* reliquary_of_souls_essence_of_suffering_fixates_on_closest_target(PlayerbotAI* botAI)
+    static Trigger* reliquary_of_souls_should_position_for_suffering(PlayerbotAI* botAI)
     {
-        return new ReliquaryOfSoulsEssenceOfSufferingFixatesOnClosestTargetTrigger(botAI);
+        return new ReliquaryOfSoulsShouldPositionForSufferingTrigger(botAI);
     }
-    static Trigger* reliquary_of_souls_essence_of_suffering_disables_healing(PlayerbotAI* botAI)
+    static Trigger* reliquary_of_souls_healers_should_attack_suffering(PlayerbotAI* botAI)
     {
-        return new ReliquaryOfSoulsEssenceOfSufferingDisablesHealingTrigger(botAI);
+        return new ReliquaryOfSoulsHealersShouldAttackSufferingTrigger(botAI);
     }
     static Trigger* reliquary_of_souls_essence_of_desire_has_rune_shield(PlayerbotAI* botAI)
     {

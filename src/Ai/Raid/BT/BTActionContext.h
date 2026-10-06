@@ -19,6 +19,14 @@ public:
         creators["black temple reset encounter states"] =
             &RaidBlackTempleActionContext::black_temple_reset_encounter_states;
 
+        // Trash
+        creators["mark sister of pleasure"] =
+            &RaidBlackTempleActionContext::mark_sister_of_pleasure;
+        creators["shadowmoon reaver stop wand"] =
+            &RaidBlackTempleActionContext::shadowmoon_reaver_stop_wand;
+        creators["shadowmoon reaver control caster pet"] =
+            &RaidBlackTempleActionContext::shadowmoon_reaver_control_caster_pet;
+
         // High Warlord Naj'entus
         creators["high warlord naj'entus misdirect to main tank"] =
             &RaidBlackTempleActionContext::high_warlord_najentus_misdirect_to_main_tank;
@@ -29,15 +37,21 @@ public:
         creators["high warlord naj'entus disperse ranged"] =
             &RaidBlackTempleActionContext::high_warlord_najentus_disperse_ranged;
 
+        creators["high warlord naj'entus assign spine remover"] =
+            &RaidBlackTempleActionContext::high_warlord_najentus_assign_spine_remover;
+
         creators["high warlord naj'entus remove impaling spine"] =
             &RaidBlackTempleActionContext::high_warlord_najentus_remove_impaling_spine;
+
+        creators["high warlord naj'entus assign spine thrower"] =
+            &RaidBlackTempleActionContext::high_warlord_najentus_assign_spine_thrower;
 
         creators["high warlord naj'entus throw impaling spine"] =
             &RaidBlackTempleActionContext::high_warlord_najentus_throw_impaling_spine;
 
         // Supremus
-        creators["supremus misdirect to tanks"] =
-            &RaidBlackTempleActionContext::supremus_misdirect_to_tanks;
+        creators["supremus misdirect to main tank"] =
+            &RaidBlackTempleActionContext::supremus_misdirect_to_main_tank;
 
         creators["supremus disperse ranged"] =
             &RaidBlackTempleActionContext::supremus_disperse_ranged;
@@ -47,9 +61,6 @@ public:
 
         creators["supremus move away from volcanos"] =
             &RaidBlackTempleActionContext::supremus_move_away_from_volcanos;
-
-        creators["supremus manage phase timer"] =
-            &RaidBlackTempleActionContext::supremus_manage_phase_timer;
 
         // Shade of Akama
         creators["shade of akama melee dps prioritize channelers"] =
@@ -84,11 +95,8 @@ public:
         creators["gurtogg bloodboil rotate ranged groups"] =
             &RaidBlackTempleActionContext::gurtogg_bloodboil_rotate_ranged_groups;
 
-        creators["gurtogg bloodboil ranged move away from enraged player"] =
-            &RaidBlackTempleActionContext::gurtogg_bloodboil_ranged_move_away_from_enraged_player;
-
-        creators["gurtogg bloodboil manage phase timer"] =
-            &RaidBlackTempleActionContext::gurtogg_bloodboil_manage_phase_timer;
+        creators["gurtogg bloodboil lead boss to tank position"] =
+            &RaidBlackTempleActionContext::gurtogg_bloodboil_lead_boss_to_tank_position;
 
         // Reliquary of Souls
         creators["reliquary of souls misdirect to main tank"] =
@@ -119,8 +127,8 @@ public:
         creators["mother shahraz position ranged under pillar"] =
             &RaidBlackTempleActionContext::mother_shahraz_position_ranged_under_pillar;
 
-        creators["mother shahraz run away to break fatal attraction"] =
-            &RaidBlackTempleActionContext::mother_shahraz_run_away_to_break_fatal_attraction;
+        creators["mother shahraz break fatal attraction"] =
+            &RaidBlackTempleActionContext::mother_shahraz_break_fatal_attraction;
 
         // Illidari Council
         creators["illidari council misdirect to tanks"] =
@@ -216,10 +224,25 @@ private:
         return new BlackTempleResetEncounterStatesAction(botAI);
     }
 
+    // Trash
+    static Action* mark_sister_of_pleasure(PlayerbotAI* botAI)
+    {
+        return new MarkSisterOfPleasureAction(botAI);
+    }
+    static Action* shadowmoon_reaver_stop_wand(PlayerbotAI* botAI)
+    {
+        return new ShadowmoonReaverStopWandAction(botAI);
+    }
+    static Action* shadowmoon_reaver_control_caster_pet(PlayerbotAI* botAI)
+    {
+        return new ShadowmoonReaverControlCasterPetAction(botAI);
+    }
+
     // High Warlord Naj'entus
     static Action* high_warlord_najentus_misdirect_to_main_tank(PlayerbotAI* botAI)
     {
-        return new HighWarlordNajentusMisdirectToMainTankAction(botAI);
+        return new BlackTempleMisdirectToMainTankAction(
+            botAI, "high warlord naj'entus misdirect to main tank", "high warlord naj'entus");
     }
     static Action* high_warlord_najentus_tanks_position_boss(PlayerbotAI* botAI)
     {
@@ -229,9 +252,17 @@ private:
     {
         return new HighWarlordNajentusDisperseRangedAction(botAI);
     }
+    static Action* high_warlord_najentus_assign_spine_remover(PlayerbotAI* botAI)
+    {
+        return new HighWarlordNajentusAssignSpineRemoverAction(botAI);
+    }
     static Action* high_warlord_najentus_remove_impaling_spine(PlayerbotAI* botAI)
     {
         return new HighWarlordNajentusRemoveImpalingSpineAction(botAI);
+    }
+    static Action* high_warlord_najentus_assign_spine_thrower(PlayerbotAI* botAI)
+    {
+        return new HighWarlordNajentusAssignSpineThrowerAction(botAI);
     }
     static Action* high_warlord_najentus_throw_impaling_spine(PlayerbotAI* botAI)
     {
@@ -239,9 +270,10 @@ private:
     }
 
     // Supremus
-    static Action* supremus_misdirect_to_tanks(PlayerbotAI* botAI)
+    static Action* supremus_misdirect_to_main_tank(PlayerbotAI* botAI)
     {
-        return new SupremusMisdirectToTanksAction(botAI);
+        return new BlackTempleMisdirectToMainTankAction(
+            botAI, "supremus misdirect to main tank", "supremus");
     }
     static Action* supremus_disperse_ranged(PlayerbotAI* botAI)
     {
@@ -255,10 +287,6 @@ private:
     {
         return new SupremusMoveAwayFromVolcanosAction(botAI);
     }
-    static Action* supremus_manage_phase_timer(PlayerbotAI* botAI)
-    {
-        return new SupremusManagePhaseTimerAction(botAI);
-    }
 
     // Shade of Akama
     static Action* shade_of_akama_melee_dps_prioritize_channelers(PlayerbotAI* botAI)
@@ -269,7 +297,8 @@ private:
     // Teron Gorefiend
     static Action* teron_gorefiend_misdirect_to_main_tank(PlayerbotAI* botAI)
     {
-        return new TeronGorefiendMisdirectToMainTankAction(botAI);
+        return new BlackTempleMisdirectToMainTankAction(
+            botAI, "teron gorefiend misdirect to main tank", "teron gorefiend");
     }
     static Action* teron_gorefiend_tanks_position_boss(PlayerbotAI* botAI)
     {
@@ -295,7 +324,8 @@ private:
     // Gurtogg Bloodboil
     static Action* gurtogg_bloodboil_misdirect_to_main_tank(PlayerbotAI* botAI)
     {
-        return new GurtoggBloodboilMisdirectToMainTankAction(botAI);
+        return new BlackTempleMisdirectToMainTankAction(
+            botAI, "gurtogg bloodboil misdirect to main tank", "gurtogg bloodboil");
     }
     static Action* gurtogg_bloodboil_tanks_position_boss(PlayerbotAI* botAI)
     {
@@ -305,13 +335,9 @@ private:
     {
         return new GurtoggBloodboilRotateRangedGroupsAction(botAI);
     }
-    static Action* gurtogg_bloodboil_ranged_move_away_from_enraged_player(PlayerbotAI* botAI)
+    static Action* gurtogg_bloodboil_lead_boss_to_tank_position(PlayerbotAI* botAI)
     {
-        return new GurtoggBloodboilRangedMoveAwayFromEnragedPlayerAction(botAI);
-    }
-    static Action* gurtogg_bloodboil_manage_phase_timer(PlayerbotAI* botAI)
-    {
-        return new GurtoggBloodboilManagePhaseTimerAction(botAI);
+        return new GurtoggBloodboilLeadBossToTankPositionAction(botAI);
     }
 
     // Reliquary of Souls
@@ -339,7 +365,8 @@ private:
     // Mother Shahraz
     static Action* mother_shahraz_misdirect_to_main_tank(PlayerbotAI* botAI)
     {
-        return new MotherShahrazMisdirectToMainTankAction(botAI);
+        return new BlackTempleMisdirectToMainTankAction(
+            botAI, "mother shahraz misdirect to main tank", "mother shahraz");
     }
     static Action* mother_shahraz_tanks_position_boss_under_pillar(PlayerbotAI* botAI)
     {
@@ -353,9 +380,9 @@ private:
     {
         return new MotherShahrazPositionRangedUnderPillarAction(botAI);
     }
-    static Action* mother_shahraz_run_away_to_break_fatal_attraction(PlayerbotAI* botAI)
+    static Action* mother_shahraz_break_fatal_attraction(PlayerbotAI* botAI)
     {
-        return new MotherShahrazRunAwayToBreakFatalAttractionAction(botAI);
+        return new MotherShahrazBreakFatalAttractionAction(botAI);
     }
 
     // Illidari Council

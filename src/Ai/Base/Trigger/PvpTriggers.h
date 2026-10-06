@@ -141,6 +141,10 @@ public:
     bool IsActive() override;
 };
 
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游 #2855 重构战场 PvP 时整段删掉了本核这批
+//   自保触发器（LowHpPvp / SafeToBandage / PvpCritical / PvpCycleDisengage / AllianceNoSnowfallGY）。
+//   它们在本核是完整可用的核心魔改：TriggerContext.h 有注册、PvpTriggers.cpp 有实现、
+//   GenericWarriorStrategy.cpp 引用 low hp pvp ⇒ 冲突为「本核 66 行 / 上游 0 行」，保留本核。
 class AllianceNoSnowfallGY : public Trigger
 {
 public:

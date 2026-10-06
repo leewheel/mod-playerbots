@@ -22,7 +22,7 @@ public:
 
     bool IsActive() final
     {
-        return EncounterHelpers::IsEncounterInProgress(bot, BlackTempleHelpers::BLACK_TEMPLE_MAP_ID) &&
+        return EncounterHelpers::IsEncounterInProgress(bot, BtHelpers::BT_MAP_ID) &&
             IsActiveInEncounter();
     }
 
@@ -43,7 +43,8 @@ public:
 // Shared Bosses
 
 // A Hunter while the named boss is untouched, so Misdirection goes out on the pull. Used for
-// High Warlord Naj'entus, Teron Gorefiend, Mother Shahraz and the Illidari Council (on Gathios).
+// High Warlord Naj'entus, Supremus, Teron Gorefiend, Mother Shahraz and the Illidari Council (on
+// Gathios).
 class BlackTempleHunterShouldMisdirectTrigger : public BlackTempleEncounterTrigger
 {
 public:
@@ -58,6 +59,36 @@ private:
     std::string const _bossName;
 };
 
+// Trash
+
+// Not gated on an encounter, so throttled to once per second. A skull is a raid leader's call,
+// and the Sister of Pain's first Shell of Pain is 20 s away.
+class SisterOfPleasureShouldBeMarkedTrigger : public Trigger
+{
+public:
+    SisterOfPleasureShouldBeMarkedTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "sister of pleasure should be marked", 1000) {}
+    bool IsActive() override;
+};
+
+// A wand keeps shooting once started, so a multiplier can't stop it.
+class ShadowmoonReaverWandBuildsChargesTrigger : public Trigger
+{
+public:
+    ShadowmoonReaverWandBuildsChargesTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "shadowmoon reaver wand builds charges") {}
+    bool IsActive() override;
+};
+
+// A pet keeps its victim when its owner switches (PetAI::OwnerAttacked), so it needs commanding.
+class ShadowmoonReaverShouldControlCasterPetTrigger : public Trigger
+{
+public:
+    ShadowmoonReaverShouldControlCasterPetTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "shadowmoon reaver should control caster pet") {}
+    bool IsActive() override;
+};
+
 // High Warlord Naj'entus
 
 class HighWarlordNajentusShouldBeTankedTrigger : public BlackTempleEncounterTrigger
@@ -70,21 +101,43 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class HighWarlordNajentusCastsNeedleSpinesTrigger : public BlackTempleEncounterTrigger
+class HighWarlordNajentusRangedShouldSpreadTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    HighWarlordNajentusCastsNeedleSpinesTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "high warlord naj'entus casts needle spines") {}
+    HighWarlordNajentusRangedShouldSpreadTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "high warlord naj'entus ranged should spread") {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class HighWarlordNajentusPlayerIsImpaledTrigger : public BlackTempleEncounterTrigger
+class HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    HighWarlordNajentusPlayerIsImpaledTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "high warlord naj'entus player is impaled") {}
+    HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+              botAI, "high warlord naj'entus impaled player needs remover") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class HighWarlordNajentusImpalingSpineOnGroupMemberTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    HighWarlordNajentusImpalingSpineOnGroupMemberTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+              botAI, "high warlord naj'entus impaling spine on group member") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class HighWarlordNajentusNeedsSpineThrowerTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    HighWarlordNajentusNeedsSpineThrowerTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "high warlord naj'entus needs spine thrower", 1000) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -101,16 +154,6 @@ protected:
 };
 
 // Supremus
-
-class SupremusHunterShouldMisdirectTrigger : public BlackTempleEncounterTrigger
-{
-public:
-    SupremusHunterShouldMisdirectTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "supremus hunter should misdirect") {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
 
 class SupremusRangedShouldSpreadTrigger : public BlackTempleEncounterTrigger
 {
@@ -142,23 +185,13 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class SupremusShouldManagePhaseTimerTrigger : public BlackTempleEncounterTrigger
-{
-public:
-    SupremusShouldManagePhaseTimerTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "supremus should manage phase timer") {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
-
 // Shade of Akama
 
-class ShadeOfAkamaKillingChannelersStartsPhase2Trigger : public BlackTempleEncounterTrigger
+class ShadeOfAkamaShouldPrioritizeChannelersTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    ShadeOfAkamaKillingChannelersStartsPhase2Trigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "shade of akama killing channelers starts phase 2") {}
+    ShadeOfAkamaShouldPrioritizeChannelersTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "shade of akama should prioritize channelers") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -196,11 +229,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class TeronGorefiendShadowOfDeathTrigger : public BlackTempleEncounterTrigger
+class TeronGorefiendShouldPositionForVengefulSpiritTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    TeronGorefiendShadowOfDeathTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "teron gorefiend shadow of death") {}
+    TeronGorefiendShouldPositionForVengefulSpiritTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+              botAI, "teron gorefiend should position for vengeful spirit") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -218,16 +252,6 @@ protected:
 
 // Gurtogg Bloodboil
 
-class GurtoggBloodboilHunterShouldMisdirectTrigger : public BlackTempleEncounterTrigger
-{
-public:
-    GurtoggBloodboilHunterShouldMisdirectTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil hunter should misdirect") {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
-
 class GurtoggBloodboilShouldBeTankedTrigger : public BlackTempleEncounterTrigger
 {
 public:
@@ -238,31 +262,21 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class GurtoggBloodboilCastsBloodboilTrigger : public BlackTempleEncounterTrigger
+class GurtoggBloodboilShouldPositionForBloodboilTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    GurtoggBloodboilCastsBloodboilTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil casts bloodboil") {}
+    GurtoggBloodboilShouldPositionForBloodboilTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil should position for bloodboil") {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class GurtoggBloodboilFelRageOnGroupMemberTrigger : public BlackTempleEncounterTrigger
+class GurtoggBloodboilFelRageOnBotTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    GurtoggBloodboilFelRageOnGroupMemberTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil fel rage on group member") {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
-
-class GurtoggBloodboilShouldManagePhaseTimerTrigger : public BlackTempleEncounterTrigger
-{
-public:
-    GurtoggBloodboilShouldManagePhaseTimerTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil should manage phase timer") {}
+    GurtoggBloodboilFelRageOnBotTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil fel rage on bot") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -280,23 +294,23 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class ReliquaryOfSoulsEssenceOfSufferingFixatesOnClosestTargetTrigger : public BlackTempleEncounterTrigger
+class ReliquaryOfSoulsShouldPositionForSufferingTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    ReliquaryOfSoulsEssenceOfSufferingFixatesOnClosestTargetTrigger(PlayerbotAI* botAI)
+    ReliquaryOfSoulsShouldPositionForSufferingTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "reliquary of souls essence of suffering fixates on closest target") {}
+            botAI, "reliquary of souls should position for suffering") {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class ReliquaryOfSoulsEssenceOfSufferingDisablesHealingTrigger : public BlackTempleEncounterTrigger
+class ReliquaryOfSoulsHealersShouldAttackSufferingTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    ReliquaryOfSoulsEssenceOfSufferingDisablesHealingTrigger(PlayerbotAI* botAI)
+    ReliquaryOfSoulsHealersShouldAttackSufferingTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "reliquary of souls essence of suffering disables healing") {}
+            botAI, "reliquary of souls healers should attack suffering") {}
 
 protected:
     bool IsActiveInEncounter() override;

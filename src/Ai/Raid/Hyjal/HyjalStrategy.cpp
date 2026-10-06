@@ -180,7 +180,10 @@ void RaidHyjalStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 void RaidHyjalStrategy::AppendTargetExclusions(
     GuidSet& exclusions, TargetValueExclusionType type)
 {
-    if (type != TargetValueExclusionType::Tank)
+    //By leewheel 20261002 枚举成员名对齐修复：Tank 在 TargetValueExclusionType 中不存在（正名 TankTarget），原写法致编译报错 C2065/C2838
+    //By leewheel 2026-10-06 合并 brighton the-lab: 本次冲突解决时该行一度被回退成 Tank（丢失了这条修复），
+    //   已按备份 patch 逐字恢复。TankTarget 是核心 TargetValueExclusionType 的实际成员名，不可改回。
+    if (type != TargetValueExclusionType::TankTarget)
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();

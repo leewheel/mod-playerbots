@@ -11,8 +11,10 @@
 #include "AttackAction.h"
 #include "BTHelpers.h"
 #include "MovementActions.h"
+#include "Unit.h"
+#include <string>
 
-namespace BlackTempleHelpers
+namespace BtHelpers
 {
     struct EyeBlastDangerArea;
 }
@@ -27,15 +29,54 @@ public:
     bool Execute(Event event) override;
 };
 
-// High Warlord Naj'entus
+// Shared Bosses
 
-class HighWarlordNajentusMisdirectToMainTankAction : public AttackAction
+// Used for High Warlord Naj'entus, Supremus, Teron Gorefiend, Gurtogg Bloodboil and Mother
+// Shahraz.
+class BlackTempleMisdirectToMainTankAction : public AttackAction
 {
 public:
-    HighWarlordNajentusMisdirectToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "high warlord naj'entus misdirect to main tank") {}
+    BlackTempleMisdirectToMainTankAction(
+        PlayerbotAI* botAI, std::string const& name, std::string const& bossName)
+        : AttackAction(botAI, name), _bossName(bossName) {}
+    bool Execute(Event event) override;
+
+private:
+    std::string const _bossName;
+};
+
+// Trash
+
+class MarkSisterOfPleasureAction : public Action
+{
+public:
+    MarkSisterOfPleasureAction(PlayerbotAI* botAI) : Action(botAI, "mark sister of pleasure") {}
     bool Execute(Event event) override;
 };
+
+class ShadowmoonReaverStopWandAction : public Action
+{
+public:
+    ShadowmoonReaverStopWandAction(
+        PlayerbotAI* botAI) : Action(botAI, "shadowmoon reaver stop wand") {}
+    bool Execute(Event event) override;
+};
+
+class ShadowmoonReaverControlCasterPetAction : public Action
+{
+public:
+    ShadowmoonReaverControlCasterPetAction(
+        PlayerbotAI* botAI) : Action(botAI, "shadowmoon reaver control caster pet") {}
+    bool Execute(Event event) override;
+
+private:
+    bool RestoreReactState(Guardian* pet);
+
+    ReactStates _previousReactState = REACT_DEFENSIVE;
+    bool _setPassive = false;
+};
+
+// High Warlord Naj'entus
 
 class HighWarlordNajentusTanksPositionBossAction : public AttackAction
 {
@@ -53,11 +94,33 @@ public:
     bool Execute(Event event) override;
 };
 
+class HighWarlordNajentusAssignSpineRemoverAction : public Action
+{
+public:
+    HighWarlordNajentusAssignSpineRemoverAction(
+        PlayerbotAI* botAI) : Action(botAI, "high warlord naj'entus assign spine remover") {}
+    bool Execute(Event event) override;
+};
+
 class HighWarlordNajentusRemoveImpalingSpineAction : public MovementAction
 {
 public:
     HighWarlordNajentusRemoveImpalingSpineAction(
         PlayerbotAI* botAI) : MovementAction(botAI, "high warlord naj'entus remove impaling spine") {}
+    bool Execute(Event event) override;
+
+private:
+    ObjectGuid _spineGuid;
+    bool _usedSpine = false;
+    uint32 _reactionStartTime = 0;
+    uint32 _reactionDelay = 0;
+};
+
+class HighWarlordNajentusAssignSpineThrowerAction : public Action
+{
+public:
+    HighWarlordNajentusAssignSpineThrowerAction(
+        PlayerbotAI* botAI) : Action(botAI, "high warlord naj'entus assign spine thrower") {}
     bool Execute(Event event) override;
 };
 
@@ -67,17 +130,12 @@ public:
     HighWarlordNajentusThrowImpalingSpineAction(
         PlayerbotAI* botAI) : MovementAction(botAI, "high warlord naj'entus throw impaling spine") {}
     bool Execute(Event event) override;
+
+private:
+    uint32 _throwDelay = 0;
 };
 
 // Supremus
-
-class SupremusMisdirectToTanksAction : public AttackAction
-{
-public:
-    SupremusMisdirectToTanksAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "supremus misdirect to tanks") {}
-    bool Execute(Event event) override;
-};
 
 class SupremusDisperseRangedAction : public MovementAction
 {
@@ -103,18 +161,9 @@ public:
     bool Execute(Event event) override;
 
 private:
-    Position FindSafestNearbyPosition(
-        std::vector<Unit*> const& volcanos, float maxRadius, float hazardRadius);
-    bool IsPathSafeFromVolcanos(Position const& start,
-        Position const& end, std::vector<Unit*> const& volcanos, float hazardRadius);
-};
-
-class SupremusManagePhaseTimerAction : public Action
-{
-public:
-    SupremusManagePhaseTimerAction(
-        PlayerbotAI* botAI) : Action(botAI, "supremus manage phase timer") {}
-    bool Execute(Event event) override;
+    bool FindSafestNearbyPosition(std::vector<Unit*> const& volcanoes, Position& destination);
+    bool IsPathSafeFromVolcanos(
+        Position const& start, Position const& end, std::vector<Unit*> const& volcanoes);
 };
 
 // Shade of Akama
@@ -128,14 +177,6 @@ public:
 };
 
 // Teron Gorefiend
-
-class TeronGorefiendMisdirectToMainTankAction : public AttackAction
-{
-public:
-    TeronGorefiendMisdirectToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "teron gorefiend misdirect to main tank") {}
-    bool Execute(Event event) override;
-};
 
 class TeronGorefiendTanksPositionBossAction : public AttackAction
 {
@@ -179,14 +220,6 @@ public:
 
 // Gurtogg Bloodboil
 
-class GurtoggBloodboilMisdirectToMainTankAction : public AttackAction
-{
-public:
-    GurtoggBloodboilMisdirectToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "gurtogg bloodboil misdirect to main tank") {}
-    bool Execute(Event event) override;
-};
-
 class GurtoggBloodboilTanksPositionBossAction : public AttackAction
 {
 public:
@@ -203,19 +236,12 @@ public:
     bool Execute(Event event) override;
 };
 
-class GurtoggBloodboilRangedMoveAwayFromEnragedPlayerAction : public MovementAction
+// The Fel Rage target brings him to the tank spot, his cones facing the wall.
+class GurtoggBloodboilLeadBossToTankPositionAction : public MovementAction
 {
 public:
-    GurtoggBloodboilRangedMoveAwayFromEnragedPlayerAction(
-        PlayerbotAI* botAI) : MovementAction(botAI, "gurtogg bloodboil ranged move away from enraged player") {}
-    bool Execute(Event event) override;
-};
-
-class GurtoggBloodboilManagePhaseTimerAction : public Action
-{
-public:
-    GurtoggBloodboilManagePhaseTimerAction(
-        PlayerbotAI* botAI) : Action(botAI, "gurtogg bloodboil manage phase timer") {}
+    GurtoggBloodboilLeadBossToTankPositionAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "gurtogg bloodboil lead boss to tank position") {}
     bool Execute(Event event) override;
 };
 
@@ -268,14 +294,6 @@ public:
 
 // Mother Shahraz
 
-class MotherShahrazMisdirectToMainTankAction : public AttackAction
-{
-public:
-    MotherShahrazMisdirectToMainTankAction(
-        PlayerbotAI* botAI) : AttackAction(botAI, "mother shahraz misdirect to main tank") {}
-    bool Execute(Event event) override;
-};
-
 class MotherShahrazTanksPositionBossUnderPillarAction : public AttackAction
 {
 public:
@@ -300,11 +318,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class MotherShahrazRunAwayToBreakFatalAttractionAction : public MovementAction
+class MotherShahrazBreakFatalAttractionAction : public MovementAction
 {
 public:
-    MotherShahrazRunAwayToBreakFatalAttractionAction(
-        PlayerbotAI* botAI) : MovementAction(botAI, "mother shahraz run away to break fatal attraction") {}
+    MotherShahrazBreakFatalAttractionAction(
+        PlayerbotAI* botAI) : MovementAction(botAI, "mother shahraz break fatal attraction") {}
     bool Execute(Event event) override;
 
 private:
@@ -458,7 +476,7 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool RepositionToAvoidEyeBlast(BlackTempleHelpers::EyeBlastDangerArea const& dangerArea);
+    bool RepositionToAvoidEyeBlast(BtHelpers::EyeBlastDangerArea const& dangerArea);
     bool RepositionToAvoidBlaze(Unit* eastFlame, Unit* westFlame);
 };
 

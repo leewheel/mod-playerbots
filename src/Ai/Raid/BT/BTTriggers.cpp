@@ -5,21 +5,21 @@
  */
 
 #include "BTTriggers.h"
-#include "AiFactory.h"
 #include "BTHelpers.h"
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
+#include "RtiTargetValue.h"
 #include "SharedDefines.h"
-#include "Timer.h"
+#include "Spell.h"
 
-using namespace BlackTempleHelpers;
+using namespace BtHelpers;
 using namespace EncounterHelpers;
 
 // General
 
 bool BlackTempleNoEncounterInProgressTrigger::IsActive()
 {
-    return !IsEncounterInProgress(bot, BLACK_TEMPLE_MAP_ID);
+    return !IsEncounterInProgress(bot, BT_MAP_ID);
 }
 
 // Shared Bosses
@@ -33,6 +33,37 @@ bool BlackTempleHunterShouldMisdirectTrigger::IsActiveInEncounter()
     return boss && boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
 }
 
+// Trash
+
+bool SisterOfPleasureShouldBeMarkedTrigger::IsActive()
+{
+    if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
+        return false;
+
+    Unit* skull = botAI->GetUnit(bot->GetGroup()->GetTargetIcon(RtiTargetValue::skullIndex));
+    return !IsLinkedSisterOfPleasure(skull) && FindLinkedSisterOfPleasure(botAI);
+}
+
+bool ShadowmoonReaverWandBuildsChargesTrigger::IsActive()
+{
+    Spell* wand = bot->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL);
+    if (!wand || GetChaoticChargeReach(wand->m_spellInfo) == ChaoticChargeReach::None)
+        return false;
+
+    return IsShadowmoonReaverUnsafeForMagic(wand->m_targets.GetUnitTarget());
+}
+
+bool ShadowmoonReaverShouldControlCasterPetTrigger::IsActive()
+{
+    Guardian* pet = bot->GetGuardianPet();
+    if (!IsChargeBuildingPet(pet))
+        return false;
+
+    // Also true while the pet is passive, so the action can restore a stance it set.
+    return pet->HasReactState(REACT_PASSIVE) ||
+        !context->GetValue<GuidVector>("shadowmoon reavers")->RefGet().empty();
+}
+
 // High Warlord Naj'entus
 
 bool HighWarlordNajentusShouldBeTankedTrigger::IsActiveInEncounter()
@@ -40,75 +71,62 @@ bool HighWarlordNajentusShouldBeTankedTrigger::IsActiveInEncounter()
     return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "22887");
 }
 
-bool HighWarlordNajentusCastsNeedleSpinesTrigger::IsActiveInEncounter()
+bool HighWarlordNajentusRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "22887");
 }
 
-bool HighWarlordNajentusPlayerIsImpaledTrigger::IsActiveInEncounter()
+bool HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger::IsActiveInEncounter()
 {
-    if (PlayerbotAI::IsTank(bot))
+    if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
     if (!AI_VALUE2(Unit*, "find target", "22887"))
         return false;
 
-    Group* group = bot->GetGroup();
-    if (!group)
+    return FindNajentusUnassignedImpaledPlayer(bot);
+}
+
+bool HighWarlordNajentusImpalingSpineOnGroupMemberTrigger::IsActiveInEncounter()
+{
+    return GetNajentusImpaledPlayerToFree(bot);
+}
+
+bool HighWarlordNajentusNeedsSpineThrowerTrigger::IsActiveInEncounter()
+{
+    if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
-    Player* impaledPlayer = nullptr;
+    if (!AI_VALUE2(Unit*, "find target", "22887"))
+        return false;
 
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (!member || member == bot)
-            continue;
-
-        if (member->HasAura(Id(BlackTempleSpells::SPELL_IMPALING_SPINE)))
-        {
-            impaledPlayer = member;
-            break;
-        }
-    }
-
-    Player* closestBot = nullptr;
-    float closestDist = std::numeric_limits<float>::max();
-
-    if (impaledPlayer)
-    {
-        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-        {
-            Player* member = ref->GetSource();
-            if (!member || !member->IsAlive() || member == impaledPlayer ||
-                !GET_PLAYERBOT_AI(member) || PlayerbotAI::IsTank(member))
-            {
-                continue;
-            }
-
-            float const dist = member->GetDistance(impaledPlayer);
-            if (dist < closestDist)
-            {
-                closestDist = dist;
-                closestBot = member;
-            }
-        }
-    }
-
-    return closestBot == bot;
+    return !GetNajentusSpineThrower(bot);
 }
 
 bool HighWarlordNajentusHasTidalShieldTrigger::IsActiveInEncounter()
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
     if (!najentus || !najentus->HasAura(Id(BlackTempleSpells::SPELL_TIDAL_SHIELD)))
         return false;
 
-    return botAI->HasItemInInventory(Id(BlackTempleItems::ITEM_NAJENTUS_SPINE));
+    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
+    if (!najentus || !najentus->HasAura(Id(BtSpells::SPELL_TIDAL_SHIELD)))
+        return false;
+
+    return botAI->HasItemInInventory(Id(BtItems::ITEM_NAJENTUS_SPINE));
 }
 
 // Supremus
 
+//By leewheel 2026-10-06 合并 brighton the-lab: 本块上游侧为空 ⇒ 整段保留本核实现。
 bool SupremusHunterShouldMisdirectTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
@@ -136,6 +154,10 @@ bool SupremusRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
     return supremus && !supremus->HasAura(Id(BlackTempleSpells::SPELL_SNARE_SELF));
 }
@@ -149,6 +171,10 @@ bool SupremusFixatesOnBotTrigger::IsActiveInEncounter()
 
 bool SupremusNearVolcanoTrigger::IsActiveInEncounter()
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     return AI_VALUE2(Unit*, "find target", "22898") && HasSupremusVolcanoNearby(botAI);
 }
 
@@ -160,16 +186,9 @@ bool SupremusShouldManagePhaseTimerTrigger::IsActiveInEncounter()
 
 // Shade of Akama
 
-bool ShadeOfAkamaKillingChannelersStartsPhase2Trigger::IsActiveInEncounter()
+bool ShadeOfAkamaShouldPrioritizeChannelersTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsDps(bot) || !PlayerbotAI::IsMelee(bot))
-        return false;
-
-    constexpr float searchRadius = 30.0f;
-    Unit* channeler = bot->FindNearestCreature(
-        Id(BlackTempleNpcs::NPC_ASHTONGUE_CHANNELER), searchRadius, true);
-
-    return channeler && !channeler->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+    return PlayerbotAI::IsDps(bot) && PlayerbotAI::IsMelee(bot) && GetShadeOfAkamaKillTarget(botAI);
 }
 
 // Teron Gorefiend
@@ -184,58 +203,38 @@ bool TeronGorefiendRangedShouldPositionOnBalconyTrigger::IsActiveInEncounter()
     return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "22871");
 }
 
+// Feign Death and Vanish cancel his cast. Ice Block and Divine Shield don't help: Shadow of Death
+// pierces invulnerability in AC.
 bool TeronGorefiendCastsShadowOfDeathTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_HUNTER && bot->getClass() != CLASS_MAGE &&
-        bot->getClass() != CLASS_PALADIN && bot->getClass() != CLASS_ROGUE)
-    {
+    if (bot->getClass() != CLASS_HUNTER && bot->getClass() != CLASS_ROGUE)
         return false;
-    }
 
     Unit* gorefiend = AI_VALUE2(Unit*, "find target", "22871");
     if (!gorefiend)
         return false;
 
-    if (botAI->HasAura("feign death", bot))
-    {
-        botAI->RemoveAura("feign death");
-        return true;
-    }
-    else if (botAI->HasAura("ice block", bot))
-    {
-        botAI->RemoveAura("ice block");
-        return true;
-    }
-    else if (!PlayerbotAI::IsHeal(bot) && botAI->HasAura("divine shield", bot))
-    {
-        botAI->RemoveAura("divine shield");
-        return true;
-    }
-
-    if (!gorefiend->HasUnitState(UNIT_STATE_CASTING))
-        return false;
-
-    Spell* spell = gorefiend->GetCurrentSpell(CURRENT_GENERIC_SPELL);
-    if (!spell || spell->m_spellInfo->Id != Id(BlackTempleSpells::SPELL_SHADOW_OF_DEATH))
-        return false;
-
-    Unit* target = spell->m_targets.GetUnitTarget();
-    return target && target->GetGUID() == bot->GetGUID();
+    // Once the bolt is launched, nothing cancels it.
+    Spell* spell =
+        gorefiend->FindCurrentSpellBySpellId(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
+    return spell && spell->getState() == SPELL_STATE_PREPARING &&
+        spell->m_targets.GetUnitTarget() == bot;
 }
 
-bool TeronGorefiendShadowOfDeathTrigger::IsActiveInEncounter()
+bool TeronGorefiendShouldPositionForVengefulSpiritTrigger::IsActiveInEncounter()
 {
-    Aura* aura = bot->GetAura(Id(BlackTempleSpells::SPELL_SHADOW_OF_DEATH));
-    return aura && aura->GetDuration() < 12000;
+    Aura* aura = bot->GetAura(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
+    return aura && aura->GetDuration() <= GOREFIEND_SHADOW_OF_DEATH_MOVE_MS;
 }
 
 bool TeronGorefiendTransformedIntoVengefulSpiritTrigger::IsActiveInEncounter()
 {
-    return bot->HasAura(Id(BlackTempleSpells::SPELL_SPIRITUAL_VENGEANCE));
+    return bot->HasAura(Id(BtSpells::SPELL_SPIRITUAL_VENGEANCE));
 }
 
 // Gurtogg Bloodboil
 
+//By leewheel 2026-10-06 合并 brighton the-lab: 本块上游侧为空 ⇒ 整段保留本核实现。
 bool GurtoggBloodboilHunterShouldMisdirectTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
@@ -262,8 +261,12 @@ bool GurtoggBloodboilShouldBeTankedTrigger::IsActiveInEncounter()
     return gurtogg && !gurtogg->HasAura(Id(BlackTempleSpells::SPELL_BOSS_FEL_RAGE));
 }
 
-bool GurtoggBloodboilCastsBloodboilTrigger::IsActiveInEncounter()
+bool GurtoggBloodboilShouldPositionForBloodboilTrigger::IsActiveInEncounter()
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
@@ -299,24 +302,35 @@ bool GurtoggBloodboilShouldManagePhaseTimerTrigger::IsActiveInEncounter()
         AI_VALUE2(Unit*, "find target", "22948");
 }
 
+bool GurtoggBloodboilFelRageOnBotTrigger::IsActiveInEncounter()
+{
+    return bot->HasAura(Id(BtSpells::SPELL_PLAYER_FEL_RAGE)) &&
+        bot->GetExactDist2d(GURTOGG_TANK_POSITION) > GURTOGG_POSITION_TOLERANCE;
+}
+
 // Reliquary of Souls
 
 bool ReliquaryOfSoulsHunterShouldMisdirectTrigger::IsActiveInEncounter()
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     return bot->getClass() == CLASS_HUNTER && AI_VALUE2(Unit*, "find target", "22856");
 }
 
-bool ReliquaryOfSoulsEssenceOfSufferingFixatesOnClosestTargetTrigger::IsActiveInEncounter()
+bool ReliquaryOfSoulsShouldPositionForSufferingTrigger::IsActiveInEncounter()
 {
     return AI_VALUE2(Unit*, "find target", "23418");
 }
 
-bool ReliquaryOfSoulsEssenceOfSufferingDisablesHealingTrigger::IsActiveInEncounter()
+bool ReliquaryOfSoulsHealersShouldAttackSufferingTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsHeal(bot))
         return false;
 
-    if (bot->getClass() == CLASS_PRIEST && AiFactory::GetPlayerSpecTab(bot) == PRIEST_TAB_DISCIPLINE)
+    // Discipline priests keep shielding.
+    if (bot->getClass() == CLASS_PRIEST && botAI->HasStrategy("disc", BOT_STATE_COMBAT))
         return false;
 
     return AI_VALUE2(Unit*, "find target", "23418");
@@ -341,7 +355,7 @@ bool ReliquaryOfSoulsEssenceOfDesireCastsDeadenTrigger::IsActiveInEncounter()
         return false;
 
     Spell* spell = desire->GetCurrentSpell(CURRENT_GENERIC_SPELL);
-    if (!spell || spell->m_spellInfo->Id != Id(BlackTempleSpells::SPELL_DEADEN))
+    if (!spell || spell->m_spellInfo->Id != Id(BtSpells::SPELL_DEADEN))
         return false;
 
     Unit* target = spell->m_targets.GetUnitTarget();
@@ -358,7 +372,7 @@ bool MotherShahrazShouldBeTankedTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "22947"))
         return false;
 
-    return !bot->HasAura(Id(BlackTempleSpells::SPELL_FATAL_ATTRACTION));
+    return !bot->HasAura(Id(BtSpells::SPELL_FATAL_ATTRACTION));
 }
 
 bool MotherShahrazTanksArePositioningBossTrigger::IsActiveInEncounter()
@@ -370,8 +384,9 @@ bool MotherShahrazTanksArePositioningBossTrigger::IsActiveInEncounter()
     if (!shahraz || shahraz->GetHealthPct() < 90.0f)
         return false;
 
-    TankPositionState const tankState = GetShahrazTankPositionState(bot);
-    return tankState != TankPositionState::Positioned;
+    Unit* victim = shahraz->GetVictim();
+    return !victim ||
+        victim->GetExactDist2d(SHAHRAZ_TANK_POSITION) > SHAHRAZ_POSITIONED_DISTANCE;
 }
 
 bool MotherShahrazRangedShouldPositionUnderPillarTrigger::IsActiveInEncounter()
@@ -382,12 +397,12 @@ bool MotherShahrazRangedShouldPositionUnderPillarTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "22947"))
         return false;
 
-    return !bot->HasAura(Id(BlackTempleSpells::SPELL_FATAL_ATTRACTION));
+    return !bot->HasAura(Id(BtSpells::SPELL_FATAL_ATTRACTION));
 }
 
 bool MotherShahrazFatalAttractionTrigger::IsActiveInEncounter()
 {
-    return bot->HasAura(Id(BlackTempleSpells::SPELL_FATAL_ATTRACTION));
+    return bot->HasAura(Id(BtSpells::SPELL_FATAL_ATTRACTION));
 }
 
 // Illidari Council
@@ -405,13 +420,13 @@ bool IllidariCouncilGathiosCastsJudgementOfCommandTrigger::IsActiveInEncounter()
 
     Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
     if (!gathios || !gathios->HasUnitState(UNIT_STATE_CASTING) ||
-        !gathios->HasAura(Id(BlackTempleSpells::SPELL_SEAL_OF_COMMAND)))
+        !gathios->HasAura(Id(BtSpells::SPELL_SEAL_OF_COMMAND)))
     {
         return false;
     }
 
     Spell* spell = gathios->GetCurrentSpell(CURRENT_GENERIC_SPELL);
-    if (!spell || spell->m_spellInfo->Id != Id(BlackTempleSpells::SPELL_JUDGEMENT))
+    if (!spell || spell->m_spellInfo->Id != Id(BtSpells::SPELL_JUDGEMENT))
         return false;
 
     Unit* target = spell->m_targets.GetUnitTarget();
@@ -568,7 +583,7 @@ bool IllidanStormrageParasiticShadowfiendsRunWildTrigger::IsActiveInEncounter()
 
     Creature* totem = bot->GetMap()->GetCreature(guid);
     return !totem || totem->GetDistance(bot) > 20.0f ||
-        totem->GetUInt32Value(UNIT_CREATED_BY_SPELL) != Id(BlackTempleSpells::SPELL_EARTHBIND_TOTEM);
+        totem->GetUInt32Value(UNIT_CREATED_BY_SPELL) != Id(BtSpells::SPELL_EARTHBIND_TOTEM);
 }
 
 bool IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger::IsActiveInEncounter()
@@ -624,7 +639,7 @@ bool IllidanStormrageDarkBarrageOnImmunityClassTrigger::IsActiveInEncounter()
         return true;
     }
 
-    return bot->HasAura(Id(BlackTempleSpells::SPELL_DARK_BARRAGE));
+    return bot->HasAura(Id(BtSpells::SPELL_DARK_BARRAGE));
 }
 
 bool IllidanStormragePreparesToLandTrigger::IsActiveInEncounter()
@@ -729,7 +744,7 @@ bool IllidanStormrageMaievPlacedShadowTrapTrigger::IsActiveInEncounter()
 
 bool IllidanStormrageShouldManageDpsTimerAndRtiTrigger::IsActiveInEncounter()
 {
-    if (!IsMechanicTrackerBot(bot, BLACK_TEMPLE_MAP_ID))
+    if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
@@ -740,7 +755,7 @@ bool IllidanStormrageShouldManageDpsTimerAndRtiTrigger::IsActiveInEncounter()
 // The strategy simply cannot work without doing this
 bool IllidanStormrageShouldClearHazardsBetweenPhasesTrigger::IsActiveInEncounter()
 {
-    if (!IsMechanicTrackerBot(bot, BLACK_TEMPLE_MAP_ID))
+    if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");

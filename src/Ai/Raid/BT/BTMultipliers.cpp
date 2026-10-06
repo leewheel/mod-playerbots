@@ -8,21 +8,36 @@
 #include "BTActions.h"
 #include "BTHelpers.h"
 #include "ChooseTargetActions.h"
+#include "DKActions.h"
 #include "DruidShapeshiftActions.h"
 #include "EncounterHelpers.h"
 #include "FollowActions.h"
+#include "GenericSpellActions.h"
 #include "HunterActions.h"
 #include "MageActions.h"
 #include "PriestActions.h"
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "ShamanActions.h"
+#include "SpellMgr.h"
+#include "ThreatManager.h"
 #include "Timer.h"
 #include "WipeAction.h"
 #include <array>
 
-using namespace BlackTempleHelpers;
+using namespace BtHelpers;
 using namespace EncounterHelpers;
+
+namespace
+{
+
+bool IsRepositionAction(Player* bot, Action* action)
+{
+    return (bot->getClass() == CLASS_HUNTER && dynamic_cast<CastDisengageAction*>(action)) ||
+        (bot->getClass() == CLASS_MAGE && dynamic_cast<CastBlinkBackAction*>(action));
+}
+
+}
 
 // General
 
@@ -33,14 +48,22 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action
         return 1.0f;
 
     static constexpr std::array blackTempleBosses = {
-        "gathios the shatterer", "mother shahraz", "essence of suffering", "gurtogg bloodboil",
-        "teron gorefiend", "supremus", "high warlord naj'entus",
+        //By leewheel 2026-10-06 合并 brighton the-lab: 本核铁律 find-target 一律 NPC entry。
+        //   这段数组两边（上游与本核 HEAD）都用的是英文名，属于漏网之鱼 —— 随本次合并一并改为 entry，
+        //   否则与本文件其它按 entry 查 boss 的地方不一致，boss 在场判定会失效。
+        "22949",  // 加基森·沙克斯瑞（裂颅者）
+        "22947",  // 萨拉媞亚（慈悲之母）
+        "23418",  // 痛苦之精华
+        "22948",  // 古尔图戈·血沸
+        "22871",  // 屠魔者泰隆·戈菲恩
+        "22898",  // 高阶抛开者苏普雷姆斯
+        "22887",  // 纳迦特斯
     };
 
     Unit* boss = nullptr;
-    for (char const* name : blackTempleBosses)
+    for (char const* entry : blackTempleBosses)
     {
-        if (Unit* candidate = AI_VALUE2(Unit*, "find target", name))
+        if (Unit* candidate = AI_VALUE2(Unit*, "find target", entry))
         {
             boss = candidate;
             break;
@@ -53,26 +76,68 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action
     return 1.0f;
 }
 
+// Trash
+
+float ShadowmoonReaverHoldChargeBuildingSpellsMultiplier::GetValue(Action* action)
+{
+    auto* spellAction = dynamic_cast<CastSpellAction*>(action);
+    if (!spellAction)
+        return 1.0f;
+
+    auto const& reavers = context->GetValue<GuidVector>("shadowmoon reavers")->RefGet();
+    if (reavers.empty())
+        return 1.0f;
+
+    // Summons whose own casts build charges, held for the whole pull.
+    if (dynamic_cast<CastMirrorImageAction*>(action) ||
+        dynamic_cast<CastSummonGargoyleAction*>(action) ||
+        dynamic_cast<CastSearingTotemAction*>(action) ||
+        dynamic_cast<CastFireElementalTotemAction*>(action) ||
+        dynamic_cast<CastFireElementalTotemMeleeAction*>(action))
+    {
+        return 0.0f;
+    }
+
+    SpellInfo const* spellInfo =
+        sSpellMgr->GetSpellInfo(AI_VALUE2(uint32, "spell id", spellAction->getSpell()));
+    ChaoticChargeReach const reach = GetChaoticChargeReach(spellInfo);
+    if (reach == ChaoticChargeReach::None)
+        return 1.0f;
+
+    if (reach == ChaoticChargeReach::Target)
+        return IsShadowmoonReaverUnsafeForMagic(action->GetTarget()) ? 0.0f : 1.0f;
+
+    return IsAnyShadowmoonReaverUnsafeForMagic(botAI) ? 0.0f : 1.0f;
+}
+
 // High Warlord Naj'entus
 
 float HighWarlordNajentusDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (!AI_VALUE2(Unit*, "find target", "22887"))
         return 1.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
         !dynamic_cast<SetBehindTargetAction*>(action))
     {
-        return 0.0f;
+        return 1.0f;
     }
 
-    return 1.0f;
+    return AI_VALUE2(Unit*, "find target", "22887") ? 0.0f : 1.0f;
 }
 
 // Supremus
 
-float SupremusFocusOnAvoidanceInPhase2Multiplier::GetValueInEncounter(Action* action)
+float SupremusFocusOnAvoidanceInKitePhaseMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
     if (!supremus || supremus->GetVictim() != bot ||
         !supremus->HasAura(Id(BlackTempleSpells::SPELL_SNARE_SELF)))
@@ -80,71 +145,81 @@ float SupremusFocusOnAvoidanceInPhase2Multiplier::GetValueInEncounter(Action* ac
         return 1.0f;
     }
 
-    if (dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<SupremusKiteBossAction*>(action) &&
-        !dynamic_cast<SupremusMoveAwayFromVolcanosAction*>(action))
-    {
-        return 0.0f;
-    }
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
+    if (!supremus || supremus->GetVictim() != bot)
+        return 1.0f;
 
-    return 1.0f;
+    return IsSupremusKitePhase(supremus) ? 0.0f : 1.0f;
 }
 
-float SupremusHitboxIsBuggedMultiplier::GetValueInEncounter(Action* action)
+float SupremusDelayDpsCooldownsInKitePhaseMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (bot->getClass() != CLASS_ROGUE || !AI_VALUE2(Unit*, "find target", "22898"))
         return 1.0f;
 
-    if (dynamic_cast<CastKillingSpreeAction*>(action))
-        return 0.0f;
+    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
+    return IsSupremusKitePhase(supremus) ? 0.0f : 1.0f;
+}
 
-    return 1.0f;
+float SupremusDisableKillingSpreeMultiplier::GetValueInEncounter(Action* action)
+{
+    if (bot->getClass() != CLASS_ROGUE)
+        return 1.0f;
+
+    if (!dynamic_cast<CastKillingSpreeAction*>(action))
+        return 1.0f;
+
+    return AI_VALUE2(Unit*, "find target", "22898") ? 0.0f : 1.0f;
+}
+
+// Shade of Akama
+
+float ShadeOfAkamaDontDropOutOfSightTargetMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!dynamic_cast<DropTargetAction*>(action))
+        return 1.0f;
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target || !target->IsAlive())
+        return 1.0f;
+
+    return target->GetEntry() == Id(BtNpcs::NPC_ASHTONGUE_CHANNELER) ||
+        target->GetEntry() == Id(BtNpcs::NPC_ASHTONGUE_SORCERER) ? 0.0f : 1.0f;
 }
 
 // Teron Gorefiend
 
 float TeronGorefiendControlMovementMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (!AI_VALUE2(Unit*, "find target", "22871"))
         return 1.0f;
 
-    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<SetBehindTargetAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    if (dynamic_cast<FollowAction*>(action) ||
-        dynamic_cast<FleeAction*>(action) ||
-        dynamic_cast<CastDisengageAction*>(action) ||
-        dynamic_cast<CastBlinkBackAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    if (PlayerbotAI::IsRanged(bot) && dynamic_cast<ReachTargetAction*>(action))
-        return 0.0f;
-
-    return 1.0f;
+    return AI_VALUE2(Unit*, "find target", "22871") ? 0.0f : 1.0f;
 }
 
 float TeronGorefiendMarkedBotOnlyMoveToDieMultiplier::GetValueInEncounter(Action* action)
 {
-    Aura* aura = bot->GetAura(Id(BlackTempleSpells::SPELL_SHADOW_OF_DEATH));
-    if (!aura || aura->GetDuration() >= 15000)
+    Aura* aura = bot->GetAura(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
+    if (!aura || aura->GetDuration() > GOREFIEND_SHADOW_OF_DEATH_MOVE_MS)
         return 1.0f;
 
-    if (dynamic_cast<WipeAction*>(action))
+    if (!dynamic_cast<MovementAction*>(action))
         return 1.0f;
-    else if (!dynamic_cast<TeronGorefiendMoveToCornerToDieAction*>(action))
-        return 0.0f;
 
-    return 1.0f;
+    return dynamic_cast<TeronGorefiendMoveToCornerToDieAction*>(action) ? 1.0f : 0.0f;
 }
 
-float TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier::GetValueInEncounter(Action* action)
+float TeronGorefiendSpiritsAttackShadowyConstructsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!bot->HasAura(Id(BlackTempleSpells::SPELL_SPIRITUAL_VENGEANCE)) ||
+    if (!bot->HasAura(Id(BtSpells::SPELL_SPIRITUAL_VENGEANCE)) ||
         dynamic_cast<WipeAction*>(action))
     {
         return 1.0f;
@@ -158,6 +233,10 @@ float TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier::GetValueInEnco
 
 float TeronGorefiendDisableAttackingConstructsMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (!AI_VALUE2(Unit*, "find target", "22871"))
         return 1.0f;
 
@@ -168,46 +247,67 @@ float TeronGorefiendDisableAttackingConstructsMultiplier::GetValueInEncounter(Ac
         return 1.0f;
 
     CastSpellAction* castSpellAction = dynamic_cast<CastSpellAction*>(action);
-    if (castSpellAction && castSpellAction->getThreatType() == Action::ActionThreatType::Aoe)
-        return 0.0f;
+    bool const isRangedAoe = castSpellAction &&
+        castSpellAction->getThreatType() == Action::ActionThreatType::Aoe &&
+        PlayerbotAI::IsRangedDps(bot);
 
-    return 1.0f;
+    if (!isTankAssist && !isRangedAoe)
+        return 1.0f;
+
+    return AI_VALUE2(Unit*, "find target", "22871") ? 0.0f : 1.0f;
 }
 
 // Gurtogg Bloodboil
 
 float GurtoggBloodboilControlMovementMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (!AI_VALUE2(Unit*, "find target", "22948"))
         return 1.0f;
 
-    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<SetBehindTargetAction*>(action))
+    return AI_VALUE2(Unit*, "find target", "22948") ? 0.0f : 1.0f;
+}
+
+float GurtoggBloodboilHoldThreatMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!dynamic_cast<CastSpellAction*>(action) && !dynamic_cast<AttackAction*>(action))
+        return 1.0f;
+
+    if (dynamic_cast<BlackTempleMisdirectToMainTankAction*>(action))
+        return 1.0f;
+
+    if (PlayerbotAI::IsTank(bot) || PlayerbotAI::IsHeal(bot) ||
+        bot->HasAura(Id(BtSpells::SPELL_INSIGNIFICANCE)))
     {
-        return 0.0f;
+        return 1.0f;
     }
 
-    if (dynamic_cast<FollowAction*>(action) ||
-        dynamic_cast<FleeAction*>(action) ||
-        dynamic_cast<CastDisengageAction*>(action) ||
-        dynamic_cast<CastBlinkBackAction*>(action))
-    {
-        return 0.0f;
-    }
+    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
+    if (!gurtogg)
+        return 1.0f;
 
-    if (bot->HasAura(Id(BlackTempleSpells::SPELL_PLAYER_FEL_RAGE)) &&
-        dynamic_cast<MovementAction*>(action) && !dynamic_cast<AttackAction*>(action))
-    {
-        return 0.0f;
-    }
+    if (action->GetTarget() != gurtogg && AI_VALUE(Unit*, "current target") != gurtogg)
+        return 1.0f;
 
-    return 1.0f;
+    float const secondTankThreat = AI_VALUE(float, "gurtogg bloodboil second tank threat");
+    if (secondTankThreat <= 0.0f)
+        return 1.0f;
+
+    return gurtogg->GetThreatMgr().GetThreat(bot) >= secondTankThreat * GURTOGG_THREAT_HOLD_RATIO ?
+        0.0f : 1.0f;
 }
 
 // Reliquary of Souls
 
 float ReliquaryOfSoulsDontWasteHealingMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场、再判 action 类型」重构成
+//   「先判 action 类型、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (!AI_VALUE2(Unit*, "find target", "23418"))
         return 1.0f;
 
@@ -219,41 +319,69 @@ float ReliquaryOfSoulsDontWasteHealingMultiplier::GetValueInEncounter(Action* ac
         return 1.0f;
     }
 
-    if (dynamic_cast<CastTreeFormAction*>(action) ||
-        dynamic_cast<CastHealingSpellAction*>(action))
+    return AI_VALUE2(Unit*, "find target", "23418") ? 0.0f : 1.0f;
+}
+
+float ReliquaryOfSoulsDelayDpsCooldownsBetweenEssencesMultiplier::GetValueInEncounter(
+    Action* action)
+{
+    if (!IsDpsCooldownAction(bot, action) ||
+        !AI_VALUE2(Unit*, "find target", "reliquary of the lost"))
     {
-        return 0.0f;
+        return 1.0f;
     }
 
-    return 1.0f;
+    for (char const* name : { "essence of suffering", "essence of desire", "essence of anger" })
+    {
+        Unit* essence = AI_VALUE2(Unit*, "find target", name);
+        if (essence && essence->IsAlive() && !essence->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+            return 1.0f;
+    }
+
+    return 0.0f;
+}
+
+float ReliquaryOfSoulsLetMagesStealRuneShieldMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!dynamic_cast<CastPurgeAction*>(action) &&
+        !dynamic_cast<CastTranquilizingShotAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    Unit* target = action->GetTarget();
+    if (!target || target->GetEntry() != Id(BtNpcs::NPC_ESSENCE_OF_DESIRE))
+        return 1.0f;
+
+    Aura* runeShield = target->GetAura(Id(BtSpells::SPELL_RUNE_SHIELD));
+    if (!runeShield)
+        return 1.0f;
+
+    uint32 const elapsed =
+        static_cast<uint32>(runeShield->GetMaxDuration() - runeShield->GetDuration());
+    return elapsed < RUNE_SHIELD_MAGE_PRIORITY_MS ? 0.0f : 1.0f;
 }
 
 // Mother Shahraz
 
 float MotherShahrazControlMovementMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (!AI_VALUE2(Unit*, "find target", "22947"))
         return 1.0f;
 
-    if (dynamic_cast<CombatFormationMoveAction*>(action) &&
-        !dynamic_cast<SetBehindTargetAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    if (dynamic_cast<FollowAction*>(action) ||
-        dynamic_cast<FleeAction*>(action) ||
-        dynamic_cast<CastDisengageAction*>(action) ||
-        dynamic_cast<CastBlinkBackAction*>(action))
-    {
-        return 0.0f;
-    }
-
-    return 1.0f;
+    return AI_VALUE2(Unit*, "find target", "mother shahraz") ? 0.0f : 1.0f;
 }
 
-float MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier::GetValueInEncounter(Action* action)
+float MotherShahrazFatalAttractionRunAwayMultiplier::GetValueInEncounter(Action* action)
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
+//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
+//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
+//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
     if (!AI_VALUE2(Unit*, "find target", "22947") ||
         !bot->HasAura(Id(BlackTempleSpells::SPELL_FATAL_ATTRACTION)))
     {
@@ -263,10 +391,10 @@ float MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier::GetValueInEncou
     if (dynamic_cast<WipeAction*>(action))
         return 1.0f;
 
-    if (!dynamic_cast<MotherShahrazRunAwayToBreakFatalAttractionAction*>(action))
-        return 0.0f;
+    if (!dynamic_cast<MovementAction*>(action))
+        return 1.0f;
 
-    return 1.0f;
+    return dynamic_cast<MotherShahrazBreakFatalAttractionAction*>(action) ? 1.0f : 0.0f;
 }
 
 // Illidari Council
@@ -305,8 +433,7 @@ float IllidariCouncilControlMovementMultiplier::GetValueInEncounter(Action* acti
 
     if (dynamic_cast<FollowAction*>(action) ||
         dynamic_cast<FleeAction*>(action) ||
-        dynamic_cast<CastDisengageAction*>(action) ||
-        dynamic_cast<CastBlinkBackAction*>(action))
+        IsRepositionAction(bot, action))
     {
         return 0.0f;
     }
@@ -517,9 +644,9 @@ float IllidanStormrageDisableDefaultTargetingMultiplier::GetValueInEncounter(Act
         return 1.0f;
 
     constexpr float searchRadius = 40.0f;
-    Unit* shadowDemon = bot->FindNearestCreature(Id(BlackTempleNpcs::NPC_SHADOW_DEMON), searchRadius);
+    Unit* shadowDemon = bot->FindNearestCreature(Id(BtNpcs::NPC_SHADOW_DEMON), searchRadius);
     Unit* shadowfiend = bot->FindNearestCreature(
-        Id(BlackTempleNpcs::NPC_PARASITIC_SHADOWFIEND), searchRadius);
+        Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND), searchRadius);
 
     if ((shadowDemon && bot->GetTarget() == shadowDemon->GetGUID()) ||
         (shadowfiend && bot->GetTarget() == shadowfiend->GetGUID()))
@@ -545,10 +672,9 @@ float IllidanStormrageControlNonTankMovementMultiplier::GetValueInEncounter(Acti
         return 0.0f;
     }
 
-    if (dynamic_cast<CastDisengageAction*>(action) ||
-        dynamic_cast<CastBlinkBackAction*>(action) ||
-        dynamic_cast<FleeAction*>(action) ||
-        dynamic_cast<FollowAction*>(action))
+    if (dynamic_cast<FleeAction*>(action) ||
+        dynamic_cast<FollowAction*>(action) ||
+        IsRepositionAction(bot, action))
     {
         return 0.0f;
     }

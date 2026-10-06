@@ -6,12 +6,23 @@
 
 #include "PvpTriggers.h"
 #include "BattleGroundTactics.h"
-#include "BattlegroundAV.h"
 #include "BattlegroundEY.h"
 #include "BattlegroundMgr.h"
 #include "BattlegroundWS.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
+
+namespace
+{
+// a game from the random queue records BATTLEGROUND_RB as the player's type: use the rolled map
+BattlegroundTypeId RealBgType(Player* bot)
+{
+    BattlegroundTypeId bgType = bot->GetBattlegroundTypeId();
+    if (bgType == BATTLEGROUND_RB && bot->GetBattleground())
+        bgType = bot->GetBattleground()->GetBgTypeID(true);
+    return bgType;
+}
+}  // namespace
 
 bool EnemyPlayerNear::IsActive() { return AI_VALUE(Unit*, "enemy player target"); }
 
@@ -19,7 +30,7 @@ bool PlayerHasNoFlag::IsActive()
 {
     if (botAI->GetBot()->InBattleground())
     {
-        if (botAI->GetBot()->GetBattlegroundTypeId() == BattlegroundTypeId::BATTLEGROUND_WS)
+        if (RealBgType(botAI->GetBot()) == BattlegroundTypeId::BATTLEGROUND_WS)
         {
             BattlegroundWS* bg = (BattlegroundWS*)botAI->GetBot()->GetBattleground();
             if (!(bg->GetFlagState(bg->GetOtherTeamId(bot->GetTeamId())) == BG_WS_FLAG_STATE_ON_PLAYER))
@@ -99,14 +110,14 @@ bool PlayerIsInBattlegroundWithoutFlag::IsActive()
 {
     if (botAI->GetBot()->InBattleground())
     {
-        if (botAI->GetBot()->GetBattlegroundTypeId() == BattlegroundTypeId::BATTLEGROUND_WS)
+        if (RealBgType(botAI->GetBot()) == BattlegroundTypeId::BATTLEGROUND_WS)
         {
             BattlegroundWS* bg = (BattlegroundWS*)botAI->GetBot()->GetBattleground();
             if (!(bg->GetFlagState(bg->GetOtherTeamId(bot->GetTeamId())) == BG_WS_FLAG_STATE_ON_PLAYER))
                 return true;
 
             if (bot->GetGUID() == bg->GetFlagPickerGUID(TEAM_ALLIANCE) ||
-                bot->GetGUID() == bg->GetFlagPickerGUID(TEAM_ALLIANCE))
+                bot->GetGUID() == bg->GetFlagPickerGUID(TEAM_HORDE))
             {
                 return false;
             }
@@ -127,7 +138,7 @@ bool PlayerHasFlag::IsCapturingFlag(Player* bot)
 {
     if (bot->InBattleground())
     {
-        if (bot->GetBattlegroundTypeId() == BATTLEGROUND_WS)
+        if (RealBgType(bot) == BATTLEGROUND_WS)
         {
             BattlegroundWS* bg = (BattlegroundWS*)bot->GetBattleground();
             // bot is horde and has ally flag
@@ -161,7 +172,7 @@ bool PlayerHasFlag::IsCapturingFlag(Player* bot)
             return false;  // bot doesn't have flag
         }
 
-        if (bot->GetBattlegroundTypeId() == BATTLEGROUND_EY)
+        if (RealBgType(bot) == BATTLEGROUND_EY)
         {
             BattlegroundEY* bg = (BattlegroundEY*)bot->GetBattleground();
 
@@ -196,7 +207,7 @@ bool TeamHasFlag::IsActive()
     if (!botAI->GetBot()->InBattleground())
         return false;
 
-    if (botAI->GetBot()->GetBattlegroundTypeId() != BattlegroundTypeId::BATTLEGROUND_WS)
+    if (RealBgType(botAI->GetBot()) != BattlegroundTypeId::BATTLEGROUND_WS)
         return false;
 
     BattlegroundWS* bg = (BattlegroundWS*)botAI->GetBot()->GetBattleground();
@@ -220,7 +231,7 @@ bool EnemyTeamHasFlag::IsActive()
 {
     if (botAI->GetBot()->InBattleground())
     {
-        if (botAI->GetBot()->GetBattlegroundTypeId() == BattlegroundTypeId::BATTLEGROUND_WS)
+        if (RealBgType(botAI->GetBot()) == BattlegroundTypeId::BATTLEGROUND_WS)
         {
             BattlegroundWS* bg = (BattlegroundWS*)botAI->GetBot()->GetBattleground();
 
@@ -259,6 +270,10 @@ bool EnemyFlagCarrierNear::IsActive()
 
 bool TeamFlagCarrierNear::IsActive()
 {
+//By leewheel 2026-10-06 合并 brighton the-lab: 上游 #2855 的 WSG 改动把「双旗都不在基地就放弃护送己方旗手」
+//   这段又加了回来。但本核 2026-09-01 已按用户反馈（夺旗后己方旗手无人护送、夺旗进度归零）
+//   明确移除该排除，理由是护送己方旗手与拦截敌方旗手同为第一优先级、互不冲突。
+//   保留本核的移除逻辑，只留原注释作为该决策的来由。
     // By leewheel 2026-09-01 修复：原"双旗都不在基地 → 返回 false"会让己方旗手失去保护——
     //   当敌方夺走我方旗、我方又夺走敌旗时（bothFlagsNotAtBase 成立），bot 不再护送己方旗手，
     //   导致己方旗手孤身被击杀、夺旗进度归零（用户反馈"夺旗后无人护送/拦截"）。
@@ -293,6 +308,10 @@ bool VehicleNearTrigger::IsActive()
 }
 
 bool InVehicleTrigger::IsActive() { return botAI->IsInVehicle(); }
+//By leewheel 2026-10-06 合并 brighton the-lab: 本段 137 行是本核 PVP 自保触发器实现
+//   （AllianceNoSnowfallGY + LowHpPvp / SafeToBandage / PvpCritical / PvpCycleDisengage）
+//   及其匿名命名空间辅助函数（CountNearbyEnemyPlayers / CountNearbyThreateningEnemyPlayers）。
+//   上游侧为空（上游没有这批魔改）⇒ 整段保留本核，否则 TriggerContext.h 的注册会链接失败。
 
 bool AllianceNoSnowfallGY::IsActive()
 {

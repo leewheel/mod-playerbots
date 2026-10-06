@@ -13,6 +13,16 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("black temple no encounter in progress",
         { NextAction("black temple reset encounter states", ACTION_EMERGENCY + 11) }));
 
+    // Trash
+    triggers.push_back(new TriggerNode("sister of pleasure should be marked",
+        { NextAction("mark sister of pleasure", ACTION_RAID + 1) }));
+
+    triggers.push_back(new TriggerNode("shadowmoon reaver wand builds charges",
+        { NextAction("shadowmoon reaver stop wand", ACTION_EMERGENCY + 1) }));
+
+    triggers.push_back(new TriggerNode("shadowmoon reaver should control caster pet",
+        { NextAction("shadowmoon reaver control caster pet", ACTION_EMERGENCY + 1) }));
+
     // High Warlord Naj'entus
     triggers.push_back(new TriggerNode("high warlord naj'entus hunter should misdirect",
         { NextAction("high warlord naj'entus misdirect to main tank", ACTION_RAID + 2) }));
@@ -20,18 +30,24 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("high warlord naj'entus should be tanked",
         { NextAction("high warlord naj'entus tanks position boss", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("high warlord naj'entus casts needle spines",
+    triggers.push_back(new TriggerNode("high warlord naj'entus ranged should spread",
         { NextAction("high warlord naj'entus disperse ranged", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("high warlord naj'entus player is impaled",
+    triggers.push_back(new TriggerNode("high warlord naj'entus impaled player needs remover",
+        { NextAction("high warlord naj'entus assign spine remover", ACTION_EMERGENCY + 12) }));
+
+    triggers.push_back(new TriggerNode("high warlord naj'entus impaling spine on group member",
         { NextAction("high warlord naj'entus remove impaling spine", ACTION_EMERGENCY + 1) }));
+
+    triggers.push_back(new TriggerNode("high warlord naj'entus needs spine thrower",
+        { NextAction("high warlord naj'entus assign spine thrower", ACTION_EMERGENCY + 12) }));
 
     triggers.push_back(new TriggerNode("high warlord naj'entus has tidal shield",
         { NextAction("high warlord naj'entus throw impaling spine", ACTION_RAID + 2) }));
 
     // Supremus
     triggers.push_back(new TriggerNode("supremus hunter should misdirect",
-        { NextAction("supremus misdirect to tanks", ACTION_RAID + 2) }));
+        { NextAction("supremus misdirect to main tank", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("supremus ranged should spread",
         { NextAction("supremus disperse ranged", ACTION_RAID + 1) }));
@@ -42,11 +58,8 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("supremus near volcano",
         { NextAction("supremus move away from volcanos", ACTION_EMERGENCY + 6) }));
 
-    triggers.push_back(new TriggerNode("supremus should manage phase timer",
-        { NextAction("supremus manage phase timer", ACTION_EMERGENCY + 10) }));
-
     // Shade of Akama
-    triggers.push_back(new TriggerNode("shade of akama killing channelers starts phase 2",
+    triggers.push_back(new TriggerNode("shade of akama should prioritize channelers",
         { NextAction("shade of akama melee dps prioritize channelers", ACTION_RAID + 1) }));
 
     // Teron Gorefiend
@@ -62,7 +75,7 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("teron gorefiend casts shadow of death",
         { NextAction("teron gorefiend avoid shadow of death", ACTION_EMERGENCY + 10) }));
 
-    triggers.push_back(new TriggerNode("teron gorefiend shadow of death",
+    triggers.push_back(new TriggerNode("teron gorefiend should position for vengeful spirit",
         { NextAction("teron gorefiend move to corner to die", ACTION_EMERGENCY + 10) }));
 
     triggers.push_back(new TriggerNode("teron gorefiend transformed into vengeful spirit",
@@ -76,24 +89,21 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("gurtogg bloodboil should be tanked",
         { NextAction("gurtogg bloodboil tanks position boss", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("gurtogg bloodboil casts bloodboil",
+    triggers.push_back(new TriggerNode("gurtogg bloodboil should position for bloodboil",
         { NextAction("gurtogg bloodboil rotate ranged groups", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("gurtogg bloodboil fel rage on group member",
-        { NextAction("gurtogg bloodboil ranged move away from enraged player", ACTION_RAID + 1) }));
-
-    triggers.push_back(new TriggerNode("gurtogg bloodboil should manage phase timer",
-        { NextAction("gurtogg bloodboil manage phase timer", ACTION_EMERGENCY + 10) }));
+    triggers.push_back(new TriggerNode("gurtogg bloodboil fel rage on bot",
+        { NextAction("gurtogg bloodboil lead boss to tank position", ACTION_RAID + 1) }));
 
     // Reliquary of Souls
     triggers.push_back(new TriggerNode("reliquary of souls hunter should misdirect",
         { NextAction("reliquary of souls misdirect to main tank", ACTION_RAID + 3) }));
 
     triggers.push_back(new TriggerNode(
-        "reliquary of souls essence of suffering fixates on closest target",
+        "reliquary of souls should position for suffering",
         { NextAction("reliquary of souls adjust distance from suffering", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("reliquary of souls essence of suffering disables healing",
+    triggers.push_back(new TriggerNode("reliquary of souls healers should attack suffering",
         { NextAction("reliquary of souls healers dps suffering", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("reliquary of souls essence of desire has rune shield",
@@ -117,7 +127,7 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode("mother shahraz fatal attraction",
         { NextAction(
-            "mother shahraz run away to break fatal attraction", ACTION_EMERGENCY + 10) }));
+            "mother shahraz break fatal attraction", ACTION_EMERGENCY + 10) }));
 
     // Illidari Council
     triggers.push_back(new TriggerNode("illidari council hunter should misdirect",
@@ -214,28 +224,38 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     // General
     multipliers.push_back(new BlackTempleDelayDpsCooldownsMultiplier(botAI));
 
+    // Trash
+    multipliers.push_back(new ShadowmoonReaverHoldChargeBuildingSpellsMultiplier(botAI));
+
     // High Warlord Naj'entus
     multipliers.push_back(new HighWarlordNajentusDisableCombatFormationMoveMultiplier(botAI));
 
     // Supremus
-    multipliers.push_back(new SupremusFocusOnAvoidanceInPhase2Multiplier(botAI));
-    multipliers.push_back(new SupremusHitboxIsBuggedMultiplier(botAI));
+    multipliers.push_back(new SupremusFocusOnAvoidanceInKitePhaseMultiplier(botAI));
+    multipliers.push_back(new SupremusDelayDpsCooldownsInKitePhaseMultiplier(botAI));
+    multipliers.push_back(new SupremusDisableKillingSpreeMultiplier(botAI));
+
+    // Shade of Akama
+    multipliers.push_back(new ShadeOfAkamaDontDropOutOfSightTargetMultiplier(botAI));
 
     // Teron Gorefiend
     multipliers.push_back(new TeronGorefiendControlMovementMultiplier(botAI));
     multipliers.push_back(new TeronGorefiendMarkedBotOnlyMoveToDieMultiplier(botAI));
-    multipliers.push_back(new TeronGorefiendSpiritsAttackOnlyShadowyConstructsMultiplier(botAI));
+    multipliers.push_back(new TeronGorefiendSpiritsAttackShadowyConstructsMultiplier(botAI));
     multipliers.push_back(new TeronGorefiendDisableAttackingConstructsMultiplier(botAI));
 
     // Gurtogg Bloodboil
     multipliers.push_back(new GurtoggBloodboilControlMovementMultiplier(botAI));
+    multipliers.push_back(new GurtoggBloodboilHoldThreatMultiplier(botAI));
 
     // Reliquary of Souls
     multipliers.push_back(new ReliquaryOfSoulsDontWasteHealingMultiplier(botAI));
+    multipliers.push_back(new ReliquaryOfSoulsDelayDpsCooldownsBetweenEssencesMultiplier(botAI));
+    multipliers.push_back(new ReliquaryOfSoulsLetMagesStealRuneShieldMultiplier(botAI));
 
     // Mother Shahraz
     multipliers.push_back(new MotherShahrazControlMovementMultiplier(botAI));
-    multipliers.push_back(new MotherShahrazBotsWithFatalAttractionOnlyRunAwayMultiplier(botAI));
+    multipliers.push_back(new MotherShahrazFatalAttractionRunAwayMultiplier(botAI));
 
     // Illidari Council
     multipliers.push_back(new IllidariCouncilDisableTankActionsMultiplier(botAI));
@@ -252,4 +272,16 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new IllidanStormrageControlNonTankMovementMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageUseEarthbindTotemMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageWaitForDpsMultiplier(botAI));
+}
+
+void RaidBlackTempleStrategy::AppendTargetExclusions(
+    GuidSet& exclusions, TargetValueExclusionType type)
+{
+    // Trash
+    if (type != TargetValueExclusionType::TankTarget)
+        BtHelpers::AppendShadowmoonReaverExclusions(botAI, exclusions);
+
+    // Shade of Akama
+    if (type == TargetValueExclusionType::TankTarget)
+        BtHelpers::AppendShadeOfAkamaTankExclusions(botAI, exclusions);
 }
