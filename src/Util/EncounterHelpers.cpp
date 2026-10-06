@@ -34,7 +34,8 @@ namespace EncounterHelpers
 // for triggers and multipliers that should run only during a boss fight. This will not work for
 // every single encounter, as some bosses are not scripted to report IN_PROGRESS (though all TBC
 // raid bosses now do). It's also possible for a boss script to set IN_PROGRESS upon an event other
-// than the pull (e.g., Leotheras is set to IN_PROGRESS only after the Spellbinders are killed).
+// than the pull (e.g., Leotheras goes IN_PROGRESS when first hit, even while banished, or else
+// when the last Spellbinder dies, not when his Spellbinders are pulled).
 bool IsEncounterInProgress(Player* bot, uint32 mapId)
 {
     if (bot->GetMapId() != mapId)
@@ -284,35 +285,15 @@ bool IsMechanicTrackerBot(Player* bot, uint32 mapId)
     return false;
 }
 
-// By leewheel 2026-10-02 合并brighton 07e47c61..beef2d08 补回：本 fork 扩展的 4 参重载
-//   （botAI + exclude，机制跟踪者限定 DPS，与 TK/SWP/ZA 行为一致；声明见 EncounterHelpers.h
-//   的 fork note）。解决 EncounterHelpers.cpp 冲突取上游版时被顺带覆盖，Seth/Kara 调用点
-//   （botAI, bot, mapId 三参形式）依赖它，缺实现即 LNK2019。实现体取自合并前 HEAD。
-bool IsMechanicTrackerBot(PlayerbotAI* botAI, Player* bot, uint32 mapId, Player* exclude)
-{
-    if (!botAI->IsDps(bot) || !bot->IsAlive() || bot->GetMapId() != mapId)
-        return false;
+//By leewheel 2026-10-06 合并 brighton the-lab: 删除了紧随其后的第二份 4 参
+//   IsMechanicTrackerBot 实现（288-315 行那份「2026-10-02 补回」注释块）。
+//   原因：上游 #2811（fix: never read an Item after a call that can free it）改写了本文件，
+//   自动合并把本核 234 行的实现与这段补回实现同时保留，两份逐字相同 ⇒ C2084 函数已有主体。
+//   本核 234 行那份注释更完整（带 fork note 与 68fae590 出处），保留它，删除重复的那份。
+//   4 参重载本身仍是必需的：EncounterHelpers.h 有声明，Seth/Kara 等调用点依赖它，
+//   删掉实现会 LNK2019。
 
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (!member || !member->IsAlive() || member->GetMapId() != mapId || member == exclude)
-            continue;
-
-        PlayerbotAI* memberAI = GET_PLAYERBOT_AI(member);
-        if (!memberAI || !memberAI->IsDps(member))
-            continue;
-
-        return member == bot;
-    }
-
-    return false;
-}
-// End By leewheel// Requires the main tank to be alive
+// Requires the main tank to be alive
 Player* GetGroupMainTank(Player* bot)
 {
     Group* group = bot->GetGroup();
