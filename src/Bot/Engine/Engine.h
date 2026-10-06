@@ -64,7 +64,7 @@ class Engine : public PlayerbotAIAware
 public:
     Engine(PlayerbotAI* botAI, AiObjectContext* factory);
 
-    void Init();
+    virtual void Init();
     void addStrategy(std::string const name, bool init = true);
     void addStrategies(std::string first, ...);
     void addStrategiesNoInit(std::string first, ...);
@@ -87,35 +87,34 @@ public:
     void removeActionExecutionListener(ActionExecutionListener* listener) { actionExecutionListeners.Remove(listener); }
     bool HasStrategyType(StrategyType type) { return strategyTypeMask & type; }
     bool HasTargetExclusions() const { return hasTargetExclusions; }
+    std::vector<Multiplier*> const& GetMultipliers() const { return multipliers; }
     virtual ~Engine(void);
 
     bool testMode;
 
 private:
-    // By leewheel 2026-08-19
-    // 性能优化：原参数按值传递 std::vector<NextAction>，每次调用都拷贝整个 vector
-    //（含 string 成员）；调用方传入的均为临时对象（getHandlers()/getDefaultActions() 按值返回），
-    // 改为 const& 绑定零拷贝，行为完全不变。
-    // 2026-09-04 合并brighton-chi/the-lab：保留本分支const&性能优化，
-    // pushType参数声明随上游east-const风格，与Engine.cpp实现签名一致。
-    bool MultiplyAndPush(std::vector<NextAction> const& actions, float forceRelevance, bool skipPrerequisites,
-                         Event event, char const* pushType);
-    // End By leewheel
-    void Reset();
     std::string const ResolveStrategyName(std::string const name);
-    void ProcessTriggers(bool minimal);
     void PushDefaultActions();
-    void PushAgain(ActionNode* actionNode, float relevance, Event event);
     ActionNode* CreateActionNode(std::string const name);
-    Action* InitializeAction(ActionNode* actionNode);
-    bool ListenAndExecute(Action* action, Event event);
 
-    void LogAction(char const* format, ...);
     void LogValues();
 
     ActionExecutionListeners actionExecutionListeners;
 
 protected:
+    void LogAction(char const* format, ...);
+    // By leewheel 2026-10-06 合并 brighton the-lab：上游把本组成员从 private 移到 protected，
+    //   此处采纳上游的组织方式；但形参仍必须是 const&——
+    //   Engine.cpp:280 的实现签名就是 `std::vector<NextAction> const&`（本 fork 2026-08-19 的
+    //   零拷贝优化），若按上游写成按值传递会变成只有声明没有定义的其它重载，直接 LNK2019。
+    bool MultiplyAndPush(std::vector<NextAction> const& actions, float forceRelevance, bool skipPrerequisites,
+                         Event event, char const* pushType);
+    void Reset();
+    void ProcessTriggers(bool minimal);
+    void PushAgain(ActionNode* actionNode, float relevance, Event event);
+    virtual Action* InitializeAction(ActionNode* actionNode);
+    virtual bool ListenAndExecute(Action* action, Event event);
+
     Queue queue;
     std::vector<TriggerNode*> triggers;
     std::vector<Multiplier*> multipliers;

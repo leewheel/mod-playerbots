@@ -515,6 +515,8 @@ bool PlayerbotAIConfig::Initialize()
     randomBotNonCombatStrategies = sConfigMgr->GetOption<std::string>("AiPlayerbot.RandomBotNonCombatStrategies", "");
     combatStrategies = sConfigMgr->GetOption<std::string>("AiPlayerbot.CombatStrategies", "");
     nonCombatStrategies = sConfigMgr->GetOption<std::string>("AiPlayerbot.NonCombatStrategies", "");
+    reactStrategies = sConfigMgr->GetOption<std::string>("AiPlayerbot.ReactStrategies", "");
+    randomBotReactStrategies = sConfigMgr->GetOption<std::string>("AiPlayerbot.RandomBotReactStrategies", "");
     applyInstanceStrategies = sConfigMgr->GetOption<bool>("AiPlayerbot.ApplyInstanceStrategies", true);
 
     // By leewheel 2026-07-15: 副本/团本中主副坦克自动标记骷髅/叉叉开关

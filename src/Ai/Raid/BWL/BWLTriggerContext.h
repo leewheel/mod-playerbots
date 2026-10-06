@@ -53,30 +53,31 @@ public:
     }
 
 private:
-    static Trigger* bwl_suppression_device(PlayerbotAI* ai) { return new BwlSuppressionDeviceTrigger(ai); }
-    static Trigger* bwl_razorgore_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "razorgore the untamed"); }
-    static Trigger* bwl_razorgore_not_mind_controlled(PlayerbotAI* ai) { return new BwlRazorgoreNotMindControlledTrigger(ai); }
-    static Trigger* bwl_vaelastrasz_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "vaelastrasz the corrupt"); }
-    static Trigger* bwl_vaelastrasz_positioning(PlayerbotAI* ai) { return new BwlVaelastraszPositioningTrigger(ai); }
-    static Trigger* bwl_vaelastrasz_burning_adrenaline(PlayerbotAI* ai) { return new BwlVaelastraszBurningAdrenalineTrigger(ai); }
-    static Trigger* bwl_broodlord_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "broodlord lashlayer"); }
-    static Trigger* bwl_broodlord_ranged_too_close(PlayerbotAI* ai) { return new BwlBroodlordRangedTooCloseTrigger(ai); }
-    static Trigger* bwl_firemaw_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "firemaw"); }
-    static Trigger* bwl_firemaw_not_victim(PlayerbotAI* ai) { return new BwlBlackDrakeNotVictimTrigger(ai, "firemaw"); }
-    static Trigger* bwl_ebonroc_not_victim(PlayerbotAI* ai) { return new BwlBlackDrakeNotVictimTrigger(ai, "ebonroc"); }
-    static Trigger* bwl_flamegor_fire_resistance_trigger(PlayerbotAI* ai) { return new BossFireResistanceTrigger(ai, "flamegor"); }
-    static Trigger* bwl_flamegor_not_victim(PlayerbotAI* ai) { return new BwlBlackDrakeNotVictimTrigger(ai, "flamegor"); }
-    static Trigger* bwl_affliction_bronze(PlayerbotAI* ai) { return new BwlAfflictionBronzeTrigger(ai); }
-    static Trigger* bwl_nefarian_wild_magic(PlayerbotAI* ai) { return new BwlNefarianWildMagicTrigger(ai); }
-    static Trigger* bwl_nefarian_positioning(PlayerbotAI* ai) { return new BwlNefarianPositioningTrigger(ai); }
-    static Trigger* bwl_death_talon_wyrmguard_tank(PlayerbotAI* ai) { return new BwlDeathTalonWyrmguardTankTrigger(ai); }
-    static Trigger* bwl_death_talon_wyrmguard_ranged(PlayerbotAI* ai) { return new BwlDeathTalonWyrmguardRangedTrigger(ai); }
+// By leewheel 2026-10-06 合并 brighton the-lab（#2846）：形参名 ai → botAI，并保留本 fork 的 valthorax 触发器
+    static Trigger* bwl_suppression_device(PlayerbotAI* botAI) { return new BwlSuppressionDeviceTrigger(botAI); }
+    static Trigger* bwl_razorgore_fire_resistance_trigger(PlayerbotAI* botAI) { return new BossFireResistanceTrigger(botAI, "razorgore the untamed"); }
+    static Trigger* bwl_razorgore_not_mind_controlled(PlayerbotAI* botAI) { return new BwlRazorgoreNotMindControlledTrigger(botAI); }
+    static Trigger* bwl_vaelastrasz_fire_resistance_trigger(PlayerbotAI* botAI) { return new BossFireResistanceTrigger(botAI, "vaelastrasz the corrupt"); }
+    static Trigger* bwl_vaelastrasz_positioning(PlayerbotAI* botAI) { return new BwlVaelastraszPositioningTrigger(botAI); }
+    static Trigger* bwl_vaelastrasz_burning_adrenaline(PlayerbotAI* botAI) { return new BwlVaelastraszBurningAdrenalineTrigger(botAI); }
+    static Trigger* bwl_broodlord_fire_resistance_trigger(PlayerbotAI* botAI) { return new BossFireResistanceTrigger(botAI, "broodlord lashlayer"); }
+    static Trigger* bwl_broodlord_ranged_too_close(PlayerbotAI* botAI) { return new BwlBroodlordRangedTooCloseTrigger(botAI); }
+    static Trigger* bwl_firemaw_fire_resistance_trigger(PlayerbotAI* botAI) { return new BossFireResistanceTrigger(botAI, "firemaw"); }
+    static Trigger* bwl_firemaw_not_victim(PlayerbotAI* botAI) { return new BwlBlackDrakeNotVictimTrigger(botAI, "firemaw"); }
+    static Trigger* bwl_ebonroc_not_victim(PlayerbotAI* botAI) { return new BwlBlackDrakeNotVictimTrigger(botAI, "ebonroc"); }
+    static Trigger* bwl_flamegor_fire_resistance_trigger(PlayerbotAI* botAI) { return new BossFireResistanceTrigger(botAI, "flamegor"); }
+    static Trigger* bwl_flamegor_not_victim(PlayerbotAI* botAI) { return new BwlBlackDrakeNotVictimTrigger(botAI, "flamegor"); }
+    static Trigger* bwl_affliction_bronze(PlayerbotAI* botAI) { return new BwlAfflictionBronzeTrigger(botAI); }
+    static Trigger* bwl_nefarian_wild_magic(PlayerbotAI* botAI) { return new BwlNefarianWildMagicTrigger(botAI); }
+    static Trigger* bwl_nefarian_positioning(PlayerbotAI* botAI) { return new BwlNefarianPositioningTrigger(botAI); }
+    static Trigger* bwl_death_talon_wyrmguard_tank(PlayerbotAI* botAI) { return new BwlDeathTalonWyrmguardTankTrigger(botAI); }
+    static Trigger* bwl_death_talon_wyrmguard_ranged(PlayerbotAI* botAI) { return new BwlDeathTalonWyrmguardRangedTrigger(botAI); }
     // Custom Boss: Valthorax
-    static Trigger* bwl_valthorax_frost_resistance(PlayerbotAI* ai) { return new BossFrostResistanceTrigger(ai, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
-    static Trigger* bwl_valthorax_shadow_resistance(PlayerbotAI* ai) { return new BossShadowResistanceTrigger(ai, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
-    static Trigger* bwl_valthorax_frost_bomb(PlayerbotAI* ai) { return new BwlValthoraxFrostBombTrigger(ai); }
-    static Trigger* bwl_valthorax_vabomination(PlayerbotAI* ai) { return new BwlValthoraxVabominationTrigger(ai); }
-    static Trigger* bwl_valthorax_adds(PlayerbotAI* ai) { return new BwlValthoraxAddsTrigger(ai); }
+    static Trigger* bwl_valthorax_frost_resistance(PlayerbotAI* botAI) { return new BossFrostResistanceTrigger(botAI, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
+    static Trigger* bwl_valthorax_shadow_resistance(PlayerbotAI* botAI) { return new BossShadowResistanceTrigger(botAI, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
+    static Trigger* bwl_valthorax_frost_bomb(PlayerbotAI* botAI) { return new BwlValthoraxFrostBombTrigger(botAI); }
+    static Trigger* bwl_valthorax_vabomination(PlayerbotAI* botAI) { return new BwlValthoraxVabominationTrigger(botAI); }
+    static Trigger* bwl_valthorax_adds(PlayerbotAI* botAI) { return new BwlValthoraxAddsTrigger(botAI); }
     //End By leewheel
 };
 

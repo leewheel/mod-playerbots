@@ -313,6 +313,7 @@ public:
     bool summonAtInnkeepersEnabled;
     std::string combatStrategies, nonCombatStrategies;
     std::string randomBotCombatStrategies, randomBotNonCombatStrategies;
+    std::string reactStrategies, randomBotReactStrategies;
     bool applyInstanceStrategies;
     bool autoTankMarkEnabled;  // By leewheel 2026-07-15: 主副坦克自动标记骷髅/叉叉；2026-08-08 扩展到副本外（野外）也标记
     uint32 randomBotMinLevel, randomBotMaxLevel;

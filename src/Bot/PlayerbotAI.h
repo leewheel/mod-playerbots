@@ -30,11 +30,13 @@
 #include "WorldPacket.h"
 #include <stack>
 
+class Action;
 class AiObjectContext;
 class Creature;
 class Engine;
 class ExternalEventHelper;
 class Group;
+class ReactionEngine;
 class Gameobject;
 class Item;
 class Player;
@@ -78,6 +80,7 @@ enum BotState
     BOT_STATE_COMBAT = 0,
     BOT_STATE_NON_COMBAT = 1,
     BOT_STATE_DEAD = 2,
+    BOT_STATE_REACTION = 3,
 
     BOT_STATE_MAX
 };
@@ -267,7 +270,8 @@ enum ActivityType
     PACKET_ACTIVITY = 5,
     DETAILED_MOVE_ACTIVITY = 6,
     PARTY_ACTIVITY = 7,
-    ALL_ACTIVITY = 8,
+    REACT_ACTIVITY = 8,
+    ALL_ACTIVITY = 9,
 
     MAX_ACTIVITY_TYPE
 };
@@ -395,6 +399,9 @@ private:
 
 class PlayerbotAI : public PlayerbotAIBase
 {
+    // Consumes queued chat commands from FindReaction(); needs HandleCommands().
+    friend class ReactionEngine;
+
 public:
     PlayerbotAI();
     PlayerbotAI(Player* bot);
@@ -402,6 +409,10 @@ public:
 
     void UpdateAI(uint32 elapsed, bool minimal = false) override;
     void UpdateAIInternal(uint32 elapsed, bool minimal = false) override;
+    bool UpdateAIReaction(uint32 elapsed, bool minimal, bool canControlSelf);
+    Engine* GetCurrentEngine() const { return currentEngine; }
+    void SetActionDuration(Action const* action);
+    using PlayerbotAIBase::SetActionDuration;
 
     std::string const HandleRemoteCommand(std::string const command);
     void HandleCommand(uint32 type, std::string const text, Player* fromPlayer);
@@ -677,6 +688,7 @@ protected:
     bool allowActive[MAX_ACTIVITY_TYPE];
     time_t m_lastCombatTime = 0;  // Tracks last time bot was in combat, for post-combat acceleration
     time_t allowActiveCheckTimer[MAX_ACTIVITY_TYPE];
+    ReactionEngine* reactionEngine = nullptr;
     bool inCombat = false;
     BotCheatMask cheatMask = BotCheatMask::none;
     Position jumpDestination = Position();

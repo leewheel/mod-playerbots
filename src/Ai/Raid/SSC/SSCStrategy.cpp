@@ -312,29 +312,37 @@ void AppendFathomLordKarathressBlessingHoldExclusions(
     exclusions.insert(karathress->GetGUID());
 }
 
-void AppendLadyVashjGeneratorPhaseExclusions(AiObjectContext* context, GuidSet& exclusions)
-{
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    if (vashj && vashj->HasAura(Id(SscSpells::SPELL_MAGIC_BARRIER)))
-        exclusions.insert(vashj->GetGUID());
-}
-
+// By leewheel 2026-10-06 合并 brighton the-lab：本 fork 旧版 AppendLadyVashjGeneratorPhaseExclusions
+//   （按 entry "21212" 查找）与上游本次新增的同名实现（下方按 "lady vashj" 查找）功能等价，
+//   若两份都留会 C2084 重复定义，故删除本 fork 那份，统一用上游实现。
+//   Morogrim 的 tidewalker 取值同时采纳上游的惰性写法（进入循环后再取，避免每次都查目标）。
 void AppendMorogrimTidewalkerMurlocExclusions(
     PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
-    Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213");
-    if (!tidewalker)
-        return;
-
+    Unit* tidewalker = nullptr;
     for (auto const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
     {
         if (guid.GetEntry() != Id(SscNpcs::NPC_TIDEWALKER_LURKER))
             continue;
 
+        if (!tidewalker)
+        {
+            tidewalker = AI_VALUE2(Unit*, "find target", "morogrim tidewalker");
+            if (!tidewalker)
+                return;
+        }
+
         Unit* unit = botAI->GetUnit(guid);
         if (unit && unit->GetExactDist2d(tidewalker) > TIDEWALKER_MURLOC_MAX_TARGET_DISTANCE)
             exclusions.insert(guid);
     }
+}
+
+void AppendLadyVashjGeneratorPhaseExclusions(AiObjectContext* context, GuidSet& exclusions)
+{
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    if (vashj && vashj->HasAura(Id(SscSpells::SPELL_MAGIC_BARRIER)))
+        exclusions.insert(vashj->GetGUID());
 }
 
 } // end anonymous namespace

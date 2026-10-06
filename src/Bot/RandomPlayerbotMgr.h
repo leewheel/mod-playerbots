@@ -343,6 +343,7 @@ private:
     // std::map<uint32, std::vector<WorldLocation>> rpgLocsCache;
     std::map<uint32, std::map<uint32, std::vector<WorldLocation>>> rpgLocsCacheLevel;
     std::map<TeamId, std::map<BattlegroundTypeId, std::vector<uint32>>> BattleMastersCache;
+    std::unordered_map<uint32, ObjectGuid::LowType> BattleMasterSpawnIds;
     std::unordered_map<uint32, BotEventCache> eventCache;
     std::unordered_set<uint32> currentBots;
     // By leewheel 2026-08-29 氛围组机器人：名单周期重抽，目的地偏向真实玩家附近

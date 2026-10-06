@@ -5,12 +5,16 @@
  */
 
 #include "SWPStrategy.h"
+#include "EncounterHelpers.h"
 #include "Playerbots.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
 #include "SWPMultipliers.h"
 #include "SWPShared.h"
+
+using namespace SwpHelpers;
+using namespace EncounterHelpers;
 
 void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
@@ -278,8 +282,6 @@ void RaidSwpStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 namespace
 {
 
-using namespace SwpHelpers;
-
 void AppendVolatileFiendMeleeDpsExclusions(
     PlayerbotAI* botAI, Player* bot, AiObjectContext* context, GuidSet& exclusions)
 {
@@ -292,19 +294,24 @@ void AppendVolatileFiendMeleeDpsExclusions(
 }
 
 void AppendFelmystVaporPhaseMeleeExclusions(
-    PlayerbotAI* botAI, Player* bot, AiObjectContext* context, GuidSet& exclusions)
+    Player* bot, AiObjectContext* context, GuidSet& exclusions)
 {
     if (!PlayerbotAI::IsMelee(bot))
         return;
 
+// By leewheel 2026-10-06 合并 brighton the-lab：保留本 fork 的 entry 查找
+    //   （本服 creature_template 名已汉化，用英文名 find target 会找不到），
+    //   同时补上上游新增的空指针保护（felmyst 为空时原写法会解引用崩溃）。
     Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
-    if (IsFelmystAirPhaseTargetSuppressed(felmyst))
+    if (felmyst && IsFelmystAirPhaseTargetSuppressed(felmyst))
         exclusions.insert(felmyst->GetGUID());
 }
 
 void AppendMuruDarkFiendExclusions(
     PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
+// By leewheel 2026-10-06 合并 brighton the-lab：保留本 fork 的 entry 前置判据
+    //   （M'uru 不在目标列表时不必遍历 attackers 做暗影魔排除），entry 查找避免中文库名匹配失败。
     if (!AI_VALUE2(Unit*, "find target", "25741"))
         return;
 
@@ -322,8 +329,10 @@ void AppendMuruTankExclusions(
     if (!PlayerbotAI::IsTank(bot))
         return;
 
+// By leewheel 2026-10-06 合并 brighton the-lab：entry 查找 + 上游的空指针保护
+    //   （下方 muru->GetGUID() 无条件使用，muru 为空必须提前返回）。
     Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
-    if (!IsMuruPhaseActive(muru))
+    if (!muru || !IsMuruPhaseActive(muru))
         return;
 
     bool const darknessActive = PeekMuruDarknessActiveState(bot);
@@ -359,6 +368,7 @@ void AppendKiljaedenShieldOrbExclusions(
     if (!PlayerbotAI::IsMelee(bot))
         return;
 
+// By leewheel 2026-10-06 合并 brighton the-lab：保留本 fork 的 entry 前置判据（基尔加丹不在场则不遍历）。
     if (!AI_VALUE2(Unit*, "find target", "25315"))
         return;
 
@@ -382,7 +392,11 @@ void RaidSwpStrategy::AppendTargetExclusions(
 
     AiObjectContext* context = botAI->GetAiObjectContext();
     AppendVolatileFiendMeleeDpsExclusions(botAI, bot, context, exclusions);
-    AppendFelmystVaporPhaseMeleeExclusions(botAI, bot, context, exclusions);
+
+    if (!IsEncounterInProgress(bot, SWP_MAP_ID))
+        return;
+
+    AppendFelmystVaporPhaseMeleeExclusions(bot, context, exclusions);
     AppendMuruDarkFiendExclusions(botAI, context, exclusions);
     AppendMuruTankExclusions(botAI, bot, context, exclusions);
     AppendKiljaedenShieldOrbExclusions(botAI, bot, context, exclusions);

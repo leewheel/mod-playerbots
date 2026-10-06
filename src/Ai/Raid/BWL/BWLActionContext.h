@@ -53,31 +53,31 @@ public:
     }
 
 private:
-    static Action* bwl_check_onyxia_scale_cloak(PlayerbotAI* ai) { return new BwlOnyxiaScaleCloakAuraCheckAction(ai); }
-    static Action* bwl_turn_off_suppression_device(PlayerbotAI* ai) { return new BwlTurnOffSuppressionDeviceAction(ai); }
-    static Action* bwl_razorgore_fire_resistance_action(PlayerbotAI* ai) { return new BossFireResistanceAction(ai, "razorgore the untamed"); }
-    static Action* bwl_razorgore_avoid_aoe(PlayerbotAI* ai) { return new BwlRazorgoreAvoidAoeAction(ai); }
-    static Action* bwl_razorgore_mark_boss(PlayerbotAI* ai) { return new BwlRazorgoreMarkBossAction(ai); }
-    static Action* bwl_vaelastrasz_fire_resistance_action(PlayerbotAI* ai) { return new BossFireResistanceAction(ai, "vaelastrasz the corrupt"); }
-    static Action* bwl_vaelastrasz_move_away(PlayerbotAI* ai) { return new BwlVaelastraszMoveAwayAction(ai); }
-    static Action* bwl_broodlord_fire_resistance_action(PlayerbotAI* ai) { return new BossFireResistanceAction(ai, "broodlord lashlayer"); }
-    static Action* bwl_broodlord_ranged_move_away(PlayerbotAI* ai) { return new BwlBroodlordRangedMoveAwayAction(ai); }
-    static Action* bwl_firemaw_fire_resistance_action(PlayerbotAI* ai) { return new BossFireResistanceAction(ai, "firemaw"); }
-    static Action* bwl_firemaw_avoid_breath(PlayerbotAI* ai) { return new BwlBlackDrakeAvoidBreathAction(ai, "firemaw"); }
-    static Action* bwl_ebonroc_avoid_breath(PlayerbotAI* ai) { return new BwlBlackDrakeAvoidBreathAction(ai, "ebonroc"); }
-    static Action* bwl_flamegor_fire_resistance_action(PlayerbotAI* ai) { return new BossFireResistanceAction(ai, "flamegor"); }
-    static Action* bwl_flamegor_avoid_breath(PlayerbotAI* ai) { return new BwlBlackDrakeAvoidBreathAction(ai, "flamegor"); }
-    static Action* bwl_use_hourglass_sand(PlayerbotAI* ai) { return new BwlUseHourglassSandAction(ai); }
-    static Action* bwl_nefarian_rear_flank(PlayerbotAI* ai) { return new BossRearFlankAction(ai, "nefarian"); }
-    static Action* bwl_death_talon_wyrmguard_tank_move_away(PlayerbotAI* ai) { return new BwlDeathTalonWyrmguardTankMoveAwayAction(ai); }
-    static Action* bwl_death_talon_wyrmguard_ranged_move_away(PlayerbotAI* ai) { return new BwlDeathTalonWyrmguardRangedMoveAwayAction(ai); }
-    // Custom Boss: Valthorax
-    static Action* bwl_valthorax_frost_resistance(PlayerbotAI* ai) { return new BossFrostResistanceAction(ai, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
-    static Action* bwl_valthorax_shadow_resistance(PlayerbotAI* ai) { return new BossShadowResistanceAction(ai, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
-    static Action* bwl_valthorax_avoid_frost_bomb(PlayerbotAI* ai) { return new BwlValthoraxAvoidFrostBombAction(ai); }
-    static Action* bwl_valthorax_attack_vabomination(PlayerbotAI* ai) { return new BwlValthoraxAttackVabominationAction(ai); }
-    static Action* bwl_valthorax_attack_adds(PlayerbotAI* ai) { return new BwlValthoraxAttackAddsAction(ai); }
-    //End By leewheel
+// By leewheel 2026-10-06 合并 brighton the-lab（#2846）：形参名 ai → botAI，并保留本 fork 的 valthorax 动作
+    static Action* bwl_check_onyxia_scale_cloak(PlayerbotAI* botAI) { return new BwlOnyxiaScaleCloakAuraCheckAction(botAI); }
+    static Action* bwl_turn_off_suppression_device(PlayerbotAI* botAI) { return new BwlTurnOffSuppressionDeviceAction(botAI); }
+    static Action* bwl_razorgore_fire_resistance_action(PlayerbotAI* botAI) { return new BossFireResistanceAction(botAI, "razorgore the untamed"); }
+    static Action* bwl_razorgore_avoid_aoe(PlayerbotAI* botAI) { return new BwlRazorgoreAvoidAoeAction(botAI); }
+    static Action* bwl_razorgore_mark_boss(PlayerbotAI* botAI) { return new BwlRazorgoreMarkBossAction(botAI); }
+    static Action* bwl_vaelastrasz_fire_resistance_action(PlayerbotAI* botAI) { return new BossFireResistanceAction(botAI, "vaelastrasz the corrupt"); }
+    static Action* bwl_vaelastrasz_move_away(PlayerbotAI* botAI) { return new BwlVaelastraszMoveAwayAction(botAI); }
+    static Action* bwl_broodlord_fire_resistance_action(PlayerbotAI* botAI) { return new BossFireResistanceAction(botAI, "broodlord lashlayer"); }
+    static Action* bwl_broodlord_ranged_move_away(PlayerbotAI* botAI) { return new BwlBroodlordRangedMoveAwayAction(botAI); }
+    static Action* bwl_firemaw_fire_resistance_action(PlayerbotAI* botAI) { return new BossFireResistanceAction(botAI, "firemaw"); }
+    static Action* bwl_firemaw_avoid_breath(PlayerbotAI* botAI) { return new BwlBlackDrakeAvoidBreathAction(botAI, "firemaw"); }
+    static Action* bwl_ebonroc_avoid_breath(PlayerbotAI* botAI) { return new BwlBlackDrakeAvoidBreathAction(botAI, "ebonroc"); }
+    static Action* bwl_flamegor_fire_resistance_action(PlayerbotAI* botAI) { return new BossFireResistanceAction(botAI, "flamegor"); }
+    static Action* bwl_flamegor_avoid_breath(PlayerbotAI* botAI) { return new BwlBlackDrakeAvoidBreathAction(botAI, "flamegor"); }
+    static Action* bwl_use_hourglass_sand(PlayerbotAI* botAI) { return new BwlUseHourglassSandAction(botAI); }
+    static Action* bwl_nefarian_rear_flank(PlayerbotAI* botAI) { return new BossRearFlankAction(botAI, "nefarian"); }
+    static Action* bwl_death_talon_wyrmguard_tank_move_away(PlayerbotAI* botAI) { return new BwlDeathTalonWyrmguardTankMoveAwayAction(botAI); }
+    static Action* bwl_death_talon_wyrmguard_ranged_move_away(PlayerbotAI* botAI) { return new BwlDeathTalonWyrmguardRangedMoveAwayAction(botAI); }
+
+    static Action* bwl_valthorax_frost_resistance(PlayerbotAI* botAI) { return new BossFrostResistanceAction(botAI, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
+    static Action* bwl_valthorax_shadow_resistance(PlayerbotAI* botAI) { return new BossShadowResistanceAction(botAI, BlackwingLairHelpers::BOSS_NAME_VALTHORAX); }
+    static Action* bwl_valthorax_avoid_frost_bomb(PlayerbotAI* botAI) { return new BwlValthoraxAvoidFrostBombAction(botAI); }
+    static Action* bwl_valthorax_attack_vabomination(PlayerbotAI* botAI) { return new BwlValthoraxAttackVabominationAction(botAI); }
+    static Action* bwl_valthorax_attack_adds(PlayerbotAI* botAI) { return new BwlValthoraxAttackAddsAction(botAI); }
 };
 
 #endif
