@@ -12,8 +12,9 @@
 
 float ErekemMultiplier::GetValue(Action* action)
 {
+// By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找（汉化库英文名匹配不上）
     Unit* boss = AI_VALUE2(Unit*, "find target", "29315");
-    if (!boss || !botAI->IsDps(bot)) { return 1.0f; }
+    if (!boss || !PlayerbotAI::IsDps(bot)) { return 1.0f; }
 
     if (dynamic_cast<DpsAssistAction*>(action))
     {

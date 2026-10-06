@@ -89,9 +89,12 @@ public:
 
         if (!strcmp(args, "toggle"))
         {
-            sPlayerbotAIConfig.perfMonEnabled = !sPlayerbotAIConfig.perfMonEnabled;
-            if (sPlayerbotAIConfig.perfMonEnabled)
+// By leewheel 2026-10-07 合并 #2854：配置成员随上游改为 PascalCase（perfMonEnabled -> PerfMonEnabled）；
+    //   日志文本保留本 fork 的中文。
+            sPlayerbotAIConfig.PerfMonEnabled = !sPlayerbotAIConfig.PerfMonEnabled;
+            if (sPlayerbotAIConfig.PerfMonEnabled)
                 LOG_INFO("playerbots", "性能监控已启用");
+            // End By leewheel
             else
                 LOG_INFO("playerbots", "性能监控已禁用");
             return true;

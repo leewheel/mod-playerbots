@@ -15,8 +15,9 @@
 
 float BjarngrimMultiplier::GetValue(Action* action)
 {
+// By leewheel 2026-10-07 合并 #2854：静态调用 PlayerbotAI::IsHeal；目标按 entry 查找（汉化库英文名匹配不上）
     Unit* boss = AI_VALUE2(Unit*, "find target", "28586");
-    if (!boss || botAI->IsHeal(bot)) { return 1.0f; }
+    if (!boss || PlayerbotAI::IsHeal(bot)) { return 1.0f; }
 
     if (boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_WHIRLWIND_BJARNGRIM))
     {
@@ -42,7 +43,7 @@ float BjarngrimMultiplier::GetValue(Action* action)
         }
     }
 
-    if (!boss_add || botAI->IsTank(bot)) { return 1.0f; }
+    if (!boss_add || PlayerbotAI::IsTank(bot)) { return 1.0f; }
 
     if (dynamic_cast<DpsAssistAction*>(action))
     {
@@ -59,8 +60,9 @@ float BjarngrimMultiplier::GetValue(Action* action)
 
 float VolkhanMultiplier::GetValue(Action* action)
 {
+// By leewheel 2026-10-07 合并 #2854：静态调用 PlayerbotAI::IsTank/IsHeal；目标按 entry 查找
     Unit* boss = AI_VALUE2(Unit*, "find target", "28587");
-    if (!boss || botAI->IsTank(bot) || botAI->IsHeal(bot)) { return 1.0f; }
+    if (!boss || PlayerbotAI::IsTank(bot) || PlayerbotAI::IsHeal(bot)) { return 1.0f; }
 
     if (dynamic_cast<DpsAssistAction*>(action))
     {

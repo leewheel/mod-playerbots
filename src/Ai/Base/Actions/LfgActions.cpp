@@ -32,9 +32,11 @@ uint32 LfgJoinAction::GetRoles()
     // 修复2（防御）：此处使用 bySpec=true 直接检查天赋页，不依赖策略状态
     if (!RandomPlayerbotMgr::instance().IsRandomBot(bot))
     {
-        if (botAI->IsTank(bot, true))
+// By leewheel 2026-10-07 合并 #2854：采纳上游静态调用写法 PlayerbotAI::IsTank/IsHeal，
+    //   但保留本 fork 的 bySpec=true（必须按天赋页判断，不能依赖 AI 策略状态，理由见上方注释）。
+        if (PlayerbotAI::IsTank(bot, true))
             return PLAYER_ROLE_TANK;
-        if (botAI->IsHeal(bot, true))
+        if (PlayerbotAI::IsHeal(bot, true))
             return PLAYER_ROLE_HEALER;
         else
             return PLAYER_ROLE_DAMAGE;
@@ -292,11 +294,13 @@ bool LfgLeaveAction::Execute(Event /*event*/)
     if (sLFGMgr->GetState(bot->GetGUID()) > LFG_STATE_QUEUED)
         return false;
 
-    // By leewheel 2026-07-29
+// By leewheel 2026-07-29
     // 改回直接调 sLFGMgr::LeaveLfg（参考 LiyunfanPlayerbotsBranch）。
     // But don't drop a queue we deliberately joined. The "seldom" tick (RandomTrigger, ~300s)
     // otherwise pulls random bots straight back out.
-    if (sPlayerbotAIConfig.randomBotJoinLfg && RandomPlayerbotMgr::instance().IsRandomBot(bot))
+    // By leewheel 2026-10-07 合并 #2854：配置成员/键随上游改为 PascalCase（randomBotJoinLfg -> RandomBotJoinLfg）。
+    if (sPlayerbotAIConfig.RandomBotJoinLfg && RandomPlayerbotMgr::instance().IsRandomBot(bot))
+    // End By leewheel
         return false;
 
     sLFGMgr->LeaveLfg(bot->GetGUID());
@@ -328,7 +332,7 @@ bool LfgTeleportAction::Execute(Event event)
 
 bool LfgJoinAction::isUseful()
 {
-    if (!sPlayerbotAIConfig.randomBotJoinLfg)
+    if (!sPlayerbotAIConfig.RandomBotJoinLfg)
     {
         // botAI->ChangeStrategy("-lfg", BOT_STATE_NON_COMBAT);
         return false;

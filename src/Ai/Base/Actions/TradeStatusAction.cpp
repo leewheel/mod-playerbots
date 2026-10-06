@@ -49,7 +49,7 @@ bool TradeStatusAction::Execute(Event event)
         return false;
     }
 
-    if (sPlayerbotAIConfig.enableRandomBotTrading == 0 &&
+    if (sPlayerbotAIConfig.EnableRandomBotTrading == 0 &&
         (sRandomPlayerbotMgr.IsRandomBot(bot)|| sRandomPlayerbotMgr.IsAddclassBot(bot)))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
@@ -138,7 +138,7 @@ bool TradeStatusAction::Execute(Event event)
     }
     else if (status == TRADE_STATUS_BEGIN_TRADE)
     {
-        if (!bot->HasInArc(CAST_ANGLE_IN_FRONT, trader, sPlayerbotAIConfig.sightDistance))
+        if (!bot->HasInArc(CAST_ANGLE_IN_FRONT, trader, sPlayerbotAIConfig.SightDistance))
             bot->SetFacingToObject(trader);
 
         BeginTrade();
@@ -251,7 +251,7 @@ bool TradeStatusAction::CheckTrade()
     int32 botMoney = bot->GetTradeData()->GetMoney() + botItemsMoney;
     int32 playerItemsMoney = CalculateCost(trader, false);
     int32 playerMoney = trader->GetTradeData()->GetMoney() + playerItemsMoney;
-    if (botItemsMoney > 0 && sPlayerbotAIConfig.enableRandomBotTrading == 2 &&
+    if (botItemsMoney > 0 && sPlayerbotAIConfig.EnableRandomBotTrading == 2 &&
         (sRandomPlayerbotMgr.IsRandomBot(bot)|| sRandomPlayerbotMgr.IsAddclassBot(bot)))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
@@ -259,7 +259,7 @@ bool TradeStatusAction::CheckTrade()
                      LANG_UNIVERSAL, trader);
         return false;
     }
-    if (playerItemsMoney && sPlayerbotAIConfig.enableRandomBotTrading == 3 &&
+    if (playerItemsMoney && sPlayerbotAIConfig.EnableRandomBotTrading == 3 &&
         (sRandomPlayerbotMgr.IsRandomBot(bot)|| sRandomPlayerbotMgr.IsAddclassBot(bot)))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(

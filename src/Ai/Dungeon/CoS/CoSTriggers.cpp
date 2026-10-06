@@ -32,5 +32,7 @@ bool ExplodeGhoulTrigger::IsActive()
 
 bool EpochRangedTrigger::IsActive()
 {
-    return !botAI->IsMelee(bot) && AI_VALUE2(Unit*, "find target", "26532");
+// By leewheel 2026-10-07 合并 #2854：采纳上游静态调用写法 PlayerbotAI::IsMelee；
+    //   目标仍按 entry 查找（本服 creature_template 名已汉化，英文名 chrono-lord epoch 匹配不上）。
+    return !PlayerbotAI::IsMelee(bot) && AI_VALUE2(Unit*, "find target", "26532");
 }

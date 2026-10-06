@@ -327,7 +327,10 @@ void AppendMorogrimTidewalkerMurlocExclusions(
 
         if (!tidewalker)
         {
-            tidewalker = AI_VALUE2(Unit*, "find target", "morogrim tidewalker");
+            // By leewheel 2026-10-07 合并后复查：本服 creature_template 名已汉化，
+            //   英文名 "morogrim tidewalker" 在 FindTargetValue 里永远匹配不上（长度+子串比对），
+            //   必须改用 entry 21213，否则莫洛格里姆的小鱼人排除逻辑静默失效。
+            tidewalker = AI_VALUE2(Unit*, "find target", "21213");
             if (!tidewalker)
                 return;
         }
@@ -340,7 +343,9 @@ void AppendMorogrimTidewalkerMurlocExclusions(
 
 void AppendLadyVashjGeneratorPhaseExclusions(AiObjectContext* context, GuidSet& exclusions)
 {
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "lady vashj");
+    // By leewheel 2026-10-07 合并后复查：同上，英文名必须换成 entry 21212（瓦斯琪女士），
+    //   否则"魔法屏障阶段把瓦斯琪排除出目标列表"这条逻辑静默失效。
+    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
     if (vashj && vashj->HasAura(Id(SscSpells::SPELL_MAGIC_BARRIER)))
         exclusions.insert(vashj->GetGUID());
 }

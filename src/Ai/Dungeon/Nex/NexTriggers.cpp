@@ -52,7 +52,7 @@ bool FactionCommanderWhirlwindTrigger::IsActive()
 
 bool TelestraFirebombTrigger::IsActive()
 {
-    if (botAI->IsMelee(bot)) { return false; }
+    if (PlayerbotAI::IsMelee(bot)) { return false; }
 
     Unit* boss = AI_VALUE2(Unit*, "find target", "26731");
     // Avoid split phase with the fake Telestra units, only match the true boss id
@@ -74,8 +74,9 @@ bool ChaoticRiftTrigger::IsActive()
 
 bool OrmorokSpikesTrigger::IsActive()
 {
+// By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找（汉化库英文名匹配不上）
     Unit* boss = AI_VALUE2(Unit*, "find target", "26794");
-    if (!boss || !botAI->IsTank(bot)) { return false; }
+    if (!boss || !PlayerbotAI::IsTank(bot)) { return false; }
 
     GuidVector objects = AI_VALUE(GuidVector, "closest game objects");
     for (auto i = objects.begin(); i != objects.end(); ++i)
@@ -91,8 +92,9 @@ bool OrmorokSpikesTrigger::IsActive()
 
 bool OrmorokStackTrigger::IsActive()
 {
+// By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找
     Unit* boss = AI_VALUE2(Unit*, "find target", "26794");
-    return (boss && !botAI->IsTank(bot));
+    return (boss && !PlayerbotAI::IsTank(bot));
 }
 
 bool IntenseColdTrigger::IsActive()
@@ -108,6 +110,6 @@ bool KeristraszaPositioningTrigger::IsActive()
 {
     Unit* boss = AI_VALUE2(Unit*, "find target", "26723");
     // Include healers here for now, otherwise they stand in things
-    return boss && !botAI->IsTank(bot) && !botAI->IsRangedDps(bot);
-    // return boss && botAI->IsMelee(bot) && !botAI->IsTank(bot);
+    return boss && !PlayerbotAI::IsTank(bot) && !PlayerbotAI::IsRangedDps(bot);
+    // return boss && PlayerbotAI::IsMelee(bot) && !PlayerbotAI::IsTank(bot);
 }

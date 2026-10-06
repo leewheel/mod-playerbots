@@ -47,8 +47,9 @@ float SkarvaldAndDalronnMultiplier::GetValue(Action* action)
 
 float IngvarThePlundererMultiplier::GetValue(Action* action)
 {
+// By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找（汉化库英文名匹配不上）
     Unit* boss = AI_VALUE2(Unit*, "find target", "23954");
-    bool isTank = botAI->IsTank(bot);
+    bool isTank = PlayerbotAI::IsTank(bot);
     if (!boss) { return 1.0f; }
 
     // Prevent movement actions overriding current movement, we're probably dodging a slam

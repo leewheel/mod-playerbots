@@ -57,9 +57,11 @@ ZhaoYufengMgr& ZhaoYufengMgr::instance()
 // ============================================================
 void ZhaoYufengMgr::LoadConfig()
 {
-    m_enabled = sConfigMgr->GetOption<bool>("AiPlayerbot.ZhaoYufeng.Enabled", true);
-    m_chance  = sConfigMgr->GetOption<uint32>("AiPlayerbot.ZhaoYufeng.Chance", 25);
-    m_name    = sConfigMgr->GetOption<std::string>("AiPlayerbot.ZhaoYufeng.Name", "赵与风");
+    // By leewheel 2026-10-07 合并 brighton the-lab #2854：配置键前缀随上游统一改为 Playerbots.*
+    //（原 AiPlayerbot.ZhaoYufeng.*，conf/playerbots.conf.dist 已同步改名）。
+    m_enabled = sConfigMgr->GetOption<bool>("Playerbots.ZhaoYufeng.Enabled", true);
+    m_chance  = sConfigMgr->GetOption<uint32>("Playerbots.ZhaoYufeng.Chance", 25);
+    m_name    = sConfigMgr->GetOption<std::string>("Playerbots.ZhaoYufeng.Name", "赵与风");
 
     if (m_chance > 100)
         m_chance = 100;

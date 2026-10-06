@@ -53,12 +53,15 @@ bool AcceptInvitationAction::Execute(Event /*event*/)
 
     botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "你好", {}));
 
-    //By leewheel 2026-08-31 修复: 接受入队邀请后跨地图/跨副本分卷不传送
+// By leewheel 2026-08-31 修复: 接受入队邀请后跨地图/跨副本分卷不传送
     //  仅按距离判断会漏掉"同地图不同副本分卷"的情况(坐标相同距离≈0)
-    if (sPlayerbotAIConfig.summonWhenGroup &&
-        (bot->GetDistance(inviter) > sPlayerbotAIConfig.sightDistance ||
+    // By leewheel 2026-10-07 合并 #2854：配置成员随上游改为 PascalCase
+    //  （summonWhenGroup -> SummonWhenGroup、sightDistance -> SightDistance）。
+    if (sPlayerbotAIConfig.SummonWhenGroup &&
+        (bot->GetDistance(inviter) > sPlayerbotAIConfig.SightDistance ||
          bot->GetMapId() != inviter->GetMapId() ||
          bot->GetInstanceId() != inviter->GetInstanceId()))
+    // End By leewheel
     {
         Teleport(inviter, bot, true);
     }

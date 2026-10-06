@@ -241,7 +241,7 @@ bool PetsAction::Execute(Event event)
             }
         }
         // Inform the master if the command succeeded or failed.
-        if (didAttack && sPlayerbotAIConfig.petChatCommandDebug == 1)
+        if (didAttack && sPlayerbotAIConfig.PetChatCommandDebug == 1)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "pet_attack_success", "已命令宠物攻击你的目标。", {});
@@ -259,7 +259,7 @@ bool PetsAction::Execute(Event event)
     else if (param == "follow")
     {
         botAI->PetFollow();
-        if (sPlayerbotAIConfig.petChatCommandDebug == 1)
+        if (sPlayerbotAIConfig.PetChatCommandDebug == 1)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "pet_follow_success", "已命令宠物跟随。", {});
@@ -300,7 +300,7 @@ bool PetsAction::Execute(Event event)
                 charmInfo->SetForcedTargetGUID();
             }
         }
-        if (sPlayerbotAIConfig.petChatCommandDebug == 1)
+        if (sPlayerbotAIConfig.PetChatCommandDebug == 1)
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "pet_stay_success", "已命令宠物停留。", {});
@@ -328,7 +328,7 @@ bool PetsAction::Execute(Event event)
     }
 
     // Inform the master of the new stance if debug is enabled.
-    if (sPlayerbotAIConfig.petChatCommandDebug == 1)
+    if (sPlayerbotAIConfig.PetChatCommandDebug == 1)
     {
         std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "pet_stance_set_success", "宠物姿态已设为 %stance.",
@@ -398,7 +398,7 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
     }
 
     // Debug message if pet spells have been toggled and debug is enabled
-    if (toggled && sPlayerbotAIConfig.petChatCommandDebug == 1)
+    if (toggled && sPlayerbotAIConfig.PetChatCommandDebug == 1)
         botAI->TellMaster("Pet autocast spells have been toggled.");
 
     return toggled;
@@ -472,7 +472,7 @@ bool SetPetStanceAction::Execute(Event /*event*/)
     }
 
     // Get the default pet stance from the configuration
-    int32 stance = sPlayerbotAIConfig.defaultPetStance;
+    int32 stance = sPlayerbotAIConfig.DefaultPetStance;
     ReactStates react = REACT_DEFENSIVE;
     std::string stanceText = "defensive (from config, fallback)";
 
@@ -508,7 +508,7 @@ bool SetPetStanceAction::Execute(Event /*event*/)
     }
 
     // If debug is enabled in config, inform the master of the new stance
-    if (sPlayerbotAIConfig.petChatCommandDebug == 1)
+    if (sPlayerbotAIConfig.PetChatCommandDebug == 1)
         botAI->TellMaster("Pet stance set to " + stanceText + " (applied to all pets/guardians).");
 
     return true;

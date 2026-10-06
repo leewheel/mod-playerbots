@@ -70,19 +70,22 @@ void server(Acore::Asio::IoContext& io_service, short port)
 
 void Run()
 {
-    if (!sPlayerbotAIConfig.commandServerPort)
+    if (!sPlayerbotAIConfig.CommandServerPort)
     {
         return;
     }
 
     std::ostringstream s;
-    s << "\x1b[32m" << "正在启动 Playerbots 命令服务器，端口 " << sPlayerbotAIConfig.commandServerPort << "\x1b[0m";
+// By leewheel 2026-10-07 合并 #2854：配置成员随上游改为 PascalCase（commandServerPort -> CommandServerPort）；
+    //   输出文本保留本 fork 的中文与绿色高亮。
+    s << "\x1b[32m" << "正在启动 Playerbots 命令服务器，端口 " << sPlayerbotAIConfig.CommandServerPort << "\x1b[0m";
+    // End By leewheel
     LOG_INFO("playerbots", "{}", s.str().c_str());
 
     try
     {
         Acore::Asio::IoContext io_service;
-        server(io_service, sPlayerbotAIConfig.commandServerPort);
+        server(io_service, sPlayerbotAIConfig.CommandServerPort);
     }
 
     catch (std::exception& e)

@@ -1281,7 +1281,7 @@ static std::pair<uint32, uint32> IC_AttackObjectives[] = {
 // useful commands for fixing BG bugs and checking waypoints/paths
 bool BGTactics::HandleConsoleCommand(ChatHandler* handler, char const* args)
 {
-    if (!sPlayerbotAIConfig.enabled)
+    if (!sPlayerbotAIConfig.Enabled)
     {
         handler->PSendSysMessage("|cffff0000玩家机器人系统当前已禁用！");
         return true;
@@ -4656,9 +4656,9 @@ bool BGTactics::useBuff()
     if (closeObjects.empty())
         return false;
 
-    bool needRegen = bot->GetHealthPct() < sPlayerbotAIConfig.mediumHealth ||
+    bool needRegen = bot->GetHealthPct() < sPlayerbotAIConfig.MediumHealth ||
                      (AI_VALUE2(bool, "has mana", "self target") &&
-                      AI_VALUE2(uint8, "mana", "self target") < sPlayerbotAIConfig.mediumMana);
+                      AI_VALUE2(uint8, "mana", "self target") < sPlayerbotAIConfig.MediumMana);
     bool needSpeed = (bgType != BATTLEGROUND_WS || bot->HasAura(BG_WS_SPELL_WARSONG_FLAG) ||
                       bot->HasAura(BG_WS_SPELL_SILVERWING_FLAG) || bot->HasAura(BG_EY_NETHERSTORM_FLAG_SPELL)) ||
                      !(teamFlagTaken() || flagTaken());
@@ -4687,7 +4687,7 @@ bool BGTactics::useBuff()
         // do not move to Berserk buff if bot is healer or has flag
         if (!(bot->HasAura(BG_WS_SPELL_WARSONG_FLAG) || bot->HasAura(BG_WS_SPELL_SILVERWING_FLAG) ||
               bot->HasAura(BG_EY_NETHERSTORM_FLAG_SPELL)) &&
-            !botAI->IsHeal(bot) && go->GetEntry() == Buff_Entries[2])
+            !PlayerbotAI::IsHeal(bot) && go->GetEntry() == Buff_Entries[2])
             foundBuff = true;
 
         if (foundBuff)

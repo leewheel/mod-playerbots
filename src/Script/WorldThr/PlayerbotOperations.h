@@ -78,13 +78,15 @@ public:
         if (group->AddMember(target))
         {
             LOG_DEBUG("playerbots", "GroupInviteOperation: Successfully added {} to group", target->GetName());
-            //By leewheel 2026-08-31 修复: 快速组队重组后机器人卡在上次副本分卷不传送
+//By leewheel 2026-08-31 修复: 快速组队重组后机器人卡在上次副本分卷不传送
             //  仅按距离判断会漏掉"同地图不同副本分卷"的情况(坐标相同距离≈0),
             //  地图或副本分卷不同也必须传送到邀请者身边
-            if (sPlayerbotAIConfig.summonWhenGroup &&
-                (target->GetDistance(bot) > sPlayerbotAIConfig.sightDistance ||
+            // By leewheel 2026-10-07 合并 #2854：配置成员随上游改为 PascalCase。
+            if (sPlayerbotAIConfig.SummonWhenGroup &&
+                (target->GetDistance(bot) > sPlayerbotAIConfig.SightDistance ||
                  target->GetMapId() != bot->GetMapId() ||
                  target->GetInstanceId() != bot->GetInstanceId()))
+            // End By leewheel
             {
                 PlayerbotAI* targetAI = sPlayerbotsMgr.GetPlayerbotAI(target);
                 if (targetAI)

@@ -47,8 +47,9 @@ OnyxiaNearTailTrigger::OnyxiaNearTailTrigger(PlayerbotAI* botAI) : Trigger(botAI
 
 bool OnyxiaNearTailTrigger::IsActive()
 {
+// By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找（汉化库英文名匹配不上）
     Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
-    if (!boss || botAI->IsTank(bot))
+    if (!boss || PlayerbotAI::IsTank(bot))
         return false;
 
     // Skip if Onyxia is in air or transitioning
@@ -96,7 +97,7 @@ bool RaidOnyxiaWhelpsSpawnTrigger::IsActive()
     if (!boss)
         return false;
 
-    return !botAI->IsHeal(bot) && boss->IsFlying();  // DPS + Tanks only
+    return !PlayerbotAI::IsHeal(bot) && boss->IsFlying();  // DPS + Tanks only
 }
 
 OnyxiaAvoidEggsTrigger::OnyxiaAvoidEggsTrigger(PlayerbotAI* botAI) : Trigger(botAI, "ony avoid eggs") {}

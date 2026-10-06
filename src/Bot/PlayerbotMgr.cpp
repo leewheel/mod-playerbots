@@ -140,16 +140,17 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
     Player* masterPlayer = masterSession ? masterSession->GetPlayer() : nullptr;
 
     bool isRndbot = !masterAccountId;
-    //By leewheel 2026-07-22
+//By leewheel 2026-07-22
     // 修复：addaccount 命令用于添加不同账号的机器人，原逻辑 allowAccountBots && accountId==masterAccountId
     // 要求同账号才通过，导致跨账号添加必然失败（"你无权控制机器人"）。
     // 改为：同账号直接通过，或 allowAccountBots 开启时允许跨账号。
-    bool sameAccount = accountId == masterAccountId || sPlayerbotAIConfig.allowAccountBots;
+    // By leewheel 2026-10-07 合并 #2854：配置成员随上游改为 PascalCase（allowAccountBots -> AllowAccountBots）。
+    bool sameAccount = accountId == masterAccountId || sPlayerbotAIConfig.AllowAccountBots;
     //End By leewheel
     Guild* guild = masterPlayer ? sGuildMgr->GetGuildById(masterPlayer->GetGuildId()) : nullptr;
-    bool sameGuild = sPlayerbotAIConfig.allowGuildBots && guild && guild->GetMember(playerGuid);
+    bool sameGuild = sPlayerbotAIConfig.AllowGuildBots && guild && guild->GetMember(playerGuid);
     bool addClassBot = sRandomPlayerbotMgr.IsAddclassBot(playerGuid.GetCounter());
-    bool linkedAccount = sPlayerbotAIConfig.allowTrustedAccountBots && IsAccountLinked(accountId, masterAccountId);
+    bool linkedAccount = sPlayerbotAIConfig.AllowTrustedAccountBots && IsAccountLinked(accountId, masterAccountId);
 
     // By leewheel 2026-07-15
     // 允许快速组队系统控制随机机器人账号下的角色
@@ -185,10 +186,12 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
                 ++loadingForMaster;
         }
         uint32 count = mgr->GetPlayerbotsCount() + loadingForMaster;
-        if (count >= uint32(PlayerbotAIConfig::instance().maxAddedBots))
+        if (count >= uint32(PlayerbotAIConfig::Instance().MaxAddedBots))
         {
             allowed = false;
-            out << "失败：你添加的机器人过多（超过 " << sPlayerbotAIConfig.maxAddedBots << " 个）";
+// By leewheel 2026-10-07 合并 #2854：配置成员 PascalCase；提示文本保留中文。
+            out << "失败：你添加的机器人过多（超过 " << sPlayerbotAIConfig.MaxAddedBots << " 个）";
+            // End By leewheel
         }
     }
     if (!allowed)
@@ -633,7 +636,7 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
 
             // Don't disband alt groups when master goes away
             // Controlled by config
-            if (sPlayerbotAIConfig.KeepAltsInGroup())
+            if (sPlayerbotAIConfig.KeepAltsInGroup)
             {
                 uint32 account = sCharacterCache->GetCharacterAccountIdByGuid(member);
                 if (!sPlayerbotAIConfig.IsInRandomAccountList(account))
@@ -714,11 +717,11 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
     uint32 accountId = bot->GetSession()->GetAccountId();
     bool isRandomAccount = sPlayerbotAIConfig.IsInRandomAccountList(accountId);
 
-    if (isRandomAccount && sPlayerbotAIConfig.randomBotFixedLevel)
+    if (isRandomAccount && sPlayerbotAIConfig.RandomBotFixedLevel)
     {
         bot->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
     }
-    else if (isRandomAccount && !sPlayerbotAIConfig.randomBotFixedLevel)
+    else if (isRandomAccount && !sPlayerbotAIConfig.RandomBotFixedLevel)
     {
         bot->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
     }
@@ -730,7 +733,7 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
         // PlayerbotFactory factory(bot, master->GetLevel());
         // factory.Randomize(false);
         uint32 mixedGearScore =
-            PlayerbotAI::GetMixedGearScore(master, true, false, 12) * sPlayerbotAIConfig.autoInitEquipLevelLimitRatio;
+            PlayerbotAI::GetMixedGearScore(master, true, false, 12) * sPlayerbotAIConfig.AutoInitEquipLevelLimitRatio;
         // work around: distinguish from 0 if no gear
         if (mixedGearScore == 0)
             mixedGearScore = 1;
@@ -755,7 +758,7 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
     uint8 locale = BroadcastHelper::GetLocale();
     AreaTableEntry const* current_zone = GET_PLAYERBOT_AI(bot)->GetCurrentZone();
     ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
-    std::string current_zone_name = current_zone ? GET_PLAYERBOT_AI(bot)->GetLocalizedAreaName(current_zone) : "";
+    std::string current_zone_name = current_zone ? PlayerbotAI::GetLocalizedAreaName(current_zone) : "";
 
     if (current_zone && cMgr)
     {
@@ -786,7 +789,7 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
                     //but if you (actual player) logout in a city and log back in - you join "City" versions
                     constexpr uint32 AREA_ID_CITY = 3459;
                     std::string const cityName =
-                        GET_PLAYERBOT_AI(bot)->GetLocalizedAreaName(sAreaTableStore.LookupEntry(AREA_ID_CITY));
+                        PlayerbotAI::GetLocalizedAreaName(sAreaTableStore.LookupEntry(AREA_ID_CITY));
                     snprintf(new_channel_name_buf, 100, channel->pattern[locale], cityName.c_str());
                     new_channel = cMgr->GetJoinChannel(new_channel_name_buf, channel->ChannelID);
                     break;
@@ -810,8 +813,10 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
 std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, ObjectGuid guid, ObjectGuid masterguid,
                                                      bool admin, uint32 masterAccountId, uint32)
 {
-    if (!sPlayerbotAIConfig.enabled || guid.IsEmpty())
+// By leewheel 2026-10-07 合并 #2854：配置成员 PascalCase；提示文本保留中文。
+    if (!sPlayerbotAIConfig.Enabled || guid.IsEmpty())
         return "机器人系统已禁用";
+    // End By leewheel
 
     std::string const normalizedCmd = PlayerbotCmd::NormalizeBotSubCommand(cmd);
 
@@ -829,8 +834,8 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
                 return "未找到该角色";
             }
 
-            if (!sPlayerbotAIConfig.allowAccountBots && accountId != masterAccountId &&
-                !(sPlayerbotAIConfig.allowTrustedAccountBots && IsAccountLinked(accountId, masterAccountId)))
+            if (!sPlayerbotAIConfig.AllowAccountBots && accountId != masterAccountId &&
+                !(sPlayerbotAIConfig.AllowTrustedAccountBots && IsAccountLinked(accountId, masterAccountId)))
             {
                 return "你只能添加自己账号或已关联账号的机器人";
             }
@@ -864,8 +869,10 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
 
     if (!addClassBot)
     {
-        if (!(normalizedCmd == "refresh=raid" && sPlayerbotAIConfig.resetInstanceIdForAltBots))
+// By leewheel 2026-10-07 合并 #2854：配置成员 PascalCase；提示文本保留中文；保留本 fork 的子命令归一化写法。
+        if (!(normalizedCmd == "refresh=raid" && sPlayerbotAIConfig.ResetInstanceIdForAltBots))
             return "错误：此命令只能用于 addclass 机器人。";
+        // End By leewheel
     }
 
     if (!admin)
@@ -881,8 +888,10 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
     {
         if (Player* master = GET_PLAYERBOT_AI(bot)->GetMaster())
         {
-            if (master->GetSession()->GetSecurity() <= SEC_PLAYER && sPlayerbotAIConfig.autoInitOnly &&
+// By leewheel 2026-10-07 合并 #2854：配置成员 PascalCase；保留本 fork 的子命令归一化写法。
+            if (master->GetSession()->GetSecurity() <= SEC_PLAYER && sPlayerbotAIConfig.AutoInitOnly &&
                 normalizedCmd != "init=auto")
+            // End By leewheel
             {
                 return "不允许使用此命令，请改用 init=auto。";
             }
@@ -928,7 +937,7 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
             else if (normalizedCmd == "init=auto")
             {
                 uint32 mixedGearScore = PlayerbotAI::GetMixedGearScore(master, true, false, 12) *
-                                        sPlayerbotAIConfig.autoInitEquipLevelLimitRatio;
+                                        sPlayerbotAIConfig.AutoInitEquipLevelLimitRatio;
                 // work around: distinguish from 0 if no gear
                 if (mixedGearScore == 0)
                     mixedGearScore = 1;
@@ -996,7 +1005,7 @@ static uint8 GetOfflinePlayerGender(ObjectGuid guid)
 
 bool PlayerbotMgr::HandlePlayerbotMgrCommand(ChatHandler* handler, char const* args)
 {
-    if (!sPlayerbotAIConfig.enabled)
+    if (!sPlayerbotAIConfig.Enabled)
     {
         handler->PSendSysMessage("|cffff0000玩家机器人系统当前已禁用！");
         return false;
@@ -1179,11 +1188,13 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
 
     if (botCmd == "tweak")
     {
-        sPlayerbotAIConfig.tweakValue = sPlayerbotAIConfig.tweakValue++;
-        if (sPlayerbotAIConfig.tweakValue > 2)
-            sPlayerbotAIConfig.tweakValue = 0;
+        sPlayerbotAIConfig.TweakValue = sPlayerbotAIConfig.TweakValue++;
+        if (sPlayerbotAIConfig.TweakValue > 2)
+            sPlayerbotAIConfig.TweakValue = 0;
 
-        messages.push_back("微调值已设为 " + std::to_string(sPlayerbotAIConfig.tweakValue));
+// By leewheel 2026-10-07 合并 #2854：配置成员 PascalCase；提示文本保留中文。
+        messages.push_back("微调值已设为 " + std::to_string(sPlayerbotAIConfig.TweakValue));
+        // End By leewheel
         return messages;
     }
 
@@ -1199,11 +1210,12 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
             if (master->isTaxiCheater())
                 master->SetTaxiCheater(false);
         }
-        else if (sPlayerbotAIConfig.selfBotLevel == 0)
-// By leewheel 2026-09-27 合并brighton the-lab：文案保留本地简体中文
+// By leewheel 2026-10-07 合并 #2854：配置成员 PascalCase；提示文本保留中文（上游本次改过英文文案）。
+        else if (sPlayerbotAIConfig.SelfBotLevel == 0)
             messages.push_back("自我机器人功能已禁用");
-        else if (sPlayerbotAIConfig.selfBotLevel == 1 && !master->CanBeGameMaster())
+        else if (sPlayerbotAIConfig.SelfBotLevel == 1 && !master->CanBeGameMaster())
             messages.push_back("你没有权限启用玩家机器人AI");
+        // End By leewheel
         else
         {
             messages.push_back("已启用玩家机器人AI");
@@ -1248,7 +1260,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
 
     if (botCmd == "addclass")
     {
-        if (sPlayerbotAIConfig.addClassCommand == 0 && !master->CanBeGameMaster())
+        if (sPlayerbotAIConfig.AddClassCommand == 0 && !master->CanBeGameMaster())
         {
             messages.push_back("你没有权限使用 addclass 命令创建机器人");
             return messages;
@@ -1355,7 +1367,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         // eligible character is always the same one. Walk a shuffled copy when a random one is wanted,
         // and the cache itself otherwise, so the default path copies nothing.
         ObjectGuid picked = ObjectGuid::Empty;
-        if (sPlayerbotAIConfig.addClassRandomCharacter)
+        if (sPlayerbotAIConfig.AddClassRandomCharacter)
         {
             std::vector<ObjectGuid> candidates(guidCache.begin(), guidCache.end());
             Acore::Containers::RandomShuffle(candidates);
@@ -1682,7 +1694,7 @@ PlayerbotMgr::~PlayerbotMgr()
 
 void PlayerbotMgr::UpdateAIInternal(uint32 elapsed, bool /*minimal*/)
 {
-    SetNextCheckDelay(sPlayerbotAIConfig.reactDelay);
+    SetNextCheckDelay(sPlayerbotAIConfig.ReactDelay);
     CheckTellErrors(elapsed);
 }
 
@@ -1692,12 +1704,13 @@ void PlayerbotMgr::HandleCommand(uint32 type, std::string const text)
     if (!master)
         return;
 
-    // By leewheel 2026-09-08 与 PlayerbotAI 保持一致：分隔符按字符集合匹配，并防止空分隔符导致无限递归
-    if (!sPlayerbotAIConfig.commandSeparator.empty() &&
-        text.find_first_of(sPlayerbotAIConfig.commandSeparator) != std::string::npos)
+// By leewheel 2026-09-08 与 PlayerbotAI 保持一致：分隔符按字符集合匹配，并防止空分隔符导致无限递归
+    // By leewheel 2026-10-07 合并 #2854：配置成员随上游改为 PascalCase（commandSeparator -> CommandSeparator）。
+    if (!sPlayerbotAIConfig.CommandSeparator.empty() &&
+        text.find_first_of(sPlayerbotAIConfig.CommandSeparator) != std::string::npos)
     {
         std::vector<std::string> commands;
-        split(commands, text, sPlayerbotAIConfig.commandSeparator.c_str());
+        split(commands, text, sPlayerbotAIConfig.CommandSeparator.c_str());
         for (std::vector<std::string>::iterator i = commands.begin(); i != commands.end(); ++i)
         {
             HandleCommand(type, *i);
@@ -1853,10 +1866,10 @@ void PlayerbotMgr::OnPlayerLogin(Player* player)
     // set locale priority for bot texts
     PlayerbotTextMgr::instance().AddLocalePriority(usedLocale);
 
-    if (sPlayerbotAIConfig.selfBotLevel > 2)
+    if (sPlayerbotAIConfig.SelfBotLevel > 2)
         HandlePlayerbotCommand("self", player);
 
-    if (!sPlayerbotAIConfig.botAutologin)
+    if (!sPlayerbotAIConfig.BotAutologin)
         return;
 
     uint32 accountId = session->GetAccountId();
@@ -1896,7 +1909,7 @@ void PlayerbotMgr::TellError(std::string const botName, std::string const text)
 void PlayerbotMgr::CheckTellErrors(uint32 /*elapsed*/)
 {
     time_t now = time(nullptr);
-    if ((now - lastErrorTell) < sPlayerbotAIConfig.errorDelay / 1000)
+    if ((now - lastErrorTell) < sPlayerbotAIConfig.ErrorDelay / 1000)
         return;
 
     lastErrorTell = now;
@@ -1980,7 +1993,7 @@ void PlayerbotsMgr::RemovePlayerBotData(ObjectGuid const& guid, bool is_AI)
 
 PlayerbotAI* PlayerbotsMgr::GetPlayerbotAI(Player* player)
 {
-    if (!(sPlayerbotAIConfig.enabled) || !player)
+    if (!(sPlayerbotAIConfig.Enabled) || !player)
     {
         return nullptr;
     }
@@ -2000,7 +2013,7 @@ PlayerbotAI* PlayerbotsMgr::GetPlayerbotAI(Player* player)
 
 PlayerbotMgr* PlayerbotsMgr::GetPlayerbotMgr(Player* player)
 {
-    if (!(sPlayerbotAIConfig.enabled) || !player)
+    if (!(sPlayerbotAIConfig.Enabled) || !player)
     {
         return nullptr;
     }

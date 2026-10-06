@@ -10,7 +10,7 @@
 
 bool StormforgedLieutenantTrigger::IsActive()
 {
-    if (!botAI->IsDps(bot)) { return false; }
+    if (!PlayerbotAI::IsDps(bot)) { return false; }
 
     // Target is not findable from threat table using AI_VALUE2(),
     // therefore need to search manually for the unit name
@@ -38,8 +38,9 @@ bool BjarngrimWhirlwindTrigger::IsActive()
 
 bool VolkhanTrigger::IsActive()
 {
+// By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找
     Unit* boss = AI_VALUE2(Unit*, "find target", "28587");
-    return boss && !botAI->IsTank(bot) && !botAI->IsHeal(bot);
+    return boss && !PlayerbotAI::IsTank(bot) && !PlayerbotAI::IsHeal(bot);
 }
 
 bool IonarStaticOverloadTrigger::IsActive()
@@ -58,7 +59,7 @@ bool IonarStaticOverloadTrigger::IsActive()
 
 bool IonarBallLightningTrigger::IsActive()
 {
-    if (botAI->IsMelee(bot)) { return false; }
+    if (PlayerbotAI::IsMelee(bot)) { return false; }
 
     Unit* boss = AI_VALUE2(Unit*, "find target", "28546");
     if (!boss) { return false; }
@@ -68,7 +69,7 @@ bool IonarBallLightningTrigger::IsActive()
 
 bool IonarTankAggroTrigger::IsActive()
 {
-    if (!botAI->IsTank(bot)) { return false; }
+    if (!PlayerbotAI::IsTank(bot)) { return false; }
 
     Unit* boss = AI_VALUE2(Unit*, "find target", "28546");
     if (!boss) { return false; }
@@ -86,7 +87,8 @@ bool IonarDisperseTrigger::IsActive()
 
 bool LokenRangedTrigger::IsActive()
 {
-    return !botAI->IsMelee(bot) && AI_VALUE2(Unit*, "find target", "28923");
+// By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找
+    return !PlayerbotAI::IsMelee(bot) && AI_VALUE2(Unit*, "find target", "28923");
 }
 
 bool LokenLightningNovaTrigger::IsActive()

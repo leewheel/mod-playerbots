@@ -96,7 +96,7 @@ bool FollowChatShortcutAction::Execute(Event /*event*/)
 
     /* Default mechanics takes care of this now.
     if (bot->GetMapId() != master->GetMapId() || (master && bot->GetDistance(master) >
-    sPlayerbotAIConfig.sightDistance))
+    sPlayerbotAIConfig.SightDistance))
     {
         if (bot->isDead())
         {
@@ -164,7 +164,7 @@ bool FleeChatShortcutAction::Execute(Event /*event*/)
     ResetReturnPosition();
     ResetStayPosition();
 
-    if (bot->GetMapId() != master->GetMapId() || bot->GetDistance(master) > sPlayerbotAIConfig.sightDistance)
+    if (bot->GetMapId() != master->GetMapId() || bot->GetDistance(master) > sPlayerbotAIConfig.SightDistance)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "fleeing_far", "距离太远，我不会与你一起逃跑", {}));
@@ -217,7 +217,7 @@ bool TankAttackChatShortcutAction::Execute(Event /*event*/)
     if (!master)
         return false;
 
-    if (!botAI->IsTank(bot))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
     botAI->Reset();

@@ -19,9 +19,9 @@
 //     uint8 targetHealth = AI_VALUE2(uint8, "health", "current target");
 //     uint8 mana = AI_VALUE2(uint8, "mana", "self target");
 //     bool hasMana = AI_VALUE2(bool, "has mana", "self target");
-//     bool mediumMana = hasMana && mana < sPlayerbotAIConfig.mediumMana;
+//     bool mediumMana = hasMana && mana < sPlayerbotAIConfig.MediumMana;
 
-//     if (health < sPlayerbotAIConfig.lowHealth)
+//     if (health < sPlayerbotAIConfig.LowHealth)
 //         return 1.0f;
 
 //     Unit* target = AI_VALUE(Unit*, "current target");
@@ -92,7 +92,7 @@
 float HealerAutoSaveManaMultiplier::GetValue(Action* action)
 {
     uint8 mana = bot->GetPowerPct(Powers::POWER_MANA);
-    if (mana > sPlayerbotAIConfig.saveManaThreshold)
+    if (mana > sPlayerbotAIConfig.SaveManaThreshold)
         return 1.0f;
     CastHealingSpellAction* healingAction = dynamic_cast<CastHealingSpellAction*>(action);
 
@@ -102,21 +102,22 @@ float HealerAutoSaveManaMultiplier::GetValue(Action* action)
     Unit* target = healingAction->GetTarget();
     if (!target)
         return 1.0f;
-
-    // By leewheel 2026-09-10
+// By leewheel 2026-09-10
     // 紧急豁免：目标血量已进入"低血"区间时，省蓝逻辑必须让路。
     // 根因：低等级治疗 bot 蓝池小（20 级萨满约 500~700），副本里持续治疗后蓝量会掉到
     // SaveManaThreshold（本服配置 60）以下。一旦低于阈值：
     //   - manaEfficiency <= LOW 的技能（如萨满 Lesser Healing Wave）在"非坦克"分支被无条件压制；
     //   - Healing Wave 只对血量 <= 50% 的目标放行。
-    // 而 PartyMemberToHeal 的入选门槛是 mediumHealth(65)，两者重叠，导致队友 50~65% 血时
+    // 而 PartyMemberToHeal 的入选门槛是 MediumHealth(65)，两者重叠，导致队友 50~65% 血时
     // 既被选为治疗目标、又被省蓝压制 -> 完全不治疗，玩家看到"萨满不给低血队友加血"。
-    // 此处让 lowHealth(45) 以下无条件放行，使快速治疗（LHW）也能用；其余判定原样保留。
-    if (target->GetHealthPct() < sPlayerbotAIConfig.lowHealth)
+    // 此处让 LowHealth(45) 以下无条件放行，使快速治疗（LHW）也能用；其余判定原样保留。
+    // By leewheel 2026-10-07 合并 #2854：配置成员随上游改为 PascalCase（lowHealth -> LowHealth）。
+    if (target->GetHealthPct() < sPlayerbotAIConfig.LowHealth)
         return 1.0f;
     // End By leewheel
 
-    bool isTank = target->ToPlayer() ? botAI->IsTank(target->ToPlayer()) : false;
+    // By leewheel 2026-10-07 合并 #2854：采纳上游静态调用写法 PlayerbotAI::IsTank。
+    bool isTank = target->ToPlayer() ? PlayerbotAI::IsTank(target->ToPlayer()) : false;
     uint8 health = target->GetHealthPct();
     HealingManaEfficiency manaEfficiency = healingAction->manaEfficiency;
     uint8 estAmount = healingAction->estAmount;
@@ -124,16 +125,16 @@ float HealerAutoSaveManaMultiplier::GetValue(Action* action)
     if (isTank)
     {
         estAmount /= 1.5;  // tanks have more health
-        if (health >= sPlayerbotAIConfig.mediumHealth &&
+        if (health >= sPlayerbotAIConfig.MediumHealth &&
             (lossAmount < estAmount || manaEfficiency <= HealingManaEfficiency::MEDIUM))
             return 0.0f;
-        if (health >= sPlayerbotAIConfig.lowHealth &&
+        if (health >= sPlayerbotAIConfig.LowHealth &&
             (lossAmount < estAmount || manaEfficiency <= HealingManaEfficiency::LOW))
             return 0.0f;
     }
     else
     {
-        if (health >= sPlayerbotAIConfig.mediumHealth &&
+        if (health >= sPlayerbotAIConfig.MediumHealth &&
             (lossAmount < estAmount || manaEfficiency <= HealingManaEfficiency::MEDIUM))
             return 0.0f;
         if (lossAmount < estAmount || manaEfficiency <= HealingManaEfficiency::LOW)

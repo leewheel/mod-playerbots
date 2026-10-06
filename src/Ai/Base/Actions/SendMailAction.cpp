@@ -43,7 +43,7 @@ bool SendMailAction::Execute(Event event)
     if (!tellTo)
         tellTo = receiver;
 
-    if (!sPlayerbotAIConfig.botSendMailEnabled)
+    if (!sPlayerbotAIConfig.BotSendMailEnabled)
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                          "send_mail_disabled", "我无法发送邮件", {}),

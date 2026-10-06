@@ -16,7 +16,7 @@ bool MutatingInjectionMeleeTrigger::IsActive()
     if (!boss)
         return false;
 
-    return MutatingInjectionTrigger::IsActive() && !botAI->IsRanged(bot);
+    return MutatingInjectionTrigger::IsActive() && !PlayerbotAI::IsRanged(bot);
 }
 
 bool MutatingInjectionRangedTrigger::IsActive()
@@ -25,7 +25,7 @@ bool MutatingInjectionRangedTrigger::IsActive()
     if (!boss)
         return false;
 
-    return MutatingInjectionTrigger::IsActive() && botAI->IsRanged(bot);
+    return MutatingInjectionTrigger::IsActive() && PlayerbotAI::IsRanged(bot);
 }
 
 bool AuraRemovedTrigger::IsActive()
@@ -45,7 +45,7 @@ bool MutatingInjectionRemovedTrigger::IsActive()
     if (!boss)
         return false;
 
-    return HasNoAuraTrigger::IsActive() && botAI->GetState() == BOT_STATE_COMBAT && botAI->IsRanged(bot);
+    return HasNoAuraTrigger::IsActive() && botAI->GetState() == BOT_STATE_COMBAT && PlayerbotAI::IsRanged(bot);
 }
 
 bool GrobbulusCloudTrigger::IsActive()
@@ -54,7 +54,7 @@ bool GrobbulusCloudTrigger::IsActive()
     if (!boss)
         return false;
 
-    if (!botAI->IsMainTank(bot))
+    if (!PlayerbotAI::IsMainTank(bot))
         return false;
 
     // bot->Yell("has aggro on " + boss->GetName() + " : " + to_string(AI_VALUE2(bool, "has aggro", "boss target")),
@@ -97,7 +97,7 @@ bool RazuviousTankTrigger::IsActive()
 {
     Difficulty diff = bot->GetRaidDifficulty();
     if (diff == RAID_DIFFICULTY_10MAN_NORMAL)
-        return helper.UpdateBossAI() && botAI->IsTank(bot);
+        return helper.UpdateBossAI() && PlayerbotAI::IsTank(bot);
 
     return helper.UpdateBossAI() && bot->getClass() == CLASS_PRIEST;
 }
@@ -106,7 +106,7 @@ bool RazuviousNontankTrigger::IsActive()
 {
     Difficulty diff = bot->GetRaidDifficulty();
     if (diff == RAID_DIFFICULTY_10MAN_NORMAL)
-        return helper.UpdateBossAI() && !(botAI->IsTank(bot));
+        return helper.UpdateBossAI() && !(PlayerbotAI::IsTank(bot));
 
     return helper.UpdateBossAI() && !(bot->getClass() == CLASS_PRIEST);
 }
@@ -150,7 +150,7 @@ bool GluthMainTankMortalWoundTrigger::IsActive()
     if (!helper.UpdateBossAI())
         return false;
 
-    if (!botAI->IsAssistTankOfIndex(bot, 0))
+    if (!PlayerbotAI::IsAssistTankOfIndex(bot, 0))
         return false;
 
     Unit* mt = AI_VALUE(Unit*, "main tank");
@@ -194,7 +194,7 @@ bool MaexxnaTrigger::IsActive()
     if (!boss)
         return false;
 
-    return !botAI->IsTank(bot);
+    return !PlayerbotAI::IsTank(bot);
 }
 
 //bool PatchwerkTankTrigger::IsActive()
@@ -204,7 +204,7 @@ bool MaexxnaTrigger::IsActive()
 //    {
 //        return false;
 //    }
-//    return !botAI->IsTank(bot) && !botAI->IsRanged(bot);
+//    return !PlayerbotAI::IsTank(bot) && !PlayerbotAI::IsRanged(bot);
 //}
 //
 //bool PatchwerkRangedTrigger::IsActive()
@@ -214,7 +214,7 @@ bool MaexxnaTrigger::IsActive()
 //    {
 //        return false;
 //    }
-//    return !botAI->IsTank(bot) && botAI->IsRanged(bot);
+//    return !PlayerbotAI::IsTank(bot) && PlayerbotAI::IsRanged(bot);
 //}
 //
 //bool PatchwerkNonTankTrigger::IsActive()
@@ -224,7 +224,7 @@ bool MaexxnaTrigger::IsActive()
 //    {
 //        return false;
 //    }
-//    return !botAI->IsTank(bot);
+//    return !PlayerbotAI::IsTank(bot);
 //}
 
 bool LoathebTrigger::IsActive() { return helper.UpdateBossAI(); }
