@@ -63,12 +63,8 @@ bool BlackTempleResetEncounterStatesAction::Execute(Event /*event*/)
 
 bool BlackTempleMisdirectToMainTankAction::Execute(Event /*event*/)
 {
-//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
-//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
-//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
-//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
-    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
-    if (!najentus)
+    Unit* boss = AI_VALUE2(Unit*, "find target", _bossName);
+    if (!boss)
         return false;
 
     Player* mainTank = GetGroupMainTank(bot);
@@ -325,58 +321,6 @@ bool HighWarlordNajentusThrowImpalingSpineAction::Execute(Event /*event*/)
 
 // Supremus
 
-//By leewheel 2026-10-06 合并 brighton the-lab: 本块上游侧为空 ⇒ 整段保留本核实现。
-bool SupremusMisdirectToTanksAction::Execute(Event /*event*/)
-{
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
-    if (!supremus)
-        return false;
-
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-
-    std::vector<Player*> hunters;
-    for (GroupReference* ref = group->GetFirstMember(); ref && hunters.size() < 3; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (member && member->GetMapId() == BLACK_TEMPLE_MAP_ID && member->IsAlive() &&
-            member->getClass() == CLASS_HUNTER && GET_PLAYERBOT_AI(member))
-        {
-            hunters.push_back(member);
-        }
-    }
-
-    if (hunters.empty())
-        return false;
-
-    Player* mainTank = GetGroupMainTank(bot);
-    Player* firstAssistTank = GetGroupAssistTank(bot, 0);
-    Player* secondAssistTank = GetGroupAssistTank(bot, 1);
-
-    Player* misdirectTarget = nullptr;
-    if (bot == hunters[0] && mainTank)
-        misdirectTarget = mainTank;
-    else if (hunters.size() > 1 && bot == hunters[1] && firstAssistTank)
-        misdirectTarget = firstAssistTank;
-    else if (hunters.size() > 2 && bot == hunters[2] && secondAssistTank)
-        misdirectTarget = secondAssistTank;
-
-    if (!misdirectTarget)
-        return false;
-
-    if (botAI->CanCastSpell("misdirection", misdirectTarget))
-        return botAI->CastSpell("misdirection", misdirectTarget);
-
-    if (bot->HasAura(Id(BlackTempleSpells::SPELL_MISDIRECTION)) &&
-        botAI->CanCastSpell("steady shot", supremus))
-    {
-        return botAI->CastSpell("steady shot", supremus);
-    }
-
-    return false;
-}
-
 bool SupremusDisperseRangedAction::Execute(Event /*event*/)
 {
     Player* nearestPlayer = GetNearestPlayerInRadius(bot, SUPREMUS_RANGED_SPREAD_DISTANCE);
@@ -389,7 +333,7 @@ bool SupremusDisperseRangedAction::Execute(Event /*event*/)
 bool SupremusKiteBossAction::Execute(Event /*event*/)
 {
     Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
-    if (!supremus)
+    if (!supremus || bot->GetDistance2d(supremus) >= SUPREMUS_KITE_DISTANCE)
         return false;
 
     constexpr MovementPriority priority = MovementPriority::MOVEMENT_FORCED;
@@ -523,19 +467,6 @@ bool SupremusMoveAwayFromVolcanosAction::IsPathSafeFromVolcanos(
     return true;
 }
 
-//By leewheel 2026-10-06 合并 brighton the-lab: 本块上游侧为空 ⇒ 整段保留本核实现。
-bool SupremusManagePhaseTimerAction::Execute(Event /*event*/)
-{
-    Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
-    if (!supremus)
-        return false;
-
-    supremusPhaseTimer.try_emplace(
-        supremus->GetMap()->GetInstanceId(), getMSTime());
-
-    return false;
-}
-
 // Shade of Akama
 
 // Channelers stand on a platform out of sight from below, and Attack refuses a target out of
@@ -573,29 +504,6 @@ bool ShadeOfAkamaMeleeDpsPrioritizeChannelersAction::Execute(Event /*event*/)
 }
 
 // Teron Gorefiend
-
-//By leewheel 2026-10-06 合并 brighton the-lab: 本块上游侧为空 ⇒ 整段保留本核实现。
-bool TeronGorefiendMisdirectToMainTankAction::Execute(Event /*event*/)
-{
-    Unit* gorefiend = AI_VALUE2(Unit*, "find target", "22871");
-    if (!gorefiend)
-        return false;
-
-    Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank)
-        return false;
-
-    if (botAI->CanCastSpell("misdirection", mainTank))
-        return botAI->CastSpell("misdirection", mainTank);
-
-    if (bot->HasAura(Id(BlackTempleSpells::SPELL_MISDIRECTION)) &&
-        botAI->CanCastSpell("steady shot", gorefiend))
-    {
-        return botAI->CastSpell("steady shot", gorefiend);
-    }
-
-    return false;
-}
 
 bool TeronGorefiendTanksPositionBossAction::Execute(Event /*event*/)
 {
@@ -789,33 +697,6 @@ bool TeronGorefiendControlAndDestroyShadowyConstructsAction::Execute(Event /*eve
 
 // Gurtogg Bloodboil
 
-//By leewheel 2026-10-06 合并 brighton the-lab: 本块上游侧为空 ⇒ 整段保留本核实现。
-bool GurtoggBloodboilMisdirectToMainTankAction::Execute(Event /*event*/)
-{
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
-    if (!gurtogg)
-        return false;
-
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-
-    Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank)
-        return false;
-
-    if (botAI->CanCastSpell("misdirection", mainTank))
-        return botAI->CastSpell("misdirection", mainTank);
-
-    if (bot->HasAura(Id(BlackTempleSpells::SPELL_MISDIRECTION)) &&
-        botAI->CanCastSpell("steady shot", gurtogg))
-    {
-        return botAI->CastSpell("steady shot", gurtogg);
-    }
-
-    return false;
-}
-
 bool GurtoggBloodboilTanksPositionBossAction::Execute(Event /*event*/)
 {
     Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
@@ -847,42 +728,10 @@ bool GurtoggBloodboilTanksPositionBossAction::Execute(Event /*event*/)
 
 bool GurtoggBloodboilRotateRangedGroupsAction::Execute(Event /*event*/)
 {
-//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
-//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
-//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
-//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
-    if (!gurtogg)
-        return false;
-
-    std::vector<std::vector<Player*>> const groups = GetGurtoggRangedRotationGroups(bot);
-    int const activeGroup = GetGurtoggActiveRotationGroup(gurtogg);
-
-    bool inActiveGroup = false;
-    if (activeGroup >= 0 && static_cast<size_t>(activeGroup) < groups.size())
-    {
-        auto const& group = groups[activeGroup];
-        inActiveGroup = std::find(group.begin(), group.end(), bot) != group.end();
-    }
-
-    Position const& nearPosition = GURTOGG_RANGED_POSITION;
-    Position const& farPosition = GURTOGG_SOAKER_POSITION;
-    constexpr float distFromPos = 2.0f;
-
-    if (inActiveGroup && bot->GetExactDist2d(farPosition) > distFromPos)
-    {
-        return MoveInside(BLACK_TEMPLE_MAP_ID, farPosition.GetPositionX(),
-                          farPosition.GetPositionY(), bot->GetPositionZ(),
-                          distFromPos, MovementPriority::MOVEMENT_FORCED);
-    }
-    else if (!inActiveGroup && bot->GetExactDist2d(nearPosition) > distFromPos)
-    {
-        return MoveInside(BLACK_TEMPLE_MAP_ID, nearPosition.GetPositionX(),
-                          nearPosition.GetPositionY(), bot->GetPositionZ(),
-                          distFromPos, MovementPriority::MOVEMENT_FORCED);
-    }
-
-    return false;
+    Position const& position = GetGurtoggBloodboilPosition(bot);
+    return MoveInside(
+        BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), bot->GetPositionZ(),
+        GURTOGG_POSITION_TOLERANCE, MovementPriority::MOVEMENT_FORCED);
 }
 
 bool GurtoggBloodboilLeadBossToTankPositionAction::Execute(Event /*event*/)
@@ -891,47 +740,9 @@ bool GurtoggBloodboilLeadBossToTankPositionAction::Execute(Event /*event*/)
     if (bot->GetExactDist2d(position) <= GURTOGG_POSITION_TOLERANCE)
         return false;
 
-//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
-//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
-//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
-//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
-    Player* enragedPlayer = nullptr;
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (member && member->HasAura(Id(BlackTempleSpells::SPELL_PLAYER_FEL_RAGE)))
-        {
-            enragedPlayer = member;
-            break;
-        }
-    }
-
-    constexpr float safeDistance = 20.0f;
-    constexpr uint32 minInterval = 0;
-    if (enragedPlayer && bot->GetExactDist2d(enragedPlayer) < safeDistance)
-        return FleePosition(enragedPlayer->GetPosition(), safeDistance, minInterval);
-
-    return false;
-}
-
-bool GurtoggBloodboilManagePhaseTimerAction::Execute(Event /*event*/)
-{
-    Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
-    if (!gurtogg)
-        return false;
-
-    uint32 const now = getMSTime();
-    uint32 const instanceId = gurtogg->GetMap()->GetInstanceId();
-
-    if (gurtogg->HasAura(Id(BlackTempleSpells::SPELL_BOSS_FEL_RAGE)))
-    {
-        return gurtoggPhaseTimer.erase(instanceId) > 0;
-    }
-    else
-    {
-        auto const [it, inserted] = gurtoggPhaseTimer.try_emplace(instanceId, now);
-        return inserted;
-    }
+    return MoveTo(
+        BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), bot->GetPositionZ(), false,
+        false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 // Reliquary of Souls
@@ -939,10 +750,7 @@ bool GurtoggBloodboilManagePhaseTimerAction::Execute(Event /*event*/)
 bool ReliquaryOfSoulsMisdirectToMainTankAction::Execute(Event /*event*/)
 {
     Unit* desire = AI_VALUE2(Unit*, "find target", "23419");
-    // By leewheel 2026-10-02 合并brighton the-lab 07e47c61..beef2d08: essence of anger=23420(愤怒精华)，
-    //   23418苦痛/23419欲望/23420愤怒（creature_template 基础列实查），上游英文名按规则第81条 entry 化
     Unit* anger = AI_VALUE2(Unit*, "find target", "23420");
-    // End By leewheel
 
     if (!desire && !anger)
         return false;
@@ -1066,15 +874,9 @@ bool ReliquaryOfSoulsHealersDpsSufferingAction::Execute(Event /*event*/)
 
 bool ReliquaryOfSoulsSpellstealRuneShieldAction::Execute(Event /*event*/)
 {
-//By leewheel 2026-10-06 合并 brighton the-lab: 上游把「先判 boss 在场再判 action 类��」重构成
-//   「先判 action 类��、末尾 return boss ? 0 : 1」，两者语义等价。
-//   按本核铁律 find-target 一律用 NPC entry（上游侧用的是英文名如 "supremus"/"gurtogg bloodboil"），
-//   保留本核写法，并把整份文件里 find target 的英文名统一换成 entry。
-    if (Unit* desire = AI_VALUE2(Unit*, "find target", "23419");
-        desire && botAI->CanCastSpell("spellsteal", desire))
-    {
-        return botAI->CastSpell("spellsteal", desire);
-    }
+    Unit* desire = AI_VALUE2(Unit*, "find target", "23419");
+    if (!desire)
+        return false;
 
     if (!botAI->CanCastSpell(Id(BtSpells::SPELL_SPELLSTEAL), desire))
         return false;
@@ -1089,29 +891,6 @@ bool ReliquaryOfSoulsSpellReflectDeadenAction::Execute(Event /*event*/)
 }
 
 // Mother Shahraz
-
-//By leewheel 2026-10-06 合并 brighton the-lab: 本块上游侧为空 ⇒ 整段保留本核实现。
-bool MotherShahrazMisdirectToMainTankAction::Execute(Event /*event*/)
-{
-    Unit* shahraz = AI_VALUE2(Unit*, "find target", "22947");
-    if (!shahraz)
-        return false;
-
-    Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank)
-        return false;
-
-    if (botAI->CanCastSpell("misdirection", mainTank))
-        return botAI->CastSpell("misdirection", mainTank);
-
-    if (bot->HasAura(Id(BlackTempleSpells::SPELL_MISDIRECTION)) &&
-        botAI->CanCastSpell("steady shot", shahraz))
-    {
-        return botAI->CastSpell("steady shot", shahraz);
-    }
-
-    return false;
-}
 
 bool MotherShahrazTanksPositionBossUnderPillarAction::Execute(Event /*event*/)
 {
@@ -1304,7 +1083,7 @@ bool IllidariCouncilMisdirectToTanksAction::Execute(Event /*event*/)
     Player* tankTarget = nullptr;
     if (hunterIndex == 0)
     {
-        councilTarget = AI_VALUE2(Unit*, "find target", "22950");
+        councilTarget = AI_VALUE2(Unit*, "find target", "22992");
         tankTarget = GetZerevorMageTank(botAI);
     }
     else if (hunterIndex == 1)
@@ -1452,7 +1231,7 @@ bool IllidariCouncilSecondAssistTankPositionDarkshadowAction::Execute(Event /*ev
 
 bool IllidariCouncilMageTankPositionZerevorAction::Execute(Event /*event*/)
 {
-    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
+    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22992");
     if (!zerevor)
         return false;
 
@@ -1491,7 +1270,7 @@ bool IllidariCouncilPositionMageTankHealerAction::Execute(Event /*event*/)
     if (!mageTank)
         return false;
 
-    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
+    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22992");
     if (!zerevor || zerevor->GetVictim() != mageTank)
         return false;
 
@@ -1567,7 +1346,7 @@ bool IllidariCouncilAssignDpsTargetsAction::Execute(Event /*event*/)
         return false;
 
     bool shouldAttackMalande = false;
-    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
+    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22992");
     if (zerevor && zerevor->GetExactDist2d(malande) < 15.0f)
     {
         shouldAttackMalande = false;
@@ -1590,7 +1369,7 @@ bool IllidariCouncilAssignDpsTargetsAction::Execute(Event /*event*/)
             return Attack(malande);
     }
     else if (Unit* darkshadow = AI_VALUE2(Unit*, "find target", "22952");
-        darkshadow && !darkshadow->HasAura(Id(BlackTempleSpells::SPELL_VANISH)))
+        darkshadow && !IsDarkshadowVanished(darkshadow))
     {
         SetRtiTarget(botAI, "circle");
 

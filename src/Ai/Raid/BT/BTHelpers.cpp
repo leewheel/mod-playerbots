@@ -781,7 +781,7 @@ Position const& GetGurtoggBloodboilPosition(Player* bot)
 float FindGurtoggSecondTankThreat(PlayerbotAI* botAI)
 {
     Unit* gurtogg = botAI->GetAiObjectContext()
-                        ->GetValue<Unit*>("find target", "gurtogg bloodboil")
+                        ->GetValue<Unit*>("find target", "22948")
                         ->Get();
     if (!gurtogg)
         return 0.0f;
