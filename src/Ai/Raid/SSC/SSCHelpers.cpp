@@ -2624,7 +2624,12 @@ void PlanVashjCorePassingChain(Player* bot, Unit* tainted, Player* looter)
     }
 
     AssignVashjCoreCatchers(bot, chain);
-    SscState(bot->GetInstanceId()).vashjCorePassingChain = std::move(chain);
+//By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，等于无锁保护。
+        //   跨地图线程并发写同一 state 会崩（unordered_map 扩容时尤其）。
+            WithSscState(bot->GetInstanceId(), [&chain](SscInstanceState& state)
+    {
+        state.vashjCorePassingChain = std::move(chain);
+    });
 }
 
 bool ReplanVashjCorePassingChain(Player* holder, VashjCorePassingChain& chain, ObjectGuid excluded)
@@ -2725,6 +2730,22 @@ float GetVashjCoreSpotArrivalDistance(VashjCorePassingChain const& chain, int8 i
 }
 
 // Shared encounter state
+
+//By leewheel 2026-10-07 补上 4e9d05bc 缺失的真正持锁访问：
+//   那个提交里的 std::lock_guard 只覆盖了下面 SscState() 的一行查找就释放了，
+//   返回的引用被调用方长期持有并读写 ⇒ 等于没加锁。
+//   改为把锁本身交出去（RAII unique_lock），锁活到调用方用完为止。
+//   刻意不做成回调模板：lambda 是函数内部类型，模板实现在本 .cpp 时无法跨 TU 实例化
+//   （2026-10-07 实测报 7 处 LNK2019）。
+std::unique_lock<std::mutex> LockSscState()
+{
+    return std::unique_lock<std::mutex>(sscStateMutex);
+}
+
+SscInstanceState& SscStateLocked(uint32 instanceId)
+{
+    return sscStates[instanceId];
+}
 
 SscInstanceState& SscState(uint32 instanceId)
 {

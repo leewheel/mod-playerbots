@@ -14,6 +14,7 @@
 #include <array>
 #include <initializer_list>
 #include <limits>
+#include <mutex>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -833,7 +834,38 @@ struct SscInstanceState
     std::optional<VashjCorePassingChain> vashjCorePassingChain;
 };
 
+//By leewheel 2026-10-07 修正 4e9d05bc 的无效加锁：
+//   原 SscState() 里 std::lock_guard 只保护了 sscStates[instanceId] 这一行查找，
+//   随后就返回引用并立刻析构锁；调用方拿到的引用在读写整个 SscInstanceState 期间
+//   完全无锁。两个 SSC 副本跑在不同地图线程时，仍会并发写同一个 state
+//   （unordered_map 扩容时更会直接崩在迭代器上）⇒ 那个 mutex 等于没加。
+//
+//   正解：写操作用 WithSscState()（定义在本头文件、inline），由它在回调期间真正持锁。
+//   ⚠ 回调体内不得再调用 SscState()/WithSscState()/SscResetInstance()
+//     ——std::mutex 不可重入，会自锁死。
+//
+//   刻意把模板实现放头文件而不是 .cpp：调用方传的 lambda 是函数内部类型，
+//   若模板只在 .cpp 里定义，SSCActions.cpp 需要的那些实例化无法跨 TU 产生，
+//   会直接 LNK2019（2026-10-07 实测 7 处 unresolved external symbol）。
+
+// 取得 SSC 共享状态锁（RAII，作用域结束自动解锁）。
+std::unique_lock<std::mutex> LockSscState();
+
+// 在已持有 LockSscState() 的前提下取得可写引用。
+SscInstanceState& SscStateLocked(uint32 instanceId);
+
+// 只读快照用：【不提供任何保护】，仅用于「读几个字段做判断」的场景。
+//   任何会修改 state 的地方都必须改用 WithSscState()。
 SscInstanceState& SscState(uint32 instanceId);
+
+// 真正持锁访问：在回调执行期间持有 sscStateMutex，供写操作使用。
+template <typename Fn>
+auto WithSscState(uint32 instanceId, Fn&& fn) -> decltype(fn(std::declval<SscInstanceState&>()))
+{
+    std::unique_lock<std::mutex> lock = LockSscState();
+    return fn(SscStateLocked(instanceId));
+}
+
 bool SscResetInstance(uint32 instanceId);
 
 template <typename T, typename U>

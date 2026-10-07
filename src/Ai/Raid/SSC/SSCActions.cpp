@@ -224,29 +224,33 @@ bool HydrossTheUnstableManagePhaseTimersAction::Execute(Event /*event*/)
     Unit* victim = hydross->GetVictim();
     Player* marked = victim && victim->IsPlayer() ? victim->ToPlayer() : bot;
 
-    SscInstanceState& state = SscState(instanceId);
-    bool updated = false;
-
-    if (IsHydrossInFrostPhase(hydross))
+    //By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，
+    //   这一整段多字段读改写完全无锁，两个 SSC 副本在不同地图线程并发时必崩。
+    return WithSscState(instanceId, [hydross, marked, now](SscInstanceState& state)
     {
-        updated |= EmplaceIfUnset(state.hydrossFrostPhaseStartTime, now);
-        updated |= ResetIfSet(state.hydrossNaturePhaseStartTime);
-        updated |= ResetIfSet(state.hydrossNatureMarkMaxedTime);
+        bool updated = false;
 
-        if (!state.hydrossFrostMarkMaxedTime && HasMarkOfHydrossAt100Percent(marked))
-            updated |= EmplaceIfUnset(state.hydrossFrostMarkMaxedTime, now);
-    }
-    else // Nature phase
-    {
-        updated |= EmplaceIfUnset(state.hydrossNaturePhaseStartTime, now);
-        updated |= ResetIfSet(state.hydrossFrostPhaseStartTime);
-        updated |= ResetIfSet(state.hydrossFrostMarkMaxedTime);
+        if (IsHydrossInFrostPhase(hydross))
+        {
+            updated |= EmplaceIfUnset(state.hydrossFrostPhaseStartTime, now);
+            updated |= ResetIfSet(state.hydrossNaturePhaseStartTime);
+            updated |= ResetIfSet(state.hydrossNatureMarkMaxedTime);
 
-        if (!state.hydrossNatureMarkMaxedTime && HasMarkOfCorruptionAt100Percent(marked))
-            updated |= EmplaceIfUnset(state.hydrossNatureMarkMaxedTime, now);
-    }
+            if (!state.hydrossFrostMarkMaxedTime && HasMarkOfHydrossAt100Percent(marked))
+                updated |= EmplaceIfUnset(state.hydrossFrostMarkMaxedTime, now);
+        }
+        else // Nature phase
+        {
+            updated |= EmplaceIfUnset(state.hydrossNaturePhaseStartTime, now);
+            updated |= ResetIfSet(state.hydrossFrostPhaseStartTime);
+            updated |= ResetIfSet(state.hydrossFrostMarkMaxedTime);
 
-    return updated;
+            if (!state.hydrossNatureMarkMaxedTime && HasMarkOfCorruptionAt100Percent(marked))
+                updated |= EmplaceIfUnset(state.hydrossNatureMarkMaxedTime, now);
+        }
+
+        return updated;
+    });
 }
 
 // The Lurker Below
@@ -500,31 +504,36 @@ bool TheLurkerBelowTanksPickUpGuardiansAction::Execute(Event /*event*/)
 ObjectGuid TheLurkerBelowTanksPickUpGuardiansAction::ClaimGuardianForTank(
     std::vector<Unit*> const& guardians, int8 myIndex)
 {
-    std::optional<LurkerGuardianTankAssignments>& assignmentsField =
-        SscState(bot->GetInstanceId()).lurkerGuardianTankAssignments;
-    LurkerGuardianTankAssignments& assignments =
-        assignmentsField ? *assignmentsField : assignmentsField.emplace();
-    ObjectGuid& assignedGuid = assignments[myIndex];
-
-    if (std::any_of(guardians.begin(), guardians.end(),
-            [&assignedGuid](Unit* guardian) { return guardian->GetGUID() == assignedGuid; }))
+    //By leewheel 2026-10-07 读-改-写改走 WithSscState：原 SscState() 返回引用时锁已释放，
+    //   下面 assignmentsField.emplace() 与后续赋值都在无锁下做，并发时必崩。
+    return WithSscState(bot->GetInstanceId(), [&guardians, myIndex](SscInstanceState& state)
     {
-        return assignedGuid;
-    }
+        std::optional<LurkerGuardianTankAssignments>& assignmentsField =
+            state.lurkerGuardianTankAssignments;
+        LurkerGuardianTankAssignments& assignments =
+            assignmentsField ? *assignmentsField : assignmentsField.emplace();
+        ObjectGuid& assignedGuid = assignments[myIndex];
 
-    assignedGuid = ObjectGuid::Empty;
-
-    for (Unit* guardian : guardians)
-    {
-        if (std::find(assignments.begin(), assignments.end(), guardian->GetGUID()) ==
-            assignments.end())
+        if (std::any_of(guardians.begin(), guardians.end(),
+                [&assignedGuid](Unit* guardian) { return guardian->GetGUID() == assignedGuid; }))
         {
-            assignedGuid = guardian->GetGUID();
-            break;
+            return assignedGuid;
         }
-    }
 
-    return assignedGuid;
+        assignedGuid = ObjectGuid::Empty;
+
+        for (Unit* guardian : guardians)
+        {
+            if (std::find(assignments.begin(), assignments.end(), guardian->GetGUID()) ==
+                assignments.end())
+            {
+                assignedGuid = guardian->GetGUID();
+                break;
+            }
+        }
+
+        return assignedGuid;
+    });
 }
 
 bool TheLurkerBelowMeleeMoveDirectlyToTargetAction::Execute(Event /*event*/)
@@ -879,34 +888,38 @@ bool LeotherasTheBlindManageDpsWaitTimersAction::Execute(Event /*event*/)
     if (!leotheras)
         return false;
 
-    SscInstanceState& state = SscState(leotheras->GetInstanceId());
     uint32 const now = getMSTime();
 
-    bool changed = false;
+    //By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，
+    //   这一整段多字段读改写完全无锁，两个 SSC 副本在不同地图线程并发时必崩。
+    return WithSscState(leotheras->GetInstanceId(), [this, leotheras, now](SscInstanceState& state)
+    {
+        bool changed = false;
 
-    if (IsLeotherasHumanoidPhase(botAI))
-    {
-        changed |= EmplaceIfUnset(state.leotherasHumanoidPhaseStartTime, now);
-        changed |= TrackWhirlwindEnd(leotheras, state.leotherasWhirlwindEndTime, now);
-        changed |= ResetIfSet(state.leotherasDemonPhaseStartTime);
-        changed |= ResetIfSet(state.leotherasFinalPhaseStartTime);
-    }
-    else if (IsLeotherasDemonPhase(botAI))
-    {
-        changed |= EmplaceIfUnset(state.leotherasDemonPhaseStartTime, now);
-        changed |= ResetIfSet(state.leotherasHumanoidPhaseStartTime);
-        changed |= ResetIfSet(state.leotherasWhirlwindEndTime);
-        changed |= ResetIfSet(state.leotherasFinalPhaseStartTime);
-    }
-    else if (IsLeotherasFinalPhase(botAI))
-    {
-        changed |= EmplaceIfUnset(state.leotherasFinalPhaseStartTime, now);
-        changed |= TrackWhirlwindEnd(leotheras, state.leotherasWhirlwindEndTime, now);
-        changed |= ResetIfSet(state.leotherasHumanoidPhaseStartTime);
-        changed |= ResetIfSet(state.leotherasDemonPhaseStartTime);
-    }
+        if (IsLeotherasHumanoidPhase(botAI))
+        {
+            changed |= EmplaceIfUnset(state.leotherasHumanoidPhaseStartTime, now);
+            changed |= TrackWhirlwindEnd(leotheras, state.leotherasWhirlwindEndTime, now);
+            changed |= ResetIfSet(state.leotherasDemonPhaseStartTime);
+            changed |= ResetIfSet(state.leotherasFinalPhaseStartTime);
+        }
+        else if (IsLeotherasDemonPhase(botAI))
+        {
+            changed |= EmplaceIfUnset(state.leotherasDemonPhaseStartTime, now);
+            changed |= ResetIfSet(state.leotherasHumanoidPhaseStartTime);
+            changed |= ResetIfSet(state.leotherasWhirlwindEndTime);
+            changed |= ResetIfSet(state.leotherasFinalPhaseStartTime);
+        }
+        else if (IsLeotherasFinalPhase(botAI))
+        {
+            changed |= EmplaceIfUnset(state.leotherasFinalPhaseStartTime, now);
+            changed |= TrackWhirlwindEnd(leotheras, state.leotherasWhirlwindEndTime, now);
+            changed |= ResetIfSet(state.leotherasHumanoidPhaseStartTime);
+            changed |= ResetIfSet(state.leotherasDemonPhaseStartTime);
+        }
 
-    return changed;
+        return changed;
+    });
 }
 
 // Whirlwind resets threat on every tick. Hold dps for a moment after it ends. But do not hold
@@ -1171,8 +1184,11 @@ bool FathomLordKarathressManageDpsTimerAction::Execute(Event /*event*/)
     if (!karathress)
         return false;
 
-    return EmplaceIfUnset(
-        SscState(karathress->GetInstanceId()).karathressDpsWaitTimer, getMSTime());
+    //By leewheel 2026-10-07 写操作改走 WithSscState：原写法取到引用时锁已释放，emplace 无锁。
+    return WithSscState(karathress->GetInstanceId(), [now = getMSTime()](SscInstanceState& state)
+    {
+        return EmplaceIfUnset(state.karathressDpsWaitTimer, now);
+    });
 }
 
 bool FathomLordKarathressDropToGroundAfterCycloneAction::Execute(Event /*event*/)
@@ -1471,54 +1487,60 @@ bool LadyVashjAssignStationSlotsAction::Execute(Event /*event*/)
     if (!group)
         return false;
 
-    std::optional<VashjStationHolders>& holdersField =
-        SscState(bot->GetInstanceId()).vashjStationHolders;
-    VashjStationHolders& holders = holdersField ? *holdersField : holdersField.emplace();
-    auto holdsSlot = [&holders](ObjectGuid guid)
+    //By leewheel 2026-10-07 读-改-写改走 WithSscState：原 SscState() 返回引用时锁已释放，
+    //   下面 holdersField.emplace() 与逐槽位赋值都在无锁下做，并发时必崩。
+    //   锁内调用的 IsLiveVashjStationHolder / GetVashjStationFillOrder 均不碰 SscState，
+    //   不会重入加锁（std::mutex 不可重入）。
+    return WithSscState(bot->GetInstanceId(), [this, group](SscInstanceState& state)
     {
-        return std::any_of(holders.begin(), holders.end(), [guid](auto const& station)
+        std::optional<VashjStationHolders>& holdersField = state.vashjStationHolders;
+        VashjStationHolders& holders = holdersField ? *holdersField : holdersField.emplace();
+        auto holdsSlot = [&holders](ObjectGuid guid)
         {
-            return std::find(station.begin(), station.end(), guid) != station.end();
-        });
-    };
+            return std::any_of(holders.begin(), holders.end(), [guid](auto const& station)
+            {
+                return std::find(station.begin(), station.end(), guid) != station.end();
+            });
+        };
 
-    std::vector<Player*> rangedSpares;
-    std::vector<Player*> healerSpares;
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (!member || !member->IsAlive() || member->GetMapId() != SSC_MAP_ID ||
-            !GET_PLAYERBOT_AI(member) || holdsSlot(member->GetGUID()))
+        std::vector<Player*> rangedSpares;
+        std::vector<Player*> healerSpares;
+        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
-            continue;
+            Player* member = ref->GetSource();
+            if (!member || !member->IsAlive() || member->GetMapId() != SSC_MAP_ID ||
+                !GET_PLAYERBOT_AI(member) || holdsSlot(member->GetGUID()))
+            {
+                continue;
+            }
+
+            if (PlayerbotAI::IsRangedDps(member))
+                rangedSpares.push_back(member);
+            else if (PlayerbotAI::IsHeal(member))
+                healerSpares.push_back(member);
         }
 
-        if (PlayerbotAI::IsRangedDps(member))
-            rangedSpares.push_back(member);
-        else if (PlayerbotAI::IsHeal(member))
-            healerSpares.push_back(member);
-    }
+        bool changed = false;
+        size_t nextRanged = 0;
+        size_t nextHealer = 0;
+        for (VashjStationSlot const& slot : GetVashjStationFillOrder())
+        {
+            ObjectGuid& holder = holders[slot.station][slot.slot];
+            if (IsLiveVashjStationHolder(bot, holder))
+                continue;
 
-    bool changed = false;
-    size_t nextRanged = 0;
-    size_t nextHealer = 0;
-    for (VashjStationSlot const& slot : GetVashjStationFillOrder())
-    {
-        ObjectGuid& holder = holders[slot.station][slot.slot];
-        if (IsLiveVashjStationHolder(bot, holder))
-            continue;
+            bool const isHealerSlot = slot.slot == VASHJ_STATION_HEALER_SLOT;
+            std::vector<Player*> const& spares = isHealerSlot ? healerSpares : rangedSpares;
+            size_t& next = isHealerSlot ? nextHealer : nextRanged;
+            if (next >= spares.size())
+                continue;
 
-        bool const isHealerSlot = slot.slot == VASHJ_STATION_HEALER_SLOT;
-        std::vector<Player*> const& spares = isHealerSlot ? healerSpares : rangedSpares;
-        size_t& next = isHealerSlot ? nextHealer : nextRanged;
-        if (next >= spares.size())
-            continue;
+            holder = spares[next++]->GetGUID();
+            changed = true;
+        }
 
-        holder = spares[next++]->GetGUID();
-        changed = true;
-    }
-
-    return changed;
+        return changed;
+    });
 }
 
 bool LadyVashjPhase2PositionAtStationAction::Execute(Event /*event*/)
@@ -1609,7 +1631,12 @@ bool LadyVashjAssignGroundingShamanAction::Execute(Event /*event*/)
     if (!shaman)
         return false;
 
-    SscState(bot->GetInstanceId()).vashjGroundingShaman = shaman->GetGUID();
+//By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，等于无锁保护。
+        //   跨地图线程并发写同一 state 会崩（unordered_map 扩容时尤其）。
+            WithSscState(bot->GetInstanceId(), [shaman](SscInstanceState& state)
+    {
+        state.vashjGroundingShaman = shaman->GetGUID();
+    });
     return true;
 }
 
@@ -2021,8 +2048,12 @@ bool LadyVashjAssignTaintedCoreLooterAction::Execute(Event /*event*/)
     if (!looter)
         return false;
 
-    SscState(bot->GetInstanceId()).vashjTaintedCoreLooter =
-        TaintedCoreLooter{ tainted->GetGUID(), looter->GetGUID(), station };
+//By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，等于无锁保护。
+        //   跨地图线程并发写同一 state 会崩（unordered_map 扩容时尤其）。
+            WithSscState(bot->GetInstanceId(), [tainted, looter, station](SscInstanceState& state)
+    {
+        state.vashjTaintedCoreLooter = TaintedCoreLooter{ tainted->GetGUID(), looter->GetGUID(), station };
+    });
 
     VashjCorePassingChain* chain = GetVashjCorePassingChain(bot);
     if (!chain || chain->tainted != tainted->GetGUID())
