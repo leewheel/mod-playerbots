@@ -41,7 +41,7 @@ bool VanillaKelthuzadChooseTargetAction::Execute(Event /*event*/)
         if (unit->GetDistance2d(helper.center.first, helper.center.second) > 30.0f)
             continue;
 
-        if (bot->GetDistance2d(unit) > sPlayerbotAIConfig.spellDistance)
+        if (bot->GetDistance2d(unit) > sPlayerbotAIConfig.SpellDistance)
             continue;
 
         if (botAI->EqualLowercaseName(unit->GetName(), "unstoppable abomination") || unit->GetEntry() == 16428)

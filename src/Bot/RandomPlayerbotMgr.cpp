@@ -510,7 +510,7 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
     // 启动爬坡期每10秒播报一条"已登录 N/M"；达到目标或连续6个周期无增长
     // （可用角色不足/已达上限）则播报收尾并停止，避免长期刷屏。
     // 注：UpdateAI 的 tick 间隔随爬坡阶段变化，10秒为下限，实际间隔取两者较大值。
-    if (sPlayerbotAIConfig.randomBotAutologin && !_loginProgressDone)
+    if (sPlayerbotAIConfig.RandomBotAutologin && !_loginProgressDone)
     {
         if (maxAllowedBotCount && onlineBotCount >= maxAllowedBotCount)
         {
@@ -1637,7 +1637,7 @@ static void RestoreBotTalents(Player* bot, uint8 specTab)
         return;
 
     uint8 const cls = bot->getClass();
-    uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
+    uint32 const specIndex = sPlayerbotAIConfig.RandomClassSpecIndex[cls][specTab];
     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
     if (bot->GetFreeTalentPoints() > 0)
     {
@@ -2383,7 +2383,7 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     // 否则 bot 会带着洗坏的天赋留在池子里，下一轮补位再次判定失败，形成连败循环。
                     uint8 const specTabBefore = AiFactory::GetPlayerSpecTab(cand.bot);
                     // End By leewheel
-                    uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cand.cls][specTab];
+                    uint32 const specIndex = sPlayerbotAIConfig.RandomClassSpecIndex[cand.cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(cand.bot, specIndex, true);
                     if (cand.bot->GetFreeTalentPoints() > 0)
                     {
@@ -2544,7 +2544,7 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     // 记录切换前的天赋页快照，切换失败时回滚（同坦克职业轮转段）
                     uint8 const specTabBefore = AiFactory::GetPlayerSpecTab(bot);
                     // End By leewheel
-                    uint32 specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
+                    uint32 specIndex = sPlayerbotAIConfig.RandomClassSpecIndex[cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
                     if (bot->GetFreeTalentPoints() > 0)
                     {
@@ -2608,7 +2608,7 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     // 记录切换前的天赋页快照，切换失败时回滚
                     uint8 const healSpecTabBefore = AiFactory::GetPlayerSpecTab(bot);
                     // End By leewheel
-                    uint32 specIndex = sPlayerbotAIConfig.randomClassSpecIndex[cls][specTab];
+                    uint32 specIndex = sPlayerbotAIConfig.RandomClassSpecIndex[cls][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
                     if (bot->GetFreeTalentPoints() > 0)
                     {
@@ -2708,7 +2708,7 @@ void RandomPlayerbotMgr::ForceBotsJoinLfg(TeamId teamId)
                     // 记录切换前的天赋页快照，切换失败时回滚（与其它切换点保持一致）
                     uint8 const specTabBefore = AiFactory::GetPlayerSpecTab(bot);
                     // End By leewheel
-                    uint32 const specIndex = sPlayerbotAIConfig.randomClassSpecIndex[bot->getClass()][specTab];
+                    uint32 const specIndex = sPlayerbotAIConfig.RandomClassSpecIndex[bot->getClass()][specTab];
                     PlayerbotFactory::InitTalentsBySpecNo(bot, specIndex, true);
                     if (bot->GetFreeTalentPoints() > 0)
                     {
@@ -2918,7 +2918,7 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
     if (lfgState != lfg::LFG_STATE_NONE)
     {
         // 重置所有事件以延后下一次执行，避免 bot 离开 LFG 后立刻再次被传送
-        SetEventValue(bot, "update", 1, sPlayerbotAIConfig.randomBotUpdateInterval);
+        SetEventValue(bot, "update", 1, sPlayerbotAIConfig.RandomBotUpdateInterval);
         return false;
     }
     // End By leewheel
@@ -3092,8 +3092,8 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
             {
                 Refresh(bot);
                 uint32 ambienceTime =
-                    urand(sPlayerbotAIConfig.minRandomBotTeleportInterval,
-                          sPlayerbotAIConfig.maxRandomBotTeleportInterval);
+                    urand(sPlayerbotAIConfig.MinRandomBotTeleportInterval,
+                          sPlayerbotAIConfig.MaxRandomBotTeleportInterval);
                 ScheduleTeleport(botId, ambienceTime);
                 return true;
             }
@@ -3542,24 +3542,24 @@ void RandomPlayerbotMgr::ReshuffleAmbienceBots()
 // End By leewheel
 uint32 RandomPlayerbotMgr::RollNativeBotLevel()
 {
-    uint32 minLevel = sPlayerbotAIConfig.randomBotMinLevel;
-    uint32 maxLevel = std::min<uint32>(sPlayerbotAIConfig.randomBotMaxLevel,
+    uint32 minLevel = sPlayerbotAIConfig.RandomBotMinLevel;
+    uint32 maxLevel = std::min<uint32>(sPlayerbotAIConfig.RandomBotMaxLevel,
         static_cast<uint32>(sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL)));
     if (minLevel > maxLevel)
         return 0;
 
     // 与 RandomizeLevel（本文件）完全一致的原生分布掷点
     uint32 roll = urand(1, 100);
-    if (roll <= 100 * sPlayerbotAIConfig.randomBotMaxLevelChance)
+    if (roll <= 100 * sPlayerbotAIConfig.RandomBotMaxLevelChance)
         return maxLevel;
-    if (roll <= 100 * (sPlayerbotAIConfig.randomBotMaxLevelChance + sPlayerbotAIConfig.randomBotMinLevelChance))
+    if (roll <= 100 * (sPlayerbotAIConfig.RandomBotMaxLevelChance + sPlayerbotAIConfig.RandomBotMinLevelChance))
         return minLevel;
     return urand(minLevel, maxLevel);
 }
 
 bool RandomPlayerbotMgr::FixBotLevel(Player* bot)
 {
-    if (sPlayerbotAIConfig.disableRandomLevels)
+    if (sPlayerbotAIConfig.DisableRandomLevels)
         return false;
 
     // 忙碌状态（战场/副本/排队/战斗/飞行/死亡）的bot不动，等下次登录或命令
@@ -3589,7 +3589,7 @@ bool RandomPlayerbotMgr::FixBotLevel(Player* bot)
 
 void RandomPlayerbotMgr::FixLevelDistribution()
 {
-    if (sPlayerbotAIConfig.disableRandomLevels)
+    if (sPlayerbotAIConfig.DisableRandomLevels)
     {
         LOG_ERROR("playerbots", "随机等级已禁用（AiPlayerbot.DisableRandomLevels=1），跳过等级分布修复");
         return;

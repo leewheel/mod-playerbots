@@ -76,7 +76,7 @@ std::vector<std::string> QuickPartyHelper::RandomGear(Player* invoker, Player* t
     factory.InitEquipment(true);
     factory.InitBags(true);
     factory.InitAmmo();
-    if (level >= sPlayerbotAIConfig.minEnchantingBotLevel)
+    if (level >= sPlayerbotAIConfig.MinEnchantingBotLevel)
         factory.ApplyEnchantAndGemsNew();
     target->DurabilityRepairAll(false, 1.0f, false);
 

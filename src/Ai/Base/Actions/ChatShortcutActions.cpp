@@ -299,7 +299,7 @@ bool TankAttackChatShortcutAction::Execute(Event /*event*/)
             pullStrategy->RequestPull(target);
             context->GetValue<Unit*>("current target")->Set(target);
             botAI->ChangeEngine(BOT_STATE_COMBAT);
-            botAI->SetNextCheckDelay(sPlayerbotAIConfig.reactDelay);
+            botAI->SetNextCheckDelay(sPlayerbotAIConfig.ReactDelay);
 
             //By leewheel 2026-08-31 硬性规则: 开怪瞬间立即给第一只怪标骷髅, 不等触发器周期
             //  前提: 骷髅槽位为空或指向已死亡/消失目标(陈旧标记)才覆盖,

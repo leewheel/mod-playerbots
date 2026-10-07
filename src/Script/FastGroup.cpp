@@ -742,10 +742,10 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
     // 原代码 INNER JOIN account a ON c.account = a.id 试图在角色数据库中JOIN account表，
     // 但 account 表在登录数据库(acore_auth)中，不在角色数据库(acore_characters)中，
     // 导致SQL报错 "Table 'acore_characters.account' doesn't exist"，查询返回空结果。
-    // 修复方案：使用 sPlayerbotAIConfig.randomBotAccounts 内存列表（服务器启动时已加载）
+    // 修复方案：使用 sPlayerbotAIConfig.RandomBotAccounts 内存列表（服务器启动时已加载）
     //          构建账号ID的 IN 条件，替代跨库JOIN。
     std::string accountCondition;
-    if (sPlayerbotAIConfig.randomBotAccounts.empty())
+    if (sPlayerbotAIConfig.RandomBotAccounts.empty())
     {
         // 兜底：如果内存列表为空，直接返回（不应该发生）
         LOG_ERROR("playerbots", "快速组队：randomBotAccounts 列表为空，无法查找离线机器人。");
@@ -753,7 +753,7 @@ std::vector<BotCandidate> FindOfflineBotsForRole(
     }
 
     bool acctFirst = true;
-    for (uint32 acctId : sPlayerbotAIConfig.randomBotAccounts)
+    for (uint32 acctId : sPlayerbotAIConfig.RandomBotAccounts)
     {
         if (!acctFirst)
             accountCondition += ",";
@@ -1287,8 +1287,8 @@ void EnsureBotHasMounts(Player* bot)
         return;
 
     uint32 botLevel = bot->GetLevel();
-    uint32 groundMountMinLevel = sPlayerbotAIConfig.useGroundMountAtMinLevel;
-    uint32 flyMountMinLevel = sPlayerbotAIConfig.useFlyMountAtMinLevel;
+    uint32 groundMountMinLevel = sPlayerbotAIConfig.UseGroundMountAtMinLevel;
+    uint32 flyMountMinLevel = sPlayerbotAIConfig.UseFlyMountAtMinLevel;
 
     // By leewheel 2026-07-18
     // 重写：改用硬编码数组替代数据库查询，不再依赖 spell_dbc 表和静态缓存
@@ -1365,11 +1365,11 @@ void EnsureBotHasMounts(Player* bot)
     // 注意：绝不使用 removeSpell，避免破坏 InitSkills 已正确设置的骑术技能
     if (botLevel >= groundMountMinLevel && !bot->HasSpell(33388))
         bot->learnSpell(33388);  // Apprentice Riding (地面骑术75)
-    if (botLevel >= sPlayerbotAIConfig.useFastGroundMountAtMinLevel && !bot->HasSpell(33391))
+    if (botLevel >= sPlayerbotAIConfig.UseFastGroundMountAtMinLevel && !bot->HasSpell(33391))
         bot->learnSpell(33391);  // Journeyman Riding (地面骑术150)
     if (botLevel >= flyMountMinLevel && !bot->HasSpell(34090))
         bot->learnSpell(34090);  // Expert Riding (飞行骑术225)
-    if (botLevel >= sPlayerbotAIConfig.useFastFlyMountAtMinLevel && !bot->HasSpell(34091))
+    if (botLevel >= sPlayerbotAIConfig.UseFastFlyMountAtMinLevel && !bot->HasSpell(34091))
         bot->learnSpell(34091);  // Artisan Riding (飞行骑术300)
     if (botLevel >= 77 && !bot->HasSpell(54197))
         bot->learnSpell(54197);  // Cold Weather Flying (寒冷天气飞行)
@@ -1750,7 +1750,7 @@ public:
         // End By leewheel
         factory.InitBags(true);
         factory.InitAmmo();
-        if (targetLevel >= sPlayerbotAIConfig.minEnchantingBotLevel)
+        if (targetLevel >= sPlayerbotAIConfig.MinEnchantingBotLevel)
             factory.ApplyEnchantAndGemsNew();
 
         player->DurabilityRepairAll(false, 1.0f, false);

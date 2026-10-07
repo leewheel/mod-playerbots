@@ -32,10 +32,10 @@ bool UnknownDungeonTrigger::IsActive()
 bool LfgRolePriorityTrigger::IsActive()
 {
     // By leewheel 2026-07-29: 允许通过配置关闭坦克优先
-    if (!sPlayerbotAIConfig.randomBotJoinLfg || sPlayerbotAIConfig.randomBotLfgRolePriority == 0)
+    if (!sPlayerbotAIConfig.RandomBotJoinLfg || sPlayerbotAIConfig.randomBotLfgRolePriority == 0)
         return false;
 
-    if (getMSTime() - lastCheck < sPlayerbotAIConfig.repeatDelay)
+    if (getMSTime() - lastCheck < sPlayerbotAIConfig.RepeatDelay)
         return false;
     lastCheck = getMSTime();
 
@@ -72,7 +72,7 @@ bool LfgRolePriorityTrigger::IsActive()
         return false;
     // End By leewheel
 
-    int32 k = (int32)(probability / sPlayerbotAIConfig.randomChangeMultiplier);
+    int32 k = (int32)(probability / sPlayerbotAIConfig.RandomChangeMultiplier);
     if (k < 1)
         k = 1;
     return (rand() % k) == 0;

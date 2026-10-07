@@ -2075,8 +2075,8 @@ bool AvoidAoeAction::TryDisarmTrap()
             continue;
 
         // 跳过白名单中的陷阱
-        if (sPlayerbotAIConfig.aoeAvoidSpellWhitelist.find(trapSpellId) !=
-            sPlayerbotAIConfig.aoeAvoidSpellWhitelist.end())
+        if (sPlayerbotAIConfig.AoeAvoidSpellWhitelist.find(trapSpellId) !=
+            sPlayerbotAIConfig.AoeAvoidSpellWhitelist.end())
             continue;
 
         const SpellInfo* trapSpellInfo = sSpellMgr->GetSpellInfo(trapSpellId);
@@ -2103,7 +2103,7 @@ bool AvoidAoeAction::TryDisarmTrap()
 
         lastDisarmTimer = time(nullptr);
 
-        if (sPlayerbotAIConfig.tellWhenAvoidAoe && lastTellTimer < time(nullptr) - 10)
+        if (sPlayerbotAIConfig.TellWhenAvoidAoe && lastTellTimer < time(nullptr) - 10)
         {
             lastTellTimer = time(nullptr);
             lastMoveTimer = getMSTime();

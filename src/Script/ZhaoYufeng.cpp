@@ -111,7 +111,7 @@ void ZhaoYufengMgr::LoadEntriesFromDb()
 // ============================================================
 void ZhaoYufengMgr::RecruitIfMissing(uint32 teamId)
 {
-    if (sPlayerbotAIConfig.randomBotAccounts.empty())
+    if (sPlayerbotAIConfig.RandomBotAccounts.empty())
     {
         LOG_WARN("playerbots", "赵与风：随机机器人账号列表为空（{} 阵营暂不征用），将在后续重试。",
             teamId == 0 ? "联盟" : "部落");
@@ -144,7 +144,7 @@ void ZhaoYufengMgr::RecruitIfMissing(uint32 teamId)
     // 随机机器人账号 IN 条件
     std::string accountCondition = "account IN (";
     bool firstAccount = true;
-    for (uint32 accountId : sPlayerbotAIConfig.randomBotAccounts)
+    for (uint32 accountId : sPlayerbotAIConfig.RandomBotAccounts)
     {
         if (!firstAccount)
             accountCondition += ",";
@@ -415,7 +415,7 @@ void ZhaoYufengMgr::PrepareForLevel(Player* bot, uint32 level)
     factory.InitEquipment(false);
     factory.InitBags(true);
     factory.InitAmmo();
-    if (level >= sPlayerbotAIConfig.minEnchantingBotLevel)
+    if (level >= sPlayerbotAIConfig.MinEnchantingBotLevel)
         factory.ApplyEnchantAndGemsNew();
 
     bot->DurabilityRepairAll(false, 1.0f, false);
@@ -497,7 +497,7 @@ public:
 //  启动脚本：在世界初始化之前加载/征用两位「赵与风」
 //  时机说明：本脚本的注册位置在 PlayerbotsWorldScript 之后，
 //            因此执行时 sPlayerbotAIConfig.Initialize() 已完成、
-//            sPlayerbotAIConfig.randomBotAccounts 已就绪；
+//            sPlayerbotAIConfig.RandomBotAccounts 已就绪；
 //            同时早于 characters 角色缓存加载，改名结果会被缓存正确读取。
 // ============================================================
 class ZhaoYufengWorldScript : public WorldScript

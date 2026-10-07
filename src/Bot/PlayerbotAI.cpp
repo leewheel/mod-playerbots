@@ -577,7 +577,7 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
     // 拼接结果根本不会被使用，白白浪费 CPU 与内存。
     // 改为仅在 perfMonEnabled 开启时才执行构造与拼接，行为与原逻辑完全一致。
     PerfMonitorOperation* pmo = nullptr;
-    if (sPlayerbotAIConfig.perfMonEnabled)
+    if (sPlayerbotAIConfig.PerfMonEnabled)
     {
         std::string const mapString = PlayerbotAI::IsOverworldMap(bot->GetMapId())
             ? std::to_string(bot->GetMapId()) : "I";
