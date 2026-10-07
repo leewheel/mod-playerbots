@@ -88,13 +88,13 @@ float GetDpsHoldValue(Player* bot, Action* action)
     if (bot->getClass() == CLASS_SHAMAN && dynamic_cast<CastTotemAction*>(action))
         return 0.0f;
 
-    bool const castOnRaid = dynamic_cast<CastBuffSpellAction*>(action) ||
+    bool const castOnRaidSpell = dynamic_cast<CastBuffSpellAction*>(action) ||
         dynamic_cast<CastCureSpellAction*>(action) ||
         dynamic_cast<CurePartyMemberAction*>(action) ||
         dynamic_cast<ResurrectPartyMemberAction*>(action) ||
         dynamic_cast<CastProtectSpellAction*>(action);
 
-    return castOnRaid ? 1.0f : 0.0f;
+    return castOnRaidSpell ? 1.0f : 0.0f;
 }
 
 bool IsAnyVashjAddUntanked(PlayerbotAI* botAI)
@@ -179,23 +179,42 @@ float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
         return tidewalker->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
+// By leewheel 2026-10-07 合并brighton the-lab：上游用英文名(fathom-lord karathress/
+    //   fathom-guard tidalvess)，按项目规则第97条保留本分支 entry 化
+    //   （21214=Fathom-Lord Karathress，21965=Fathom-Guard Tidalvess）。
     if (AI_VALUE2(Unit*, "find target", "21214"))
     {
         // FLK: Hold until Tidalvess, the first council member in the kill order, is under 95%.
         Unit* tidalvess = AI_VALUE2(Unit*, "find target", "21965");
+        // End By leewheel
         return tidalvess && tidalvess->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
-    for (char const* name : { "the lurker below", "hydross the unstable" })
+    // Lurker: No dps cooldowns while spouting or submerged.
+    // By leewheel 2026-10-07 合并brighton后复查：上游用英文名 "the lurker below"，本服
+    //   creature_template 名已汉化，英文名在 FindTargetValue 匹配不上，按规则 entry 化 21217
+    //   （深水领主卡拉瑟雷斯 The Lurker Below）。
+    if (Unit* lurker = AI_VALUE2(Unit*, "find target", "21217"))
+    // End By leewheel
     {
-        if (Unit* boss = AI_VALUE2(Unit*, "find target", name))
-            return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+        if (!IsLurkerSurfacedAndCalm(lurker))
+            return 0.0f;
+
+        return lurker->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
-    if (Unit* leotheras = GetLeotheras(botAI))
-        return leotheras->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+    // Hydross and Leotheras: Only the standard hold on pull until 95%.
+    // By leewheel 2026-10-07 合并brighton后复查：同上，英文名 "hydross the unstable" 改 entry 21216
+    //   （Hydross the Unstable）。
+    if (Unit* hydross = AI_VALUE2(Unit*, "find target", "21216"))
+    // End By leewheel
+        return hydross->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 
-    return 1.0f;
+    if (bot->GetExactDist(LEOTHERAS_SPAWN_POSITION) > LEOTHERAS_SEARCH_DISTANCE)
+        return 1.0f;
+
+    Unit* leotheras = GetLeotheras(botAI);
+    return leotheras && leotheras->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 }
 
 // Practically, just for Lurker. Bots can briefly transition to non-combat engines during avoidance,
@@ -251,9 +270,9 @@ float HydrossTheUnstableDisableOffPhaseTankActionsMultiplier::GetValueInEncounte
     if (!hydross)
         return 1.0f;
 
-    bool const offPhaseTank =
+    bool const isOffPhaseTank =
         IsHydrossInFrostPhase(hydross) ? IsHydrossNatureTank(bot) : IsHydrossFrostTank(bot);
-    return offPhaseTank ? 0.0f : 1.0f;
+    return isOffPhaseTank ? 0.0f : 1.0f;
 }
 
 float HydrossTheUnstableDisablePhaseTankAssistMultiplier::GetValueInEncounter(Action* action)
@@ -349,17 +368,17 @@ float TheLurkerBelowTanksFocusAssignedGuardianMultiplier::GetValueInEncounter(Ac
         return 1.0f;
     }
 
-    auto const instanceIt = lurkerGuardianTankAssignments.find(bot->GetInstanceId());
-    if (instanceIt == lurkerGuardianTankAssignments.end())
+    std::optional<LurkerGuardianTankAssignments> const& assignments =
+        SscState(bot->GetInstanceId()).lurkerGuardianTankAssignments;
+    if (!assignments)
         return 1.0f;
 
     Unit* target = AI_VALUE(Unit*, "current target");
     if (!target || !target->IsAlive())
         return 1.0f;
 
-    auto const& assignments = instanceIt->second;
-    return std::find(assignments.begin(), assignments.end(), target->GetGUID()) !=
-        assignments.end() ? 0.0f : 1.0f;
+    return std::find(assignments->begin(), assignments->end(), target->GetGUID()) !=
+        assignments->end() ? 0.0f : 1.0f;
 }
 
 // Killing Spree puts bots right at the center of Lurker, and then they don't move back.
@@ -714,12 +733,10 @@ float FathomLordKarathressWaitForDpsMultiplier::GetValueInEncounter(Action* acti
     if (!karathress)
         return 1.0f;
 
-    auto it = karathressDpsWaitTimer.find(karathress->GetInstanceId());
-    if (it != karathressDpsWaitTimer.end() &&
-        getMSTimeDiff(it->second, getMSTime()) >= KARATHRESS_DPS_WAIT_MS)
-    {
+    std::optional<uint32> const& waitStart =
+        SscState(karathress->GetInstanceId()).karathressDpsWaitTimer;
+    if (waitStart && getMSTimeDiff(*waitStart, getMSTime()) >= KARATHRESS_DPS_WAIT_MS)
         return 1.0f;
-    }
 
     return GetDpsHoldValue(bot, action);
 }
