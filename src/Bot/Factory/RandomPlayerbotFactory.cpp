@@ -783,8 +783,12 @@ void RandomPlayerbotFactory::CreateRandomBots()
         LOG_DEBUG("playerbots", "Creating random bot characters for account: [{}/{}]", accountNumber + 1, totalAccountCount);
         RandomPlayerbotFactory factory;
 
+        // By leewheel 20261009 补回第 13 参 is_bot=true（与 PlayerbotMgr.cpp 同源缺陷，勿再删）
+        //   本处创建的 sessionBots 是"批量预建随机 bot 角色"用的 bot 会话，必须由 IsBot() 识别，
+        //   否则 mod-random-enchants 等"跳过 bot"的模块会对其误动作。
         WorldSession* session = new WorldSession(accountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING,
-                                                time_t(0), LOCALE_enUS, 0, false, false, 0);
+                                                time_t(0), LOCALE_enUS, 0, false, false, 0, true);
+        // End By leewheel
         sessionBots.push_back(session);
 
         for (uint8 cls = CLASS_WARRIOR; cls < MAX_CLASSES - count; ++cls)

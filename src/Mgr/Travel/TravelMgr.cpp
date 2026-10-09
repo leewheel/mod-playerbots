@@ -3406,9 +3406,11 @@ void TravelMgr::LoadQuestTravelTable()
             Field* fields = result->Fetch();
             uint32 accountId = fields[0].Get<uint32>();
 
+            // By leewheel 20261009 补回第 13 参 is_bot=true（与 PlayerbotMgr.cpp 同源缺陷，勿再删）
             WorldSession* session =
                 new WorldSession(accountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING, time_t(0),
-                                 LOCALE_enUS, 0, false, false, 0);
+                                 LOCALE_enUS, 0, false, false, 0, true);
+            // End By leewheel
 
             std::vector<std::pair<std::pair<uint32, uint32>, uint32>> classSpecLevel;
 

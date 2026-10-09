@@ -212,9 +212,16 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
 
 // By leewheel 2026-09-27 合并brighton the-lab：采纳上游 PendingBotLogin——创建 botSession 提前入 map，
     //   由 UpdatePendingLogins 统一管理其生命周期（避免在查询回调栈内析构 session）。
+    // By leewheel 20261009 补回第 13 参 is_bot=true（关键修复，勿再删）
+    //   上游 1e5add88(2026-09-24 "Change bot to headless") 因主张 bot 会话改用 headless(!m_Socket)
+    //   语义而删掉了本参数；但本核 WorldSession 仍保留 _isBot 标记（WorldSession.cpp:153
+    //   「_isBot 为本核 bot 会话标记(必须保留)」），且全核含本核模块共 56 处依赖 IsBot() 排除 bot。
+    //   漏传 ⇒ 默认 false ⇒ bot 会话 IsBot() 恒假 ⇒ 这些判定全部失效。直接后果之一：
+    //   mod-random-enchants 的 ShouldEnchant 拦不住 bot，对 bot 任务奖励物品附魔时
+    //   在 Item::SetEnchantment 空 owner 处解引用崩服（玩家反馈 bug_42 / bug_44）。
     WorldSession* botSession =
         new WorldSession(accountId, "", 0x0, nullptr, SEC_PLAYER, EXPANSION_WRATH_OF_THE_LICH_KING, time_t(0),
-                         sWorld->GetDefaultDbcLocale(), 0, false, false, 0);
+                         sWorld->GetDefaultDbcLocale(), 0, false, false, 0, true);
     // End By leewheel
 
     botLoading.emplace(playerGuid, PendingBotLogin{masterAccountId, botSession, false});
