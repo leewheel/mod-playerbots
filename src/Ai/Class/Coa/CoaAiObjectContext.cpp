@@ -3523,11 +3523,23 @@ public:
                 bot->AttackStop();
             return 0.0f;
         }
-        // An area attack hits the whole pack: it also waits for the mobs around the target that the tank holds.
-        if (action->getThreatType() == Action::ActionThreatType::Aoe)
+        // An area attack hits the whole pack: it waits until the tank holds every mob around the target, and holds
+        // them by enough. An add the tank had not picked up yet took the damage dealers' area attacks and left for
+        // them: adds stayed 12 to 27% of the time on a Felsworn Tyrant (bench, 10/10).
+        auto const groupHasTank = [this]()
+        {
+            if (Group* group = bot->GetGroup())
+                for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+                    if (Player* member = ref->GetSource(); member && member != bot && member->IsAlive() &&
+                                                            OnSameInstance(bot, member) && PlayerbotAI::IsTank(member))
+                        return true;
+            return false;
+        };
+        if (action->getThreatType() == Action::ActionThreatType::Aoe && groupHasTank())
             for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
-                if (Unit* unit = botAI->GetUnit(guid); unit && unit != target && unit->IsWithinDist(target, 10.0f) &&
-                                                       heldByTank(unit) && ThreatShare(bot, unit) >= limit)
+                if (Unit* unit = botAI->GetUnit(guid); unit && unit != target && unit->IsAlive() &&
+                                                       unit->IsWithinDist(target, 10.0f) &&
+                                                       (!heldByTank(unit) || ThreatShare(bot, unit) >= limit))
                     return 0.0f;
         return 1.0f;
     }
