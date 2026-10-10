@@ -3657,9 +3657,13 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
                     if (effect.Effect == SPELL_EFFECT_SCHOOL_DAMAGE || effect.Effect == SPELL_EFFECT_WEAPON_DAMAGE ||
                         effect.Effect == SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL || effect.Effect == SPELL_EFFECT_NORMALIZED_WEAPON_DMG ||
                         effect.Effect == SPELL_EFFECT_WEAPON_PERCENT_DAMAGE || effect.Effect == SPELL_EFFECT_HEALTH_LEECH ||
-                        effect.Effect == SPELL_EFFECT_TRIGGER_SPELL || effect.Effect == SPELL_EFFECT_TRIGGER_MISSILE)
+                        effect.Effect == SPELL_EFFECT_TRIGGER_SPELL || effect.Effect == SPELL_EFFECT_TRIGGER_MISSILE ||
+                        (effect.IsAura() && (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE ||
+                                             effect.ApplyAuraName == SPELL_AURA_PERIODIC_LEECH ||
+                                             effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE_PERCENT)))
                         damages = true;
-                if (!damages)
+                // A debuff that stacks (Sunder) still climbs to its top.
+                if (!damages && (info->StackAmount <= 1 || worn->GetStackAmount() >= info->StackAmount))
                     return false;
             }
 
