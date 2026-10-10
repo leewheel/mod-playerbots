@@ -676,8 +676,12 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
     // skull. The bot is rebuilt the way a random bot is - gear, talents and spells of that level -
     // rather than merely relabelled, which would leave it in gear it could no longer wear.
     // The dungeon finder takes no one under level 15: a level 14 bot recruited for a level 15 player kept the group
-    // out of the queue (Server Manager, 11/10). Under that line the bot is rebuilt at the master's level too.
-    bool const blocksFinder = master->GetLevel() >= 15 && chosen->GetLevel() < 15;
+    // out of the queue (Server Manager, 11/10). Under that line the bot is rebuilt at the master's level too, and so
+    // is one under a master at the realm's level cap: a level 58 or 59 bot kept the group out of the end-game
+    // dungeons the finder only opens to everyone at the cap.
+    bool const blocksFinder = (master->GetLevel() >= 15 && chosen->GetLevel() < 15) ||
+                              (master->GetLevel() >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) &&
+                               chosen->GetLevel() < master->GetLevel());
     if (blocksFinder || std::abs(int32(chosen->GetLevel()) - int32(master->GetLevel())) > int32(levelTolerance))
     {
         uint32 const level = master->GetLevel();
