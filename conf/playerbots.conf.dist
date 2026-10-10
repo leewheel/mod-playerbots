@@ -1716,11 +1716,14 @@ AiPlayerbot.CoaDungeonPriorities = 1
 # second, last but one, no longer the silent healer of 21/09.
 # Set it when a specialization is broken beyond what the bot can be taught, and write the reason and
 # the date here, so that it is reconsidered rather than forgotten.
-# History: 99 Bloodmage Eternal was set aside from 24/09 to 10/10 (its cursed form Eternal Curse, 92114, was
-#    granted by nothing, so every ability failed); the core grants it since jealous-sound#5655 (29/09).
+#    99 Bloodmage Eternal: the cursed form Eternal Curse (92114) is granted by nothing in the core,
+#       so every ability of the specialization fails with SPELL_FAILED_CASTER_AURASTATE. Measured
+#       24/09 over ten arena runs at level 60: 0 taunts, 90 damage a second where the other eleven
+#       tanks do 289 to 668, and 4.2 group deaths a run, the worst of the twelve. Nothing on the bot
+#       side can repair it. Take it out again once the form is granted.
 # Read again by ".reload config".
-# Default: (empty)
-AiPlayerbot.CoaExcludedSpecializations = 
+# Default: 99
+AiPlayerbot.CoaExcludedSpecializations = 99
 
 #    AiPlayerbot.CoaOffensiveHealerSpecs
 #        Description: Healer specializations whose damage is their healing: they keep dealing damage
