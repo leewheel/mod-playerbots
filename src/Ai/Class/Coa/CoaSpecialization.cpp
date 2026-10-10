@@ -173,7 +173,7 @@ constexpr SpecializationProfile Profiles[] =
     { 52, 29, MELEE, AGI | STA }, { 53, 29, MELEE, INT },       { 54, 29, CASTER, INT },       // Venomancer
     { 101, 29, CASTER, INT },
     { 55, 30, MELEE, STR },       { 56, 30, MELEE, STR },       { 57, 30, MELEE, STR | STA },  // Reaper
-    { 58, 31, CASTER, STR | INT }, { 59, 31, MELEE, STR },      { 60, 31, MELEE, STR | STA },  // Primalist
+    { 58, 31, MELEE, STR | INT },  { 59, 31, MELEE, STR },      { 60, 31, MELEE, STR | STA },  // Primalist
     { 95, 31, CASTER, INT },
     { 61, 32, MELEE, AGI },       { 62, 32, CASTER, INT | SPI }, { 63, 32, MELEE, AGI },       // Runemaster
 };
