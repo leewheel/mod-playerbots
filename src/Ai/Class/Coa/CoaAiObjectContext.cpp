@@ -4317,6 +4317,17 @@ void CoaTankThreatBuffs(PlayerbotAI* botAI, Player* bot)
     }
 }
 
+bool CoaRivalBuffBlocks(Player* bot, SpellInfo const* info, Unit* target)
+{
+    // A caster keeps one of its rival buffs on each target (Greater Devotions of a Sun Cleric, Seals, Adaptations):
+    // a spec rotation asking for all four with "buff missing" put one on, which took the other off, and asked for
+    // that one again: 75 Devotions in a 3 minute fight (bench, 10/10).
+    // On the bot itself, CoaRotationMayCast lets the member its rotation keeps replace a sibling (stances, Tattoos).
+    if (!bot || !info || !target || target == bot || !info->IsPositive())
+        return false;
+    return WearsRivalBuffFrom(target, bot, info) && !target->GetAura(info->Id, bot->GetGUID());
+}
+
 bool CoaRotationMayCast(PlayerbotAI* botAI, Player* bot, SpellInfo const* info)
 {
     if (!info)

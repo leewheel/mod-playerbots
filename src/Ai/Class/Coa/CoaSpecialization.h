@@ -89,6 +89,9 @@ bool CoaRotationMayCast(PlayerbotAI* botAI, Player* bot, SpellInfo const* info);
 // bot itself (Dogsmeller, 07/10: a damage dealer taunting the mobs off the tank). Every cast passes here.
 bool CoaTankOnlySpell(Player* bot, SpellInfo const* info, Unit* target);
 
+// Whether the target already wears a rival buff of this one from the bot (a caster keeps one of them on each target).
+bool CoaRivalBuffBlocks(Player* bot, SpellInfo const* info, Unit* target);
+
 // A tank out of combat puts on the threat buffs it knows outside its class kit (every 10 seconds).
 void CoaTankThreatBuffs(PlayerbotAI* botAI, Player* bot);
 
