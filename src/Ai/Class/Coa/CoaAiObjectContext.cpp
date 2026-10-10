@@ -2827,42 +2827,6 @@ public:
     }
 };
 
-// A tank whose taunt is not ready turns to the enemy hitting another member when its own target is safe: the
-// adds it taunted went back to the damage dealers 11 to 20 seconds of their 25, since it never hit them (bench, 10/10).
-class CoaPickUpAction : public Action
-{
-public:
-    CoaPickUpAction(PlayerbotAI* botAI) : Action(botAI, "coa pick up") {}
-
-    bool Execute(Event /*event*/) override
-    {
-        Unit* enemy = LooseEnemy(botAI, bot);
-        if (!enemy)
-            return false;
-        context->GetValue<Unit*>("current target")->Set(enemy);
-        bot->SetSelection(enemy->GetGUID());
-        if (bot->IsWithinMeleeRange(enemy))
-            bot->Attack(enemy, true);
-        return true;
-    }
-
-    bool isUseful() override
-    {
-        if (GetCoaRole(bot) != CoaRole::Tank || !LooseEnemy(botAI, bot))
-            return false;
-        // Its own target stays on it a while: 130% of the threat of whoever is next on it.
-        Unit* target = AI_VALUE(Unit*, "current target");
-        if (!target || !target->IsAlive() || target->GetVictim() != bot)
-            return true;
-        float const mine = target->GetThreatMgr().GetThreat(bot);
-        float other = 0.0f;
-        for (ThreatReference const* ref : target->GetThreatMgr().GetUnsortedThreatList())
-            if (ref->GetVictim() != bot)
-                other = std::max(other, ref->GetThreat());
-        return mine >= other * 1.3f;
-    }
-};
-
 // For a tank: an enemy is hitting another player of its group.
 class CoaLooseEnemyTrigger : public Trigger
 {
@@ -3685,7 +3649,7 @@ public:
         // Above the spec rotations, whose attacks reach 88: at ACTION_HIGH + 4 it never fired (the NUC
         // arenas showed no change in taunts, 29/09). Only the rotation's own "lose aggro" taunt (94) and
         // its buffs (95) come first.
-        triggers.push_back(new TriggerNode("coa loose enemy", { NextAction("coa taunt", 93.0f), NextAction("coa pick up", 92.0f) }));
+        triggers.push_back(new TriggerNode("coa loose enemy", { NextAction("coa taunt", 93.0f) }));
         triggers.push_back(new TriggerNode("light aoe", { NextAction("coa aoe", ACTION_HIGH + 3) }));
         triggers.push_back(new TriggerNode("medium health", { NextAction("coa defensive", ACTION_HIGH + 6) }));
     }
@@ -4113,7 +4077,6 @@ public:
         creators["coa group heal"] = &CoaActionFactoryInternal::coa_group_heal;
         creators["coa hot"] = &CoaActionFactoryInternal::coa_hot;
         creators["coa taunt"] = &CoaActionFactoryInternal::coa_taunt;
-        creators["coa pick up"] = &CoaActionFactoryInternal::coa_pick_up;
         creators["coa defensive"] = &CoaActionFactoryInternal::coa_defensive;
         creators["coa dispel"] = &CoaActionFactoryInternal::coa_dispel;
         creators["coa purge"] = &CoaActionFactoryInternal::coa_purge;
@@ -4142,7 +4105,6 @@ private:
     }
     static Action* coa_hot(PlayerbotAI* botAI) { return new CoaHealAction(botAI, "coa hot", CoaHealAction::Mode::OverTime); }
     static Action* coa_taunt(PlayerbotAI* botAI) { return new CoaTauntAction(botAI); }
-    static Action* coa_pick_up(PlayerbotAI* botAI) { return new CoaPickUpAction(botAI); }
     static Action* coa_defensive(PlayerbotAI* botAI) { return new CoaDefensiveAction(botAI); }
     static Action* coa_dispel(PlayerbotAI* botAI) { return new CoaDispelAction(botAI); }
     static Action* coa_purge(PlayerbotAI* botAI) { return new CoaPurgeAction(botAI); }
