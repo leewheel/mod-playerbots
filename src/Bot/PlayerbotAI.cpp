@@ -3929,7 +3929,23 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
     // directly and the proc is never consumed. Umbral Glaive has no global
     // cooldown and could then be repeated without end.
     if (uint32 const replacement = bot->GetTemporarySpellReplacement(spellId); replacement && replacement != spellId)
+    {
         spellId = replacement;
+
+        // A swapped-in spell that only puts back a permanent aura the bot already wears won the turn at every tick:
+        // a Knight of Xoroth tank's rotation asked for Call: Hellfire Imp, swapped for Impcaller, and cast it 299
+        // times in a 3 minute fight and almost nothing else (bench, 10/10).
+        if (SpellInfo const* swapped = sSpellMgr->GetSpellInfo(spellId);
+            swapped && swapped->GetMaxDuration() == -1 && bot->HasAura(spellId, bot->GetGUID()))
+        {
+            bool selfOnly = true;
+            for (SpellEffectInfo const& effect : swapped->Effects)
+                if (effect.IsEffect() && effect.TargetA.GetTarget() != TARGET_UNIT_CASTER && effect.TargetA.GetTarget() != 0)
+                    selfOnly = false;
+            if (selfOnly)
+                return false;
+        }
+    }
 
     // The swapped-in spell may taunt where the one checked did not.
     if (CoaTankOnlySpell(bot, sSpellMgr->GetSpellInfo(spellId), target ? target : bot))
