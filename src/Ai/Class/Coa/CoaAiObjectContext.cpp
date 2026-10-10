@@ -2255,8 +2255,10 @@ public:
         // (and its weapon), keeping the rest for heals.
         bool const saveMana = SavingManaForHeals(bot);
 
-        // Taunts, even those that deal damage, stay out of the rotation on an enemy another tank holds.
-        bool const noTaunt = tank && HeldByOtherTank(bot, target);
+        // Taunts, even those that deal damage, stay out of the rotation on an enemy another tank holds, and on one that
+        // already hits the tank: a Felsworn Tyrant spent 9 of its 18 Betrays on a boss already on it, its taunt then
+        // on cooldown when an add ran to a healer (bench, 10/10).
+        bool const noTaunt = tank && (HeldByOtherTank(bot, target) || target->GetVictim() == bot);
         std::vector<Usable> const usable = KnownAbilities(bot, [tank, noTaunt](uint16 kind)
             { return IsAttack(kind, tank) && !(noTaunt && (kind & KIND_TAUNT)); });
         if (usable.empty())
