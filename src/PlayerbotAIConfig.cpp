@@ -631,7 +631,7 @@ bool PlayerbotAIConfig::Initialize()
     }
 
     // SPP switches
-    enableGreet = sConfigMgr->GetOption<bool>("AiPlayerbot.EnableGreet", true);
+    enableGreet = sConfigMgr->GetOption<bool>("AiPlayerbot.EnableGreet", false);
     summonWhenGroup = sConfigMgr->GetOption<bool>("AiPlayerbot.SummonWhenGroup", true);
     randomBotFixedLevel = sConfigMgr->GetOption<bool>("AiPlayerbot.RandomBotFixedLevel", false);
     disableRandomLevels = sConfigMgr->GetOption<bool>("AiPlayerbot.DisableRandomLevels", false);

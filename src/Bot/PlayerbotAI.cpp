@@ -3368,6 +3368,9 @@ bool PlayerbotAI::MasterWantsThis()
 
 bool PlayerbotAI::TellMasterGreeting(std::string const text, PlayerbotSecurityLevel securityLevel)
 {
+    // AiPlayerbot.EnableGreet = 0: no "Hello" whispered on joining a group, a dungeon or coming back to life.
+    if (!sPlayerbotAIConfig.enableGreet)
+        return false;
     greeting = true;
     bool const told = TellMaster(text, securityLevel);
     greeting = false;
