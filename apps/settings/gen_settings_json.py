@@ -45,8 +45,6 @@ SETTINGS = [
     ('RandomBotMaxLevel', 'population', 'Highest bot level', 'Highest level of the random bots (60 is the Conquest of Azeroth level cap).'),
     ('CoaClassesOnly', 'population', 'Conquest of Azeroth classes only',
      'Random bots are created only in the 21 Conquest of Azeroth classes, never in the nine WotLK classes.'),
-    ('CoaPurgeBotsOnUpgrade', 'population', 'Fresh bots on upgrade',
-     'Once, when the server moves to a CoA Bots version that needs it, the random bots are deleted and recreated from scratch. Characters of players are never touched.'),
     ('CoaBotSurname', 'population', '"Bot" surname',
      'Random bots carry the surname "Bot", so players tell them from real players at a glance.'),
     ('RandomGearQualityLimit', 'population', 'Best gear quality',

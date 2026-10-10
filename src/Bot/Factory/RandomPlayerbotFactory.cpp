@@ -23,12 +23,6 @@
 #include "SocialMgr.h"
 #include "Timer.h"
 
-#include <algorithm>
-#include <cctype>
-#include <sstream>
-#include <thread>
-#include <unordered_set>
-
 constexpr RandomPlayerbotFactory::NameRaceAndGender RandomPlayerbotFactory::CombineRaceAndGender(uint8 race,
                                                                                                 uint8 gender)
 {
@@ -505,131 +499,9 @@ uint32 RandomPlayerbotFactory::CalculateAvailableCharsPerAccount()
     return availableChars;
 }
 
-namespace
-{
-    // Bump only for a release whose bots must be rebuilt from scratch, not at every release.
-    constexpr char const* COA_PURGE_VERSION = "2.0";
-    constexpr char const* COA_PURGE_MARKER_KEY = "coaPurgedVersion";
-
-    // guid 0 is never a character, so no per-bot cleanup in playerbots_db_store reaches the marker.
-    std::string GetCoaPurgeMarker()
-    {
-        QueryResult result = PlayerbotsDatabase.Query(
-            "SELECT `value` FROM playerbots_db_store WHERE guid = 0 AND `key` = '{}' ORDER BY id DESC LIMIT 1",
-            COA_PURGE_MARKER_KEY);
-        return result ? (*result)[0].Get<std::string>() : std::string();
-    }
-
-    bool IsVersionBelow(std::string const& version, std::string const& target)
-    {
-        std::istringstream left(version), right(target);
-        std::string leftPart, rightPart;
-        while (true)
-        {
-            bool const hasLeft = static_cast<bool>(std::getline(left, leftPart, '.'));
-            bool const hasRight = static_cast<bool>(std::getline(right, rightPart, '.'));
-            if (!hasLeft && !hasRight)
-                return false;
-            uint32 const leftValue = hasLeft ? static_cast<uint32>(std::strtoul(leftPart.c_str(), nullptr, 10)) : 0;
-            uint32 const rightValue = hasRight ? static_cast<uint32>(std::strtoul(rightPart.c_str(), nullptr, 10)) : 0;
-            if (leftValue != rightValue)
-                return leftValue < rightValue;
-        }
-    }
-
-    // Only names made by CreateRandomBots (prefix followed by digits), so a player account that merely
-    // starts with the prefix is never caught by the LIKE.
-    bool IsGeneratedBotAccountName(std::string username, std::string prefix)
-    {
-        std::transform(username.begin(), username.end(), username.begin(), ::toupper);
-        std::transform(prefix.begin(), prefix.end(), prefix.begin(), ::toupper);
-        if (prefix.empty() || username.size() <= prefix.size() || username.compare(0, prefix.size(), prefix) != 0)
-            return false;
-        return std::all_of(username.begin() + prefix.size(), username.end(), [](char c) { return std::isdigit(static_cast<unsigned char>(c)); });
-    }
-
-    void WaitForDatabaseQueues()
-    {
-        while (LoginDatabase.QueueSize() || CharacterDatabase.QueueSize() || PlayerbotsDatabase.QueueSize())
-            std::this_thread::sleep_for(1s);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-}
-
-// Unlike DeleteRandomBotAccounts this runs after guilds, groups, arena teams and the character cache are
-// loaded, so it goes through AccountMgr::DeleteAccount, which keeps them in step, and the server can carry
-// on and recreate the bots in the same start.
-void RandomPlayerbotFactory::PurgeRandomBotsOnCoaUpgrade()
-{
-    if (!sPlayerbotAIConfig.coaPurgeBotsOnUpgrade || sPlayerbotAIConfig.deleteRandomBotAccounts)
-        return;
-
-    std::string const marker = GetCoaPurgeMarker();
-    if (!marker.empty() && !IsVersionBelow(marker, COA_PURGE_VERSION))
-        return;
-
-    std::string const& prefix = sPlayerbotAIConfig.randomBotAccountPrefix;
-    std::unordered_set<uint32> accounts;
-    if (QueryResult result = LoginDatabase.Query("SELECT id, username FROM account WHERE username LIKE '{}%%'", prefix))
-    {
-        do
-        {
-            Field* fields = result->Fetch();
-            if (IsGeneratedBotAccountName(fields[1].Get<std::string>(), prefix))
-                accounts.insert(fields[0].Get<uint32>());
-        } while (result->NextRow());
-    }
-
-    uint32 const timer = getMSTime();
-    if (!accounts.empty())
-    {
-        LOG_INFO("playerbots", "CoA Bots {}: purging the random bots made by {} ({} accounts '{}N'), they are recreated from scratch. Player characters are not touched.",
-                 COA_PURGE_VERSION, marker.empty() ? std::string("an older version") : "version " + marker, accounts.size(), prefix);
-
-        // A team whose captain is purged would stay behind empty, with a captain that no longer exists.
-        std::vector<uint32> arenaTeams;
-        for (auto const& [id, team] : sArenaTeamMgr->GetArenaTeams())
-            if (team && accounts.count(sCharacterCache->GetCharacterAccountIdByGuid(team->GetCaptain())))
-                arenaTeams.push_back(id);
-        for (uint32 teamId : arenaTeams)
-            if (ArenaTeam* team = sArenaTeamMgr->GetArenaTeamById(teamId))
-                team->Disband();
-
-        uint32 deleted = 0;
-        uint32 processed = 0;
-        for (uint32 accountId : accounts)
-        {
-            if (AccountMgr::DeleteAccount(accountId) == AOR_OK)
-                ++deleted;
-            // Each deletion queues dozens of statements; draining in batches keeps memory flat on big realms.
-            if (++processed % 100 == 0)
-                WaitForDatabaseQueues();
-        }
-        WaitForDatabaseQueues();
-
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_random_bots");
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_account_type");
-        std::string const characterDBName = CharacterDatabase.GetConnectionInfo()->database;
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_guild_tasks WHERE owner NOT IN (SELECT guid FROM " + characterDBName + ".characters)");
-        PlayerbotsDatabase.Execute("DELETE FROM playerbots_db_store WHERE guid NOT IN (SELECT guid FROM " + characterDBName + ".characters)");
-        WaitForDatabaseQueues();
-
-        LOG_INFO("playerbots", "CoA Bots {}: {} random bot accounts and their characters deleted ({} arena teams disbanded) in {} ms",
-                 COA_PURGE_VERSION, deleted, arenaTeams.size(), GetMSTimeDiffToNow(timer));
-    }
-    else
-        LOG_INFO("playerbots", "CoA Bots {}: no older random bots to purge.", COA_PURGE_VERSION);
-
-    PlayerbotsDatabase.DirectExecute("DELETE FROM playerbots_db_store WHERE guid = 0 AND `key` = '{}'", COA_PURGE_MARKER_KEY);
-    PlayerbotsDatabase.DirectExecute("INSERT INTO playerbots_db_store (guid, `key`, `value`) VALUES (0, '{}', '{}')",
-                                     COA_PURGE_MARKER_KEY, COA_PURGE_VERSION);
-}
-
 void RandomPlayerbotFactory::CreateRandomBots()
 {
     /* multi-thread here is meaningless? since the async db operations */
-
-    PurgeRandomBotsOnCoaUpgrade();
 
     if (sPlayerbotAIConfig.deleteRandomBotAccounts)
     {

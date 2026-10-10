@@ -397,7 +397,6 @@ public:
     bool autoLearnTrainerSpells;
     bool autoLearnTradeskillSpells;
     bool coaClassesOnly;
-    bool coaPurgeBotsOnUpgrade;
     bool coaSpecRotations;
     uint32 coaHealerManaReserve;
     uint32 coaCasterManaReserve;

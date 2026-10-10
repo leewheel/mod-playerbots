@@ -1394,16 +1394,6 @@ AiPlayerbot.AutoLearnTradeskillSpells = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaClassesOnly = 1
 
-# Purge the random bots once when the server moves to a CoA Bots version that needs fresh bots.
-# Bots made by an older version keep data the new code no longer produces (thousands of mount and
-# companion spells, old gear and settings). On: at the first start of such a version, every random
-# bot account (RandomBotAccountPrefix) is deleted with its characters and playerbots data, then the
-# bots are recreated from scratch. It runs once per server; a marker remembers it. Players' own
-# characters and accounts are never touched.
-# Off: existing bots are kept as they are.
-# Default: 1 (enabled)
-AiPlayerbot.CoaPurgeBotsOnUpgrade = 1
-
 # Authored combat rotations for the Conquest of Azeroth specializations.
 # Off: CoA bots are driven by the runtime classifier alone, which picks a spell
 # every tick from what the bot knows.

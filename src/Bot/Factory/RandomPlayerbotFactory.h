@@ -53,7 +53,6 @@ public:
 
     Player* CreateRandomBot(WorldSession* session, uint8 cls, std::unordered_map<NameRaceAndGender, std::vector<std::string>>& names);
     static void CreateRandomBots();
-    static void PurgeRandomBotsOnCoaUpgrade();
     static std::string const CreateRandomGuildName();
     static uint32 CalculateTotalAccountCount();
     static uint32 CalculateAvailableCharsPerAccount();
