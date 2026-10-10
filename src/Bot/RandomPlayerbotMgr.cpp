@@ -3195,6 +3195,16 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
         }
     }
 
+    // The core resets at login the talents of a character that spent more than its level allows (bots made by older
+    // versions): the bot then stood without talents until its next randomize, up to 14 days later. It picks them now.
+    if (IsRandomBot(bot) && bot->GetFreeTalentPoints() >= 5)
+    {
+        uint32 const freePoints = bot->GetFreeTalentPoints();
+        PlayerbotFactory factory(bot, bot->GetLevel());
+        factory.InitTalentsTree(true);
+        LOG_INFO("playerbots", "coa repair: {} had {} free talent points: talents picked again", bot->GetName(), freePoints);
+    }
+
     // Bots rebuilt under level 5 before 1.5 lost their CoA starter kit and still stand naked.
     PlayerbotFactory::DressNakedCoaStarter(bot);
     // And those brought down in level before 1.5.1 still carry the spell ranks of their old level.
