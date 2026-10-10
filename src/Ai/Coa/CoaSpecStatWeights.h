@@ -258,7 +258,9 @@ static constexpr CoaStatWeight CoaStats_31_95[] = { { STATS_TYPE_HIT, 1.8f }, { 
 // (0.2 / 0.06) carry a spell power term far above the attack power one. Spell power had no weight (bots: 108 spell power,
 // 257 Strength; lowest damage index of all bench specs, 0.51). Hit comes in. Ranged weapon damage goes: nothing in the
 // kit shoots a weapon (0% of its bench damage).
-static constexpr CoaStatWeight CoaStats_31_58[] = { { STATS_TYPE_STRENGTH, 2.3f }, { STATS_TYPE_SPELL_POWER, 2.0f }, { STATS_TYPE_HASTE, 1.97f }, { STATS_TYPE_INTELLECT, 1.65f }, { STATS_TYPE_HIT, 1.6f }, { STATS_TYPE_CRIT, 1.32f }, { STATS_TYPE_SPIRIT, 1.0f }, { STATS_TYPE_ATTACK_POWER, 1.0f } };
+// Corrected by hand on 10/10: Grovekeeper fights in melee (Wildclaw is 48% of real players' casts, a normalized
+// weapon strike), so the weapon's damage counts, at about half a pure melee spec's weight.
+static constexpr CoaStatWeight CoaStats_31_58[] = { { STATS_TYPE_MELEE_DPS, 4.0f }, { STATS_TYPE_STRENGTH, 2.3f }, { STATS_TYPE_SPELL_POWER, 2.0f }, { STATS_TYPE_HASTE, 1.97f }, { STATS_TYPE_INTELLECT, 1.65f }, { STATS_TYPE_HIT, 1.6f }, { STATS_TYPE_CRIT, 1.32f }, { STATS_TYPE_SPIRIT, 1.0f }, { STATS_TYPE_ATTACK_POWER, 1.0f } };
 // Primalist / Mountain King (tank)
 static constexpr CoaStatWeight CoaStats_31_60[] = { { STATS_TYPE_STAMINA, 3.0f }, { STATS_TYPE_DEFENSE, 2.5f }, { STATS_TYPE_DODGE, 2.0f }, { STATS_TYPE_PARRY, 2.0f }, { STATS_TYPE_HIT, 1.6f }, { STATS_TYPE_EXPERTISE, 1.42f }, { STATS_TYPE_STRENGTH, 1.24f }, { STATS_TYPE_ARMOR_PENETRATION, 1.06f }, { STATS_TYPE_BLOCK_RATING, 1.0f }, { STATS_TYPE_CRIT, 0.88f }, { STATS_TYPE_HASTE, 0.7f }, { STATS_TYPE_BLOCK_VALUE, 0.5f }, { STATS_TYPE_ARMOR, 0.15f } };
 // Runemaster / Glyphic (zauber)
@@ -341,7 +343,7 @@ static constexpr CoaSpecStats CoaSpecStatsTable[] =
     { 30,  55, "Soul", "physisch_nah", "dualWield", true, CoaStats_30_55, 8 },
     { 31,  59, "Wildwalker", "physisch_nah", "twoHand", true, CoaStats_31_59, 8 },
     { 31,  95, "Geomancy", "zauber", "caster", true, CoaStats_31_95, 8 },
-    { 31,  58, "Grovekeeper", "physisch_fern", "any", true, CoaStats_31_58, 8 },
+    { 31,  58, "Grovekeeper", "physisch_fern", "any", true, CoaStats_31_58, 9 },
     { 31,  60, "Mountain King", "tank", "dualWield", true, CoaStats_31_60, 13 },
     { 32,  62, "Glyphic", "zauber", "any", true, CoaStats_32_62, 7 },
     { 32,  61, "Engravement", "physisch_nah", "dualWield", true, CoaStats_32_61, 9 },

@@ -3653,6 +3653,10 @@ public:
         triggers.push_back(new TriggerNode("coa priority add", { NextAction("coa priority add", ACTION_DISPEL + 1) }));
         triggers.push_back(new TriggerNode("medium aoe", { NextAction("coa aoe", ACTION_HIGH + 2) }));
         triggers.push_back(new TriggerNode("low health", { NextAction("coa defensive", ACTION_HIGH + 8) }));
+        // A pet summoned by a player spell starts passive (CharmInfo) and never assists its owner:
+        // the Stormbringer's Air Elemental did 0 damage and the Barbarian's Honored Ancestor never
+        // swung on the boss bench. Same stance step as the hunter and warlock strategies.
+        triggers.push_back(new TriggerNode("new pet", { NextAction("set pet stance", 60.0f) }));
     }
 
 protected:
