@@ -3507,7 +3507,18 @@ public:
         if (!hold)
             return 1.0f;
         // Aggro passes at 110% of the tank's threat in melee and 130% at range: a ranged bot holds 20 points later.
-        float const limit = float(hold + (botAI->IsRanged(bot) ? 20 : 0)) / 100.0f;
+        float limit = float(hold + (botAI->IsRanged(bot) ? 20 : 0)) / 100.0f;
+        // The tank's first seconds on a target: its threat is still small and the first big blows passed it before the
+        // hold could see them coming (a Venomancer lost the boss at 3, 6 and 14 seconds, bench, 10/10). Players let the
+        // tank settle: 60% of the limit for 3 seconds after its first touch.
+        {
+            uint32 const nowMs = getMSTime();
+            if (settles.size() > 32)
+                settles.clear();
+            auto const touched = settles.emplace(target->GetGUID(), nowMs).first;
+            if (getMSTimeDiff(touched->second, nowMs) < 3 * IN_MILLISECONDS)
+                limit *= 0.6f;
+        }
         // A mob that already left the tank has nothing left to hold: the tank taunts it back.
         auto const heldByTank = [](Unit* unit)
         {
@@ -3574,6 +3585,7 @@ private:
 
     std::unordered_map<ObjectGuid, uint32> openers;  // target -> first seen untouched by a tank
     std::unordered_map<ObjectGuid, Trend> trends;    // target -> how fast the bot's share of the tank's threat climbs
+    std::unordered_map<ObjectGuid, uint32> settles;  // target -> first seen touched by a tank
 };
 
 class CoaCombatStrategy : public CombatStrategy
