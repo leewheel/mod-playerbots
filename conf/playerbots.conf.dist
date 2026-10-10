@@ -109,6 +109,9 @@ AiPlayerbot.RandomBotAccountPrefix = "rndbot"
 # Delete all randombot accounts
 # To apply this, set the number to 1 and run the Worldserver. Once deletion is complete, if you would
 # like to recreate randombots, set the number back to 0 and rerun the Worldserver.
+# Set it back to 0 right after that one start, otherwise every start wipes all random bots again.
+# The purge also cleans the Conquest of Azeroth character tables (Mystic Enchants, challenges, Manastorm,
+# Mythic+, personal bank...) so new bots never inherit data from deleted bots that had the same guid.
 AiPlayerbot.DeleteRandomBotAccounts = 0
 
 # Disable randombots when no real players are logged in

@@ -23,6 +23,9 @@
 #include "SocialMgr.h"
 #include "Timer.h"
 
+#include <algorithm>
+#include <unordered_set>
+
 constexpr RandomPlayerbotFactory::NameRaceAndGender RandomPlayerbotFactory::CombineRaceAndGender(uint8 race,
                                                                                                 uint8 gender)
 {
@@ -599,6 +602,105 @@ void RandomPlayerbotFactory::CreateRandomBots()
         // Clean up petition data
         CharacterDatabase.Execute("DELETE FROM petition WHERE ownerguid NOT IN (SELECT guid FROM characters)");
         CharacterDatabase.Execute("DELETE FROM petition_sign WHERE ownerguid NOT IN (SELECT guid FROM characters) OR playerguid NOT IN (SELECT guid FROM characters)");
+
+        // New characters take the next guid after the highest remaining one, so fresh bots reuse the
+        // deleted bots' guids and would inherit any row still keyed by them. Clean every other table
+        // keyed by a character guid; CoA tables depend on the core build and installed modules, so a
+        // table missing from this characters DB is skipped instead of failing the purge.
+        std::unordered_set<std::string> characterTables;
+        if (QueryResult tables = CharacterDatabase.Query(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()"))
+        {
+            do
+            {
+                std::string name = tables->Fetch()[0].Get<std::string>();
+                std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+                characterTables.insert(name);
+            } while (tables->NextRow());
+        }
+
+        auto deleteOrphans = [&characterTables](char const* table, char const* condition)
+        {
+            if (!characterTables.count(table))
+                return;
+            CharacterDatabase.Execute("DELETE FROM `" + std::string(table) + "` WHERE " + condition);
+        };
+
+        static std::pair<char const*, char const*> const characterKeyedTables[] = {
+            // Core tables the list above misses
+            {"character_achievement_offline_updates", "guid"},
+            {"character_banned", "guid"},
+            {"character_battleground_random", "guid"},
+            {"character_brew_of_the_month", "guid"},
+            {"character_declinedname", "guid"},
+            {"character_equipmentsets", "guid"},
+            {"character_gifts", "guid"},
+            {"character_instance", "guid"},
+            {"character_pet_declinedname", "owner"},
+            {"character_queststatus_daily", "guid"},
+            {"character_queststatus_weekly", "guid"},
+            {"character_queststatus_monthly", "guid"},
+            {"character_queststatus_seasonal", "guid"},
+            {"character_settings", "guid"},
+            {"character_social", "guid"},
+            {"character_stats", "guid"},
+            {"guild_member_withdraw", "guid"},
+            {"item_refund_instance", "player_guid"},
+            {"recovery_item", "Guid"},
+            // CoA core
+            {"ascension_manastorm_bonus", "guid"},
+            {"ascension_manastorm_cache", "guid"},
+            {"ascension_manastorm_clear", "guid"},
+            {"ascension_manastorm_loadout", "guid"},
+            {"ascension_manastorm_xp", "guid"},
+            {"coa_mystic_enchant", "guid"},
+            {"coa_mystic_enchant_known", "guid"},
+            {"coa_mystic_enchant_slot", "guid"},
+            {"coa_lottery_entry", "guid"},
+            // mod-ascension
+            {"character_appearance", "guid"},
+            {"character_appearance_outfit", "guid"},
+            {"character_appearance_settings", "guid"},
+            {"character_ascension_state", "guid"},
+            // mod-coa-challenges
+            {"coa_character_challenge", "guid"},
+            {"coa_challenge_failure", "guid"},
+            {"coa_challenge_failure_new", "guid"},
+            {"coa_character_condition", "guid"},
+            {"coa_character_objective", "guid"},
+            {"coa_challenge_completion", "guid"},
+            {"coa_custom_trial", "guid"},
+            {"coa_custom_trial_entry", "guid"},
+            {"coa_custom_trial_vote", "guid"},
+            {"coa_custom_trial_active", "guid"},
+            {"coa_custom_trial_completion", "guid"},
+            {"coa_character_gamemode", "guid"},
+            {"coa_character_gamemode_lives", "guid"},
+            {"coa_character_survival", "guid"},
+            {"coa_character_fatigue", "guid"},
+            {"coa_character_looted_item", "guid"},
+            // mod-coa-mythic-plus, mod-craftsmans-codex, mod-worldforged-pickups
+            {"coa_mythic_weekly", "guid"},
+            {"coa_mythic_best", "guid"},
+            {"mod_craftsmans_codex", "guid"},
+            {"character_worldforged_loot", "guid"},
+        };
+        for (auto const& [table, column] : characterKeyedTables)
+            deleteOrphans(table, (std::string("`") + column + "` NOT IN (SELECT guid FROM characters)").c_str());
+
+        // Personal bank: owner_kind 0 is a character, 1 is the account-wide bank (kept)
+        for (char const* table : {"mod_ascension_bank_item", "mod_ascension_bank_tab", "mod_ascension_bank_money",
+                                  "mod_ascension_bank_log"})
+            deleteOrphans(table, "owner_kind = 0 AND owner_id NOT IN (SELECT guid FROM characters)");
+
+        // Item-keyed rows must wait for the item_instance purge above, item guids are reused the same way
+        while (CharacterDatabase.QueueSize())
+        {
+            std::this_thread::sleep_for(1s);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        deleteOrphans("character_item_scaling", "item_guid NOT IN (SELECT guid FROM item_instance)");
+        deleteOrphans("coa_mc_fire_lord_cache_tier", "ItemGuid NOT IN (SELECT guid FROM item_instance)");
 
         // Finally, delete the bot accounts themselves
         LOG_INFO("playerbots", "Deleting random bot accounts...");
