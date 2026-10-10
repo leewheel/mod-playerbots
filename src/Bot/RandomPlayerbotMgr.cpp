@@ -3128,6 +3128,26 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
                 bot->TeleportTo(info->mapId, info->positionX, info->positionY, info->positionZ, info->orientation);
             }
 
+    // A bot made before MaxPlayerLevel or RandomBotMaxLevel was lowered kept its level, since Randomize only
+    // rebuilds a bot at the level it has: bring it down to the cap, gear, talents and spells redone.
+    if (IsRandomBot(bot) && !bot->InBattleground() && !bot->InArena() && GET_PLAYERBOT_AI(bot))
+    {
+        uint32 const levelCap = std::min<uint32>(sPlayerbotAIConfig.randomBotMaxLevel,
+                                                 sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
+        if (levelCap && bot->GetLevel() > levelCap)
+        {
+            uint32 const oldLevel = bot->GetLevel();
+            if (bot->IsMounted())
+                bot->Dismount();
+            SetValue(bot, "level", levelCap);
+            PlayerbotFactory factory(bot, levelCap);
+            factory.Randomize(false);
+            RandomTeleportForLevel(bot);
+            LOG_INFO("playerbots", "coa: {} was level {}, above the cap {}: rebuilt at level {}", bot->GetName(),
+                     oldLevel, levelCap, levelCap);
+        }
+    }
+
     // Bots rebuilt under level 5 before 1.5 lost their CoA starter kit and still stand naked.
     PlayerbotFactory::DressNakedCoaStarter(bot);
     // And those brought down in level before 1.5.1 still carry the spell ranks of their old level.

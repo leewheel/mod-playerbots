@@ -415,7 +415,11 @@ bool PlayerbotAIConfig::Initialize()
     randomBotMinLevel = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotMinLevel", 1);
     randomBotMaxLevel = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotMaxLevel", 80);
     if (randomBotMaxLevel > sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
+    {
+        LOG_WARN("server.loading", "AiPlayerbot.RandomBotMaxLevel {} is above MaxPlayerLevel {}: random bots stop at {}.",
+                 randomBotMaxLevel, sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL), sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
         randomBotMaxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
+    }
 
     // Bracket defaults (below) derive from randomBotMaxLevel, so this must run after it is read.
     LoadRandomBotLevelConfig();
@@ -701,6 +705,13 @@ bool PlayerbotAIConfig::Initialize()
     limitEnchantExpansion = sConfigMgr->GetOption<int32>("AiPlayerbot.LimitEnchantExpansion", 1);
     limitGearExpansion = sConfigMgr->GetOption<int32>("AiPlayerbot.LimitGearExpansion", 1);
     randombotStartingLevel = sConfigMgr->GetOption<int32>("AiPlayerbot.RandombotStartingLevel", 1);
+    // With DisableRandomLevels every bot is made at this level, so it must obey the realm's cap too.
+    if (randombotStartingLevel > randomBotMaxLevel)
+    {
+        LOG_WARN("server.loading", "AiPlayerbot.RandombotStartingLevel {} is above the random bot max level {}: using {}.",
+                 randombotStartingLevel, randomBotMaxLevel, randomBotMaxLevel);
+        randombotStartingLevel = randomBotMaxLevel;
+    }
     enablePeriodicOnlineOffline = sConfigMgr->GetOption<bool>("AiPlayerbot.EnablePeriodicOnlineOffline", false);
     enableRandomBotTrading = sConfigMgr->GetOption<int32>("AiPlayerbot.EnableRandomBotTrading", 1);
     periodicOnlineOfflineRatio = sConfigMgr->GetOption<float>("AiPlayerbot.PeriodicOnlineOfflineRatio", 2.0);
