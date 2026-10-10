@@ -1056,14 +1056,14 @@ inline constexpr std::array<Pick, 3594> Picks =
     {18, 20, 15, 1, 4836, 1},
     {18, 20, 16, 0, 30057, 1},
     {18, 20, 17, 1, 34433, 1},
-    {18, 20, 18, 0, 34427, 1},
+    {18, 20, 18, 0, 6364, 1},
     {18, 20, 19, 1, 6454, 1},
-    {18, 20, 20, 0, 6364, 1},
+    {18, 20, 20, 0, 6456, 1},
     {18, 20, 20, 1, 29216, 1},  // by hand web4: free choice Banner of Conquest (top players), group 743521, level 20
     {18, 20, 21, 1, 6454, 2},
-    {18, 20, 22, 0, 6456, 1},
+    {18, 20, 22, 0, 29430, 1},  // by hand 2.0: Net Throw (top players, leads to Knightly Demeanor) instead of Deflector (34422), no gate
     {18, 20, 23, 1, 6428, 1},
-    {18, 20, 24, 0, 6362, 1},  // by hand 2.0: Knightly Demeanor (top players) instead of Deflector (34422), no gate
+    {18, 20, 24, 0, 6362, 1},  // by hand 2.0: Knightly Demeanor (top players) instead of Sturdy (34427), no gate
     {18, 20, 25, 1, 30829, 1},
     {18, 20, 26, 0, 29639, 1},
     {18, 20, 27, 1, 31361, 1},
@@ -2788,7 +2788,7 @@ inline constexpr std::array<Pick, 3594> Picks =
     {28, 49, 52, 0, 34987, 1},
     {28, 49, 53, 1, 5991, 1},
     {28, 49, 54, 0, 8354, 1},
-    {28, 49, 55, 1, 29441, 1},
+    {28, 49, 55, 1, 7035, 1},  // by hand 2.0: Rocket Pack (top players, leads to Rocket Turrets) instead of Rocket Engineering (29441), same 8-point gate
     {28, 49, 56, 0, 5195, 1},
     {28, 49, 57, 1, 30580, 1},
     {28, 49, 58, 0, 29440, 1},
@@ -2818,17 +2818,17 @@ inline constexpr std::array<Pick, 3594> Picks =
     {28, 50, 31, 1, 5966, 1},  // by hand 2.0: Regeneration Enhancement (top players) instead of Mechsuit: Activate Jets (5212), same 8-point gate
     {28, 50, 32, 0, 8355, 1},
     {28, 50, 33, 1, 5503, 1},
-    {28, 50, 34, 0, 5974, 1},
+    {28, 50, 34, 0, 6998, 1},
     {28, 50, 35, 1, 6491, 1},
-    {28, 50, 36, 0, 6998, 1},
+    {28, 50, 36, 0, 31235, 1},
     {28, 50, 37, 1, 29206, 1},
-    {28, 50, 38, 0, 31235, 1},
+    {28, 50, 38, 0, 9995, 1},
     {28, 50, 39, 1, 6531, 1},
-    {28, 50, 40, 0, 9995, 1},
+    {28, 50, 40, 0, 5103, 1},  // by hand 2.0: Modulator (top players) instead of Innate Brilliance (5331), same 9-point gate
     {28, 50, 41, 1, 9980, 1},  // by hand 03/10: Offensive Utility (top players) instead of Defensive Utility (30980), same tree and gate
-    {28, 50, 42, 0, 4871, 1},
+    {28, 50, 42, 0, 30583, 1},  // by hand 2.0: Build: Alarm Beacon (top players) instead of Concussive Spanner (4871), cut off from the tree without Frozen Bomb Launcher, same 9-point gate
     {28, 50, 43, 1, 7014, 1},
-    {28, 50, 44, 0, 5103, 1},  // by hand 2.0: Modulator (top players) instead of Innate Brilliance (5331), same 9-point gate
+    {28, 50, 44, 0, 6890, 1},  // by hand 2.0: Mechanical Enhancements (top players) instead of Frozen Bomb Launcher (5974), cut off from the tree without Macro-Gravity Zone, same 9-point gate
     {28, 50, 45, 1, 6504, 1},
     {28, 50, 46, 0, 30869, 1},
     {28, 50, 47, 1, 29818, 1},
