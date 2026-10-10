@@ -353,6 +353,35 @@ bool BuildsThreat(SpellInfo const* info)
     return entry && (entry->flatMod > 0 || entry->pctMod > 1.0f || entry->apPctMod > 0.0f);
 }
 
+// Whether the spell deals damage, itself or by a spell it triggers: a weapon strike, a school damage, a damage over time.
+bool DealsDamage(SpellInfo const* info, uint8 depth = 0)
+{
+    for (SpellEffectInfo const& effect : info->Effects)
+    {
+        switch (effect.Effect)
+        {
+            case SPELL_EFFECT_SCHOOL_DAMAGE:
+            case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+            case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
+            case SPELL_EFFECT_WEAPON_DAMAGE:
+            case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+            case SPELL_EFFECT_HEALTH_LEECH:
+                return true;
+            default:
+                break;
+        }
+        if (effect.IsAura() && (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE ||
+                                effect.ApplyAuraName == SPELL_AURA_PERIODIC_LEECH))
+            return true;
+        if (depth < 2 && effect.TriggerSpell &&
+            (effect.Effect == SPELL_EFFECT_TRIGGER_SPELL || effect.Effect == SPELL_EFFECT_TRIGGER_MISSILE))
+            if (SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell))
+                if (triggered != info && DealsDamage(triggered, depth + 1))
+                    return true;
+    }
+    return false;
+}
+
 // Swimming and breathing under water: a form to travel in, not to stand in.
 bool IsTravelForm(SpellInfo const* info)
 {
@@ -2253,6 +2282,29 @@ public:
             }
         }
 
+        // A tank's threat is its damage: its abilities that deal none (Cripple, Consume Magic, Manaburn) come after the
+        // others. A Felsworn Tyrant spent a third of its global cooldowns on them and lost the boss (bench, 10/10).
+        // They are tried first, each in turn; the others only when none of them can go.
+        if (tank)
+        {
+            std::vector<Usable> damage;
+            std::copy_if(usable.begin(), usable.end(), std::back_inserter(damage),
+                         [](Usable const& spell) { return DealsDamage(spell.info); });
+            DropChannelBreakers(bot, damage);
+            if (!damage.empty())
+            {
+                size_t const start = nextDamage % damage.size();
+                std::rotate(damage.begin(), damage.begin() + start, damage.end());
+                if (SpellInfo const* cast = CastFirst(botAI, bot, damage, target, USAGE_ATTACK))
+                {
+                    auto const itr = std::find_if(damage.begin(), damage.end(),
+                        [cast](Usable const& spell) { return spell.info == cast; });
+                    nextDamage = start + size_t(std::distance(damage.begin(), itr)) + 1;
+                    return RecordUsage(USAGE_ATTACK, cast);
+                }
+            }
+        }
+
         if (sPlayerbotAIConfig.coaAttackLoop)
             return AttackThroughCastFirst(usable, target, saveMana);
 
@@ -2343,6 +2395,7 @@ private:
     };
 
     size_t next = 0;
+    size_t nextDamage = 0;  // a tank's turn through its damaging abilities
     std::unordered_map<uint32, Strikes> failures;
 };
 
