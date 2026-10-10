@@ -1,9 +1,9 @@
 -- CoA Bots 2.0: default rotations (owner 0) of the CoA damage specs that dealt the least on the level 60
--- boss bench (09-10/10), on top of zz_coa_rotation_corrections_1_9.sql. Applied once by Installer-Bots
+-- boss bench (09-10/10) and of the healers that lagged on the level 60 heal bench (10/10), on top of zz_coa_rotation_corrections_1_9.sql. Applied once by Installer-Bots
 -- (coa_bots_installed). Re-runnable: the same result every time. Rows with owner <> 0 and the 'say'
 -- strategy are never touched. A wrong result (count, checksum, apostrophes) aborts the transaction.
--- Rows: 376 in 12 specs. Checksum SUM(CRC32(CONCAT_WS('|',name,idx,owner,action_line))) = 802646441476.
--- Rows per spec: knight-of-xoroth-hellfire 30, primalist-grovekeeper 39, primalist-wildwalker 32, ranger-archery 28, ranger-farstrider 37, runemaster-engravement 17, runemaster-riftblade 21, starcaller-sentinel 24, stormbringer-wind 37, sun-cleric-valkyrie 36, tinker-demolition 36, tinker-mechanics 39
+-- Rows: 457 in 15 specs. Checksum SUM(CRC32(CONCAT_WS('|',name,idx,owner,action_line))) = 974768429940.
+-- Rows per spec: chronomancer-time 26, cultist-heretic 29, knight-of-xoroth-hellfire 30, primalist-grovekeeper 39, primalist-wildwalker 32, ranger-archery 28, ranger-farstrider 37, runemaster-engravement 17, runemaster-riftblade 21, starcaller-sentinel 24, stormbringer-wind 37, sun-cleric-valkyrie 36, tinker-demolition 36, tinker-invention 26, tinker-mechanics 39
 -- Why: stormbringer-wind never summoned its Air Elemental (Flurry commands it) and put Cloudburst, a
 -- knockback, first; primalist-grovekeeper fights in melee from 2.0 (Wildclaw on the melee action, Primal
 -- Rush no longer leaps it out); tinker-mechanics kept Makeshift Dynamite, its Scrap for the Mechsuit, and
@@ -33,6 +33,21 @@
 -- Rocket Launcher, which kept it out. Its weaker second minute comes from Rockadier (3 min cooldown, 10 to 20%
 -- of a bench fight, all in the first 30 s), not from mana.
 
+-- Fourth batch, healers (level 60 heal bench, 10/10, and real players' combat logs): cultist-heretic had
+-- both Old God Tentacles; only one can stand, so each replaced the other about 25 times a fight (45% and
+-- 30% of base mana a cast, 8 to 14k mana, no healing): its worst fights (55 to 450 healing a second, up to
+-- 36 deaths) are those. It also cast Malevolence, a 5 yard melee spell, from healing range, and Corrupt
+-- Mind (fear) and Hallucination (decoys) in fights. Void Shield (its best heal for the mana) goes
+-- on the one dropping and on the tank, Gaze of C'Thun and Eldritch Shock (free) on the wounded ally.
+-- chronomancer-time answered one member dropping with Correct the Mistake (36%, group heal) and the
+-- others with Reverse Wound (31%, the worst healing per mana): its bad fights cast 25 to 46 of them and
+-- 2 to 10 Epochs, its good ones 37 to 63 Epochs; real players heal with Epoch, Renewal and Accelerated
+-- Recovery (Reverse Wound 0 to 4%). Infinite Shield, known, was never cast (priority 29, on itself): now on
+-- the tank. tinker-invention put Repair Shot (2.5 s, 28%) above everything, so in heavy fights Zap!,
+-- Nanobot Reconstruction and Restorative Beacon, which its heal kit only reached below, were never cast
+-- and it ran dry (16 to 22 deaths); real players heal with Nanobot Reconstruction, Zap! and beacons. Its
+-- other gun augmentations replaced Stim Augmentation (its healing splash, 16k a fight), up to 40 times.
+
 DROP PROCEDURE IF EXISTS coa20_check;
 DELIMITER $$
 CREATE PROCEDURE coa20_check()
@@ -42,16 +57,16 @@ BEGIN
   DECLARE a BIGINT DEFAULT 0;
   SELECT COUNT(*), COALESCE(SUM(CRC32(CONCAT_WS('|', name, idx, owner, action_line))), 0)
     INTO n, h FROM playerbots_custom_strategy
-   WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-mechanics');
-  SELECT COUNT(*) INTO a FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-mechanics')
+   WHERE owner = 0 AND name IN ('chronomancer-time', 'cultist-heretic', 'knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-invention', 'tinker-mechanics');
+  SELECT COUNT(*) INTO a FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('chronomancer-time', 'cultist-heretic', 'knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-invention', 'tinker-mechanics')
      AND action_line LIKE '%''%';
-  IF n <> 376 THEN
+  IF n <> 457 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: wrong row count, nothing was changed';
   END IF;
-  IF a <> 25 THEN
+  IF a <> 39 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: apostrophes lost (character set), nothing was changed';
   END IF;
-  IF h <> 802646441476 THEN
+  IF h <> 974768429940 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: wrong checksum, nothing was changed';
   END IF;
 END$$
@@ -63,9 +78,64 @@ SELECT * FROM playerbots_custom_strategy WHERE owner = 0;
 
 START TRANSACTION;
 
-DELETE FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-mechanics');
+DELETE FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('chronomancer-time', 'cultist-heretic', 'knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-invention', 'tinker-mechanics');
 
 INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
+ ('chronomancer-time', 1, 0, 'party member critical health>cast heal party::Fabric of Time!92'),
+ ('chronomancer-time', 2, 0, 'party member critical health>cast heal party::Epoch!91'),
+ ('chronomancer-time', 3, 0, 'medium group heal setting>cast heal party::Fortify Timeline!90'),
+ ('chronomancer-time', 4, 0, 'medium group heal setting>cast heal aoe::Correct the Mistake!89'),
+ ('chronomancer-time', 5, 0, 'party member medium health>cast heal party::Fabric of Time!88'),
+ ('chronomancer-time', 6, 0, 'party member medium health>cast heal party::Epoch!87'),
+ ('chronomancer-time', 7, 0, 'can cast::Infinite Shield>cast heal tank::Infinite Shield!86'),
+ ('chronomancer-time', 8, 0, 'party member medium health>cast heal party::Accelerated Recovery!85'),
+ ('chronomancer-time', 9, 0, 'low mana>cast::Time Out!!83'),
+ ('chronomancer-time', 10, 0, 'buff missing::Temporal Swiftness>cast buff::Temporal Swiftness!27'),
+ ('chronomancer-time', 11, 0, 'can cast::Timeguard>cast::Timeguard!26'),
+ ('chronomancer-time', 12, 0, 'buff missing::Aeon of Renewal>cast buff::Aeon of Renewal!24'),
+ ('chronomancer-time', 13, 0, 'buff missing::Temporal Anomaly>cast buff::Temporal Anomaly!21'),
+ ('chronomancer-time', 14, 0, 'buff missing::Greater Nozdormu''s Wisdom>cast buff party::Greater Nozdormu''s Wisdom!20'),
+ ('chronomancer-time', 15, 0, 'buff missing::Greater Chromie''s Wisdom>cast buff party::Greater Chromie''s Wisdom!19'),
+ ('chronomancer-time', 16, 0, 'can cast::Resynchronize>cast::Resynchronize!18'),
+ ('chronomancer-time', 17, 0, 'can cast::Moment''s Reprieve>cast::Moment''s Reprieve!17'),
+ ('chronomancer-time', 18, 0, 'can cast::Hasten>cast::Hasten!14'),
+ ('chronomancer-time', 19, 0, 'can cast::Backtrack>cast::Backtrack!13'),
+ ('chronomancer-time', 20, 0, 'can cast::Accelerate>cast::Accelerate!11'),
+ ('chronomancer-time', 21, 0, 'can cast::Infinite Clone>cast::Infinite Clone!10'),
+ ('chronomancer-time', 22, 0, 'can cast::Chromie''s Wisdom>cast::Chromie''s Wisdom!7'),
+ ('chronomancer-time', 23, 0, 'can cast::Wand of Time>cast::Wand of Time!4'),
+ ('chronomancer-time', 24, 0, 'debuff missing::Decomposition>cast debuff::Decomposition!2'),
+ ('chronomancer-time', 25, 0, 'debuff missing::Unmake>cast debuff::Unmake!1'),
+ ('chronomancer-time', 26, 0, 'can cast::Wand>cast::Wand!1'),
+ ('cultist-heretic', 1, 0, 'party member critical health>cast heal party::Void Shield!92'),
+ ('cultist-heretic', 2, 0, 'party member critical health>cast heal party::Gaze of C''Thun!91'),
+ ('cultist-heretic', 3, 0, 'low mana>cast::Sanity Tap!90'),
+ ('cultist-heretic', 4, 0, 'cure party::Devour Magic>cast cure party::Devour Magic!88'),
+ ('cultist-heretic', 5, 0, 'party member medium health>cast heal party::Void Shield!87'),
+ ('cultist-heretic', 6, 0, 'party member medium health>cast heal party::Gaze of C''Thun!86'),
+ ('cultist-heretic', 7, 0, 'party member medium health>cast heal party::Eldritch Shock!85'),
+ ('cultist-heretic', 8, 0, 'party member medium health>cast heal party::Eldritch Mending!84'),
+ ('cultist-heretic', 9, 0, 'can cast::Void Shield>cast heal tank::Void Shield!83'),
+ ('cultist-heretic', 10, 0, 'party member low health>cast buff::Eldritch Eye!82'),
+ ('cultist-heretic', 11, 0, 'low mana>cast::Satiate!81'),
+ ('cultist-heretic', 12, 0, 'can cast::Gaze of C''Thun>cast::Gaze of C''Thun!30'),
+ ('cultist-heretic', 13, 0, 'low health>cast buff::Embrace the Void!27'),
+ ('cultist-heretic', 14, 0, 'can cast::Hand of Yogg-Saron>cast heal tank::Hand of Yogg-Saron!26'),
+ ('cultist-heretic', 15, 0, 'buff missing::Greater Whispers of C''thun>cast buff party::Greater Whispers of C''thun!24'),
+ ('cultist-heretic', 16, 0, 'can cast::Greater Whispers of Y''shaarj>cast::Greater Whispers of Y''shaarj!23'),
+ ('cultist-heretic', 17, 0, 'buff missing::Greater Whispers of N''zoth>cast buff party::Greater Whispers of N''zoth!22'),
+ ('cultist-heretic', 18, 0, 'can cast::Restore Sanity>cast::Restore Sanity!21'),
+ ('cultist-heretic', 19, 0, 'buff missing::Presence of Yogg-Saron>cast buff::Presence of Yogg-Saron!20'),
+ ('cultist-heretic', 20, 0, 'can cast::Whispers of C''thun>cast::Whispers of C''thun!17'),
+ ('cultist-heretic', 21, 0, 'can cast::Eldritch Shock>cast::Eldritch Shock!16'),
+ ('cultist-heretic', 22, 0, 'can cast::Void Resilience>cast::Void Resilience!13'),
+ ('cultist-heretic', 23, 0, 'can cast::Whispers of N''Zoth>cast::Whispers of N''Zoth!10'),
+ ('cultist-heretic', 24, 0, 'can cast::Whispers of Y''shaarj>cast::Whispers of Y''shaarj!7'),
+ ('cultist-heretic', 25, 0, 'can cast::Sanity Tap>cast::Sanity Tap!6'),
+ ('cultist-heretic', 26, 0, 'can cast::Entropic Slam>cast::Entropic Slam!4'),
+ ('cultist-heretic', 27, 0, 'can cast::Hammer of Twilight>cast::Hammer of Twilight!2'),
+ ('cultist-heretic', 28, 0, 'can cast::Shoot>cast::Shoot!2'),
+ ('cultist-heretic', 29, 0, 'can cast::Wand>cast::Wand!1'),
  ('knight-of-xoroth-hellfire', 1, 0, 'medium aoe>cast melee::Meatsaw!81'),
  ('knight-of-xoroth-hellfire', 2, 0, 'aura stacks::Demonfire,6>cast melee::Flames of Xoroth!88'),
  ('knight-of-xoroth-hellfire', 3, 0, 'debuff missing::Hellmaw>cast debuff::Hellmaw!24'),
@@ -403,6 +473,32 @@ INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
  ('tinker-demolition', 38, 0, 'can cast::Defibrillate>cast::Defibrillate!2'),
  ('tinker-demolition', 39, 0, 'can cast::Build: Clockwork Assistant>cast::Build: Clockwork Assistant!1'),
  ('tinker-demolition', 40, 0, 'can cast::Auto Shot>cast::Auto Shot!3'),
+ ('tinker-invention', 1, 0, 'party member critical health>cast heal party::Zap!!92'),
+ ('tinker-invention', 2, 0, 'party member critical health>cast heal party::Emergency Heal!91'),
+ ('tinker-invention', 3, 0, 'can cast::Nanobot Reconstruction>cast heal tank::Nanobot Reconstruction!90'),
+ ('tinker-invention', 4, 0, 'party member medium health>cast heal party::Zap!!89'),
+ ('tinker-invention', 5, 0, 'medium group heal setting>cast heal tank::Build: Restorative Beacon!88'),
+ ('tinker-invention', 6, 0, 'buff missing::Nanobot Recharger>cast buff::Nanobot Recharger!87'),
+ ('tinker-invention', 7, 0, 'low mana>cast::Mana Module!86'),
+ ('tinker-invention', 8, 0, 'medium mana>cast::Build: Replenishment Beacon!85'),
+ ('tinker-invention', 9, 0, 'party member medium health>cast heal party::Repair Shot!84'),
+ ('tinker-invention', 10, 0, 'can cast::Auto Resuscitation Device>cast::Auto Resuscitation Device!30'),
+ ('tinker-invention', 11, 0, 'can cast::Stim Augmentation>cast::Stim Augmentation!29'),
+ ('tinker-invention', 12, 0, 'buff missing::Greater Power Module>cast buff party::Greater Power Module!28'),
+ ('tinker-invention', 13, 0, 'can cast::Build: Destructo-Bot>cast::Build: Destructo-Bot!26'),
+ ('tinker-invention', 14, 0, 'can cast::Greater Mana Module>cast::Greater Mana Module!25'),
+ ('tinker-invention', 15, 0, 'buff missing::Basic Intuition>cast buff::Basic Intuition!21'),
+ ('tinker-invention', 16, 0, 'can cast::Build: Battle Turret X-13>cast::Build: Battle Turret X-13!20'),
+ ('tinker-invention', 17, 0, 'can cast::Build: Rusthound>cast::Build: Rusthound!19'),
+ ('tinker-invention', 18, 0, 'can cast::Build: Replenishment Beacon>cast::Build: Replenishment Beacon!17'),
+ ('tinker-invention', 19, 0, 'can cast::Mana Module>cast::Mana Module!11'),
+ ('tinker-invention', 20, 0, 'can cast::Build: Mechano-Bear>cast::Build: Mechano-Bear!9'),
+ ('tinker-invention', 21, 0, 'can cast::''Pick Lock''>cast::''Pick Lock''!8'),
+ ('tinker-invention', 22, 0, 'can cast::Build: Portable Sawmill>cast::Build: Portable Sawmill!7'),
+ ('tinker-invention', 23, 0, 'can cast::Defibrillate>cast::Defibrillate!6'),
+ ('tinker-invention', 24, 0, 'can cast::Build: Clockwork Assistant>cast::Build: Clockwork Assistant!5'),
+ ('tinker-invention', 25, 0, 'can cast::Power Module>cast::Power Module!1'),
+ ('tinker-invention', 26, 0, 'can cast::Auto Shot>cast::Auto Shot!3'),
  ('tinker-mechanics', 1, 0, 'medium aoe>cast::Sticky Bomb!88'),
  ('tinker-mechanics', 2, 0, 'medium aoe>cast::Scrap Shot!87'),
  ('tinker-mechanics', 3, 0, 'medium aoe>cast::Makeshift Dynamite!86'),
