@@ -2255,12 +2255,13 @@ public:
         // (and its weapon), keeping the rest for heals.
         bool const saveMana = SavingManaForHeals(bot);
 
-        // Taunts, even those that deal damage, stay out of the rotation on an enemy another tank holds, and on one that
-        // already hits the tank: a Felsworn Tyrant spent 9 of its 18 Betrays on a boss already on it, its taunt then
-        // on cooldown when an add ran to a healer (bench, 10/10).
-        bool const noTaunt = tank && (HeldByOtherTank(bot, target) || target->GetVictim() == bot);
-        std::vector<Usable> const usable = KnownAbilities(bot, [tank, noTaunt](uint16 kind)
-            { return IsAttack(kind, tank) && !(noTaunt && (kind & KIND_TAUNT)); });
+        // Taunts, even those that deal damage, stay out of the rotation on an enemy another tank holds; those that deal
+        // none, on one that already hits the tank: a Felsworn Tyrant spent 9 of its 18 Betrays on a boss already on it,
+        // its taunt then on cooldown when an add ran to a healer (bench, 10/10).
+        bool const noTaunt = tank && HeldByOtherTank(bot, target);
+        bool const onMe = tank && target->GetVictim() == bot;
+        std::vector<Usable> const usable = KnownAbilities(bot, [tank, noTaunt, onMe](uint16 kind)
+            { return IsAttack(kind, tank) && !((noTaunt || (onMe && !(kind & KIND_DAMAGE))) && (kind & KIND_TAUNT)); });
         if (usable.empty())
             return false;
 
@@ -4232,10 +4233,10 @@ bool CoaTankOnlySpell(Player* bot, SpellInfo const* info, Unit* target)
         return false;
     uint32 const first = info->GetFirstRankSpell()->Id;
     bool const taunt = taunts.count(info->Id) || taunts.count(first);
-    // A tank does not taunt an enemy already hitting it, whatever asks for it (its spec rotation listed Betray and
-    // Writhe among its attacks): the taunt stays ready for the add that runs to a healer.
+    // A tank does not taunt an enemy already hitting it with a taunt that deals no damage, whatever asks for it (its
+    // spec rotation listed Betray among its attacks): the taunt stays ready for the add that runs to a healer.
     if (GetCoaRole(bot) == CoaRole::Tank)
-        return taunt && target && target != bot && target->GetVictim() == bot;
+        return taunt && target && target != bot && target->GetVictim() == bot && !DealsDamage(info);
     // A spell of the bot's own raising its threat (a tank stance, Righteous Fury), kit or not.
     bool const threat = !taunt && (!target || target == bot) && RaisesThreat(info);
     if (taunt || threat)
