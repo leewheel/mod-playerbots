@@ -4412,8 +4412,12 @@ bool CoaRivalBuffBlocks(Player* bot, SpellInfo const* info, Unit* target)
     // A caster keeps one of its rival buffs on each target (Greater Devotions of a Sun Cleric, Seals, Adaptations):
     // a spec rotation asking for all four with "buff missing" put one on, which took the other off, and asked for
     // that one again: 75 Devotions in a 3 minute fight (bench, 10/10).
-    // On the bot itself, CoaRotationMayCast lets the member its rotation keeps replace a sibling (stances, Tattoos).
-    if (!bot || !info || !target || target == bot || !info->IsPositive())
+    // On the bot itself, CoaRotationMayCast lets the member its rotation keeps replace a sibling (stances, Tattoos,
+    // permanent): only the buffs that run out are held there. A Knight of Xoroth tank cast its Greater Marks of
+    // Korth'azz, Blaumeux and Zeliek, group buffs of 30 minutes, 42 times in a 3 minute fight (bench, 10/10).
+    if (!bot || !info || !target || !info->IsPositive())
+        return false;
+    if (target == bot && (info->GetMaxDuration() <= 0 || info->HasAura(SPELL_AURA_MOD_SHAPESHIFT)))
         return false;
     return WearsRivalBuffFrom(target, bot, info) && !target->GetAura(info->Id, bot->GetGUID());
 }
