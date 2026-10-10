@@ -24,7 +24,7 @@ GROUPS = {
     'population': 'Population',
     'party': 'Groups and players\' bots',
     'combat': 'Combat',
-    'activities': 'Dungeons and PvP',
+    'activities': 'Activities: dungeons, PvP, cities',
     'chat': 'Chat',
     'other': 'Other',
 }
