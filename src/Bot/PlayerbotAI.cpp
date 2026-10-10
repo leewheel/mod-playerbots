@@ -3653,6 +3653,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (CoaRivalBuffBlocks(bot, sSpellMgr->GetSpellInfo(spellid), target))
         return false;
 
+    if (CoaCarriesBotAway(bot, sSpellMgr->GetSpellInfo(spellid)))
+        return false;
+
     // A spell that deals no damage is not cast again on an enemy still wearing the bot's own aura of it for more than
     // 3 seconds: a spec rotation recast Cripple 28 times in a 3 minute fight on a boss already slowed, global cooldowns
     // its tank lacked for threat (Felsworn Tyrant, bench, 10/10).
@@ -3979,6 +3982,9 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
 
     // The swapped-in spell may taunt where the one checked did not.
     if (CoaTankOnlySpell(bot, sSpellMgr->GetSpellInfo(spellId), target ? target : bot))
+        return false;
+
+    if (CoaCarriesBotAway(bot, sSpellMgr->GetSpellInfo(spellId)))
         return false;
 
     if (!target)

@@ -256,6 +256,32 @@ bool TeleportsCasterHome(SpellInfo const* info)
     return false;
 }
 
+// A spell that keeps its caster rolling or running forward for its whole duration, unable to stop or to steer
+// (Boulder Dash, Advance, Shooting Star).
+bool ForcesCasterForward(SpellInfo const* info)
+{
+    for (SpellEffectInfo const& effect : info->Effects)
+        if (IsAuraEffect(effect) && effect.ApplyAuraName == SPELL_AURA_FORCE_MOVE_FORWARD &&
+            effect.TargetA.GetTarget() == TARGET_UNIT_CASTER)
+            return true;
+    return false;
+}
+
+// A spell that sends its caster to a place in front of it (Primal Rush rushes 20 yards on through the enemies).
+bool SendsCasterAhead(SpellInfo const* info)
+{
+    for (SpellEffectInfo const& effect : info->Effects)
+    {
+        if (effect.Effect != SPELL_EFFECT_CHARGE_DEST && effect.Effect != SPELL_EFFECT_LEAP &&
+            effect.Effect != SPELL_EFFECT_JUMP_DEST && effect.Effect != SPELL_EFFECT_TELEPORT_UNITS)
+            continue;
+        for (uint32 const dest : { effect.TargetA.GetTarget(), effect.TargetB.GetTarget() })
+            if (dest == TARGET_DEST_CASTER_FRONT || dest == TARGET_DEST_CASTER_FRONT_LEAP)
+                return true;
+    }
+    return false;
+}
+
 bool IsDefensiveAura(SpellEffectInfo const& effect)
 {
     switch (effect.ApplyAuraName)
@@ -761,6 +787,11 @@ void Classify(SpellInfo const* info, CoaAbility& ability, uint8 depth = 0)
             (effect.ApplyAuraName == SPELL_AURA_MOD_SHAPESHIFT || effect.ApplyAuraName == SPELL_AURA_MOD_STUN ||
              effect.ApplyAuraName == SPELL_AURA_MOD_PACIFY || effect.ApplyAuraName == SPELL_AURA_MOD_PACIFY_SILENCE))
             ability.kind &= ~KIND_BUFF;
+
+    // A roll or run the caster cannot stop is no attack and no buff: Boulder Dash's damage made it one, and
+    // Wildwalker bots rolled 10 s away from the boss, 20 s a fight out of reach (bench, 10/10).
+    if (!depth && ForcesCasterForward(info))
+        ability.kind &= ~(KIND_HOSTILE | KIND_DAMAGE | KIND_AOE | KIND_BUFF);
 
     // Befriend Beast (Ranger, 562301) possesses a beast for 40 s: no bot can steer it, and the beast and
     // the bot stood idle while the beast took hits (jealous-sound/azerothcore-wotlk-coa#6111). No action
@@ -4385,6 +4416,28 @@ bool CoaRivalBuffBlocks(Player* bot, SpellInfo const* info, Unit* target)
     if (!bot || !info || !target || target == bot || !info->IsPositive())
         return false;
     return WearsRivalBuffFrom(target, bot, info) && !target->GetAura(info->Id, bot->GetGUID());
+}
+
+bool CoaCarriesBotAway(Player* bot, SpellInfo const* info)
+{
+    if (!bot || !info || !bot->IsInCombat())
+        return false;
+    // In a fight a bot neither rolls off for seconds nor rushes on past the enemy it stands at: Wildwalkers spent
+    // a sixth of each boss fight out of reach after Boulder Dash and Primal Rush (bench, 10/10). Out of reach, a
+    // rush ahead still closes the gap.
+    Unit* const victim = bot->GetVictim();
+    bool const away = ForcesCasterForward(info) ||
+                      (SendsCasterAhead(info) && victim && bot->IsWithinMeleeRange(victim));
+    if (away)
+    {
+        static std::mutex logged;
+        static std::unordered_set<uint32> seen;
+        std::lock_guard<std::mutex> guard(logged);
+        if (seen.insert(info->Id).second)
+            LOG_INFO("playerbots", "coa carries away: {} (class {}) kept from {} ({}) in a fight", bot->GetName(),
+                     bot->getClass(), info->SpellName[LOCALE_enUS], info->Id);
+    }
+    return away;
 }
 
 bool CoaRotationMayCast(PlayerbotAI* botAI, Player* bot, SpellInfo const* info)

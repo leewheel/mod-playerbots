@@ -92,6 +92,10 @@ bool CoaTankOnlySpell(Player* bot, SpellInfo const* info, Unit* target);
 // Whether the target already wears a rival buff of this one from the bot (a caster keeps one of them on each target).
 bool CoaRivalBuffBlocks(Player* bot, SpellInfo const* info, Unit* target);
 
+// Whether this spell would carry the bot, in a fight, away from where it fights: a roll or run it cannot stop
+// (Boulder Dash), or a rush to a place ahead while it stands in reach of its enemy (Primal Rush).
+bool CoaCarriesBotAway(Player* bot, SpellInfo const* info);
+
 // A tank out of combat puts on the threat buffs it knows outside its class kit (every 10 seconds).
 void CoaTankThreatBuffs(PlayerbotAI* botAI, Player* bot);
 
