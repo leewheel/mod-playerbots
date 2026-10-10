@@ -2,8 +2,8 @@
 -- boss bench (09-10/10), on top of zz_coa_rotation_corrections_1_9.sql. Applied once by Installer-Bots
 -- (coa_bots_installed). Re-runnable: the same result every time. Rows with owner <> 0 and the 'say'
 -- strategy are never touched. A wrong result (count, checksum, apostrophes) aborts the transaction.
--- Rows: 319 in 10 specs. Checksum SUM(CRC32(CONCAT_WS('|',name,idx,owner,action_line))) = 680976522342.
--- Rows per spec: knight-of-xoroth-hellfire 30, primalist-grovekeeper 39, primalist-wildwalker 32, ranger-archery 28, ranger-farstrider 37, runemaster-engravement 17, runemaster-riftblade 21, stormbringer-wind 37, tinker-demolition 39, tinker-mechanics 39
+-- Rows: 376 in 12 specs. Checksum SUM(CRC32(CONCAT_WS('|',name,idx,owner,action_line))) = 802646441476.
+-- Rows per spec: knight-of-xoroth-hellfire 30, primalist-grovekeeper 39, primalist-wildwalker 32, ranger-archery 28, ranger-farstrider 37, runemaster-engravement 17, runemaster-riftblade 21, starcaller-sentinel 24, stormbringer-wind 37, sun-cleric-valkyrie 36, tinker-demolition 36, tinker-mechanics 39
 -- Why: stormbringer-wind never summoned its Air Elemental (Flurry commands it) and put Cloudburst, a
 -- knockback, first; primalist-grovekeeper fights in melee from 2.0 (Wildclaw on the melee action, Primal
 -- Rush no longer leaps it out); tinker-mechanics kept Makeshift Dynamite, its Scrap for the Mechsuit, and
@@ -21,6 +21,18 @@
 -- longer throw Warpdagger (its reactivation teleports them to the dagger, out of reach), nor Leyfeed or
 -- Leyline Adjustment (engravement).
 
+-- Third batch, checked against real players' combat logs (mythic+, 08/2026): starcaller-sentinel casts
+-- Starfire Shot whenever it can, before Huntress Shot (it waited for Scattered Stars on the target, so it
+-- alternated with Huntress Shot; a Starfire Shot deals 3 to 6 times a Huntress Shot per second of cast, the
+-- best real Sentinel cast 3 for 1, and our bots' damage followed their Starfire Shot count, 12 to 27 a fight).
+-- sun-cleric-valkyrie casts Sunslam while Dawn is up (the line waited for 12 stacks of Dawn, which has 10
+-- charges at most: never cast, 8 to 13% of real players' damage) and Solar Invocation: Conquest outside Dawn
+-- (10 Solar Power and mana, twice a minute for real players, absent from the rotation). tinker-demolition keeps
+-- Explosive Augmentation on its gun (8 to 9% of real players' damage; the bots never had it) and drops the
+-- other augmentations that would replace it; Bomb Toss (instant, 10 a minute for real players) goes before
+-- Rocket Launcher, which kept it out. Its weaker second minute comes from Rockadier (3 min cooldown, 10 to 20%
+-- of a bench fight, all in the first 30 s), not from mana.
+
 DROP PROCEDURE IF EXISTS coa20_check;
 DELIMITER $$
 CREATE PROCEDURE coa20_check()
@@ -30,16 +42,16 @@ BEGIN
   DECLARE a BIGINT DEFAULT 0;
   SELECT COUNT(*), COALESCE(SUM(CRC32(CONCAT_WS('|', name, idx, owner, action_line))), 0)
     INTO n, h FROM playerbots_custom_strategy
-   WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics');
-  SELECT COUNT(*) INTO a FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics')
+   WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-mechanics');
+  SELECT COUNT(*) INTO a FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-mechanics')
      AND action_line LIKE '%''%';
-  IF n <> 319 THEN
+  IF n <> 376 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: wrong row count, nothing was changed';
   END IF;
-  IF a <> 20 THEN
+  IF a <> 25 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: apostrophes lost (character set), nothing was changed';
   END IF;
-  IF h <> 680976522342 THEN
+  IF h <> 802646441476 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: wrong checksum, nothing was changed';
   END IF;
 END$$
@@ -51,7 +63,7 @@ SELECT * FROM playerbots_custom_strategy WHERE owner = 0;
 
 START TRANSACTION;
 
-DELETE FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics');
+DELETE FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-mechanics');
 
 INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
  ('knight-of-xoroth-hellfire', 1, 0, 'medium aoe>cast melee::Meatsaw!81'),
@@ -258,6 +270,30 @@ INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
  ('runemaster-riftblade', 20, 0, 'can cast::Leyfeed>cast melee::Leyfeed!11'),
  ('runemaster-riftblade', 21, 0, 'can cast::Elemental Burst>cast melee::Elemental Burst!1'),
  ('runemaster-riftblade', 22, 0, 'no aura::Air Engraving>cast::Weapon Engraving: Air!13'),
+ ('starcaller-sentinel', 1, 0, 'medium health>cast heal::Hand of Elune!98'),
+ ('starcaller-sentinel', 2, 0, 'light aoe>cast::Starcall!90'),
+ ('starcaller-sentinel', 3, 0, 'light aoe>cast::Trueshot!89'),
+ ('starcaller-sentinel', 4, 0, 'buff missing::Drawstring of Elune>cast buff::Drawstring of Elune!88'),
+ ('starcaller-sentinel', 5, 0, 'buff missing::Lunar Eclipse>cast buff::Lunar Eclipse!87'),
+ ('starcaller-sentinel', 6, 0, 'can cast::Arrow of the Goddess>cast::Arrow of the Goddess!86'),
+ ('starcaller-sentinel', 7, 0, 'light aoe>cast buff::Arrows In The Night!85'),
+ ('starcaller-sentinel', 8, 0, 'target has aura::Scattered Stars>cast::Starfire Shot!84'),
+ ('starcaller-sentinel', 9, 0, 'can cast::Huntress Shot>cast::Huntress Shot!72'),
+ ('starcaller-sentinel', 10, 0, 'target has aura::Scattered Stars>cast::Lunar Lance!70'),
+ ('starcaller-sentinel', 11, 0, 'low mana>cast::Moon Arrow!60'),
+ ('starcaller-sentinel', 12, 0, 'buff missing::Aspect of the Cosmos>cast buff::Aspect of the Cosmos!31'),
+ ('starcaller-sentinel', 13, 0, 'can cast::Trueshot>cast::Trueshot!29'),
+ ('starcaller-sentinel', 14, 0, 'buff missing::Reverse Magic>cast buff::Reverse Magic!27'),
+ ('starcaller-sentinel', 15, 0, 'can cast::Starfire Shot>cast::Starfire Shot!73'),
+ ('starcaller-sentinel', 16, 0, 'can cast::Warden''s Blade>cast::Warden''s Blade!24'),
+ ('starcaller-sentinel', 17, 0, 'buff missing::Greater Arcane Protection>cast buff party::Greater Arcane Protection!22'),
+ ('starcaller-sentinel', 18, 0, 'buff missing::Greater Celestial Mind>cast buff party::Greater Celestial Mind!21'),
+ ('starcaller-sentinel', 19, 0, 'cure party::Elune''s Purification>cast cure party::Elune''s Purification!15'),
+ ('starcaller-sentinel', 20, 0, 'can cast::Celestial Cleave>cast::Celestial Cleave!11'),
+ ('starcaller-sentinel', 21, 0, 'can cast::Celestial Strike>cast::Celestial Strike!4'),
+ ('starcaller-sentinel', 22, 0, 'can cast::Starsunder>cast::Starsunder!3'),
+ ('starcaller-sentinel', 23, 0, 'can cast::Auto Shot>cast::Auto Shot!3'),
+ ('starcaller-sentinel', 24, 0, 'can cast::Wand>cast::Wand!1'),
  ('stormbringer-wind', 1, 0, 'coa summon missing::500941>cast::Summon: Air Elemental!88'),
  ('stormbringer-wind', 2, 0, 'can cast::Charge>cast::Charge!87'),
  ('stormbringer-wind', 3, 0, 'can cast::Flurry>cast::Flurry!83'),
@@ -295,18 +331,53 @@ INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
  ('stormbringer-wind', 101, 0, 'aura stacks::Static,50>cast::Aeroblast!86'),
  ('stormbringer-wind', 102, 0, 'aura stacks::Static,70>cast::Updraft!85'),
  ('stormbringer-wind', 103, 0, 'medium mana>cast::Discharge!89'),
+ ('sun-cleric-valkyrie', 1, 0, 'buff missing::Vow of the Valkyr>cast buff::Vow of the Valkyr!95'),
+ ('sun-cleric-valkyrie', 2, 0, 'medium health>cast heal::Solar Prayer!94'),
+ ('sun-cleric-valkyrie', 3, 0, 'aura stacks::Solar Power,20>cast melee::Dawn!90'),
+ ('sun-cleric-valkyrie', 4, 0, 'has aura::Dawn>cast buff::Paragon!89'),
+ ('sun-cleric-valkyrie', 5, 0, 'medium aoe>cast melee::Horusath Blast!88'),
+ ('sun-cleric-valkyrie', 6, 0, 'medium aoe>cast melee::Glorious Execution!87'),
+ ('sun-cleric-valkyrie', 7, 0, 'can cast::Dawnfall>cast melee::Dawnfall!87'),
+ ('sun-cleric-valkyrie', 8, 0, 'buff missing::Champion of the Sun>cast buff::Champion of the Sun!86'),
+ ('sun-cleric-valkyrie', 9, 0, 'medium aoe>cast melee::Justice!86'),
+ ('sun-cleric-valkyrie', 10, 0, 'can cast::Radiance>cast melee::Radiance!85'),
+ ('sun-cleric-valkyrie', 11, 0, 'medium aoe>cast melee::Valkyr''s Calling!85'),
+ ('sun-cleric-valkyrie', 12, 0, 'can cast::Divine Retribution>cast melee::Divine Retribution!84'),
+ ('sun-cleric-valkyrie', 13, 0, 'has aura::Dawn>cast melee::Sunslam!88'),
+ ('sun-cleric-valkyrie', 14, 0, 'can cast::Glorious Execution>cast melee::Glorious Execution!83'),
+ ('sun-cleric-valkyrie', 15, 0, 'can cast::Horusath Blast>cast melee::Horusath Blast!82'),
+ ('sun-cleric-valkyrie', 16, 0, 'can cast::Gavel of Grace>cast melee::Gavel of Grace!81'),
+ ('sun-cleric-valkyrie', 17, 0, 'can cast::Justice>cast melee::Justice!80'),
+ ('sun-cleric-valkyrie', 18, 0, 'can cast::Gavel of Light>cast melee::Gavel of Light!79'),
+ ('sun-cleric-valkyrie', 19, 0, 'can cast::Dawn>cast melee::Dawn!78'),
+ ('sun-cleric-valkyrie', 20, 0, 'buff missing::Greater Devotion of Dawn>cast buff party::Greater Devotion of Dawn!28'),
+ ('sun-cleric-valkyrie', 21, 0, 'buff missing::Greater Devotion of Emperors>cast buff party::Greater Devotion of Emperors!27'),
+ ('sun-cleric-valkyrie', 22, 0, 'buff missing::Greater Devotion of Grace>cast buff party::Greater Devotion of Grace!26'),
+ ('sun-cleric-valkyrie', 23, 0, 'can cast::Auto Attack>cast melee::Auto Attack!24'),
+ ('sun-cleric-valkyrie', 24, 0, 'can cast::Valkyr''s Calling>cast melee::Valkyr''s Calling!21'),
+ ('sun-cleric-valkyrie', 25, 0, 'buff missing::Greater Devotion of Radiance>cast buff party::Greater Devotion of Radiance!19'),
+ ('sun-cleric-valkyrie', 26, 0, 'can cast::New Day>cast melee::New Day!18'),
+ ('sun-cleric-valkyrie', 27, 0, 'buff missing::An''she''s Blessing>cast buff::An''she''s Blessing!16'),
+ ('sun-cleric-valkyrie', 28, 0, 'can cast::Glare>cast melee::Glare!15'),
+ ('sun-cleric-valkyrie', 29, 0, 'can cast::Devotion of Emperors>cast melee::Devotion of Emperors!14'),
+ ('sun-cleric-valkyrie', 30, 0, 'can cast::Devotion of Radiance>cast melee::Devotion of Radiance!9'),
+ ('sun-cleric-valkyrie', 31, 0, 'can cast::Gavel of Wrath>cast melee::Gavel of Wrath!8'),
+ ('sun-cleric-valkyrie', 32, 0, 'can cast::Devotion of Dawn>cast melee::Devotion of Dawn!5'),
+ ('sun-cleric-valkyrie', 33, 0, 'can cast::Revivify>cast melee::Revivify!4'),
+ ('sun-cleric-valkyrie', 34, 0, 'can cast::Devotion of Grace>cast melee::Devotion of Grace!3'),
+ ('sun-cleric-valkyrie', 35, 0, 'can cast::Sunflare>cast melee::Sunflare!1'),
+ ('sun-cleric-valkyrie', 36, 0, 'no aura::Dawn>cast buff::Solar Invocation: Conquest!86'),
  ('tinker-demolition', 1, 0, 'medium aoe>cast::Sticky Bomb!88'),
  ('tinker-demolition', 2, 0, 'medium aoe>cast::Bomb Toss!87'),
  ('tinker-demolition', 3, 0, 'medium aoe>cast::Scrap Shot!86'),
  ('tinker-demolition', 4, 0, 'medium aoe>cast::Rocket Launcher!85'),
  ('tinker-demolition', 5, 0, 'medium health>cast heal::Repair Shot!84'),
  ('tinker-demolition', 6, 0, 'can cast::Sticky Bomb>cast::Sticky Bomb!85'),
- ('tinker-demolition', 7, 0, 'can cast::Bomb Toss>cast::Bomb Toss!82'),
+ ('tinker-demolition', 7, 0, 'can cast::Bomb Toss>cast::Bomb Toss!86'),
  ('tinker-demolition', 8, 0, 'can cast::Scrap Shot>cast::Scrap Shot!50'),
  ('tinker-demolition', 9, 0, 'can cast::Rocket Launcher>cast::Rocket Launcher!84'),
  ('tinker-demolition', 10, 0, 'can cast::Build: Spider Bomb>cast::Build: Spider Bomb!30'),
  ('tinker-demolition', 11, 0, 'can cast::Build: Firepot Drone>cast::Build: Firepot Drone!29'),
- ('tinker-demolition', 12, 0, 'can cast::Tracer Augmentation>cast::Tracer Augmentation!9'),
  ('tinker-demolition', 13, 0, 'buff missing::Greater Power Module>cast buff party::Greater Power Module!27'),
  ('tinker-demolition', 14, 0, 'can cast::Macro-Gravity Zone>cast::Macro-Gravity Zone!26'),
  ('tinker-demolition', 15, 0, 'can cast::Build: Oil-Spill Pylon>cast::Build: Oil-Spill Pylon!25'),
@@ -323,10 +394,8 @@ INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
  ('tinker-demolition', 26, 0, 'can cast::Freeze Ray>cast::Freeze Ray!14'),
  ('tinker-demolition', 27, 0, 'can cast::Build: Replenishment Beacon>cast::Build: Replenishment Beacon!13'),
  ('tinker-demolition', 28, 0, 'debuff missing::Control Mechanical>cast debuff::Control Mechanical!12'),
- ('tinker-demolition', 29, 0, 'can cast::Aether Augmentation>cast::Aether Augmentation!11'),
- ('tinker-demolition', 30, 0, 'can cast::Explosive Augmentation>cast::Explosive Augmentation!28'),
+ ('tinker-demolition', 30, 0, 'buff missing::Explosive Augmentation>cast buff::Explosive Augmentation!90'),
  ('tinker-demolition', 31, 0, 'can cast::Nanobot Recharger>cast::Nanobot Recharger!9'),
- ('tinker-demolition', 32, 0, 'can cast::Piercing Augmentation>cast::Piercing Augmentation!8'),
  ('tinker-demolition', 33, 0, 'can cast::Mana Module>cast::Mana Module!7'),
  ('tinker-demolition', 35, 0, 'can cast::Build: Mechano-Bear>cast::Build: Mechano-Bear!5'),
  ('tinker-demolition', 36, 0, 'can cast::Build: Sentry Turret>cast::Build: Sentry Turret!87'),
