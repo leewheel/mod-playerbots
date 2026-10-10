@@ -1734,11 +1734,16 @@ void PlayerbotAI::DoNextAction(bool min)
         CoaTankThreatBonus(bot);
         CoaTankThreatBuffs(this, bot);
 
-        // In a dungeon, the pet of a bot that is no tank leaves its taunt (Growl, Torment) to the tank; out of one it
-        // casts it again, to hold the mobs off its master.
+        // In a group with a tank, the pet of a bot that is no tank leaves its taunt (Growl, Torment) to the tank; on its
+        // own it casts it again, to hold the mobs off its master. Only in dungeons before: since pets assist in 2.0, they
+        // took the boss off a bench tank in the open world up to 10 times a fight (10/10).
         if (Pet* pet = bot->GetPet(); pet && GetCoaRole(bot) != CoaRole::Tank)
         {
-            bool const instance = bot->GetMap()->IsDungeon();
+            bool instance = bot->GetMap()->IsDungeon();
+            if (Group* group = bot->GetGroup(); group && !instance)
+                for (GroupReference* ref = group->GetFirstMember(); ref && !instance; ref = ref->next())
+                    if (Player* member = ref->GetSource(); member && member != bot && member->IsAlive() && IsTank(member))
+                        instance = true;
             for (auto const& [spellId, petSpell] : pet->m_spells)
                 if (SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
                     petSpell.state != PETSPELL_REMOVED && info && info->IsAutocastable() && CoaTankOnlySpell(bot, info, pet) &&
