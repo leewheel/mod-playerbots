@@ -675,7 +675,10 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
     // player in its sight, so a level 42 tank beside a level 22 player turns every pull into a
     // skull. The bot is rebuilt the way a random bot is - gear, talents and spells of that level -
     // rather than merely relabelled, which would leave it in gear it could no longer wear.
-    if (std::abs(int32(chosen->GetLevel()) - int32(master->GetLevel())) > int32(levelTolerance))
+    // The dungeon finder takes no one under level 15: a level 14 bot recruited for a level 15 player kept the group
+    // out of the queue (Server Manager, 11/10). Under that line the bot is rebuilt at the master's level too.
+    bool const blocksFinder = master->GetLevel() >= 15 && chosen->GetLevel() < 15;
+    if (blocksFinder || std::abs(int32(chosen->GetLevel()) - int32(master->GetLevel())) > int32(levelTolerance))
     {
         uint32 const level = master->GetLevel();
         sRandomPlayerbotMgr.SetValue(chosen, "level", level);
