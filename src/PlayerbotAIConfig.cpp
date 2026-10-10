@@ -761,6 +761,8 @@ bool PlayerbotAIConfig::Initialize()
     coaGearByContent = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGearByContent", true);
     coaGearMatchGroup = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGearMatchGroup", true);
     coaGearHighRiskPvp = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGearHighRiskPvp", true);
+    coaCityStayMinMinutes = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaCityStayMinMinutes", 10);
+    coaCityStayMaxMinutes = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaCityStayMaxMinutes", 30);
     coaBgLevelBalanceChance = std::min<uint32>(100, sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaBgLevelBalanceChance", 15));
     coaStatusFile = sConfigMgr->GetOption<std::string>("AiPlayerbot.CoaStatusFile", "");
     coaStatusIntervalSeconds = std::max<uint32>(1, sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaStatusIntervalSeconds", 5));

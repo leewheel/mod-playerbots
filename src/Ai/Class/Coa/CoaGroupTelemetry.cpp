@@ -663,6 +663,10 @@ public:
         sPlayerbotAIConfig.coaGearByContent = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGearByContent", true);
         sPlayerbotAIConfig.coaGearMatchGroup = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGearMatchGroup", true);
         sPlayerbotAIConfig.coaGearHighRiskPvp = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGearHighRiskPvp", true);
+        // City life is tuned live too: its share of the bots and how long they stay.
+        sPlayerbotAIConfig.RpgStatusProbWeight[RPG_GO_CITY] = sConfigMgr->GetOption<int32>("AiPlayerbot.RpgStatusProbWeight.GoCity", 10);
+        sPlayerbotAIConfig.coaCityStayMinMinutes = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaCityStayMinMinutes", 10);
+        sPlayerbotAIConfig.coaCityStayMaxMinutes = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaCityStayMaxMinutes", 30);
         sPlayerbotAIConfig.coaInterruptCoordination = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaInterruptCoordination", true);
         sPlayerbotAIConfig.coaDungeonPriorities = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaDungeonPriorities", true);
         sPlayerbotAIConfig.coaAncestralCombatFix = sConfigMgr->GetOption<bool>("AiPlayerbot.Coa.AncestralCombatFix", true);

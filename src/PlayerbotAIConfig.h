@@ -428,6 +428,8 @@ public:
     bool coaGearByContent;
     bool coaGearMatchGroup;
     bool coaGearHighRiskPvp;
+    uint32 coaCityStayMinMinutes;
+    uint32 coaCityStayMaxMinutes;
     uint32 coaBgLevelBalanceChance;
     std::string coaStatusFile;
     uint32 coaStatusIntervalSeconds;

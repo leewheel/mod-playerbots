@@ -1920,8 +1920,9 @@ AiPlayerbot.EnableNewRpgStrategy = 1
 # TravelFlight  (Default: 15  Go to the nearest flightmaster and fly to a level-appropriate area)
 # Rest          (Default: 5   Take a break for a while and do nothing)
 # OutdoorPvp    (Default: 10  Participate in outdoor PvP capture points if already in an outdoor PvP zone)
-# GoCity        (Default: 10  Visit a capital of the bot's faction for 10-30 minutes: bank, auction house,
-#                             trainers and vendors; bots too far away teleport there and back)
+# GoCity        (Default: 10  Visit a capital of the bot's faction for a while (see CoaCityStay below): bank,
+#                             auction house, inn, trainers and vendors; bots too far away (from level 10) teleport
+#                             there and back. Never a bot in a group, a queue, an instance or High Risk)
 AiPlayerbot.RpgStatusProbWeight.WanderRandom = 15
 AiPlayerbot.RpgStatusProbWeight.WanderNpc = 20
 AiPlayerbot.RpgStatusProbWeight.GoGrind = 15
@@ -1931,6 +1932,12 @@ AiPlayerbot.RpgStatusProbWeight.TravelFlight = 15
 AiPlayerbot.RpgStatusProbWeight.Rest = 5
 AiPlayerbot.RpgStatusProbWeight.OutdoorPvp = 10
 AiPlayerbot.RpgStatusProbWeight.GoCity = 10
+
+# How long a bot on a city visit (GoCity above) stays among the city NPCs, in minutes: a random time between the
+# two. Both are read again by ".reload config", like the GoCity weight.
+# Default: 10 and 30
+AiPlayerbot.CoaCityStayMinMinutes = 10
+AiPlayerbot.CoaCityStayMaxMinutes = 30
 
 # Bots' minimum and maximum level when teleporting in and out of a zone, according to the new RPG strategy
 # Format: AiPlayerbot.ZoneBracket.zoneID = minLevel,maxLevel

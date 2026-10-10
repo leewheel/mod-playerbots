@@ -126,6 +126,11 @@ SETTINGS = [
      'A bot grouped with a player is geared at the item level of that player. Off: it keeps the gear it has.'),
     ('CoaGearHighRiskPvp', 'activities', 'High Risk bots always in PvP gear',
      'High Risk bots wear PvP gear all the time. Off: only in a battleground or an arena, like the other bots.'),
+    ('RpgStatusProbWeight.GoCity', 'activities', 'City life',
+     'Weight of the city visit among the activities of the random bots (10 = about one bot in ten): the bot goes to a '
+     'capital of its faction, visits the bank, auction house, inn and trainers, then goes back. 0 = never.'),
+    ('CoaCityStayMinMinutes', 'activities', 'City visit, shortest (minutes)', 'Shortest stay of a bot visiting a capital.'),
+    ('CoaCityStayMaxMinutes', 'activities', 'City visit, longest (minutes)', 'Longest stay of a bot visiting a capital.'),
     ('CoaLfgBots', 'activities', '"lfg bot" in chat',
      'A player who says "lfg bot heal", "lfg bot tank" or "lfg bot dps" in chat is whispered by free bots of those roles to invite.'),
     ('CoaLfgLevelRange', 'activities', '"lfg bot" level range',
