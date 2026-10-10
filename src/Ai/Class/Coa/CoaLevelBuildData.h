@@ -727,7 +727,7 @@ inline constexpr std::array<Pick, 3594> Picks =
     {16, 13, 44, 0, 34916, 2},
     {16, 13, 45, 1, 34957, 1},
     {16, 13, 46, 0, 29410, 1},
-    {16, 13, 47, 1, 34955, 1},
+    {16, 13, 47, 1, 7186, 1},  // by hand 2.0: Aeromancy (top players, links Master Elementalist) instead of Master Airbender (34955), same 8-point gate
     {16, 13, 48, 0, 34912, 1},
     {16, 13, 49, 1, 30132, 1},
     {16, 13, 50, 0, 7474, 1},
@@ -1279,7 +1279,7 @@ inline constexpr std::array<Pick, 3594> Picks =
     {19, 24, 30, 0, 34377, 1},
     {19, 24, 31, 1, 7823, 1},
     {19, 24, 32, 0, 30611, 1},
-    {19, 24, 33, 1, 12361, 1},
+    {19, 24, 33, 1, 7024, 1},  // by hand 2.0: Templar's Might (Condemn damage, links Focused and Radiant Blade) instead of Holy Tempest (12361), unreachable without Tyr's Blessing, same 8-point gate
     {19, 24, 34, 0, 29714, 1},
     {19, 24, 35, 1, 34373, 1},
     {19, 24, 36, 0, 6924, 1},
@@ -1526,21 +1526,21 @@ inline constexpr std::array<Pick, 3594> Picks =
     {21, 28, 18, 0, 29416, 3},
     {21, 28, 19, 1, 7787, 1},
     {21, 28, 20, 0, 34169, 1},
-    {21, 28, 21, 1, 29447, 1},
+    {21, 28, 21, 1, 7788, 1},
     {21, 28, 22, 0, 30352, 1},
-    {21, 28, 23, 1, 7788, 1},
+    {21, 28, 23, 1, 31283, 1},
     {21, 28, 24, 0, 7258, 1},
-    {21, 28, 25, 1, 31283, 1},
+    {21, 28, 25, 1, 31284, 1},
     {21, 28, 26, 0, 6670, 1},
-    {21, 28, 27, 1, 31284, 1},
+    {21, 28, 27, 1, 31283, 2},
     {21, 28, 28, 0, 34172, 1},
-    {21, 28, 29, 1, 31283, 2},
+    {21, 28, 29, 1, 29660, 1},
     {21, 28, 30, 0, 34159, 1},
-    {21, 28, 31, 1, 29660, 1},
+    {21, 28, 31, 1, 8009, 1},
     {21, 28, 32, 0, 34157, 1},
-    {21, 28, 33, 1, 8009, 1},
+    {21, 28, 33, 1, 30350, 1},
     {21, 28, 34, 0, 5908, 1},
-    {21, 28, 35, 1, 30350, 1},
+    {21, 28, 35, 1, 30180, 1},  // by hand 2.0: Lethal Wounds (top players, links Strike Where It Hurts) instead of Deadeye (29447)
     {21, 28, 36, 0, 5311, 1},
     {21, 28, 37, 1, 30350, 2},
     {21, 28, 38, 0, 30053, 1},
@@ -2382,9 +2382,9 @@ inline constexpr std::array<Pick, 3594> Picks =
     {26, 43, 54, 0, 33832, 1},
     {26, 43, 55, 1, 33817, 1},
     {26, 43, 56, 0, 11811, 1},
-    {26, 43, 57, 1, 6693, 1},  // by hand 03/10: Rippling Moonwater (top players) instead of Rampaging Waters (33808), same tree and gate
+    {26, 43, 57, 1, 29663, 1},  // by hand 2.0: Lunar Cascade (top players, links Rippling Moonwater) instead of Celestial Form (6270), unreachable, same 23-point gate
     {26, 43, 58, 0, 9834, 1},
-    {26, 43, 59, 1, 6270, 1},
+    {26, 43, 59, 1, 6693, 1},  // by hand 03/10: Rippling Moonwater (top players) instead of Rampaging Waters (33808), same tree and gate
     {26, 43, 60, 0, 30369, 1},
     {26, 44, 10, 0, 7409, 1},
     {26, 44, 11, 1, 30595, 1},
@@ -2588,7 +2588,7 @@ inline constexpr std::array<Pick, 3594> Picks =
     {27, 46, 56, 0, 11025, 1},
     {27, 46, 57, 1, 34052, 1},  // by hand 03/10: Burning Heat (top players) instead of Burn The Heretics (5312), same tree and gate
     {27, 46, 58, 0, 30154, 1},
-    {27, 46, 59, 1, 29505, 1},
+    {27, 46, 59, 1, 30797, 1},  // by hand 2.0: Spears of Glory (top players) instead of Sun Down (29505), unreachable, same 23-point gate
     {27, 46, 60, 0, 29181, 1},
     {27, 47, 10, 0, 29510, 1},
     {27, 47, 11, 1, 31196, 1},
@@ -3594,11 +3594,11 @@ inline constexpr std::array<Pick, 3594> Picks =
     {32, 63, 38, 0, 34615, 1},
     {32, 63, 39, 1, 34622, 1},
     {32, 63, 40, 0, 34663, 1},
-    {32, 63, 41, 1, 6486, 1},
+    {32, 63, 41, 1, 30603, 1},  // by hand 2.0: Residual Power (top players, links Windbreaker) instead of Mind Over Matter (6486), unreachable, same 8-point gate
     {32, 63, 42, 0, 34663, 2},
-    {32, 63, 43, 1, 34621, 1},  // by hand 03/10: Swift Etching (top players) instead of Echo Rune (30032), same tree and gate
+    {32, 63, 43, 1, 1756, 1},
     {32, 63, 44, 0, 34610, 1},
-    {32, 63, 45, 1, 1756, 1},
+    {32, 63, 45, 1, 34621, 1},  // by hand 03/10: Swift Etching (top players) instead of Echo Rune (30032), same tree and gate
     {32, 63, 46, 0, 34614, 1},
     {32, 63, 47, 1, 1598, 1},
     {32, 63, 48, 0, 6378, 1},
