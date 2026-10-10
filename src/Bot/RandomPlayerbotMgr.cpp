@@ -31,6 +31,8 @@
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
+#include "CoaSpecialization.h"
+#include "AscensionSpecialization.h"
 #include "SpellMgr.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
@@ -3197,7 +3199,16 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
 
     // The core resets at login the talents of a character that spent more than its level allows (bots made by older
     // versions): the bot then stood without talents until its next randomize, up to 14 days later. It picks them now.
-    if (IsRandomBot(bot) && bot->GetFreeTalentPoints() >= 5)
+    // A CoA class has no talent tree but Character Advancement entries, set from our level builds: they were set only
+    // on a level up or a change of specialization, so a bot made by an older version kept entries above its level or
+    // missing ones. ApplyCoaTalents brings them to the build of its level, down and up.
+    if (IsAscensionCustomClassId(bot->getClass()))
+    {
+        if (uint32 const changed = ApplyCoaTalents(bot))
+            LOG_INFO("playerbots", "coa repair: {} (level {}) had {} Character Advancement entries off its build",
+                     bot->GetName(), bot->GetLevel(), changed);
+    }
+    else if (IsRandomBot(bot) && bot->GetFreeTalentPoints() >= 5)
     {
         uint32 const freePoints = bot->GetFreeTalentPoints();
         PlayerbotFactory factory(bot, bot->GetLevel());
