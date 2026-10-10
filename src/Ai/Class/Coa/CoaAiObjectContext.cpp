@@ -3514,12 +3514,32 @@ public:
             Unit* victim = unit->GetVictim();
             return victim && victim->IsPlayer() && PlayerbotAI::IsTank(victim->ToPlayer());
         };
-        if (heldByTank(target) && share >= limit)
+        // How fast the share climbs: a melee bot at 4,000 to 7,000 per second went from under the limit to past the
+        // 110% that takes aggro in a few blows (Guardian Gladiator, Templar Zealot, bench, 10/10). It holds as well when
+        // the share would pass 105% in melee, 125% at range, within a second and a half.
+        uint32 const now = getMSTime();
+        if (trends.size() > 32)
+            trends.clear();
+        Trend& trend = trends[target->GetGUID()];
+        uint32 const since = trend.at ? getMSTimeDiff(trend.at, now) : 0;
+        if (since >= 500)
+        {
+            trend.rate = since < 5000 ? (share - trend.share) * 1000.0f / float(since) : 0.0f;
+            trend.share = share;
+            trend.at = now;
+        }
+        else if (!trend.at)
+        {
+            trend.share = share;
+            trend.at = now;
+        }
+        float const predicted = share + std::max(0.0f, trend.rate) * 1.5f;
+        if (heldByTank(target) && (share >= limit || predicted >= limit + 0.15f))
         {
             // White swings go on with no action at all: a Knight of Xoroth War held its spells and still took the
             // boss 7 times in 3 minutes from a Tyrant tank (bench, 10/10). Past the tank's threat a melee bot stops
             // swinging too; "coa attack" swings again once the tank is ahead.
-            if (share >= limit + 0.1f && bot->GetVictim() == target && !botAI->IsRanged(bot))
+            if ((share >= limit + 0.1f || predicted >= limit + 0.15f) && bot->GetVictim() == target && !botAI->IsRanged(bot))
                 bot->AttackStop();
             return 0.0f;
         }
@@ -3545,7 +3565,15 @@ public:
     }
 
 private:
+    struct Trend
+    {
+        float share = 0.0f;
+        float rate = 0.0f;  // share gained per second
+        uint32 at = 0;
+    };
+
     std::unordered_map<ObjectGuid, uint32> openers;  // target -> first seen untouched by a tank
+    std::unordered_map<ObjectGuid, Trend> trends;    // target -> how fast the bot's share of the tank's threat climbs
 };
 
 class CoaCombatStrategy : public CombatStrategy
