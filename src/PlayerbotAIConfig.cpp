@@ -779,7 +779,7 @@ bool PlayerbotAIConfig::Initialize()
     coaStatusIntervalSeconds = std::max<uint32>(1, sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaStatusIntervalSeconds", 5));
     coaStatusEnabled = !coaStatusFile.empty();
     coaExcludedSpecializations.clear();
-    LoadSet<std::set<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.CoaExcludedSpecializations", "99"),
+    LoadSet<std::set<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.CoaExcludedSpecializations", ""),
                               coaExcludedSpecializations);
     coaOffensiveHealerSpecs.clear();
     LoadSet<std::set<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.CoaOffensiveHealerSpecs", "40,43"),
