@@ -3645,6 +3645,24 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (CoaTankOnlySpell(bot, sSpellMgr->GetSpellInfo(spellid), target))
         return false;
 
+    // A spell that deals no damage is not cast again on an enemy still wearing the bot's own aura of it for more than
+    // 3 seconds: a spec rotation recast Cripple 28 times in a 3 minute fight on a boss already slowed, global cooldowns
+    // its tank lacked for threat (Felsworn Tyrant, bench, 10/10).
+    if (target != bot)
+        if (SpellInfo const* info = sSpellMgr->GetSpellInfo(spellid); info && !info->IsPositive())
+            if (Aura const* worn = target->GetAura(spellid, bot->GetGUID()); worn && worn->GetDuration() > 3000)
+            {
+                bool damages = false;
+                for (SpellEffectInfo const& effect : info->Effects)
+                    if (effect.Effect == SPELL_EFFECT_SCHOOL_DAMAGE || effect.Effect == SPELL_EFFECT_WEAPON_DAMAGE ||
+                        effect.Effect == SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL || effect.Effect == SPELL_EFFECT_NORMALIZED_WEAPON_DMG ||
+                        effect.Effect == SPELL_EFFECT_WEAPON_PERCENT_DAMAGE || effect.Effect == SPELL_EFFECT_HEALTH_LEECH ||
+                        effect.Effect == SPELL_EFFECT_TRIGGER_SPELL || effect.Effect == SPELL_EFFECT_TRIGGER_MISSILE)
+                        damages = true;
+                if (!damages)
+                    return false;
+            }
+
     if (Pet* pet = bot->GetPet())
         if (pet->HasSpell(spellid))
             return true;
