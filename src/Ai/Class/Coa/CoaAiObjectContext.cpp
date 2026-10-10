@@ -3481,8 +3481,11 @@ public:
 
     float GetValue(Action* action) override
     {
-        if (!sPlayerbotAIConfig.coaSmartTank || !action || action->getThreatType() == Action::ActionThreatType::None ||
-            GetCoaRole(bot) != CoaRole::Dps)
+        // "melee" starts the white swings again at every tick and says it makes no threat: held like an attack, or the
+        // swings stopped past the tank's threat came straight back (a Felsworn Slayer still reached 111%, 10/10).
+        bool const swing = action && action->getName() == "melee";
+        if (!sPlayerbotAIConfig.coaSmartTank || !action ||
+            (action->getThreatType() == Action::ActionThreatType::None && !swing) || GetCoaRole(bot) != CoaRole::Dps)
             return 1.0f;
         Unit* target = AI_VALUE(Unit*, "current target");
         if (!target)
