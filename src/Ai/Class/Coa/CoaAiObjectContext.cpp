@@ -3650,8 +3650,11 @@ public:
         // arenas showed no change in taunts, 29/09). Only the rotation's own "lose aggro" taunt (94) and
         // its buffs (95) come first.
         triggers.push_back(new TriggerNode("coa loose enemy", { NextAction("coa taunt", 93.0f) }));
-        triggers.push_back(new TriggerNode("light aoe", { NextAction("coa aoe", ACTION_HIGH + 3) }));
-        triggers.push_back(new TriggerNode("medium health", { NextAction("coa defensive", ACTION_HIGH + 6) }));
+        // Two enemies or more around: the area attacks hold a pack. At ACTION_HIGH + 3 they lost to every line of the
+        // spec rotations (80 to 94), and the adds a Felsworn Tyrant taunted stayed on it 36% of the time (bench, 10/10).
+        triggers.push_back(new TriggerNode("light aoe", { NextAction("coa aoe", 86.0f) }));
+        // Its defensive cooldowns when hurt, before its attacks: at ACTION_HIGH + 6 they lost to the spec rotation too.
+        triggers.push_back(new TriggerNode("medium health", { NextAction("coa defensive", 89.0f) }));
     }
 };
 
