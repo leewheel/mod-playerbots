@@ -4991,6 +4991,14 @@ bool PlayerbotAI::AllowActive(ActivityType activityType)
     {
         if (bot->IsInCombat())
             return true;
+
+        // A member of its group fights nearby: asleep, the bot saw no enemy and never joined the fight that would
+        // have woken it, standing 30 yards away while the others fought (measured in our test arena, 23/09).
+        if (Group* group = bot->GetGroup())
+            for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+                if (Player* member = ref->GetSource(); member && member != bot && member->IsInCombat() &&
+                                                        member->IsInMap(bot) && bot->IsWithinDistInMap(member, 60.0f))
+                    return true;
     }
 
     // bot is inside a BG, dungeon, or raid — always active
