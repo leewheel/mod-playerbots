@@ -3653,6 +3653,34 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
     if (CoaRivalBuffBlocks(bot, sSpellMgr->GetSpellInfo(spellid), target))
         return false;
 
+    // A purge on an enemy wearing nothing it can take off: a Felsworn Tyrant cast Consume Magic 20 times every 2
+    // minutes on a boss with no magic buff, global cooldowns its threat lacked (bench, 10/10).
+    if (target != bot && bot->IsValidAttackTarget(target))
+        if (SpellInfo const* info = sSpellMgr->GetSpellInfo(spellid))
+        {
+            uint32 mask = 0;
+            bool otherEffect = false;
+            for (SpellEffectInfo const& effect : info->Effects)
+            {
+                if (effect.Effect == SPELL_EFFECT_DISPEL || effect.Effect == SPELL_EFFECT_STEAL_BENEFICIAL_BUFF)
+                    mask |= SpellInfo::GetDispelMask(DispelType(effect.MiscValue));
+                else if (effect.IsEffect())
+                    otherEffect = true;
+            }
+            if (mask && !otherEffect)
+            {
+                bool dispellable = false;
+                for (auto const& [id, application] : target->GetAppliedAuras())
+                    if (application->IsPositive() && (application->GetBase()->GetSpellInfo()->GetDispelMask() & mask))
+                    {
+                        dispellable = true;
+                        break;
+                    }
+                if (!dispellable)
+                    return false;
+            }
+        }
+
     if (CoaCarriesBotAway(bot, sSpellMgr->GetSpellInfo(spellid)))
         return false;
 
