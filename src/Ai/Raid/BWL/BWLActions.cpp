@@ -302,19 +302,6 @@ bool BwlUseHourglassSandAction::Execute(Event /*event*/)
     return botAI->CastSpell(spell, bot);
 }
 
-bool BwlNefarianFearWardAction::Execute(Event /*event*/)
-{
-    Unit* nefarian = AI_VALUE2(Unit*, "find target", "nefarian");
-    if (!nefarian)
-        return false;
-
-    Unit* victim = nefarian->GetVictim();
-    if (!victim)
-        return false;
-
-    return botAI->CastSpell("fear ward", victim);
-}
-
 // Trash
 
 static constexpr float WYRMGUARD_SAFE_DISTANCE = 16.0f;
