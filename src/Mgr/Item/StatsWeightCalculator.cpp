@@ -293,8 +293,18 @@ void StatsWeightCalculator::GenerateBasicWeights(Player* player)
 
             if (stats)
             {
+                bool shoots = false;
                 for (uint8 i = 0; i < stats->count; ++i)
+                {
                     stats_weights_[stats->weights[i].stat] += stats->weights[i].weight;
+                    shoots |= stats->weights[i].stat == STATS_TYPE_RANGED_DPS;
+                }
+
+                // A spec that never shoots judges a bow by its stats alone: the 0.01 per DPS point, scaled
+                // up by item level and quality, let a Defiance tank need Venomstrike, a bow with no stats,
+                // over its bow with stamina (jealous-sound/azerothcore-wotlk-coa#5509).
+                if (!shoots && !CoaSpecNeedsShootingWeapon(player))
+                    stats_weights_[STATS_TYPE_RANGED_DPS] = 0.0f;
 
                 return;
             }
@@ -599,6 +609,10 @@ void StatsWeightCalculator::GenerateCoaWeights(Player* player)
     }
     else if (style == CoaStyle::Ranged)
         stats_weights_[STATS_TYPE_RANGED_DPS] += 7.0f;
+
+    // As with the per-spec table: a bow's damage counts only for a spec that shoots.
+    if (style != CoaStyle::Ranged)
+        stats_weights_[STATS_TYPE_RANGED_DPS] = 0.0f;
 
     if (PlayerbotAI::IsTank(player))
     {

@@ -126,4 +126,16 @@ namespace BlackwingLairHelpers
 
         return static_cast<uint32>(BlackwingLairSpells::SPELL_HOURGLASS_SAND);
     }
+
+    bool IsCorruptedWhelp(Unit const* unit)
+    {
+        if (!unit)
+            return false;
+
+        const uint32 entry = unit->GetEntry();
+        return entry == static_cast<uint32>(BlackwingLairNPCs::NPC_CORRUPTED_RED_WHELP) ||
+            entry == static_cast<uint32>(BlackwingLairNPCs::NPC_CORRUPTED_GREEN_WHELP) ||
+            entry == static_cast<uint32>(BlackwingLairNPCs::NPC_CORRUPTED_BLUE_WHELP) ||
+            entry == static_cast<uint32>(BlackwingLairNPCs::NPC_CORRUPTED_BRONZE_WHELP);
+    }
 }
