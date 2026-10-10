@@ -3456,7 +3456,14 @@ public:
             return victim && victim->IsPlayer() && PlayerbotAI::IsTank(victim->ToPlayer());
         };
         if (heldByTank(target) && share >= limit)
+        {
+            // White swings go on with no action at all: a Knight of Xoroth War held its spells and still took the
+            // boss 7 times in 3 minutes from a Tyrant tank (bench, 10/10). Past the tank's threat a melee bot stops
+            // swinging too; "coa attack" swings again once the tank is ahead.
+            if (share >= limit + 0.1f && bot->GetVictim() == target && !botAI->IsRanged(bot))
+                bot->AttackStop();
             return 0.0f;
+        }
         // An area attack hits the whole pack: it also waits for the mobs around the target that the tank holds.
         if (action->getThreatType() == Action::ActionThreatType::Aoe)
             for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
