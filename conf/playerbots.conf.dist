@@ -1721,6 +1721,8 @@ AiPlayerbot.CoaDungeonPriorities = 1
 #       24/09 over ten arena runs at level 60: 0 taunts, 90 damage a second where the other eleven
 #       tanks do 289 to 668, and 4.2 group deaths a run, the worst of the twelve. Nothing on the bot
 #       side can repair it. Take it out again once the form is granted.
+#       10/10: tried again (the core grants the form since jealous-sound#5655): still broken on the tank
+#       bench, 12 to 53% of the fight held, Scarlet Delirium cast 80 times in 3 minutes and almost nothing else.
 # Read again by ".reload config".
 # Default: 99
 AiPlayerbot.CoaExcludedSpecializations = 99
