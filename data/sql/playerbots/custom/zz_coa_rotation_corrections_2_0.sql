@@ -1,15 +1,25 @@
--- CoA Bots 2.0: default rotations (owner 0) of five CoA damage specs that dealt the least on the level 60
+-- CoA Bots 2.0: default rotations (owner 0) of the CoA damage specs that dealt the least on the level 60
 -- boss bench (09-10/10), on top of zz_coa_rotation_corrections_1_9.sql. Applied once by Installer-Bots
 -- (coa_bots_installed). Re-runnable: the same result every time. Rows with owner <> 0 and the 'say'
 -- strategy are never touched. A wrong result (count, checksum, apostrophes) aborts the transaction.
--- Rows: 191 in 5 specs. Checksum SUM(CRC32(CONCAT_WS('|',name,idx,owner,action_line))) = 413700189556.
--- Rows per spec: primalist-grovekeeper 39, ranger-farstrider 37, stormbringer-wind 37, tinker-demolition 39, tinker-mechanics 39
+-- Rows: 319 in 10 specs. Checksum SUM(CRC32(CONCAT_WS('|',name,idx,owner,action_line))) = 680976522342.
+-- Rows per spec: knight-of-xoroth-hellfire 30, primalist-grovekeeper 39, primalist-wildwalker 32, ranger-archery 28, ranger-farstrider 37, runemaster-engravement 17, runemaster-riftblade 21, stormbringer-wind 37, tinker-demolition 39, tinker-mechanics 39
 -- Why: stormbringer-wind never summoned its Air Elemental (Flurry commands it) and put Cloudburst, a
 -- knockback, first; primalist-grovekeeper fights in melee from 2.0 (Wildclaw on the melee action, Primal
 -- Rush no longer leaps it out); tinker-mechanics kept Makeshift Dynamite, its Scrap for the Mechsuit, and
 -- Mechsuit: Combustion under fillers that are always castable; ranger-farstrider gets its Thalassian Brand
 -- (talent from 2.0) and keeps Battle Screech up; tinker-demolition puts down its Sentry Turret (it fires
 -- Rocket Launcher too with Rocket Turrets) and lays Sticky Bomb before Rocket Launcher (Surprise Launch!).
+
+-- Second batch: knight-of-xoroth-hellfire, short of Rage on a boss, keeps Burning Rage and Demon Heart up
+-- (off the global cooldown) and no longer spends Demonfire on Hellmaw before Flames of Xoroth; out-of-combat
+-- or crowd control lines go (Hellfire Advance, Dreadsteed Portal, Hell's Forge, Imprison, Hellbound Leash,
+-- Drag Through Hell). primalist-wildwalker spends its Rage on Wildclaw before Primal Shred and no longer
+-- rushes past the boss (Primal Rush). ranger-archery wears Searing Quiver (Fire Arrows, a quarter of real
+-- players' damage) and no longer spends Advantage below 5 stacks (Skullpiercer, Neurotoxin Arrow): its good
+-- fights kept Skirmish up 90% of the time, its bad ones 20 to 50%. runemaster-engravement and riftblade no
+-- longer throw Warpdagger (its reactivation teleports them to the dagger, out of reach), nor Leyfeed or
+-- Leyline Adjustment (engravement).
 
 DROP PROCEDURE IF EXISTS coa20_check;
 DELIMITER $$
@@ -20,16 +30,16 @@ BEGIN
   DECLARE a BIGINT DEFAULT 0;
   SELECT COUNT(*), COALESCE(SUM(CRC32(CONCAT_WS('|', name, idx, owner, action_line))), 0)
     INTO n, h FROM playerbots_custom_strategy
-   WHERE owner = 0 AND name IN ('primalist-grovekeeper', 'ranger-farstrider', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics');
-  SELECT COUNT(*) INTO a FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('primalist-grovekeeper', 'ranger-farstrider', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics')
+   WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics');
+  SELECT COUNT(*) INTO a FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics')
      AND action_line LIKE '%''%';
-  IF n <> 191 THEN
+  IF n <> 319 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: wrong row count, nothing was changed';
   END IF;
-  IF a <> 11 THEN
+  IF a <> 20 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: apostrophes lost (character set), nothing was changed';
   END IF;
-  IF h <> 413700189556 THEN
+  IF h <> 680976522342 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: wrong checksum, nothing was changed';
   END IF;
 END$$
@@ -41,9 +51,39 @@ SELECT * FROM playerbots_custom_strategy WHERE owner = 0;
 
 START TRANSACTION;
 
-DELETE FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('primalist-grovekeeper', 'ranger-farstrider', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics');
+DELETE FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'stormbringer-wind', 'tinker-demolition', 'tinker-mechanics');
 
 INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
+ ('knight-of-xoroth-hellfire', 1, 0, 'medium aoe>cast melee::Meatsaw!81'),
+ ('knight-of-xoroth-hellfire', 2, 0, 'aura stacks::Demonfire,6>cast melee::Flames of Xoroth!88'),
+ ('knight-of-xoroth-hellfire', 3, 0, 'debuff missing::Hellmaw>cast debuff::Hellmaw!24'),
+ ('knight-of-xoroth-hellfire', 4, 0, 'medium health>cast heal::Suffuse!83'),
+ ('knight-of-xoroth-hellfire', 5, 0, 'can cast::Infernal Strike>cast melee::Infernal Strike!82'),
+ ('knight-of-xoroth-hellfire', 6, 0, 'aura stacks::Demonfire,6>cast melee::Skulltaker!87'),
+ ('knight-of-xoroth-hellfire', 7, 0, 'low health>cast buff::Juggernaut!92'),
+ ('knight-of-xoroth-hellfire', 8, 0, 'buff missing::Burning Rage>cast buff::Burning Rage!93'),
+ ('knight-of-xoroth-hellfire', 9, 0, 'buff missing::Greater Mark of Korth’azz>cast buff party::Greater Mark of Korth’azz!28'),
+ ('knight-of-xoroth-hellfire', 10, 0, 'can cast::Chainwhip>cast melee::Chainwhip!27'),
+ ('knight-of-xoroth-hellfire', 11, 0, 'can cast::Doom>cast melee::Doom!25'),
+ ('knight-of-xoroth-hellfire', 12, 0, 'buff missing::Greater Mark of Rivendare>cast buff party::Greater Mark of Rivendare!24'),
+ ('knight-of-xoroth-hellfire', 13, 0, 'buff missing::Hellfire Stirrups>cast buff::Hellfire Stirrups!23'),
+ ('knight-of-xoroth-hellfire', 14, 0, 'buff missing::Pestilence of Apocalypse>cast buff::Pestilence of Apocalypse!90'),
+ ('knight-of-xoroth-hellfire', 15, 0, 'can cast::Seeking Flame>cast melee::Seeking Flame!84'),
+ ('knight-of-xoroth-hellfire', 16, 0, 'buff missing::Hellfire Form>cast buff::Hellfire Form!86'),
+ ('knight-of-xoroth-hellfire', 17, 0, 'buff missing::Unleash Pestilence>cast buff::Unleash Pestilence!78'),
+ ('knight-of-xoroth-hellfire', 18, 0, 'buff missing::Greater Mark of Blaumeux>cast buff party::Greater Mark of Blaumeux!18'),
+ ('knight-of-xoroth-hellfire', 19, 0, 'buff missing::Greater Mark of Zeliek>cast buff party::Greater Mark of Zeliek!17'),
+ ('knight-of-xoroth-hellfire', 20, 0, 'buff missing::Mark of Zeliek>cast buff::Mark of Zeliek!16'),
+ ('knight-of-xoroth-hellfire', 24, 0, 'can cast::Mark of Rivendare>cast melee::Mark of Rivendare!12'),
+ ('knight-of-xoroth-hellfire', 27, 0, 'can cast::Melt>cast melee::Melt!9'),
+ ('knight-of-xoroth-hellfire', 28, 0, 'can cast::Mark of Blaumeux>cast melee::Mark of Blaumeux!8'),
+ ('knight-of-xoroth-hellfire', 29, 0, 'buff missing::Hellrider>cast buff::Hellrider!7'),
+ ('knight-of-xoroth-hellfire', 30, 0, 'can cast::Dreadrider''s Stomp>cast melee::Dreadrider''s Stomp!6'),
+ ('knight-of-xoroth-hellfire', 31, 0, 'can cast::Hellfire Trample>cast melee::Hellfire Trample!5'),
+ ('knight-of-xoroth-hellfire', 33, 0, 'can cast::Meatsaw>cast melee::Meatsaw!79'),
+ ('knight-of-xoroth-hellfire', 34, 0, 'can cast::Flesh Hook>cast melee::Flesh Hook!1'),
+ ('knight-of-xoroth-hellfire', 35, 0, 'can cast::Flames of Xoroth>cast melee::Flames of Xoroth!77'),
+ ('knight-of-xoroth-hellfire', 36, 0, 'no aura::Demonfire>cast melee::Demon Heart!91'),
  ('primalist-grovekeeper', 1, 0, 'medium aoe>cast::Spirit Charge!88'),
  ('primalist-grovekeeper', 2, 0, 'medium aoe>cast::Seismic Wave!87'),
  ('primalist-grovekeeper', 3, 0, 'medium aoe>cast melee::Wildclaw!86'),
@@ -83,6 +123,66 @@ INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
  ('primalist-grovekeeper', 38, 0, 'can cast::Throw>cast::Throw!6'),
  ('primalist-grovekeeper', 39, 0, 'can cast::Shoot>cast::Shoot!2'),
  ('primalist-grovekeeper', 40, 0, 'can cast::Wand>cast::Wand!1'),
+ ('primalist-wildwalker', 1, 0, 'buff missing::Boon of the Bear>cast buff::Boon of the Bear!95'),
+ ('primalist-wildwalker', 2, 0, 'can cast::Therazane''s Rage>cast melee::Therazane''s Rage!89'),
+ ('primalist-wildwalker', 3, 0, 'medium aoe>cast melee::Totemic Smash!88'),
+ ('primalist-wildwalker', 4, 0, 'medium aoe>cast melee::Primal Shred!87'),
+ ('primalist-wildwalker', 5, 0, 'light aoe>cast melee::Seismic Spike!86'),
+ ('primalist-wildwalker', 6, 0, 'medium aoe>cast melee::Wildclaw!85'),
+ ('primalist-wildwalker', 7, 0, 'medium aoe>cast melee::Rylak''s Bite!84'),
+ ('primalist-wildwalker', 8, 0, 'can cast::Savage Frenzy>cast melee::Savage Frenzy!82'),
+ ('primalist-wildwalker', 9, 0, 'buff missing::Primal Convergence>cast buff::Primal Convergence!81'),
+ ('primalist-wildwalker', 10, 0, 'can cast::Totemic Smash>cast melee::Totemic Smash!80'),
+ ('primalist-wildwalker', 11, 0, 'can cast::Seismic Crash>cast melee::Seismic Crash!79'),
+ ('primalist-wildwalker', 12, 0, 'can cast::Rylak''s Bite>cast melee::Rylak''s Bite!78'),
+ ('primalist-wildwalker', 13, 0, 'can cast::Primal Shred>cast melee::Primal Shred!74'),
+ ('primalist-wildwalker', 14, 0, 'can cast::Wildclaw>cast melee::Wildclaw!76'),
+ ('primalist-wildwalker', 16, 0, 'buff missing::Rock Barrier>cast buff::Rock Barrier!28'),
+ ('primalist-wildwalker', 17, 0, 'buff missing::Greater Earthen Endurance>cast buff party::Greater Earthen Endurance!27'),
+ ('primalist-wildwalker', 18, 0, 'buff missing::Greater Grove Instinct>cast buff party::Greater Grove Instinct!26'),
+ ('primalist-wildwalker', 19, 0, 'buff missing::Greater Essence of Nature>cast buff party::Greater Essence of Nature!25'),
+ ('primalist-wildwalker', 20, 0, 'buff missing::Greater Primal Instinct>cast buff party::Greater Primal Instinct!24'),
+ ('primalist-wildwalker', 21, 0, 'can cast::Protective Roar>cast melee::Protective Roar!22'),
+ ('primalist-wildwalker', 22, 0, 'cure party::Soothing Touch>cast cure party::Soothing Touch!21'),
+ ('primalist-wildwalker', 23, 0, 'can cast::Essence of Nature>cast melee::Essence of Nature!20'),
+ ('primalist-wildwalker', 24, 0, 'can cast::Earthen Endurance>cast melee::Earthen Endurance!19'),
+ ('primalist-wildwalker', 25, 0, 'can cast::Ursoc''s Bellow>cast melee::Ursoc''s Bellow!17'),
+ ('primalist-wildwalker', 26, 0, 'debuff missing::Earthquake>cast debuff::Earthquake!16'),
+ ('primalist-wildwalker', 27, 0, 'can cast::Return to Life>cast melee::Return to Life!13'),
+ ('primalist-wildwalker', 28, 0, 'can cast::Seismic Spike>cast::Seismic Spike!75'),
+ ('primalist-wildwalker', 29, 0, 'can cast::Primal Instinct>cast melee::Primal Instinct!10'),
+ ('primalist-wildwalker', 30, 0, 'can cast::Stoneshard>cast melee::Stoneshard!7'),
+ ('primalist-wildwalker', 31, 0, 'can cast::Grove Instinct>cast melee::Grove Instinct!6'),
+ ('primalist-wildwalker', 32, 0, 'can cast::Throw>cast melee::Throw!4'),
+ ('primalist-wildwalker', 33, 0, 'can cast::Geode Barrage>cast melee::Geode Barrage!3'),
+ ('ranger-archery', 1, 0, 'aura stacks::Advantage,5>cast buff::Skirmish!93'),
+ ('ranger-archery', 2, 0, 'aura stacks::Advantage,5>cast debuff::Serrated Shot!92'),
+ ('ranger-archery', 3, 0, 'aura stacks::Advantage,5>cast::Incendiary Shot!91'),
+ ('ranger-archery', 4, 0, 'aura stacks::Advantage,5>cast::Precision Shot!90'),
+ ('ranger-archery', 5, 0, 'can cast::Instinct>cast::Instinct!89'),
+ ('ranger-archery', 6, 0, 'buff missing::Horn of Perseverance>cast buff::Horn of Perseverance!88'),
+ ('ranger-archery', 7, 0, 'medium aoe>cast::Hunting Shot!87'),
+ ('ranger-archery', 8, 0, 'aura stacks::Advantage,5>cast::Skullpiercer!86'),
+ ('ranger-archery', 9, 0, 'can cast::Deadshot>cast::Deadshot!85'),
+ ('ranger-archery', 10, 0, 'buff missing::Searing Quiver>cast buff::Searing Quiver!84'),
+ ('ranger-archery', 11, 0, 'can cast::Quick Shot>cast::Quick Shot!83'),
+ ('ranger-archery', 12, 0, 'can cast::Brutal Shot>cast::Brutal Shot!80'),
+ ('ranger-archery', 15, 0, 'can cast::Guise>cast::Guise!28'),
+ ('ranger-archery', 16, 0, 'buff missing::Greater Footpad''s Adaptation>cast buff party::Greater Footpad''s Adaptation!27'),
+ ('ranger-archery', 17, 0, 'buff missing::Greater Woodsman''s Adaptation>cast buff party::Greater Woodsman''s Adaptation!25'),
+ ('ranger-archery', 18, 0, 'can cast::Survival Potion>cast::Survival Potion!21'),
+ ('ranger-archery', 19, 0, 'can cast::Feral Pressure>cast::Feral Pressure!19'),
+ ('ranger-archery', 20, 0, 'buff missing::Wild Blessing>cast buff party::Wild Blessing!18'),
+ ('ranger-archery', 21, 0, 'can cast::Rusty Shiv>cast::Rusty Shiv!16'),
+ ('ranger-archery', 22, 0, 'buff missing::Befriend Beast>cast buff::Befriend Beast!15'),
+ ('ranger-archery', 23, 0, 'can cast::Uncover Weakness>cast::Uncover Weakness!12'),
+ ('ranger-archery', 24, 0, 'can cast::Footpad''s Adaptation>cast::Footpad''s Adaptation!11'),
+ ('ranger-archery', 25, 0, 'can cast::Sticky Fingers>cast::Sticky Fingers!10'),
+ ('ranger-archery', 26, 0, 'can cast::Woodsman''s Adaptation>cast::Woodsman''s Adaptation!9'),
+ ('ranger-archery', 27, 0, 'can cast::Flank>cast::Flank!8'),
+ ('ranger-archery', 28, 0, 'debuff missing::Toxic Dart>cast debuff::Toxic Dart!7'),
+ ('ranger-archery', 29, 0, 'can cast::Auto Shot>cast::Auto Shot!6'),
+ ('ranger-archery', 30, 0, 'can cast::Wild Strike>cast::Wild Strike!3'),
  ('ranger-farstrider', 1, 0, 'medium aoe>cast::Horn of War!88'),
  ('ranger-farstrider', 2, 0, 'medium aoe>cast::Survival Potion!87'),
  ('ranger-farstrider', 3, 0, 'medium aoe>cast::Quick Shot!86'),
@@ -120,6 +220,44 @@ INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
  ('ranger-farstrider', 36, 0, 'can cast::Auto Shot>cast::Auto Shot!3'),
  ('ranger-farstrider', 101, 0, 'can cast::Instinct>cast::Instinct!89'),
  ('ranger-farstrider', 102, 0, 'can cast::Skullpiercer>cast::Skullpiercer!70'),
+ ('runemaster-engravement', 1, 0, 'buff missing::Runic Tattoos: Water>cast buff::Runic Tattoos: Water!90'),
+ ('runemaster-engravement', 2, 0, 'medium aoe>cast melee::Runic Brand!88'),
+ ('runemaster-engravement', 3, 0, 'medium aoe>cast melee::Primordial Blast!87'),
+ ('runemaster-engravement', 4, 0, 'buff missing::Zenith>cast buff::Zenith!86'),
+ ('runemaster-engravement', 5, 0, 'target has aura::Marked: Runic Brand>cast melee::Runeblade!85'),
+ ('runemaster-engravement', 6, 0, 'can cast::Primordial Blast>cast melee::Primordial Blast!84'),
+ ('runemaster-engravement', 7, 0, 'can cast::Runic Brand>cast melee::Runic Brand!83'),
+ ('runemaster-engravement', 8, 0, 'can cast::Fist of the Ancients>cast melee::Fist of the Ancients!89'),
+ ('runemaster-engravement', 9, 0, 'can cast::Power Engraving>cast melee::Power Engraving!80'),
+ ('runemaster-engravement', 10, 0, 'can cast::Runeblade>cast melee::Runeblade!79'),
+ ('runemaster-engravement', 12, 0, 'buff missing::Greater Etching of the Dextrous>cast buff party::Greater Etching of the Dextrous!27'),
+ ('runemaster-engravement', 13, 0, 'can cast::Guarding Rune>cast melee::Guarding Rune!26'),
+ ('runemaster-engravement', 15, 0, 'buff missing::Speed Rune>cast buff::Speed Rune!24'),
+ ('runemaster-engravement', 17, 0, 'can cast::Etching of the Magi>cast melee::Etching of the Magi!20'),
+ ('runemaster-engravement', 18, 0, 'buff missing::Palm Sigil: Frost>cast buff::Palm Sigil: Frost!18'),
+ ('runemaster-engravement', 20, 0, 'can cast::Elemental Burst>cast melee::Elemental Burst!2'),
+ ('runemaster-engravement', 201, 0, 'no aura::Fire Engraving>cast melee::Weapon Engraving: Fire!91'),
+ ('runemaster-riftblade', 1, 0, 'buff missing::Runic Tattoos: Fire>cast buff::Runic Tattoos: Fire!90'),
+ ('runemaster-riftblade', 2, 0, 'debuff missing::Hoarfrost>cast debuff::Hoarfrost!87'),
+ ('runemaster-riftblade', 3, 0, 'medium aoe>cast melee::Primordial Blast!86'),
+ ('runemaster-riftblade', 4, 0, 'medium aoe>cast melee::Runeblade!85'),
+ ('runemaster-riftblade', 5, 0, 'buff missing::Zenith>cast buff::Zenith!84'),
+ ('runemaster-riftblade', 6, 0, 'buff missing::Primordial Fury>cast buff::Primordial Fury!83'),
+ ('runemaster-riftblade', 7, 0, 'can cast::Hurricane>cast melee::Hurricane!82'),
+ ('runemaster-riftblade', 8, 0, 'can cast::Smolder>cast melee::Smolder!81'),
+ ('runemaster-riftblade', 9, 0, 'can cast::Primordial Blast>cast melee::Primordial Blast!80'),
+ ('runemaster-riftblade', 11, 0, 'can cast::Runeblade>cast melee::Runeblade!78'),
+ ('runemaster-riftblade', 12, 0, 'can cast::Genesis>cast melee::Genesis!29'),
+ ('runemaster-riftblade', 13, 0, 'buff missing::Greater Etching of the Dextrous>cast buff party::Greater Etching of the Dextrous!28'),
+ ('runemaster-riftblade', 14, 0, 'can cast::Leyline Adjustment>cast melee::Leyline Adjustment!27'),
+ ('runemaster-riftblade', 15, 0, 'buff missing::Convergence>cast buff::Convergence!26'),
+ ('runemaster-riftblade', 16, 0, 'buff missing::Speed Rune>cast buff::Speed Rune!25'),
+ ('runemaster-riftblade', 17, 0, 'can cast::Glacial Rune>cast melee::Glacial Rune!22'),
+ ('runemaster-riftblade', 18, 0, 'can cast::Etching of the Magi>cast melee::Etching of the Magi!19'),
+ ('runemaster-riftblade', 19, 0, 'buff missing::Palm Sigil: Fire>cast buff::Palm Sigil: Fire!77'),
+ ('runemaster-riftblade', 20, 0, 'can cast::Leyfeed>cast melee::Leyfeed!11'),
+ ('runemaster-riftblade', 21, 0, 'can cast::Elemental Burst>cast melee::Elemental Burst!1'),
+ ('runemaster-riftblade', 22, 0, 'no aura::Air Engraving>cast::Weapon Engraving: Air!13'),
  ('stormbringer-wind', 1, 0, 'coa summon missing::500941>cast::Summon: Air Elemental!88'),
  ('stormbringer-wind', 2, 0, 'can cast::Charge>cast::Charge!87'),
  ('stormbringer-wind', 3, 0, 'can cast::Flurry>cast::Flurry!83'),
