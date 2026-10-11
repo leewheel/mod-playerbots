@@ -1533,7 +1533,9 @@ AiPlayerbot.CoaSmartTank = 1
 # dealers step out of a point blank cast (Whirlwind, Fire Nova, War Stomp) or from in front of
 # a cone (breaths, Arcing Smash) while its cast bar runs, anyone leaves the spot of an area
 # cast (Flamestrike), and ranged members keep out of the reach of instant point blank spells
-# that the smart_scripts rows of the creature hold. Radius limit: AiPlayerbot.MaxAoeAvoidRadius.
+# that the smart_scripts rows of the creature hold. A point blank cast of any nearby enemy, not
+# only of the bot's target, is stepped out of too (a boss's Bladestorm while the group kills an
+# add). Radius limit: AiPlayerbot.MaxAoeAvoidRadius.
 # Takes effect when a bot's strategies are reset (login, ".playerbots bot init", spec change).
 # Default: 1 (enabled)
 AiPlayerbot.CoaBossKnowledge = 1

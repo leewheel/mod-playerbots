@@ -6,7 +6,10 @@
 
 #include "CoaBossKnowledge.h"
 
+#include "CellImpl.h"
 #include "DatabaseEnv.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Log.h"
 #include "Map.h"
 #include "Multiplier.h"
@@ -25,6 +28,7 @@
 #include <cmath>
 #include <ctime>
 #include <initializer_list>
+#include <list>
 #include <set>
 #include <unordered_map>
 
@@ -245,7 +249,7 @@ Spell const* CurrentCast(Unit* unit)
     return unit->GetCurrentSpell(CURRENT_GENERIC_SPELL);
 }
 
-// The enemy whose casts the bot watches: its own target, inside a dungeon or a raid.
+// The enemy whose casts the bot watches first: its own target, inside a dungeon or a raid.
 Unit* WatchedEnemy(PlayerbotAI* botAI, Player* bot)
 {
     if (!bot->IsInCombat() || !bot->GetMap() || !bot->GetMap()->IsDungeon())
@@ -256,6 +260,45 @@ Unit* WatchedEnemy(PlayerbotAI* botAI, Player* bot)
     return enemy;
 }
 
+// A point blank cast running on a hostile creature other than `except`, boss or not, whose area takes in `at`:
+// with every bot on an add, nobody watched Rhahk'zor and his Bladestorm (2102554, 8 yards a tick) hit the whole
+// group (headless dungeon runs, 11/10). The caster whose area reaches furthest past `at`, nullptr if none does.
+Unit* PointBlankCasterOver(Player* bot, Position const& at, Unit* except, float& area, SpellInfo const*& cast)
+{
+    if (!bot->IsInCombat() || !bot->GetMap() || !bot->GetMap()->IsDungeon())
+        return nullptr;
+    float const range = sPlayerbotAIConfig.maxAoeAvoidRadius + 10.0f + bot->GetExactDist2d(&at);
+    std::list<Unit*> units;
+    Acore::AnyUnfriendlyUnitInObjectRangeCheck check(bot, bot, range);
+    Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(bot, units, check);
+    Cell::VisitObjects(bot, searcher, range);
+
+    Unit* found = nullptr;
+    float deepest = 0.0f;
+    for (Unit* unit : units)
+    {
+        if (unit == except || !unit->IsAlive() || unit->GetTypeId() != TYPEID_UNIT)
+            continue;
+        Spell const* spell = CurrentCast(unit);
+        if (!spell)
+            continue;
+        Danger const danger = Classify(spell->GetSpellInfo());
+        if (danger.shape != Shape::PointBlank || danger.radius <= 0.0f ||
+            danger.radius > sPlayerbotAIConfig.maxAoeAvoidRadius)
+            continue;
+        float const reach = danger.radius + unit->GetCombatReach() + 1.0f;
+        float const depth = reach - unit->GetExactDist2d(&at);
+        if (depth > deepest)
+        {
+            deepest = depth;
+            found = unit;
+            area = reach;
+            cast = spell->GetSpellInfo();
+        }
+    }
+    return found;
+}
+
 class CoaBossDangerTrigger : public Trigger
 {
 public:
@@ -264,11 +307,13 @@ public:
     bool IsActive() override
     {
         Unit* enemy = WatchedEnemy(botAI, bot);
-        if (!enemy)
-            return false;
-        if (CurrentCast(enemy))
+        if (enemy && CurrentCast(enemy))
             return true;
-        if (!PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsTank(bot))
+        float area = 0.0f;
+        SpellInfo const* cast = nullptr;
+        if (PointBlankCasterOver(bot, bot->GetPosition(), enemy, area, cast))
+            return true;
+        if (!enemy || !PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsTank(bot))
             return false;
         uint32 const entry = enemy->GetEntry();
         if (entry != lastEntry)
@@ -298,8 +343,20 @@ private:
     bool Act(bool dryRun)
     {
         Unit* enemy = WatchedEnemy(botAI, bot);
-        if (!enemy)
+        if (enemy && ActOn(enemy, dryRun))
+            return true;
+
+        // Another enemy than the bot's own: the tank it beats on stays where it is.
+        float area = 0.0f;
+        SpellInfo const* cast = nullptr;
+        Unit* caster = PointBlankCasterOver(bot, bot->GetPosition(), enemy, area, cast);
+        if (!caster || (PlayerbotAI::IsTank(bot) && caster->GetVictim() == bot))
             return false;
+        return dryRun || Dodge(caster->GetPosition(), area, cast);
+    }
+
+    bool ActOn(Unit* enemy, bool dryRun)
+    {
 
         bool const tank = PlayerbotAI::IsTank(bot);
         float const reach = enemy->GetCombatReach() + 1.0f;
@@ -393,7 +450,8 @@ private:
 };
 
 // While a point blank cast runs, a melee bot that stepped out would walk straight back in to
-// reach melee range or get behind: those moves wait until the cast ends.
+// reach melee range or get behind: those moves wait until the cast ends, that of its target or
+// that of another enemy whose area takes in its target.
 class CoaBossDodgeMultiplier : public Multiplier
 {
 public:
@@ -406,17 +464,20 @@ public:
         std::string const name = action->getName();
         if (name != "reach melee" && name != "set behind")
             return 1.0f;
+        if (PlayerbotAI::IsTank(bot))
+            return 1.0f;
         Unit* enemy = WatchedEnemy(botAI, bot);
-        if (!enemy || PlayerbotAI::IsTank(bot))
-            return 1.0f;
-        Spell const* spell = CurrentCast(enemy);
-        if (!spell)
-            return 1.0f;
-        Danger const danger = Classify(spell->GetSpellInfo());
-        return danger.shape == Shape::PointBlank && danger.radius > 0.0f &&
-                       danger.radius <= sPlayerbotAIConfig.maxAoeAvoidRadius
-                   ? 0.0f
-                   : 1.0f;
+        if (Spell const* spell = enemy ? CurrentCast(enemy) : nullptr)
+        {
+            Danger const danger = Classify(spell->GetSpellInfo());
+            if (danger.shape == Shape::PointBlank && danger.radius > 0.0f &&
+                danger.radius <= sPlayerbotAIConfig.maxAoeAvoidRadius)
+                return 0.0f;
+        }
+        // Nor does it walk back to its target inside another enemy's point blank cast.
+        float area = 0.0f;
+        SpellInfo const* cast = nullptr;
+        return enemy && PointBlankCasterOver(bot, enemy->GetPosition(), enemy, area, cast) ? 0.0f : 1.0f;
     }
 };
 
