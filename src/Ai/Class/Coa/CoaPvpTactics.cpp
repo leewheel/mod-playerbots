@@ -604,6 +604,130 @@ namespace
         }
     };
 
+    // Whether the bot can move on its own at all.
+    bool Held(Player* bot)
+    {
+        return bot->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED | UNIT_STATE_FLEEING);
+    }
+
+    // Bonus for a point next to a pillar: around it a melee loses its target and a caster its line.
+    float NextToCover(std::vector<Cover> const& cover, float x, float y)
+    {
+        for (Cover const& pillar : cover)
+            if (std::hypot(pillar.x - x, pillar.y - y) < pillar.radius + 3.5f)
+                return -3.0f;
+        return 0.0f;
+    }
+
+    /*
+     * Kiting. A CoA ranged bot or healer had no reason to leave an enemy melee: "coa ranged" is built on the plain
+     * combat strategy, without the "enemy too close for spell" flee of the ranged one. In an arena it now steps
+     * 7 to 11 yards away from the melee on it, rather towards a pillar, while staying within casting range and
+     * sight of what it casts on (its target, or for a healer the most hurt team member). Never for long: after
+     * 5 seconds of steps it stands and fights for 6 seconds. Dungeons are not concerned.
+     */
+    class CoaArenaKiteAction : public CoaPvpMoveAction
+    {
+    public:
+        CoaArenaKiteAction(PlayerbotAI* botAI) : CoaPvpMoveAction(botAI, "coa arena kite") {}
+
+        bool isUseful() override
+        {
+            if (Busy() || getMSTime() < restUntil || !On("AiPlayerbot.CoaArenaKite") || !bot->IsAlive() ||
+                !Squishy(bot) || Held(bot))
+                return false;
+            Battleground* bg = ArenaFight(bot);
+            return bg && Chaser(bg);
+        }
+
+        bool Execute(Event /*event*/) override
+        {
+            Battleground* bg = ArenaFight(bot);
+            Player* chaser = bg ? Chaser(bg) : nullptr;
+            if (!chaser)
+                return false;
+
+            uint32 const now = getMSTime();
+            if (!streakStart || now - lastStep > 2500)
+                streakStart = now;
+            if (now - streakStart > 5000)
+            {
+                restUntil = now + 6000;
+                streakStart = 0;
+                return false;
+            }
+
+            Unit* anchor = Anchor(bg, chaser);
+            std::vector<Cover> const cover = CoverOf(bot, bg);
+            std::vector<std::pair<float, float>> points;
+            Rings(points, bot->GetPositionX(), bot->GetPositionY(), { 7.0f, 11.0f }, 12);
+            BehindCover(points, cover, chaser->GetPosition());
+            float const gap = bot->GetExactDist2d(chaser);
+            auto score = [&](float x, float y, float z)
+            {
+                if (bot->GetExactDist2d(x, y) > 15.0f || !InArenaBounds(bg, x, y))
+                    return Rejected;
+                float const away = chaser->GetExactDist2d(x, y);
+                if (away < gap + 3.0f)
+                    return Rejected;
+                float value = -away;
+                if (anchor)
+                {
+                    float const reach = anchor->GetExactDist2d(x, y);
+                    if (reach > 30.0f)
+                        value += 10.0f + (reach - 30.0f) * 2.0f;
+                    if (!anchor->IsWithinLOS(x, y, z))
+                        value += 8.0f;
+                }
+                if (MeleeEnemyNear(bg, bot, x, y, 6.0f))
+                    value += 20.0f;
+                return value + NextToCover(cover, x, y);
+            };
+            Spot best;
+            if (!BestSpot(bot, points, score, 20.0f, best))
+                return false;
+            lastStep = now;
+            return Go(best.x, best.y, best.z);
+        }
+
+    private:
+        // The nearest enemy melee on the bot, or any one in its face.
+        Player* Chaser(Battleground* bg)
+        {
+            Player* chaser = nullptr;
+            Fighters(bg, bot, true, [&](Player* enemy)
+            {
+                if (Squishy(enemy))
+                    return;
+                float const distance = bot->GetExactDist2d(enemy);
+                if ((distance < 7.0f && enemy->GetVictim() == bot) || distance < 4.0f)
+                    if (!chaser || distance < bot->GetExactDist2d(chaser))
+                        chaser = enemy;
+            });
+            return chaser;
+        }
+
+        Unit* Anchor(Battleground* bg, Player* chaser)
+        {
+            if (!Healer(bot))
+            {
+                Unit* victim = bot->GetVictim();
+                return victim && victim != chaser ? victim : nullptr;
+            }
+            Player* worst = nullptr;
+            Fighters(bg, bot, false, [&](Player* ally)
+            {
+                if (!worst || ally->GetHealthPct() < worst->GetHealthPct())
+                    worst = ally;
+            });
+            return worst;
+        }
+
+        uint32 streakStart = 0;
+        uint32 lastStep = 0;
+        uint32 restUntil = 0;
+    };
+
     // The triggers only check the place, the switch and the role, each a cheap test; the action decides the rest.
     using Gate = bool (*)(Player* bot);
 
@@ -631,6 +755,11 @@ namespace
         return bot->InArena() && IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaLineOfSight");
     }
 
+    bool KiteGate(Player* bot)
+    {
+        return bot->InArena() && IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaKite");
+    }
+
     class CoaPvpStrategy : public Strategy
     {
     public:
@@ -645,6 +774,7 @@ namespace
             // The combat moves come above the attacks, which reach 88 in the authored rotations: an action of
             // this strategy only runs when it has a reason to, and then only for one tick.
             triggers.push_back(new TriggerNode("coa arena sight", { NextAction("coa arena sight", 89.5f) }));
+            triggers.push_back(new TriggerNode("coa arena kite", { NextAction("coa arena kite", 92.0f) }));
         }
     };
 
@@ -664,9 +794,11 @@ namespace
         {
             creators["coa arena preparation"] = &preparation;
             creators["coa arena sight"] = &sight;
+            creators["coa arena kite"] = &kite;
         }
 
     private:
+        static Action* kite(PlayerbotAI* botAI) { return new CoaArenaKiteAction(botAI); }
         static Action* preparation(PlayerbotAI* botAI) { return new CoaArenaPreparationAction(botAI); }
         static Action* sight(PlayerbotAI* botAI) { return new CoaArenaSightAction(botAI); }
     };
@@ -678,9 +810,11 @@ namespace
         {
             creators["coa arena preparation"] = &preparation;
             creators["coa arena sight"] = &sight;
+            creators["coa arena kite"] = &kite;
         }
 
     private:
+        static Trigger* kite(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena kite", 300, &KiteGate); }
         static Trigger* preparation(PlayerbotAI* botAI)
         {
             return new CoaPvpTrigger(botAI, "coa arena preparation", 1000, &PreparationGate);
