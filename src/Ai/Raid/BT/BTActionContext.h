@@ -20,8 +20,8 @@ public:
             &RaidBlackTempleActionContext::black_temple_reset_encounter_states;
 
         // Trash
-        creators["mark sister of pleasure"] =
-            &RaidBlackTempleActionContext::mark_sister_of_pleasure;
+        creators["focus sister of pleasure"] =
+            &RaidBlackTempleActionContext::focus_sister_of_pleasure;
 
         creators["shadowmoon reaver stop wand"] =
             &RaidBlackTempleActionContext::shadowmoon_reaver_stop_wand;
@@ -58,11 +58,13 @@ public:
         creators["supremus disperse ranged"] =
             &RaidBlackTempleActionContext::supremus_disperse_ranged;
 
-        creators["supremus kite boss"] =
-            &RaidBlackTempleActionContext::supremus_kite_boss;
+        creators["supremus kite boss"] = &RaidBlackTempleActionContext::supremus_kite_boss;
 
-        creators["supremus move away from volcanos"] =
-            &RaidBlackTempleActionContext::supremus_move_away_from_volcanos;
+        creators["supremus move away from fire"] =
+            &RaidBlackTempleActionContext::supremus_move_away_from_fire;
+
+        creators["supremus reach around fire"] =
+            &RaidBlackTempleActionContext::supremus_reach_around_fire;
 
         // Shade of Akama
         creators["shade of akama melee dps prioritize channelers"] =
@@ -96,6 +98,12 @@ public:
 
         creators["gurtogg bloodboil rotate ranged groups"] =
             &RaidBlackTempleActionContext::gurtogg_bloodboil_rotate_ranged_groups;
+
+        creators["gurtogg bloodboil melee move behind"] =
+            &RaidBlackTempleActionContext::gurtogg_bloodboil_melee_move_behind;
+
+        creators["gurtogg bloodboil avoid fel rage target"] =
+            &RaidBlackTempleActionContext::gurtogg_bloodboil_avoid_fel_rage_target;
 
         creators["gurtogg bloodboil lead boss to tank position"] =
             &RaidBlackTempleActionContext::gurtogg_bloodboil_lead_boss_to_tank_position;
@@ -142,11 +150,14 @@ public:
         creators["illidari council main tank reflect judgement of command"] =
             &RaidBlackTempleActionContext::illidari_council_main_tank_reflect_judgement_of_command;
 
+        creators["illidari council interrupt circle of healing"] =
+            &RaidBlackTempleActionContext::illidari_council_interrupt_circle_of_healing;
+
         creators["illidari council first assist tank focus malande"] =
             &RaidBlackTempleActionContext::illidari_council_first_assist_tank_focus_malande;
 
-        creators["illidari council second assist tank position darkshadow"] =
-            &RaidBlackTempleActionContext::illidari_council_second_assist_tank_position_darkshadow;
+        creators["illidari council second assist tank position veras"] =
+            &RaidBlackTempleActionContext::illidari_council_second_assist_tank_position_veras;
 
         creators["illidari council mage tank position zerevor"] =
             &RaidBlackTempleActionContext::illidari_council_mage_tank_position_zerevor;
@@ -157,8 +168,8 @@ public:
         creators["illidari council disperse ranged"] =
             &RaidBlackTempleActionContext::illidari_council_disperse_ranged;
 
-        creators["illidari council command pets to attack gathios"] =
-            &RaidBlackTempleActionContext::illidari_council_command_pets_to_attack_gathios;
+        creators["illidari council command pet target"] =
+            &RaidBlackTempleActionContext::illidari_council_command_pet_target;
 
         creators["illidari council assign dps targets"] =
             &RaidBlackTempleActionContext::illidari_council_assign_dps_targets;
@@ -188,8 +199,11 @@ public:
         creators["illidan stormrage position above grate"] =
             &RaidBlackTempleActionContext::illidan_stormrage_position_above_grate;
 
-        creators["illidan stormrage remove dark barrage"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_remove_dark_barrage;
+        creators["illidan stormrage clear debuff with immunity"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_clear_debuff_with_immunity;
+
+        creators["illidan stormrage cancel immunity"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_cancel_immunity;
 
         creators["illidan stormrage move away from landing point"] =
             &RaidBlackTempleActionContext::illidan_stormrage_move_away_from_landing_point;
@@ -206,11 +220,11 @@ public:
         creators["illidan stormrage dps prioritize adds"] =
             &RaidBlackTempleActionContext::illidan_stormrage_dps_prioritize_adds;
 
-        creators["illidan stormrage use shadow trap"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_use_shadow_trap;
+        creators["illidan stormrage use cage trap"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_use_cage_trap;
 
-        creators["illidan stormrage manage dps timer and rti"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_manage_dps_timer_and_rti;
+        creators["illidan stormrage manage dps timers"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_manage_dps_timers;
 
         creators["illidan stormrage destroy hazards"] =
             &RaidBlackTempleActionContext::illidan_stormrage_destroy_hazards;
@@ -227,9 +241,9 @@ private:
     }
 
     // Trash
-    static Action* mark_sister_of_pleasure(PlayerbotAI* botAI)
+    static Action* focus_sister_of_pleasure(PlayerbotAI* botAI)
     {
-        return new MarkSisterOfPleasureAction(botAI);
+        return new FocusSisterOfPleasureAction(botAI);
     }
     static Action* shadowmoon_reaver_stop_wand(PlayerbotAI* botAI)
     {
@@ -287,9 +301,13 @@ private:
     {
         return new SupremusKiteBossAction(botAI);
     }
-    static Action* supremus_move_away_from_volcanos(PlayerbotAI* botAI)
+    static Action* supremus_move_away_from_fire(PlayerbotAI* botAI)
     {
-        return new SupremusMoveAwayFromVolcanosAction(botAI);
+        return new SupremusMoveAwayFromFireAction(botAI);
+    }
+    static Action* supremus_reach_around_fire(PlayerbotAI* botAI)
+    {
+        return new SupremusReachAroundFireAction(botAI);
     }
 
     // Shade of Akama
@@ -343,6 +361,14 @@ private:
     static Action* gurtogg_bloodboil_rotate_ranged_groups(PlayerbotAI* botAI)
     {
         return new GurtoggBloodboilRotateRangedGroupsAction(botAI);
+    }
+    static Action* gurtogg_bloodboil_avoid_fel_rage_target(PlayerbotAI* botAI)
+    {
+        return new GurtoggBloodboilAvoidFelRageTargetAction(botAI);
+    }
+    static Action* gurtogg_bloodboil_melee_move_behind(PlayerbotAI* botAI)
+    {
+        return new GurtoggBloodboilMeleeMoveBehindAction(botAI);
     }
     static Action* gurtogg_bloodboil_lead_boss_to_tank_position(PlayerbotAI* botAI)
     {
@@ -411,13 +437,17 @@ private:
         return new BlackTempleCastSpellReflectionAction(
             botAI, "illidari council main tank reflect judgement of command");
     }
+    static Action* illidari_council_interrupt_circle_of_healing(PlayerbotAI* botAI)
+    {
+        return new IllidariCouncilInterruptCircleOfHealingAction(botAI);
+    }
     static Action* illidari_council_first_assist_tank_focus_malande(PlayerbotAI* botAI)
     {
         return new IllidariCouncilFirstAssistTankFocusMalandeAction(botAI);
     }
-    static Action* illidari_council_second_assist_tank_position_darkshadow(PlayerbotAI* botAI)
+    static Action* illidari_council_second_assist_tank_position_veras(PlayerbotAI* botAI)
     {
-        return new IllidariCouncilSecondAssistTankPositionDarkshadowAction(botAI);
+        return new IllidariCouncilSecondAssistTankPositionVerasAction(botAI);
     }
     static Action* illidari_council_mage_tank_position_zerevor(PlayerbotAI* botAI)
     {
@@ -431,9 +461,9 @@ private:
     {
         return new IllidariCouncilDisperseRangedAction(botAI);
     }
-    static Action* illidari_council_command_pets_to_attack_gathios(PlayerbotAI* botAI)
+    static Action* illidari_council_command_pet_target(PlayerbotAI* botAI)
     {
-        return new IllidariCouncilCommandPetsToAttackGathiosAction(botAI);
+        return new IllidariCouncilCommandPetTargetAction(botAI);
     }
     static Action* illidari_council_assign_dps_targets(PlayerbotAI* botAI)
     {
@@ -473,9 +503,13 @@ private:
     {
         return new IllidanStormragePositionAboveGrateAction(botAI);
     }
-    static Action* illidan_stormrage_remove_dark_barrage(PlayerbotAI* botAI)
+    static Action* illidan_stormrage_clear_debuff_with_immunity(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageRemoveDarkBarrageAction(botAI);
+        return new IllidanStormrageClearDebuffWithImmunityAction(botAI);
+    }
+    static Action* illidan_stormrage_cancel_immunity(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageCancelImmunityAction(botAI);
     }
     static Action* illidan_stormrage_move_away_from_landing_point(PlayerbotAI* botAI)
     {
@@ -497,13 +531,13 @@ private:
     {
         return new IllidanStormrageDpsPrioritizeAddsAction(botAI);
     }
-    static Action* illidan_stormrage_use_shadow_trap(PlayerbotAI* botAI)
+    static Action* illidan_stormrage_use_cage_trap(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageUseShadowTrapAction(botAI);
+        return new IllidanStormrageUseCageTrapAction(botAI);
     }
-    static Action* illidan_stormrage_manage_dps_timer_and_rti(PlayerbotAI* botAI)
+    static Action* illidan_stormrage_manage_dps_timers(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageManageDpsTimerAndRtiAction(botAI);
+        return new IllidanStormrageManageDpsTimersAction(botAI);
     }
     static Action* illidan_stormrage_destroy_hazards(PlayerbotAI* botAI)
     {

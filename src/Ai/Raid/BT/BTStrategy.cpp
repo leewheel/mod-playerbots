@@ -20,8 +20,8 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("black temple reset encounter states", ACTION_EMERGENCY + 10) }));
 
     // Trash
-    triggers.push_back(new TriggerNode("sister of pleasure should be marked",
-        { NextAction("mark sister of pleasure", ACTION_RAID + 1) }));
+    triggers.push_back(new TriggerNode("sister of pleasure should be focused",
+        { NextAction("focus sister of pleasure", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("shadowmoon reaver wand builds charges",
         { NextAction("shadowmoon reaver stop wand", ACTION_EMERGENCY + 1) }));
@@ -58,11 +58,14 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("supremus ranged should spread",
         { NextAction("supremus disperse ranged", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("supremus fixates on bot",
+    triggers.push_back(new TriggerNode("supremus fixated on bot",
         { NextAction("supremus kite boss", ACTION_EMERGENCY + 7) }));
 
-    triggers.push_back(new TriggerNode("supremus near volcano",
-        { NextAction("supremus move away from volcanos", ACTION_EMERGENCY + 6) }));
+    triggers.push_back(new TriggerNode("supremus near fire",
+        { NextAction("supremus move away from fire", ACTION_EMERGENCY + 6) }));
+
+    triggers.push_back(new TriggerNode("supremus reach blocked by fire",
+        { NextAction("supremus reach around fire", ACTION_RAID - 1) }));
 
     // Shade of Akama
     triggers.push_back(new TriggerNode("shade of akama should prioritize channelers",
@@ -97,6 +100,12 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode("gurtogg bloodboil should position for bloodboil",
         { NextAction("gurtogg bloodboil rotate ranged groups", ACTION_RAID + 1) }));
+
+    triggers.push_back(new TriggerNode("gurtogg bloodboil melee should stay behind",
+        { NextAction("gurtogg bloodboil melee move behind", ACTION_RAID + 2) }));
+
+    triggers.push_back(new TriggerNode("gurtogg bloodboil should avoid fel rage target",
+        { NextAction("gurtogg bloodboil avoid fel rage target", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("gurtogg bloodboil fel rage on bot",
         { NextAction("gurtogg bloodboil lead boss to tank position", ACTION_RAID + 1) }));
@@ -145,24 +154,28 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction(
             "illidari council main tank reflect judgement of command", ACTION_EMERGENCY + 1) }));
 
+    triggers.push_back(new TriggerNode("illidari council malande casts circle of healing",
+        { NextAction(
+            "illidari council interrupt circle of healing", ACTION_EMERGENCY + 8) }));
+
     triggers.push_back(new TriggerNode("illidari council malande should be tanked",
         { NextAction("illidari council first assist tank focus malande", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("illidari council darkshadow should be tanked",
+    triggers.push_back(new TriggerNode("illidari council veras should be tanked",
         { NextAction(
-            "illidari council second assist tank position darkshadow", ACTION_RAID + 1) }));
+            "illidari council second assist tank position veras", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("illidari council zerevor should be tanked by mage",
         { NextAction("illidari council mage tank position zerevor", ACTION_EMERGENCY + 6) }));
 
-    triggers.push_back(new TriggerNode("illidari council mage tank needs dedicated healer",
+    triggers.push_back(new TriggerNode("illidari council mage tank healer should reposition",
         { NextAction("illidari council position mage tank healer", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("illidari council ranged should spread",
         { NextAction("illidari council disperse ranged", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("illidari council pets screw up the pull",
-        { NextAction("illidari council command pets to attack gathios", ACTION_RAID + 3) }));
+    triggers.push_back(new TriggerNode("illidari council pet should switch target",
+        { NextAction("illidari council command pet target", ACTION_RAID + 3) }));
 
     triggers.push_back(new TriggerNode("illidari council should assign dps priority",
         { NextAction("illidari council assign dps targets", ACTION_RAID + 1) }));
@@ -193,8 +206,11 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage grate is safe from flames",
         { NextAction("illidan stormrage position above grate", ACTION_EMERGENCY + 2) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage dark barrage on immunity class",
-        { NextAction("illidan stormrage remove dark barrage", ACTION_EMERGENCY + 6) }));
+    triggers.push_back(new TriggerNode("illidan stormrage immunity can clear debuff",
+        { NextAction("illidan stormrage clear debuff with immunity", ACTION_EMERGENCY + 6) }));
+
+    triggers.push_back(new TriggerNode("illidan stormrage immunity no longer needed",
+        { NextAction("illidan stormrage cancel immunity", ACTION_EMERGENCY + 6) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage prepares to land",
         { NextAction("illidan stormrage move away from landing point", ACTION_EMERGENCY + 3) }));
@@ -211,11 +227,11 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage should assign dps priority",
         { NextAction("illidan stormrage dps prioritize adds", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage maiev placed shadow trap",
-        { NextAction("illidan stormrage use shadow trap", ACTION_EMERGENCY + 1) }));
+    triggers.push_back(new TriggerNode("illidan stormrage maiev placed cage trap",
+        { NextAction("illidan stormrage use cage trap", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage should manage dps timer and rti",
-        { NextAction("illidan stormrage manage dps timer and rti", ACTION_EMERGENCY + 11) }));
+    triggers.push_back(new TriggerNode("illidan stormrage should manage dps timers",
+        { NextAction("illidan stormrage manage dps timers", ACTION_EMERGENCY + 11) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage should clear hazards between phases",
         { NextAction("illidan stormrage destroy hazards", ACTION_EMERGENCY + 10) }));
@@ -226,8 +242,9 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 {
-    // General
+    // Shared
     multipliers.push_back(new BlackTempleDelayDpsCooldownsMultiplier(botAI));
+    multipliers.push_back(new BlackTempleDisableKillingSpreeMultiplier(botAI));
 
     // Trash
     multipliers.push_back(new ShadowmoonReaverHoldChargeBuildingSpellsMultiplier(botAI));
@@ -237,7 +254,8 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
 
     // Supremus
     multipliers.push_back(new SupremusFocusOnAvoidanceInKitePhaseMultiplier(botAI));
-    multipliers.push_back(new SupremusDisableKillingSpreeMultiplier(botAI));
+    multipliers.push_back(new SupremusDoNotReachThroughFireMultiplier(botAI));
+    multipliers.push_back(new SupremusDisableAvoidAoeInKitePhaseMultiplier(botAI));
 
     // Shade of Akama
     multipliers.push_back(new ShadeOfAkamaDontDropOutOfSightTargetMultiplier(botAI));
@@ -250,10 +268,13 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
 
     // Gurtogg Bloodboil
     multipliers.push_back(new GurtoggBloodboilControlMovementMultiplier(botAI));
+    multipliers.push_back(new GurtoggBloodboilNoThreatRedirectsDuringFelRageMultiplier(botAI));
+    multipliers.push_back(new GurtoggBloodboilFelRageTargetHoldsAggroMultiplier(botAI));
     multipliers.push_back(new GurtoggBloodboilHoldThreatMultiplier(botAI));
 
     // Reliquary of Souls
     multipliers.push_back(new ReliquaryOfSoulsDontWasteHealingMultiplier(botAI));
+    multipliers.push_back(new ReliquaryOfSoulsControlMeleeMovementMultiplier(botAI));
     multipliers.push_back(new ReliquaryOfSoulsLetMagesStealRuneShieldMultiplier(botAI));
 
     // Mother Shahraz
@@ -261,11 +282,9 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new MotherShahrazFatalAttractionRunAwayMultiplier(botAI));
 
     // Illidari Council
-    multipliers.push_back(new IllidariCouncilDisableTankActionsMultiplier(botAI));
-    multipliers.push_back(new IllidariCouncilControlMovementMultiplier(botAI));
-    multipliers.push_back(new IllidariCouncilControlMisdirectionMultiplier(botAI));
-    multipliers.push_back(new IllidariCouncilDisableArcaneShotOnZerevorMultiplier(botAI));
-    multipliers.push_back(new IllidariCouncilDisableIceBlockMultiplier(botAI));
+    multipliers.push_back(new IllidariCouncilControlMovementAndTargetingMultiplier(botAI));
+    multipliers.push_back(new IllidariCouncilDisableMageTankActionsMultiplier(botAI));
+    multipliers.push_back(new IllidariCouncilControlHunterActionsMultiplier(botAI));
     multipliers.push_back(new IllidariCouncilWaitForDpsMultiplier(botAI));
 
     // Illidan Stormrage <The Betrayer>

@@ -5,10 +5,13 @@
  */
 
 #include "BTHelpers.h"
+#include "DynamicObject.h"
 #include "EncounterHelpers.h"
+#include "GameTime.h"
 #include "PathGenerator.h"
 #include "PetDefines.h"
 #include "Playerbots.h"
+#include "Spell.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
@@ -19,6 +22,11 @@
 #include <list>
 
 using namespace EncounterHelpers;
+
+// By leewheel 2026-10-12 合并上游 BT 重构后：本文件所有 "find target" 参数一律改为按 NPC
+//   entry 查找（本服为汉化客户端/库，英文名匹配不上）。entry 均实查
+//   data/sql/base/db_world/creature_template.sql 与 acore_world.creature_template 核定。
+// End By leewheel
 
 namespace BtHelpers
 {
@@ -33,22 +41,9 @@ Player* GetCachedPlayer(PlayerbotAI* botAI, char const* value)
     return player && player->IsAlive() ? player : nullptr;
 }
 
-std::vector<Unit*> GetCachedUnits(PlayerbotAI* botAI, char const* value)
-{
-    std::vector<Unit*> units;
-    for (ObjectGuid const& guid : botAI->GetAiObjectContext()->GetValue<GuidVector>(value)->RefGet())
-    {
-        Unit* unit = botAI->GetUnit(guid);
-        if (unit && unit->IsAlive())
-            units.push_back(unit);
-    }
-
-    return units;
 }
 
-}
-
-// General
+// Shared
 
 bool MisdirectTargetToTank(PlayerbotAI* botAI, Unit* target, Player* tank)
 {
@@ -62,6 +57,49 @@ bool MisdirectTargetToTank(PlayerbotAI* botAI, Unit* target, Player* tank)
         return false;
 
     return botAI->CanCastSpell("steady shot", target) && botAI->CastSpell("steady shot", target);
+}
+
+bool IsInRectangle(
+    Position const& point, Position const& centre, Position const& facing, float halfWidth,
+    float halfDepth)
+{
+    float const angle = centre.GetAngle(&facing);
+    float const dX = point.GetPositionX() - centre.GetPositionX();
+    float const dY = point.GetPositionY() - centre.GetPositionY();
+    float const depth = dX * std::cos(angle) + dY * std::sin(angle);
+    float const width = -dX * std::sin(angle) + dY * std::cos(angle);
+    return std::fabs(depth) <= halfDepth && std::fabs(width) <= halfWidth;
+}
+
+Position GetBotPointInRectangle(
+    Player* bot, Position const& centre, Position const& facing, float halfWidth,
+    float halfDepth)
+{
+    // Keeps points off the edge, so a bot that arrives counts as inside.
+    constexpr float edgeInset = 0.5f;
+
+    // splitmix64 on the GUID: two independent values in [-1, 1].
+    uint64 hash = bot->GetGUID().GetRawValue() + 0x9E3779B97F4A7C15ULL;
+    hash = (hash ^ (hash >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    hash = (hash ^ (hash >> 27)) * 0x94D049BB133111EBULL;
+    hash ^= hash >> 31;
+    float const widthFraction = static_cast<float>(hash & 0xFFFF) / 0xFFFF * 2.0f - 1.0f;
+    float const depthFraction = static_cast<float>((hash >> 16) & 0xFFFF) / 0xFFFF * 2.0f - 1.0f;
+
+    float const angle = centre.GetAngle(&facing);
+    float const width = widthFraction * std::max(halfWidth - edgeInset, 0.0f);
+    float const depth = depthFraction * std::max(halfDepth - edgeInset, 0.0f);
+    float x = centre.GetPositionX() + depth * std::cos(angle) - width * std::sin(angle);
+    float y = centre.GetPositionY() + depth * std::sin(angle) + width * std::cos(angle);
+    float z = bot->GetPositionZ();
+
+    if (!bot->GetMap()->CheckCollisionAndGetValidCoords(
+            bot, centre.GetPositionX(), centre.GetPositionY(), bot->GetPositionZ(), x, y, z))
+    {
+        return Position(centre.GetPositionX(), centre.GetPositionY(), bot->GetPositionZ());
+    }
+
+    return Position(x, y, bot->GetPositionZ());
 }
 
 // Trash
@@ -169,13 +207,13 @@ bool IsLinkedSisterOfPleasure(Unit* unit)
 
 Unit* FindLinkedSisterOfPleasure(PlayerbotAI* botAI)
 {
-    auto const& attackers =
-        botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->RefGet();
-    for (ObjectGuid const& guid : attackers)
+    std::list<Creature*> sisters;
+    botAI->GetBot()->GetCreatureListWithEntryInGrid(
+        sisters, Id(BtNpcs::NPC_SISTER_OF_PLEASURE), SISTER_OF_PLEASURE_SEARCH_RADIUS);
+    for (Creature* sister : sisters)
     {
-        Unit* unit = botAI->GetUnit(guid);
-        if (IsLinkedSisterOfPleasure(unit))
-            return unit;
+        if (IsLinkedSisterOfPleasure(sister))
+            return sister;
     }
 
     return nullptr;
@@ -302,7 +340,7 @@ Unit* FindPetTargetOtherThanReaver(PlayerbotAI* botAI)
 std::unordered_map<uint32, std::vector<NajentusSpineAssignment>> najentusSpineAssignments;
 std::unordered_map<uint32, ObjectGuid> najentusSpineThrower;
 
-namespace
+namespace // High Warlord Naj'entus
 {
 
 // A remover counts while it is alive, on the map and free to move.
@@ -319,7 +357,7 @@ bool CanThrowNajentusSpine(Player* bot)
         bot->HasItemCount(Id(BtItems::ITEM_NAJENTUS_SPINE));
 }
 
-}
+} // end anonymous namespace (High Warlord Naj'entus)
 
 bool IsNajentusImpaled(Player* player)
 {
@@ -461,30 +499,54 @@ Player* FindNajentusSpineThrower(Player* bot, Unit* najentus)
 
 // Supremus
 
+namespace
+{
+
+float GetSupremusHazardRadius(SupremusHazard const& hazard, SupremusHazardZone zone)
+{
+    return zone == SupremusHazardZone::Damage ? hazard.damageRadius : hazard.safeRadius;
+}
+
+}
+
 bool IsSupremusKitePhase(Unit* supremus)
 {
     return supremus && supremus->HasAura(Id(BtSpells::SPELL_SNARE_SELF));
 }
 
-GuidVector FindSupremusVolcanoGuids(Player* bot)
+float GetSupremusFixateTimeRemaining(Unit* supremus)
 {
-    std::list<Creature*> creatureList;
-    bot->GetCreatureListWithEntryInGrid(
-        creatureList, Id(BtNpcs::NPC_SUPREMUS_VOLCANO), SUPREMUS_VOLCANO_SEARCH_RADIUS);
+    if (!supremus)
+        return 0.0f;
 
-    GuidVector volcanoes;
-    for (Creature* creature : creatureList)
-    {
-        if (creature && creature->IsAlive())
-            volcanoes.push_back(creature->GetGUID());
-    }
+    Aura* snareSelf = supremus->GetAura(Id(BtSpells::SPELL_SNARE_SELF));
+    if (!snareSelf)
+        return 0.0f;
 
-    return volcanoes;
+    int64 const elapsed =
+        GameTime::GetGameTime().count() - static_cast<int64>(snareSelf->GetApplyTime());
+    int64 const remaining = std::min(
+        SUPREMUS_FIXATE_INTERVAL_SECONDS,
+        SUPREMUS_FIXATE_INTERVAL_SECONDS + 1 - elapsed % SUPREMUS_FIXATE_INTERVAL_SECONDS);
+
+    return static_cast<float>(remaining);
 }
 
-std::vector<Unit*> GetSupremusVolcanoes(PlayerbotAI* botAI)
+float GetSupremusCatchDistance(Player* bot, Unit* supremus)
 {
-    return GetCachedUnits(botAI, "supremus volcanoes");
+    if (!supremus)
+        return 0.0f;
+
+    return supremus->GetMeleeRange(bot) + SUPREMUS_KITE_SAFETY_MARGIN;
+}
+
+bool CanSupremusCatchStandingBot(Player* bot, Unit* supremus)
+{
+    if (!supremus)
+        return false;
+
+    float const closing = supremus->GetSpeed(MOVE_RUN) * GetSupremusFixateTimeRemaining(supremus);
+    return supremus->GetExactDist2d(bot) - closing < GetSupremusCatchDistance(bot, supremus);
 }
 
 bool IsSupremusVolcanoErupting(Unit* volcano)
@@ -494,26 +556,132 @@ bool IsSupremusVolcanoErupting(Unit* volcano)
          volcano->HasUnitState(UNIT_STATE_CASTING));
 }
 
-bool IsInEruptingSupremusVolcano(
-    std::vector<Unit*> const& volcanoes, float x, float y, float radius)
+std::vector<SupremusHazard> FindSupremusHazards(PlayerbotAI* botAI)
 {
-    for (Unit* volcano : volcanoes)
+    Player* bot = botAI->GetBot();
+    std::vector<SupremusHazard> hazards;
+
+    std::list<Creature*> volcanoes;
+    bot->GetCreatureListWithEntryInGrid(
+        volcanoes, Id(BtNpcs::NPC_SUPREMUS_VOLCANO), SUPREMUS_HAZARD_SEARCH_RADIUS);
+    for (Creature* volcano : volcanoes)
     {
-        if (IsSupremusVolcanoErupting(volcano) && volcano->GetExactDist2d(x, y) < radius)
+        if (IsSupremusVolcanoErupting(volcano))
         {
-            return true;
+            hazards.push_back({
+                volcano->GetPosition(), SUPREMUS_VOLCANO_HAZARD_RADIUS,
+                SUPREMUS_VOLCANO_SAFE_DISTANCE });
         }
+    }
+
+    // In the tank phase stock avoid aoe handles Molten Flame; it sidesteps, keeping bots near.
+    Unit* supremus =
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "22898")->Get();
+    if (!IsSupremusKitePhase(supremus))
+        return hazards;
+
+    for (Position const& patch : GetDynamicObjectPositions(
+             bot, SUPREMUS_HAZARD_SEARCH_RADIUS, Id(BtSpells::SPELL_MOLTEN_FLAME_PATCH)))
+    {
+        hazards.push_back(
+            { patch, SUPREMUS_MOLTEN_FLAME_HAZARD_RADIUS, SUPREMUS_MOLTEN_FLAME_SAFE_DISTANCE });
+    }
+
+    return hazards;
+}
+
+std::vector<SupremusHazard> const& GetSupremusHazards(PlayerbotAI* botAI)
+{
+    return botAI->GetAiObjectContext()
+        ->GetValue<std::vector<SupremusHazard>>("supremus hazards")
+        ->RefGet();
+}
+
+bool IsInSupremusHazard(
+    std::vector<SupremusHazard> const& hazards, float x, float y, SupremusHazardZone zone,
+    float margin)
+{
+    for (SupremusHazard const& hazard : hazards)
+    {
+        if (hazard.position.GetExactDist2d(x, y) < GetSupremusHazardRadius(hazard, zone) + margin)
+            return true;
     }
 
     return false;
 }
 
-bool IsInsideSupremusKiteBoundary(float x, float y)
+float GetLineLengthInSupremusHazards(
+    std::vector<SupremusHazard> const& hazards, Position const& from, Position const& to,
+    SupremusHazardZone zone)
 {
-    return x > SUPREMUS_BOUNDARY_MIN_X + SUPREMUS_KITE_BOUNDARY_MARGIN &&
-        x < SUPREMUS_BOUNDARY_MAX_X - SUPREMUS_KITE_BOUNDARY_MARGIN &&
-        y > SUPREMUS_BOUNDARY_MIN_Y + SUPREMUS_KITE_BOUNDARY_MARGIN &&
-        y < SUPREMUS_BOUNDARY_MAX_Y - SUPREMUS_KITE_BOUNDARY_MARGIN;
+    float const length = from.GetExactDist2d(to);
+    if (length <= 0.0f)
+        return 0.0f;
+
+    float const dx = (to.GetPositionX() - from.GetPositionX()) / length;
+    float const dy = (to.GetPositionY() - from.GetPositionY()) / length;
+    float total = 0.0f;
+    for (SupremusHazard const& hazard : hazards)
+    {
+        // The line crosses the circle where t^2 + 2 * along * t + outside = 0.
+        float const radius = GetSupremusHazardRadius(hazard, zone);
+        float const offsetX = from.GetPositionX() - hazard.position.GetPositionX();
+        float const offsetY = from.GetPositionY() - hazard.position.GetPositionY();
+        float const along = offsetX * dx + offsetY * dy;
+        float const outside = offsetX * offsetX + offsetY * offsetY - radius * radius;
+        float const discriminant = along * along - outside;
+        if (discriminant <= 0.0f)
+            continue;
+
+        float const root = std::sqrt(discriminant);
+        float const enter = std::max(0.0f, -along - root);
+        float const exit = std::min(length, -along + root);
+        if (exit > enter)
+            total += exit - enter;
+    }
+
+    return total;
+}
+
+bool GetSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit*& target, float& range)
+{
+    Player* bot = botAI->GetBot();
+    target = nullptr;
+    range = 0.0f;
+
+    // Stock reach doesn't break a channel either.
+    if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+        return false;
+
+    bool const isHealer = PlayerbotAI::IsHeal(bot);
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    target = context->GetValue<Unit*>(isHealer ? "party member to heal" : "current target")->Get();
+    if (isHealer)
+        range = botAI->GetRange("heal");
+    else if (PlayerbotAI::IsRanged(bot))
+        range = botAI->GetRange("spell");
+    else
+        range = sPlayerbotAIConfig.MeleeDistance;
+
+    if (!target || !target->IsAlive() || bot->IsWithinCombatRange(target, range))
+        return false;
+
+    // Where the walk in would stop: a yard inside range, on the straight line to the target.
+    constexpr float rangeInset = 1.0f;
+    float const stopDistance =
+        range + bot->GetCombatReach() + target->GetCombatReach() - rangeInset;
+    float const distance = bot->GetExactDist2d(target);
+    if (distance <= stopDistance)
+        return false;
+
+    float const ratio = stopDistance / distance;
+    Position const stop(
+        target->GetPositionX() + (bot->GetPositionX() - target->GetPositionX()) * ratio,
+        target->GetPositionY() + (bot->GetPositionY() - target->GetPositionY()) * ratio,
+        bot->GetPositionZ());
+
+    return GetLineLengthInSupremusHazards(
+        GetSupremusHazards(botAI), bot->GetPosition(), stop, SupremusHazardZone::Safe) > 0.0f;
 }
 
 // Shade of Akama
@@ -725,7 +893,8 @@ std::vector<std::vector<Player*>> GetGurtoggRangedRotationGroups(Player* bot)
 }
 
 // The group hit longest ago soaks next: the lowest mean Bloodboil time left, ties to the first.
-// Just after a cast, that group's debuffs run out before the next one.
+// Just after a cast, that group's debuffs run out before the next one. Debuffs younger than the
+// rotation delay count as none, so the group just hit stays the soakers until then.
 GuidVector FindGurtoggBloodboilSoakerGuids(Player* bot)
 {
     std::vector<std::vector<Player*>> const groups = GetGurtoggRangedRotationGroups(bot);
@@ -739,7 +908,12 @@ GuidVector FindGurtoggBloodboilSoakerGuids(Player* bot)
         int32 totalRemaining = 0;
         for (Player* member : group)
         {
-            if (Aura* bloodboil = member->GetAura(Id(BtSpells::SPELL_BLOODBOIL)))
+            Aura* bloodboil = member->GetAura(Id(BtSpells::SPELL_BLOODBOIL));
+            if (!bloodboil)
+                continue;
+
+            int32 const elapsed = bloodboil->GetMaxDuration() - bloodboil->GetDuration();
+            if (elapsed >= GURTOGG_ROTATION_DELAY_MS)
                 totalRemaining += bloodboil->GetDuration();
         }
 
@@ -771,11 +945,40 @@ Position const& GetGurtoggBloodboilPosition(Player* bot)
     return isSoaker ? GURTOGG_SOAKER_POSITION : GURTOGG_RANGED_POSITION;
 }
 
+// The Fel Rage target taunts him onto itself, so it is his victim.
+Unit* GetGurtoggFelRageTarget(Unit* gurtogg)
+{
+    if (!gurtogg->HasAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE)))
+        return nullptr;
+
+    Unit* victim = gurtogg->GetVictim();
+    return victim && victim->HasAura(Id(BtSpells::SPELL_PLAYER_FEL_RAGE)) ? victim : nullptr;
+}
+
+Position GetGurtoggFelRageMeleePosition(Player* bot, Unit* gurtogg, Unit* felRageTarget)
+{
+    float const axisAngle = gurtogg->GetAngle(felRageTarget);
+    float relativeAngle = Position::NormalizeOrientation(gurtogg->GetAngle(bot) - axisAngle);
+    if (relativeAngle > M_PI)
+        relativeAngle -= 2.0f * M_PI;
+
+    float angle = axisAngle + static_cast<float>(M_PI);
+    if (std::fabs(relativeAngle) < static_cast<float>(M_PI_2))
+    {
+        float const side = relativeAngle >= 0.0f ? 1.0f : -1.0f;
+        angle = axisAngle + side * GURTOGG_FEL_RAGE_MELEE_SIDE_ANGLE;
+    }
+
+    return Position(
+        gurtogg->GetPositionX() + GURTOGG_FEL_RAGE_MELEE_DISTANCE * std::cos(angle),
+        gurtogg->GetPositionY() + GURTOGG_FEL_RAGE_MELEE_DISTANCE * std::sin(angle),
+        bot->GetPositionZ());
+}
+
 float FindGurtoggSecondTankThreat(PlayerbotAI* botAI)
 {
-    Unit* gurtogg = botAI->GetAiObjectContext()
-                        ->GetValue<Unit*>("find target", "22948")
-                        ->Get();
+    Unit* gurtogg =
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "22948")->Get();
     if (!gurtogg)
         return 0.0f;
 
@@ -813,28 +1016,16 @@ bool IsSufferingFixateTank(Player* bot)
     return PlayerbotAI::IsTank(bot) && bot->GetHealthPct() > SUFFERING_TANK_MIN_HEALTH_PCT;
 }
 
-Position GetSufferingMeleePosition(Player* bot, Unit* suffering)
-{
-    float const distance = bot->GetMeleeRange(suffering);
-    float const behindAngle = Position::NormalizeOrientation(suffering->GetOrientation() + M_PI);
-    return Position(
-        suffering->GetPositionX() + distance * std::cos(behindAngle),
-        suffering->GetPositionY() + distance * std::sin(behindAngle), bot->GetPositionZ());
-}
-
 bool IsOutOfSufferingPosition(Player* bot, Unit* suffering)
 {
     if (!suffering)
         return false;
 
     if (IsSufferingFixateTank(bot))
-        return bot->GetExactDist2d(suffering) > SUFFERING_TANK_DISTANCE;
+        return bot->GetExactDist2d(suffering) > SUFFERING_TANK_MAX_DISTANCE;
 
     if (PlayerbotAI::IsMelee(bot))
-    {
-        return bot->GetExactDist2d(GetSufferingMeleePosition(bot, suffering)) >
-            SUFFERING_MELEE_POSITION_TOLERANCE;
-    }
+        return bot->GetExactDist2d(suffering) < SUFFERING_MELEE_MIN_DISTANCE;
 
     return PlayerbotAI::IsRanged(bot) && bot->GetExactDist2d(suffering) < SUFFERING_RANGED_DISTANCE;
 }
@@ -842,8 +1033,6 @@ bool IsOutOfSufferingPosition(Player* bot, Unit* suffering)
 // Illidari Council
 
 std::unordered_map<uint32, uint32> councilDpsWaitTimer;
-std::unordered_map<ObjectGuid, uint8> gathiosTankStep;
-std::unordered_map<ObjectGuid, uint8> zerevorHealStep;
 
 // (1) First priority is an assistant Mage (real player or bot)
 // (2) If no assistant Mage, then look for any Mage bot
@@ -902,68 +1091,223 @@ bool HasDangerousCouncilAura(Player* bot)
     return false;
 }
 
-bool IsDarkshadowVanished(Unit* darkshadow)
+bool IsVerasVanished(Unit* veras)
 {
-    return darkshadow && darkshadow->HasAura(Id(BtSpells::SPELL_DARKSHADOW_VANISH));
+    return veras && veras->HasAura(Id(BtSpells::SPELL_VERAS_VANISH));
+}
+
+bool CanInterruptCircleOfHealing(Unit* malande)
+{
+    if (!malande)
+        return false;
+
+    Spell* spell = malande->FindCurrentSpellBySpellId(Id(BtSpells::SPELL_CIRCLE_OF_HEALING));
+    return spell && spell->getState() == SPELL_STATE_PREPARING &&
+        spell->GetCastTime() - spell->GetCastTimeRemaining() >= CIRCLE_OF_HEALING_REACTION_MS;
+}
+
+// Zerevor has at most one Blizzard and one Flamestrike down at a time.
+bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin)
+{
+    if (!zerevor)
+        return false;
+
+    static constexpr std::array patchSpells = {
+        Id(BtSpells::SPELL_BLIZZARD),
+        Id(BtSpells::SPELL_FLAMESTRIKE),
+    };
+
+    for (uint32 spellId : patchSpells)
+    {
+        DynamicObject* patch = zerevor->GetDynObject(spellId);
+        if (patch && patch->GetExactDist2d(point) < patch->GetRadius() + margin)
+            return true;
+    }
+
+    return false;
+}
+
+bool IsMalandeInZerevorPatch(Unit* malande, Unit* zerevor)
+{
+    return malande && IsInZerevorPatch(zerevor, *malande);
+}
+
+bool IsZerevorOnMageTank(PlayerbotAI* botAI, Unit* zerevor)
+{
+    Player* mageTank = GetZerevorMageTank(botAI);
+    return zerevor && mageTank && zerevor->GetVictim() == mageTank;
+}
+
+// Within heal range of the mage tank, clear of a patch on it, of Arcane Explosion, and of any
+// patch down.
+bool IsMageTankHealerPositionSafe(Position const& point, Player* mageTank, Unit* zerevor)
+{
+    float const toMageTank = mageTank->GetExactDist2d(point);
+    return toMageTank <= MAGE_TANK_HEALER_MAX_DISTANCE &&
+        toMageTank >= MAGE_TANK_HEALER_MIN_DISTANCE &&
+        zerevor->GetExactDist2d(point) >= ZEREVOR_ARCANE_EXPLOSION_SAFE_DISTANCE &&
+        !IsInZerevorPatch(zerevor, point, ZEREVOR_PATCH_MARGIN);
+}
+
+// The nearest safe point on two rings round the mage tank that the bot can walk to in a straight
+// line and that has line of sight to the mage tank.
+bool FindMageTankHealerPosition(
+    Player* bot, Player* mageTank, Unit* zerevor, Position& destination)
+{
+    static constexpr std::array ringRadii = { 16.0f, 24.0f };
+    constexpr uint8 pointsPerRing = 16;
+
+    std::vector<Position> candidates;
+    for (float radius : ringRadii)
+    {
+        for (uint8 i = 0; i < pointsPerRing; ++i)
+        {
+            float const angle = 2.0f * static_cast<float>(M_PI) * i / pointsPerRing;
+            Position const point(
+                mageTank->GetPositionX() + radius * std::cos(angle),
+                mageTank->GetPositionY() + radius * std::sin(angle), bot->GetPositionZ());
+            if (IsMageTankHealerPositionSafe(point, mageTank, zerevor))
+                candidates.push_back(point);
+        }
+    }
+
+    std::sort(
+        candidates.begin(), candidates.end(),
+        [bot](Position const& a, Position const& b)
+        {
+            return bot->GetExactDist2d(a) < bot->GetExactDist2d(b);
+        });
+
+    for (Position const& candidate : candidates)
+    {
+        float x = candidate.GetPositionX();
+        float y = candidate.GetPositionY();
+        float z = candidate.GetPositionZ();
+        if (!bot->GetMap()->CheckCollisionAndGetValidCoords(
+                bot, bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), x, y, z) ||
+            !mageTank->IsWithinLOS(x, y, z))
+        {
+            continue;
+        }
+
+        destination = Position(x, y, bot->GetPositionZ());
+        return true;
+    }
+
+    return false;
+}
+
+// Any council member but the bot's own target.
+bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range)
+{
+    static constexpr std::array memberNames = {
+        "gathios the shatterer",
+        "high nethermancer zerevor",
+        "lady malande",
+        "veras darkshadow",
+    };
+
+    Player* bot = botAI->GetBot();
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    Unit* ownTarget = AI_VALUE(Unit*, "current target");
+    for (char const* name : memberNames)
+    {
+        Unit* member = AI_VALUE2(Unit*, "find target", name);
+        if (member && member != ownTarget && bot->GetDistance(member) < range)
+            return true;
+    }
+
+    return false;
+}
+
+// Felhunters stay on Malande for Spell Lock; other pets follow their master's target, or go to
+// Gathios while the master has none.
+Unit* GetCouncilPetTarget(PlayerbotAI* botAI, Creature* pet)
+{
+    if (!pet)
+        return nullptr;
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
+    if (!gathios)
+        return nullptr;
+
+    if (pet->GetEntry() == NPC_FELHUNTER)
+    {
+        if (Unit* malande = AI_VALUE2(Unit*, "find target", "22951"))
+            return malande;
+    }
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    return target && target->IsAlive() ? target : gathios;
+}
+
+// PlayerbotAI::CanCastSpell passes any spell the pet knows without checking range or cooldown.
+uint32 GetReadySpellLock(Creature* pet, Unit* target)
+{
+    if (!pet || !target || !pet->IsAlive() || pet->GetEntry() != NPC_FELHUNTER)
+        return 0;
+
+    constexpr float spellLockRange = 30.0f;
+    if (!pet->IsWithinCombatRange(target, spellLockRange) || !pet->IsWithinLOSInMap(target))
+        return 0;
+
+    static constexpr std::array spellLockRanks = {
+        Id(BtSpells::SPELL_SPELL_LOCK_2),
+        Id(BtSpells::SPELL_SPELL_LOCK_1),
+    };
+
+    for (uint32 spellLock : spellLockRanks)
+    {
+        if (pet->HasSpell(spellLock))
+            return pet->HasSpellCooldown(spellLock) ? 0 : spellLock;
+    }
+
+    return 0;
 }
 
 // Illidan Stormrage <The Betrayer>
 
-std::unordered_map<ObjectGuid, size_t> flameTankWaypointIndex;
-std::unordered_map<ObjectGuid, ObjectGuid> illidanShadowTrapGuid;
-std::unordered_map<ObjectGuid, Position> illidanShadowTrapDestination;
-std::unordered_map<uint32, int> illidanLastPhase;
-std::unordered_map<uint32, uint32> illidanBossDpsWaitTimer;
-std::unordered_map<uint32, uint32> illidanFlameDpsWaitTimer;
+std::unordered_map<uint32, IllidanPhase> illidanLastPhase;
+std::unordered_map<uint32, uint32> illidanPhaseStartTime;
+std::unordered_map<uint32, uint32> illidanFlamePhaseStartTime;
 std::unordered_map<uint32, ObjectGuid> eastFlameGuid;
 std::unordered_map<uint32, ObjectGuid> westFlameGuid;
 
-int GetIllidanPhase(Unit* illidan)
+IllidanPhase GetIllidanPhase(Unit* illidan)
 {
-    if (!illidan || IsIllidanDeathScene(illidan) ||
-        illidan->HasAura(Id(BtSpells::SPELL_SHADOW_PRISON)))
-    {
-        return -1;
-    }
+    if (!illidan || IsIllidanDeathScene(illidan))
+        return IllidanPhase::None;
 
-    // Transitioning from Phase 2 to Phase 3
-    float x, y, z;
-    illidan->GetMotionMaster()->GetDestination(x, y, z);
-    Position const dest(x, y, z);
-    if ((dest.GetExactDist2d(ILLIDAN_LANDING_POSITION) < 0.2f ||
-         illidan->GetExactDist2d(ILLIDAN_LANDING_POSITION) < 0.2f) &&
-        illidan->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
-    {
-        return 0;
-    }
-
-    // Phase 2: Flying
+    float const healthPct = illidan->GetHealthPct();
     if (illidan->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
-        return 2;
+    {
+        // He takes no damage while flying, so below 30% he is unselectable only for Maiev's
+        // arrival.
+        if (healthPct <= 30.0f)
+            return IllidanPhase::None;
 
-    // Phase 1: Health > 65%
-    if (illidan->GetHealthPct() > 65.0f)
-        return 1;
+        float x, y, z;
+        bool const isLanding = illidan->GetExactDist2d(ILLIDAN_LANDING_POSITION) < 0.2f ||
+            (illidan->GetMotionMaster()->GetDestination(x, y, z) &&
+             ILLIDAN_LANDING_POSITION.GetExactDist2d(x, y) < 0.2f);
 
-    // Phase 4: Demon Form
+        return isLanding ? IllidanPhase::Landing : IllidanPhase::Flying;
+    }
+
+    if (healthPct > 65.0f)
+        return IllidanPhase::Initial;
+
     if (!illidan->HasAura(Id(BtSpells::SPELL_CAGED)) &&
         (illidan->HasAura(Id(BtSpells::SPELL_DEMON_FORM)) ||
          illidan->HasAura(Id(BtSpells::SPELL_DEMON_TRANSFORM_1)) ||
          illidan->HasAura(Id(BtSpells::SPELL_DEMON_TRANSFORM_2)) ||
          illidan->HasAura(Id(BtSpells::SPELL_DEMON_TRANSFORM_3))))
     {
-        return 4;
+        return IllidanPhase::Demon;
     }
 
-    // Phase 3: Normal (ground, 65-30%, not demon)
-    if (illidan->GetHealthPct() > 30.0f)
-        return 3;
-
-    // Phase 5: Health <= 30%
-    if (illidan->GetHealthPct() <= 30.0f)
-        return 5;
-
-    return -1;
+    return healthPct > 30.0f ? IllidanPhase::Grounded : IllidanPhase::Maiev;
 }
 
 bool IsIllidanDeathScene(Unit* illidan)
@@ -1059,25 +1403,32 @@ bool HasParasiticShadowfiend(Player* player)
         player->HasAura(Id(BtSpells::SPELL_PARASITIC_SHADOWFIEND_2));
 }
 
-// Get the first bot hunter that doesn't have Parasitic Shadowfiend
-Player* GetIllidanTrapperHunter(Player* bot)
+// The first bot hunter that doesn't have Parasitic Shadowfiend
+bool IsIllidanTrapperHunter(Player* bot)
 {
+    if (bot->getClass() != CLASS_HUNTER)
+        return false;
+
     Group* group = bot->GetGroup();
     if (!group)
-        return nullptr;
+        return false;
 
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (member && member->GetMapId() == BT_MAP_ID && member->IsAlive() &&
-            member->getClass() == CLASS_HUNTER && GET_PLAYERBOT_AI(member) &&
-            !HasParasiticShadowfiend(member))
+        if (!member || member->GetMapId() != BT_MAP_ID || !member->IsAlive())
+            continue;
+
+        if (member->getClass() != CLASS_HUNTER || !GET_PLAYERBOT_AI(member) ||
+            HasParasiticShadowfiend(member))
         {
-            return member;
+            continue;
         }
+
+        return member == bot;
     }
 
-    return nullptr;
+    return false;
 }
 
 ObjectGuid FindBotWithParasiticShadowfiendGuid(Player* bot)
@@ -1128,7 +1479,9 @@ EyeBlastDangerArea GetEyeBlastDangerArea(Player* bot)
         eyeBlastTrigger->GetPositionY(), eyeBlastTrigger->GetPositionZ());
 
     float destX, destY, destZ;
-    eyeBlastTrigger->GetMotionMaster()->GetDestination(destX, destY, destZ);
+    if (!eyeBlastTrigger->GetMotionMaster()->GetDestination(destX, destY, destZ))
+        return {};
+
     Position const endPos(destX, destY, destZ);
 
     if (startPos.GetExactDist2d(endPos) < 0.1f)
@@ -1160,7 +1513,7 @@ bool IsPositionInEyeBlastDangerArea(Position const& pos, EyeBlastDangerArea cons
     return distToLine < area.width;
 }
 
-GameObject* FindNearestTrap(PlayerbotAI* botAI)
+GameObject* FindNearestCageTrap(PlayerbotAI* botAI)
 {
     GuidVector const& gos =
         botAI->GetAiObjectContext()->GetValue<GuidVector>("nearest game objects")->Get();
@@ -1169,7 +1522,7 @@ GameObject* FindNearestTrap(PlayerbotAI* botAI)
     for (ObjectGuid const& guid : gos)
     {
         GameObject* go = botAI->GetGameObject(guid);
-        if (go && go->isSpawned() && go->GetEntry() == Id(BtObjects::GO_SHADOW_TRAP))
+        if (go && go->isSpawned() && go->GetEntry() == Id(BtObjects::GO_CAGE_TRAP))
         {
             nearestTrap = go;
             break;

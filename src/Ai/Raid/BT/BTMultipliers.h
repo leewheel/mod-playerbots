@@ -12,7 +12,7 @@
 #include "Multiplier.h"
 #include <string>
 
-// General
+// Shared
 
 class BlackTempleEncounterMultiplier : public Multiplier
 {
@@ -22,8 +22,8 @@ public:
 
     float GetValue(Action* action) final
     {
-        return EncounterHelpers::IsEncounterInProgress(
-            bot, BtHelpers::BT_MAP_ID) ? GetValueInEncounter(action) : 1.0f;
+        return EncounterHelpers::IsEncounterInProgress(bot, BtHelpers::BT_MAP_ID) ?
+            GetValueInEncounter(action) : 1.0f;
     }
 
 protected:
@@ -35,6 +35,19 @@ class BlackTempleDelayDpsCooldownsMultiplier : public BlackTempleEncounterMultip
 public:
     BlackTempleDelayDpsCooldownsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(botAI, "black temple delay dps cooldowns") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Supremus's bounding radius is 80 yd, far beyond his combat reach, and Killing Spree places the
+// rogue by bounding radius, so it takes the rogue well out of the fight.
+// Essence of Suffering targets the closest player, and Killing Spree makes the Rogue the closest.
+class BlackTempleDisableKillingSpreeMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    BlackTempleDisableKillingSpreeMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "black temple disable killing spree") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -76,13 +89,24 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Supremus's bounding radius is 80 yd, far beyond his combat reach, and Killing Spree places the
-// rogue by bounding radius, so it takes the rogue well out of the fight.
-class SupremusDisableKillingSpreeMultiplier : public BlackTempleEncounterMultiplier
+// Stock reach walks a straight line, so it gives way while that line passes through fire.
+class SupremusDoNotReachThroughFireMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    SupremusDisableKillingSpreeMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "supremus disable killing spree") {}
+    SupremusDoNotReachThroughFireMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "supremus do not reach through fire") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// Stock avoid aoe flees one patch at a time and can't see volcanoes; in the kite phase the fire
+// avoidance sees both. In the tank phase it handles Molten Flame again.
+class SupremusDisableAvoidAoeInKitePhaseMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    SupremusDisableAvoidAoeInKitePhaseMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "supremus disable avoid aoe in kite phase") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -156,6 +180,30 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+// Fel Rage fixes him on its target, so tanks don't taunt and hunters don't misdirect until it ends.
+class GurtoggBloodboilNoThreatRedirectsDuringFelRageMultiplier
+    : public BlackTempleEncounterMultiplier
+{
+public:
+    GurtoggBloodboilNoThreatRedirectsDuringFelRageMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+              botAI, "gurtogg bloodboil no threat redirects during fel rage") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+// The Fel Rage target keeps him for all of Fel Rage, so it uses nothing that drops its threat.
+class GurtoggBloodboilFelRageTargetHoldsAggroMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    GurtoggBloodboilFelRageTargetHoldsAggroMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "gurtogg bloodboil fel rage target holds aggro") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 // Non-tanks other than healers hold below the second tank's threat. No hold under Insignificance,
 // when no one gains threat.
 class GurtoggBloodboilHoldThreatMultiplier : public BlackTempleEncounterMultiplier
@@ -175,6 +223,16 @@ class ReliquaryOfSoulsDontWasteHealingMultiplier : public BlackTempleEncounterMu
 public:
     ReliquaryOfSoulsDontWasteHealingMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(botAI, "reliquary of souls don't waste healing") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class ReliquaryOfSoulsControlMeleeMovementMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    ReliquaryOfSoulsControlMeleeMovementMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "reliquary of souls control melee movement") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -216,51 +274,36 @@ protected:
 
 // Illidari Council
 
-class IllidariCouncilDisableTankActionsMultiplier : public BlackTempleEncounterMultiplier
+class IllidariCouncilControlMovementAndTargetingMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    IllidariCouncilDisableTankActionsMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidari council disable tank actions") {}
+    IllidariCouncilControlMovementAndTargetingMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidari council control movement and targeting") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+
+private:
+    float GetTankValue(Action* action);
+    float GetNonTankValue(Action* action);
+};
+
+class IllidariCouncilDisableMageTankActionsMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    IllidariCouncilDisableMageTankActionsMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "illidari council disable mage tank actions") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class IllidariCouncilControlMovementMultiplier : public BlackTempleEncounterMultiplier
+class IllidariCouncilControlHunterActionsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    IllidariCouncilControlMovementMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidari council control movement") {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
-};
-
-class IllidariCouncilControlMisdirectionMultiplier : public BlackTempleEncounterMultiplier
-{
-public:
-    IllidariCouncilControlMisdirectionMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidari council control misdirection") {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
-};
-
-class IllidariCouncilDisableArcaneShotOnZerevorMultiplier : public BlackTempleEncounterMultiplier
-{
-public:
-    IllidariCouncilDisableArcaneShotOnZerevorMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidari council disable arcane shot on zerevor") {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
-};
-
-class IllidariCouncilDisableIceBlockMultiplier : public BlackTempleEncounterMultiplier
-{
-public:
-    IllidariCouncilDisableIceBlockMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidari council disable ice block") {}
+    IllidariCouncilControlHunterActionsMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "illidari council control hunter actions") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

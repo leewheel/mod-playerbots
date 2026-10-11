@@ -131,11 +131,8 @@ float AttumenTheHuntsmanDisableAutoTargetingMultiplier::GetValueInEncounter(Acti
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (!dynamic_cast<TankAssistAction*>(action) &&
-        !dynamic_cast<DpsAssistAction*>(action))
-    {
+    if (!dynamic_cast<DpsAssistAction*>(action) && !dynamic_cast<TankAssistAction*>(action))
         return 1.0f;
-    }
 
     return AI_VALUE2(Unit*, "find target", "16151") ? 0.0f : 1.0f;
 }
@@ -354,7 +351,14 @@ float NetherspiteKeepBlockingBeamMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
-    if (!netherspite || IsBanishPhase(netherspite))
+    if (!netherspite)
+        return 1.0f;
+
+    // Derived from CombatFormationMoveAction. Block even in Banish phase so the tank stays put.
+    if (dynamic_cast<TankFaceAction*>(action))
+        return 0.0f;
+
+    if (IsBanishPhase(netherspite))
         return 1.0f;
 
     auto [redBlocker, greenBlocker, blueBlocker] = GetCurrentBeamBlockers(bot);

@@ -657,7 +657,7 @@ bool MuruDarknessIsComingTrigger::IsActiveInEncounter()
 
 bool MuruBerserkerHasFlurryTrigger::IsActiveInEncounter()
 {
-    // No stuns and can't be a Tauren. Too bad.
+    // These classes have no stuns and can't be Tauren.
     if (bot->getClass() == CLASS_MAGE || bot->getClass() == CLASS_PRIEST ||
         bot->getClass() == CLASS_WARLOCK)
     {
@@ -672,7 +672,7 @@ bool MuruBerserkerHasFlurryTrigger::IsActiveInEncounter()
 
 bool MuruFuryMageCastingFelFireballTrigger::IsActiveInEncounter()
 {
-    // Do Druids have no interrupts...?
+    // Druids are seriously the only class with no interrupts?
     if (bot->getClass() == CLASS_DRUID)
         return false;
 
@@ -751,11 +751,17 @@ bool KiljaedenShouldCoordinateOrbUseTrigger::IsActiveInEncounter()
     if (stateItr != kiljaedenEncounterStates.end() && stateItr->second.dragonOrbAnnouncementMs)
         return false;
 
+    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) < HAND_SEARCH_RADIUS)
+        return false;
+
     return AI_VALUE2(Unit*, "find target", "25588");
 }
 
 bool KiljaedenHandsOfTheDeceiverAreActiveTrigger::IsActiveInEncounter()
 {
+    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) < HAND_SEARCH_RADIUS)
+        return false;
+
     return AI_VALUE2(Unit*, "find target", "25588");
 }
 
@@ -847,10 +853,7 @@ bool KiljaedenDragonOrbIsActiveTrigger::IsActiveInEncounter()
     if (!kiljaeden || kiljaeden->GetHealthPct() > KILJAEDEN_PHASE3_HP_THRESHOLD)
         return false;
 
-    if (GetKiljaedenDragonOrbUser(bot) != bot)
-        return false;
-
-    if (HasKiljaedenDragonAura(bot))
+    if (GetKiljaedenDragonOrbUser(bot) != bot || HasKiljaedenDragonAura(bot))
         return false;
 
     bool orbInUse = false;

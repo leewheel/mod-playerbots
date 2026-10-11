@@ -20,8 +20,8 @@ public:
             &RaidBlackTempleTriggerContext::black_temple_no_encounter_in_progress;
 
         // Trash
-        creators["sister of pleasure should be marked"] =
-            &RaidBlackTempleTriggerContext::sister_of_pleasure_should_be_marked;
+        creators["sister of pleasure should be focused"] =
+            &RaidBlackTempleTriggerContext::sister_of_pleasure_should_be_focused;
 
         creators["shadowmoon reaver wand builds charges"] =
             &RaidBlackTempleTriggerContext::shadowmoon_reaver_wand_builds_charges;
@@ -58,11 +58,14 @@ public:
         creators["supremus ranged should spread"] =
             &RaidBlackTempleTriggerContext::supremus_ranged_should_spread;
 
-        creators["supremus fixates on bot"] =
-            &RaidBlackTempleTriggerContext::supremus_fixates_on_bot;
+        creators["supremus fixated on bot"] =
+            &RaidBlackTempleTriggerContext::supremus_fixated_on_bot;
 
-        creators["supremus near volcano"] =
-            &RaidBlackTempleTriggerContext::supremus_near_volcano;
+        creators["supremus near fire"] =
+            &RaidBlackTempleTriggerContext::supremus_near_fire;
+
+        creators["supremus reach blocked by fire"] =
+            &RaidBlackTempleTriggerContext::supremus_reach_blocked_by_fire;
 
         // Shade of Akama
         creators["shade of akama should prioritize channelers"] =
@@ -96,6 +99,12 @@ public:
 
         creators["gurtogg bloodboil should position for bloodboil"] =
             &RaidBlackTempleTriggerContext::gurtogg_bloodboil_should_position_for_bloodboil;
+
+        creators["gurtogg bloodboil melee should stay behind"] =
+            &RaidBlackTempleTriggerContext::gurtogg_bloodboil_melee_should_stay_behind;
+
+        creators["gurtogg bloodboil should avoid fel rage target"] =
+            &RaidBlackTempleTriggerContext::gurtogg_bloodboil_should_avoid_fel_rage_target;
 
         creators["gurtogg bloodboil fel rage on bot"] =
             &RaidBlackTempleTriggerContext::gurtogg_bloodboil_fel_rage_on_bot;
@@ -142,23 +151,26 @@ public:
         creators["illidari council gathios casts judgement of command"] =
             &RaidBlackTempleTriggerContext::illidari_council_gathios_casts_judgement_of_command;
 
+        creators["illidari council malande casts circle of healing"] =
+            &RaidBlackTempleTriggerContext::illidari_council_malande_casts_circle_of_healing;
+
         creators["illidari council malande should be tanked"] =
             &RaidBlackTempleTriggerContext::illidari_council_malande_should_be_tanked;
 
-        creators["illidari council darkshadow should be tanked"] =
-            &RaidBlackTempleTriggerContext::illidari_council_darkshadow_should_be_tanked;
+        creators["illidari council veras should be tanked"] =
+            &RaidBlackTempleTriggerContext::illidari_council_veras_should_be_tanked;
 
         creators["illidari council zerevor should be tanked by mage"] =
             &RaidBlackTempleTriggerContext::illidari_council_zerevor_should_be_tanked_by_mage;
 
-        creators["illidari council mage tank needs dedicated healer"] =
-            &RaidBlackTempleTriggerContext::illidari_council_mage_tank_needs_dedicated_healer;
+        creators["illidari council mage tank healer should reposition"] =
+            &RaidBlackTempleTriggerContext::illidari_council_mage_tank_healer_should_reposition;
 
         creators["illidari council ranged should spread"] =
             &RaidBlackTempleTriggerContext::illidari_council_ranged_should_spread;
 
-        creators["illidari council pets screw up the pull"] =
-            &RaidBlackTempleTriggerContext::illidari_council_pets_screw_up_the_pull;
+        creators["illidari council pet should switch target"] =
+            &RaidBlackTempleTriggerContext::illidari_council_pet_should_switch_target;
 
         creators["illidari council should assign dps priority"] =
             &RaidBlackTempleTriggerContext::illidari_council_should_assign_dps_priority;
@@ -188,8 +200,11 @@ public:
         creators["illidan stormrage grate is safe from flames"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_grate_is_safe_from_flames;
 
-        creators["illidan stormrage dark barrage on immunity class"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_dark_barrage_on_immunity_class;
+        creators["illidan stormrage immunity can clear debuff"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_immunity_can_clear_debuff;
+
+        creators["illidan stormrage immunity no longer needed"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_immunity_no_longer_needed;
 
         creators["illidan stormrage prepares to land"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_prepares_to_land;
@@ -206,11 +221,11 @@ public:
         creators["illidan stormrage should assign dps priority"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_should_assign_dps_priority;
 
-        creators["illidan stormrage maiev placed shadow trap"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_maiev_placed_shadow_trap;
+        creators["illidan stormrage maiev placed cage trap"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_maiev_placed_cage_trap;
 
-        creators["illidan stormrage should manage dps timer and rti"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_should_manage_dps_timer_and_rti;
+        creators["illidan stormrage should manage dps timers"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_should_manage_dps_timers;
 
         creators["illidan stormrage should clear hazards between phases"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_should_clear_hazards_between_phases;
@@ -227,9 +242,9 @@ private:
     }
 
     // Trash
-    static Trigger* sister_of_pleasure_should_be_marked(PlayerbotAI* botAI)
+    static Trigger* sister_of_pleasure_should_be_focused(PlayerbotAI* botAI)
     {
-        return new SisterOfPleasureShouldBeMarkedTrigger(botAI);
+        return new SisterOfPleasureShouldBeFocusedTrigger(botAI);
     }
     static Trigger* shadowmoon_reaver_wand_builds_charges(PlayerbotAI* botAI)
     {
@@ -281,13 +296,17 @@ private:
     {
         return new SupremusRangedShouldSpreadTrigger(botAI);
     }
-    static Trigger* supremus_fixates_on_bot(PlayerbotAI* botAI)
+    static Trigger* supremus_fixated_on_bot(PlayerbotAI* botAI)
     {
-        return new SupremusFixatesOnBotTrigger(botAI);
+        return new SupremusFixatedOnBotTrigger(botAI);
     }
-    static Trigger* supremus_near_volcano(PlayerbotAI* botAI)
+    static Trigger* supremus_near_fire(PlayerbotAI* botAI)
     {
-        return new SupremusNearVolcanoTrigger(botAI);
+        return new SupremusNearFireTrigger(botAI);
+    }
+    static Trigger* supremus_reach_blocked_by_fire(PlayerbotAI* botAI)
+    {
+        return new SupremusReachBlockedByFireTrigger(botAI);
     }
 
     // Shade of Akama
@@ -336,6 +355,14 @@ private:
     static Trigger* gurtogg_bloodboil_should_position_for_bloodboil(PlayerbotAI* botAI)
     {
         return new GurtoggBloodboilShouldPositionForBloodboilTrigger(botAI);
+    }
+    static Trigger* gurtogg_bloodboil_should_avoid_fel_rage_target(PlayerbotAI* botAI)
+    {
+        return new GurtoggBloodboilShouldAvoidFelRageTargetTrigger(botAI);
+    }
+    static Trigger* gurtogg_bloodboil_melee_should_stay_behind(PlayerbotAI* botAI)
+    {
+        return new GurtoggBloodboilMeleeShouldStayBehindTrigger(botAI);
     }
     static Trigger* gurtogg_bloodboil_fel_rage_on_bot(PlayerbotAI* botAI)
     {
@@ -401,29 +428,33 @@ private:
     {
         return new IllidariCouncilGathiosCastsJudgementOfCommandTrigger(botAI);
     }
+    static Trigger* illidari_council_malande_casts_circle_of_healing(PlayerbotAI* botAI)
+    {
+        return new IllidariCouncilMalandeCastsCircleOfHealingTrigger(botAI);
+    }
     static Trigger* illidari_council_malande_should_be_tanked(PlayerbotAI* botAI)
     {
         return new IllidariCouncilMalandeShouldBeTankedTrigger(botAI);
     }
-    static Trigger* illidari_council_darkshadow_should_be_tanked(PlayerbotAI* botAI)
+    static Trigger* illidari_council_veras_should_be_tanked(PlayerbotAI* botAI)
     {
-        return new IllidariCouncilDarkshadowShouldBeTankedTrigger(botAI);
+        return new IllidariCouncilVerasShouldBeTankedTrigger(botAI);
     }
     static Trigger* illidari_council_zerevor_should_be_tanked_by_mage(PlayerbotAI* botAI)
     {
         return new IllidariCouncilZerevorShouldBeTankedByMageTrigger(botAI);
     }
-    static Trigger* illidari_council_mage_tank_needs_dedicated_healer(PlayerbotAI* botAI)
+    static Trigger* illidari_council_mage_tank_healer_should_reposition(PlayerbotAI* botAI)
     {
-        return new IllidariCouncilMageTankNeedsDedicatedHealerTrigger(botAI);
+        return new IllidariCouncilMageTankHealerShouldRepositionTrigger(botAI);
     }
     static Trigger* illidari_council_ranged_should_spread(PlayerbotAI* botAI)
     {
         return new IllidariCouncilRangedShouldSpreadTrigger(botAI);
     }
-    static Trigger* illidari_council_pets_screw_up_the_pull(PlayerbotAI* botAI)
+    static Trigger* illidari_council_pet_should_switch_target(PlayerbotAI* botAI)
     {
-        return new IllidariCouncilPetsScrewUpThePullTrigger(botAI);
+        return new IllidariCouncilPetShouldSwitchTargetTrigger(botAI);
     }
     static Trigger* illidari_council_should_assign_dps_priority(PlayerbotAI* botAI)
     {
@@ -463,9 +494,13 @@ private:
     {
         return new IllidanStormrageGrateIsSafeFromFlamesTrigger(botAI);
     }
-    static Trigger* illidan_stormrage_dark_barrage_on_immunity_class(PlayerbotAI* botAI)
+    static Trigger* illidan_stormrage_immunity_can_clear_debuff(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageDarkBarrageOnImmunityClassTrigger(botAI);
+        return new IllidanStormrageImmunityCanClearDebuffTrigger(botAI);
+    }
+    static Trigger* illidan_stormrage_immunity_no_longer_needed(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageImmunityNoLongerNeededTrigger(botAI);
     }
     static Trigger* illidan_stormrage_prepares_to_land(PlayerbotAI* botAI)
     {
@@ -487,13 +522,13 @@ private:
     {
         return new IllidanStormrageShouldAssignDpsPriorityTrigger(botAI);
     }
-    static Trigger* illidan_stormrage_maiev_placed_shadow_trap(PlayerbotAI* botAI)
+    static Trigger* illidan_stormrage_maiev_placed_cage_trap(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageMaievPlacedShadowTrapTrigger(botAI);
+        return new IllidanStormrageMaievPlacedCageTrapTrigger(botAI);
     }
-    static Trigger* illidan_stormrage_should_manage_dps_timer_and_rti(PlayerbotAI* botAI)
+    static Trigger* illidan_stormrage_should_manage_dps_timers(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageShouldManageDpsTimerAndRtiTrigger(botAI);
+        return new IllidanStormrageShouldManageDpsTimersTrigger(botAI);
     }
     static Trigger* illidan_stormrage_should_clear_hazards_between_phases(PlayerbotAI* botAI)
     {

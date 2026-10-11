@@ -55,7 +55,7 @@ bool MagtheridonPullingWestAndEastChannelersTrigger::IsActiveInEncounter()
     return GetChanneler(bot, WEST_CHANNELER_DB_GUID) || GetChanneler(bot, EAST_CHANNELER_DB_GUID);
 }
 
-bool MagtheridonDeterminingKillOrderTrigger::IsActiveInEncounter()
+bool MagtheridonShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-09-09 合并brighton: 采纳brighton简化版(非坦克+在场即拉击杀顺序), boss按entry规则用17257
     return !PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "17257");

@@ -137,7 +137,7 @@ float HighKingMaulgarControlHunterActionsMultiplier::GetValueInEncounter(Action*
         return 1.0f;
 
     bool const isMainTankMisdirect = dynamic_cast<CastMisdirectionOnMainTankAction*>(action);
-    if (!isMainTankMisdirect && !dynamic_cast<CastArcaneShotAction*>(action))
+    if (!isMainTankMisdirect && !dynamic_cast<CastTranquilizingShotAction*>(action))
         return 1.0f;
 
     // Krosh/Kiggler will be the last to die before Maulgar.
@@ -151,7 +151,7 @@ float HighKingMaulgarControlHunterActionsMultiplier::GetValueInEncounter(Action*
     }
 
     // By leewheel 2026-09-05 合并：沿用上游单一krosh变量(去除此前冗余重定义), 上游改变更见commit
-    // Arcane Shot removes Spell Shield, which the mage tank needs to survive
+    // Tranquilizing Shot removes Spell Shield, which the mage tank needs to survive.
     return krosh && action->GetTarget() == krosh ? 0.0f : 1.0f;
 }
 

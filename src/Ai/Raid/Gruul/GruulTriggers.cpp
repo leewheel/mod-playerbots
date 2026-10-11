@@ -48,7 +48,7 @@ bool HighKingMaulgarKigglerNeedsMoonkinTankTrigger::IsActiveInEncounter()
     // End By leewheel
 }
 
-bool HighKingMaulgarDeterminingKillOrderTrigger::IsActiveInEncounter()
+bool HighKingMaulgarShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 {
     if (!AI_VALUE2(Unit*, "find target", "18831"))
         return false;
