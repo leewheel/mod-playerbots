@@ -4209,6 +4209,17 @@ private:
 
 }  // namespace
 
+// CoaPvpTactics.cpp: crowd control on an enemy player, when the bot knows one that is ready.
+bool CoaHasReadyControl(PlayerbotAI* botAI, Player* bot)
+{
+    return ClassHas(bot, KIND_CONTROL) && HasReadyAbility(botAI, bot, [](uint16 kind) { return (kind & KIND_CONTROL) != 0; });
+}
+
+bool CoaCastControl(PlayerbotAI* botAI, Player* bot, Unit* target)
+{
+    return CastFirst(botAI, bot, KnownAbilities(bot, [](uint16 kind) { return (kind & KIND_CONTROL) != 0; }), target) != nullptr;
+}
+
 // Whether a spell heals or shields an ally, by the classifier (triggered spells included) or by an
 // absorb it puts on its target. Gaze of C'Thun hits enemies or heals allies: not a heal to the
 // classifier, yet the Cultist healer's main heal (its rotation's "can cast" line).

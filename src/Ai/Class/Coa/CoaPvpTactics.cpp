@@ -14,6 +14,7 @@
 #include "CoaPvpTactics.h"
 
 #include "AscensionSpecialization.h"
+#include "AttackAction.h"
 #include "Battleground.h"
 #include "CellImpl.h"
 #include "Config.h"
@@ -40,6 +41,10 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+
+// CoaAiObjectContext.cpp: the crowd control abilities of the bot's CoA class.
+bool CoaHasReadyControl(PlayerbotAI* botAI, Player* bot);
+bool CoaCastControl(PlayerbotAI* botAI, Player* bot, Unit* target);
 
 namespace
 {
@@ -728,6 +733,289 @@ namespace
         uint32 restUntil = 0;
     };
 
+    // An enemy aims at this player: in melee with it, or casting at it.
+    bool Aims(Player* enemy, Player* target)
+    {
+        return enemy->GetVictim() == target || enemy->GetTarget() == target->GetGUID();
+    }
+
+    /*
+     * Focus. A damage dealer kept whatever "dps assist" handed it. In an arena a CoA damage dealer now goes for the
+     * enemy healer it can see within reach (35 yards from range, 25 in melee), else for the most hurt enemy it sees.
+     * It finishes a target under 25%, does not leave a target for one barely more hurt, and switches at most every
+     * 4 seconds. While it holds an enemy player, "dps assist" waits (CoaArenaFocusMultiplier).
+     */
+    class CoaArenaFocusAction : public AttackAction
+    {
+    public:
+        CoaArenaFocusAction(PlayerbotAI* botAI) : AttackAction(botAI, "coa arena focus") {}
+
+        bool isUseful() override
+        {
+            if (getMSTime() - lastSwitch < 4000 || !On("AiPlayerbot.CoaArenaFocus") || !bot->IsAlive() || Healer(bot) ||
+                Tank(bot))
+                return false;
+            Battleground* bg = ArenaFight(bot);
+            Player* pick = bg ? Pick(bg) : nullptr;
+            return pick && pick != bot->GetVictim();
+        }
+
+        bool Execute(Event /*event*/) override
+        {
+            Battleground* bg = ArenaFight(bot);
+            Player* pick = bg ? Pick(bg) : nullptr;
+            if (!pick || pick == bot->GetVictim())
+                return false;
+            lastSwitch = getMSTime();
+            return Attack(pick);
+        }
+
+    private:
+        Player* Pick(Battleground* bg)
+        {
+            float const reach = Squishy(bot) ? 35.0f : 25.0f;
+            Player* healer = nullptr;
+            Player* weakest = nullptr;
+            Fighters(bg, bot, true, [&](Player* enemy)
+            {
+                if (!bot->IsWithinDist(enemy, reach) || !bot->IsWithinLOSInMap(enemy))
+                    return;
+                if (Healer(enemy) && (!healer || bot->GetExactDist2d(enemy) < bot->GetExactDist2d(healer)))
+                    healer = enemy;
+                if (!weakest || enemy->GetHealthPct() < weakest->GetHealthPct())
+                    weakest = enemy;
+            });
+
+            Unit* victim = bot->GetVictim();
+            Player* held = victim && victim->IsAlive() ? victim->ToPlayer() : nullptr;
+            bool const heldEnemy = held && held->GetBgTeamId() != bot->GetBgTeamId() && bot->IsWithinLOSInMap(held);
+            if (heldEnemy && held->GetHealthPct() < 25.0f)
+                return held;
+            if (healer)
+                return healer;
+            if (heldEnemy && weakest && weakest->GetHealthPct() > held->GetHealthPct() - 15.0f)
+                return held;
+            return weakest;
+        }
+
+        uint32 lastSwitch = 0;
+    };
+
+    class CoaArenaFocusMultiplier : public Multiplier
+    {
+    public:
+        CoaArenaFocusMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "coa arena focus") {}
+
+        float GetValue(Action* action) override
+        {
+            if (!action || action->getName() != "dps assist" || !bot->InArena())
+                return 1.0f;
+            if (!IsCoaBot(bot) || Healer(bot) || Tank(bot) || !On("AiPlayerbot.CoaArenaFocus") || !ArenaFight(bot))
+                return 1.0f;
+            Unit* victim = bot->GetVictim();
+            Player* held = victim && victim->IsAlive() ? victim->ToPlayer() : nullptr;
+            return held && held->GetBgTeamId() != bot->GetBgTeamId() ? 0.0f : 1.0f;
+        }
+    };
+
+    /*
+     * Peel. A tank, or a melee damage dealer once the healer drops under 60%, turns on the enemy that hits its
+     * team's healer, and puts its crowd control on it (every 12 seconds at most).
+     */
+    class CoaArenaPeelAction : public AttackAction
+    {
+    public:
+        CoaArenaPeelAction(PlayerbotAI* botAI) : AttackAction(botAI, "coa arena peel") {}
+
+        bool isUseful() override
+        {
+            if (!On("AiPlayerbot.CoaArenaPeel") || !bot->IsAlive() || Healer(bot) || (Squishy(bot) && !Tank(bot)))
+                return false;
+            Battleground* bg = ArenaFight(bot);
+            Player* threat = bg ? Threat(bg) : nullptr;
+            if (!threat)
+                return false;
+            return threat != bot->GetVictim() ||
+                   (getMSTime() >= nextControl && bot->IsWithinDist(threat, 20.0f) && CoaHasReadyControl(botAI, bot));
+        }
+
+        bool Execute(Event /*event*/) override
+        {
+            Battleground* bg = ArenaFight(bot);
+            Player* threat = bg ? Threat(bg) : nullptr;
+            if (!threat)
+                return false;
+            if (threat != bot->GetVictim())
+                return Attack(threat);
+            uint32 const now = getMSTime();
+            if (now < nextControl || !CoaCastControl(botAI, bot, threat))
+                return false;
+            nextControl = now + 12000;
+            return true;
+        }
+
+    private:
+        Player* Threat(Battleground* bg)
+        {
+            Player* threat = nullptr;
+            Fighters(bg, bot, false, [&](Player* healer)
+            {
+                if (!Healer(healer) || (!Tank(bot) && healer->GetHealthPct() >= 60.0f))
+                    return;
+                Fighters(bg, bot, true, [&](Player* enemy)
+                {
+                    if (!Healer(enemy) && Aims(enemy, healer) && bot->IsWithinDist(enemy, 30.0f) &&
+                        (!threat || healer->GetExactDist2d(enemy) < healer->GetExactDist2d(threat)))
+                        threat = enemy;
+                });
+            });
+            return threat;
+        }
+
+        uint32 nextControl = 0;
+    };
+
+    /*
+     * Under pressure. A CoA ranged bot or healer under 45% that enemies aim at gets out of the line of the casters
+     * among them: behind a pillar, or any reachable point near it none of them sees, preferably one its own healer
+     * still sees. With only melee on it, it falls back behind its tank or melee team mate. 6 seconds at most, then
+     * 10 seconds before it hides again.
+     */
+    class CoaArenaPressureAction : public CoaPvpMoveAction
+    {
+    public:
+        CoaArenaPressureAction(PlayerbotAI* botAI) : CoaPvpMoveAction(botAI, "coa arena pressure") {}
+
+        bool isUseful() override
+        {
+            if (Busy() || getMSTime() < restUntil || !On("AiPlayerbot.CoaArenaPressure") || !bot->IsAlive() ||
+                !Squishy(bot) || bot->GetHealthPct() >= 45.0f || Held(bot))
+                return false;
+            Battleground* bg = ArenaFight(bot);
+            return bg && !Threats(bg).empty();
+        }
+
+        bool Execute(Event /*event*/) override
+        {
+            Battleground* bg = ArenaFight(bot);
+            if (!bg)
+                return false;
+            std::vector<Player*> const threats = Threats(bg);
+            if (threats.empty())
+                return false;
+
+            uint32 const now = getMSTime();
+            if (!streakStart || now - lastStep > 3000)
+                streakStart = now;
+            if (now - streakStart > 6000)
+            {
+                restUntil = now + 10000;
+                streakStart = 0;
+                return false;
+            }
+
+            std::vector<Player*> casters;
+            for (Player* threat : threats)
+                if (Squishy(threat))
+                    casters.push_back(threat);
+
+            Spot best;
+            if (!casters.empty() && Hide(bg, threats, casters, best))
+            {
+                lastStep = now;
+                return Go(best.x, best.y, best.z);
+            }
+            if (FallBack(bg, threats, best))
+            {
+                lastStep = now;
+                return Go(best.x, best.y, best.z);
+            }
+            return false;
+        }
+
+    private:
+        std::vector<Player*> Threats(Battleground* bg)
+        {
+            std::vector<Player*> threats;
+            Fighters(bg, bot, true, [&](Player* enemy)
+            {
+                if (Aims(enemy, bot) && bot->IsWithinDist(enemy, 40.0f))
+                    threats.push_back(enemy);
+            });
+            return threats;
+        }
+
+        bool Hide(Battleground* bg, std::vector<Player*> const& threats, std::vector<Player*> const& casters, Spot& best)
+        {
+            Position from;
+            float x = 0.0f, y = 0.0f;
+            for (Player* caster : casters)
+            {
+                x += caster->GetPositionX();
+                y += caster->GetPositionY();
+            }
+            from.Relocate(x / float(casters.size()), y / float(casters.size()), bot->GetPositionZ());
+
+            std::vector<std::pair<float, float>> points;
+            BehindCover(points, CoverOf(bot, bg), from);
+            Rings(points, bot->GetPositionX(), bot->GetPositionY(), { 6.0f, 10.0f, 14.0f }, 12);
+            std::vector<Player*> healers;
+            if (!Healer(bot))
+                Fighters(bg, bot, false, [&](Player* ally) { if (Healer(ally)) healers.push_back(ally); });
+
+            auto score = [&](float px, float py, float pz)
+            {
+                float const move = bot->GetExactDist2d(px, py);
+                if (move > 18.0f || !InArenaBounds(bg, px, py))
+                    return Rejected;
+                for (Player* caster : casters)
+                    if (caster->IsWithinLOS(px, py, pz))
+                        return Rejected;
+                float value = move;
+                for (Player* threat : threats)
+                    if (!Squishy(threat) && threat->GetExactDist2d(px, py) < 5.0f)
+                        value += 12.0f;
+                for (Player* healer : healers)
+                    if (healer->IsWithinDist2d(px, py, 36.0f) && healer->IsWithinLOS(px, py, pz))
+                    {
+                        value -= 4.0f;
+                        break;
+                    }
+                return value;
+            };
+            return BestSpot(bot, points, score, 26.0f, best);
+        }
+
+        // Behind the nearest tank or melee team mate, on its far side from the nearest threat.
+        bool FallBack(Battleground* bg, std::vector<Player*> const& threats, Spot& best)
+        {
+            Player* nearestThreat = nullptr;
+            for (Player* threat : threats)
+                if (!nearestThreat || bot->GetExactDist2d(threat) < bot->GetExactDist2d(nearestThreat))
+                    nearestThreat = threat;
+            Player* guard = nullptr;
+            Fighters(bg, bot, false, [&](Player* ally)
+            {
+                if (!Squishy(ally) && (!guard || bot->GetExactDist2d(ally) < bot->GetExactDist2d(guard)))
+                    guard = ally;
+            });
+            if (!guard || !nearestThreat || bot->GetExactDist2d(guard) > 30.0f)
+                return false;
+            float const angle = nearestThreat->GetAbsoluteAngle(guard);
+            float const x = guard->GetPositionX() + 3.0f * std::cos(angle);
+            float const y = guard->GetPositionY() + 3.0f * std::sin(angle);
+            float z = guard->GetPositionZ();
+            if (!GroundAt(bot, x, y, z) || !Walkable(bot, x, y, z, 40.0f))
+                return false;
+            best = { x, y, z, 0.0f };
+            return true;
+        }
+
+        uint32 streakStart = 0;
+        uint32 lastStep = 0;
+        uint32 restUntil = 0;
+    };
+
     // The triggers only check the place, the switch and the role, each a cheap test; the action decides the rest.
     using Gate = bool (*)(Player* bot);
 
@@ -760,6 +1048,22 @@ namespace
         return bot->InArena() && IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaKite");
     }
 
+    bool FocusGate(Player* bot)
+    {
+        return bot->InArena() && IsCoaBot(bot) && !Healer(bot) && !Tank(bot) && On("AiPlayerbot.CoaArenaFocus");
+    }
+
+    bool PeelGate(Player* bot)
+    {
+        return bot->InArena() && IsCoaBot(bot) && !Healer(bot) && On("AiPlayerbot.CoaArenaPeel");
+    }
+
+    bool PressureGate(Player* bot)
+    {
+        return bot->InArena() && bot->GetHealthPct() < 45.0f && IsCoaBot(bot) && Squishy(bot) &&
+               On("AiPlayerbot.CoaArenaPressure");
+    }
+
     class CoaPvpStrategy : public Strategy
     {
     public:
@@ -775,6 +1079,14 @@ namespace
             // this strategy only runs when it has a reason to, and then only for one tick.
             triggers.push_back(new TriggerNode("coa arena sight", { NextAction("coa arena sight", 89.5f) }));
             triggers.push_back(new TriggerNode("coa arena kite", { NextAction("coa arena kite", 92.0f) }));
+            triggers.push_back(new TriggerNode("coa arena focus", { NextAction("coa arena focus", 90.5f) }));
+            triggers.push_back(new TriggerNode("coa arena peel", { NextAction("coa arena peel", 91.0f) }));
+            triggers.push_back(new TriggerNode("coa arena pressure", { NextAction("coa arena pressure", 93.0f) }));
+        }
+
+        void InitMultipliers(std::vector<Multiplier*>& multipliers) override
+        {
+            multipliers.push_back(new CoaArenaFocusMultiplier(botAI));
         }
     };
 
@@ -795,9 +1107,15 @@ namespace
             creators["coa arena preparation"] = &preparation;
             creators["coa arena sight"] = &sight;
             creators["coa arena kite"] = &kite;
+            creators["coa arena focus"] = &focus;
+            creators["coa arena peel"] = &peel;
+            creators["coa arena pressure"] = &pressure;
         }
 
     private:
+        static Action* focus(PlayerbotAI* botAI) { return new CoaArenaFocusAction(botAI); }
+        static Action* peel(PlayerbotAI* botAI) { return new CoaArenaPeelAction(botAI); }
+        static Action* pressure(PlayerbotAI* botAI) { return new CoaArenaPressureAction(botAI); }
         static Action* kite(PlayerbotAI* botAI) { return new CoaArenaKiteAction(botAI); }
         static Action* preparation(PlayerbotAI* botAI) { return new CoaArenaPreparationAction(botAI); }
         static Action* sight(PlayerbotAI* botAI) { return new CoaArenaSightAction(botAI); }
@@ -811,9 +1129,18 @@ namespace
             creators["coa arena preparation"] = &preparation;
             creators["coa arena sight"] = &sight;
             creators["coa arena kite"] = &kite;
+            creators["coa arena focus"] = &focus;
+            creators["coa arena peel"] = &peel;
+            creators["coa arena pressure"] = &pressure;
         }
 
     private:
+        static Trigger* focus(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena focus", 1000, &FocusGate); }
+        static Trigger* peel(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena peel", 500, &PeelGate); }
+        static Trigger* pressure(PlayerbotAI* botAI)
+        {
+            return new CoaPvpTrigger(botAI, "coa arena pressure", 500, &PressureGate);
+        }
         static Trigger* kite(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena kite", 300, &KiteGate); }
         static Trigger* preparation(PlayerbotAI* botAI)
         {
