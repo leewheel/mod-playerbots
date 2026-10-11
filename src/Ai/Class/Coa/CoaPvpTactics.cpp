@@ -22,11 +22,13 @@
 #include "GameObject.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "Item.h"
 #include "Log.h"
 #include "Map.h"
 #include "MovementActions.h"
 #include "Multiplier.h"
 #include "NamedObjectContext.h"
+#include "ObjectAccessor.h"
 #include "PathGenerator.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -1105,6 +1107,179 @@ namespace
         ObjectGuid stuckFor;
     };
 
+    // In a fight against players: a battleground or arena, or a duel under way.
+    bool InPvp(Player* bot)
+    {
+        return bot->InBattleground() || (bot->duel && bot->duel->State == DUEL_STATE_IN_PROGRESS);
+    }
+
+    // The enemy players of the bot's battleground or arena, or its duel opponent.
+    template <typename Visit>
+    void Foes(Player* bot, Visit visit)
+    {
+        if (Battleground* bg = bot->GetBattleground())
+            Fighters(bg, bot, true, visit);
+        else if (Player* foe = DuelFoe(bot, DUEL_STATE_IN_PROGRESS))
+            visit(foe);
+    }
+
+    bool Controlled(Unit* unit)
+    {
+        return unit->HasUnitState(UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED | UNIT_STATE_FLEEING);
+    }
+
+    /*
+     * Crowd control, run, recover. A CoA bot under 40% with an enemy player in its face, in any PvP fight, puts its
+     * crowd control on it (every 20 seconds at most), then runs 9 to 14 yards away for up to 4 seconds, out of the
+     * enemy's sight when it can (behind a pillar in an arena, near the flag in a duel). The bandage below then
+     * gives it back some health while the enemy is held.
+     */
+    class CoaPvpRecoverAction : public CoaPvpMoveAction
+    {
+    public:
+        CoaPvpRecoverAction(PlayerbotAI* botAI) : CoaPvpMoveAction(botAI, "coa pvp recover") {}
+
+        bool isUseful() override
+        {
+            if (Busy() || !On("AiPlayerbot.CoaPvpRecovery") || !IsCoaBot(bot) || !bot->IsAlive() || !InPvp(bot) || Held(bot))
+                return false;
+            uint32 const now = getMSTime();
+            if (now < escapeUntil && HeldFoe())
+                return true;
+            return bot->GetHealthPct() < 40.0f && now >= nextControl && Attacker() && CoaHasReadyControl(botAI, bot);
+        }
+
+        bool Execute(Event /*event*/) override
+        {
+            uint32 const now = getMSTime();
+            if (now < escapeUntil)
+            {
+                if (Player* foe = HeldFoe())
+                    return Run(foe);
+                escapeUntil = 0;
+            }
+            Player* attacker = Attacker();
+            if (!attacker)
+                return false;
+            if (!CoaCastControl(botAI, bot, attacker))
+            {
+                nextControl = now + 2000;
+                return false;
+            }
+            held = attacker->GetGUID();
+            escapeUntil = now + 4000;
+            nextControl = now + 20000;
+            return true;
+        }
+
+    private:
+        Player* Attacker()
+        {
+            Player* attacker = nullptr;
+            Foes(bot, [&](Player* foe)
+            {
+                if (Aims(foe, bot) && bot->GetExactDist2d(foe) < 8.0f &&
+                    (!attacker || bot->GetExactDist2d(foe) < bot->GetExactDist2d(attacker)))
+                    attacker = foe;
+            });
+            return attacker;
+        }
+
+        // The enemy it holds, while still close enough to run from.
+        Player* HeldFoe()
+        {
+            Player* foe = ObjectAccessor::GetPlayer(*bot, held);
+            return foe && foe->IsAlive() && foe->GetMap() == bot->GetMap() && bot->GetExactDist2d(foe) < 15.0f ? foe : nullptr;
+        }
+
+        bool Run(Player* foe)
+        {
+            Battleground* bg = ArenaFight(bot);
+            GameObject* flag = bot->duel ? DuelFlag(bot) : nullptr;
+            std::vector<std::pair<float, float>> points;
+            Rings(points, bot->GetPositionX(), bot->GetPositionY(), { 9.0f, 14.0f }, 12);
+            if (bg)
+                BehindCover(points, CoverOf(bot, bg), foe->GetPosition());
+            float const gap = bot->GetExactDist2d(foe);
+            auto score = [&](float x, float y, float z)
+            {
+                float const away = foe->GetExactDist2d(x, y);
+                if (away < gap + 4.0f || bot->GetExactDist2d(x, y) > 18.0f || (bg && !InArenaBounds(bg, x, y)) ||
+                    (flag && flag->GetExactDist2d(x, y) > 28.0f))
+                    return Rejected;
+                return -away + (foe->IsWithinLOS(x, y, z) ? 6.0f : 0.0f);
+            };
+            Spot best;
+            return BestSpot(bot, points, score, 22.0f, best) && Go(best.x, best.y, best.z);
+        }
+
+        ObjectGuid held;
+        uint32 escapeUntil = 0;
+        uint32 nextControl = 0;
+    };
+
+    /*
+     * Bandage. In a PvP fight a CoA bot under 65% that carries a bandage it has the First Aid for, and that no free
+     * enemy can hit (every enemy held, out of sight, or far), bandages itself: never while Recently Bandaged, a
+     * damage over time runs on it, it moves, casts or eats. Eating and drinking between fights stay with the
+     * "food" strategy.
+     */
+    class CoaPvpBandageAction : public Action
+    {
+    public:
+        CoaPvpBandageAction(PlayerbotAI* botAI) : Action(botAI, "coa pvp bandage") {}
+
+        bool isUseful() override
+        {
+            if (getMSTime() < noBandageUntil || !On("AiPlayerbot.CoaPvpBandage") || !IsCoaBot(bot) || !bot->IsAlive() ||
+                !InPvp(bot) || bot->GetHealthPct() >= 65.0f || bot->HasAura(RecentlyBandaged) || bot->isMoving() ||
+                bot->IsNonMeleeSpellCast(false) || bot->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE) ||
+                bot->HasAuraType(SPELL_AURA_MOD_REGEN) || bot->HasAuraType(SPELL_AURA_MOD_POWER_REGEN) || Held(bot))
+                return false;
+            return !Threatened() && Bandage();
+        }
+
+        bool Execute(Event /*event*/) override
+        {
+            Item* bandage = Bandage();
+            if (!bandage)
+                return false;
+            botAI->ImbueItem(bandage, bot);
+            return true;
+        }
+
+    private:
+        static constexpr uint32 RecentlyBandaged = 11196;
+
+        bool Threatened()
+        {
+            bool threatened = false;
+            Foes(bot, [&](Player* foe)
+            {
+                if (threatened || Controlled(foe))
+                    return;
+                float const distance = bot->GetExactDist2d(foe);
+                if ((distance < 15.0f || (Squishy(foe) && distance < 40.0f)) && foe->IsWithinLOSInMap(bot))
+                    threatened = true;
+            });
+            return threatened;
+        }
+
+        Item* Bandage()
+        {
+            Item* item = botAI->FindBandage();
+            ItemTemplate const* proto = item ? item->GetTemplate() : nullptr;
+            if (!proto || (proto->RequiredSkill && bot->GetSkillValue(proto->RequiredSkill) < proto->RequiredSkillRank))
+            {
+                noBandageUntil = getMSTime() + 60000;
+                return nullptr;
+            }
+            return item;
+        }
+
+        uint32 noBandageUntil = 0;
+    };
+
     // The triggers only check the place, the switch and the role, each a cheap test; the action decides the rest.
     using Gate = bool (*)(Player* bot);
 
@@ -1158,6 +1333,16 @@ namespace
         return bot->duel && bot->duel->State == DUEL_STATE_COUNTDOWN && IsCoaBot(bot) && On("AiPlayerbot.CoaDuelOpening");
     }
 
+    bool RecoverGate(Player* bot)
+    {
+        return InPvp(bot) && bot->GetHealthPct() < 45.0f && IsCoaBot(bot) && On("AiPlayerbot.CoaPvpRecovery");
+    }
+
+    bool BandageGate(Player* bot)
+    {
+        return InPvp(bot) && bot->GetHealthPct() < 65.0f && IsCoaBot(bot) && On("AiPlayerbot.CoaPvpBandage");
+    }
+
     class CoaPvpStrategy : public Strategy
     {
     public:
@@ -1178,6 +1363,8 @@ namespace
             triggers.push_back(new TriggerNode("coa arena focus", { NextAction("coa arena focus", 90.5f) }));
             triggers.push_back(new TriggerNode("coa arena peel", { NextAction("coa arena peel", 91.0f) }));
             triggers.push_back(new TriggerNode("coa arena pressure", { NextAction("coa arena pressure", 93.0f) }));
+            triggers.push_back(new TriggerNode("coa pvp cornered", { NextAction("coa pvp recover", 94.0f) }));
+            triggers.push_back(new TriggerNode("coa pvp hurt", { NextAction("coa pvp bandage", 90.0f) }));
         }
 
         void InitMultipliers(std::vector<Multiplier*>& multipliers) override
@@ -1207,9 +1394,13 @@ namespace
             creators["coa arena peel"] = &peel;
             creators["coa arena pressure"] = &pressure;
             creators["coa duel opening"] = &duel;
+            creators["coa pvp recover"] = &recover;
+            creators["coa pvp bandage"] = &bandage;
         }
 
     private:
+        static Action* recover(PlayerbotAI* botAI) { return new CoaPvpRecoverAction(botAI); }
+        static Action* bandage(PlayerbotAI* botAI) { return new CoaPvpBandageAction(botAI); }
         static Action* duel(PlayerbotAI* botAI) { return new CoaDuelOpeningAction(botAI); }
         static Action* focus(PlayerbotAI* botAI) { return new CoaArenaFocusAction(botAI); }
         static Action* peel(PlayerbotAI* botAI) { return new CoaArenaPeelAction(botAI); }
@@ -1231,9 +1422,13 @@ namespace
             creators["coa arena peel"] = &peel;
             creators["coa arena pressure"] = &pressure;
             creators["coa duel countdown"] = &duel;
+            creators["coa pvp cornered"] = &cornered;
+            creators["coa pvp hurt"] = &hurt;
         }
 
     private:
+        static Trigger* cornered(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa pvp cornered", 300, &RecoverGate); }
+        static Trigger* hurt(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa pvp hurt", 1000, &BandageGate); }
         static Trigger* duel(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa duel countdown", 250, &DuelGate); }
         static Trigger* focus(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena focus", 1000, &FocusGate); }
         static Trigger* peel(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena peel", 500, &PeelGate); }

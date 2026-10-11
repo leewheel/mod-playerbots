@@ -1776,6 +1776,23 @@ AiPlayerbot.CoaArenaPressure = 1
 
 AiPlayerbot.CoaDuelOpening = 1
 
+#    AiPlayerbot.CoaPvpRecovery
+#        Description: 1 - in a duel, arena or battleground, a CoA bot under 40% health with an enemy player in its
+#                     face puts a crowd control on it (every 20 seconds at most), then runs 9 to 14 yards away for
+#                     up to 4 seconds, out of the enemy's sight when it can. 0 - as before.
+#        Default:     1
+
+AiPlayerbot.CoaPvpRecovery = 1
+
+#    AiPlayerbot.CoaPvpBandage
+#        Description: 1 - in a duel, arena or battleground, a CoA bot under 65% health bandages itself when it
+#                     carries a bandage it has the First Aid for and no free enemy can reach it (held, out of
+#                     sight or far); never while Recently Bandaged, under a damage over time, moving or eating.
+#                     Eating and drinking between fights stay with the "food" strategy.
+#        Default:     1
+
+AiPlayerbot.CoaPvpBandage = 1
+
 #    AiPlayerbot.CoaShortLivedDebuffs
 #        Description: life a target must have left (its health over the estimated damage of the group)
 #                     for the rotation lines "debuff missing::<spell>" and "cast debuff::<spell>".
