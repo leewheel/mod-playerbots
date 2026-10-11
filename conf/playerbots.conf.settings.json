@@ -1,11 +1,11 @@
 {
  "format": 1,
  "module": "SquidBots (mod-playerbots for Conquest of Azeroth)",
- "version": "2.0",
- "tag": "v2.0",
- "commit": "3433caf3",
+ "version": "2.1",
+ "tag": "v2.1",
+ "commit": "c1b4b4c6",
  "file": "configs/modules/playerbots.conf",
- "notes": "The options a server owner usually changes, not all of playerbots.conf.dist. default = value in playerbots.conf.dist; default_if_missing = what the code uses when the key is absent; min/max where the code or the meaning bounds the value; coa = option of the Conquest of Azeroth fork; new_in / changed_in compare with 1.9.2. Every option needs a world server restart, except those whose description in the .dist says \".reload config\". commit = the commit the options were read from; the build itself is identified by its tag.",
+ "notes": "The options a server owner usually changes, not all of playerbots.conf.dist. default = value in playerbots.conf.dist; default_if_missing = what the code uses when the key is absent; min/max where the code or the meaning bounds the value; coa = option of the Conquest of Azeroth fork; new_in / changed_in compare with 2.0. Every option needs a world server restart, except those whose description in the .dist says \".reload config\". commit = the commit the options were read from; the build itself is identified by its tag.",
  "groups": {
   "population": "Population",
   "party": "Groups and players' bots",
@@ -244,8 +244,7 @@
    "type": "int",
    "default": 0,
    "min": 0,
-   "coa": true,
-   "new_in": "2.0"
+   "coa": true
   },
   {
    "key": "AiPlayerbot.CoaThreatHold",
@@ -255,9 +254,7 @@
    "type": "int",
    "default": 90,
    "min": 0,
-   "coa": true,
-   "changed_in": "2.0",
-   "previous_default": 0
+   "coa": true
   },
   {
    "key": "AiPlayerbot.CoaInterruptCoordination",
@@ -275,8 +272,7 @@
    "description": "Bots kick heals and crowd control first; in dungeons they purge boss buffs and enrages, and damage dealers kill healing adds and totems before the boss.",
    "type": "bool",
    "default": true,
-   "coa": true,
-   "new_in": "2.0"
+   "coa": true
   },
   {
    "key": "AiPlayerbot.CoaBossKnowledge",
@@ -466,8 +462,7 @@
    "description": "A bot grouped with a player is geared at the item level of that player. Off: it keeps the gear it has.",
    "type": "bool",
    "default": true,
-   "coa": true,
-   "new_in": "2.0"
+   "coa": true
   },
   {
    "key": "AiPlayerbot.CoaGearHighRiskPvp",
@@ -476,8 +471,7 @@
    "description": "High Risk bots wear PvP gear all the time. Off: only in a battleground or an arena, like the other bots.",
    "type": "bool",
    "default": true,
-   "coa": true,
-   "new_in": "2.0"
+   "coa": true
   },
   {
    "key": "AiPlayerbot.RpgStatusProbWeight.GoCity",
@@ -496,8 +490,7 @@
    "type": "int",
    "default": 10,
    "min": 0,
-   "coa": true,
-   "new_in": "2.0"
+   "coa": true
   },
   {
    "key": "AiPlayerbot.CoaCityStayMaxMinutes",
@@ -507,8 +500,7 @@
    "type": "int",
    "default": 30,
    "min": 0,
-   "coa": true,
-   "new_in": "2.0"
+   "coa": true
   },
   {
    "key": "AiPlayerbot.CoaLfgBots",
@@ -611,6 +603,86 @@
    "type": "string",
    "default": "",
    "coa": true
+  },
+  {
+   "key": "AiPlayerbot.CoaArenaReady",
+   "group": "activities",
+   "title": "Arena ready pylon",
+   "description": "A pylon in each arena starting room, as on the original CoA realm: players click it, bots get ready on their own, and the gates open a few seconds after everyone is ready.",
+   "type": "bool",
+   "default": true,
+   "coa": true,
+   "new_in": "2.1"
+  },
+  {
+   "key": "AiPlayerbot.CoaArenaReadyCountdown",
+   "group": "activities",
+   "title": "Arena start once everyone is ready",
+   "description": "Seconds left before the gates open once every combatant is ready (5-4-3-2-1 shown on screen).",
+   "type": "int",
+   "default": 5,
+   "coa": true,
+   "new_in": "2.1"
+  },
+  {
+   "key": "AiPlayerbot.CoaArenaPreparation",
+   "group": "activities",
+   "title": "Bots prepare before the gates open",
+   "description": "In the starting room bots buff, call pets and take a spot by role (healers behind, melee in front) facing the gate.",
+   "type": "int",
+   "default": 1,
+   "coa": true,
+   "new_in": "2.1"
+  },
+  {
+   "key": "AiPlayerbot.CoaArenaKite",
+   "group": "activities",
+   "title": "Arena kiting",
+   "description": "Ranged bots and healers step away from melee in arenas instead of standing still, unless they are about to win.",
+   "type": "int",
+   "default": 1,
+   "coa": true,
+   "new_in": "2.1"
+  },
+  {
+   "key": "AiPlayerbot.CoaArenaFocus",
+   "group": "activities",
+   "title": "Arena focus",
+   "description": "Damage bots go for the enemy healer, or the lowest enemy in sight, in arenas.",
+   "type": "int",
+   "default": 1,
+   "coa": true,
+   "new_in": "2.1"
+  },
+  {
+   "key": "AiPlayerbot.CoaArenaCover",
+   "group": "activities",
+   "title": "Arena pillars",
+   "description": "Bots under pressure hide behind the arena pillars (Nagrand, Blade’s Edge, Ruins of Lordaeron, Dalaran, Ring of Valor).",
+   "type": "int",
+   "default": 1,
+   "coa": true,
+   "new_in": "2.1"
+  },
+  {
+   "key": "AiPlayerbot.CoaDuelOpening",
+   "group": "activities",
+   "title": "Duel opening positions",
+   "description": "During a duel countdown bots take a distance that suits them: close for melee, about 20 yards for ranged.",
+   "type": "int",
+   "default": 1,
+   "coa": true,
+   "new_in": "2.1"
+  },
+  {
+   "key": "AiPlayerbot.CoaPvpRecovery",
+   "group": "activities",
+   "title": "PvP recovery",
+   "description": "In duels, arenas and battlegrounds a cornered bot can crowd control its attacker, then break away; bandage when safe (CoaPvpBandage).",
+   "type": "int",
+   "default": 1,
+   "coa": true,
+   "new_in": "2.1"
   }
  ]
 }
