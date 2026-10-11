@@ -1330,9 +1330,21 @@ namespace
         return bot->InArena() && IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaLineOfSight");
     }
 
+    // A bot about to win stays on its kill: no stepping back from a target nearly dead, or lower than itself.
+    bool Winning(Player* bot)
+    {
+        Unit* target = bot->GetVictim();
+        if (!target)
+            if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot))
+                target = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
+        if (!target || !target->IsAlive())
+            return false;
+        return target->GetHealthPct() < 35.0f || target->GetHealthPct() + 10.0f < bot->GetHealthPct();
+    }
+
     bool KiteGate(Player* bot)
     {
-        return bot->InArena() && IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaKite");
+        return bot->InArena() && IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaKite") && !Winning(bot);
     }
 
     bool FocusGate(Player* bot)
@@ -1348,7 +1360,7 @@ namespace
     bool PressureGate(Player* bot)
     {
         return bot->InArena() && bot->GetHealthPct() < 45.0f && IsCoaBot(bot) && Squishy(bot) &&
-               On("AiPlayerbot.CoaArenaPressure");
+               On("AiPlayerbot.CoaArenaPressure") && !Winning(bot);
     }
 
     bool DuelGate(Player* bot)
@@ -1358,7 +1370,8 @@ namespace
 
     bool RecoverGate(Player* bot)
     {
-        return InPvp(bot) && bot->GetHealthPct() < 45.0f && IsCoaBot(bot) && On("AiPlayerbot.CoaPvpRecovery");
+        return InPvp(bot) && bot->GetHealthPct() < 45.0f && IsCoaBot(bot) && On("AiPlayerbot.CoaPvpRecovery") &&
+               !Winning(bot);
     }
 
     bool BandageGate(Player* bot)
