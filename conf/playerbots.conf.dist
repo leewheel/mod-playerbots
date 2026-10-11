@@ -1697,6 +1697,15 @@ AiPlayerbot.CoaArenaReadySide = 3
 
 AiPlayerbot.CoaArenaReadyHeight = 1.2
 
+#    AiPlayerbot.CoaArenaRoleSpot
+#        Description: 1 - in an arena a CoA bot takes the spot of its role before the fight (healers at the back,
+#                     ranged in the middle, melee and tanks in front). 0 - all CoA bots take the melee spot, as
+#                     before (they all share class id 27). Every CoaArena*, CoaPvp* and CoaDuel* switch below is
+#                     read again by ".reload config".
+#        Default:     1
+
+AiPlayerbot.CoaArenaRoleSpot = 1
+
 #    AiPlayerbot.CoaShortLivedDebuffs
 #        Description: life a target must have left (its health over the estimated damage of the group)
 #                     for the rotation lines "debuff missing::<spell>" and "cast debuff::<spell>".

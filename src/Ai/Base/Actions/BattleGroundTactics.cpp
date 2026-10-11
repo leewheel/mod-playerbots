@@ -5,6 +5,7 @@
  */
 
 #include "BattleGroundTactics.h"
+#include "CoaPvpTactics.h"
 #include "GameGraveyard.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
@@ -4434,6 +4435,10 @@ bool ArenaTactics::moveToCenter(Battleground* bg)
             Preference = 9;
             break;
     }
+
+    // CoA classes all share class id 27: their role picks the spot instead.
+    if (uint32 const coaSpot = CoaPvp::ArenaSpot(bot))
+        Preference = coaSpot;
 
     switch (bg->GetBgTypeID())
     {
