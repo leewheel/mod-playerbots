@@ -1766,6 +1766,16 @@ AiPlayerbot.CoaArenaPeel = 1
 
 AiPlayerbot.CoaArenaPressure = 1
 
+#    AiPlayerbot.CoaDuelOpening
+#        Description: 1 - during the duel countdown, a CoA melee bot closes in to 3.5 yards and a ranged bot or
+#                     healer steps back to 20 yards (in sight, near the duel flag), then faces the opponent and
+#                     refreshes its buffs. Works in the .coapvp duel bench too (the held duellist does not move;
+#                     the distance logged at the start of a bench duel grows for ranged bots).
+#                     0 - both stay where the challenge left them, as before.
+#        Default:     1
+
+AiPlayerbot.CoaDuelOpening = 1
+
 #    AiPlayerbot.CoaShortLivedDebuffs
 #        Description: life a target must have left (its health over the estimated damage of the group)
 #                     for the rotation lines "debuff missing::<spell>" and "cast debuff::<spell>".

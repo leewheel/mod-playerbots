@@ -1016,6 +1016,95 @@ namespace
         uint32 restUntil = 0;
     };
 
+    // The duel spell's flag, which the duellists must not get too far from.
+    GameObject* DuelFlag(Player* bot)
+    {
+        return bot->GetMap()->GetGameObject(bot->GetGuidValue(PLAYER_DUEL_ARBITER));
+    }
+
+    Player* DuelFoe(Player* bot, DuelState state)
+    {
+        if (!bot->duel || bot->duel->State != state)
+            return nullptr;
+        Player* foe = bot->duel->Opponent;
+        return foe && foe->IsInWorld() && foe->IsAlive() && foe->GetMap() == bot->GetMap() ? foe : nullptr;
+    }
+
+    /*
+     * Duel opening. During the three seconds of the duel countdown both bots stood where the challenge left them.
+     * Now a melee bot closes in to 3.5 yards and a ranged bot or healer steps back to 20 yards, in sight of the
+     * opponent and near the flag; then it faces the opponent and refreshes its buffs. A duellist whose AI is held
+     * (the .coapvp bench holds the challenged one) does not move, and the bench still starts the fight itself.
+     */
+    class CoaDuelOpeningAction : public CoaPvpMoveAction
+    {
+    public:
+        CoaDuelOpeningAction(PlayerbotAI* botAI) : CoaPvpMoveAction(botAI, "coa duel opening") {}
+
+        bool isUseful() override
+        {
+            if (Busy() || !On("AiPlayerbot.CoaDuelOpening") || !IsCoaBot(bot) || !bot->IsAlive() ||
+                bot->IsNonMeleeSpellCast(false))
+                return false;
+            Player* foe = DuelFoe(bot, DUEL_STATE_COUNTDOWN);
+            return foe && (!InPlace(foe) || !bot->HasInArc(0.4f, foe) || buffedFor != foe->GetGUID());
+        }
+
+        bool Execute(Event /*event*/) override
+        {
+            Player* foe = DuelFoe(bot, DUEL_STATE_COUNTDOWN);
+            if (!foe)
+                return false;
+            if (!InPlace(foe) && Step(foe))
+                return true;
+            if (!bot->HasInArc(0.4f, foe))
+            {
+                bot->SetFacingToObject(foe);
+                return true;
+            }
+            if (buffedFor != foe->GetGUID())
+            {
+                buffedFor = foe->GetGUID();
+                botAI->DoSpecificAction("coa buff", Event(), true);
+                return true;
+            }
+            return false;
+        }
+
+    private:
+        bool InPlace(Player* foe)
+        {
+            if (stuckFor == foe->GetGUID())
+                return true;
+            float const distance = bot->GetExactDist2d(foe);
+            return Squishy(bot) ? distance >= 16.0f && distance <= 28.0f : distance <= 5.0f;
+        }
+
+        bool Step(Player* foe)
+        {
+            float const want = Squishy(bot) ? 20.0f : 3.5f;
+            float const base = foe->GetAbsoluteAngle(bot);
+            GameObject* flag = DuelFlag(bot);
+            for (float turn : { 0.0f, 0.4f, -0.4f, 0.8f, -0.8f })
+            {
+                float const x = foe->GetPositionX() + want * std::cos(base + turn);
+                float const y = foe->GetPositionY() + want * std::sin(base + turn);
+                float z = bot->GetPositionZ();
+                if (!GroundAt(bot, x, y, z) || !foe->IsWithinLOS(x, y, z) || (flag && flag->GetExactDist2d(x, y) > 28.0f))
+                    continue;
+                if (!Walkable(bot, x, y, z, bot->GetExactDist2d(x, y) * 1.5f + 4.0f))
+                    continue;
+                if (Go(x, y, z, MovementPriority::MOVEMENT_NORMAL))
+                    return true;
+            }
+            stuckFor = foe->GetGUID();
+            return false;
+        }
+
+        ObjectGuid buffedFor;
+        ObjectGuid stuckFor;
+    };
+
     // The triggers only check the place, the switch and the role, each a cheap test; the action decides the rest.
     using Gate = bool (*)(Player* bot);
 
@@ -1064,6 +1153,11 @@ namespace
                On("AiPlayerbot.CoaArenaPressure");
     }
 
+    bool DuelGate(Player* bot)
+    {
+        return bot->duel && bot->duel->State == DUEL_STATE_COUNTDOWN && IsCoaBot(bot) && On("AiPlayerbot.CoaDuelOpening");
+    }
+
     class CoaPvpStrategy : public Strategy
     {
     public:
@@ -1075,6 +1169,8 @@ namespace
         {
             // Just above "coa buff": into place first, buffs once standing.
             triggers.push_back(new TriggerNode("coa arena preparation", { NextAction("coa arena preparation", ACTION_NORMAL + 6) }));
+            // Above "attack duel opponent" (70).
+            triggers.push_back(new TriggerNode("coa duel countdown", { NextAction("coa duel opening", 75.0f) }));
             // The combat moves come above the attacks, which reach 88 in the authored rotations: an action of
             // this strategy only runs when it has a reason to, and then only for one tick.
             triggers.push_back(new TriggerNode("coa arena sight", { NextAction("coa arena sight", 89.5f) }));
@@ -1110,9 +1206,11 @@ namespace
             creators["coa arena focus"] = &focus;
             creators["coa arena peel"] = &peel;
             creators["coa arena pressure"] = &pressure;
+            creators["coa duel opening"] = &duel;
         }
 
     private:
+        static Action* duel(PlayerbotAI* botAI) { return new CoaDuelOpeningAction(botAI); }
         static Action* focus(PlayerbotAI* botAI) { return new CoaArenaFocusAction(botAI); }
         static Action* peel(PlayerbotAI* botAI) { return new CoaArenaPeelAction(botAI); }
         static Action* pressure(PlayerbotAI* botAI) { return new CoaArenaPressureAction(botAI); }
@@ -1132,9 +1230,11 @@ namespace
             creators["coa arena focus"] = &focus;
             creators["coa arena peel"] = &peel;
             creators["coa arena pressure"] = &pressure;
+            creators["coa duel countdown"] = &duel;
         }
 
     private:
+        static Trigger* duel(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa duel countdown", 250, &DuelGate); }
         static Trigger* focus(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena focus", 1000, &FocusGate); }
         static Trigger* peel(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena peel", 500, &PeelGate); }
         static Trigger* pressure(PlayerbotAI* botAI)
