@@ -3537,10 +3537,8 @@ public:
         uint32 const hold = sPlayerbotAIConfig.coaThreatHold;
         if (!hold)
             return 1.0f;
-        // Aggro passes at 110% of the tank's threat in melee and 130% at range: a ranged bot holds 10 points later. At 20
-        // points the big ranged casters (Pyromancer Draconic, Witch Hunter Inquisition, Bloodmage Accursed) passed
-        // the tank in one nuke and led the bench's boss losses (11/10).
-        float limit = float(hold + (botAI->IsRanged(bot) ? 10 : 0)) / 100.0f;
+        // Aggro passes at 110% of the tank's threat in melee and 130% at range: a ranged bot holds 20 points later.
+        float limit = float(hold + (botAI->IsRanged(bot) ? 20 : 0)) / 100.0f;
         // The tank's first seconds on a target: its threat is still small and the first big blows passed it before the
         // hold could see them coming (a Venomancer lost the boss at 3, 6 and 14 seconds, bench, 10/10). Players let the
         // tank settle: 60% of the limit for 3 seconds after its first touch.
