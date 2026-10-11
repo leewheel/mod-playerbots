@@ -71,6 +71,10 @@ public:
     bool IsBetter(Unit* new_unit, Unit* old_unit)
     {
         Player* bot = botAI->GetBot();
+        // A mob running for help hits nobody, so it ranked first and the tank followed it into the next
+        // packs, 7 to 17 times a dungeon (headless runs, 11/10): it comes last (AiPlayerbot.CoaSmartTank).
+        if (sPlayerbotAIConfig.coaSmartTank && IsFleeing(new_unit) != IsFleeing(old_unit))
+            return IsFleeing(old_unit);
         // if group has multiple tanks, explicit main tank just focus on the current target
         Unit* currentTarget = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
         if (currentTarget && botAI->IsExplicitMainTank(bot) && botAI->GetGroupTankNum(bot) > 1)
@@ -122,6 +126,19 @@ public:
         if (!GET_PLAYERBOT_AI(victim))
             danger += 10;
         return danger;
+    }
+    static bool IsFleeing(Unit* unit)
+    {
+        if (unit->HasUnitState(UNIT_STATE_FLEEING))
+            return true;
+        switch (unit->GetMotionMaster()->GetCurrentMovementGeneratorType())
+        {
+            case FLEEING_MOTION_TYPE: case ASSISTANCE_MOTION_TYPE: case ASSISTANCE_DISTRACT_MOTION_TYPE:
+            case TIMED_FLEEING_MOTION_TYPE:
+                return true;
+            default:
+                return false;
+        }
     }
     int32_t GetIntervalLevel(Unit* unit)
     {

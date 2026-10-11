@@ -1524,7 +1524,8 @@ AiPlayerbot.CoaStatusIntervalSeconds = 5
 AiPlayerbot.CoaSmartHeal = 1
 
 # Tanks of Conquest of Azeroth: of the enemies hitting someone else, take first the one
-# on the healer, then the one on whoever is lowest, rather than the nearest one.
+# on the healer, then the one on whoever is lowest, rather than the nearest one; a mob
+# running away or for help comes last, so the tank no longer follows it into other packs.
 # Read again by ".reload config".
 # Default: 1 (enabled)
 AiPlayerbot.CoaSmartTank = 1
