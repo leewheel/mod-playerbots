@@ -1137,6 +1137,11 @@ bool BGStatusCheckAction::Execute(Event /*event*/)
     if (bot->IsBeingTeleported())
         return false;
 
+    // The core refuses the port of a player in combat: a random bot fighting outside (a mob, a High-Risk
+    // player) would let the invitation run out and leave its team one short.
+    if (bot->IsInCombat() && !botAI->GetMaster() && sRandomPlayerbotMgr.IsRandomBot(bot))
+        bot->CombatStop(true);
+
     WorldPacket packet(CMSG_BATTLEFIELD_STATUS);
     bot->GetSession()->HandleBattlefieldStatusOpcode(packet);
 

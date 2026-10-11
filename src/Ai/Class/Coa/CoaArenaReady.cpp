@@ -388,6 +388,54 @@ public:
 
 void CoaPvpOptionsReload();
 
+namespace
+{
+    std::string ArenaRoster(Battleground* bg)
+    {
+        std::string roster;
+        for (auto const& [guid, player] : bg->GetPlayers())
+            if (player)
+                roster += " " + player->GetName() + "(side " + std::to_string(uint32(player->GetBgTeamId())) +
+                          (player->IsAlive() ? " alive " : " dead ") + std::to_string(player->GetHealth()) + "/" +
+                          std::to_string(player->GetMaxHealth()) + " form " +
+                          std::to_string(uint32(player->GetShapeshiftForm())) + ")";
+        return roster;
+    }
+}
+
+// Why an arena ends: the state of everyone when the core weighs the winner, and each player kill.
+class CoaArenaEndWatch : public ArenaScript
+{
+public:
+    CoaArenaEndWatch() : ArenaScript("coa_arena_end_watch", { ARENAHOOK_ON_BEFORE_CHECK_WIN_CONDITION }) {}
+
+    bool OnBeforeArenaCheckWinConditions(Battleground* const bg) override
+    {
+        if (bg && bg->GetStatus() == STATUS_IN_PROGRESS &&
+            (!bg->GetAlivePlayersCountByTeam(TEAM_ALLIANCE) || !bg->GetAlivePlayersCountByTeam(TEAM_HORDE)))
+            LOG_INFO("playerbots.coa", "coa arena win check: arena {} after {} s, alliance alive {}/{}, horde alive {}/{},{}",
+                     bg->GetInstanceID(), bg->GetStartTime() / IN_MILLISECONDS, bg->GetAlivePlayersCountByTeam(TEAM_ALLIANCE),
+                     bg->GetPlayersCountByTeam(TEAM_ALLIANCE), bg->GetAlivePlayersCountByTeam(TEAM_HORDE),
+                     bg->GetPlayersCountByTeam(TEAM_HORDE), ArenaRoster(bg));
+        return true;
+    }
+};
+
+class CoaArenaKillWatch : public PlayerScript
+{
+public:
+    CoaArenaKillWatch() : PlayerScript("coa_arena_kill_watch", { PLAYERHOOK_ON_PVP_KILL }) {}
+
+    void OnPlayerPVPKill(Player* killer, Player* killed) override
+    {
+        if (!killer || !killed || !killed->InArena())
+            return;
+        LOG_INFO("playerbots.coa", "coa arena kill: {} killed {} (alive {}, health {}/{}, form {})", killer->GetName(),
+                 killed->GetName(), killed->IsAlive(), killed->GetHealth(), killed->GetMaxHealth(),
+                 uint32(killed->GetShapeshiftForm()));
+    }
+};
+
 class CoaArenaReadySettings : public WorldScript
 {
 public:
@@ -403,6 +451,8 @@ public:
 void AddSC_coa_arena_ready()
 {
     new CoaArenaReadySettings();
+    new CoaArenaEndWatch();
+    new CoaArenaKillWatch();
     new CoaArenaReadyBattleground();
     new CoaArenaReadyPylon();
 }
