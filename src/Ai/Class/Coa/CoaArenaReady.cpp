@@ -56,15 +56,49 @@ namespace
     std::mutex StatesLock;
     std::unordered_map<uint32, ArenaReadyState> States;
 
-    bool Enabled() { return sConfigMgr->GetOption<bool>("AiPlayerbot.CoaArenaReady", true); }
-    uint32 PylonEntry() { return sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaArenaReadyEntry", 184615); }
-    uint32 PylonDisplay() { return sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaArenaReadyDisplay", 0); }
-    float PylonDistance() { return sConfigMgr->GetOption<float>("AiPlayerbot.CoaArenaReadyDistance", 6.0f); }
-    float PylonSide() { return sConfigMgr->GetOption<float>("AiPlayerbot.CoaArenaReadySide", 3.0f); }
-    float PylonHeight() { return sConfigMgr->GetOption<float>("AiPlayerbot.CoaArenaReadyHeight", 1.2f); }
-    float PylonScale() { return sConfigMgr->GetOption<float>("AiPlayerbot.CoaArenaReadyScale", 0.5f); }
-    int32 CountdownMs() { return int32(sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaArenaReadyCountdown", 5)) * IN_MILLISECONDS; }
-    int32 BotSettleMs() { return int32(sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaArenaReadyBotDelay", 10)) * IN_MILLISECONDS; }
+    // Read once and again on ".reload config": these run every second in each arena, and a missing key
+    // makes the core log a warning at every read.
+    struct ArenaReadySettings
+    {
+        bool loaded = false;
+        bool enabled = true;
+        uint32 entry = 184615;
+        uint32 display = 0;
+        float distance = 6.0f;
+        float side = 3.0f;
+        float height = 1.2f;
+        float scale = 0.5f;
+        int32 countdownMs = 5 * IN_MILLISECONDS;
+        int32 botSettleMs = 10 * IN_MILLISECONDS;
+    } Settings;
+
+    ArenaReadySettings const& Get()
+    {
+        if (!Settings.loaded)
+        {
+            Settings.enabled = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaArenaReady", true);
+            Settings.entry = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaArenaReadyEntry", 184615);
+            Settings.display = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaArenaReadyDisplay", 0);
+            Settings.distance = sConfigMgr->GetOption<float>("AiPlayerbot.CoaArenaReadyDistance", 6.0f);
+            Settings.side = sConfigMgr->GetOption<float>("AiPlayerbot.CoaArenaReadySide", 3.0f);
+            Settings.height = sConfigMgr->GetOption<float>("AiPlayerbot.CoaArenaReadyHeight", 1.2f);
+            Settings.scale = sConfigMgr->GetOption<float>("AiPlayerbot.CoaArenaReadyScale", 0.5f);
+            Settings.countdownMs = int32(sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaArenaReadyCountdown", 5)) * IN_MILLISECONDS;
+            Settings.botSettleMs = int32(sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaArenaReadyBotDelay", 10)) * IN_MILLISECONDS;
+            Settings.loaded = true;
+        }
+        return Settings;
+    }
+
+    bool Enabled() { return Get().enabled; }
+    uint32 PylonEntry() { return Get().entry; }
+    uint32 PylonDisplay() { return Get().display; }
+    float PylonDistance() { return Get().distance; }
+    float PylonSide() { return Get().side; }
+    float PylonHeight() { return Get().height; }
+    float PylonScale() { return Get().scale; }
+    int32 CountdownMs() { return Get().countdownMs; }
+    int32 BotSettleMs() { return Get().botSettleMs; }
 
     void Announce(Battleground* bg, std::string const& text, ChatMsg type = CHAT_MSG_RAID_BOSS_EMOTE)
     {
@@ -352,8 +386,23 @@ public:
     }
 };
 
+void CoaPvpOptionsReload();
+
+class CoaArenaReadySettings : public WorldScript
+{
+public:
+    CoaArenaReadySettings() : WorldScript("coa_arena_ready_settings", { WORLDHOOK_ON_AFTER_CONFIG_LOAD }) {}
+
+    void OnAfterConfigLoad(bool /*reload*/) override
+    {
+        Settings.loaded = false;
+        CoaPvpOptionsReload();
+    }
+};
+
 void AddSC_coa_arena_ready()
 {
+    new CoaArenaReadySettings();
     new CoaArenaReadyBattleground();
     new CoaArenaReadyPylon();
 }

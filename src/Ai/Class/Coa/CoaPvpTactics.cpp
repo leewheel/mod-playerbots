@@ -43,6 +43,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+#include <string>
 
 // CoaAiObjectContext.cpp: the crowd control abilities of the bot's CoA class.
 bool CoaHasReadyControl(PlayerbotAI* botAI, Player* bot);
@@ -50,7 +51,19 @@ bool CoaCastControl(PlayerbotAI* botAI, Player* bot, Unit* target);
 
 namespace
 {
-    bool On(char const* key) { return sConfigMgr->GetOption<bool>(key, true); }
+    std::mutex OptionsLock;
+    std::unordered_map<std::string, bool> Options;
+
+    // Read once per key and again after ".reload config" (CoaPvpOptionsReload): a missing key makes the
+    // core log a warning at every read, and these are read at every bot tick in PvP.
+    bool On(char const* key)
+    {
+        std::lock_guard<std::mutex> lock(OptionsLock);
+        auto found = Options.find(key);
+        if (found == Options.end())
+            found = Options.emplace(key, sConfigMgr->GetOption<bool>(key, true)).first;
+        return found->second;
+    }
 
     bool IsCoaBot(Player* bot) { return bot && IsAscensionCustomClassId(bot->getClass()); }
 
@@ -1512,4 +1525,10 @@ bool CoaPvp::FindSightSpot(Player* bot, Unit* target, float range, Position& spo
     }
     spot.Relocate(x, y, z);
     return true;
+}
+
+void CoaPvpOptionsReload()
+{
+    std::lock_guard<std::mutex> lock(OptionsLock);
+    Options.clear();
 }
