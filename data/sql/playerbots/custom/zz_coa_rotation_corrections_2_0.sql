@@ -2,8 +2,8 @@
 -- boss bench (09-10/10) and of the healers that lagged on the level 60 heal bench (10/10), on top of zz_coa_rotation_corrections_1_9.sql. Applied once by Installer-Bots
 -- (coa_bots_installed). Re-runnable: the same result every time. Rows with owner <> 0 and the 'say'
 -- strategy are never touched. A wrong result (count, checksum, apostrophes) aborts the transaction.
--- Rows: 457 in 15 specs. Checksum SUM(CRC32(CONCAT_WS('|',name,idx,owner,action_line))) = 974768429940.
--- Rows per spec: chronomancer-time 26, cultist-heretic 29, knight-of-xoroth-hellfire 30, primalist-grovekeeper 39, primalist-wildwalker 32, ranger-archery 28, ranger-farstrider 37, runemaster-engravement 17, runemaster-riftblade 21, starcaller-sentinel 24, stormbringer-wind 37, sun-cleric-valkyrie 36, tinker-demolition 36, tinker-invention 26, tinker-mechanics 39
+-- Rows: 455 in 15 specs. Checksum SUM(CRC32(CONCAT_WS('|',name,idx,owner,action_line))) = 970017480704.
+-- Rows per spec: chronomancer-time 26, cultist-heretic 29, knight-of-xoroth-hellfire 30, primalist-grovekeeper 39, primalist-wildwalker 32, ranger-archery 28, ranger-farstrider 37, runemaster-engravement 17, runemaster-riftblade 21, starcaller-sentinel 24, stormbringer-wind 37, sun-cleric-valkyrie 36, tinker-demolition 36, tinker-invention 26, tinker-mechanics 37
 -- Why: stormbringer-wind never summoned its Air Elemental (Flurry commands it) and put Cloudburst, a
 -- knockback, first; primalist-grovekeeper fights in melee from 2.0 (Wildclaw on the melee action, Primal
 -- Rush no longer leaps it out); tinker-mechanics kept Makeshift Dynamite, its Scrap for the Mechsuit, and
@@ -60,13 +60,13 @@ BEGIN
    WHERE owner = 0 AND name IN ('chronomancer-time', 'cultist-heretic', 'knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-invention', 'tinker-mechanics');
   SELECT COUNT(*) INTO a FROM playerbots_custom_strategy WHERE owner = 0 AND name IN ('chronomancer-time', 'cultist-heretic', 'knight-of-xoroth-hellfire', 'primalist-grovekeeper', 'primalist-wildwalker', 'ranger-archery', 'ranger-farstrider', 'runemaster-engravement', 'runemaster-riftblade', 'starcaller-sentinel', 'stormbringer-wind', 'sun-cleric-valkyrie', 'tinker-demolition', 'tinker-invention', 'tinker-mechanics')
      AND action_line LIKE '%''%';
-  IF n <> 457 THEN
+  IF n <> 455 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: wrong row count, nothing was changed';
   END IF;
   IF a <> 39 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: apostrophes lost (character set), nothing was changed';
   END IF;
-  IF h <> 974768429940 THEN
+  IF h <> 970017480704 THEN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CoA Bots 2.0 rotations: wrong checksum, nothing was changed';
   END IF;
 END$$
@@ -526,10 +526,8 @@ INSERT INTO playerbots_custom_strategy (name, idx, owner, action_line) VALUES
  ('tinker-mechanics', 25, 0, 'can cast::Freeze Ray>cast::Freeze Ray!14'),
  ('tinker-mechanics', 26, 0, 'can cast::Build: Replenishment Beacon>cast::Build: Replenishment Beacon!13'),
  ('tinker-mechanics', 27, 0, 'debuff missing::Control Mechanical>cast debuff::Control Mechanical!12'),
- ('tinker-mechanics', 28, 0, 'can cast::Aether Augmentation>cast::Aether Augmentation!11'),
- ('tinker-mechanics', 29, 0, 'can cast::Explosive Augmentation>cast::Explosive Augmentation!31'),
+ ('tinker-mechanics', 29, 0, 'buff missing::Explosive Augmentation>cast buff::Explosive Augmentation!90'),
  ('tinker-mechanics', 30, 0, 'can cast::Nanobot Recharger>cast::Nanobot Recharger!9'),
- ('tinker-mechanics', 31, 0, 'can cast::Piercing Augmentation>cast::Piercing Augmentation!9'),
  ('tinker-mechanics', 32, 0, 'can cast::Mana Module>cast::Mana Module!7'),
  ('tinker-mechanics', 34, 0, 'can cast::Build: Mechano-Bear>cast::Build: Mechano-Bear!5'),
  ('tinker-mechanics', 35, 0, 'can cast::''Pick Lock''>cast::''Pick Lock''!4'),
