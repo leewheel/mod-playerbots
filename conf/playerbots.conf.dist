@@ -1706,6 +1706,16 @@ AiPlayerbot.CoaArenaReadyHeight = 1.2
 
 AiPlayerbot.CoaArenaRoleSpot = 1
 
+#    AiPlayerbot.CoaArenaPreparation
+#        Description: 1 - before the gates open, a CoA bot takes a place of its role in its starting room, between
+#                     the start point and the gate (healers at the back, ranged in the middle, melee in front, side
+#                     by side), faces the gate, then keeps its buffs and pet up. It never leaves the room, stays on
+#                     the Ring of Valor lift, and is still marked ready (AiPlayerbot.CoaArenaReady).
+#                     0 - the bots wait on their start point.
+#        Default:     1
+
+AiPlayerbot.CoaArenaPreparation = 1
+
 #    AiPlayerbot.CoaShortLivedDebuffs
 #        Description: life a target must have left (its health over the estimated damage of the group)
 #                     for the rotation lines "debuff missing::<spell>" and "cast debuff::<spell>".

@@ -458,6 +458,9 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
 
         if (sPlayerbotAIConfig.coaBossKnowledge)
             engine->addStrategy("coa boss dodge", false);
+
+        // Arenas, duels and battlegrounds; its actions do nothing anywhere else (CoaPvpTactics.cpp).
+        engine->addStrategy("coa pvp", false);
     }
 
     if (PlayerbotAI::IsTank(player, true))
@@ -643,7 +646,7 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
             if (IsAscensionCustomClassId(player->getClass()))
             {
                 nonCombatEngine->addStrategiesNoInit(GetCoaRole(player) == CoaRole::Tank ? "tank assist" : "dps assist",
-                                                     "coa buff", nullptr);
+                                                     "coa buff", "coa pvp", nullptr);
                 // Pulls on its own once the group of a real player is ready ("nc -coa auto pull" stops it).
                 if (GetCoaRole(player) == CoaRole::Tank)
                     nonCombatEngine->addStrategy("coa auto pull", false);

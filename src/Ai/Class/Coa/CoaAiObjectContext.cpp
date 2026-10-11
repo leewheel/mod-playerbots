@@ -47,6 +47,11 @@ Strategy* NewCoaBossDodgeStrategy(PlayerbotAI* botAI);
 Action* NewCoaBossDodgeAction(PlayerbotAI* botAI);
 Trigger* NewCoaBossDangerTrigger(PlayerbotAI* botAI);
 
+// CoaPvpTactics.cpp: "coa pvp", arenas, duels and battlegrounds.
+NamedObjectContext<Strategy>* NewCoaPvpStrategyContext();
+NamedObjectContext<Action>* NewCoaPvpActionContext();
+NamedObjectContext<Trigger>* NewCoaPvpTriggerContext();
+
 // CoaGroupTelemetry.cpp: counts a taunt, a heal tried, or an interrupt, in the group fight being measured.
 void CoaTelemetryNoteTaunt(Player* bot);
 void CoaTelemetryNoteHeal(Player* bot, uint32 spellId, uint16 outcome);
@@ -4506,18 +4511,21 @@ void CoaAiObjectContext::BuildSharedStrategyContexts(SharedNamedObjectContextLis
     AiObjectContext::BuildSharedStrategyContexts(strategyContexts);
     strategyContexts.Add(new CoaStrategyFactoryInternal());
     strategyContexts.Add(new CoaNonCombatStrategyFactoryInternal());
+    strategyContexts.Add(NewCoaPvpStrategyContext());
 }
 
 void CoaAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<Action>& actionContexts)
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new CoaActionFactoryInternal());
+    actionContexts.Add(NewCoaPvpActionContext());
 }
 
 void CoaAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
 {
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new CoaTriggerFactoryInternal());
+    triggerContexts.Add(NewCoaPvpTriggerContext());
 }
 
 void CoaAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
