@@ -1104,6 +1104,9 @@ bool BGStatusAction::Execute(Event event)
         WorldPacket emptyPacket;
         bot->GetSession()->HandleCancelMountAuraOpcode(emptyPacket);
 
+        if (bot->IsInCombat() && !botAI->GetMaster() && sRandomPlayerbotMgr.IsRandomBot(bot))
+            bot->CombatStopWithPets(true);
+
         action = 0x1;
 
         WorldPacket packet(CMSG_BATTLEFIELD_PORT, 20);
