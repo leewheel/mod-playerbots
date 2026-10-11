@@ -1716,6 +1716,14 @@ AiPlayerbot.CoaArenaRoleSpot = 1
 
 AiPlayerbot.CoaArenaPreparation = 1
 
+#    AiPlayerbot.CoaArenaLineOfSight
+#        Description: 1 - in an arena, a CoA ranged bot or healer whose target (or most hurt team member) is out of
+#                     sight steps to the nearest reachable point that sees it from casting range, away from enemy
+#                     melee, or joins a team member who sees it. 0 - it walks onto the target's spot, as before.
+#        Default:     1
+
+AiPlayerbot.CoaArenaLineOfSight = 1
+
 #    AiPlayerbot.CoaShortLivedDebuffs
 #        Description: life a target must have left (its health over the estimated damage of the group)
 #                     for the rotation lines "debuff missing::<spell>" and "cast debuff::<spell>".

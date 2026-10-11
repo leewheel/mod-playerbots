@@ -4384,6 +4384,14 @@ bool ArenaTactics::Execute(Event /*event*/)
     {
         bool losBlocked = !bot->IsWithinLOSInMap(target) || fabs(bot->GetPositionZ() - target->GetPositionZ()) > 5.0f;
 
+        // A CoA ranged bot or healer looks for a spot in sight from range rather than the target's own spot.
+        if (losBlocked && CoaPvp::HandlesLineOfSight(bot))
+        {
+            Position spot;
+            if (CoaPvp::FindSightSpot(bot, target, 28.0f, spot))
+                return MoveTo(target->GetMapId(), spot.GetPositionX(), spot.GetPositionY(), spot.GetPositionZ(), false, true);
+        }
+
         if (losBlocked)
         {
             PathGenerator path(bot);

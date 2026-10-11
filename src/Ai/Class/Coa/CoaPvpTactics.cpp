@@ -134,6 +134,91 @@ namespace
         return length <= maxLength && dx * dx + dy * dy < 4.0f;
     }
 
+    Battleground* ArenaFight(Player* bot)
+    {
+        Battleground* bg = ArenaOf(bot);
+        return bg && bg->GetStatus() == STATUS_IN_PROGRESS ? bg : nullptr;
+    }
+
+    // The living arena fighters of one side, on the bot's map; enemies only when the bot sees them.
+    template <typename Visit>
+    void Fighters(Battleground* bg, Player* bot, bool enemies, Visit visit)
+    {
+        for (auto const& [guid, player] : bg->GetPlayers())
+        {
+            if (!player || player == bot || !player->IsInWorld() || !player->IsAlive() || player->GetMap() != bot->GetMap())
+                continue;
+            if ((player->GetBgTeamId() != bot->GetBgTeamId()) != enemies)
+                continue;
+            if (enemies && !bot->CanSeeOrDetect(player))
+                continue;
+            visit(player);
+        }
+    }
+
+    bool InArenaBounds(Battleground* bg, float x, float y)
+    {
+        ArenaGround const* ground = GroundOf(bg->GetMapId());
+        Position centre;
+        return !ground || !ArenaCentre(bg, centre) || centre.GetExactDist2d(x, y) <= ground->reach;
+    }
+
+    constexpr float Rejected = 1.0e9f;
+
+    struct Spot
+    {
+        float x, y, z, score;
+    };
+
+    // Points on circles around (x, y).
+    void Rings(std::vector<std::pair<float, float>>& points, float x, float y, std::initializer_list<float> radii, int count)
+    {
+        for (float radius : radii)
+            for (int i = 0; i < count; ++i)
+            {
+                float const angle = 2.0f * float(M_PI) * (float(i) + (radius > 8.0f ? 0.5f : 0.0f)) / float(count);
+                points.emplace_back(x + radius * std::cos(angle), y + radius * std::sin(angle));
+            }
+    }
+
+    // The best scored point (lowest score) that has a floor and that the bot reaches. Paths are only computed for
+    // the few best ones.
+    template <typename Score>
+    bool BestSpot(Player* bot, std::vector<std::pair<float, float>> const& points, Score score, float maxPath, Spot& best)
+    {
+        std::vector<Spot> spots;
+        for (auto const& [x, y] : points)
+        {
+            float z = bot->GetPositionZ();
+            if (!GroundAt(bot, x, y, z))
+                continue;
+            float const value = score(x, y, z);
+            if (value < Rejected)
+                spots.push_back({ x, y, z, value });
+        }
+        std::sort(spots.begin(), spots.end(), [](Spot const& a, Spot const& b) { return a.score < b.score; });
+        if (spots.size() > 4)
+            spots.resize(4);
+        for (Spot const& spot : spots)
+            if (Walkable(bot, spot.x, spot.y, spot.z, maxPath))
+            {
+                best = spot;
+                return true;
+            }
+        return false;
+    }
+
+    bool MeleeEnemyNear(Battleground* bg, Player* bot, float x, float y, float distance)
+    {
+        bool found = false;
+        Fighters(bg, bot, true, [&](Player* enemy)
+        {
+            if (!Squishy(enemy) && enemy->GetExactDist2d(x, y) < distance)
+                found = true;
+        });
+        return found;
+    }
+
     // Base of the moving actions: a combat move, and the time it should take, during which the action stands back.
     class CoaPvpMoveAction : public MovementAction
     {
@@ -288,6 +373,62 @@ namespace
         bool faced = false;
     };
 
+    /*
+     * Out of sight in an arena. A ranged bot whose target went behind a pillar used to walk onto the target's own
+     * spot, into its melee. Now it steps to the nearest reachable point that sees the target from casting range,
+     * away from enemy melee, or else joins a team member who sees it. A healer does the same for the most hurt team
+     * member it cannot see, before the generic "reach party member to heal" walks it to that member.
+     */
+    class CoaArenaSightAction : public CoaPvpMoveAction
+    {
+    public:
+        CoaArenaSightAction(PlayerbotAI* botAI) : CoaPvpMoveAction(botAI, "coa arena sight") {}
+
+        bool isUseful() override
+        {
+            if (Busy() || !On("AiPlayerbot.CoaArenaLineOfSight") || !ArenaFight(bot) || !bot->IsAlive())
+                return false;
+            return Hidden() != nullptr;
+        }
+
+        bool Execute(Event /*event*/) override
+        {
+            Unit* target = Hidden();
+            if (!target)
+                return false;
+            Position spot;
+            if (!CoaPvp::FindSightSpot(bot, target, Healer(bot) ? 36.0f : 28.0f, spot))
+                return false;
+            return Go(spot.GetPositionX(), spot.GetPositionY(), spot.GetPositionZ());
+        }
+
+    private:
+        Unit* Hidden()
+        {
+            Battleground* bg = ArenaFight(bot);
+            if (!bg)
+                return nullptr;
+            if (Healer(bot))
+            {
+                Player* worst = nullptr;
+                Fighters(bg, bot, false, [&](Player* ally)
+                {
+                    if (ally->GetHealthPct() < 85.0f && bot->IsWithinDist(ally, 60.0f) &&
+                        (!worst || ally->GetHealthPct() < worst->GetHealthPct()))
+                        worst = ally;
+                });
+                if (worst && !bot->IsWithinLOSInMap(worst))
+                    return worst;
+                if (worst || bot->GetHealthPct() < 85.0f)
+                    return nullptr;
+            }
+            Unit* victim = bot->GetVictim();
+            if (victim && victim->IsAlive() && !bot->IsWithinLOSInMap(victim))
+                return victim;
+            return nullptr;
+        }
+    };
+
     // The triggers only check the place, the switch and the role, each a cheap test; the action decides the rest.
     using Gate = bool (*)(Player* bot);
 
@@ -310,6 +451,11 @@ namespace
         return ArenaWaiting(bot) && IsCoaBot(bot) && On("AiPlayerbot.CoaArenaPreparation");
     }
 
+    bool SightGate(Player* bot)
+    {
+        return bot->InArena() && IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaLineOfSight");
+    }
+
     class CoaPvpStrategy : public Strategy
     {
     public:
@@ -321,6 +467,9 @@ namespace
         {
             // Just above "coa buff": into place first, buffs once standing.
             triggers.push_back(new TriggerNode("coa arena preparation", { NextAction("coa arena preparation", ACTION_NORMAL + 6) }));
+            // The combat moves come above the attacks, which reach 88 in the authored rotations: an action of
+            // this strategy only runs when it has a reason to, and then only for one tick.
+            triggers.push_back(new TriggerNode("coa arena sight", { NextAction("coa arena sight", 89.5f) }));
         }
     };
 
@@ -339,10 +488,12 @@ namespace
         CoaPvpActionContext() : NamedObjectContext<Action>(false, false)
         {
             creators["coa arena preparation"] = &preparation;
+            creators["coa arena sight"] = &sight;
         }
 
     private:
         static Action* preparation(PlayerbotAI* botAI) { return new CoaArenaPreparationAction(botAI); }
+        static Action* sight(PlayerbotAI* botAI) { return new CoaArenaSightAction(botAI); }
     };
 
     class CoaPvpTriggerContext : public NamedObjectContext<Trigger>
@@ -351,6 +502,7 @@ namespace
         CoaPvpTriggerContext() : NamedObjectContext<Trigger>(false, false)
         {
             creators["coa arena preparation"] = &preparation;
+            creators["coa arena sight"] = &sight;
         }
 
     private:
@@ -358,6 +510,7 @@ namespace
         {
             return new CoaPvpTrigger(botAI, "coa arena preparation", 1000, &PreparationGate);
         }
+        static Trigger* sight(PlayerbotAI* botAI) { return new CoaPvpTrigger(botAI, "coa arena sight", 500, &SightGate); }
     };
 }
 
@@ -374,4 +527,58 @@ uint32 CoaPvp::ArenaSpot(Player* bot)
     if (Squishy(bot))
         return 9;
     return 6;
+}
+
+bool CoaPvp::HandlesLineOfSight(Player* bot)
+{
+    return IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaLineOfSight");
+}
+
+bool CoaPvp::FindSightSpot(Player* bot, Unit* target, float range, Position& spot)
+{
+    Battleground* bg = ArenaOf(bot);
+    if (!bg || !target)
+        return false;
+
+    std::vector<std::pair<float, float>> points;
+    Rings(points, bot->GetPositionX(), bot->GetPositionY(), { 4.0f, 8.0f, 12.0f, 17.0f }, 12);
+    auto score = [&](float x, float y, float z)
+    {
+        float const toTarget = target->GetExactDist2d(x, y);
+        if (toTarget > range || !InArenaBounds(bg, x, y) || !target->IsWithinLOS(x, y, z))
+            return Rejected;
+        float value = bot->GetExactDist2d(x, y);
+        if (MeleeEnemyNear(bg, bot, x, y, 7.0f))
+            value += 15.0f;
+        return value;
+    };
+    Spot best;
+    if (BestSpot(bot, points, score, 28.0f, best))
+    {
+        spot.Relocate(best.x, best.y, best.z);
+        return true;
+    }
+
+    // A team member who sees the target from range: next to it.
+    Player* guide = nullptr;
+    Fighters(bg, bot, false, [&](Player* ally)
+    {
+        if (ally->IsWithinDist(target, range) && ally->IsWithinLOSInMap(target) &&
+            (!guide || bot->GetExactDist2d(ally) < bot->GetExactDist2d(guide)))
+            guide = ally;
+    });
+    if (!guide)
+        return false;
+    float const angle = guide->GetAbsoluteAngle(bot);
+    float x = guide->GetPositionX() + 2.0f * std::cos(angle);
+    float y = guide->GetPositionY() + 2.0f * std::sin(angle);
+    float z = guide->GetPositionZ();
+    if (!GroundAt(bot, x, y, z))
+    {
+        x = guide->GetPositionX();
+        y = guide->GetPositionY();
+        z = guide->GetPositionZ();
+    }
+    spot.Relocate(x, y, z);
+    return true;
 }
