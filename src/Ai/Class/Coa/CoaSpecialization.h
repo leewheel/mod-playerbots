@@ -93,7 +93,8 @@ bool CoaTankOnlySpell(Player* bot, SpellInfo const* info, Unit* target);
 bool CoaRivalBuffBlocks(Player* bot, SpellInfo const* info, Unit* target);
 
 // Whether this spell would carry the bot, in a fight, away from where it fights: a roll or run it cannot stop
-// (Boulder Dash), or a rush to a place ahead while it stands in reach of its enemy (Primal Rush).
+// (Boulder Dash), or a rush to a place ahead while it stands in reach of its enemy (Primal Rush). A healer
+// never casts a spell that moves it (a jump, leap, charge or blink: Dragon Leap), in a fight or out of it.
 bool CoaCarriesBotAway(Player* bot, SpellInfo const* info);
 
 // A tank out of combat puts on the threat buffs it knows outside its class kit (every 10 seconds).

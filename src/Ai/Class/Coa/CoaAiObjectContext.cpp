@@ -287,6 +287,32 @@ bool SendsCasterAhead(SpellInfo const* info)
     return false;
 }
 
+// A spell that moves its caster somewhere else: a jump, leap, charge or blink (Dragon Leap jumps to its target),
+// looking into the spells the cast itself triggers.
+bool MovesCaster(SpellInfo const* info, uint8 depth = 0)
+{
+    for (SpellEffectInfo const& effect : info->Effects)
+    {
+        switch (effect.Effect)
+        {
+            case SPELL_EFFECT_JUMP: case SPELL_EFFECT_JUMP_DEST: case SPELL_EFFECT_CHARGE:
+            case SPELL_EFFECT_CHARGE_DEST: case SPELL_EFFECT_LEAP: case SPELL_EFFECT_LEAP_BACK:
+                return true;
+            case SPELL_EFFECT_TELEPORT_UNITS:
+                if (effect.TargetA.GetTarget() == TARGET_UNIT_CASTER)
+                    return true;
+                break;
+            default:
+                break;
+        }
+        if (effect.TriggerSpell && effect.TriggerSpell != info->Id && !IsAuraEffect(effect) && depth < 2)
+            if (SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell))
+                if (MovesCaster(triggered, depth + 1))
+                    return true;
+    }
+    return false;
+}
+
 bool IsDefensiveAura(SpellEffectInfo const& effect)
 {
     switch (effect.ApplyAuraName)
@@ -4440,13 +4466,19 @@ bool CoaRivalBuffBlocks(Player* bot, SpellInfo const* info, Unit* target)
 
 bool CoaCarriesBotAway(Player* bot, SpellInfo const* info)
 {
-    if (!bot || !info || !bot->IsInCombat())
+    if (!bot || !info)
+        return false;
+    // A healer never jumps, leaps, charges or blinks, in a fight or out of it: a Flameweaving healer cast Dragon
+    // Leap on cooldown from "coa attack" and "coa aoe" and landed in packs nobody had pulled (headless dungeon
+    // runs, 11/10). No CoA healer path moves the bot on purpose with a spell; its feet do it.
+    bool const healerMove = GetCoaRole(bot) == CoaRole::Heal && MovesCaster(info);
+    if (!healerMove && !bot->IsInCombat())
         return false;
     // In a fight a bot neither rolls off for seconds nor rushes on past the enemy it stands at: Wildwalkers spent
     // a sixth of each boss fight out of reach after Boulder Dash and Primal Rush (bench, 10/10). Out of reach, a
     // rush ahead still closes the gap.
     Unit* const victim = bot->GetVictim();
-    bool const away = ForcesCasterForward(info) ||
+    bool const away = healerMove || ForcesCasterForward(info) ||
                       (SendsCasterAhead(info) && victim && bot->IsWithinMeleeRange(victim));
     if (away)
     {
