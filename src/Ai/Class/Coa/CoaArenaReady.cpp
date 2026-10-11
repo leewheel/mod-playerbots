@@ -281,6 +281,17 @@ public:
         Countdown(bg, state);
 
         uint32 const now = GameTime::GetGameTimeMS().count();
+        // Nobody should be dead before the gates open: a combatant who arrives dead or falls in the starting
+        // room would stay a corpse for the whole match.
+        for (auto const& [guid, player] : bg->GetPlayers())
+            if (player && player->IsInWorld() && !player->IsAlive() && !player->IsBeingTeleported())
+            {
+                LOG_INFO("playerbots.coa", "coa arena ready: {} dead in the starting room of arena {} at {:.1f} {:.1f} {:.1f}, raised",
+                         player->GetName(), bg->GetInstanceID(), player->GetPositionX(), player->GetPositionY(),
+                         player->GetPositionZ());
+                player->ResurrectPlayer(1.0f);
+                player->SpawnCorpseBones();
+            }
         for (auto const& [guid, player] : bg->GetPlayers())
         {
             if (state.ready.count(guid) || !player || !player->IsInWorld() || !player->IsAlive())
@@ -311,11 +322,12 @@ public:
         }
         LOG_INFO("playerbots.coa",
                  "coa arena join: {} ({}) arena {} map {} type {} status {}, arena side {}, faction {}, alliance {} "
-                 "horde {} in the arena",
+                 "horde {} in the arena, alive {}, health {}/{}, at {:.1f} {:.1f} {:.1f}",
                  player->GetName(), GET_PLAYERBOT_AI(player) ? "bot" : "player", bg->GetInstanceID(), bg->GetMapId(),
                  uint32(bg->GetArenaType()), uint32(bg->GetStatus()), uint32(player->GetBgTeamId()),
                  uint32(player->GetTeamId(true)), bg->GetPlayersCountByTeam(TEAM_ALLIANCE),
-                 bg->GetPlayersCountByTeam(TEAM_HORDE));
+                 bg->GetPlayersCountByTeam(TEAM_HORDE), player->IsAlive(), player->GetHealth(), player->GetMaxHealth(),
+                 player->GetPositionX(), player->GetPositionY(), player->GetPositionZ());
     }
 
     void OnBattlegroundRemovePlayerAtLeave(Battleground* bg, Player* player) override
