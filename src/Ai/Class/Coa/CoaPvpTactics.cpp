@@ -21,6 +21,7 @@
 #include "GameObject.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "Log.h"
 #include "Map.h"
 #include "MovementActions.h"
 #include "Multiplier.h"
@@ -36,6 +37,8 @@
 #include <algorithm>
 #include <cmath>
 #include <list>
+#include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace
@@ -217,6 +220,178 @@ namespace
                 found = true;
         });
         return found;
+    }
+
+    /*
+     * Cover: what breaks the line of sight in each arena, for the bots that kite or hide (AiPlayerbot.CoaArenaCover).
+     *
+     * The pillars of the static map are found once per arena map, by a walk over the floor around the centre: a
+     * 2 yard grid, where two neighbouring points at the same height that do not see each other at chest height
+     * have something between them. Those points gather into groups; a small group (at most 14 yards across) that
+     * also blocks the view straight across its middle is a pillar or a block, a long one is a wall or a ramp and
+     * is left out. The pillars found are written to the log ("coa arena cover") so they can be checked in game.
+     *
+     * The core spawns some blockers as objects, which the static walk cannot see: the four Ring of Valor pillars
+     * and the Dalaran waterfall (BattlegroundRV / BattlegroundDS). They come from the table below; they are not
+     * always up, and every use checks the sight again.
+     */
+    struct Cover
+    {
+        float x, y, z, radius;
+    };
+
+    struct KnownCover
+    {
+        uint32 map;
+        float x, y, radius;
+    };
+
+    constexpr KnownCover ObjectCover[] = {
+        { 618, 763.6f, -306.2f, 3.0f },
+        { 618, 723.6f, -284.5f, 3.0f },
+        { 618, 763.6f, -261.9f, 3.0f },
+        { 618, 802.2f, -284.5f, 3.0f },
+        { 617, 1291.6f, 790.8f, 4.0f },
+    };
+
+    std::mutex CoverLock;
+    std::unordered_map<uint32, std::vector<Cover>> FoundCover;
+
+    std::vector<Cover> ScanCover(Map* map, uint32 phase, Position const& centre, float reach)
+    {
+        constexpr float Step = 2.0f;
+        int const half = int(reach / Step);
+        int const side = half * 2 + 1;
+        auto index = [side](int i, int j) { return j * side + i; };
+        auto pointX = [&](int i) { return centre.GetPositionX() + float(i - half) * Step; };
+        auto pointY = [&](int j) { return centre.GetPositionY() + float(j - half) * Step; };
+
+        std::vector<float> floor(size_t(side * side), INVALID_HEIGHT);
+        for (int j = 0; j < side; ++j)
+            for (int i = 0; i < side; ++i)
+                if (centre.GetExactDist2d(pointX(i), pointY(j)) <= reach)
+                    floor[index(i, j)] = map->GetHeight(phase, pointX(i), pointY(j), centre.GetPositionZ() + 4.0f, true, 10.0f);
+
+        std::vector<uint8> blocked(size_t(side * side), 0);
+        for (int j = 0; j < side; ++j)
+            for (int i = 0; i < side; ++i)
+            {
+                float const za = floor[index(i, j)];
+                if (za <= INVALID_HEIGHT)
+                    continue;
+                for (auto [di, dj] : { std::pair<int, int>(1, 0), std::pair<int, int>(0, 1) })
+                {
+                    int const ni = i + di;
+                    int const nj = j + dj;
+                    if (ni >= side || nj >= side)
+                        continue;
+                    float const zb = floor[index(ni, nj)];
+                    if (zb <= INVALID_HEIGHT || std::fabs(za - zb) > 1.5f)
+                        continue;
+                    float const h = std::max(za, zb) + 1.6f;
+                    if (!map->isInLineOfSight(pointX(i), pointY(j), h, pointX(ni), pointY(nj), h, phase,
+                                              LINEOFSIGHT_CHECK_VMAP, VMAP::ModelIgnoreFlags::Nothing))
+                        blocked[index(i, j)] = blocked[index(ni, nj)] = 1;
+                }
+            }
+
+        std::vector<Cover> found;
+        std::vector<uint8> seen(size_t(side * side), 0);
+        for (int start = 0; start < side * side && found.size() < 12; ++start)
+        {
+            if (!blocked[start] || seen[start])
+                continue;
+            int minI = side, maxI = -1, minJ = side, maxJ = -1, count = 0;
+            float heights = 0.0f;
+            std::vector<int> open{ start };
+            seen[start] = 1;
+            while (!open.empty())
+            {
+                int const cell = open.back();
+                open.pop_back();
+                int const i = cell % side;
+                int const j = cell / side;
+                minI = std::min(minI, i);
+                maxI = std::max(maxI, i);
+                minJ = std::min(minJ, j);
+                maxJ = std::max(maxJ, j);
+                heights += floor[cell];
+                ++count;
+                for (int dj = -1; dj <= 1; ++dj)
+                    for (int di = -1; di <= 1; ++di)
+                    {
+                        int const ni = i + di;
+                        int const nj = j + dj;
+                        if (ni < 0 || nj < 0 || ni >= side || nj >= side)
+                            continue;
+                        int const next = index(ni, nj);
+                        if (blocked[next] && !seen[next])
+                        {
+                            seen[next] = 1;
+                            open.push_back(next);
+                        }
+                    }
+            }
+            float const across = float(std::max(maxI - minI, maxJ - minJ) + 1) * Step;
+            if (count < 3 || across > 14.0f)
+                continue;
+            float const x = (pointX(minI) + pointX(maxI)) / 2.0f;
+            float const y = (pointY(minJ) + pointY(maxJ)) / 2.0f;
+            float const z = heights / float(count);
+            float const radius = across / 2.0f;
+            if (centre.GetExactDist2d(x, y) > reach - 3.0f)
+                continue;
+            float const h = z + 1.6f;
+            float const d = radius + 2.5f;
+            bool const crossX = !map->isInLineOfSight(x - d, y, h, x + d, y, h, phase, LINEOFSIGHT_CHECK_VMAP,
+                                                      VMAP::ModelIgnoreFlags::Nothing);
+            bool const crossY = !map->isInLineOfSight(x, y - d, h, x, y + d, h, phase, LINEOFSIGHT_CHECK_VMAP,
+                                                      VMAP::ModelIgnoreFlags::Nothing);
+            if (crossX || crossY)
+                found.push_back({ x, y, z, radius });
+        }
+        return found;
+    }
+
+    // The cover of the bot's arena, found on first use.
+    std::vector<Cover> CoverOf(Player* bot, Battleground* bg)
+    {
+        std::vector<Cover> cover;
+        ArenaGround const* ground = GroundOf(bg->GetMapId());
+        Position centre;
+        if (!ground || !On("AiPlayerbot.CoaArenaCover") || !ArenaCentre(bg, centre))
+            return cover;
+        {
+            std::lock_guard<std::mutex> lock(CoverLock);
+            auto found = FoundCover.find(bg->GetMapId());
+            if (found == FoundCover.end())
+            {
+                found = FoundCover.emplace(bg->GetMapId(), ScanCover(bot->GetMap(), bot->GetPhaseMask(), centre, ground->reach)).first;
+                for (Cover const& pillar : found->second)
+                    LOG_INFO("playerbots.coa", "coa arena cover: map {} pillar at {:.1f} {:.1f} {:.1f}, {:.1f} yards across",
+                             bg->GetMapId(), pillar.x, pillar.y, pillar.z, pillar.radius * 2.0f);
+                LOG_INFO("playerbots.coa", "coa arena cover: map {} has {} pillars", bg->GetMapId(), found->second.size());
+            }
+            cover = found->second;
+        }
+        for (KnownCover const& known : ObjectCover)
+            if (known.map == bg->GetMapId())
+                cover.push_back({ known.x, known.y, ground->floorZ, known.radius });
+        return cover;
+    }
+
+    // Points just behind each pillar, seen from `from`.
+    void BehindCover(std::vector<std::pair<float, float>>& points, std::vector<Cover> const& cover, Position const& from)
+    {
+        for (Cover const& pillar : cover)
+        {
+            float const away = std::atan2(pillar.y - from.GetPositionY(), pillar.x - from.GetPositionX());
+            for (float turn : { 0.0f, 0.5f, -0.5f })
+            {
+                float const distance = pillar.radius + 2.0f;
+                points.emplace_back(pillar.x + distance * std::cos(away + turn), pillar.y + distance * std::sin(away + turn));
+            }
+        }
     }
 
     // Base of the moving actions: a combat move, and the time it should take, during which the action stands back.

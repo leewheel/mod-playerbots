@@ -1724,6 +1724,15 @@ AiPlayerbot.CoaArenaPreparation = 1
 
 AiPlayerbot.CoaArenaLineOfSight = 1
 
+#    AiPlayerbot.CoaArenaCover
+#        Description: 1 - the CoA arena moves (kiting, hiding when under pressure, running after a crowd control)
+#                     know the pillars of each arena: found once per arena map by a walk over its floor (written
+#                     to the log as "coa arena cover: ..." to check them in game), plus the Ring of Valor pillars
+#                     and the Dalaran waterfall the core spawns as objects. 0 - they only try points around the bot.
+#        Default:     1
+
+AiPlayerbot.CoaArenaCover = 1
+
 #    AiPlayerbot.CoaShortLivedDebuffs
 #        Description: life a target must have left (its health over the estimated damage of the group)
 #                     for the rotation lines "debuff missing::<spell>" and "cast debuff::<spell>".
