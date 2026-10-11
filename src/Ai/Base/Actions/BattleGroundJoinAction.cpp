@@ -550,6 +550,10 @@ bool BGJoinAction::JoinQueue(uint32 type)
 
         switch (arenaType)
         {
+            case ARENA_TYPE_1v1:
+                arenaslot = 2;
+                _bgType = "1v1";
+                break;
             case ARENA_TYPE_2v2:
                 arenaslot = 0;
                 _bgType = "2v2";
@@ -921,6 +925,9 @@ bool BGStatusAction::Execute(Event event)
 
     switch (arenaType)
     {
+        case ARENA_TYPE_1v1:
+            _bgType = "1v1";
+            break;
         case ARENA_TYPE_2v2:
             _bgType = "2v2";
             break;

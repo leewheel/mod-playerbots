@@ -566,6 +566,7 @@ void AddSC_randombot_level_mgr();
 
 void AddSC_coa_group_telemetry();
 void AddSC_coa_status_file();
+void AddSC_coa_arena_ready();
 
 void AddPlayerbotsScripts()
 {
@@ -589,5 +590,6 @@ void AddPlayerbotsScripts()
     AddSC_randombot_level_mgr();
     AddSC_coa_group_telemetry();
     AddSC_coa_status_file();
+    AddSC_coa_arena_ready();
     AddSC_coa_lfg();
 }

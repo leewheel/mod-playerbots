@@ -1642,6 +1642,61 @@ AiPlayerbot.Coa.AncestralCombatFix = 1
 
 AiPlayerbot.CoaKeepPassiveAuras = 1
 
+#    AiPlayerbot.CoaArenaReady
+#        Description: 1 - an arena shows a ready pylon in each starting room, as on the original CoA realm.
+#                     A player clicks it when ready; a bot is ready by itself once settled. When every
+#                     combatant is ready, the preparation drops to AiPlayerbot.CoaArenaReadyCountdown seconds.
+#                     0 - the full preparation time, as before.
+#                     Read again by ".reload config".
+#        Default:     1
+
+AiPlayerbot.CoaArenaReady = 1
+
+#    AiPlayerbot.CoaArenaReadyCountdown
+#        Description: seconds left before the gates open once everyone is ready.
+#        Default:     6
+
+AiPlayerbot.CoaArenaReadyCountdown = 5
+
+#    AiPlayerbot.CoaArenaReadyBotDelay
+#        Description: seconds a bot waits after it enters the arena (gear, buffs, pet) before it is ready.
+#        Default:     10
+
+AiPlayerbot.CoaArenaReadyBotDelay = 10
+
+#    AiPlayerbot.CoaArenaReadyEntry
+#    AiPlayerbot.CoaArenaReadyDisplay
+#        Description: gameobject template spawned as the pylon (a clickable object without lock or script)
+#                     and an optional display id to give it another look (0 - the template's own).
+#        Default:     184615, 0
+
+AiPlayerbot.CoaArenaReadyEntry = 184615
+AiPlayerbot.CoaArenaReadyDisplay = 0
+
+#    AiPlayerbot.CoaArenaReadyScale
+#        Description: size of the pylon (the default crystal is far taller than a player at 1).
+#        Default:     0.5
+
+AiPlayerbot.CoaArenaReadyScale = 0.5
+
+#    AiPlayerbot.CoaArenaReadyDistance
+#        Description: yards from the team start point towards the other team, where the pylon stands.
+#        Default:     5
+
+AiPlayerbot.CoaArenaReadyDistance = 6
+
+#    AiPlayerbot.CoaArenaReadySide
+#        Description: yards to the right of that line (negative: to the left), out of the way to the gate.
+#        Default:     3
+
+AiPlayerbot.CoaArenaReadySide = 3
+
+#    AiPlayerbot.CoaArenaReadyHeight
+#        Description: yards above the ground the pylon floats (the crystal sinks halfway into the floor at 0).
+#        Default:     1.2
+
+AiPlayerbot.CoaArenaReadyHeight = 1.2
+
 #    AiPlayerbot.CoaShortLivedDebuffs
 #        Description: life a target must have left (its health over the estimated damage of the group)
 #                     for the rotation lines "debuff missing::<spell>" and "cast debuff::<spell>".
