@@ -202,13 +202,17 @@ bool ChangeTalentsAction::Execute(Event event)
                 return false;
             }
             std::string const what = param.substr(6);
-            uint32 const spellId = chat->parseSpell(what);
-            uint32 const number = spellId ? 0 : uint32(atoi(what.c_str()));
+            // A bare number is an entry id first (parseSpell returns it as it is), then a spell id.
+            bool const digits = !what.empty() && what.find_first_not_of("0123456789") == std::string::npos;
+            uint32 const number = digits ? uint32(atoi(what.c_str())) : 0;
+            uint32 const spellId = digits ? number : chat->parseSpell(what);
             AscensionCompatData::CoATalentEntry const* entry = number ? FindCoaEntry(number) : nullptr;
+            if (entry && entry->ClassId != bot->getClass())
+                entry = nullptr;
             if (!entry)
                 for (AscensionCompatData::CoATalentEntry const& candidate : AscensionCompatData::CoATalentEntries)
                     if (candidate.ClassId == bot->getClass() &&
-                        std::find(candidate.SpellIds.begin(), candidate.SpellIds.end(), spellId ? spellId : number) !=
+                        std::find(candidate.SpellIds.begin(), candidate.SpellIds.end(), spellId) !=
                             candidate.SpellIds.end())
                     {
                         entry = &candidate;
