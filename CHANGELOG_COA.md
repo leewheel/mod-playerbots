@@ -1,5 +1,16 @@
 # CoA Bots — changelog
 
+## v2.1.1 — in progress
+
+### Rotations — from the specs site reports
+- **Primalist Mountain King**: Geode Barrage only on the Aftershock proc (instant), no more channelled filler.
+- **Primalist Grovekeeper**: the Aftershock proc is spent on Geode Barrage at once (thanks Yeh).
+- **Ranger Archery**: Uncover Weakness with 5 stacks of Advantage, right after Serrated Shot.
+- **Bloodmage Fleshweaver**: no more Scarlet Delirium spam (an area fear, cast even with no enemy around).
+- **Witch Doctor Voodoo**: Spirit Idol when mana runs low.
+- **Starcaller Moon Guard**: no Stellar Drift in the tank rotation (it knocked packs away and pulled more).
+- Shipped as `zz_coa_rotation_corrections_2_1_1.sql` (default rotations only, applied once at server start).
+
 ## v2.1 — Arenas, alts and dungeon fixes (October 2026) — release main-20261012-e91c0624
 
 Core: jealous-sound `main` of 12 October 2026 (`d5ff1cfa`) + two CoA Bots fixes (crashes under a heavy bot load,
