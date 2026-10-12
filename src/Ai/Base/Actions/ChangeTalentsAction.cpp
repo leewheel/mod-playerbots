@@ -96,7 +96,9 @@ void ChangeTalentsAction::ListCoaTalents()
                 entry = &candidate;
                 break;
             }
-        if (!entry || !entry->Talent || !item.Rank || !entry->SpellCount)
+        // Talents and the abilities bought with points (Black Prayer, Crystalline Reflection): "talents learn" takes
+        // both, and listing only the talents hid what had just been learned. The free automatic ranks stay out.
+        if (!entry || !(entry->Talent || entry->AECost || entry->TECost) || !item.Rank || !entry->SpellCount)
             continue;
 
         uint32 const rank = std::min<uint32>(item.Rank, entry->SpellCount);
@@ -106,6 +108,8 @@ void ChangeTalentsAction::ListCoaTalents()
 
         std::ostringstream line;
         line << "Talent: " << chat->FormatSpell(info) << " rank " << rank << "/" << uint32(entry->SpellCount);
+        if (!entry->Talent)
+            line << " ability";
         if (CoaSpecStrategy const* tree = GetCoaSpecStrategy(entry->ClassId, entry->SpecId))
             line << " (tree " << tree->specName << ")";
         botAI->TellMaster(line.str());
