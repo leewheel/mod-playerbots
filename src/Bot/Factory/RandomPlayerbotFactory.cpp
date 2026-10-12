@@ -81,9 +81,11 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
         // The races a custom races module makes playable (the CoA Server Manager's: Goblin 9, 12 to 32 and 47 to
         // 97) are left out unless that module lets bots have them, and any race can be excluded by id. The mask
         // above cannot reach most of them: shifting by 32 or more is undefined and on x86 wrapped onto a base
-        // race's bit. 65 is that module's "Test Race".
+        // race's bit. Its author lists 65 (Test Race), 72 and 77 (Skyborne), 80 and 81 (Darkfallen) as the races
+        // that crash the client: never given to bots.
         bool const baseRace = race <= RACE_DRAENEI && race != 9;
-        if ((!baseRace && !sPlayerbotAIConfig.customRacesForBots) || race == 65)
+        if ((!baseRace && !sPlayerbotAIConfig.customRacesForBots) || race == 65 || race == 72 || race == 77 ||
+            race == 80 || race == 81)
             continue;
         if (std::find(sPlayerbotAIConfig.excludedBotRaces.begin(), sPlayerbotAIConfig.excludedBotRaces.end(), race) !=
             sPlayerbotAIConfig.excludedBotRaces.end())
@@ -105,7 +107,8 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
     }
 
     const uint8 race = raceOptions[urand(0, raceOptions.size() - 1)];
-    const uint8 gender = urand(0, 1) ? GENDER_MALE : GENDER_FEMALE;
+    // Gnoll (83) and Saberon (97) of the custom races module only have a male model.
+    const uint8 gender = (race == 83 || race == 97 || urand(0, 1)) ? GENDER_MALE : GENDER_FEMALE;
     const auto raceAndGender = CombineRaceAndGender(race, gender);
 
     std::string name;

@@ -1406,7 +1406,12 @@ AiPlayerbot.CoaClassesOnly = 1
 # Left commented out here on purpose: the first copy of a key in a .conf file wins, so an empty line here would
 # hide the one the CoA Server Manager adds.
 # Default: none
-# AiPlayerbot.ExcludedBotRaces = "55,63,97"
+# Examples from the custom races module's author (with AiPlayerbot.CoaClassesOnly = 1):
+#   every custom race but those that crash the client (always left out by CoA Bots anyway):
+#     AiPlayerbot.ExcludedBotRaces = "65,72,77,80,81"
+#   base races only: leave CoACustomRaces.BotsEnable = 0, or list every custom race id (9, 12-32, 47-97).
+# Never given to bots, whatever this list says: 65 (Test Race), 72 and 77 (Skyborne), 80 and 81 (Darkfallen).
+# AiPlayerbot.ExcludedBotRaces = "65,72,77,80,81"
 
 # Authored combat rotations for the Conquest of Azeroth specializations.
 # Off: CoA bots are driven by the runtime classifier alone, which picks a spell
