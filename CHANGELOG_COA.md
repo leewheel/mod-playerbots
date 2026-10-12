@@ -1,12 +1,14 @@
 # CoA Bots — changelog
 
-## v2.1 — Arenas, alts and dungeon fixes (October 2026) — release main-20261012-2fadd7d5
+## v2.1 — Arenas, alts and dungeon fixes (October 2026) — release main-20261012-e91c0624
 
-Core: jealous-sound `main` of 12 October 2026 (`c1ce0f50`) + two CoA Bots fixes (crashes under a heavy bot load,
+Core: jealous-sound `main` of 12 October 2026 (`d5ff1cfa`) + two CoA Bots fixes (crashes under a heavy bot load,
 Icecrown summon leak). Bots module: branch `coa-2.1`, tag `v2.1`.
 
 ### Arenas — 1v1, ready pylon, smarter bots
 - **1v1 skirmish** from the 1v1 row of the PvP frame: queue solo and a bot comes to fight you (core #7269).
+- **Rated solo queues** from the core (jealous-sound #7408): rated 1v1, and rated 2v2/3v3 matched by role (healer or
+  damage). Players fill them for now; bots joining them comes next.
 - **Ready pylon** in every arena starting room. Click it when you're ready; bots get ready once geared and buffed.
   When everyone is ready the gates open in 5 seconds, with a 5-4-3-2-1 countdown (`AiPlayerbot.CoaArenaReady`).
 - Bots **prepare** before the gates: buffs, pets, and a spot by role — healers at the back, ranged in the middle,

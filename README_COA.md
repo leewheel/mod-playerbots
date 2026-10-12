@@ -16,7 +16,7 @@ This `coa` branch of mod-playerbots adds bots for the **Conquest of Azeroth cust
 > **CoA Bots 2.1 (12 October 2026)**: 1v1 skirmish and a ready pylon in arenas, smarter arena bots (kiting, pillars,
 > focus), your alts managed from SquidBots Lite (bot sheet, mounts, talents), dungeon fixes from headless test runs,
 > and a core fix for servers that slowed down over hours. Built on jealous-sound's `main` of 12 October 2026
-> (`c1ce0f50`).
+> (`d5ff1cfa`).
 >
 > **CoA Bots 2.0 (11 October 2026)**: tanks that hold, dungeons played like players, battlegrounds and rated arenas.
 > Built on jealous-sound's `main` of 11 October 2026 (`0a0a21d3`). Benched 24/7 on three realms before release.
@@ -58,7 +58,7 @@ and tell what the bots were doing (class, level, dungeon or open world) if you k
 
 | jealous-sound | This module |
 |---|---|
-| **`main`** of 12 October 2026 (`c1ce0f50`), release main-20261012-2fadd7d5 | tag **`v2.1`**, branch `coa` |
+| **`main`** of 12 October 2026 (`d5ff1cfa`), release main-20261012-e91c0624 | tag **`v2.1`**, branch `coa` |
 | `main` of 11 October 2026 (`0a0a21d3`), release main-20261011-a543922b | tag `v2.0` |
 | repack main-20261007 | tags `v1.9`, `v1.9.1`, `v1.9.2` |
 | repack main-20260930 / core of 4 October | tags `v1.8`, `v1.8.1` |
