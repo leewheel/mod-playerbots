@@ -19,6 +19,7 @@
 #include "NonCombatStrategy.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
+#include "ServerFacade.h"
 #include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
@@ -2090,6 +2091,17 @@ bool KickReaches(Player* bot, SpellInfo const* kick, Unit* caster)
 
 // A kick the bot has ready that reaches the caster. Also read for other bots of the group, which
 // is safe for members on the bot's own map instance: the same thread updates them.
+// Whether this kick can work on that caster from this bot as it stands. Most classic dungeon bosses are immune to
+// interrupts (CreatureImmunitiesId -325: Zum'rah, Antu'sul, Jammal'an...) and Ley Lock or Jawbreaker carry the
+// interrupt mechanic, so they were spent on them while the heal finished (headless runs, 12/10). Toxic Dart needs
+// stealth: a Ranger out of stealth tried it 436 times for no kick, and won the kick claim each time.
+bool KickFits(Player* bot, SpellInfo const* kick, Unit* caster)
+{
+    if (kick->CheckShapeshift(bot->GetShapeshiftForm()) != SPELL_CAST_OK)
+        return false;
+    return !caster || !caster->IsImmunedToSpell(kick, static_cast<Unit const*>(bot));
+}
+
 SpellInfo const* ReadyKickFor(PlayerbotAI* ai, Player* member, Unit* caster)
 {
     auto const* context = dynamic_cast<CoaAiObjectContext const*>(ai->GetAiObjectContext());
@@ -2103,7 +2115,7 @@ SpellInfo const* ReadyKickFor(PlayerbotAI* ai, Player* member, Unit* caster)
         if (member->HasSpellCooldown(info->Id) || IsBenched(context->benchedSpells, spell.info->Id, now) ||
             IsBenched(context->benchedSpells, info->Id, now))
             continue;
-        if (KickReaches(member, info, caster))
+        if (KickFits(member, info, caster) && KickReaches(member, info, caster))
             return spell.info;
     }
     return nullptr;
@@ -3134,9 +3146,17 @@ public:
         // Read before the kick, which ends the cast.
         SpellInfo const* const enemySpell = InterruptibleSpell(caster)->GetSpellInfo();
         uint32 const enemySpellId = enemySpell->Id;
-        SpellInfo const* kick =
-            CastFirst(botAI, bot, KnownAbilities(bot, [](uint16 kind) { return (kind & KIND_INTERRUPT) != 0; }), caster,
-                      LoopUsage(USAGE_INTERRUPT));
+        std::vector<Usable> kicks = KnownAbilities(bot, [](uint16 kind) { return (kind & KIND_INTERRUPT) != 0; });
+        kicks.erase(std::remove_if(kicks.begin(), kicks.end(),
+                                   [&](Usable const& k) { return !KickFits(bot, EffectiveSpell(bot, k.info), caster); }),
+                    kicks.end());
+        if (kicks.empty())
+            return false;
+        // The strict check before the cast refuses a kick at a caster behind the bot ("not in front" was the first
+        // kick failure of those runs) and the facing in PlayerbotAI::CastSpell comes after it: turn first.
+        if (!bot->HasInArc(CAST_ANGLE_IN_FRONT, caster))
+            ServerFacade::instance().SetFacingTo(bot, caster);
+        SpellInfo const* kick = CastFirst(botAI, bot, kicks, caster, LoopUsage(USAGE_INTERRUPT));
         if (kick && sPlayerbotAIConfig.coaDungeonPriorities)
             if (uint8 const rank = CoaDungeonPriorities::InterruptRank(enemySpell))
                 if (CoaDungeonPriorities::LogDue(CoaDungeonPriorities::Decision::Kick))
