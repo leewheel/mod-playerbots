@@ -45,6 +45,12 @@ SETTINGS = [
     ('RandomBotMaxLevel', 'population', 'Highest bot level', 'Highest level of the random bots (60 is the Conquest of Azeroth level cap).'),
     ('CoaClassesOnly', 'population', 'Conquest of Azeroth classes only',
      'Random bots are created only in the 21 Conquest of Azeroth classes, never in the nine WotLK classes.'),
+    ('ExcludedBotRaces', 'population', 'Races bots never use',
+     'Comma-separated race ids of the custom races module, added to the always-excluded crashing races below. Only '
+     'matters when CoACustomRaces.BotsEnable = 1; bots already created keep their race.'),
+    ('CrashingBotRaces', 'population', 'Custom races that crash the client',
+     'Always excluded from bots, on top of the list above. Default 65, 72, 77, 80, 81 (Test Race, Skyborne, '
+     'Darkfallen), per the custom races module author.'),
     ('CoaBotSurname', 'population', '"Bot" surname',
      'Random bots carry the surname "Bot", so players tell them from real players at a glance.'),
     ('RandomGearQualityLimit', 'population', 'Best gear quality',
@@ -173,6 +179,9 @@ RANGES = {'RandomGearQualityLimit': (1, 5), 'RandomBotMinLevel': (1, 80), 'Rando
 CHOICES = {'BotTextLocale': [(-1, "Auto (players' client language)"), (0, 'English'), (2, 'Français'), (3, 'Deutsch'),
                              (6, 'Español'), (8, 'Русский')]}
 
+# Commented out in the .dist, read anyway; and CoA options whose name does not start with Coa.
+COMMENTED = {'AiPlayerbot.ExcludedBotRaces'}
+COA_ALSO = {'ExcludedBotRaces', 'CrashingBotRaces'}
 KEY = re.compile(r'^((?:AiPlayerbot|Playerbots|PlayerbotsDatabase)[\w.]*)\s*=\s*(.*?)\s*$')
 OPTION = re.compile(r'(?:std::(min|max)<[\w:]+>\(\s*(-?[\d.]+)f?\s*,\s*)?'
                     r'sConfigMgr->GetOption<([\w:]+)>\(\s*"([\w.]+)"\s*,\s*([^;]*?)\)\s*(\))?\s*;')
@@ -186,7 +195,13 @@ def git(*args):
 
 
 def dist_values(text):
-    return {m.group(1): m.group(2) for m in (KEY.match(l.strip()) for l in text.splitlines()) if m}
+    found = {m.group(1): m.group(2) for m in (KEY.match(l.strip()) for l in text.splitlines()) if m}
+    # A key left commented out on purpose (another module writes it, and the first copy of a key wins) counts too.
+    for line in text.splitlines():
+        m = KEY.match(line.strip().lstrip('#').strip()) if line.strip().startswith('#') else None
+        if m and m.group(1) in COMMENTED:
+            found.setdefault(m.group(1), m.group(2))
+    return found
 
 
 def parse_code():
@@ -268,7 +283,7 @@ def main():
             item['default_if_missing'] = value(code_default, kind)
         if short in CHOICES:
             item['choices'] = [{'value': v, 'label': label} for v, label in CHOICES[short]]
-        item['coa'] = short.startswith('Coa')
+        item['coa'] = short.startswith('Coa') or short in COA_ALSO
         if before:
             if key not in before:
                 item['new_in'] = a.version

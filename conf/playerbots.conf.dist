@@ -1397,20 +1397,20 @@ AiPlayerbot.AutoLearnTradeskillSpells = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaClassesOnly = 1
 
-# Races left out of the random bots, as a list of race ids separated by commas (e.g. "55,63,97").
-# The custom races module of the CoA Server Manager writes this line when its "bots use custom races" option is on.
-# The races that module makes playable (Goblin 9, 12 to 32, 47 to 97) are only given to random bots when its own setting
-# CoACustomRaces.BotsEnable = 1; CharacterCreating.Disabled.RaceMask (worldserver.conf) only reaches ids 1 to 32.
-# Applies to bots created afterwards: bots already created keep their race; delete the bot accounts
-# (AiPlayerbot.DeleteRandomBotAccounts) to renew them.
-# Left commented out here on purpose: the first copy of a key in a .conf file wins, so an empty line here would
-# hide the one the CoA Server Manager adds.
-# Examples from the custom races module's author (with AiPlayerbot.CoaClassesOnly = 1):
-#   every custom race but those that crash the client: "65,72,77,80,81"
-#   base races only: leave CoACustomRaces.BotsEnable = 0, or list every custom race id (9, 12-32, 47-97).
-# When the key is set, exactly its list applies (an empty "" excludes nothing).
-# Default (key absent): the races that crash the client, 65 (Test Race), 72 and 77 (Skyborne), 80 and 81 (Darkfallen).
-# AiPlayerbot.ExcludedBotRaces = "65,72,77,80,81"
+# Races of the custom races module (CoA Server Manager) that random bots never use, as race ids separated by
+# commas, e.g. "55,63,97". The races that module makes playable (Goblin 9, 12 to 32, 47 to 97) only go to random bots
+# when its own setting CoACustomRaces.BotsEnable = 1; CharacterCreating.Disabled.RaceMask (worldserver.conf) only
+# reaches ids 1 to 32. Added to AiPlayerbot.CrashingBotRaces below. Applies to bots created afterwards: bots already
+# created keep their race; delete the bot accounts (AiPlayerbot.DeleteRandomBotAccounts) to renew them.
+# Commented out on purpose: the custom races module writes this line itself, and the first copy of a key in a .conf
+# file wins, so a line here would hide its own.
+# Default: "" (none)
+# AiPlayerbot.ExcludedBotRaces = ""
+
+# Custom races that crash the client, always left out of the random bots on top of AiPlayerbot.ExcludedBotRaces.
+# Default, from the module's author: 65 (Test Race), 72 and 77 (Skyborne), 80 and 81 (Darkfallen).
+# Default: "65,72,77,80,81"
+AiPlayerbot.CrashingBotRaces = "65,72,77,80,81"
 
 # Authored combat rotations for the Conquest of Azeroth specializations.
 # Off: CoA bots are driven by the runtime classifier alone, which picks a spell
