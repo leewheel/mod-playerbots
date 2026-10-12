@@ -1,5 +1,75 @@
 # CoA Bots — changelog
 
+## v2.1 — Arenas, alts and dungeon fixes (October 2026) — release main-20261012-2fadd7d5
+
+Core: jealous-sound `main` of 12 October 2026 (`c1ce0f50`) + two CoA Bots fixes (crashes under a heavy bot load,
+Icecrown summon leak). Bots module: branch `coa-2.1`, tag `v2.1`.
+
+### Arenas — 1v1, ready pylon, smarter bots
+- **1v1 skirmish** from the 1v1 row of the PvP frame: queue solo and a bot comes to fight you (core #7269).
+- **Ready pylon** in every arena starting room. Click it when you're ready; bots get ready once geared and buffed.
+  When everyone is ready the gates open in 5 seconds, with a 5-4-3-2-1 countdown (`AiPlayerbot.CoaArenaReady`).
+- Bots **prepare** before the gates: buffs, pets, and a spot by role — healers at the back, ranged in the middle,
+  melee in front (`CoaArenaPreparation`, `CoaArenaRoleSpot`).
+- Ranged and healers **kite** melee (`CoaArenaKite`), step back into **line of sight** instead of running at their
+  target (`CoaArenaLineOfSight`), and use **pillars** under pressure (`CoaArenaCover`, measured in game for Nagrand,
+  Blade's Edge and Ruins of Lordaeron).
+- DPS **focus the enemy healer**, melee **peel** for their own, and a bot about to win **stays on its kill**
+  (`CoaArenaFocus`, `CoaArenaPeel`, `CoaArenaPressure`).
+- Duels: opening positions during the countdown (`CoaDuelOpening`). PvP: crowd control, then disengage and bandage
+  when safe (`CoaPvpRecovery`, `CoaPvpBandage`).
+- Fixes: arenas no longer end with everyone alive (some CoA forms counted as dead, core #7270); no more 2v3 (a bot
+  stuck in combat outside missed the port); a combatant dead in the starting room is raised before the gates open.
+
+### Your alts — with SquidBots Lite 2.1
+- New chat commands read by the addon's bot sheet:
+  - `mount ?` lists a bot's mounts, `mount <spell>` sets its preferred ground or flying mount (no restart any more),
+    `mount clear` goes back to the automatic choice.
+  - `talents ?` lists a CoA bot's talents and abilities with the points spent and left.
+  - `talents options` / `talents learn <talent>`: choose **your own alts'** CoA talents rank by rank, under the
+    talent frame's rules (level, prerequisites, active specialization, points of the level). Random bots keep their
+    community build; `talents autopick` sets it again.
+
+### Dungeons — from ladiabale's headless test runs
+- Healer bots never cast a spell that moves them (no more Dragon Leap into unpulled packs).
+- Bots step out of a point blank spin of **any** nearby enemy (Bladestorm), not only their own target's.
+- Tank bots no longer chase a mob running away or for help.
+- Bot-only groups now avoid ground effects too (Ramstein's Venom Belch): it only worked with a real player before.
+- Interrupts: no kick wasted on a caster immune to it (most classic dungeon bosses), bots turn to the caster before
+  kicking, a kick that needs a form the bot is not in is skipped (Ranger Toxic Dart out of stealth), and a kick with
+  its own cast time is not started at a cast that ends sooner.
+- A corpse one bot goes to resurrect is left to it (no more four rez casts on the tank while a dps stays down).
+- A ranged damage dealer no longer leaps forward into the fight (Venomancer Skitter).
+
+### Rotations
+- **Primalist Grovekeeper** rebuilt from 12 real players' combat logs (thanks Mighty_Rathalos for the report): Seismic Wave and Earthquake on rage first,
+  Wildclaw core, Geode Barrage only as a filler, Stoneshard removed.
+
+### Fixes
+- **Server slowing down over hours** (world tick up to 0.8 s mean after a day): Argent Champions in Icecrown piled up
+  hundreds of summons that kept fighting with nobody around once a bot had passed by. Fixed in the core (PR #7353 sent
+  to jealous-sound); the bench now stays around 20 ms.
+- Random bots keep the configured number of battlegrounds going (`RandomBotAutoJoinBG<type>Count`), not one more per
+  open battle: a realm set to one Alterac Valley ran four at once.
+- No more "Hello" / "Hi" whispers when a bot joins your group, logs in, accepts an invite or comes by meeting stone
+  (`AiPlayerbot.EnableGreet`, 0 by default).
+- `lfg bot`: the first invite to a bot re-rolled to your level is no longer lost.
+- Security: `.playerbots account link/unlink` checks the account name before using it.
+
+### Dashboard 2.1
+- "Turn the journals on" now writes the repack's `Settings\worldserver.conf.template`, so battleground statistics stay
+  on after a restart.
+- With the database down, the Armory and the other pages say so instead of showing a MySQL password warning.
+
+### SquidBots Lite 2.1
+- New **Alts** button and **My alts** panel: log your alts in or out as bots, summon them, see level, class, spec and
+  XP; Teams (log a saved group in at once) and linked Accounts.
+- **Bot sheet** for every bot: gear with the bot in 3D and its item level, bags and bank (give, equip, use, sell, drag
+  and drop), quests (abandon), talents (see them, choose your alts' talents), favourite mount.
+- Mounts and talents need CoA Bots 2.1. Thanks to Maky for the ideas.
+
+Thanks to ladiabale for the dungeon reports, MinecraftParker, Mighty_Rathalos and everyone who reported on Discord.
+
 ## v2.0 — Tanks that hold, dungeons played like players (October 2026) — release main-20261011-a543922b
 Core and bots are updated together. `CoA-Update-2.0\Update-2.0.bat` takes a **CoA Bots 1.9.1** install
 (`main-20261007-b46a130e`: the 1.9.1 update or the full 1.9.1 repack), a **CoA Bots 1.9** install

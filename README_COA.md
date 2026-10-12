@@ -13,6 +13,11 @@ This `coa` branch of mod-playerbots adds bots for the **Conquest of Azeroth cust
 ## Current status
 
 > [!NOTE]
+> **CoA Bots 2.1 (12 October 2026)**: 1v1 skirmish and a ready pylon in arenas, smarter arena bots (kiting, pillars,
+> focus), your alts managed from SquidBots Lite (bot sheet, mounts, talents), dungeon fixes from headless test runs,
+> and a core fix for servers that slowed down over hours. Built on jealous-sound's `main` of 12 October 2026
+> (`c1ce0f50`).
+>
 > **CoA Bots 2.0 (11 October 2026)**: tanks that hold, dungeons played like players, battlegrounds and rated arenas.
 > Built on jealous-sound's `main` of 11 October 2026 (`0a0a21d3`). Benched 24/7 on three realms before release.
 >
@@ -31,15 +36,16 @@ This `coa` branch of mod-playerbots adds bots for the **Conquest of Azeroth cust
 > One specialization is set aside by default, **Bloodmage Eternal** (`CoaExcludedSpecializations = 99`): it still
 > does not play correctly on the current core.
 
-Full history from 1.1 to 2.0: **[CHANGELOG_COA.md](CHANGELOG_COA.md)** (also `CHANGELOG.md` in the CoA Bots package).
+Full history from 1.1 to 2.1: **[CHANGELOG_COA.md](CHANGELOG_COA.md)** (also `CHANGELOG.md` in the CoA Bots package).
 
 ## Download
 
 | You have | Take |
 |---|---|
-| the **CoA Server Manager** | nothing to do: it installs the newest `v*` tag of this module (2.0 = tag `v2.0`) |
-| CoA Bots 1.9.1, 1.9, 1.8 or the CoA repack of 30/09 | the **CoA Bots 2.0 update** (links on the CoA Discord), run `Update-2.0.bat` |
-| nothing yet | the **full repack with CoA Bots 2.0** (links on the CoA Discord) |
+| the **CoA Server Manager** | nothing to do: it installs the newest `v*` tag of this module (2.1 = tag `v2.1`) |
+| CoA Bots 2.0 | the **CoA Bots 2.1 update** (links on the CoA Discord), run `Update-2.1.bat` |
+| CoA Bots 1.9.1, 1.9, 1.8 or the CoA repack of 30/09 | the **full repack with CoA Bots 2.1**, or the 2.0 update then the 2.1 one |
+| nothing yet | the **full repack with CoA Bots 2.1** (links on the CoA Discord) |
 
 Companions: the **[SquidBots Lite](https://github.com/Zyth45/squidbots-addon)** addon (in the package) and the
 **[SquidBots dashboard](https://github.com/Zyth45/squidbots-dashboard)** with its Armory (in the package, and in the
@@ -52,7 +58,8 @@ and tell what the bots were doing (class, level, dungeon or open world) if you k
 
 | jealous-sound | This module |
 |---|---|
-| **`main`** of 11 October 2026 (`0a0a21d3`), release main-20261011-a543922b | tag **`v2.0`**, branch `coa` |
+| **`main`** of 12 October 2026 (`c1ce0f50`), release main-20261012-2fadd7d5 | tag **`v2.1`**, branch `coa` |
+| `main` of 11 October 2026 (`0a0a21d3`), release main-20261011-a543922b | tag `v2.0` |
 | repack main-20261007 | tags `v1.9`, `v1.9.1`, `v1.9.2` |
 | repack main-20260930 / core of 4 October | tags `v1.8`, `v1.8.1` |
 | issue-batch-20260915 (`a8b28faac98d`) | tag `bots-issue-batch-20260915-v1.1`, with the core tag of the same name from [Zyth45/azerothcore-wotlk-coa](https://github.com/Zyth45/azerothcore-wotlk-coa) |
