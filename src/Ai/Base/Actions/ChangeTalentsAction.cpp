@@ -184,6 +184,11 @@ bool ChangeTalentsAction::Execute(Event event)
                 line << "Talent option: " << chat->FormatSpell(info) << " entry " << entry.EntryId << " rank " << rank << "/"
                      << uint32(entry.SpellCount) << " cost " << uint32(entry.SpecId ? entry.TECost : entry.AECost) << " "
                      << (entry.SpecId ? "spec" : "class") << " level " << uint32(entry.RequiredLevel);
+                // Prerequisites as the core reads them: the required entry held at any rank.
+                for (uint32 const required : entry.RequiredEntryIds)
+                    if (AscensionCompatData::CoATalentEntry const* before = required ? FindCoaEntry(required) : nullptr)
+                        if (before->SpellIds[0])
+                            line << " requires " << before->SpellIds[0] << " rank 1";
                 if (rank < entry.SpellCount && RefusalFor(bot, entry, rank + 1).empty())
                     line << " (can learn)";
                 botAI->TellMaster(line.str());
