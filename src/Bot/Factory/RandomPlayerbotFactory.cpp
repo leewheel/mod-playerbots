@@ -81,11 +81,9 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
         // The races a custom races module makes playable (the CoA Server Manager's: Goblin 9, 12 to 32 and 47 to
         // 97) are left out unless that module lets bots have them, and any race can be excluded by id. The mask
         // above cannot reach most of them: shifting by 32 or more is undefined and on x86 wrapped onto a base
-        // race's bit. Its author lists 65 (Test Race), 72 and 77 (Skyborne), 80 and 81 (Darkfallen) as the races
-        // that crash the client: never given to bots.
+        // race's bit.
         bool const baseRace = race <= RACE_DRAENEI && race != 9;
-        if ((!baseRace && !sPlayerbotAIConfig.customRacesForBots) || race == 65 || race == 72 || race == 77 ||
-            race == 80 || race == 81)
+        if (!baseRace && !sPlayerbotAIConfig.customRacesForBots)
             continue;
         if (std::find(sPlayerbotAIConfig.excludedBotRaces.begin(), sPlayerbotAIConfig.excludedBotRaces.end(), race) !=
             sPlayerbotAIConfig.excludedBotRaces.end())

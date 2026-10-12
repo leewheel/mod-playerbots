@@ -743,9 +743,10 @@ bool PlayerbotAIConfig::Initialize()
     coaClassesOnly = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaClassesOnly", true);
     // Written by the CoA Server Manager's custom races module ("bots use custom races"): a list of race ids,
     // not a mask, since its races go up to 97. Its own switch, CoACustomRaces.BotsEnable, is read here too so
-    // that random bots only take the added races when that module allows it.
+    // that random bots only take the added races when that module allows it. Without the key, the races its
+    // author lists as crashing the client: 65 (Test Race), 72 and 77 (Skyborne), 80 and 81 (Darkfallen).
     excludedBotRaces.clear();
-    LoadList<std::vector<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.ExcludedBotRaces", "", false),
+    LoadList<std::vector<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.ExcludedBotRaces", "65,72,77,80,81", false),
                                   excludedBotRaces);
     customRacesForBots = sConfigMgr->GetOption<bool>("CoACustomRaces.BotsEnable", false, false);
     coaSpecRotations = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSpecRotations", true);
