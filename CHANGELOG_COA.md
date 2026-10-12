@@ -9,7 +9,23 @@
 - **Bloodmage Fleshweaver**: no more Scarlet Delirium spam (an area fear, cast even with no enemy around).
 - **Witch Doctor Voodoo**: Spirit Idol when mana runs low.
 - **Starcaller Moon Guard**: no Stellar Drift in the tank rotation (it knocked packs away and pulled more).
-- Shipped as `zz_coa_rotation_corrections_2_1_1.sql` (default rotations only, applied once at server start).
+- **Witch Doctor** (all three specs): no more cycling through wards and idols with no cooldown, each one replacing
+  the last (Spirit Idol included) and draining the mana. The niche idols and Graven Effigy leave the rotation,
+  Serpent Ward (damage specs) or Healing Ward (Brewing) only when it is not standing, Spirit Idol on low mana.
+- **Starcaller Moon Guard** (tank): grabs packs in melee with Starsweep and Starburst instead of opening with a bow
+  shot, Warden's Blade then Lunar Lance on a lost target, Celestial Strike first under 40% mana.
+- **Cultist Heretic**: Tentacle of C'Thun is back while healing (only when it is not standing), Forbidden Ritual on
+  group damage.
+- **Necromancer Animation**: rotation and talent build of an experienced player: Harvest Plague, the three
+  animations, Graveyard, Unholy Frenzy, Command: Undead, Death's Due, Blight left to burst and Lichfrost on a
+  blighted target; no March of the Dead on a single target, no other raises next to the six Skeletal Warriors.
+- Shipped as `zz_coa_rotation_corrections_2_1_1.sql` and `zz_coa_rotation_corrections_2_1_1_b.sql` (default
+  rotations only, applied once at server start).
+
+### Gear
+- **Witch Hunter Houndmaster** no longer takes spell power gear: Agility, Haste and Crit, Spell Penetration first.
+- **Barbarian Brutality** wears a two-hander and values Strength over Agility; **Runemaster Glyphic** wears a
+  two-hander (its engravings need one).
 
 ## v2.1 — Arenas, alts and dungeon fixes (October 2026) — release main-20261012-e91c0624
 

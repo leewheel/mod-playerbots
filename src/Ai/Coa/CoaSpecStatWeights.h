@@ -60,7 +60,9 @@ struct CoaSpecStats
 // Corrected by hand on 03/10 (the generator is not in this repository): a Barbarian gets 1 attack power per
 // Strength (StatSystem.cpp) and Body Builder (706481, 21 of 22 bench bots) adds 75% of Strength on top: a point of
 // Strength is 1.75 attack power, Agility 1 plus crit. The bench bots wore 18 Strength against 310 Agility.
-static constexpr CoaStatWeight CoaStats_12_2[] = { { STATS_TYPE_MELEE_DPS, 7.5f }, { STATS_TYPE_HIT, 2.3f }, { STATS_TYPE_EXPERTISE, 2.04f }, { STATS_TYPE_AGILITY, 1.78f }, { STATS_TYPE_STRENGTH, 1.6f }, { STATS_TYPE_CRIT, 1.52f }, { STATS_TYPE_ARMOR_PENETRATION, 1.26f }, { STATS_TYPE_HASTE, 1.0f }, { STATS_TYPE_ATTACK_POWER, 1.0f } };
+// 13/10: a player's report and the comment above agree: Strength before Agility, and a slow two-hander
+// (weapon shape twoHand below, nearly every Brutality ability deals weapon damage).
+static constexpr CoaStatWeight CoaStats_12_2[] = { { STATS_TYPE_MELEE_DPS, 7.5f }, { STATS_TYPE_HIT, 2.3f }, { STATS_TYPE_EXPERTISE, 2.04f }, { STATS_TYPE_STRENGTH, 1.9f }, { STATS_TYPE_AGILITY, 1.4f }, { STATS_TYPE_CRIT, 1.52f }, { STATS_TYPE_ARMOR_PENETRATION, 1.26f }, { STATS_TYPE_HASTE, 1.0f }, { STATS_TYPE_ATTACK_POWER, 1.0f } };
 // Barbarian / Ancestry (physisch_nah)
 // Corrected by hand on 03/10: Strength is 1 attack power for a Barbarian (StatSystem.cpp), worth at least an
 // attack power point; it had no weight at all.
@@ -92,7 +94,10 @@ static constexpr CoaStatWeight CoaStats_15_10[] = { { STATS_TYPE_RANGED_DPS, 10.
 // Witch Hunter / Black Knight (tank)
 static constexpr CoaStatWeight CoaStats_15_97[] = { { STATS_TYPE_STAMINA, 3.0f }, { STATS_TYPE_DEFENSE, 2.5f }, { STATS_TYPE_PARRY, 2.0f }, { STATS_TYPE_DODGE, 2.0f }, { STATS_TYPE_HIT, 1.6f }, { STATS_TYPE_EXPERTISE, 1.45f }, { STATS_TYPE_AGILITY, 1.3f }, { STATS_TYPE_ARMOR_PENETRATION, 1.0f }, { STATS_TYPE_BLOCK_RATING, 1.0f }, { STATS_TYPE_CRIT, 0.85f }, { STATS_TYPE_HASTE, 0.7f }, { STATS_TYPE_BLOCK_VALUE, 0.5f }, { STATS_TYPE_ARMOR, 0.15f } };
 // Witch Hunter / Houndmaster (physisch_fern)
-static constexpr CoaStatWeight CoaStats_15_11[] = { { STATS_TYPE_RANGED_DPS, 10.0f }, { STATS_TYPE_HIT, 2.3f }, { STATS_TYPE_EXPERTISE, 2.08f }, { STATS_TYPE_AGILITY, 1.87f }, { STATS_TYPE_INTELLECT, 1.65f }, { STATS_TYPE_SPELL_POWER, 1.43f }, { STATS_TYPE_CRIT, 1.22f }, { STATS_TYPE_HASTE, 1.0f }, { STATS_TYPE_ATTACK_POWER, 1.0f } };
+// Corrected by hand on 13/10 from a Houndmaster player's report (specs site): no spell power, the class does not
+// look for it; Agility first, then Haste and Crit, Spell Penetration (most of the damage is Shadow), attack power
+// and Strength (1 attack power each), Intellect last (25% of it becomes crit). Expertise does nothing at range.
+static constexpr CoaStatWeight CoaStats_15_11[] = { { STATS_TYPE_RANGED_DPS, 10.0f }, { STATS_TYPE_HIT, 2.3f }, { STATS_TYPE_AGILITY, 2.1f }, { STATS_TYPE_HASTE, 1.6f }, { STATS_TYPE_CRIT, 1.6f }, { STATS_TYPE_SPELL_PENETRATION, 1.2f }, { STATS_TYPE_ATTACK_POWER, 1.0f }, { STATS_TYPE_STRENGTH, 1.0f }, { STATS_TYPE_INTELLECT, 0.4f } };
 // Witch Hunter / Inquisition (physisch_nah)
 // Corrected by hand on 03/10 (the generator is not in this repository): Malice (707535, 10 of 10 bench bots) gives
 // 100% of Intellect as attack power and 50% of Agility as Fire spell power (the core rewrites the DBC aura,
@@ -278,7 +283,7 @@ static constexpr CoaStatWeight CoaStats_32_63[] = { { STATS_TYPE_MELEE_DPS, 7.5f
 
 static constexpr CoaSpecStats CoaSpecStatsTable[] =
 {
-    { 12,   2, "Brutality", "physisch_nah", "any", true, CoaStats_12_2, 9 },
+    { 12,   2, "Brutality", "physisch_nah", "twoHand", true, CoaStats_12_2, 9 },
     { 12,   3, "Ancestry", "physisch_nah", "shield", true, CoaStats_12_3, 9 },
     { 12,   1, "Headhunting", "physisch_fern", "twoHand", true, CoaStats_12_1, 8 },
     { 13,   4, "Shadowhunting", "physisch_fern", "dualWield", true, CoaStats_13_4, 8 },
@@ -345,7 +350,7 @@ static constexpr CoaSpecStats CoaSpecStatsTable[] =
     { 31,  95, "Geomancy", "zauber", "caster", true, CoaStats_31_95, 8 },
     { 31,  58, "Grovekeeper", "physisch_fern", "any", true, CoaStats_31_58, 9 },
     { 31,  60, "Mountain King", "tank", "dualWield", true, CoaStats_31_60, 13 },
-    { 32,  62, "Glyphic", "zauber", "any", true, CoaStats_32_62, 7 },
+    { 32,  62, "Glyphic", "zauber", "twoHand", true, CoaStats_32_62, 7 },
     { 32,  61, "Engravement", "physisch_nah", "dualWield", true, CoaStats_32_61, 9 },
     { 32,  63, "Riftblade", "physisch_nah", "twoHand", true, CoaStats_32_63, 10 },
 };
