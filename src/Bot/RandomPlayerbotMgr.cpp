@@ -3263,7 +3263,7 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
                 {
                     botAI->SetMaster(player);
                     botAI->ResetStrategies();
-                    botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                    botAI->TellMasterGreeting(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                         "hello", "Hello", {}));
                 }
 
