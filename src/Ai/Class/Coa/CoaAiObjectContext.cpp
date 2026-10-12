@@ -2101,6 +2101,24 @@ bool KickFits(Player* bot, SpellInfo const* kick, Unit* caster)
         return false;
     if (caster && caster->IsImmunedToSpell(kick, static_cast<Unit const*>(bot)))
         return false;
+    // IsImmunedToSpell only says immune when every effect is: a kick that also hits (damage plus an interrupt effect
+    // of mechanic 26) passed against a boss immune to interrupts, and only its damage landed (#28).
+    if (caster)
+    {
+        bool stopper = false;
+        bool landing = false;
+        for (uint8 i = EFFECT_0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            SpellEffectInfo const& effect = kick->Effects[i];
+            if (effect.Effect != SPELL_EFFECT_INTERRUPT_CAST &&
+                !(effect.IsAura() && effect.ApplyAuraName == SPELL_AURA_MOD_SILENCE))
+                continue;
+            stopper = true;
+            landing |= !caster->IsImmunedToSpellEffect(kick, i, bot);
+        }
+        if (stopper && !landing)
+            return false;
+    }
     // A kick with a cast time of its own (Ley Lock, half a second) lands after a cast that ends sooner: three heals
     // finished under a Ley Lock started in time to be too late (Zul'Farrak, 12/10). An instant kick goes first then.
     if (Spell* cast = caster ? InterruptibleSpell(caster) : nullptr)
