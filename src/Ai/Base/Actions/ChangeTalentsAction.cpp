@@ -22,6 +22,67 @@
 #include "RandomPlayerbotMgr.h"
 #include "SpellMgr.h"
 
+namespace
+{
+AscensionCompatData::CoATalentEntry const* FindCoaEntry(uint32 entryId)
+{
+    for (AscensionCompatData::CoATalentEntry const& entry : AscensionCompatData::CoATalentEntries)
+        if (entry.EntryId == entryId)
+            return &entry;
+    return nullptr;
+}
+
+// The paid entries of the bot's class it may hold now: its class tree and its active specialization's tree.
+bool CoaEntryOffered(Player* bot, AscensionCompatData::CoATalentEntry const& entry)
+{
+    if (entry.ClassId != bot->getClass() || (!entry.AECost && !entry.TECost) || !entry.SpellCount)
+        return false;
+    return !entry.SpecId || entry.SpecId == GetAscensionActiveSpecialization(bot);
+}
+
+// Class tree points (AE) and specialization tree points (TE): available at the bot's level, and spent.
+struct CoaPoints
+{
+    uint32 classBudget = 0, specBudget = 0, classSpent = 0, specSpent = 0;
+};
+
+CoaPoints PointsOf(Player* bot)
+{
+    CoaPoints points;
+    AscensionCompatData::GetCoATalentBudget(bot->getClass(), bot->GetLevel(), points.classBudget, points.specBudget);
+    AscensionCoATalentState::SpentPoints const spent =
+        AscensionCoATalentState::Spent(GetAscensionKnownTalentEntries(bot));
+    points.classSpent = spent.AE;
+    points.specSpent = spent.TE;
+    return points;
+}
+
+// Why the next rank of this entry cannot be taken now, or empty: the rules the core applies to a player
+// learning it from the talent frame (AscensionCompat SetTalentRank), which SetAscensionTalentRank leaves out.
+std::string RefusalFor(Player* bot, AscensionCompatData::CoATalentEntry const& entry, uint32 rank)
+{
+    if (!CoaEntryOffered(bot, entry))
+        return "not a talent of my class or of my active specialization";
+    if (rank > entry.SpellCount)
+        return "already at its highest rank";
+    if (bot->GetLevel() < entry.RequiredLevel)
+        return "requires level " + std::to_string(uint32(entry.RequiredLevel));
+    for (uint32 const required : entry.RequiredEntryIds)
+        if (required && !GetAscensionTalentRank(bot, required))
+        {
+            AscensionCompatData::CoATalentEntry const* before = FindCoaEntry(required);
+            SpellInfo const* info = before && before->SpellIds[0] ? sSpellMgr->GetSpellInfo(before->SpellIds[0]) : nullptr;
+            return "requires " + (info ? std::string(info->SpellName[0]) : std::to_string(required));
+        }
+    CoaPoints const points = PointsOf(bot);
+    bool const classTree = !entry.SpecId;
+    uint32 const cost = classTree ? entry.AECost : entry.TECost;
+    if ((classTree ? points.classSpent : points.specSpent) + cost > (classTree ? points.classBudget : points.specBudget))
+        return std::string("not enough ") + (classTree ? "class" : "specialization") + " points";
+    return "";
+}
+}
+
 void ChangeTalentsAction::ListCoaTalents()
 {
     std::vector<AscensionCoATalentState::KnownEntry> const known = GetAscensionKnownTalentEntries(bot);
@@ -52,7 +113,12 @@ void ChangeTalentsAction::ListCoaTalents()
     }
 
     AscensionCoATalentState::SpentPoints const spent = AscensionCoATalentState::Spent(known);
-    botAI->TellMaster("Talent points: " + std::to_string(spent.TE) + " spent");
+    CoaPoints const points = PointsOf(bot);
+    uint32 const left = points.specBudget > spent.TE ? points.specBudget - spent.TE : 0;
+    botAI->TellMaster("Talent points: " + std::to_string(spent.TE) + " spent, " + std::to_string(left) + " left");
+    botAI->TellMaster("Class points: " + std::to_string(points.classSpent) + " spent, " +
+                      std::to_string(points.classBudget > points.classSpent ? points.classBudget - points.classSpent : 0) +
+                      " left");
     botAI->TellMaster("Talents: " + std::to_string(count));
 }
 
@@ -100,6 +166,72 @@ bool ChangeTalentsAction::Execute(Event event)
             // CoA: the talents the bot holds, for SquidBots Lite's bot sheet. The client inspect shows none for
             // a CoA class, and "talents" alone only names the specialization.
             ListCoaTalents();
+            return true;
+        }
+        else if (IsCoaClass(bot) && param == "options")
+        {
+            // Every entry the bot may raise now or later, for the addon to draw its trees.
+            uint32 count = 0;
+            for (AscensionCompatData::CoATalentEntry const& entry : AscensionCompatData::CoATalentEntries)
+            {
+                if (!CoaEntryOffered(bot, entry))
+                    continue;
+                SpellInfo const* info = sSpellMgr->GetSpellInfo(entry.SpellIds[0]);
+                if (!info)
+                    continue;
+                uint32 const rank = GetAscensionTalentRank(bot, entry.EntryId);
+                std::ostringstream line;
+                line << "Talent option: " << chat->FormatSpell(info) << " entry " << entry.EntryId << " rank " << rank << "/"
+                     << uint32(entry.SpellCount) << " cost " << uint32(entry.SpecId ? entry.TECost : entry.AECost) << " "
+                     << (entry.SpecId ? "spec" : "class") << " level " << uint32(entry.RequiredLevel);
+                if (rank < entry.SpellCount && RefusalFor(bot, entry, rank + 1).empty())
+                    line << " (can learn)";
+                botAI->TellMaster(line.str());
+                ++count;
+            }
+            botAI->TellMaster("Talent options: " + std::to_string(count));
+            return true;
+        }
+        else if (IsCoaClass(bot) && param.rfind("learn ", 0) == 0)
+        {
+            // CoA: a player chooses its own alt's talents (SquidBots Lite bot sheet), one rank at a time, under the
+            // rules of the talent frame. Random bots keep their community build.
+            if (!botAI->IsAltBot())
+            {
+                botAI->TellMaster("Talents can only be chosen for your own alts");
+                return false;
+            }
+            std::string const what = param.substr(6);
+            uint32 const spellId = chat->parseSpell(what);
+            uint32 const number = spellId ? 0 : uint32(atoi(what.c_str()));
+            AscensionCompatData::CoATalentEntry const* entry = number ? FindCoaEntry(number) : nullptr;
+            if (!entry)
+                for (AscensionCompatData::CoATalentEntry const& candidate : AscensionCompatData::CoATalentEntries)
+                    if (candidate.ClassId == bot->getClass() &&
+                        std::find(candidate.SpellIds.begin(), candidate.SpellIds.end(), spellId ? spellId : number) !=
+                            candidate.SpellIds.end())
+                    {
+                        entry = &candidate;
+                        break;
+                    }
+            if (!entry)
+            {
+                botAI->TellMaster("Unknown talent: " + what);
+                return false;
+            }
+            uint32 const rank = GetAscensionTalentRank(bot, entry->EntryId) + 1;
+            std::string const refusal = RefusalFor(bot, *entry, rank);
+            SpellInfo const* info = sSpellMgr->GetSpellInfo(entry->SpellIds[std::min<uint32>(rank, entry->SpellCount) - 1]);
+            std::string const link = info ? chat->FormatSpell(info) : std::to_string(entry->EntryId);
+            if (!refusal.empty() || !SetAscensionTalentRank(bot, entry->EntryId, rank) ||
+                GetAscensionTalentRank(bot, entry->EntryId) != rank)
+            {
+                botAI->TellMaster("Cannot learn " + link + ": " + (refusal.empty() ? "refused by the server" : refusal));
+                return false;
+            }
+            botAI->TellMaster("Talent learned: " + link + " rank " + std::to_string(rank) + "/" +
+                              std::to_string(uint32(entry->SpellCount)));
+            botAI->ResetStrategies();
             return true;
         }
         else if (IsCoaClass(bot) && param.find("autopick") != std::string::npos)
