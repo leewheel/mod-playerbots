@@ -6,6 +6,8 @@
 
 #include "ChangeTalentsAction.h"
 #include "AiFactory.h"
+#include "AscensionCoATalentData.h"
+#include "AscensionCoATalentState.h"
 #include "AscensionSpecialization.h"
 #include "AiObjectContext.h"
 #include "ChatHelper.h"
@@ -18,6 +20,41 @@
 
 #include <algorithm>
 #include "RandomPlayerbotMgr.h"
+#include "SpellMgr.h"
+
+void ChangeTalentsAction::ListCoaTalents()
+{
+    std::vector<AscensionCoATalentState::KnownEntry> const known = GetAscensionKnownTalentEntries(bot);
+    uint32 count = 0;
+    for (AscensionCoATalentState::KnownEntry const& item : known)
+    {
+        AscensionCompatData::CoATalentEntry const* entry = nullptr;
+        for (AscensionCompatData::CoATalentEntry const& candidate : AscensionCompatData::CoATalentEntries)
+            if (candidate.EntryId == item.EntryId)
+            {
+                entry = &candidate;
+                break;
+            }
+        if (!entry || !entry->Talent || !item.Rank || !entry->SpellCount)
+            continue;
+
+        uint32 const rank = std::min<uint32>(item.Rank, entry->SpellCount);
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(entry->SpellIds[rank - 1]);
+        if (!info)
+            continue;
+
+        std::ostringstream line;
+        line << "Talent: " << chat->FormatSpell(info) << " rank " << rank << "/" << uint32(entry->SpellCount);
+        if (CoaSpecStrategy const* tree = GetCoaSpecStrategy(entry->ClassId, entry->SpecId))
+            line << " (tree " << tree->specName << ")";
+        botAI->TellMaster(line.str());
+        ++count;
+    }
+
+    AscensionCoATalentState::SpentPoints const spent = AscensionCoATalentState::Spent(known);
+    botAI->TellMaster("Talent points: " + std::to_string(spent.TE) + " spent");
+    botAI->TellMaster("Talents: " + std::to_string(count));
+}
 
 bool ChangeTalentsAction::Execute(Event event)
 {
@@ -57,6 +94,21 @@ bool ChangeTalentsAction::Execute(Event event)
                 out << "Active second talent";
                 botAI->ResetStrategies();
             }
+        }
+        else if (IsCoaClass(bot) && (param == "?" || param == "list"))
+        {
+            // CoA: the talents the bot holds, for SquidBots Lite's bot sheet. The client inspect shows none for
+            // a CoA class, and "talents" alone only names the specialization.
+            ListCoaTalents();
+            return true;
+        }
+        else if (IsCoaClass(bot) && param.find("autopick") != std::string::npos)
+        {
+            // CoA: InitTalentsTree spends Blizzard talent points a CoA class does not have; its build is the
+            // community build of its specialization, which ApplyCoaTalents sets for the bot's level.
+            uint32 const changed = ApplyCoaTalents(bot);
+            out << "Talents set from the build: " << changed << " changes";
+            botAI->ResetStrategies();
         }
         else if (param.find("autopick") != std::string::npos)
         {
