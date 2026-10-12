@@ -16,6 +16,7 @@
 #include "Playerbots.h"
 #include "PlayerbotAIConfig.h"
 #include "CoaSpecialization.h"
+#include "GenericBuffUtils.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "Timer.h"
@@ -186,9 +187,42 @@ bool CoaResourceTrigger::IsActive()
 // enough that creatures at the other end of the zone do not count.
 static constexpr float SEARCH_RANGE = 60.0f;
 
+/* The aura of that name the buff lines look for, a passive namesake set aside. Every Draconic
+ * Pyromancer wears its specialization aura (92128) under the name of its form, Draconic Aspect
+ * (802117): the form counted as worn, so neither "buff missing" nor "cast buff" ever took it (#29;
+ * never up on the bench either, 03/10). When the aura found by name is passive and the spell the bot
+ * casts under that name is not, the one worn is that spell's own aura, if any. */
+static Aura* CoaWornBuff(PlayerbotAI* botAI, std::string const& name, Unit* target, bool owner, bool duration)
+{
+    Aura* aura = botAI->GetAura(name, target, owner, duration);
+    if (!aura || !aura->GetSpellInfo()->IsPassive())
+        return aura;
+
+    uint32 const id = botAI->GetAiObjectContext()->GetValue<uint32>("spell id", name)->Get();
+    SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
+    if (!info || info->IsPassive())
+        return aura;
+
+    Aura* worn = owner ? target->GetAura(id, botAI->GetBot()->GetGUID()) : target->GetAura(id);
+    if (worn && duration && worn->GetDuration() == -1)
+        return nullptr;
+    return worn;
+}
+
+bool CoaCastBuffAction::isUseful()
+{
+    Unit* target = GetTarget();
+    if (!target || !CastSpellAction::isUseful())
+        return false;
+    return ai::buff::BuffBelowRefreshTarget(botAI, CoaWornBuff(botAI, spell, target, isOwner, checkDuration),
+                                            beforeDuration);
+}
+
 bool CoaBuffMissingTrigger::IsActive()
 {
-    bool active = BuffTrigger::IsActive();
+    Unit* target = GetTarget();
+    bool active = target && ai::buff::BuffBelowRefreshTarget(
+                                botAI, CoaWornBuff(botAI, spell, target, checkIsOwner, checkDuration), beforeDuration);
     if (active)
     {
         uint32 const id = AI_VALUE2(uint32, "spell id", spell);

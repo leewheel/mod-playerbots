@@ -62,7 +62,19 @@
 
 COA_QUALIFIED_CAST(CoaCastAction, CastSpellAction, "cast")
 COA_QUALIFIED_CAST(CoaCastMeleeAction, CastMeleeSpellAction, "cast melee")
-COA_QUALIFIED_CAST(CoaCastBuffAction, CastBuffSpellAction, "cast buff")
+/* "cast buff::<spell>" - as the original, a passive aura of the same name not taken for the buff (CoaWornBuff). */
+class CoaCastBuffAction : public CastBuffSpellAction, public Qualified
+{
+public:
+    CoaCastBuffAction(PlayerbotAI* botAI) : CastBuffSpellAction(botAI, "") {}
+    void Qualify(std::string const qual) override
+    {
+        Qualified::Qualify(qual);
+        spell = qual;
+    }
+    std::string const getName() override { return "cast buff::" + qualifier; }
+    bool isUseful() override;
+};
 /* "cast debuff::<spell>" - as the original. With AiPlayerbot.CoaShortLivedDebuffs, the target only has
  * to live as long as the spell needs (CoaDebuffNeedLifeTime), not the fixed 8 s of the original. */
 class CoaCastDebuffAction : public CastDebuffSpellAction, public Qualified

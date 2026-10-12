@@ -486,7 +486,9 @@ bool WearsBuffNamed(Unit* unit, SpellInfo const* buff)
         std::string wornName(worn->SpellName[0]);
         if (wornName.rfind(greater, 0) == 0)
             wornName = wornName.substr(greater.size());
-        if (wornName == name && worn->IsPositive())
+        // A passive namesake is no buff worn: the Draconic specialization aura 92128 bears the name of the
+        // form, Draconic Aspect (802117), and the form was never taken (#29).
+        if (wornName == name && worn->IsPositive() && (!worn->IsPassive() || buff->IsPassive()))
             return true;
     }
     return false;
