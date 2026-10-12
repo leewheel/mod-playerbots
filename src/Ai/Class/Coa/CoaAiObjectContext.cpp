@@ -3954,6 +3954,29 @@ bool GroupFighting(Player* bot)
 // 30 yards. Nearest first within each. Only the dead who have not released can be raised.
 constexpr float ResurrectStrangersWithin = 30.0f;
 
+// A corpse one bot goes to raise is left to it for a while: the tank of a Sunken Temple wipe got four
+// resurrection casts from three bots while a dead damage dealer stayed down 18 seconds longer (headless runs, 12/10).
+constexpr uint32 ResurrectClaimMs = 12 * IN_MILLISECONDS;
+std::mutex ResurrectClaimsLock;
+std::unordered_map<ObjectGuid, std::pair<ObjectGuid, uint32>> ResurrectClaims;  // dead -> (bot, until)
+
+bool ClaimedByOther(Player* bot, Player* dead)
+{
+    std::lock_guard<std::mutex> guard(ResurrectClaimsLock);
+    auto const found = ResurrectClaims.find(dead->GetGUID());
+    return found != ResurrectClaims.end() && found->second.first != bot->GetGUID() &&
+           !Passed(getMSTime(), found->second.second);
+}
+
+void ClaimCorpse(Player* bot, Player* dead)
+{
+    std::lock_guard<std::mutex> guard(ResurrectClaimsLock);
+    uint32 const now = getMSTime();
+    for (auto itr = ResurrectClaims.begin(); itr != ResurrectClaims.end();)
+        itr = Passed(now, itr->second.second) ? ResurrectClaims.erase(itr) : std::next(itr);
+    ResurrectClaims[dead->GetGUID()] = { bot->GetGUID(), now + ResurrectClaimMs };
+}
+
 Player* DeadGroupMember(Player* bot)
 {
     Group* group = bot->GetGroup();
@@ -3966,7 +3989,7 @@ Player* DeadGroupMember(Player* bot)
     auto consider = [&](Player* dead, int rank)
     {
         if (!dead || dead == bot || dead->IsAlive() || dead->HasPlayerFlag(PLAYER_FLAGS_GHOST) || dead->isResurrectRequested() ||
-            !OnSameInstance(bot, dead))
+            !OnSameInstance(bot, dead) || ClaimedByOther(bot, dead))
             return;
         float const distance = dead->GetDistance(bot);
         if (distance > sPlayerbotAIConfig.sightDistance)
@@ -4018,6 +4041,7 @@ public:
         Player* dead = DeadGroupMember(bot);
         if (!dead)
             return false;
+        ClaimCorpse(bot, dead);
 
         if (bot->GetDistance(dead) > ResurrectReach || !bot->IsWithinLOSInMap(dead))
             return MoveNear(dead, ResurrectReach - 5.0f);
