@@ -75,7 +75,16 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
     for (uint8 race = RACE_HUMAN; race < sRaceMgr->GetMaxRaces(); ++race)
     {
         // skip disabled with config races
-        if ((1 << (race - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK))
+        if (race <= 32 && ((1u << (race - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK)))
+            continue;
+
+        // The races a custom races module adds (above Draenei, up to 97 with the CoA Server Manager's) are left
+        // out unless that module lets bots have them, and any race can be excluded by id. The mask above cannot
+        // reach them: shifting by 46 or more is undefined and on x86 wrapped onto a base race's bit.
+        if (race > RACE_DRAENEI && !sPlayerbotAIConfig.customRacesForBots)
+            continue;
+        if (std::find(sPlayerbotAIConfig.excludedBotRaces.begin(), sPlayerbotAIConfig.excludedBotRaces.end(), race) !=
+            sPlayerbotAIConfig.excludedBotRaces.end())
             continue;
 
         // Try to get 50/50 faction distribution for random bot population balance.
@@ -866,7 +875,7 @@ void RandomPlayerbotFactory::CreateRandomBots()
                 continue;
 
             // skip disabled with config classes
-            if ((1 << (cls - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK))
+            if (cls <= 32 && ((1u << (cls - 1)) & sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK)))
                 continue;
 
             // Conquest of Azeroth gives its players twenty-one classes of its own and hides the nine

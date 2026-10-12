@@ -1397,6 +1397,17 @@ AiPlayerbot.AutoLearnTradeskillSpells = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaClassesOnly = 1
 
+# Races left out of the random bots, as a list of race ids separated by commas (e.g. "52,63,97").
+# The custom races module of the CoA Server Manager writes this line when its "bots use custom races" option is on.
+# The races that module adds (above Draenei, ids up to 97) are only given to random bots when its own setting
+# CoACustomRaces.BotsEnable = 1; CharacterCreating.Disabled.RaceMask (worldserver.conf) only reaches ids 1 to 32.
+# Applies to bots created afterwards: bots already created keep their race; delete the bot accounts
+# (AiPlayerbot.DeleteRandomBotAccounts) to renew them.
+# Left commented out here on purpose: the first copy of a key in a .conf file wins, so an empty line here would
+# hide the one the CoA Server Manager adds.
+# Default: none
+# AiPlayerbot.ExcludedBotRaces = "52,63,97"
+
 # Authored combat rotations for the Conquest of Azeroth specializations.
 # Off: CoA bots are driven by the runtime classifier alone, which picks a spell
 # every tick from what the bot knows.

@@ -741,6 +741,13 @@ bool PlayerbotAIConfig::Initialize()
     autoLearnTradeskillSpells =
         sConfigMgr->GetOption<bool>("AiPlayerbot.AutoLearnTradeskillSpells", true);
     coaClassesOnly = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaClassesOnly", true);
+    // Written by the CoA Server Manager's custom races module ("bots use custom races"): a list of race ids,
+    // not a mask, since its races go up to 97. Its own switch, CoACustomRaces.BotsEnable, is read here too so
+    // that random bots only take the added races when that module allows it.
+    excludedBotRaces.clear();
+    LoadList<std::vector<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.ExcludedBotRaces", "", false),
+                                  excludedBotRaces);
+    customRacesForBots = sConfigMgr->GetOption<bool>("CoACustomRaces.BotsEnable", false, false);
     coaSpecRotations = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSpecRotations", true);
     coaHealerManaReserve = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaHealerManaReserve", 35);
     coaCasterManaReserve = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaCasterManaReserve", 15);
