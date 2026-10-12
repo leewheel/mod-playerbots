@@ -299,7 +299,9 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
     if (!player->InBattleground())
         engine->addStrategiesNoInit("racials", "chat", "default", "cast time", "potions", "duel", "boost", nullptr);
 
-    if (sPlayerbotAIConfig.autoAvoidAoe && facade->HasGameClientMaster())
+    // CoA: a grouped bot steps out of ground effects too, not only one a real player leads: in headless dungeon runs
+    // (11/12/10) two bots stood in Ramstein's Venom Belch down to 19-24 % health.
+    if (sPlayerbotAIConfig.autoAvoidAoe && (facade->HasGameClientMaster() || player->GetGroup()))
         engine->addStrategy("avoid aoe", false);
 
     engine->addStrategy("formation", false);
