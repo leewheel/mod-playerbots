@@ -66,7 +66,7 @@ and tell what the bots were doing (class, level, dungeon or open world) if you k
 
 jealous-sound's `main` carries everything the bots need from the core (the mod-playerbots hooks and the CoA
 specialization API). **No fork of the core is needed**: the module goes into `modules/`, which the core's
-`.gitignore` leaves alone. The CoA Bots packages add one crash fix under load, on branch `coa-bots-2.0` of
+`.gitignore` leaves alone. The CoA Bots packages add a crash fix under load and the Icecrown summon leak fix, on branch `coa-bots-2.1` of
 [Zyth45/azerothcore-wotlk-coa](https://github.com/Zyth45/azerothcore-wotlk-coa).
 
 ## Build
