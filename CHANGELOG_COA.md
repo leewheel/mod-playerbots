@@ -24,6 +24,12 @@
 - Shipped as `zz_coa_rotation_corrections_2_1_1.sql` and `zz_coa_rotation_corrections_2_1_1_b.sql` (default
   rotations only, applied once at server start).
 
+### Fixes
+- **Interrupts**: no kick wasted on a caster immune to its interrupt, even when the kick also deals damage (most
+  classic dungeon bosses; issue #28 by ladiabale).
+- **Pyromancer Draconic** bots now take Draconic Aspect: the spec's passive of the same name counted as the form, so
+  they never cast it (issue #29 by mightyrathalos).
+
 ### Gear
 - **Witch Hunter Houndmaster** no longer takes spell power gear: Agility, Haste and Crit, Spell Penetration first.
 - **Barbarian Brutality** wears a two-hander and values Strength over Agility; **Runemaster Glyphic** wears a
