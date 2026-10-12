@@ -4498,8 +4498,11 @@ bool CoaCarriesBotAway(Player* bot, SpellInfo const* info)
     // a sixth of each boss fight out of reach after Boulder Dash and Primal Rush (bench, 10/10). Out of reach, a
     // rush ahead still closes the gap.
     Unit* const victim = bot->GetVictim();
+    // A ranged damage dealer does not leap ahead into the fight it shoots at: a Rot Venomancer used Skitter (15 yards
+    // forward) as a filler 114 times in Sunken Temple and fled back after 43 of them (headless runs, 12/10).
     bool const away = healerMove || ForcesCasterForward(info) ||
-                      (SendsCasterAhead(info) && victim && bot->IsWithinMeleeRange(victim));
+                      (SendsCasterAhead(info) && ((victim && bot->IsWithinMeleeRange(victim)) ||
+                                                  PlayerbotAI::IsRanged(bot, true)));
     if (away)
     {
         static std::mutex logged;
