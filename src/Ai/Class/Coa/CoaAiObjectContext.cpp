@@ -2099,7 +2099,15 @@ bool KickFits(Player* bot, SpellInfo const* kick, Unit* caster)
 {
     if (kick->CheckShapeshift(bot->GetShapeshiftForm()) != SPELL_CAST_OK)
         return false;
-    return !caster || !caster->IsImmunedToSpell(kick, static_cast<Unit const*>(bot));
+    if (caster && caster->IsImmunedToSpell(kick, static_cast<Unit const*>(bot)))
+        return false;
+    // A kick with a cast time of its own (Ley Lock, half a second) lands after a cast that ends sooner: three heals
+    // finished under a Ley Lock started in time to be too late (Zul'Farrak, 12/10). An instant kick goes first then.
+    if (Spell* cast = caster ? InterruptibleSpell(caster) : nullptr)
+        if (int32 const own = kick->CalcCastTime(bot))
+            if (own + 100 >= cast->GetCastTimeRemaining())
+                return false;
+    return true;
 }
 
 SpellInfo const* ReadyKickFor(PlayerbotAI* ai, Player* member, Unit* caster)
