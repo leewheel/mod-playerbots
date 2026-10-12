@@ -1938,9 +1938,23 @@ void PlayerbotMgr::HandleSetSecurityKeyCommand(Player* player, std::string const
     ChatHandler(player->GetSession()).PSendSysMessage("Security key set successfully.");
 }
 
+static bool IsValidAccountName(std::string const& name)
+{
+    if (name.empty() || name.size() > 32)
+        return false;
+
+    for (char c : name)
+        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')))
+            return false;
+
+    return true;
+}
+
 void PlayerbotMgr::HandleLinkAccountCommand(Player* player, std::string const& accountName, std::string const& key)
 {
-    QueryResult result = LoginDatabase.Query("SELECT id FROM account WHERE username = '{}'", accountName);
+    QueryResult result = IsValidAccountName(accountName)
+        ? LoginDatabase.Query("SELECT id FROM account WHERE username = '{}'", accountName)
+        : nullptr;
     if (!result)
     {
         ChatHandler(player->GetSession()).PSendSysMessage("Account not found.");
@@ -2018,7 +2032,9 @@ void PlayerbotMgr::HandleViewLinkedAccountsCommand(Player* player)
 
 void PlayerbotMgr::HandleUnlinkAccountCommand(Player* player, std::string const& accountName)
 {
-    QueryResult result = LoginDatabase.Query("SELECT id FROM account WHERE username = '{}'", accountName);
+    QueryResult result = IsValidAccountName(accountName)
+        ? LoginDatabase.Query("SELECT id FROM account WHERE username = '{}'", accountName)
+        : nullptr;
     if (!result)
     {
         ChatHandler(player->GetSession()).PSendSysMessage("Account not found.");
