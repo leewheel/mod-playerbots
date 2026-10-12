@@ -6,6 +6,7 @@
 
 #include "AutoMaintenanceOnLevelupAction.h"
 #include "CoaSpecialization.h"
+#include "CoaSpecialization.h"
 #include "BroadcastHelper.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
@@ -50,6 +51,12 @@ void AutoMaintenanceOnLevelupAction::AutoTeleportForLevel()
         return;
 
     if (botAI->HasGameClientMaster())
+        return;
+
+    // CoA: a bot re-rolled to the level of the player it was just offered to (lfg bot) stays where it is: the far
+    // teleport resets its AI, which dropped the queued "accept invitation", and every later invite said "already
+    // in a group" (12/10). Accepting brings it to the player anyway.
+    if (CoaLfgOfferedToOther(bot, nullptr) || bot->GetGroupInvite())
         return;
 
     sRandomPlayerbotMgr.RandomTeleportForLevel(bot);
