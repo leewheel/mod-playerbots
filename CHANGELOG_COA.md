@@ -19,6 +19,8 @@
 - **Necromancer Animation**: rotation and talent build of an experienced player: Harvest Plague, the three
   animations, Graveyard, Unholy Frenzy, Command: Undead, Death's Due, Blight left to burst and Lichfrost on a
   blighted target; no March of the Dead on a single target, no other raises next to the six Skeletal Warriors.
+- **Pyromancer Flameweaving** (healer): no more Dragon Leap or Flame Step on cooldown into unpulled packs, and
+  Kindle heals the group when mana runs low (PR #27 by ladiabale, from headless Deadmines runs; thanks!).
 - Shipped as `zz_coa_rotation_corrections_2_1_1.sql` and `zz_coa_rotation_corrections_2_1_1_b.sql` (default
   rotations only, applied once at server start).
 
