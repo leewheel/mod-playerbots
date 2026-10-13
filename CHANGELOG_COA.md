@@ -24,6 +24,11 @@
 - Shipped as `zz_coa_rotation_corrections_2_1_1.sql` and `zz_coa_rotation_corrections_2_1_1_b.sql` (default
   rotations only, applied once at server start).
 
+### Arenas
+- **Rated solo queues**: bots join the rated 1v1, 2v2 and 3v3 solo queues when a real player is waiting, in the role
+  the match still needs (`AiPlayerbot.CoaRatedSoloQueue`, `AiPlayerbot.CoaRatedSoloRoleFallback`).
+- No bot 5v5 arena teams any more (Conquest of Azeroth has no 5v5); bot teams of a format set to 0 are disbanded at start.
+
 ### Fixes
 - **Interrupts**: no kick wasted on a caster immune to its interrupt, even when the kick also deals damage (most
   classic dungeon bosses; issue #28 by ladiabale).
