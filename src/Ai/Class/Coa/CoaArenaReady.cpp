@@ -316,6 +316,10 @@ public:
     {
         if (!bg || !player || !bg->isArena())
             return;
+        // Solo queues mix the factions in one team: a combatant on the other faction's side takes that side's player
+        // faction for the match, so his team mates see him friendly (the arena is free for all, foes stay hostile).
+        if (player->GetTeamId(true) != player->GetBgTeamId())
+            player->SetFaction(player->GetBgTeamId() == TEAM_ALLIANCE ? 1 : 2);
         {
             std::lock_guard<std::mutex> lock(StatesLock);
             States[bg->GetInstanceID()].arrival[player->GetGUID()] = GameTime::GetGameTimeMS().count();
@@ -334,6 +338,8 @@ public:
     {
         if (!bg || !player || !bg->isArena())
             return;
+        if (player->GetTeamId(true) != player->GetBgTeamId())
+            player->SetFactionForRace(player->getRace(true));
         LOG_INFO("playerbots.coa",
                  "coa arena leave: {} ({}) arena {} map {} type {} status {} after {} s, alive {}, health {}/{}, "
                  "in world {}, teleporting {}",
