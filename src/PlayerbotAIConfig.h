@@ -399,6 +399,7 @@ public:
     bool autoLearnTrainerSpells;
     bool autoLearnTradeskillSpells;
     bool coaClassesOnly;
+    bool gatherOnlySkillUp;
     std::vector<uint32> excludedBotRaces;
     bool customRacesForBots;
     bool coaSpecRotations;

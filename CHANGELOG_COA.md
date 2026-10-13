@@ -68,6 +68,12 @@ Each behaviour change has its own switch in `playerbots.conf` (all on by default
   `CoACustomRaces.BotsEnable = 1`, skip the ids listed in `AiPlayerbot.ExcludedBotRaces`, and never take the races that
   crash the client (`AiPlayerbot.CrashingBotRaces`, default 65,72,77,80,81); Gnoll and Saberon bots are male.
 
+### Gathering
+- Bots with herbalism, mining or skinning only gather what still raises their skill (green or better for their
+  client): no more bags of Peacebloom and Copper at level 60, and two alts with the same profession no longer fight
+  over the same nodes (idea by Maky). `AiPlayerbot.GatherOnlySkillUp` (default 1); `nc +gather all` lets one bot
+  gather everything again.
+
 ### Gear
 - **Witch Hunter Houndmaster** no longer takes spell power gear: Agility, Haste and Crit, Spell Penetration first.
 - **Barbarian Brutality** wears a two-hander and values Strength over Agility; **Runemaster Glyphic** wears a

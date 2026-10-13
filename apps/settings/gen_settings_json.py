@@ -45,6 +45,9 @@ SETTINGS = [
     ('RandomBotMaxLevel', 'population', 'Highest bot level', 'Highest level of the random bots (60 is the Conquest of Azeroth level cap).'),
     ('CoaClassesOnly', 'population', 'Conquest of Azeroth classes only',
      'Random bots are created only in the 21 Conquest of Azeroth classes, never in the nine WotLK classes.'),
+    ('GatherOnlySkillUp', 'activities', 'Gather only for skill-ups',
+     'Gathering bots (herbalism, mining, skinning) skip herbs, veins and corpses that are grey for them and no longer '
+     'raise their skill. One bot can gather everything again with the chat command "nc +gather all".'),
     ('ExcludedBotRaces', 'population', 'Races bots never use',
      'Comma-separated race ids of the custom races module, added to the always-excluded crashing races below. Only '
      'matters when CoACustomRaces.BotsEnable = 1; bots already created keep their race.'),
@@ -181,7 +184,7 @@ CHOICES = {'BotTextLocale': [(-1, "Auto (players' client language)"), (0, 'Engli
 
 # Commented out in the .dist, read anyway; and CoA options whose name does not start with Coa.
 COMMENTED = {'AiPlayerbot.ExcludedBotRaces'}
-COA_ALSO = {'ExcludedBotRaces', 'CrashingBotRaces'}
+COA_ALSO = {'ExcludedBotRaces', 'CrashingBotRaces', 'GatherOnlySkillUp'}
 KEY = re.compile(r'^((?:AiPlayerbot|Playerbots|PlayerbotsDatabase)[\w.]*)\s*=\s*(.*?)\s*$')
 OPTION = re.compile(r'(?:std::(min|max)<[\w:]+>\(\s*(-?[\d.]+)f?\s*,\s*)?'
                     r'sConfigMgr->GetOption<([\w:]+)>\(\s*"([\w.]+)"\s*,\s*([^;]*?)\)\s*(\))?\s*;')

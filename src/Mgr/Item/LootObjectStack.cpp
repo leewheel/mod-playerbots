@@ -424,6 +424,14 @@ bool LootObject::IsLootPossible(Player* bot)
     if (reqSkillValue > skillValue)
         return false;
 
+    // Grey for the bot's client: a herb, vein or corpse 100 points or more below its skill raises it no more
+    // (the core's gathering skill-up chance is 0 there). At level 60 bots filled their bags with Peacebloom and
+    // Copper, and two alts with the same profession fought over every node.
+    if (sPlayerbotAIConfig.gatherOnlySkillUp && skillValue >= reqSkillValue + 100 &&
+        (skillId == SKILL_HERBALISM || skillId == SKILL_MINING || skillId == SKILL_SKINNING) &&
+        !botAI->HasStrategy("gather all", BOT_STATE_NON_COMBAT))
+        return false;
+
     if (skillId == SKILL_MINING && !bot->HasItemCount(756, 1) && !bot->HasItemCount(778, 1) &&
         !bot->HasItemCount(1819, 1) && !bot->HasItemCount(1893, 1) && !bot->HasItemCount(1959, 1) &&
         !bot->HasItemCount(2901, 1) && !bot->HasItemCount(9465, 1) && !bot->HasItemCount(20723, 1) &&
