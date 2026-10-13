@@ -2312,6 +2312,11 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
     bot->DurabilityRepairAll(false, 1.0f, false);
     bot->SetFullHealth();
     bot->SetPvP(sWorld->IsPvPRealm());
+
+    // The full-bags clean-up belongs to the "maintenance" strategy, which no random bot is given: run it
+    // here, with the repair. It does nothing below 90% of the bag space.
+    botAI->DoSpecificAction("smart destroy item", Event(), true);
+
     PlayerbotFactory factory(bot, bot->GetLevel());
     factory.Refresh();
 
