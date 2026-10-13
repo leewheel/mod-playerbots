@@ -64,6 +64,7 @@ public:
     static uint32 GetBotArenaTeamCount(ArenaType type);
     static void GetBotArenaTeamCaptains(ArenaType type, std::vector<ObjectGuid>& out);
     static void LoadArenaTeamData();
+    static bool IsBotArenaTeam(ArenaTeam const* team);
 
 private:
     friend class ArenaTeamAssignOperation;
@@ -74,7 +75,6 @@ private:
     static void AssignBotToArenaTeamInternal(Player* bot);
     static void CollectJoinableBotArenaTeams(ArenaType type, TeamId faction, std::vector<ArenaTeam*>& out);
     static void CreateBotArenaTeam(Player* bot, ArenaType type);
-    static bool IsBotArenaTeam(ArenaTeam const* team);
     static std::string CreateRandomArenaTeamName();
 
     static inline std::vector<std::string> _availableArenaTeamNames;
