@@ -29,6 +29,10 @@
   classic dungeon bosses; issue #28 by ladiabale).
 - **Pyromancer Draconic** bots now take Draconic Aspect: the spec's passive of the same name counted as the form, so
   they never cast it (issue #29 by mightyrathalos).
+- **Worldforged chests**: bots no longer duplicate their loot by opening them again and again (squidbots-addon#2 by
+  Dogsmeller), and no longer run back and forth to a pickup they have already looted (reported by Maky).
+- **Full bags**: random bots whose bags are full now also get rid of gear they could wear but that is worse than
+  their own (level 60 bots kept every soulbound raid epic they looted).
 
 ### Gear
 - **Witch Hunter Houndmaster** no longer takes spell power gear: Agility, Haste and Crit, Spell Penetration first.
