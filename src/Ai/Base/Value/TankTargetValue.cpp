@@ -51,8 +51,6 @@ class FindTankTargetSmartStrategy : public FindTargetStrategy
 public:
     FindTankTargetSmartStrategy(PlayerbotAI* botAI) : FindTargetStrategy(botAI) {}
 
-    TargetValueExclusionType GetExclusionType() override { return TargetValueExclusionType::Tank; }
-
     void CheckAttacker(Unit* attacker, ThreatManager* /*threatMgr*/) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
@@ -159,9 +157,11 @@ public:
 
 Unit* TankTargetValue::Calculate()
 {
+    GuidSet const exclusions = GatherStrategyTargetExclusions(botAI, TargetValueExclusionType::TankTarget);
     std::string const rti = botAI->GetAiObjectContext()->GetValue<std::string>("rti")->Get();
     Unit* rtiTarget = RtiTargetValue::Calculate();
-    if (rtiTarget)
+    if (rtiTarget &&
+        (!sPlayerbotAIConfig.coaExclusionsEverywhere || exclusions.find(rtiTarget->GetGUID()) == exclusions.end()))
     {
         Unit* victim = rtiTarget->GetVictim();
 
@@ -182,5 +182,5 @@ Unit* TankTargetValue::Calculate()
 
     // FindTargetForTankStrategy strategy(botAI);
     FindTankTargetSmartStrategy strategy(botAI);
-    return FindTarget(&strategy);
+    return FindTarget(&strategy, exclusions);
 }

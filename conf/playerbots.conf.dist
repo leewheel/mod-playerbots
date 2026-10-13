@@ -1594,6 +1594,12 @@ AiPlayerbot.CoaHealSelfFirst = 1
 # (LowHealth) instead of 25% (CriticalHealth): one boss hit took a tank from 45% to dead.
 # Default: 1 (enabled)
 AiPlayerbot.CoaFastHealBelowLow = 1
+
+# Raid and dungeon target exclusions (Molten Core, Blackwing Lair, Karazhan...) also apply to
+# raid marks and to the count of enemies that starts an area attack: a skull on an excluded
+# unit no longer overrides them, and excluded units no longer trigger "coa aoe".
+# Default: 1 (enabled)
+AiPlayerbot.CoaExclusionsEverywhere = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds
