@@ -36,12 +36,17 @@ public:
 
 protected:
     bool JoinQueue(uint32 type);
+    // A rated solo queue a real player waits in, short of a bot of this one's role and level (CoaRatedSoloQueue):
+    // the counter to take down, or nullptr when the bot cannot fill it.
+    uint32* RatedSoloNeed(BattlegroundQueueTypeId queueTypeId, BattlegroundBracketId bracketId);
+    bool JoinRatedSolo(BattlegroundQueueTypeId queueTypeId);
     // A bot that would unbalance the average levels of the two sides skips most of its tries
     // (AiPlayerbot.CoaBgLevelBalanceChance), and stays out of that queue a minute after a refusal.
     bool LevelUnbalances(BattlegroundQueueTypeId queueTypeId, BattlegroundBracketId bracketId);
     std::unordered_map<uint32, uint32> levelRefusedAt;  // queue type -> getMSTime() of the last refusal
     std::vector<uint32> bgList;
     std::vector<uint32> ratedList;
+    std::vector<uint32> ratedSoloList;
 };
 
 class FreeBGJoinAction : public BGJoinAction

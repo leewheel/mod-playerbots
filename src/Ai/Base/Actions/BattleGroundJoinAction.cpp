@@ -8,13 +8,16 @@
 #include "ArenaTeam.h"
 #include "CoaSpecialization.h"
 #include "ArenaTeamMgr.h"
+#include "ArenaSeasonMgr.h"
 #include "BattlegroundMgr.h"
 #include "Event.h"
 #include "GroupMgr.h"
+#include "LFGMgr.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
 #include "PositionValue.h"
 #include "RandomPlayerbotFactory.h"
+#include "ScriptMgr.h"
 
 namespace
 {
@@ -47,6 +50,10 @@ uint32 BotBattles(BattlegroundQueueTypeId queueTypeId, uint32 activeBgQueue, uin
 
 bool BGJoinAction::Execute(Event /*event*/)
 {
+    // A real player waits in a rated solo queue for this bot: before any other.
+    if (!ratedSoloList.empty())
+        return JoinRatedSolo(BattlegroundQueueTypeId(ratedSoloList[urand(0, ratedSoloList.size() - 1)]));
+
     uint32 queueType = AI_VALUE(uint32, "bg type");
     if (!queueType)  // force join to fill bg
     {
@@ -291,6 +298,12 @@ bool BGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battlegroun
         BracketSize = (uint32)(type * 2);
         TeamSize = (uint32)type;
 
+        if (RatedSoloNeed(queueTypeId, bracketId))
+        {
+            ratedSoloList.push_back(queueTypeId);
+            return true;
+        }
+
         // Check if bots should join Rated Arena (Only captains can queue)
         uint32 ratedArenaBotCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].ratedArenaBotCount;
         uint32 ratedArenaPlayerCount =
@@ -305,7 +318,9 @@ bool BGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battlegroun
 
         if (isRated)
         {
-            if (sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), type))
+            // The personal team of a rated solo queue has no one else to gather.
+            ArenaTeam* captainTeam = sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), type);
+            if (captainTeam && captainTeam->GetMembersSize() > 1)
             {
                 sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].ratedArenaBotCount += TeamSize;
                 ratedList.push_back(queueTypeId);
@@ -454,6 +469,7 @@ bool BGJoinAction::isUseful()
 
     bgList.clear();
     ratedList.clear();
+    ratedSoloList.clear();
 
     for (int bracket = BG_BRACKET_ID_FIRST; bracket < MAX_BATTLEGROUND_BRACKETS; ++bracket)
     {
@@ -654,6 +670,75 @@ bool BGJoinAction::JoinQueue(uint32 type)
     return true;
 }
 
+uint32* BGJoinAction::RatedSoloNeed(BattlegroundQueueTypeId queueTypeId, BattlegroundBracketId bracketId)
+{
+    if (!sPlayerbotAIConfig.coaRatedSoloQueue || !sRandomPlayerbotMgr.IsRandomBot(bot) || bot->GetGroup() ||
+        !bot->IsAlive() || bot->IsInCombat() || sLFGMgr->GetState(bot->GetGUID()) != lfg::LFG_STATE_NONE ||
+        sArenaSeasonMgr->GetSeasonState() == ARENA_SEASON_STATE_DISABLED)
+        return nullptr;
+
+    ArenaType const type = ArenaType(BattlegroundMgr::BGArenaType(queueTypeId));
+    if (type != ARENA_TYPE_1v1 && type != ARENA_TYPE_2v2 && type != ARENA_TYPE_3v3)
+        return nullptr;
+
+    BattlegroundInfo& info = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId];
+    uint32* need = type != ARENA_TYPE_1v1 && GetCoaRole(bot) == CoaRole::Heal ? &info.ratedSoloHealersNeeded
+                                                                              : &info.ratedSoloDamageNeeded;
+    if (!*need)
+        return nullptr;
+
+    // The core plays it with a personal team in that slot (the 5v5 one for 1v1), one it creates or the bot
+    // already has from an earlier match: a bot of a real team there is left out.
+    uint8 const slot = ArenaTeam::GetSlotByType(type == ARENA_TYPE_1v1 ? uint32(ARENA_TEAM_5v5) : uint32(type));
+    if (uint32 teamId = bot->GetArenaTeamId(slot))
+    {
+        ArenaTeam* team = sArenaTeamMgr->GetArenaTeamById(teamId);
+        if (!team || team->GetMembersSize() != 1)
+            return nullptr;
+    }
+
+    return need;
+}
+
+// The rated solo queue is joined by a CoA client packet, claimed by the core before any handler and read only
+// from the network (AscensionCompat): a bot's own session never goes there, so the hook is called directly. It
+// only stores the request under a lock; the core queues the bot from its next update.
+bool BGJoinAction::JoinRatedSolo(BattlegroundQueueTypeId queueTypeId)
+{
+    uint16 constexpr CMSG_BATTLEMASTER_JOIN_ARENA_WITH_ROLE = 0x05C1;
+    uint32 constexpr ARENA_ROLE_HEALER = 0x04;
+
+    Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(BATTLEGROUND_AA);
+    PvPDifficultyEntry const* pvpDiff = bg ? GetBattlegroundBracketByLevel(bg->GetMapId(), bot->GetLevel()) : nullptr;
+    if (!pvpDiff)
+        return false;
+
+    uint32* need = RatedSoloNeed(queueTypeId, pvpDiff->GetBracketId());
+    if (!need)
+        return false;
+
+    ArenaType const type = ArenaType(BattlegroundMgr::BGArenaType(queueTypeId));
+    bool const healer = type != ARENA_TYPE_1v1 && GetCoaRole(bot) == CoaRole::Heal;
+    WorldPacket packet(CMSG_BATTLEMASTER_JOIN_ARENA_WITH_ROLE, 8);
+    packet << uint32(type == ARENA_TYPE_1v1 ? 5 : type) << uint32(healer ? ARENA_ROLE_HEALER : 0);
+    if (sScriptMgr->CanPacketReceiveEarly(bot->GetSession(), packet))
+    {
+        LOG_DEBUG("playerbots", "Bot {} <{}>: the rated solo queue is not available", bot->GetGUID().ToString(),
+                  bot->GetName());
+        return false;
+    }
+
+    --*need;
+    LOG_INFO("playerbots", "Bot {} {}:{} <{}> queued rated solo {}v{} as {}", bot->GetGUID().ToString().c_str(),
+             bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName().c_str(), uint32(type),
+             uint32(type), healer ? "healer" : "damage");
+
+    botAI->GetAiObjectContext()->GetValue<uint32>("bg type")->Set(0);
+    // Its PvP gear goes on in the queue, not in the arena's preparation (CoaGearByContent).
+    botAI->CoaCheckGearSoon();
+    return true;
+}
+
 // Not sure if this has ever worked, but it should be similar to BGJoinAction::shouldJoinBg
 bool FreeBGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, BattlegroundBracketId bracketId)
 {
@@ -692,7 +777,9 @@ bool FreeBGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battleg
 
         if (isRated)
         {
-            if (sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), type))
+            // The personal team of a rated solo queue has no one else to gather.
+            ArenaTeam* captainTeam = sArenaTeamMgr->GetArenaTeamByCaptain(bot->GetGUID(), type);
+            if (captainTeam && captainTeam->GetMembersSize() > 1)
             {
                 sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].ratedArenaBotCount += TeamSize;
                 ratedList.push_back(queueTypeId);
@@ -1058,7 +1145,11 @@ bool BGStatusAction::Execute(Event event)
         {
             //TeamId teamId = bot->GetTeamId(); //not used, line marked for removal.
             bool realPlayers = false;
-            if (isRated)
+            BattlegroundInfo const& info = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId];
+            // A bot of a rated solo queue waits as long as a real player waits there.
+            if (isRated && ginfo.Players.size() == 1)
+                realPlayers = info.ratedSoloPlayerHealers + info.ratedSoloPlayerDamage > 0;
+            else if (isRated)
                 realPlayers = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].ratedArenaPlayerCount > 0;
             else
                 realPlayers =
