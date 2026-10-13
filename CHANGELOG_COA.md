@@ -12,6 +12,14 @@ Many fixes from ladiabale's test runs and pull requests (thanks!).
 - Shipped as `zz_coa_rotation_corrections_2_2_2_time_out.sql` and `zz_coa_rotation_corrections_2_2_2_peak_posture.sql`
   (default rotations only, rows chosen by content, re-runnable). Restart the worldserver to see the change.
 
+### Rotations — from the specs site reports (thanks kuribo)
+- **Witch Doctor Shadowhunting**: Frenzied Spirits and Spirit Eclipse at 5 stacks of Spirit, no Hex of Malice nor
+  Malefic Wrath, Shadow Avatar up first.
+- **Primalist Mountain King** (tank): Earthen Avatar under low health, Bearskin and Primal Convergence under critical
+  health instead of all on cooldown at once; Ursoc's Bellow kept up on the target.
+- **Venomancer Fortitude** (tank): Weakening Venom instead of Adrenal Venom, Lifeblood under low health.
+- Shipped as `zz_coa_rotation_corrections_2_3.sql`.
+
 ### Healers and cleanses (from ladiabale's Zul'Farrak and Sunken Temple runs)
 - **Resonance Rune** (Runemaster) is used to cleanse allies: it was taken for an attack only because it also purges
   the enemies in its area, so during Hex on the healer the one cleanse the group had was never cast on her.
