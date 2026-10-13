@@ -1617,6 +1617,12 @@ AiPlayerbot.CoaFocusRunners = 1
 # update. Works best with CoaRegainLineOfSight.
 # Default: 1 (enabled)
 AiPlayerbot.CoaKeepTargetOutOfSight = 1
+
+# In dungeons and raids, out of combat, a routine move (follow, loot, positioning) that would
+# end inside the aggro radius of an idle hostile mob is refused: bots no longer pull a pack by
+# walking past it. Moves toward the bot's own target, fights and orders are not affected.
+# Default: 1 (enabled)
+AiPlayerbot.CoaBodyPullGuard = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds

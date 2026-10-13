@@ -166,6 +166,30 @@ bool MovementAction::MoveToLOS(WorldObject* target, bool ranged)
     return false;
 }
 
+bool MovementAction::IsBodyPullRisk(float x, float y, float z)
+{
+    if (!sPlayerbotAIConfig.coaBodyPullGuard || bot->IsInCombat() || !bot->GetMap()->IsDungeon())
+        return false;
+
+    Player* master = botAI->GetMaster();
+    if (master && master->IsInCombat())
+        return false;
+
+    Unit* intendedTarget = AI_VALUE(Unit*, "current target");
+    for (ObjectGuid const& guid : AI_VALUE(GuidVector, "possible targets no los"))
+    {
+        Creature* creature = botAI->GetCreature(guid);
+        if (!creature || creature == intendedTarget || !creature->IsAlive() || creature->IsInCombat() ||
+            creature->HasReactState(REACT_PASSIVE) || !creature->IsHostileTo(bot))
+            continue;
+
+        if (creature->GetExactDist(x, y, z) < creature->GetAttackDistance(bot) + 3.0f)
+            return true;
+    }
+
+    return false;
+}
+
 bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle*/, bool /*react*/, bool normal_only,
                             bool exact_waypoint, MovementPriority priority, bool lessDelay, bool backwards)
 {
@@ -179,6 +203,10 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
         return false;
     }
     if (IsWaitingForLastMove(priority))
+    {
+        return false;
+    }
+    if (priority <= MovementPriority::MOVEMENT_NORMAL && IsBodyPullRisk(x, y, z))
     {
         return false;
     }

@@ -759,6 +759,7 @@ bool PlayerbotAIConfig::Initialize()
     coaGroupTelemetry = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGroupTelemetry", false);
     coaSmartHeal = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSmartHeal", true);
     coaSmartTank = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSmartTank", true);
+    coaBodyPullGuard = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaBodyPullGuard", true, false);
     coaKeepTargetOutOfSight = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaKeepTargetOutOfSight", true, false);
     coaFocusRunners = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaFocusRunners", true, false);
     coaStickyTarget = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaStickyTarget", true, false);
