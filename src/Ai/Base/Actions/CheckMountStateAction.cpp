@@ -352,9 +352,11 @@ void CheckMountStateAction::LoadPreferredMounts()
     if (preferredMountTableChecked)
         return;
 
-    // Verify preferred mounts table existance in the database
+    // Verify preferred mounts table existance in the database. DATABASE() is the schema of this connection
+    // (PlayerbotsDatabaseInfo), whatever its name: with a fixed 'acore_playerbots' the table was never found
+    // on a server whose playerbots database has another name.
     QueryResult checkTable = PlayerbotsDatabase.Query(
-        "SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_schema = 'acore_playerbots' AND table_name = 'playerbots_preferred_mounts')");
+        "SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'playerbots_preferred_mounts')");
 
     if (checkTable && checkTable->Fetch()[0].Get<uint32>() == 1)
     {
