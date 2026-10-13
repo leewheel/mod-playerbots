@@ -81,6 +81,11 @@ public:
         if (spellInfo->Id != Id(HyjalSpells::SPELL_AIR_BURST))
             return;
 
+        // By leewheel 2026-10-13 acore 上游 #26152（GameObjects cast their own spells）后
+        // OnSpellPrepare 的 caster 参数可能为 null（GameObject 施法时），必须判空，否则段错误。
+        if (!caster)
+            return;
+
         Player* target = GetTargetedPlayer(spell);
         if (!target)
             return;
