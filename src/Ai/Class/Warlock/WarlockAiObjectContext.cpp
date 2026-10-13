@@ -155,6 +155,9 @@ public:
         creators["spellstone"] = &WarlockTriggerFactoryInternal::spellstone;
         creators["soulstone"] = &WarlockTriggerFactoryInternal::soulstone;
         creators["banish"] = &WarlockTriggerFactoryInternal::banish;
+// By leewheel 20261013 只剩一个被放逐的敌人时需要立即解除放逐
+        creators["banish last enemy"] = &WarlockTriggerFactoryInternal::banish_last_enemy;
+// End By leewheel
         creators["fear"] = &WarlockTriggerFactoryInternal::fear;
         creators["spell lock"] = &WarlockTriggerFactoryInternal::spell_lock;
         creators["devour magic purge"] = &WarlockTriggerFactoryInternal::devour_magic_purge;
@@ -205,6 +208,9 @@ private:
     static Trigger* corruption(PlayerbotAI* botAI) { return new CorruptionTrigger(botAI); }
     static Trigger* corruption_on_attacker(PlayerbotAI* botAI) { return new CorruptionOnAttackerTrigger(botAI); }
     static Trigger* banish(PlayerbotAI* botAI) { return new BanishTrigger(botAI); }
+// By leewheel 20261013 只剩一个被放逐的敌人时需要立即解除放逐
+    static Trigger* banish_last_enemy(PlayerbotAI* botAI) { return new BanishLastEnemyTrigger(botAI); }
+// End By leewheel
     static Trigger* fear(PlayerbotAI* botAI) { return new FearTrigger(botAI); }
     static Trigger* spell_lock(PlayerbotAI* botAI) { return new SpellLockInterruptSpellTrigger(botAI); }
     static Trigger* devour_magic_purge(PlayerbotAI* botAI) { return new DevourMagicPurgeTrigger(botAI); }
@@ -273,6 +279,9 @@ public:
         creators["drain mana"] = &WarlockAiObjectContextInternal::drain_mana;
         creators["drain life"] = &WarlockAiObjectContextInternal::drain_life;
         creators["banish on cc"] = &WarlockAiObjectContextInternal::banish_on_cc;
+// By leewheel 20261013 解除放逐动作
+        creators["cancel banish"] = &WarlockAiObjectContextInternal::cancel_banish;
+// End By leewheel
         creators["fear on cc"] = &WarlockAiObjectContextInternal::fear_on_cc;
         creators["spell lock"] = &WarlockAiObjectContextInternal::spell_lock;
         creators["devour magic purge"] = &WarlockAiObjectContextInternal::devour_magic_purge;
@@ -346,6 +355,9 @@ private:
     static Action* drain_mana(PlayerbotAI* botAI) { return new CastDrainManaAction(botAI); }
     static Action* drain_life(PlayerbotAI* botAI) { return new CastDrainLifeAction(botAI); }
     static Action* banish_on_cc(PlayerbotAI* botAI) { return new CastBanishOnCcAction(botAI); }
+// By leewheel 20261013 解除放逐动作
+    static Action* cancel_banish(PlayerbotAI* botAI) { return new CancelBanishAction(botAI); }
+// End By leewheel
     static Action* fear_on_cc(PlayerbotAI* botAI) { return new CastFearOnCcAction(botAI); }
     static Action* spell_lock(PlayerbotAI* botAI) { return new CastSpellLockAction(botAI); }
     static Action* devour_magic_purge(PlayerbotAI* botAI) { return new CastDevourMagicPurgeAction(botAI); }

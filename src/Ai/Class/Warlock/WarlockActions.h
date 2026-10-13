@@ -175,6 +175,16 @@ public:
     bool isPossible() override;
 };
 
+// By leewheel 20261013 解除放逐：场上只剩这一个被放逐的敌人时移除其 710/18647 光环。
+//   被放逐目标免疫全部伤害（Spell.dbc SCHOOL_IMMUNITY misc=127），不解则团队收不了尾。
+class CancelBanishAction : public Action
+{
+public:
+    CancelBanishAction(PlayerbotAI* botAI) : Action(botAI, "cancel banish") {}
+    bool Execute(Event event) override;
+};
+// End By leewheel
+
 class CastFearOnCcAction : public CastCrowdControlSpellAction
 {
 public:

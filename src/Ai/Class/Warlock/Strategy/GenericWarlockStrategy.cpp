@@ -117,6 +117,17 @@ void WarlockPetStrategy::InitTriggers(std::vector<TriggerNode*>& /*triggers*/)
 
 void WarlockCcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
+// By leewheel 20261013 只剩一个被放逐的敌人时优先解除放逐（放逐目标免疫全部伤害，不解则团队收不了尾）
+//   优先级 40 高于下面的 banish(33)，确保同一轮里先解除、不再补放逐
+    triggers.push_back(
+        new TriggerNode(
+            "banish last enemy",
+            {
+                NextAction("cancel banish", 40.0f)
+            }
+        )
+    );
+// End By leewheel
     triggers.push_back(
         new TriggerNode(
             "banish",

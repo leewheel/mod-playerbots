@@ -5,6 +5,7 @@
  */
 
 #include "WarlockTriggers.h"
+#include "AiObjectContext.h"
 #include "GenericTriggers.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -255,3 +256,61 @@ bool RainOfFireChannelCheckTrigger::IsActive()
     // Not channeling Rain of Fire
     return false;
 }
+
+// By leewheel 20261013 放逐收尾优化（玩家反馈：团本里术士一直放逐，所有怪都死了只剩一个放逐怪时打不掉）
+//   依据 Spell.dbc 实测：放逐 710 / 18647 的效果 = MOD_STUN + SCHOOL_IMMUNITY(misc=127，即免疫全部学派伤害)
+//   ⇒ 被放逐的敌人免疫一切伤害，物理和法术都碰不动。若场上只剩它一个，团队将永远无法结束战斗。
+//   本函数统计 bot 视野内存活的敌对目标数，并返回其中处于放逐状态的那一个。
+static Unit* FindBanishedEnemyAmongTargets(PlayerbotAI* botAI, uint32& aliveCount)
+{
+    aliveCount = 0;
+    Unit* banished = nullptr;
+
+    GuidVector targets = botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets")->Get();
+    for (ObjectGuid guid : targets)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        ++aliveCount;
+        if (unit->HasAura(710) || unit->HasAura(18647))
+            banished = unit;
+    }
+
+    return banished;
+}
+
+// By leewheel 20261013 只剩最后一个存活敌人时不再放逐（只叠加判定，原 RtiCcTrigger 逻辑照常由基类执行）
+bool BanishTrigger::IsActive()
+{
+    uint32 aliveCount = 0;
+    FindBanishedEnemyAmongTargets(botAI, aliveCount);
+    if (aliveCount <= 1)
+        return false;
+
+    return RtiCcTrigger::IsActive();
+}
+
+// By leewheel 20261013 场上只剩一个敌人、且它正被放逐 ⇒ 立即解除放逐
+bool BanishLastEnemyTrigger::IsActive()
+{
+    Player* bot = botAI->GetBot();
+    if (!bot || bot->getClass() != CLASS_WARLOCK)
+        return false;
+
+    if (!bot->IsInCombat())
+        return false;
+
+    // 只有学过放逐的术士才去解除（语义上说得通：会这个法术才知道怎么解）
+    if (!bot->HasSpell(710) && !bot->HasSpell(18647))
+        return false;
+
+    uint32 aliveCount = 0;
+    Unit* banished = FindBanishedEnemyAmongTargets(botAI, aliveCount);
+    if (aliveCount != 1 || !banished)
+        return false;
+
+    return true;
+}
+// End By leewheel

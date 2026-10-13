@@ -144,7 +144,21 @@ class BanishTrigger : public RtiCcTrigger
 {
 public:
     BanishTrigger(PlayerbotAI* botAI) : RtiCcTrigger(botAI, "banish") {}
+// By leewheel 20261013 只剩最后一个存活敌人时不再放逐：放逐会使目标免疫全部伤害（见 Spell.dbc 710/18647
+//   = MOD_STUN + SCHOOL_IMMUNITY(127)），继续控制会让团队收不了尾。此处只叠加判定，原逻辑仍由基类执行。
+    bool IsActive() override;
+// End By leewheel
 };
+
+// By leewheel 20261013 场上只剩一个敌人、且它正被放逐时：必须立即解除放逐，否则被放逐目标免疫全部伤害、
+//   团队永远打不死它。触发后由 "cancel banish" 动作移除 710/18647 光环。
+class BanishLastEnemyTrigger : public Trigger
+{
+public:
+    BanishLastEnemyTrigger(PlayerbotAI* botAI) : Trigger(botAI, "banish last enemy") {}
+    bool IsActive() override;
+};
+// End By leewheel
 
 class FearTrigger : public RtiCcTrigger
 {

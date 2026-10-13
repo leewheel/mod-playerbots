@@ -63,6 +63,41 @@ bool CastFearOnCcAction::isPossible()
     return CastCrowdControlSpellAction::isPossible();
 }
 
+// By leewheel 20261013 解除放逐（玩家反馈：团本里所有怪都杀了，只剩一个放逐怪时打不掉）
+//   执行前兜底复检：确认此刻场上确实只剩这一个存活敌人、且它正被放逐，才动手移除光环。
+//   做法与内核自定义脚本 General_Creature_Lazy.cpp 的 spell_remove_banish 一致：RemoveAurasDueToSpell。
+bool CancelBanishAction::Execute(Event /*event*/)
+{
+    Player* bot = botAI->GetBot();
+    if (!bot)
+        return false;
+
+    uint32 aliveCount = 0;
+    Unit* banished = nullptr;
+
+    GuidVector targets = AI_VALUE(GuidVector, "possible targets");
+    for (ObjectGuid guid : targets)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        ++aliveCount;
+        if (unit->HasAura(710) || unit->HasAura(18647))
+            banished = unit;
+    }
+
+    if (aliveCount != 1 || !banished)
+        return false;
+
+    if (banished->HasAura(710))
+        banished->RemoveAurasDueToSpell(710);
+    if (banished->HasAura(18647))
+        banished->RemoveAurasDueToSpell(18647);
+    return true;
+}
+// End By leewheel
+
 // Checks if the enemies are close enough to use Shadowflame
 bool CastShadowflameAction::isUseful()
 {
