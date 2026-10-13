@@ -756,6 +756,10 @@ void Classify(SpellInfo const* info, CoaAbility& ability, uint8 depth = 0)
         {
             ability.kind |= KIND_DISPEL;
             ability.dispelMask |= SpellInfo::GetDispelMask(DispelType(effect.MiscValue));
+            // Cleansing ground, like a Runemaster's Resonance Rune (allies within 6 yards of the spot): it
+            // can be put under another group member, CastSpell aims it at that member's position.
+            if (targetA == TARGET_UNIT_DEST_AREA_ALLY)
+                ability.kind |= KIND_ALLY_CAST;
         }
 
         // Purge, Spellsteal, Tranquilizing Shot and their CoA kind take a buff off an enemy: kept
@@ -980,7 +984,10 @@ std::vector<Usable> KnownAbilities(Player* bot, Filter wanted)
 
 bool IsFriendlyDispel(uint16 kind)
 {
-    return (kind & KIND_DISPEL) && !(kind & (KIND_CONTROL | KIND_HOSTILE));
+    // An area that cleanses allies and also purges or hurts the enemies in it (Resonance Rune) is
+    // still a cleanse: it was taken for an attack only, and during a Hex on the healer it was the only
+    // cleanse the group had (ladiabale, Zul'Farrak, 12/10).
+    return (kind & KIND_DISPEL) && !(kind & KIND_CONTROL) && (!(kind & KIND_HOSTILE) || (kind & KIND_AOE));
 }
 
 // The spell the bot will really cast. Ascension swaps a spell for another while a proc is up
@@ -2747,6 +2754,10 @@ public:
     {
         if (!SmartHeal() || !bot->IsInCombat() || !ClassHas(bot, KIND_HOT))
             return false;
+        // The class kit has one, this bot may not know it yet: a Fleshweaver fired this every update and
+        // nothing answered the tank between 65 and 85% (ladiabale, Sunken Temple, 12/10).
+        if (!HasReadyAbility(botAI, bot, [](uint16 kind) { return (kind & KIND_HOT) && !(kind & (KIND_CONTROL | KIND_HOSTILE)); }))
+            return false;
         Player* tank = GroupTank(bot);
         if (!tank || bot->GetDistance2d(tank) > sPlayerbotAIConfig.healDistance)
             return false;
@@ -3399,10 +3410,13 @@ public:
         if (!ClassHas(bot, KIND_DISPEL))
             return false;
 
+        // Only the cleanses ready now: a Ranger whose one cleanse able to clear her debuff was on
+        // cooldown kept firing the action, which found nothing to cast (24 silent failures, ladiabale).
         std::vector<Usable> const spells = KnownAbilities(bot, IsFriendlyDispel);
         for (Player* member : NearbyGroup(bot))
             for (Usable const& spell : spells)
-                if ((member == bot || (spell.kind & KIND_ALLY_CAST)) && HasDispellable(member, spell.dispelMask))
+                if ((member == bot || (spell.kind & KIND_ALLY_CAST)) && HasDispellable(member, spell.dispelMask) &&
+                    !bot->HasSpellCooldown(EffectiveSpell(bot, spell.info)->Id))
                     return true;
 
         return false;

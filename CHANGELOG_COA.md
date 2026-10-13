@@ -1,8 +1,8 @@
 # CoA Bots — changelog
 
-## v2.2.2 — in progress
+## v2.3 — in progress
 
-Fixes from ladiabale (thanks!).
+Many fixes from ladiabale's test runs and pull requests (thanks!).
 
 ### Rotations
 - **Chronomancer Artificer and Infinite**: no more Time Out! as a filler, a 6 s self-stun cast with full mana
@@ -11,6 +11,14 @@ Fixes from ladiabale (thanks!).
   stood still in combat to cast it, and out of combat it was taken for a stance (ladiabale).
 - Shipped as `zz_coa_rotation_corrections_2_2_2_time_out.sql` and `zz_coa_rotation_corrections_2_2_2_peak_posture.sql`
   (default rotations only, rows chosen by content, re-runnable). Restart the worldserver to see the change.
+
+### Healers and cleanses (from ladiabale's Zul'Farrak and Sunken Temple runs)
+- **Resonance Rune** (Runemaster) is used to cleanse allies: it was taken for an attack only because it also purges
+  the enemies in its area, so during Hex on the healer the one cleanse the group had was never cast on her.
+- A cleanse is only tried when one able to clear the debuff is ready: a Ranger whose self-cleanse was on cooldown
+  failed it over and over without casting anything.
+- A healer with no heal over time known no longer keeps trying one on the tank: a Fleshweaver did, and nothing
+  answered the tank between 65 and 85% health.
 
 ### Bots
 - **Lower spell ranks usable again** after a bot is rebuilt at a lower level: the rank kept below a removed one
