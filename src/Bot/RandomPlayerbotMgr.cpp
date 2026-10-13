@@ -2388,6 +2388,9 @@ void RandomPlayerbotMgr::RandomizeFirst(Player* bot)
         minLevel = std::max(minLevel, sWorld->getIntConfig(CONFIG_START_HEROIC_PLAYER_LEVEL));
     }
 
+    // urand below asserts max >= min.
+    minLevel = std::min(minLevel, maxLevel);
+
     PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "RandomizeFirst");
 
     uint32 level;
@@ -2523,6 +2526,9 @@ uint32 RandomPlayerbotMgr::GetZoneLevel(uint16 mapId, float teleX, float teleY, 
         Field* fields = results->Fetch();
         uint8 minLevel = fields[0].Get<uint8>();
         uint8 maxLevel = fields[1].Get<uint8>();
+        // Creature templates whose minimum level tops their maximum pull the averages the wrong way round.
+        if (minLevel > maxLevel)
+            std::swap(minLevel, maxLevel);
         level = urand(minLevel, maxLevel);
         if (level > maxLevel)
             level = maxLevel;
@@ -3551,6 +3557,10 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
         {
             std::vector<TravelDestination*> dests = TravelMgr::instance().getRpgTravelDestinations(player, true, true, 200000.0f);
 
+            // No destination at all: drawing one from the empty list read out of it.
+            if (dests.empty())
+                botPos.GetReachableRandomPointOnGround(player, sPlayerbotAIConfig.reactDistance * 2, true);
+            else
             do
             {
                 RpgTravelDestination* dest = (RpgTravelDestination*)dests[urand(0, dests.size() - 1)];

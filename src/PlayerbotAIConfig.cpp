@@ -77,6 +77,19 @@ static void ParseLevelMgrExcludeNames(std::string const& csv, std::vector<std::s
     }
 }
 
+// urand(min, max) asserts max >= min: a pair of settings written the wrong way round (MaxRandomBots lowered
+// under MinRandomBots) stopped the server as soon as the random bots were counted.
+template <typename T>
+static void OrderSettingPair(char const* minName, T& minValue, char const* maxName, T& maxValue)
+{
+    if (minValue <= maxValue)
+        return;
+
+    LOG_ERROR("server.loading", "AiPlayerbot.{} ({}) is above AiPlayerbot.{} ({}): the two values are swapped.",
+              minName, minValue, maxName, maxValue);
+    std::swap(minValue, maxValue);
+}
+
 bool PlayerbotAIConfig::Initialize()
 {
     LOG_INFO("server.loading", "Initializing mod-playerbots, based on AI Playerbots by ike3 and the original Playerbots by blueboy");
@@ -852,6 +865,33 @@ bool PlayerbotAIConfig::Initialize()
     deleteRandomBotArenaTeams = sConfigMgr->GetOption<bool>("AiPlayerbot.DeleteRandomBotArenaTeams", false);
     randomBotArenaTeamMaxRating = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotArenaTeamMaxRating", 2000);
     randomBotArenaTeamMinRating = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotArenaTeamMinRating", 1000);
+
+    OrderSettingPair("MinRandomBots", minRandomBots, "MaxRandomBots", maxRandomBots);
+    OrderSettingPair("RandomBotCountChangeMinInterval", randomBotCountChangeMinInterval,
+                     "RandomBotCountChangeMaxInterval", randomBotCountChangeMaxInterval);
+    OrderSettingPair("MinRandomBotInWorldTime", minRandomBotInWorldTime, "MaxRandomBotInWorldTime", maxRandomBotInWorldTime);
+    OrderSettingPair("MinRandomBotRandomizeTime", minRandomBotRandomizeTime,
+                     "MaxRandomBotRandomizeTime", maxRandomBotRandomizeTime);
+    OrderSettingPair("MinRandomBotChangeStrategyTime", minRandomBotChangeStrategyTime,
+                     "MaxRandomBotChangeStrategyTime", maxRandomBotChangeStrategyTime);
+    OrderSettingPair("MinRandomBotReviveTime", minRandomBotReviveTime, "MaxRandomBotReviveTime", maxRandomBotReviveTime);
+    OrderSettingPair("MinRandomBotTeleportInterval", minRandomBotTeleportInterval,
+                     "MaxRandomBotTeleportInterval", maxRandomBotTeleportInterval);
+    OrderSettingPair("MinRandomBotsPriceChangeInterval", minRandomBotsPriceChangeInterval,
+                     "MaxRandomBotsPriceChangeInterval", maxRandomBotsPriceChangeInterval);
+    OrderSettingPair("MinGuildTaskChangeTime", minGuildTaskChangeTime, "MaxGuildTaskChangeTime", maxGuildTaskChangeTime);
+    OrderSettingPair("MinGuildTaskAdvertisementTime", minGuildTaskAdvertisementTime,
+                     "MaxGuildTaskAdvertisementTime", maxGuildTaskAdvertisementTime);
+    OrderSettingPair("MinGuildTaskRewardTime", minGuildTaskRewardTime, "MaxGuildTaskRewardTime", maxGuildTaskRewardTime);
+    OrderSettingPair("RandomBotArenaTeamMinRating", randomBotArenaTeamMinRating,
+                     "RandomBotArenaTeamMaxRating", randomBotArenaTeamMaxRating);
+    // RandomBotMaxLevel was capped at MaxPlayerLevel above: a minimum left over it is brought down to it.
+    if (randomBotMinLevel > randomBotMaxLevel)
+    {
+        LOG_ERROR("server.loading", "AiPlayerbot.RandomBotMinLevel {} is above the random bots' top level {}: lowered to it.",
+                  randomBotMinLevel, randomBotMaxLevel);
+        randomBotMinLevel = randomBotMaxLevel;
+    }
 
     selfBotLevel = sConfigMgr->GetOption<int32>("AiPlayerbot.SelfBotLevel", 1);
     botTextLocale = sConfigMgr->GetOption<int32>("AiPlayerbot.BotTextLocale", -1);

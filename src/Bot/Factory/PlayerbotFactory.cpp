@@ -4485,6 +4485,10 @@ void PlayerbotFactory::InitMounts()
         if (bot->GetLevel() < fourthmount && type == 3)
             continue;
 
+        // A team without flying mounts leaves its list empty: urand(0, size - 1) would draw out of it.
+        if (mounts[bot->getRace()][type].empty())
+            continue;
+
         uint32 index = urand(0, mounts[bot->getRace()][type].size() - 1);
         uint32 spell = mounts[bot->getRace()][type][index];
         if (spell)
