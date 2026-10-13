@@ -384,10 +384,16 @@ ItemIds EquipAction::SelectInventoryItemsToEquip()
     CollectItemsVisitor visitor;
     IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
 
+    std::vector<ObjectGuid> guids;
+    guids.reserve(visitor.items.size());
+    for (Item* item : visitor.items)
+        if (item)
+            guids.push_back(item->GetGUID());
+
     ItemIds items;
-    for (auto i = visitor.items.begin(); i != visitor.items.end(); ++i)
+    for (ObjectGuid const& guid : guids)
     {
-        Item* item = *i;
+        Item* item = bot->GetItemByGuid(guid);
         if (!item)
             continue;
 
