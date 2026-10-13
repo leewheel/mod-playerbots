@@ -9,6 +9,20 @@
 #include "Playerbots.h"
 #include "Strategy.h"
 
+namespace
+{
+    float StickyLifeTime(Unit* unit, Unit* currentTarget, float lifeTime)
+    {
+        return sPlayerbotAIConfig.coaStickyTarget && unit == currentTarget ? lifeTime * 0.75f : lifeTime;
+    }
+
+    float StickyDistance(Player* bot, Unit* unit, Unit* currentTarget)
+    {
+        float const distance = bot->GetDistance(unit);
+        return sPlayerbotAIConfig.coaStickyTarget && unit == currentTarget ? distance - 5.0f : distance;
+    }
+}  // namespace
+
 class FindMaxThreatGapTargetStrategy : public FindTargetStrategy
 {
 public:
@@ -46,7 +60,8 @@ class CasterFindTargetSmartStrategy : public FindTargetStrategy
 {
 public:
     CasterFindTargetSmartStrategy(PlayerbotAI* botAI, float dps)
-        : FindTargetStrategy(botAI), dps_(dps), targetExpectedLifeTime(1000000)
+        : FindTargetStrategy(botAI), dps_(dps), targetExpectedLifeTime(1000000),
+          currentTarget(botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get())
     {
         result = nullptr;
     }
@@ -91,9 +106,9 @@ public:
 
         int32_t level = new_level;
         if (level % 10 == 2 || level % 10 == 0)
-            return new_time < old_time;
+            return StickyLifeTime(new_unit, currentTarget, new_time) <
+                   StickyLifeTime(old_unit, currentTarget, old_time);
         // dont switch targets when all of them with low health
-        Unit* currentTarget = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
         if (currentTarget == new_unit)
             return true;
 
@@ -109,6 +124,8 @@ public:
         float attackRange =
             botAI->IsRanged(botAI->GetBot()) ? sPlayerbotAIConfig.spellDistance : sPlayerbotAIConfig.meleeDistance;
         attackRange += 5.0f;
+        if (sPlayerbotAIConfig.coaStickyTarget && unit == currentTarget)
+            attackRange += 5.0f;
         int level = dis < attackRange ? 10 : 0;
         if (time >= 5 && time <= 30)
             return level + 2;
@@ -122,6 +139,7 @@ public:
 protected:
     float dps_;
     float targetExpectedLifeTime;
+    Unit* currentTarget;
 };
 
 // General
@@ -129,7 +147,8 @@ class GeneralFindTargetSmartStrategy : public FindTargetStrategy
 {
 public:
     GeneralFindTargetSmartStrategy(PlayerbotAI* botAI, float dps)
-        : FindTargetStrategy(botAI), dps_(dps), targetExpectedLifeTime(1000000)
+        : FindTargetStrategy(botAI), dps_(dps), targetExpectedLifeTime(1000000),
+          currentTarget(botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get())
     {
     }
 
@@ -174,10 +193,12 @@ public:
         // attack enemy in range and with lowest health
         int level = new_level;
         if (level == 10)
-            return new_time < old_time;
+            return StickyLifeTime(new_unit, currentTarget, new_time) <
+                   StickyLifeTime(old_unit, currentTarget, old_time);
 
         // all targets are far away, choose the closest one
-        return botAI->GetBot()->GetDistance(new_unit) < botAI->GetBot()->GetDistance(old_unit);
+        return StickyDistance(botAI->GetBot(), new_unit, currentTarget) <
+               StickyDistance(botAI->GetBot(), old_unit, currentTarget);
     }
     int32_t GetIntervalLevel(Unit* unit)
     {
@@ -185,6 +206,8 @@ public:
         float attackRange =
             botAI->IsRanged(botAI->GetBot()) ? sPlayerbotAIConfig.spellDistance : sPlayerbotAIConfig.meleeDistance;
         attackRange += 5.0f;
+        if (sPlayerbotAIConfig.coaStickyTarget && unit == currentTarget)
+            attackRange += 5.0f;
         int level = dis < attackRange ? 10 : 0;
         return level;
     }
@@ -192,6 +215,7 @@ public:
 protected:
     float dps_;
     float targetExpectedLifeTime;
+    Unit* currentTarget;
 };
 
 // combo
@@ -199,7 +223,8 @@ class ComboFindTargetSmartStrategy : public FindTargetStrategy
 {
 public:
     ComboFindTargetSmartStrategy(PlayerbotAI* botAI, float dps)
-        : FindTargetStrategy(botAI), dps_(dps), targetExpectedLifeTime(1000000)
+        : FindTargetStrategy(botAI), dps_(dps), targetExpectedLifeTime(1000000),
+          currentTarget(botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get())
     {
     }
 
@@ -250,10 +275,11 @@ public:
             if (new_unit == combo_unit)
                 return true;
 
-            return new_time < old_time;
+            return StickyLifeTime(new_unit, currentTarget, new_time) <
+                   StickyLifeTime(old_unit, currentTarget, old_time);
         }
         // all targets are far away, choose the closest one
-        return bot->GetDistance(new_unit) < bot->GetDistance(old_unit);
+        return StickyDistance(bot, new_unit, currentTarget) < StickyDistance(bot, old_unit, currentTarget);
     }
     int32_t GetIntervalLevel(Unit* unit)
     {
@@ -261,6 +287,8 @@ public:
         float attackRange =
             botAI->IsRanged(botAI->GetBot()) ? sPlayerbotAIConfig.spellDistance : sPlayerbotAIConfig.meleeDistance;
         attackRange += 5.0f;
+        if (sPlayerbotAIConfig.coaStickyTarget && unit == currentTarget)
+            attackRange += 5.0f;
         int level = dis < attackRange ? 10 : 0;
         return level;
     }
@@ -268,6 +296,7 @@ public:
 protected:
     float dps_;
     float targetExpectedLifeTime;
+    Unit* currentTarget;
 };
 
 Unit* DpsTargetValue::Calculate()

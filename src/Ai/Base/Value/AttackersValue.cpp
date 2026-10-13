@@ -12,6 +12,10 @@
 #include "ReputationMgr.h"
 #include "ServerFacade.h"
 
+#include <algorithm>
+#include <limits>
+#include <utility>
+
 GuidVector AttackersValue::Calculate()
 {
     std::unordered_set<Unit*> targets;
@@ -59,6 +63,26 @@ GuidVector AttackersValue::Calculate()
             if (unit && unit->IsPlayer() && IsValidTarget(unit, bot))
                 result.push_back(unit->GetGUID());
         }
+    }
+
+    if (sPlayerbotAIConfig.coaStickyTarget)
+    {
+        std::vector<std::pair<float, ObjectGuid>> ordered;
+        ordered.reserve(result.size());
+        for (ObjectGuid const& guid : result)
+        {
+            Unit* unit = botAI->GetUnit(guid);
+            ordered.emplace_back(unit ? bot->GetExactDist2d(unit) : std::numeric_limits<float>::max(), guid);
+        }
+
+        std::sort(ordered.begin(), ordered.end(),
+                  [](std::pair<float, ObjectGuid> const& left, std::pair<float, ObjectGuid> const& right)
+                  { return left.first != right.first ? left.first < right.first : left.second < right.second; });
+
+        result.clear();
+        for (std::pair<float, ObjectGuid> const& entry : ordered)
+            if (result.empty() || result.back() != entry.second)
+                result.push_back(entry.second);
     }
 
     return result;

@@ -1600,6 +1600,12 @@ AiPlayerbot.CoaFastHealBelowLow = 1
 # unit no longer overrides them, and excluded units no longer trigger "coa aoe".
 # Default: 1 (enabled)
 AiPlayerbot.CoaExclusionsEverywhere = 1
+
+# Damage dealers keep their target unless another one is clearly better (dies a quarter sooner,
+# or stands 5 yards closer), and the list of attackers comes in a stable order (distance, then
+# id): bots no longer flip between two mobs every second and stand still in between.
+# Default: 1 (enabled)
+AiPlayerbot.CoaStickyTarget = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds
