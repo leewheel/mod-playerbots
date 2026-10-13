@@ -1293,6 +1293,26 @@ bool BGStrategyCheckAction::Execute(Event /*event*/)
     ;
     if (!inside_bg && botAI->HasStrategy("battleground", BOT_STATE_NON_COMBAT))
     {
+        // A random bot without a master that comes back from a battleground or an arena still grouped with a real
+        // player (solo queue team mates kept in the party) leaves that party: nobody invited it there.
+        if (!botAI->GetMaster() && sRandomPlayerbotMgr.IsRandomBot(bot))
+        {
+            Group* group = bot->GetGroup();
+            if (group && !group->isBGGroup() && !group->isBFGroup())
+            {
+                for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+                {
+                    Player* member = ref->GetSource();
+                    if (member && member != bot && !GET_PLAYERBOT_AI(member))
+                    {
+                        LOG_INFO("playerbots", "Bot {} <{}> leaves the party it was left in after a battleground",
+                                 bot->GetGUID().ToString().c_str(), bot->GetName());
+                        bot->RemoveFromGroup();
+                        break;
+                    }
+                }
+            }
+        }
         botAI->ResetStrategies();
         return true;
     }
