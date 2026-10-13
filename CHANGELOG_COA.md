@@ -1,5 +1,18 @@
 # CoA Bots — changelog
 
+## v2.2.1 — Rated arenas with your party (October 2026)
+
+Needs the core with the rated solo arena changes (jealous-sound/azerothcore-wotlk-coa, rated solo queue #7408 and
+its follow-up: "Join as Group" in the rated solo system, Arena Points and runes per win, rating titles, season cap).
+
+### Arenas
+- **"Join as Group" in the Rated tab** with your bots: a party of 2 or 3 now queues in the rated solo system, and bots
+  complete your side or play against you (jealous-sound/azerothcore-wotlk-coa#7562).
+- A rated solo party still waiting gets a bot of the other role, as solo players do.
+- A bot invited by its master to an arena team leaves its own solo queue team, or a bot team it does not lead, and
+  accepts.
+- The needs of the rated solo queues are logged (bots wanted per bracket and role).
+
 ## v2.2 — Rated solo queues, ideas from other forks and your reports (October 2026)
 
 ### Rotations — from the specs site reports
