@@ -1,6 +1,6 @@
 # CoA Bots — changelog
 
-## v2.1.1 — in progress
+## v2.2 — Rated solo queues, ideas from other forks and your reports (October 2026)
 
 ### Rotations — from the specs site reports
 - **Primalist Mountain King**: Geode Barrage only on the Aftershock proc (instant), no more channelled filler.
@@ -28,6 +28,9 @@
 - **Rated solo queues**: bots join the rated 1v1, 2v2 and 3v3 solo queues when a real player is waiting, in the role
   the match still needs (`AiPlayerbot.CoaRatedSoloQueue`, `AiPlayerbot.CoaRatedSoloRoleFallback`).
 - No bot 5v5 arena teams any more (Conquest of Azeroth has no 5v5); bot teams of a format set to 0 are disbanded at start.
+- Teammates from the other faction (rated solo queues mix them) now show as friends for the match, not as enemies;
+  their own faction comes back when they leave.
+- Random bots back from an arena or battleground leave a party they were left in with a real player.
 
 ### Forks — ideas from other mod-playerbots forks
 Each behaviour change has its own switch in `playerbots.conf` (all on by default, `0` turns one off).
@@ -61,6 +64,9 @@ Each behaviour change has its own switch in `playerbots.conf` (all on by default
   Dogsmeller), and no longer run back and forth to a pickup they have already looted (reported by Maky).
 - **Full bags**: random bots whose bags are full now also get rid of gear they could wear but that is worse than
   their own (level 60 bots kept every soulbound raid epic they looted).
+- **Custom races** (custom races module of the CoA Server Manager): random bots only take them when
+  `CoACustomRaces.BotsEnable = 1`, skip the ids listed in `AiPlayerbot.ExcludedBotRaces`, and never take the races that
+  crash the client (`AiPlayerbot.CrashingBotRaces`, default 65,72,77,80,81); Gnoll and Saberon bots are male.
 
 ### Gear
 - **Witch Hunter Houndmaster** no longer takes spell power gear: Agility, Haste and Crit, Spell Penetration first.
