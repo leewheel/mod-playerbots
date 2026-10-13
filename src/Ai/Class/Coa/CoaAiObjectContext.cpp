@@ -3552,6 +3552,69 @@ public:
 };
 
 /*
+ * AiPlayerbot.CoaPvpTrinket: in an arena, a battleground or a duel, a CoA bot that loses control (stun,
+ * fear, polymorph, charm, horror) for 2 seconds or more breaks free with the PvP trinket it wears (spell
+ * 42292, the one PlayerbotFactory equips). Bots wore it and never used it: "every man for himself" is a
+ * racial of the human race only, and the CoA strategies had no use for trinkets in a fight.
+ */
+constexpr uint32 SPELL_PVP_TRINKET = 42292;
+
+bool InPvpFight(Player* bot)
+{
+    return bot->InArena() || bot->InBattleground() || bot->duel;
+}
+
+// The equipped trinket that casts the PvP trinket spell, if any.
+Item* PvpTrinket(Player* bot)
+{
+    for (uint8 slot : { EQUIPMENT_SLOT_TRINKET1, EQUIPMENT_SLOT_TRINKET2 })
+        if (Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            for (_Spell const& spell : item->GetTemplate()->Spells)
+                if (spell.SpellId == SPELL_PVP_TRINKET)
+                    return item;
+    return nullptr;
+}
+
+// The longest time left on an aura that takes control of the bot, in milliseconds.
+int32 LostControlFor(Player* bot)
+{
+    int32 longest = 0;
+    for (AuraType type : { SPELL_AURA_MOD_STUN, SPELL_AURA_MOD_FEAR, SPELL_AURA_MOD_CONFUSE, SPELL_AURA_MOD_CHARM })
+        for (AuraEffect const* effect : bot->GetAuraEffectsByType(type))
+        {
+            int32 const left = effect->GetBase()->GetDuration();
+            longest = std::max(longest, left < 0 ? 60000 : left);
+        }
+    return longest;
+}
+
+class CoaPvpTrinketTrigger : public Trigger
+{
+public:
+    CoaPvpTrinketTrigger(PlayerbotAI* botAI) : Trigger(botAI, "coa pvp trinket") {}
+
+    bool IsActive() override
+    {
+        return sPlayerbotAIConfig.coaPvpTrinket && InPvpFight(bot) && LostControlFor(bot) >= 2000 &&
+               !bot->HasSpellCooldown(SPELL_PVP_TRINKET) && PvpTrinket(bot);
+    }
+};
+
+class CoaPvpTrinketAction : public Action
+{
+public:
+    CoaPvpTrinketAction(PlayerbotAI* botAI) : Action(botAI, "coa pvp trinket") {}
+
+    bool Execute(Event /*event*/) override
+    {
+        Item* const trinket = PvpTrinket(bot);
+        if (!trinket || bot->HasSpellCooldown(SPELL_PVP_TRINKET))
+            return false;
+        return bot->CastSpell(bot, SPELL_PVP_TRINKET, false, trinket) == SPELL_CAST_OK;
+    }
+};
+
+/*
  * AiPlayerbot.CoaAvoidMarkedAlly: a harmful aura that makes its carrier hurt the allies around him (a
  * bomb, a brand, a beacon) is read from the spell data: an aura that triggers, or spreads, a damaging
  * or controlling spell on the carrier's allies in an area. A spell meant to be shared (damage split
@@ -4055,6 +4118,8 @@ public:
         triggers.push_back(new TriggerNode("coa dispel control", { NextAction("coa dispel", DispelControlPriority()) }));
         // A step out of a marked member's reach comes before any cast, as "avoid aoe" does.
         triggers.push_back(new TriggerNode("coa marked ally", { NextAction("coa avoid marked ally", ACTION_EMERGENCY + 4) }));
+        // Breaking a stun or a fear comes before anything the bot could cast once free.
+        triggers.push_back(new TriggerNode("coa pvp trinket", { NextAction("coa pvp trinket", ACTION_EMERGENCY + 6) }));
         triggers.push_back(new TriggerNode("coa enemy buff", { NextAction("coa purge", PurgePriority()) }));
         // Just above "dps assist" (50), which would otherwise turn the bot back to the boss first.
         triggers.push_back(new TriggerNode("coa priority add", { NextAction("coa priority add", ACTION_DISPEL + 1) }));
@@ -4554,6 +4619,7 @@ public:
         creators["coa defensive"] = &CoaActionFactoryInternal::coa_defensive;
         creators["coa dispel"] = &CoaActionFactoryInternal::coa_dispel;
         creators["coa avoid marked ally"] = &CoaActionFactoryInternal::coa_avoid_marked_ally;
+        creators["coa pvp trinket"] = &CoaActionFactoryInternal::coa_pvp_trinket;
         creators["coa purge"] = &CoaActionFactoryInternal::coa_purge;
         creators["coa priority add"] = &CoaActionFactoryInternal::coa_priority_add;
         creators["coa interrupt"] = &CoaActionFactoryInternal::coa_interrupt;
@@ -4583,6 +4649,7 @@ private:
     static Action* coa_defensive(PlayerbotAI* botAI) { return new CoaDefensiveAction(botAI); }
     static Action* coa_dispel(PlayerbotAI* botAI) { return new CoaDispelAction(botAI); }
     static Action* coa_avoid_marked_ally(PlayerbotAI* botAI) { return new CoaAvoidMarkedAllyAction(botAI); }
+    static Action* coa_pvp_trinket(PlayerbotAI* botAI) { return new CoaPvpTrinketAction(botAI); }
     static Action* coa_purge(PlayerbotAI* botAI) { return new CoaPurgeAction(botAI); }
     static Action* coa_priority_add(PlayerbotAI* botAI) { return new CoaPriorityAddAction(botAI); }
     static Action* coa_interrupt(PlayerbotAI* botAI) { return new CoaInterruptAction(botAI); }
@@ -4603,6 +4670,7 @@ public:
         creators["coa dispel"] = &CoaTriggerFactoryInternal::coa_dispel;
         creators["coa dispel control"] = &CoaTriggerFactoryInternal::coa_dispel_control;
         creators["coa marked ally"] = &CoaTriggerFactoryInternal::coa_marked_ally;
+        creators["coa pvp trinket"] = &CoaTriggerFactoryInternal::coa_pvp_trinket;
         creators["coa enemy casting"] = &CoaTriggerFactoryInternal::coa_enemy_casting;
         creators["coa enemy buff"] = &CoaTriggerFactoryInternal::coa_enemy_buff;
         creators["coa priority add"] = &CoaTriggerFactoryInternal::coa_priority_add;
@@ -4622,6 +4690,7 @@ private:
     static Trigger* coa_dispel(PlayerbotAI* botAI) { return new CoaDispelTrigger(botAI); }
     static Trigger* coa_dispel_control(PlayerbotAI* botAI) { return new CoaDispelControlTrigger(botAI); }
     static Trigger* coa_marked_ally(PlayerbotAI* botAI) { return new CoaMarkedAllyTrigger(botAI); }
+    static Trigger* coa_pvp_trinket(PlayerbotAI* botAI) { return new CoaPvpTrinketTrigger(botAI); }
     static Trigger* coa_enemy_casting(PlayerbotAI* botAI) { return new CoaEnemyCastingTrigger(botAI); }
     static Trigger* coa_enemy_buff(PlayerbotAI* botAI) { return new CoaEnemyBuffTrigger(botAI); }
     static Trigger* coa_priority_add(PlayerbotAI* botAI) { return new CoaPriorityAddTrigger(botAI); }

@@ -1680,6 +1680,12 @@ AiPlayerbot.CoaMeleeNoRangedHardcast = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaLootMakeRoom = 1
 
+# In an arena, a battleground or a duel, a CoA bot stunned, feared, polymorphed or charmed for 2
+# seconds or more uses the PvP trinket it wears (spell 42292) to break free. Bots wore it and never
+# used it.
+# Default: 1 (enabled)
+AiPlayerbot.CoaPvpTrinket = 1
+
 #    AiPlayerbot.CoaTankOpenerSeconds
 #        Description: With CoaSmartTank, a CoA damage dealer lets the tank open: on a target no tank
 #                     has touched yet it waits at most this many seconds, then goes all out. Read
