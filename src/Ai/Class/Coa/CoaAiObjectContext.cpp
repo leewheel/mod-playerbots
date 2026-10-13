@@ -827,6 +827,12 @@ void Classify(SpellInfo const* info, CoaAbility& ability, uint8 depth = 0)
     if (!depth && ForcesCasterForward(info))
         ability.kind &= ~(KIND_HOSTILE | KIND_DAMAGE | KIND_AOE | KIND_BUFF);
 
+    // Assume Peak Posture (Guardian, 500344) is cosmetic, never runs out and ends with any movement. IsStance
+    // takes it for a stance, so "coa buff" could stop the bot to cast it (1 s) and count it as the stance the
+    // bot stands in. It is no stance and no buff.
+    if (!depth && info->Id == 500344)
+        ability.kind &= ~(KIND_STANCE | KIND_BUFF);
+
     // Befriend Beast (Ranger, 562301) possesses a beast for 40 s: no bot can steer it, and the beast and
     // the bot stood idle while the beast took hits (jealous-sound/azerothcore-wotlk-coa#6111). No action
     // of the kit casts such a spell.
