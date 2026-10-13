@@ -1668,6 +1668,12 @@ AiPlayerbot.CoaSmartDispel = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaAvoidMarkedAlly = 1
 
+# CoA melee specializations in a fight no longer stop at range to cast an attack with a cast time
+# or a channel (hybrids stood 20 yards off hardcasting): they close in and use only their instants
+# on the way. A rooted bot, or a target it cannot walk to (far above or below), still casts.
+# Default: 1 (enabled)
+AiPlayerbot.CoaMeleeNoRangedHardcast = 1
+
 #    AiPlayerbot.CoaTankOpenerSeconds
 #        Description: With CoaSmartTank, a CoA damage dealer lets the tank open: on a target no tank
 #                     has touched yet it waits at most this many seconds, then goes all out. Read

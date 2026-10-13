@@ -1693,6 +1693,17 @@ SpellInfo const* CastFirst(PlayerbotAI* botAI, Player* bot, std::vector<Usable> 
                     continue;
                 }
 
+        // AiPlayerbot.CoaMeleeNoRangedHardcast: a melee specialization in a fight does not stop short of its
+        // target to cast an attack with a cast time or a channel: it closes in ("reach melee") and uses
+        // only its instants on the way. A rooted bot, or a target it cannot walk to (far above or below),
+        // still gets the cast.
+        if (sPlayerbotAIConfig.coaMeleeNoRangedHardcast && (usage == 0 || usage == 1) && target && target != bot &&
+            bot->IsInCombat() && PlayerbotAI::IsMelee(bot) && !PlayerbotAI::IsHeal(bot) && !bot->IsRooted() &&
+            std::abs(target->GetPositionZ() - bot->GetPositionZ()) < 8.0f &&
+            !bot->IsWithinMeleeRange(target, bot->GetMeleeRange(target) + 3.0f) &&
+            (info->CalcCastTime(bot) > 0 || info->IsChanneled()))
+            continue;
+
         SpellCastResult const check = StrictCheck(bot, info, target);
         if (check == SPELL_CAST_OK)
         {
