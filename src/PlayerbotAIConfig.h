@@ -129,6 +129,7 @@ public:
     float maxAoeAvoidRadius;
     std::set<uint32> aoeAvoidSpellWhitelist;
     bool tellWhenAvoidAoe;
+    bool regainLineOfSight;
     std::set<uint32> disallowedGameObjects;
     std::set<uint32> attunementQuests;
     std::set<uint32> unobtainableItems;

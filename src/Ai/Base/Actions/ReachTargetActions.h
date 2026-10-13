@@ -54,11 +54,29 @@ public:
     ReachSpellAction(PlayerbotAI* botAI);
 };
 
+class ReachLineOfSightAction : public MovementAction
+{
+public:
+    ReachLineOfSightAction(PlayerbotAI* botAI, std::string const name = "reach line of sight")
+        : MovementAction(botAI, name)
+    {
+    }
+
+    bool Execute(Event event) override;
+    bool isUseful() override;
+    std::string const GetTargetName() override;
+
+private:
+    Player* FindGroupMemberInSightOf(Unit* target);
+};
+
 class ReachPartyMemberToHealAction : public ReachTargetAction
 {
 public:
     ReachPartyMemberToHealAction(PlayerbotAI* botAI);
 
+    bool Execute(Event event) override;
+    bool isUseful() override;
     std::string const GetTargetName() override;
 };
 

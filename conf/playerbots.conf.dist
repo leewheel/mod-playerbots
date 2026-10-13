@@ -1556,6 +1556,17 @@ AiPlayerbot.CoaSmartTank = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaBossKnowledge = 1
 
+# CoA 2.2, ideas taken from other mod-playerbots forks. Each one can be turned off on its own.
+# They are read once at start-up (and again by ".reload config").
+
+# Move to regain line of sight in combat. Ranged bots in a group whose target is behind an
+# obstacle walk to the nearest group member that can see it, and hold position if none can.
+# Melee and solo bots walk towards the target. Healers (CoA healers too) keep the group
+# members they cannot see as candidates, at a penalty, and walk until they see them.
+# Default: 1 (enabled)
+AiPlayerbot.CoaRegainLineOfSight = 1
+#@FORKS22@
+
 #    AiPlayerbot.CoaTankOpenerSeconds
 #        Description: With CoaSmartTank, a CoA damage dealer lets the tank open: on a target no tank
 #                     has touched yet it waits at most this many seconds, then goes all out. Read

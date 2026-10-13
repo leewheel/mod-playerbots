@@ -17,6 +17,14 @@ void CombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             }
         )
     );
+    triggers.push_back(
+        new TriggerNode(
+            "target out of sight",
+            {
+                NextAction("reach line of sight", ACTION_MOVE)
+            }
+        )
+    );
     // drop target relevance 99 (lower than Worldpacket triggers)
     triggers.push_back(
         new TriggerNode(
