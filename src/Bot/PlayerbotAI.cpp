@@ -4387,16 +4387,14 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
         return false;
     }
 
-    spell->prepare(&targets);
-
-    if (bot->isMoving() && spell->GetCastTime())
+    if (bot->isMoving() && spellInfo->CalcCastTime(bot))
     {
-        // bot->StopMoving();
         SetNextCheckDelay(sPlayerbotAIConfig.reactDelay);
-        spell->cancel();
         delete spell;
         return false;
     }
+
+    spell->prepare(&targets);
 
     if (spellInfo->Effects[0].Effect == SPELL_EFFECT_OPEN_LOCK || spellInfo->Effects[0].Effect == SPELL_EFFECT_SKINNING)
     {
