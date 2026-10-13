@@ -1,5 +1,25 @@
 # CoA Bots — changelog
 
+## v2.2.2 — in progress
+
+Fixes from ladiabale (thanks!).
+
+### Rotations
+- **Chronomancer Artificer and Infinite**: no more Time Out! as a filler, a 6 s self-stun cast with full mana
+  (Zyth45/mod-playerbots#35, ladiabale).
+- **Guardian** (all three specs): no more Assume Peak Posture, a cosmetic aura that any movement ends; the bot
+  stood still in combat to cast it, and out of combat it was taken for a stance (ladiabale).
+- Shipped as `zz_coa_rotation_corrections_2_2_2_time_out.sql` and `zz_coa_rotation_corrections_2_2_2_peak_posture.sql`
+  (default rotations only, rows chosen by content, re-runnable). Restart the worldserver to see the change.
+
+### Bots
+- **Lower spell ranks usable again** after a bot is rebuilt at a lower level: the rank kept below a removed one
+  stayed inactive until the next login, and its rotation rows failed (ladiabale).
+- **CoA class bots no longer get a miscellaneous item or a fishing pole as their weapon** from the gear factory,
+  and give one up at their next gear-up: their weapon strikes failed with it (ladiabale).
+- **Preferred mounts** (`mount <spell>`) are found again when the playerbots database has another name than
+  `acore_playerbots`, and survive a restart (ladiabale).
+
 ## v2.2.1 — Rated arenas with your party (October 2026)
 
 Needs the core with the rated solo arena changes (jealous-sound/azerothcore-wotlk-coa, rated solo queue #7408 and
