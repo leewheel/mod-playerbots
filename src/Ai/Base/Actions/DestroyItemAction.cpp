@@ -8,6 +8,7 @@
 #include "Event.h"
 #include "ItemCountValue.h"
 #include "Playerbots.h"
+#include "RandomPlayerbotMgr.h"
 
 bool DestroyItemAction::Execute(Event event)
 {
@@ -79,6 +80,12 @@ bool SmartDestroyItemAction::Execute(Event /*event*/)
         bestToDestroy.push_back(ITEM_USAGE_VENDOR);
         bestToDestroy.push_back(ITEM_USAGE_AH);
     }
+
+    // Gear a random bot could wear but that is worse than its own is neither sold nor destroyed by
+    // anything else: level 60 bots kept every soulbound raid epic they looted until their bags were
+    // full (154 of 11,287 on the Dev, 13/10).
+    if (sRandomPlayerbotMgr.IsRandomBot(bot))
+        bestToDestroy.push_back(ITEM_USAGE_BAD_EQUIP);
 
     // If we still need room
     bestToDestroy.push_back(
