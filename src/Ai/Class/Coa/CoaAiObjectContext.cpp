@@ -2612,7 +2612,9 @@ public:
 
         // Someone dropping is healed with the fastest heal even when mana is short; otherwise a
         // bot saving its mana goes for the cheapest.
-        if (SavingManaForHeals(bot) && !(smart && target->GetHealthPct() < sPlayerbotAIConfig.criticalHealth))
+        float const dropping = sPlayerbotAIConfig.coaFastHealBelowLow ? sPlayerbotAIConfig.lowHealth
+                                                                       : sPlayerbotAIConfig.criticalHealth;
+        if (SavingManaForHeals(bot) && !(smart && target->GetHealthPct() < dropping))
             CheapestFirst(bot, spells);
 
         AddPrerequisites(spells);

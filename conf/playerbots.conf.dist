@@ -1589,6 +1589,11 @@ AiPlayerbot.CoaNextTargetSameTick = 1
 # second and died while full of mana.
 # Default: 1 (enabled)
 AiPlayerbot.CoaHealSelfFirst = 1
+
+# A CoA healer saving its mana stops picking its cheapest heal once the target is under 45%
+# (LowHealth) instead of 25% (CriticalHealth): one boss hit took a tank from 45% to dead.
+# Default: 1 (enabled)
+AiPlayerbot.CoaFastHealBelowLow = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds
