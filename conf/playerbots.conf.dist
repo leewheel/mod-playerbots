@@ -1565,6 +1565,12 @@ AiPlayerbot.CoaBossKnowledge = 1
 # members they cannot see as candidates, at a penalty, and walk until they see them.
 # Default: 1 (enabled)
 AiPlayerbot.CoaRegainLineOfSight = 1
+
+# A moving bot no longer stops to turn to its target: the movement rewrites its facing every
+# update, so "set facing" fired again each tick, above every heal, and healers on the move
+# cast nothing.
+# Default: 1 (enabled)
+AiPlayerbot.CoaNoFacingWhileMoving = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds

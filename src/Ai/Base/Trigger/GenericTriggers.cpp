@@ -569,6 +569,9 @@ bool IsNotFacingTargetTrigger::IsActive()
     if (botAI->HasStrategy("stay", botAI->GetState()))
         return false;
 
+    if (sPlayerbotAIConfig.coaNoFacingWhileMoving && bot->isMoving())
+        return false;
+
     return !AI_VALUE2(bool, "facing", "current target");
 }
 
