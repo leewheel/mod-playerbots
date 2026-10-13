@@ -990,6 +990,15 @@ bool IsFriendlyDispel(uint16 kind)
     return (kind & KIND_DISPEL) && !(kind & KIND_CONTROL) && (!(kind & KIND_HOSTILE) || (kind & KIND_AOE));
 }
 
+// AiPlayerbot.CoaSmartDispel: a spell that also strikes enemies (a nova that burns foes and cleanses
+// friends) still cleanses; where it can reach a member is left to DispelTarget.
+bool IsGroupDispel(uint16 kind)
+{
+    if (!sPlayerbotAIConfig.coaSmartDispel)
+        return IsFriendlyDispel(kind);
+    return (kind & KIND_DISPEL) && !(kind & KIND_CONTROL);
+}
+
 // The spell the bot will really cast. Ascension swaps a spell for another while a proc is up
 // (Malefic Wrath -> Malefic Arrow) and PlayerbotAI::CastSpell follows the swap, so the check, the
 // cooldown and the bench have to bear on the replacement; the cast keeps the listed id, or the proc
@@ -1697,6 +1706,17 @@ SpellInfo const* CastFirst(PlayerbotAI* botAI, Player* bot, std::vector<Usable> 
                     continue;
                 }
 
+        // AiPlayerbot.CoaMeleeNoRangedHardcast: a melee specialization in a fight does not stop short of its
+        // target to cast an attack with a cast time or a channel: it closes in ("reach melee") and uses
+        // only its instants on the way. A rooted bot, or a target it cannot walk to (far above or below),
+        // still gets the cast.
+        if (sPlayerbotAIConfig.coaMeleeNoRangedHardcast && (usage == 0 || usage == 1) && target && target != bot &&
+            bot->IsInCombat() && PlayerbotAI::IsMelee(bot) && !PlayerbotAI::IsHeal(bot) && !bot->IsRooted() &&
+            std::abs(target->GetPositionZ() - bot->GetPositionZ()) < 8.0f &&
+            !bot->IsWithinMeleeRange(target, bot->GetMeleeRange(target) + 3.0f) &&
+            (info->CalcCastTime(bot) > 0 || info->IsChanneled()))
+            continue;
+
         SpellCastResult const check = StrictCheck(bot, info, target);
         if (check == SPELL_CAST_OK)
         {
@@ -1970,6 +1990,85 @@ bool HasDispellable(Unit* unit, uint32 mask)
 
         SpellInfo const* auraInfo = application->GetBase()->GetSpellInfo();
         if (auraInfo->Dispel && (mask & (1 << auraInfo->Dispel)))
+            return true;
+    }
+
+    return false;
+}
+
+// Whether a dispellable harmful aura of the unit takes control of it (stun, fear, polymorph, silence...).
+bool HasDispellableControl(Unit* unit, uint32 mask)
+{
+    for (auto const& [auraId, application] : unit->GetAppliedAuras())
+    {
+        if (application->IsPositive())
+            continue;
+
+        SpellInfo const* auraInfo = application->GetBase()->GetSpellInfo();
+        if (!auraInfo->Dispel || !(mask & (1 << auraInfo->Dispel)))
+            continue;
+
+        for (SpellEffectInfo const& effect : auraInfo->Effects)
+            if (IsAuraEffect(effect) && IsControlAura(effect))
+                return true;
+    }
+
+    return false;
+}
+
+// The unit a dispel has to be cast on to cleanse `member`, or nullptr when it cannot reach him.
+// Without AiPlayerbot.CoaSmartDispel: the bot itself, or the member for a spell cast on an ally.
+// With it, also a spell put on the ground (PlayerbotAI::CastSpell lays it at the unit given) and a
+// cleanse around the caster that reaches the member.
+Unit* DispelTarget(Player* bot, Usable const& spell, Player* member)
+{
+    if (member == bot)
+        return bot;
+    if (spell.kind & KIND_ALLY_CAST)
+        return member;
+    if (!sPlayerbotAIConfig.coaSmartDispel)
+        return nullptr;
+
+    if (spell.info->Targets & TARGET_FLAG_DEST_LOCATION)
+        return member;
+
+    for (SpellEffectInfo const& effect : spell.info->Effects)
+    {
+        if (effect.Effect != SPELL_EFFECT_DISPEL)
+            continue;
+
+        switch (effect.TargetA.GetTarget())
+        {
+            case TARGET_UNIT_CASTER_AREA_PARTY: case TARGET_UNIT_SRC_AREA_ALLY: case TARGET_UNIT_SRC_AREA_PARTY:
+            case TARGET_UNIT_CASTER_AREA_RAID:
+                if (bot->IsWithinDistInMap(member, effect.CalcRadius(bot)))
+                    return bot;
+                break;
+            default:
+                break;
+        }
+    }
+
+    return nullptr;
+}
+
+// Another bot of the group is already casting a cleanse on the member: one dispel per member, not
+// every dispeller of the group on the same one (idea from ArkosLUL bbb7e02d839).
+bool DispelClaimed(Player* bot, Player* member)
+{
+    Group* const group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* const other = ref->GetSource();
+        if (!other || other == bot || !other->IsInWorld() || other->GetMapId() != bot->GetMapId())
+            continue;
+
+        Spell* const cast = other->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+        if (cast && cast->m_targets.GetUnitTargetGUID() == member->GetGUID() &&
+            cast->GetSpellInfo()->HasEffect(SPELL_EFFECT_DISPEL))
             return true;
     }
 
@@ -3005,28 +3104,54 @@ public:
 
     bool Execute(Event /*event*/) override
     {
-        std::vector<Usable> const spells = KnownAbilities(bot, IsFriendlyDispel);
+        std::vector<Usable> const spells = KnownAbilities(bot, IsGroupDispel);
         if (spells.empty())
             return false;
 
-        for (Player* member : NearbyGroup(bot))
+        std::vector<Player*> members = NearbyGroup(bot);
+        // AiPlayerbot.CoaSmartDispel: a member who lost control to a dispellable aura first, healers
+        // then tanks before the others, and a member another bot is cleansing is left to it.
+        if (sPlayerbotAIConfig.coaSmartDispel)
+        {
+            uint32 allMasks = 0;
+            for (Usable const& spell : spells)
+                allMasks |= spell.dispelMask;
+
+            auto rank = [allMasks](Player* member)
+            {
+                int score = HasDispellableControl(member, allMasks) ? 0 : 3;
+                CoaRole const role = GetCoaRole(member);
+                score += role == CoaRole::Heal ? 0 : role == CoaRole::Tank ? 1 : 2;
+                return score;
+            };
+            std::stable_sort(members.begin(), members.end(),
+                             [&rank](Player* a, Player* b) { return rank(a) < rank(b); });
+        }
+
+        for (Player* member : members)
+        {
+            if (sPlayerbotAIConfig.coaSmartDispel && member != bot && DispelClaimed(bot, member))
+                continue;
+
             for (Usable const& spell : spells)
             {
                 // Some cleanses only work on the caster.
-                if (member != bot && !(spell.kind & KIND_ALLY_CAST))
+                Unit* const castOn = DispelTarget(bot, spell, member);
+                if (!castOn)
                     continue;
 
                 if (!HasDispellable(member, spell.dispelMask))
                     continue;
 
-                if (SpellInfo const* cast = CastFirst(botAI, bot, { spell }, member, USAGE_DISPEL))
+                if (SpellInfo const* cast = CastFirst(botAI, bot, { spell }, castOn, USAGE_DISPEL))
                     return RecordUsage(USAGE_DISPEL, cast);
             }
+        }
 
         return RecordUsage(USAGE_DISPEL, nullptr);
     }
 
-    bool isUseful() override { return ClassHas(bot, KIND_DISPEL) && HasReadyAbility(botAI, bot,IsFriendlyDispel); }
+    bool isUseful() override { return ClassHas(bot, KIND_DISPEL) && HasReadyAbility(botAI, bot, IsGroupDispel); }
 };
 
 /*
@@ -3112,7 +3237,9 @@ struct PurgeChoice
 PurgeChoice FindPurge(PlayerbotAI* botAI, Player* bot, std::vector<Usable> const& purges)
 {
     PurgeChoice choice;
-    if (!sPlayerbotAIConfig.coaDungeonPriorities || !bot->IsInCombat() || !bot->GetMap()->IsDungeon())
+    // AiPlayerbot.CoaArenaPurge: in an arena, the enemy players' magic buffs too.
+    bool const arena = sPlayerbotAIConfig.coaArenaPurge && bot->InArena();
+    if (!bot->IsInCombat() || (!arena && (!sPlayerbotAIConfig.coaDungeonPriorities || !bot->GetMap()->IsDungeon())))
         return choice;
 
     auto const& benched = static_cast<CoaAiObjectContext*>(botAI->GetAiObjectContext())->benchedSpells;
@@ -3130,6 +3257,21 @@ PurgeChoice FindPurge(PlayerbotAI* botAI, Player* bot, std::vector<Usable> const
     uint32 const nowMs = getMSTime();
     auto consider = [&](Unit* unit)
     {
+        if (arena)
+        {
+            Player* enemy = unit ? unit->ToPlayer() : nullptr;
+            if (!enemy || !enemy->IsAlive() || !bot->IsHostileTo(enemy) || !bot->IsWithinDistInMap(enemy, 30.0f) ||
+                !bot->IsWithinLOSInMap(enemy))
+                return false;
+            if (SpellInfo const* buff = PurgeableBuff(enemy, mask, nowMs))
+            {
+                choice.enemy = enemy;
+                choice.buff = buff;
+                return true;
+            }
+            return false;
+        }
+
         Creature* creature = unit ? unit->ToCreature() : nullptr;
         if (!creature || !creature->IsAlive() ||
             !(creature->IsDungeonBoss() || creature->isWorldBoss() || creature->isElite()) ||
@@ -3415,15 +3557,263 @@ public:
 
         // Only the cleanses ready now: a Ranger whose one cleanse able to clear her debuff was on
         // cooldown kept firing the action, which found nothing to cast (24 silent failures, ladiabale).
-        std::vector<Usable> const spells = KnownAbilities(bot, IsFriendlyDispel);
+        std::vector<Usable> const spells = KnownAbilities(bot, IsGroupDispel);
         for (Player* member : NearbyGroup(bot))
             for (Usable const& spell : spells)
-                if ((member == bot || (spell.kind & KIND_ALLY_CAST)) && HasDispellable(member, spell.dispelMask) &&
+                if (DispelTarget(bot, spell, member) && HasDispellable(member, spell.dispelMask) &&
                     !bot->HasSpellCooldown(EffectiveSpell(bot, spell.info)->Id))
                     return true;
 
         return false;
     }
+};
+
+// AiPlayerbot.CoaSmartDispel: a group member is stunned, feared, polymorphed or silenced by an aura
+// the bot can take off. Same action as "coa dispel", at a higher priority: a healer frees a
+// controlled tank before it tops anyone up.
+class CoaDispelControlTrigger : public Trigger
+{
+public:
+    CoaDispelControlTrigger(PlayerbotAI* botAI) : Trigger(botAI, "coa dispel control") {}
+
+    bool IsActive() override
+    {
+        if (!sPlayerbotAIConfig.coaSmartDispel || !ClassHas(bot, KIND_DISPEL))
+            return false;
+
+        std::vector<Usable> const spells = KnownAbilities(bot, IsGroupDispel);
+        for (Player* member : NearbyGroup(bot))
+            for (Usable const& spell : spells)
+                if (DispelTarget(bot, spell, member) && HasDispellableControl(member, spell.dispelMask))
+                    return true;
+
+        return false;
+    }
+};
+
+/*
+ * AiPlayerbot.CoaPvpTrinket: in an arena, a battleground or a duel, a CoA bot that loses control (stun,
+ * fear, polymorph, charm, horror) for 2 seconds or more breaks free with the PvP trinket it wears (spell
+ * 42292, the one PlayerbotFactory equips). Bots wore it and never used it: "every man for himself" is a
+ * racial of the human race only, and the CoA strategies had no use for trinkets in a fight.
+ */
+constexpr uint32 SPELL_PVP_TRINKET = 42292;
+
+bool InPvpFight(Player* bot)
+{
+    return bot->InArena() || bot->InBattleground() || bot->duel;
+}
+
+// The equipped trinket that casts the PvP trinket spell, if any.
+Item* PvpTrinket(Player* bot)
+{
+    for (uint8 slot : { EQUIPMENT_SLOT_TRINKET1, EQUIPMENT_SLOT_TRINKET2 })
+        if (Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            for (_Spell const& spell : item->GetTemplate()->Spells)
+                if (spell.SpellId == SPELL_PVP_TRINKET)
+                    return item;
+    return nullptr;
+}
+
+// The longest time left on an aura that takes control of the bot, in milliseconds.
+int32 LostControlFor(Player* bot)
+{
+    int32 longest = 0;
+    for (AuraType type : { SPELL_AURA_MOD_STUN, SPELL_AURA_MOD_FEAR, SPELL_AURA_MOD_CONFUSE, SPELL_AURA_MOD_CHARM })
+        for (AuraEffect const* effect : bot->GetAuraEffectsByType(type))
+        {
+            int32 const left = effect->GetBase()->GetDuration();
+            longest = std::max(longest, left < 0 ? 60000 : left);
+        }
+    return longest;
+}
+
+class CoaPvpTrinketTrigger : public Trigger
+{
+public:
+    CoaPvpTrinketTrigger(PlayerbotAI* botAI) : Trigger(botAI, "coa pvp trinket") {}
+
+    bool IsActive() override
+    {
+        return sPlayerbotAIConfig.coaPvpTrinket && InPvpFight(bot) && LostControlFor(bot) >= 2000 &&
+               !bot->HasSpellCooldown(SPELL_PVP_TRINKET) && PvpTrinket(bot);
+    }
+};
+
+class CoaPvpTrinketAction : public Action
+{
+public:
+    CoaPvpTrinketAction(PlayerbotAI* botAI) : Action(botAI, "coa pvp trinket") {}
+
+    bool Execute(Event /*event*/) override
+    {
+        Item* const trinket = PvpTrinket(bot);
+        if (!trinket || bot->HasSpellCooldown(SPELL_PVP_TRINKET))
+            return false;
+        return bot->CastSpell(bot, SPELL_PVP_TRINKET, false, trinket) == SPELL_CAST_OK;
+    }
+};
+
+/*
+ * AiPlayerbot.CoaAvoidMarkedAlly: a harmful aura that makes its carrier hurt the allies around him (a
+ * bomb, a brand, a beacon) is read from the spell data: an aura that triggers, or spreads, a damaging
+ * or controlling spell on the carrier's allies in an area. A spell meant to be shared (damage split
+ * among those it hits) is left out: the group has to stack for it. Radius 0: no danger.
+ * Idea from the boss scripts of the forks (ArkosLUL a14a69517fc, XT-002 Gravity Bomb carriers; the
+ * MoveAwayFromPlayerWithDebuffAction of Yogg-Saron, Baltharus, Saviana), made generic for CoA content.
+ */
+bool HurtsCarrierAllies(SpellEffectInfo const& effect)
+{
+    switch (effect.TargetA.GetTarget())
+    {
+        case TARGET_UNIT_CASTER_AREA_PARTY: case TARGET_UNIT_SRC_AREA_ALLY: case TARGET_UNIT_SRC_AREA_PARTY:
+        case TARGET_UNIT_CASTER_AREA_RAID: case TARGET_UNIT_DEST_AREA_ALLY:
+            break;
+        default:
+            return false;
+    }
+
+    return IsDamage(effect) || (IsAuraEffect(effect) && IsControlAura(effect));
+}
+
+float MarkRadius(SpellInfo const* aura)
+{
+    static std::mutex lock;
+    static std::unordered_map<uint32, float> radii;
+    {
+        std::lock_guard<std::mutex> guard(lock);
+        auto const known = radii.find(aura->Id);
+        if (known != radii.end())
+            return known->second;
+    }
+
+    float radius = 0.0f;
+    for (SpellEffectInfo const& effect : aura->Effects)
+    {
+        // An aura spread to the carrier's allies around him.
+        if ((effect.Effect == SPELL_EFFECT_APPLY_AREA_AURA_FRIEND || effect.Effect == SPELL_EFFECT_APPLY_AREA_AURA_PARTY ||
+             effect.Effect == SPELL_EFFECT_APPLY_AREA_AURA_RAID) &&
+            (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE || IsControlAura(effect)))
+            radius = std::max(radius, effect.CalcRadius());
+
+        // What the aura casts from the carrier, now (periodic) or when it ends (trigger rider).
+        if (!effect.TriggerSpell)
+            continue;
+        SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell);
+        if (!triggered || triggered->HasAttribute(SPELL_ATTR0_CU_SHARE_DAMAGE))
+            continue;
+        for (SpellEffectInfo const& hit : triggered->Effects)
+            if (HurtsCarrierAllies(hit))
+                radius = std::max(radius, hit.CalcRadius());
+    }
+
+    // Beyond this the spot search below finds nothing anyway.
+    radius = std::min(radius, 30.0f);
+
+    std::lock_guard<std::mutex> guard(lock);
+    radii[aura->Id] = radius;
+    return radius;
+}
+
+// The radius of the most dangerous mark the unit carries, 0 without one.
+float CarriedMarkRadius(Unit* unit)
+{
+    float radius = 0.0f;
+    for (auto const& [auraId, application] : unit->GetAppliedAuras())
+        if (!application->IsPositive())
+            radius = std::max(radius, MarkRadius(application->GetBase()->GetSpellInfo()));
+    return radius;
+}
+
+struct MarkedHazard
+{
+    Player* center;
+    float radius;
+};
+
+// What the bot has to keep away from: every marked member around it, or, when the bot carries the
+// mark, every other member.
+std::vector<MarkedHazard> MarkedHazards(Player* bot)
+{
+    std::vector<MarkedHazard> hazards;
+    if (!sPlayerbotAIConfig.coaAvoidMarkedAlly || !bot->GetGroup() || !bot->IsInCombat())
+        return hazards;
+
+    std::vector<Player*> const members = NearbyGroup(bot);
+    if (float const own = CarriedMarkRadius(bot))
+    {
+        for (Player* member : members)
+            if (member != bot)
+                hazards.push_back({ member, own });
+        return hazards;
+    }
+
+    for (Player* member : members)
+        if (member != bot)
+            if (float const radius = CarriedMarkRadius(member))
+                hazards.push_back({ member, radius });
+    return hazards;
+}
+
+class CoaMarkedAllyTrigger : public Trigger
+{
+public:
+    CoaMarkedAllyTrigger(PlayerbotAI* botAI) : Trigger(botAI, "coa marked ally", 1) {}
+
+    bool IsActive() override
+    {
+        for (MarkedHazard const& hazard : MarkedHazards(bot))
+            if (bot->GetExactDist2d(hazard.center) < hazard.radius + 1.0f)
+                return true;
+        return false;
+    }
+};
+
+// Steps out of the reach of the marked members, or away from everyone while the bot carries the mark.
+class CoaAvoidMarkedAllyAction : public MovementAction
+{
+public:
+    CoaAvoidMarkedAllyAction(PlayerbotAI* botAI) : MovementAction(botAI, "coa avoid marked ally") {}
+
+    bool Execute(Event /*event*/) override
+    {
+        std::vector<MarkedHazard> const hazards = MarkedHazards(bot);
+        if (hazards.empty())
+            return false;
+
+        float bestX = 0.0f, bestY = 0.0f, bestScore = -1.0f;
+        float const z = bot->GetPositionZ();
+        for (int i = 0; i < 16; ++i)
+        {
+            float const angle = i * 2.0f * float(M_PI) / 16.0f;
+            for (float step = 3.0f; step <= 33.0f; step += 3.0f)
+            {
+                float const x = bot->GetPositionX() + step * std::cos(angle);
+                float const y = bot->GetPositionY() + step * std::sin(angle);
+                float margin = std::numeric_limits<float>::max();
+                for (MarkedHazard const& hazard : hazards)
+                    margin = std::min(margin, hazard.center->GetExactDist2d(x, y) - hazard.radius - 2.0f);
+                if (margin < 0.0f || !bot->IsWithinLOS(x, y, z))
+                    continue;
+                // The nearest safe spot, not the farthest: the bot keeps fighting from there.
+                float const score = 100.0f - step;
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestX = x;
+                    bestY = y;
+                }
+                break;
+            }
+        }
+
+        if (bestScore < 0.0f)
+            return false;
+
+        return MoveTo(bot->GetMapId(), bestX, bestY, z, false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true);
+    }
+
+    bool isPossible() override { return bot->CanFreeMove(); }
 };
 
 /*
@@ -3552,8 +3942,9 @@ public:
 
     bool IsActive() override
     {
-        if (!sPlayerbotAIConfig.coaDungeonPriorities || !bot->IsInCombat() || !bot->GetMap()->IsDungeon() ||
-            !ClassPurges(bot))
+        bool const arena = sPlayerbotAIConfig.coaArenaPurge && bot->InArena();
+        if (!bot->IsInCombat() || !ClassPurges(bot) ||
+            (!arena && (!sPlayerbotAIConfig.coaDungeonPriorities || !bot->GetMap()->IsDungeon())))
             return false;
         return FindPurge(botAI, bot, KnownPurges(bot)).enemy != nullptr;
     }
@@ -3765,6 +4156,11 @@ public:
 
         triggers.push_back(new TriggerNode("coa enemy casting", { NextAction("coa interrupt", InterruptPriority()) }));
         triggers.push_back(new TriggerNode("coa dispel", { NextAction("coa dispel", DispelPriority()) }));
+        triggers.push_back(new TriggerNode("coa dispel control", { NextAction("coa dispel", DispelControlPriority()) }));
+        // A step out of a marked member's reach comes before any cast, as "avoid aoe" does.
+        triggers.push_back(new TriggerNode("coa marked ally", { NextAction("coa avoid marked ally", ACTION_EMERGENCY + 4) }));
+        // Breaking a stun or a fear comes before anything the bot could cast once free.
+        triggers.push_back(new TriggerNode("coa pvp trinket", { NextAction("coa pvp trinket", ACTION_EMERGENCY + 6) }));
         triggers.push_back(new TriggerNode("coa enemy buff", { NextAction("coa purge", PurgePriority()) }));
         // Just above "dps assist" (50), which would otherwise turn the bot back to the boss first.
         triggers.push_back(new TriggerNode("coa priority add", { NextAction("coa priority add", ACTION_DISPEL + 1) }));
@@ -3779,6 +4175,8 @@ public:
 protected:
     virtual float InterruptPriority() { return ACTION_INTERRUPT; }
     virtual float DispelPriority() { return ACTION_NORMAL + 5; }
+    // A controlled member: just below the purge, above the attacks.
+    virtual float DispelControlPriority() { return ACTION_INTERRUPT - 2; }
     // Just below the interrupt: an enrage or a shield left on the boss costs more than one attack.
     virtual float PurgePriority() { return ACTION_INTERRUPT - 1; }
 
@@ -3859,6 +4257,8 @@ public:
 protected:
     float InterruptPriority() override { return ACTION_MEDIUM_HEAL + 7; }
     float DispelPriority() override { return ACTION_MEDIUM_HEAL + 6; }
+    // Above the heals of a member at medium health, below those of a member at low health.
+    float DispelControlPriority() override { return ACTION_CRITICAL_HEAL + 1.5f; }
     float PurgePriority() override { return ACTION_MEDIUM_HEAL + 5; }
 };
 
@@ -4259,6 +4659,8 @@ public:
         creators["coa taunt"] = &CoaActionFactoryInternal::coa_taunt;
         creators["coa defensive"] = &CoaActionFactoryInternal::coa_defensive;
         creators["coa dispel"] = &CoaActionFactoryInternal::coa_dispel;
+        creators["coa avoid marked ally"] = &CoaActionFactoryInternal::coa_avoid_marked_ally;
+        creators["coa pvp trinket"] = &CoaActionFactoryInternal::coa_pvp_trinket;
         creators["coa purge"] = &CoaActionFactoryInternal::coa_purge;
         creators["coa priority add"] = &CoaActionFactoryInternal::coa_priority_add;
         creators["coa interrupt"] = &CoaActionFactoryInternal::coa_interrupt;
@@ -4287,6 +4689,8 @@ private:
     static Action* coa_taunt(PlayerbotAI* botAI) { return new CoaTauntAction(botAI); }
     static Action* coa_defensive(PlayerbotAI* botAI) { return new CoaDefensiveAction(botAI); }
     static Action* coa_dispel(PlayerbotAI* botAI) { return new CoaDispelAction(botAI); }
+    static Action* coa_avoid_marked_ally(PlayerbotAI* botAI) { return new CoaAvoidMarkedAllyAction(botAI); }
+    static Action* coa_pvp_trinket(PlayerbotAI* botAI) { return new CoaPvpTrinketAction(botAI); }
     static Action* coa_purge(PlayerbotAI* botAI) { return new CoaPurgeAction(botAI); }
     static Action* coa_priority_add(PlayerbotAI* botAI) { return new CoaPriorityAddAction(botAI); }
     static Action* coa_interrupt(PlayerbotAI* botAI) { return new CoaInterruptAction(botAI); }
@@ -4305,6 +4709,9 @@ public:
     CoaTriggerFactoryInternal()
     {
         creators["coa dispel"] = &CoaTriggerFactoryInternal::coa_dispel;
+        creators["coa dispel control"] = &CoaTriggerFactoryInternal::coa_dispel_control;
+        creators["coa marked ally"] = &CoaTriggerFactoryInternal::coa_marked_ally;
+        creators["coa pvp trinket"] = &CoaTriggerFactoryInternal::coa_pvp_trinket;
         creators["coa enemy casting"] = &CoaTriggerFactoryInternal::coa_enemy_casting;
         creators["coa enemy buff"] = &CoaTriggerFactoryInternal::coa_enemy_buff;
         creators["coa priority add"] = &CoaTriggerFactoryInternal::coa_priority_add;
@@ -4322,6 +4729,9 @@ public:
 
 private:
     static Trigger* coa_dispel(PlayerbotAI* botAI) { return new CoaDispelTrigger(botAI); }
+    static Trigger* coa_dispel_control(PlayerbotAI* botAI) { return new CoaDispelControlTrigger(botAI); }
+    static Trigger* coa_marked_ally(PlayerbotAI* botAI) { return new CoaMarkedAllyTrigger(botAI); }
+    static Trigger* coa_pvp_trinket(PlayerbotAI* botAI) { return new CoaPvpTrinketTrigger(botAI); }
     static Trigger* coa_enemy_casting(PlayerbotAI* botAI) { return new CoaEnemyCastingTrigger(botAI); }
     static Trigger* coa_enemy_buff(PlayerbotAI* botAI) { return new CoaEnemyBuffTrigger(botAI); }
     static Trigger* coa_priority_add(PlayerbotAI* botAI) { return new CoaPriorityAddTrigger(botAI); }

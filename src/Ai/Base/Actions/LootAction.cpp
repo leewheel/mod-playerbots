@@ -412,7 +412,13 @@ bool StoreLootAction::Execute(Event event)
         if (!proto)
             continue;
 
-        if (!IsRealPlayer(botAI->GetMaster()) && AI_VALUE(uint8, "bag space") > 80)
+        // AiPlayerbot.CoaLootMakeRoom: a drop worth keeping is taken even with full bags, a grey item
+        // making room for it (idea from Eric Fisher 842ae0aef79, which did it for auction house loot).
+        // Never in the bags of a real player's bots (his alts): their grey items are the player's to keep or sell.
+        bool const madeRoom = sPlayerbotAIConfig.coaLootMakeRoom && loot_type != LOOT_SKINNING && !IsRealPlayer(botAI->GetMaster()) &&
+                              WorthMakingRoom(proto) && MakeRoomFor(proto, itemcount);
+
+        if (!madeRoom && !IsRealPlayer(botAI->GetMaster()) && AI_VALUE(uint8, "bag space") > 80)
         {
             uint32 maxStack = proto->GetMaxStackSize();
             if (maxStack == 1)
@@ -471,6 +477,54 @@ bool StoreLootAction::Execute(Event event)
     bot->GetSession()->QueuePacket(packet);
     // bot->GetSession()->HandleLootReleaseOpcode(packet);
     return true;
+}
+
+// A quest item, or an item of uncommon quality or better: what a full bag of grey junk made the
+// bot leave on the corpse, in a dungeon as in the open world.
+bool StoreLootAction::WorthMakingRoom(ItemTemplate const* proto)
+{
+    return proto->Quality >= ITEM_QUALITY_UNCOMMON || proto->Class == ITEM_CLASS_QUEST || proto->StartQuest ||
+           proto->Bonding == BIND_QUEST_ITEM;
+}
+
+// Whether the drop fits, after destroying the cheapest grey item of the bags when it did not.
+bool StoreLootAction::MakeRoomFor(ItemTemplate const* proto, uint32 count)
+{
+    ItemPosCountVec dest;
+    if (bot->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, proto->ItemId, count) == EQUIP_ERR_OK)
+        return true;
+
+    Item* cheapest = nullptr;
+    uint32 cheapestValue = 0;
+    auto consider = [&cheapest, &cheapestValue](Item* item)
+    {
+        if (!item)
+            return;
+        ItemTemplate const* itemProto = item->GetTemplate();
+        if (!itemProto || itemProto->Quality != ITEM_QUALITY_POOR || itemProto->Class == ITEM_CLASS_QUEST ||
+            itemProto->StartQuest || item->IsNotEmptyBag())
+            return;
+        uint32 const value = itemProto->SellPrice * item->GetCount();
+        if (!cheapest || value < cheapestValue)
+        {
+            cheapest = item;
+            cheapestValue = value;
+        }
+    };
+
+    for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        consider(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot));
+    for (uint8 bagSlot = INVENTORY_SLOT_BAG_START; bagSlot < INVENTORY_SLOT_BAG_END; ++bagSlot)
+        if (Bag* bag = bot->GetBagByPos(bagSlot))
+            for (uint32 slot = 0; slot < bag->GetBagSize(); ++slot)
+                consider(bag->GetItemByPos(slot));
+
+    if (!cheapest)
+        return false;
+
+    bot->DestroyItem(cheapest->GetBagSlot(), cheapest->GetSlot(), true);
+    dest.clear();
+    return bot->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, proto->ItemId, count) == EQUIP_ERR_OK;
 }
 
 bool StoreLootAction::IsLootAllowed(uint32 itemid, PlayerbotAI* botAI)

@@ -292,6 +292,17 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
         bot->GetSession()->isLogingOut() || bot->IsDuringRemoveFromWorld())
         return;
 
+    // A bot left with the taxi flag but no flight (flight path cut short, map change mid-flight) stays
+    // mounted and frozen: clean up what the end of the flight should have.
+    if (bot->HasUnitFlag(UNIT_FLAG_TAXI_FLIGHT) && !bot->IsInFlight() &&
+        bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != FLIGHT_MOTION_TYPE)
+    {
+        LOG_INFO("playerbots", "Bot {} stuck after taxi flight on map {} at {:.1f} {:.1f} {:.1f}, cleaning up",
+                 bot->GetName(), bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ());
+        bot->GetMotionMaster()->MovementExpired();
+        bot->CleanupAfterTaxiFlight();
+    }
+
     // Handle cheat options (set bot health and power if cheats are enabled)
     if (bot->IsAlive() &&
         (static_cast<uint32>(GetCheat()) > 0 || static_cast<uint32>(sPlayerbotAIConfig.botCheatMask) > 0))

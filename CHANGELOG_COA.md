@@ -39,6 +39,26 @@ Many fixes from ladiabale's test runs and pull requests (thanks!).
   and give one up at their next gear-up: their weapon strikes failed with it (ladiabale).
 - **Preferred mounts** (`mount <spell>`) are found again when the playerbots database has another name than
   `acore_playerbots`, and survive a restart (ladiabale).
+### Combat, arenas and group play (with ideas from the playerbots community)
+Each behaviour change has its own switch in `playerbots.conf` (all on by default, `0` turns one off).
+- **Stability**: a pair of settings written the wrong way round (MaxRandomBots under MinRandomBots, and the other
+  min/max ranges) no longer stops the server when the bots load: the two values are swapped, with an error in the
+  log; level rolls and the empty mount or travel lists can no longer draw out of range (idea from HatredPsycho).
+  Bots stuck mounted after a taxi flight are freed (Yero0). Addon messages (DBM, Carbonite...) no longer command bots
+  or open trades (upstream #2872, quasistatic-setup; SquidBots Lite is not affected).
+- **Dispels**: a member stunned, feared, polymorphed or silenced is freed first, healers then tanks; one dispeller
+  per member; cleanses laid on the ground or around the caster now reach the group, and spells that also strike
+  enemies still cleanse (`AiPlayerbot.CoaSmartDispel`; idea from ArkosLUL).
+- **Marked allies**: bots step out of the reach of a member carrying a bomb, brand or beacon, read from the spell
+  data, and the carrier steps away from the others (`AiPlayerbot.CoaAvoidMarkedAlly`; idea from ArkosLUL and the
+  Ulduar and Ruby Sanctum scripts).
+- **Melee hybrids** close in instead of hardcasting from 20 yards; only their instants on the way
+  (`AiPlayerbot.CoaMeleeNoRangedHardcast`).
+- **Full bags**: a quest item or an uncommon or better drop is no longer left on the corpse, the cheapest grey item
+  makes room for it (`AiPlayerbot.CoaLootMakeRoom`; idea from Eric Fisher).
+- **Arenas**: the PvP trinket breaks a stun, fear, polymorph or charm of 2 seconds or more, in arenas, battlegrounds
+  and duels (`AiPlayerbot.CoaPvpTrinket`); purgers take magic buffs off the enemy players (`AiPlayerbot.CoaArenaPurge`;
+  idea from ArkosLUL).
 
 ## v2.2.1 — Rated arenas with your party (October 2026)
 
@@ -85,7 +105,7 @@ its follow-up: "Join as Group" in the rated solo system, Arena Points and runes 
   their own faction comes back when they leave.
 - Random bots back from an arena or battleground leave a party they were left in with a real player.
 
-### Forks — ideas from other mod-playerbots forks
+### Combat, arenas and group play (with ideas from the playerbots community)
 Each behaviour change has its own switch in `playerbots.conf` (all on by default, `0` turns one off).
 - **Stability**: the command server listens on 127.0.0.1 only, bounds its input and runs commands on the world
   thread (`AiPlayerbot.CommandServerBind`; jealous-sound, via HatredPsycho); no crash when a bot flees from a player
