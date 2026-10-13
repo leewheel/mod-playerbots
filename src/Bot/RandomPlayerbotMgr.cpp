@@ -905,24 +905,31 @@ std::vector<uint32> parseBrackets(std::string const& str)
 }
 
 // A rated solo queue entry (AscensionArenaQueue) is rated and holds one player: no rated team queues alone.
-// Its 2v2 and 3v3 matches are played by two temporary teams, its 1v1 matches by personal teams.
+// Its 2v2 and 3v3 matches are played by two temporary teams, its 1v1 matches by personal teams. A party joined
+// as a group with personal teams waits there as one entry too: the core files it with the solos, in the normal
+// queues, where a rated arena team never goes.
 enum class RatedSolo : uint8
 {
     None,
     Waiting,
+    Premade,
     Taken  // invited or in its match
 };
 
-static RatedSolo GetRatedSolo(Player* player, BattlegroundQueueTypeId queueTypeId, uint32* joinTime = nullptr)
+static RatedSolo GetRatedSolo(Player* player, BattlegroundQueueTypeId queueTypeId, GroupQueueInfo* queued = nullptr)
 {
     GroupQueueInfo ginfo;
     if (sBattlegroundMgr->GetBattlegroundQueue(queueTypeId).GetPlayerGroupInfoData(player->GetGUID(), &ginfo))
     {
-        if (!ginfo.IsRated || ginfo.Players.size() != 1)
+        bool const premade = ginfo.Players.size() > 1 &&
+                             (ginfo.GroupType == BG_QUEUE_NORMAL_ALLIANCE || ginfo.GroupType == BG_QUEUE_NORMAL_HORDE);
+        if (!ginfo.IsRated || (ginfo.Players.size() != 1 && !premade))
             return RatedSolo::None;
-        if (joinTime)
-            *joinTime = ginfo.JoinTime;
-        return ginfo.IsInvitedToBGInstanceGUID ? RatedSolo::Taken : RatedSolo::Waiting;
+        if (ginfo.IsInvitedToBGInstanceGUID)
+            return RatedSolo::Taken;
+        if (queued)
+            *queued = ginfo;
+        return premade ? RatedSolo::Premade : RatedSolo::Waiting;
     }
 
     Battleground* bg = player->GetBattleground();
@@ -961,6 +968,7 @@ void RandomPlayerbotMgr::CheckBgQueue()
     }
 
     ratedSoloWaiting.clear();
+    ratedSoloPremades.clear();
 
     // Process real players and populate Battleground Data with player/queue count
     // Opens a queue for bots to join
@@ -999,15 +1007,25 @@ void RandomPlayerbotMgr::CheckBgQueue()
             if (BattlegroundMgr::BGArenaType(queueTypeId))
             {
                 // A rated solo player opens no queue for the rated teams of bots: they would wait for nothing.
-                uint32 joinTime = 0;
-                if (RatedSolo solo = GetRatedSolo(player, queueTypeId, &joinTime); solo != RatedSolo::None)
+                GroupQueueInfo queued;
+                if (RatedSolo solo = GetRatedSolo(player, queueTypeId, &queued); solo != RatedSolo::None)
                 {
                     BattlegroundInfo& info = BattlegroundData[queueTypeId][bracketId];
                     if (solo == RatedSolo::Waiting)
                     {
                         bool const healer = GetCoaRole(player) == CoaRole::Heal;
                         ++(healer ? info.ratedSoloPlayerHealers : info.ratedSoloPlayerDamage);
-                        ratedSoloWaiting.push_back({ player->GetGUID(), joinTime, queueTypeId, bracketId, healer });
+                        ratedSoloWaiting.push_back({ player->GetGUID(), queued.JoinTime, queueTypeId, bracketId, healer });
+                    }
+                    // A party once, whichever of its real members is seen; its role read from the specs.
+                    else if (solo == RatedSolo::Premade && !ratedSoloPremades.count(queued.ArenaTeamId))
+                    {
+                        uint32 healers = 0;
+                        for (ObjectGuid const& guid : queued.Players)
+                            if (Player* member = ObjectAccessor::FindPlayer(guid))
+                                healers += GetCoaRole(member) == CoaRole::Heal ? 1 : 0;
+                        ratedSoloPremades[queued.ArenaTeamId] = { queueTypeId, bracketId,
+                                                                  uint32(queued.Players.size()), healers };
                     }
                     continue;
                 }
@@ -1140,6 +1158,7 @@ void RandomPlayerbotMgr::CheckBgQueue()
                 if (RatedSolo solo = GetRatedSolo(bot, queueTypeId); solo != RatedSolo::None)
                 {
                     BattlegroundInfo& info = BattlegroundData[queueTypeId][bracketId];
+                    // A bot in the party of a real player is counted with that party.
                     if (solo == RatedSolo::Waiting)
                         ++(GetCoaRole(bot) == CoaRole::Heal ? info.ratedSoloBotHealers : info.ratedSoloBotDamage);
                     continue;
@@ -1326,6 +1345,22 @@ void RandomPlayerbotMgr::CountRatedSoloNeeds()
     }
     ratedSoloFallbacks.swap(fallbacks);
 
+    // A party plays on one side (AscensionArenaQueue::ComposeLineup): damage dealers complete it, and the other
+    // side is a full team, with a healer when the party has one, as each side has a healer or neither does.
+    for (auto const& [teamId, premade] : ratedSoloPremades)
+    {
+        BattlegroundInfo& info = BattlegroundData[premade.queueTypeId][premade.bracketId];
+        uint8 const arenaType = BattlegroundMgr::BGArenaType(BattlegroundQueueTypeId(premade.queueTypeId));
+        uint32 const teamSize = sBattlegroundMgr->isArenaTesting() ? 1 : arenaType;
+        if (premade.players > teamSize)
+            continue;
+
+        uint32 const opposingHealers = premade.healers ? 1 : 0;
+        ++info.ratedSoloPremades;
+        info.ratedSoloPremadeHealerSlots += opposingHealers;
+        info.ratedSoloPremadeDamageSlots += teamSize - premade.players + teamSize - opposingHealers;
+    }
+
     for (int bracket = BG_BRACKET_ID_FIRST; bracket < MAX_BATTLEGROUND_BRACKETS; ++bracket)
     {
         for (BattlegroundQueueTypeId queueTypeId : { BATTLEGROUND_QUEUE_1v1, BATTLEGROUND_QUEUE_2v2, BATTLEGROUND_QUEUE_3v3 })
@@ -1344,13 +1379,19 @@ void RandomPlayerbotMgr::CountRatedSoloNeeds()
             }
             else
             {
+                // Real solos take the slots the parties leave first; the others play matches of solos.
+                uint32 const premadeHealers = info.ratedSoloPremadeHealerSlots;
+                uint32 const premadeDamage = info.ratedSoloPremadeDamageSlots;
+                uint32 const soloHealers = realHealers - std::min(realHealers, premadeHealers);
+                uint32 const soloDamage = realDamage - std::min(realDamage, premadeDamage);
                 uint32 const teamSize = sBattlegroundMgr->isArenaTesting() ? 1 : arenaType;
-                uint32 const healerMatches = (realHealers + 1) / 2;
+                uint32 const healerMatches = (soloHealers + 1) / 2;
                 uint32 const healerMatchDamage = healerMatches * (2 * teamSize - 2);
-                uint32 const damageLeft = realDamage > healerMatchDamage ? realDamage - healerMatchDamage : 0;
+                uint32 const damageLeft = soloDamage > healerMatchDamage ? soloDamage - healerMatchDamage : 0;
                 uint32 const damageMatches = (damageLeft + 2 * teamSize - 1) / (2 * teamSize);
-                uint32 const healers = 2 * healerMatches + info.ratedSoloFallbackHealers;
-                uint32 const damage = healerMatchDamage + damageMatches * 2 * teamSize + info.ratedSoloFallbackDamage;
+                uint32 const healers = premadeHealers + 2 * healerMatches + info.ratedSoloFallbackHealers;
+                uint32 const damage =
+                    premadeDamage + healerMatchDamage + damageMatches * 2 * teamSize + info.ratedSoloFallbackDamage;
                 uint32 const haveHealers = realHealers + info.ratedSoloBotHealers;
                 uint32 const haveDamage = realDamage + info.ratedSoloBotDamage;
                 info.ratedSoloHealersNeeded = healers > haveHealers ? healers - haveHealers : 0;
@@ -1363,9 +1404,10 @@ void RandomPlayerbotMgr::CountRatedSoloNeeds()
             }
 
             if (info.ratedSoloHealersNeeded || info.ratedSoloDamageNeeded)
-                LOG_DEBUG("playerbots", "Rated solo {}v{} bracket {}: players {} healers {} damage, bots {} healers {} damage, "
-                          "{} healers and {} damage needed", uint32(arenaType), uint32(arenaType), bracket, realHealers, realDamage,
-                          info.ratedSoloBotHealers, info.ratedSoloBotDamage, info.ratedSoloHealersNeeded,
+                LOG_DEBUG("playerbots", "Rated solo {}v{} bracket {}: players {} healers {} damage, {} parties, bots {} healers "
+                          "{} damage, {} healers and {} damage needed", uint32(arenaType), uint32(arenaType), bracket,
+                          realHealers, realDamage, info.ratedSoloPremades, info.ratedSoloBotHealers,
+                          info.ratedSoloBotDamage, info.ratedSoloHealersNeeded,
                           info.ratedSoloDamageNeeded);
         }
     }

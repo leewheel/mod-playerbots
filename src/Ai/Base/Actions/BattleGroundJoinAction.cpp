@@ -1153,7 +1153,8 @@ bool BGStatusAction::Execute(Event event)
                 uint32& surplus = arenaType != ARENA_TYPE_1v1 && GetCoaRole(bot) == CoaRole::Heal
                                       ? info.ratedSoloHealersSurplus
                                       : info.ratedSoloDamageSurplus;
-                realPlayers = !surplus && info.ratedSoloPlayerHealers + info.ratedSoloPlayerDamage > 0;
+                realPlayers =
+                    !surplus && info.ratedSoloPlayerHealers + info.ratedSoloPlayerDamage + info.ratedSoloPremades > 0;
                 if (surplus)
                     --surplus;
             }

@@ -71,6 +71,19 @@ struct BattlegroundInfo
     uint32 ratedSoloFallbackDamage = 0;
     uint32 ratedSoloHealersSurplus = 0;
     uint32 ratedSoloDamageSurplus = 0;
+    // Parties waiting there as one entry (rated "Join as Group"), and the slots their matches leave to others.
+    uint32 ratedSoloPremades = 0;
+    uint32 ratedSoloPremadeHealerSlots = 0;
+    uint32 ratedSoloPremadeDamageSlots = 0;
+};
+
+// A party waiting in a rated solo 2v2 or 3v3 queue: its members, and how many of them are healers by their spec.
+struct RatedSoloPremade
+{
+    uint32 queueTypeId;
+    uint32 bracketId;
+    uint32 players;
+    uint32 healers;
 };
 
 // A real player waiting in a rated solo queue, and the role read from their spec.
@@ -205,6 +218,7 @@ public:
     // How many healer and damage bots the rated solo queues real players wait in still need (CheckBgQueue).
     void CountRatedSoloNeeds();
     std::vector<RatedSoloWait> ratedSoloWaiting;
+    std::unordered_map<uint32, RatedSoloPremade> ratedSoloPremades;  // by the leader's personal team
     // Real players given a bot of their other role: guid -> join time of that wait, and whether it was a healer.
     std::unordered_map<ObjectGuid, std::pair<uint32, bool>> ratedSoloFallbacks;
     void KeepArenaCaptainsOnline();
