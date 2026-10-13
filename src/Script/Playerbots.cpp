@@ -17,6 +17,7 @@
 #include "PlayerScript.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotCommandScript.h"
+#include "PlayerbotCommandServer.h"
 #include "PlayerbotGuildMgr.h"
 #include "PlayerbotSpellRepository.h"
 #include "PlayerbotWorldThreadProcessor.h"
@@ -370,7 +371,8 @@ class PlayerbotsWorldScript : public WorldScript
 public:
     PlayerbotsWorldScript() : WorldScript("PlayerbotsWorldScript", {
         WORLDHOOK_ON_BEFORE_WORLD_INITIALIZED,
-        WORLDHOOK_ON_UPDATE
+        WORLDHOOK_ON_UPDATE,
+        WORLDHOOK_ON_SHUTDOWN
     }) {}
 
     void OnBeforeWorldInitialized() override
@@ -413,6 +415,12 @@ public:
         PlayerbotWorldThreadProcessor::instance().Update(diff);
         sRandomPlayerbotMgr.UpdateAI(diff);  // World thread only
         sRandomPlayerbotMgr.CoaReleaseOrphanGroups();
+    }
+
+    void OnShutdown() override
+    {
+        // Command server sessions run on detached threads that would otherwise outlive the world thread processor.
+        PlayerbotCommandServer::instance().Stop();
     }
 };
 

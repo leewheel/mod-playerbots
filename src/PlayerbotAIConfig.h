@@ -351,7 +351,8 @@ public:
 
     std::vector<worldBuff> worldBuffs;
 
-    uint32 commandServerPort;
+    uint16 commandServerPort;
+    std::string commandServerBind;
     bool perfMonEnabled;
     bool summonWhenGroup;
     ShowHideCosmetic randomBotShowHelmet;

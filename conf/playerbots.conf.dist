@@ -3242,6 +3242,11 @@ Playerbots.Updates.EnableDatabases = 1
 # Command server port, 0 - disabled
 AiPlayerbot.CommandServerPort = 8888
 
+# Command server bind address (IPv4 or IPv6), the server does not start if the address is invalid
+# The command server has no authentication: keep it on a loopback address (127.0.0.1 or ::1)
+# Default: 127.0.0.1
+AiPlayerbot.CommandServerBind = 127.0.0.1
+
 #
 #
 ####################################################################################################
