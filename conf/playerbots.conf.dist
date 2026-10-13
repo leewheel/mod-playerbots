@@ -1660,6 +1660,17 @@ AiPlayerbot.Coa.AncestralCombatFix = 1
 
 AiPlayerbot.CoaKeepPassiveAuras = 1
 
+#    AiPlayerbot.CoaRatedSoloQueue
+#        Description: 1 - while a real player waits in a rated solo queue (1v1, 2v2 or 3v3 with roles), random
+#                     bots of their level bracket join it, just enough to complete the matches: healers and
+#                     damage dealers as the 2v2 and 3v3 lineups need them. A bot gets a personal arena team
+#                     of that bracket, as a player does. The role of a real player is read from their spec.
+#                     0 - bots never join the rated solo queues.
+#                     Read again by ".reload config".
+#        Default:     1
+
+AiPlayerbot.CoaRatedSoloQueue = 1
+
 #    AiPlayerbot.CoaArenaReady
 #        Description: 1 - an arena shows a ready pylon in each starting room, as on the original CoA realm.
 #                     A player clicks it when ready; a bot is ready by itself once settled. When every

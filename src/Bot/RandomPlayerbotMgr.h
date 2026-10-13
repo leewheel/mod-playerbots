@@ -55,6 +55,15 @@ struct BattlegroundInfo
     // battleground can start (its minimum per team), taken down as bots join.
     uint32 bgAllianceMissing = 0;
     uint32 bgHordeMissing = 0;
+
+    // Rated solo queues (AiPlayerbot.CoaRatedSoloQueue), kept out of the rated team counts above: real players
+    // and bots waiting there uninvited, by role, and how many more bots of each role complete their matches.
+    uint32 ratedSoloPlayerHealers = 0;
+    uint32 ratedSoloPlayerDamage = 0;
+    uint32 ratedSoloBotHealers = 0;
+    uint32 ratedSoloBotDamage = 0;
+    uint32 ratedSoloHealersNeeded = 0;
+    uint32 ratedSoloDamageNeeded = 0;
 };
 
 class ChatHandler;
@@ -176,6 +185,8 @@ public:
     // A queued real player of this team still lacks a tank or a healer: damage dealers hold back.
     std::array<std::atomic<bool>, 2> LfgNeedTankOrHeal{};
     void CheckBgQueue();
+    // How many healer and damage bots the rated solo queues real players wait in still need (CheckBgQueue).
+    void CountRatedSoloNeeds();
     void KeepArenaCaptainsOnline();
     void CheckLfgQueue();
     void CheckPlayers();

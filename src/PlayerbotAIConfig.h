@@ -433,6 +433,7 @@ public:
     uint32 coaCityStayMinMinutes;
     uint32 coaCityStayMaxMinutes;
     uint32 coaBgLevelBalanceChance;
+    bool coaRatedSoloQueue;
     std::string coaStatusFile;
     uint32 coaStatusIntervalSeconds;
     bool coaStatusEnabled;

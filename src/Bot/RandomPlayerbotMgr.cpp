@@ -904,6 +904,32 @@ std::vector<uint32> parseBrackets(std::string const& str)
     return brackets;
 }
 
+// A rated solo queue entry (AscensionArenaQueue) is rated and holds one player: no rated team queues alone.
+// Its 2v2 and 3v3 matches are played by two temporary teams, its 1v1 matches by personal teams.
+enum class RatedSolo : uint8
+{
+    None,
+    Waiting,
+    Taken  // invited or in its match
+};
+
+static RatedSolo GetRatedSolo(Player* player, BattlegroundQueueTypeId queueTypeId)
+{
+    GroupQueueInfo ginfo;
+    if (sBattlegroundMgr->GetBattlegroundQueue(queueTypeId).GetPlayerGroupInfoData(player->GetGUID(), &ginfo))
+    {
+        if (!ginfo.IsRated || ginfo.Players.size() != 1)
+            return RatedSolo::None;
+        return ginfo.IsInvitedToBGInstanceGUID ? RatedSolo::Taken : RatedSolo::Waiting;
+    }
+
+    Battleground* bg = player->GetBattleground();
+    if (bg && bg->isArena() && bg->isRated() &&
+        (bg->GetArenaType() == ARENA_TYPE_1v1 || bg->GetArenaTeamIdForTeam(TEAM_ALLIANCE) >= MAX_ARENA_TEAM_ID))
+        return RatedSolo::Taken;
+    return RatedSolo::None;
+}
+
 void RandomPlayerbotMgr::CheckBgQueue()
 {
     if (!BgCheckTimer)
@@ -968,6 +994,15 @@ void RandomPlayerbotMgr::CheckBgQueue()
             bool isRated = false;
             if (BattlegroundMgr::BGArenaType(queueTypeId))
             {
+                // A rated solo player opens no queue for the rated teams of bots: they would wait for nothing.
+                if (RatedSolo solo = GetRatedSolo(player, queueTypeId); solo != RatedSolo::None)
+                {
+                    BattlegroundInfo& info = BattlegroundData[queueTypeId][bracketId];
+                    if (solo == RatedSolo::Waiting)
+                        ++(GetCoaRole(player) == CoaRole::Heal ? info.ratedSoloPlayerHealers : info.ratedSoloPlayerDamage);
+                    continue;
+                }
+
                 BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(queueTypeId);
                 GroupQueueInfo ginfo;
 
@@ -1092,6 +1127,15 @@ void RandomPlayerbotMgr::CheckBgQueue()
 
             if (BattlegroundMgr::BGArenaType(queueTypeId))
             {
+                // Bots of the rated solo queues are counted apart, their matches with them.
+                if (RatedSolo solo = GetRatedSolo(bot, queueTypeId); solo != RatedSolo::None)
+                {
+                    BattlegroundInfo& info = BattlegroundData[queueTypeId][bracketId];
+                    if (solo == RatedSolo::Waiting)
+                        ++(GetCoaRole(bot) == CoaRole::Heal ? info.ratedSoloBotHealers : info.ratedSoloBotDamage);
+                    continue;
+                }
+
                 bool isRated = false;
                 BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(queueTypeId);
                 GroupQueueInfo ginfo;
@@ -1169,6 +1213,9 @@ void RandomPlayerbotMgr::CheckBgQueue()
         }
     }
 
+    if (sPlayerbotAIConfig.coaRatedSoloQueue)
+        CountRatedSoloNeeds();
+
     // If enabled, wait for (nearly) all bots to have logged in before queueing for Arena's / BG's.
     // 95 %, not all: a few bots are always logging out and in again (rotation, a new bot count), and on a
     // CoA test realm with 1,000 bots no battleground started for 30 to 40 minutes of every hour while the
@@ -1230,6 +1277,51 @@ void RandomPlayerbotMgr::CheckBgQueue()
     }
 
     LogBattlegroundInfo();
+}
+
+// Bots for the rated solo queues a real player waits in, just enough to complete matches. A 1v1 pairs any two.
+// A 2v2 or 3v3 lineup (AscensionArenaQueue::ComposeLineup) holds either one healer and damage dealers per side,
+// or damage dealers only, and never leaves a waiting healer the only one of a match: each pair of real healers
+// gets damage dealers, the real damage dealers left over fill matches of their own.
+void RandomPlayerbotMgr::CountRatedSoloNeeds()
+{
+    for (int bracket = BG_BRACKET_ID_FIRST; bracket < MAX_BATTLEGROUND_BRACKETS; ++bracket)
+    {
+        for (BattlegroundQueueTypeId queueTypeId : { BATTLEGROUND_QUEUE_1v1, BATTLEGROUND_QUEUE_2v2, BATTLEGROUND_QUEUE_3v3 })
+        {
+            BattlegroundInfo& info = BattlegroundData[queueTypeId][bracket];
+            uint32 const realHealers = info.ratedSoloPlayerHealers;
+            uint32 const realDamage = info.ratedSoloPlayerDamage;
+            if (!realHealers && !realDamage)
+                continue;
+
+            uint8 const arenaType = BattlegroundMgr::BGArenaType(queueTypeId);
+            if (arenaType == ARENA_TYPE_1v1)
+            {
+                info.ratedSoloDamageNeeded = (realHealers + realDamage + info.ratedSoloBotHealers + info.ratedSoloBotDamage) % 2;
+            }
+            else
+            {
+                uint32 const teamSize = sBattlegroundMgr->isArenaTesting() ? 1 : arenaType;
+                uint32 const healerMatches = (realHealers + 1) / 2;
+                uint32 const healerMatchDamage = healerMatches * (2 * teamSize - 2);
+                uint32 const damageLeft = realDamage > healerMatchDamage ? realDamage - healerMatchDamage : 0;
+                uint32 const damageMatches = (damageLeft + 2 * teamSize - 1) / (2 * teamSize);
+                uint32 const healers = 2 * healerMatches;
+                uint32 const damage = healerMatchDamage + damageMatches * 2 * teamSize;
+                uint32 const haveHealers = realHealers + info.ratedSoloBotHealers;
+                uint32 const haveDamage = realDamage + info.ratedSoloBotDamage;
+                info.ratedSoloHealersNeeded = healers > haveHealers ? healers - haveHealers : 0;
+                info.ratedSoloDamageNeeded = damage > haveDamage ? damage - haveDamage : 0;
+            }
+
+            if (info.ratedSoloHealersNeeded || info.ratedSoloDamageNeeded)
+                LOG_DEBUG("playerbots", "Rated solo {}v{} bracket {}: players {} healers {} damage, bots {} healers {} damage, "
+                          "{} healers and {} damage needed", arenaType, arenaType, bracket, realHealers, realDamage,
+                          info.ratedSoloBotHealers, info.ratedSoloBotDamage, info.ratedSoloHealersNeeded,
+                          info.ratedSoloDamageNeeded);
+        }
+    }
 }
 
 void RandomPlayerbotMgr::LogBattlegroundInfo()
