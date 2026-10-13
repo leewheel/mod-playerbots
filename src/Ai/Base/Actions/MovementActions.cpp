@@ -2013,7 +2013,7 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
         }
         if (!unit->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         {
-            return false;
+            continue;
         }
         Unit::AuraEffectList const& aurasPeriodicTriggerSpell =
             unit->GetAuraEffectsByType(SPELL_AURA_PERIODIC_TRIGGER_SPELL);
@@ -2033,7 +2033,7 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
                     continue;
                 if (sPlayerbotAIConfig.aoeAvoidSpellWhitelist.find(triggerSpellInfo->Id) !=
                     sPlayerbotAIConfig.aoeAvoidSpellWhitelist.end())
-                    return false;
+                    continue;
                 for (int j = 0; j < MAX_SPELL_EFFECTS; j++)
                 {
                     if (triggerSpellInfo->Effects[j].Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
@@ -2058,6 +2058,7 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
                                     << " Radius " << radius << " - [Unit Trigger]";
                                 bot->Say(out.str(), LANG_UNIVERSAL);
                             }
+                            return true;
                         }
                     }
                 }
