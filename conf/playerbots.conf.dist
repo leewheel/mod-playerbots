@@ -1606,6 +1606,11 @@ AiPlayerbot.CoaExclusionsEverywhere = 1
 # id): bots no longer flip between two mobs every second and stand still in between.
 # Default: 1 (enabled)
 AiPlayerbot.CoaStickyTarget = 1
+
+# In dungeons, damage dealers switch to a mob that runs off to fetch help (not a boss, not a
+# feared mob) and snares slow it down; a skull mark still comes first, and tanks keep the pack.
+# Default: 1 (enabled)
+AiPlayerbot.CoaFocusRunners = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds
