@@ -421,6 +421,7 @@ public:
     bool coaNextTargetSameTick;
     bool coaKeepCombatEngine;
     bool coaNoFacingWhileMoving;
+    bool coaSmartDispel;
     bool coaBossKnowledge;
     bool coaRecruitSameFaction;
     bool coaBotSurname;
