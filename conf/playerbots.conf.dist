@@ -1577,6 +1577,12 @@ AiPlayerbot.CoaNoFacingWhileMoving = 1
 # exist, and healed nobody until something hit it (boss submerged, flying phase).
 # Default: 1 (enabled)
 AiPlayerbot.CoaKeepCombatEngine = 1
+
+# When its target dies in a fight, a bot attacks the next one in the same update instead of
+# going through four updates (drop, assist, reach, face), and a target within 85 degrees of
+# its front counts as faced (the game's own test is 90; it was 45).
+# Default: 1 (enabled)
+AiPlayerbot.CoaNextTargetSameTick = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds

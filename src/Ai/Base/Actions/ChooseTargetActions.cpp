@@ -94,6 +94,14 @@ bool DropTargetAction::Execute(Event /*event*/)
     //     }
     // }
 
+    if (sPlayerbotAIConfig.coaNextTargetSameTick && !botAI->IsHeal(bot) && bot->IsInCombat() &&
+        !context->GetValue<GuidVector>("attackers")->Get().empty())
+    {
+        Unit* next = context->GetValue<Unit*>(PlayerbotAI::IsTank(bot) ? "tank target" : "dps target")->Get();
+        if (next && next->IsInWorld() && next->IsAlive() && !bot->IsFriendlyTo(next))
+            Attack(next);
+    }
+
     return true;
 }
 
