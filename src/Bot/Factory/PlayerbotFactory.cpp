@@ -1882,7 +1882,8 @@ uint32 PlayerbotFactory::DropCoaRanksAbove(Player* bot, uint32 level)
         if (grant != NoCoaGrantLevel && grant > level)
             above.push_back(spellId);
     }
-    // Highest first: each removal gives the rank below back its place in the spellbook.
+    // Highest first. The rank below a removed one stays inactive (Player::removeSpell: "can't be replaced by
+    // previous rank"): ReactivateHighestRanks makes it active again at the end.
     std::sort(above.begin(), above.end(), [bot](uint32 a, uint32 b) { return CoaGrantLevel(bot, a) > CoaGrantLevel(bot, b); });
     for (uint32 spellId : above)
         bot->removeSpell(spellId, SPEC_MASK_ALL, false);
@@ -1893,7 +1894,46 @@ uint32 PlayerbotFactory::DropCoaRanksAbove(Player* bot, uint32 level)
             bot->removeSpell(rank.SpellId, SPEC_MASK_ALL, false);
             above.push_back(rank.SpellId);
         }
+    if (!above.empty())
+        ReactivateHighestRanks(bot);
     return uint32(above.size());
+}
+
+uint32 PlayerbotFactory::ReactivateHighestRanks(Player* bot)
+{
+    uint8 const spec = bot->GetActiveSpec();
+    PlayerSpellMap& spells = bot->GetSpellMap();
+    auto const known = [&spells, spec](uint32 spellId)
+    {
+        auto itr = spells.find(spellId);
+        return itr != spells.end() && itr->second->State != PLAYERSPELL_REMOVED && itr->second->IsInSpec(spec);
+    };
+
+    uint32 reactivated = 0;
+    for (auto& [spellId, spell] : spells)
+    {
+        if (spell->State == PLAYERSPELL_REMOVED || spell->Active || !spell->IsInSpec(spec))
+            continue;
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+        if (!info || !info->IsRanked() || info->IsStackableWithRanks())
+            continue;
+
+        // A higher rank of the chain still known keeps this one inactive, as the core does at login.
+        bool higher = false;
+        for (uint32 next = sSpellMgr->GetNextSpellInChain(spellId); next && !higher;
+             next = sSpellMgr->GetNextSpellInChain(next))
+            higher = known(next);
+        if (higher)
+            continue;
+
+        spell->Active = true;
+        ++reactivated;
+    }
+
+    if (reactivated)
+        LOG_INFO("playerbots", "coa: {} (class {}, level {}) reactivated {} spell ranks after higher ranks were removed",
+                 bot->GetName(), bot->getClass(), bot->GetLevel(), reactivated);
+    return reactivated;
 }
 
 void PlayerbotFactory::ClearSpells()

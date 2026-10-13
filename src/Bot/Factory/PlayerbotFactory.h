@@ -88,6 +88,10 @@ public:
     // Takes off the CoA spell ranks above `level`: the core grants them on the way up only, so a bot
     // brought down in level kept the ranks of the level it had. Returns how many were removed.
     static uint32 DropCoaRanksAbove(Player* bot, uint32 level);
+    // Player::removeSpell() never makes the rank below active again: it stays learnt but inactive, and
+    // "spell id" skips inactive ranks, so the bot no longer finds the spell by name until its next login.
+    // Makes the highest rank left of each chain active again, as a login would. Returns how many.
+    static uint32 ReactivateHighestRanks(Player* bot);
     // The lowest level a player of the bot's CoA class is granted that spell at, by the core's tables or
     // the class trainers; NoCoaGrantLevel when none of them knows it.
     static constexpr uint32 NoCoaGrantLevel = 0xFFFF;

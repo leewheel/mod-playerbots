@@ -497,6 +497,9 @@ uint32 ApplyCoaTalents(Player* bot)
                 bot->removeSpell(rank.SpellId, SPEC_MASK_ALL, false);
                 ++orphans;
             }
+    // A rank left below one taken away stays inactive otherwise (see ReactivateHighestRanks).
+    if (lowered)
+        PlayerbotFactory::ReactivateHighestRanks(bot);
 
     uint32 raised = 0;
     for (auto const& [entryId, rank] : wanted)
