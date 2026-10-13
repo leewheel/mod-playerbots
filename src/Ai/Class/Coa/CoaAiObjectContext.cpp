@@ -1339,6 +1339,12 @@ Unit* SmartHealTarget(Player* bot, float below, bool overTime = false)
             bestScore = score;
         }
     }
+
+    if (sPlayerbotAIConfig.coaHealSelfFirst && best != bot && GetCoaRole(bot) == CoaRole::Heal &&
+        bot->GetHealthPct() < std::min<float>(below, sPlayerbotAIConfig.mediumHealth) &&
+        (!best || best->GetHealthPct() > sPlayerbotAIConfig.lowHealth) && !(overTime && CarriesAllHots(bot, hots, caster)))
+        return bot;
+
     return best;
 }
 

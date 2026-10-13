@@ -1583,6 +1583,12 @@ AiPlayerbot.CoaKeepCombatEngine = 1
 # its front counts as faced (the game's own test is 90; it was 45).
 # Default: 1 (enabled)
 AiPlayerbot.CoaNextTargetSameTick = 1
+
+# A CoA healer under 65% health (MediumHealth) heals itself first, unless the member it would
+# heal instead is under 45% (LowHealth). With the tank a little lower, the healer was always
+# second and died while full of mana.
+# Default: 1 (enabled)
+AiPlayerbot.CoaHealSelfFirst = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds
