@@ -426,6 +426,7 @@ public:
     bool coaMeleeNoRangedHardcast;
     bool coaLootMakeRoom;
     bool coaPvpTrinket;
+    bool coaArenaPurge;
     bool coaBossKnowledge;
     bool coaRecruitSameFaction;
     bool coaBotSurname;

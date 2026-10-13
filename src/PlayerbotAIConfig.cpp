@@ -791,6 +791,7 @@ bool PlayerbotAIConfig::Initialize()
     coaMeleeNoRangedHardcast = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaMeleeNoRangedHardcast", true, false);
     coaLootMakeRoom = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaLootMakeRoom", true, false);
     coaPvpTrinket = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaPvpTrinket", true, false);
+    coaArenaPurge = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaArenaPurge", true, false);
     coaBossKnowledge = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaBossKnowledge", true);
     coaRecruitSameFaction = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaRecruitSameFaction", true);
     coaBotSurname = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaBotSurname", true);

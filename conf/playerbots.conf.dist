@@ -1686,6 +1686,12 @@ AiPlayerbot.CoaLootMakeRoom = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaPvpTrinket = 1
 
+# In an arena, CoA bots with a purge (magic buffs, enrages) take them off the enemy players they
+# see within 30 yards, their target first, one bot per buff. Until now "coa purge" only worked on
+# dungeon bosses and elites (AiPlayerbot.CoaDungeonPriorities).
+# Default: 1 (enabled)
+AiPlayerbot.CoaArenaPurge = 1
+
 #    AiPlayerbot.CoaTankOpenerSeconds
 #        Description: With CoaSmartTank, a CoA damage dealer lets the tank open: on a target no tank
 #                     has touched yet it waits at most this many seconds, then goes all out. Read

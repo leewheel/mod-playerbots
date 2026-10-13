@@ -3217,7 +3217,9 @@ struct PurgeChoice
 PurgeChoice FindPurge(PlayerbotAI* botAI, Player* bot, std::vector<Usable> const& purges)
 {
     PurgeChoice choice;
-    if (!sPlayerbotAIConfig.coaDungeonPriorities || !bot->IsInCombat() || !bot->GetMap()->IsDungeon())
+    // AiPlayerbot.CoaArenaPurge: in an arena, the enemy players' magic buffs too.
+    bool const arena = sPlayerbotAIConfig.coaArenaPurge && bot->InArena();
+    if (!bot->IsInCombat() || (!arena && (!sPlayerbotAIConfig.coaDungeonPriorities || !bot->GetMap()->IsDungeon())))
         return choice;
 
     auto const& benched = static_cast<CoaAiObjectContext*>(botAI->GetAiObjectContext())->benchedSpells;
@@ -3235,6 +3237,21 @@ PurgeChoice FindPurge(PlayerbotAI* botAI, Player* bot, std::vector<Usable> const
     uint32 const nowMs = getMSTime();
     auto consider = [&](Unit* unit)
     {
+        if (arena)
+        {
+            Player* enemy = unit ? unit->ToPlayer() : nullptr;
+            if (!enemy || !enemy->IsAlive() || !bot->IsHostileTo(enemy) || !bot->IsWithinDistInMap(enemy, 30.0f) ||
+                !bot->IsWithinLOSInMap(enemy))
+                return false;
+            if (SpellInfo const* buff = PurgeableBuff(enemy, mask, nowMs))
+            {
+                choice.enemy = enemy;
+                choice.buff = buff;
+                return true;
+            }
+            return false;
+        }
+
         Creature* creature = unit ? unit->ToCreature() : nullptr;
         if (!creature || !creature->IsAlive() ||
             !(creature->IsDungeonBoss() || creature->isWorldBoss() || creature->isElite()) ||
@@ -3902,8 +3919,9 @@ public:
 
     bool IsActive() override
     {
-        if (!sPlayerbotAIConfig.coaDungeonPriorities || !bot->IsInCombat() || !bot->GetMap()->IsDungeon() ||
-            !ClassPurges(bot))
+        bool const arena = sPlayerbotAIConfig.coaArenaPurge && bot->InArena();
+        if (!bot->IsInCombat() || !ClassPurges(bot) ||
+            (!arena && (!sPlayerbotAIConfig.coaDungeonPriorities || !bot->GetMap()->IsDungeon())))
             return false;
         return FindPurge(botAI, bot, KnownPurges(bot)).enemy != nullptr;
     }
