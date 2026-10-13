@@ -1671,6 +1671,16 @@ AiPlayerbot.CoaKeepPassiveAuras = 1
 
 AiPlayerbot.CoaRatedSoloQueue = 1
 
+#    AiPlayerbot.CoaRatedSoloRoleFallback
+#        Description: seconds a real player waits in a rated solo 2v2 or 3v3 queue, bots already queued with
+#                     them and no match started, before their role is taken for the other one: one more bot,
+#                     a healer if they were read as a damage dealer and a damage dealer if read as a healer,
+#                     once per wait. A bot no lineup needs leaves the queue after its usual wait.
+#                     0 - never. Read again by ".reload config".
+#        Default:     40
+
+AiPlayerbot.CoaRatedSoloRoleFallback = 40
+
 #    AiPlayerbot.CoaArenaReady
 #        Description: 1 - an arena shows a ready pylon in each starting room, as on the original CoA realm.
 #                     A player clicks it when ready; a bot is ready by itself once settled. When every

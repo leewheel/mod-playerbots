@@ -664,6 +664,7 @@ public:
         sPlayerbotAIConfig.coaGearMatchGroup = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGearMatchGroup", true);
         sPlayerbotAIConfig.coaGearHighRiskPvp = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGearHighRiskPvp", true);
         sPlayerbotAIConfig.coaRatedSoloQueue = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaRatedSoloQueue", true);
+        sPlayerbotAIConfig.coaRatedSoloRoleFallback = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaRatedSoloRoleFallback", 40);
         // City life is tuned live too: its share of the bots and how long they stay.
         sPlayerbotAIConfig.RpgStatusProbWeight[RPG_GO_CITY] = sConfigMgr->GetOption<int32>("AiPlayerbot.RpgStatusProbWeight.GoCity", 10);
         sPlayerbotAIConfig.coaCityStayMinMinutes = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaCityStayMinMinutes", 10);

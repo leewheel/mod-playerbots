@@ -786,6 +786,7 @@ bool PlayerbotAIConfig::Initialize()
     coaCityStayMaxMinutes = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaCityStayMaxMinutes", 30);
     coaBgLevelBalanceChance = std::min<uint32>(100, sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaBgLevelBalanceChance", 15));
     coaRatedSoloQueue = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaRatedSoloQueue", true);
+    coaRatedSoloRoleFallback = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaRatedSoloRoleFallback", 40);
     coaStatusFile = sConfigMgr->GetOption<std::string>("AiPlayerbot.CoaStatusFile", "");
     coaStatusIntervalSeconds = std::max<uint32>(1, sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaStatusIntervalSeconds", 5));
     coaStatusEnabled = !coaStatusFile.empty();

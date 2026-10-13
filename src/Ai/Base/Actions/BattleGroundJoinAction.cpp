@@ -1145,10 +1145,17 @@ bool BGStatusAction::Execute(Event event)
         {
             //TeamId teamId = bot->GetTeamId(); //not used, line marked for removal.
             bool realPlayers = false;
-            BattlegroundInfo const& info = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId];
-            // A bot of a rated solo queue waits as long as a real player waits there.
+            BattlegroundInfo& info = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId];
+            // A bot of a rated solo queue waits as long as a real player waits there, unless no lineup needs it.
             if (isRated && ginfo.Players.size() == 1)
-                realPlayers = info.ratedSoloPlayerHealers + info.ratedSoloPlayerDamage > 0;
+            {
+                uint32& surplus = arenaType != ARENA_TYPE_1v1 && GetCoaRole(bot) == CoaRole::Heal
+                                      ? info.ratedSoloHealersSurplus
+                                      : info.ratedSoloDamageSurplus;
+                realPlayers = !surplus && info.ratedSoloPlayerHealers + info.ratedSoloPlayerDamage > 0;
+                if (surplus)
+                    --surplus;
+            }
             else if (isRated)
                 realPlayers = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].ratedArenaPlayerCount > 0;
             else

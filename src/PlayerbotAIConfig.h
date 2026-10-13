@@ -434,6 +434,7 @@ public:
     uint32 coaCityStayMaxMinutes;
     uint32 coaBgLevelBalanceChance;
     bool coaRatedSoloQueue;
+    uint32 coaRatedSoloRoleFallback;
     std::string coaStatusFile;
     uint32 coaStatusIntervalSeconds;
     bool coaStatusEnabled;

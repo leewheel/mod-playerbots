@@ -64,6 +64,22 @@ struct BattlegroundInfo
     uint32 ratedSoloBotDamage = 0;
     uint32 ratedSoloHealersNeeded = 0;
     uint32 ratedSoloDamageNeeded = 0;
+    // Bots a real player's other role may need (CoaRatedSoloRoleFallback), and bots no lineup needs:
+    // these leave the queue after their usual wait, the 1v1 ones in the damage count.
+    uint32 ratedSoloFallbackHealers = 0;
+    uint32 ratedSoloFallbackDamage = 0;
+    uint32 ratedSoloHealersSurplus = 0;
+    uint32 ratedSoloDamageSurplus = 0;
+};
+
+// A real player waiting in a rated solo queue, and the role read from their spec.
+struct RatedSoloWait
+{
+    ObjectGuid guid;
+    uint32 joinTime;
+    uint32 queueTypeId;
+    uint32 bracketId;
+    bool healer;
 };
 
 class ChatHandler;
@@ -187,6 +203,9 @@ public:
     void CheckBgQueue();
     // How many healer and damage bots the rated solo queues real players wait in still need (CheckBgQueue).
     void CountRatedSoloNeeds();
+    std::vector<RatedSoloWait> ratedSoloWaiting;
+    // Real players given a bot of their other role: guid -> join time of that wait, and whether it was a healer.
+    std::unordered_map<ObjectGuid, std::pair<uint32, bool>> ratedSoloFallbacks;
     void KeepArenaCaptainsOnline();
     void CheckLfgQueue();
     void CheckPlayers();
