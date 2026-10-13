@@ -995,6 +995,20 @@ void RandomPlayerbotFactory::LoadArenaTeamData()
         _botArenaTeamRegistry[type].push_back(id);
     }
 
+    // A bracket set to 0 has no bot teams: those left from an earlier setting are disbanded (CoA has no 5v5,
+    // and the 1v1 solo queue takes the 5v5 team slot).
+    for (auto const& [type, target] : _configTargets)
+    {
+        if (target > 0 || _botArenaTeamRegistry[type].empty())
+            continue;
+        for (uint32 teamId : _botArenaTeamRegistry[type])
+            if (ArenaTeam* team = sArenaTeamMgr->GetArenaTeamById(teamId))
+                team->Disband(nullptr);
+        LOG_INFO("playerbots", "Disbanded {} random bot {}v{} arena teams (count set to 0)",
+                 _botArenaTeamRegistry[type].size(), uint32(type), uint32(type));
+        _botArenaTeamRegistry[type].clear();
+    }
+
     _availableArenaTeamNames.clear();
 
     QueryResult result = CharacterDatabase.Query(
