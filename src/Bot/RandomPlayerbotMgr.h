@@ -86,7 +86,8 @@ struct RatedSoloPremade
     uint32 healers;
 };
 
-// A real player waiting in a rated solo queue, and the role read from their spec.
+// A real player waiting in a rated solo queue, and the role read from their spec; or a party waiting there,
+// under its first member, and whether it was read as holding a healer.
 struct RatedSoloWait
 {
     ObjectGuid guid;
@@ -94,6 +95,7 @@ struct RatedSoloWait
     uint32 queueTypeId;
     uint32 bracketId;
     bool healer;
+    bool party;
 };
 
 class ChatHandler;
@@ -221,6 +223,8 @@ public:
     std::unordered_map<uint32, RatedSoloPremade> ratedSoloPremades;  // by the leader's personal team
     // Real players given a bot of their other role: guid -> join time of that wait, and whether it was a healer.
     std::unordered_map<ObjectGuid, std::pair<uint32, bool>> ratedSoloFallbacks;
+    // Last needs line of each rated solo queue and bracket: when, and what it said.
+    std::unordered_map<uint32, std::pair<time_t, std::string>> ratedSoloNeedsLogged;
     void KeepArenaCaptainsOnline();
     void CheckLfgQueue();
     void CheckPlayers();

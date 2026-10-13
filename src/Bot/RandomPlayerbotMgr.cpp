@@ -1015,7 +1015,8 @@ void RandomPlayerbotMgr::CheckBgQueue()
                     {
                         bool const healer = GetCoaRole(player) == CoaRole::Heal;
                         ++(healer ? info.ratedSoloPlayerHealers : info.ratedSoloPlayerDamage);
-                        ratedSoloWaiting.push_back({ player->GetGUID(), queued.JoinTime, queueTypeId, bracketId, healer });
+                        ratedSoloWaiting.push_back(
+                            { player->GetGUID(), queued.JoinTime, queueTypeId, bracketId, healer, false });
                     }
                     // A party once, whichever of its real members is seen; its role read from the specs.
                     else if (solo == RatedSolo::Premade && !ratedSoloPremades.count(queued.ArenaTeamId))
@@ -1026,6 +1027,8 @@ void RandomPlayerbotMgr::CheckBgQueue()
                                 healers += GetCoaRole(member) == CoaRole::Heal ? 1 : 0;
                         ratedSoloPremades[queued.ArenaTeamId] = { queueTypeId, bracketId,
                                                                   uint32(queued.Players.size()), healers };
+                        ratedSoloWaiting.push_back(
+                            { *queued.Players.begin(), queued.JoinTime, queueTypeId, bracketId, healers > 0, true });
                     }
                     continue;
                 }
@@ -1314,7 +1317,9 @@ void RandomPlayerbotMgr::CheckBgQueue()
 //
 // The role of a real player is read from their spec, the core keeping the one they queued with. One who waited
 // AiPlayerbot.CoaRatedSoloRoleFallback seconds with bots and no match is given one bot of the other role, once
-// per wait; the bots no lineup needs are counted as surplus, to leave after their usual wait.
+// per wait; the bots no lineup needs are counted as surplus, to leave after their usual wait. A party too: the
+// core takes the role its members last queued with, or damage, so a party read as holding a healer by its specs
+// may meet a healer bot it cannot play against (each side has a healer or neither does).
 void RandomPlayerbotMgr::CountRatedSoloNeeds()
 {
     std::unordered_map<ObjectGuid, std::pair<uint32, bool>> fallbacks;
@@ -1334,8 +1339,11 @@ void RandomPlayerbotMgr::CountRatedSoloNeeds()
                  getMSTimeDiff(wait.joinTime, now) > fallbackAfter)
         {
             fallbacks[wait.guid] = { wait.joinTime, !wait.healer };
-            LOG_INFO("playerbots", "Rated solo {}v{}: player {} still waits, read as {}: one {} bot more",
-                     uint32(arenaType), uint32(arenaType), wait.guid.ToString(), wait.healer ? "healer" : "damage",
+            Player* waiting = ObjectAccessor::FindPlayer(wait.guid);
+            LOG_INFO("playerbots", "Rated solo {}v{}: {}{} still waits, read as {}: one {} bot more", uint32(arenaType),
+                     uint32(arenaType), wait.party ? "the party of " : "player ",
+                     waiting ? waiting->GetName() : wait.guid.ToString(),
+                     wait.party ? (wait.healer ? "with a healer" : "without a healer") : (wait.healer ? "healer" : "damage"),
                      wait.healer ? "damage" : "healer");
         }
         else
@@ -1403,12 +1411,24 @@ void RandomPlayerbotMgr::CountRatedSoloNeeds()
                 info.ratedSoloDamageSurplus = info.ratedSoloBotDamage > botDamage ? info.ratedSoloBotDamage - botDamage : 0;
             }
 
-            if (info.ratedSoloHealersNeeded || info.ratedSoloDamageNeeded)
-                LOG_DEBUG("playerbots", "Rated solo {}v{} bracket {}: players {} healers {} damage, {} parties, bots {} healers "
-                          "{} damage, {} healers and {} damage needed", uint32(arenaType), uint32(arenaType), bracket,
-                          realHealers, realDamage, info.ratedSoloPremades, info.ratedSoloBotHealers,
-                          info.ratedSoloBotDamage, info.ratedSoloHealersNeeded,
-                          info.ratedSoloDamageNeeded);
+            // Where a real player waits: what the bots are counted on, when it changes and every 2 minutes.
+            if (realHealers + realDamage + info.ratedSoloPremades)
+            {
+                std::string const line = Acore::StringFormat(
+                    "Rated solo {}v{} {}-{}: players {} healers {} damage, {} parties; bots queued {} healers {} damage; "
+                    "needed {} healers {} damage; surplus {} healers {} damage; extra for roles {} healers {} damage",
+                    uint32(arenaType), uint32(arenaType), info.minLevel, info.maxLevel, realHealers, realDamage,
+                    info.ratedSoloPremades, info.ratedSoloBotHealers, info.ratedSoloBotDamage,
+                    info.ratedSoloHealersNeeded, info.ratedSoloDamageNeeded, info.ratedSoloHealersSurplus,
+                    info.ratedSoloDamageSurplus, info.ratedSoloFallbackHealers, info.ratedSoloFallbackDamage);
+                auto& logged = ratedSoloNeedsLogged[uint32(queueTypeId) * MAX_BATTLEGROUND_BRACKETS + bracket];
+                time_t const at = time(nullptr);
+                if (logged.second != line || at - logged.first >= 120)
+                {
+                    LOG_INFO("playerbots", "{}", line);
+                    logged = { at, line };
+                }
+            }
         }
     }
 }

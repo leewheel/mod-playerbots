@@ -697,6 +697,11 @@ uint32* BGJoinAction::RatedSoloNeed(BattlegroundQueueTypeId queueTypeId, Battleg
         if (!team || team->GetMembersSize() != 1)
             return nullptr;
     }
+    // The core names a new personal team "<name> <bracket>" and refuses the queue when that name is taken, as
+    // by a bot team its captain named so: the need would be spent on a bot that never queues.
+    else if (sArenaTeamMgr->GetArenaTeamByName(bot->GetName() + " " +
+                                               (type == ARENA_TYPE_1v1 ? "1v1" : type == ARENA_TYPE_2v2 ? "2v2" : "3v3")))
+        return nullptr;
 
     return need;
 }
