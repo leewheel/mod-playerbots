@@ -1636,6 +1636,13 @@ AiPlayerbot.CoaChaseLeash = 1
 # with the CoA healer rules (within 18 yards of the tank): the spot is 12 yards behind it.
 # Default: 1 (enabled)
 AiPlayerbot.CoaHoldBehindTank = 1
+
+# Dungeon finder: random damage dealers hold back only while a queued party of real players
+# still misses a tank or a healer that no queued bot covers. The old test held them back
+# whenever a queued player was not tank and healer at once, nearly always, so players waited
+# for damage dealers.
+# Default: 1 (enabled)
+AiPlayerbot.CoaLfgMissingRoles = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds

@@ -1459,6 +1459,9 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     LfgDungeons[TEAM_ALLIANCE].clear();
     LfgDungeons[TEAM_HORDE].clear();
     bool needTankOrHeal[2] = {false, false};
+    uint32 partiesWithoutTank[2] = {0, 0};
+    uint32 partiesWithoutHeal[2] = {0, 0};
+    std::unordered_set<ObjectGuid> countedParties;
 
     for (std::vector<Player*>::iterator i = players.begin(); i != players.end(); ++i)
     {
@@ -1482,10 +1485,57 @@ void RandomPlayerbotMgr::CheckLfgQueue()
                 LfgDungeons[player->GetTeamId()].push_back(dungeon->id);
             }
 
-            uint8 roles = sLFGMgr->GetRoles(player->GetGUID());
-            if (!(roles & lfg::PLAYER_ROLE_TANK) || !(roles & lfg::PLAYER_ROLE_HEALER))
-                needTankOrHeal[player->GetTeamId()] = true;
+            if (!sPlayerbotAIConfig.coaLfgMissingRoles)
+            {
+                uint8 roles = sLFGMgr->GetRoles(player->GetGUID());
+                if (!(roles & lfg::PLAYER_ROLE_TANK) || !(roles & lfg::PLAYER_ROLE_HEALER))
+                    needTankOrHeal[player->GetTeamId()] = true;
+                continue;
+            }
+
+            if (!countedParties.insert(guid).second)
+                continue;
+
+            uint8 partyRoles = 0;
+            if (group)
+            {
+                for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+                    if (Player* member = ref->GetSource())
+                        partyRoles |= sLFGMgr->GetRoles(member->GetGUID());
+            }
+            else
+                partyRoles = sLFGMgr->GetRoles(player->GetGUID());
+
+            if (!(partyRoles & lfg::PLAYER_ROLE_TANK))
+                ++partiesWithoutTank[player->GetTeamId()];
+            if (!(partyRoles & lfg::PLAYER_ROLE_HEALER))
+                ++partiesWithoutHeal[player->GetTeamId()];
         }
+    }
+
+    if (sPlayerbotAIConfig.coaLfgMissingRoles &&
+        (partiesWithoutTank[TEAM_ALLIANCE] + partiesWithoutTank[TEAM_HORDE] + partiesWithoutHeal[TEAM_ALLIANCE] +
+         partiesWithoutHeal[TEAM_HORDE]) > 0)
+    {
+        uint32 queuedTanks[2] = {0, 0};
+        uint32 queuedHeals[2] = {0, 0};
+        for (auto itr = GetPlayerBotsBegin(); itr != GetPlayerBotsEnd(); ++itr)
+        {
+            Player* bot = itr->second;
+            if (!bot || !bot->IsInWorld() || bot->GetGroup() ||
+                sLFGMgr->GetState(bot->GetGUID()) != lfg::LFG_STATE_QUEUED)
+                continue;
+
+            uint8 roles = sLFGMgr->GetRoles(bot->GetGUID());
+            if (roles & lfg::PLAYER_ROLE_TANK)
+                ++queuedTanks[bot->GetTeamId()];
+            if (roles & lfg::PLAYER_ROLE_HEALER)
+                ++queuedHeals[bot->GetTeamId()];
+        }
+
+        for (uint8 team : {TEAM_ALLIANCE, TEAM_HORDE})
+            needTankOrHeal[team] =
+                partiesWithoutTank[team] > queuedTanks[team] || partiesWithoutHeal[team] > queuedHeals[team];
     }
 
     LfgNeedTankOrHeal[TEAM_ALLIANCE] = needTankOrHeal[TEAM_ALLIANCE];
