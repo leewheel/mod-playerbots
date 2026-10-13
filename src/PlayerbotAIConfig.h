@@ -407,6 +407,7 @@ public:
     bool coaGroupTelemetry;
     bool coaSmartHeal;
     bool coaSmartTank;
+    bool coaChaseLeash;
     bool coaBodyPullGuard;
     bool coaKeepTargetOutOfSight;
     bool coaFocusRunners;

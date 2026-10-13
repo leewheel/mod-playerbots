@@ -1623,6 +1623,12 @@ AiPlayerbot.CoaKeepTargetOutOfSight = 1
 # walking past it. Moves toward the bot's own target, fights and orders are not affected.
 # Default: 1 (enabled)
 AiPlayerbot.CoaBodyPullGuard = 1
+
+# In a dungeon or raid fight, a bot no longer runs after an enemy farther than healing range from the
+# main tank (from its healer, for a tank): casters and melee stopped dying alone at an add
+# spawn point. A tank may still fetch an enemy nobody holds yet (the pull).
+# Default: 1 (enabled)
+AiPlayerbot.CoaChaseLeash = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds

@@ -23,8 +23,12 @@ public:
     bool Execute(Event event) override;
     bool isUseful() override;
     std::string const GetTargetName() override;
+    virtual bool ChasesEnemy() const { return true; }
 
 protected:
+    bool IsChaseLeashed(Unit* target) const;
+    Unit* ChaseAnchor() const;
+
     float distance;
 };
 
@@ -78,6 +82,7 @@ public:
     bool Execute(Event event) override;
     bool isUseful() override;
     std::string const GetTargetName() override;
+    bool ChasesEnemy() const override { return false; }
 };
 
 class ReachPartyMemberToResurrectAction : public ReachTargetAction
@@ -86,6 +91,7 @@ public:
     ReachPartyMemberToResurrectAction(PlayerbotAI* botAI);
 
     std::string const GetTargetName() override;
+    bool ChasesEnemy() const override { return false; }
 };
 
 #endif
