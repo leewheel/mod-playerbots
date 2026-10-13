@@ -135,6 +135,7 @@ public:
         creators["combat party member dead"] = &TriggerContext::CombatPartyMemberDead;
         creators["no pet"] = &TriggerContext::no_pet;
         creators["has pet"] = &TriggerContext::has_pet;
+        creators["in front of tank"] = &TriggerContext::in_front_of_tank;
         creators["pet attack"] = &TriggerContext::pet_attack;
 
         creators["has attackers"] = &TriggerContext::has_attackers;
@@ -403,6 +404,7 @@ private:
     static Trigger* protect_party_member(PlayerbotAI* botAI) { return new ProtectPartyMemberTrigger(botAI); }
     static Trigger* no_pet(PlayerbotAI* botAI) { return new NoPetTrigger(botAI); }
     static Trigger* has_pet(PlayerbotAI* botAI) { return new HasPetTrigger(botAI); }
+    static Trigger* in_front_of_tank(PlayerbotAI* botAI) { return new InFrontOfTankTrigger(botAI); }
     static Trigger* pet_attack(PlayerbotAI* botAI) { return new PetAttackTrigger(botAI); }
     static Trigger* has_attackers(PlayerbotAI* botAI) { return new HasAttackersTrigger(botAI); }
     static Trigger* random_bot_update_trigger(PlayerbotAI* botAI) { return new RandomBotUpdateTrigger(botAI); }

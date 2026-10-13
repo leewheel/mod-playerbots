@@ -1629,6 +1629,13 @@ AiPlayerbot.CoaBodyPullGuard = 1
 # spawn point. A tank may still fetch an enemy nobody holds yet (the pull).
 # Default: 1 (enabled)
 AiPlayerbot.CoaChaseLeash = 1
+
+# In a party of five, ranged damage dealers and healers stand behind the living tank (next to
+# the healer when it is already back there), step back when they end up on the mob's side,
+# and melee close on the tank's side of the mob. Follow between pulls uses the same spot. Works
+# with the CoA healer rules (within 18 yards of the tank): the spot is 12 yards behind it.
+# Default: 1 (enabled)
+AiPlayerbot.CoaHoldBehindTank = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds

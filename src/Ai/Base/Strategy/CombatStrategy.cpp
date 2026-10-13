@@ -17,6 +17,8 @@ void CombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             }
         )
     );
+    // In range but on the mob's side of the tank. Higher than a cast so they step back, then resume.
+    triggers.push_back(new TriggerNode("in front of tank", { NextAction("reach spell", ACTION_MOVE) }));
     triggers.push_back(
         new TriggerNode(
             "target out of sight",

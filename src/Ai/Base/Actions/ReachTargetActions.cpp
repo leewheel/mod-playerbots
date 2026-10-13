@@ -6,6 +6,7 @@
 
 #include "ReachTargetActions.h"
 #include "Event.h"
+#include "Formations.h"
 #include "Group.h"
 #include "GroupReference.h"
 #include "PlayerbotAIConfig.h"
@@ -14,7 +15,62 @@
 
 static constexpr float GROUP_SIGHT_SPOT_DISTANCE = 3.0f;
 
-bool ReachTargetAction::Execute(Event /*event*/) { return ReachCombatTo(AI_VALUE(Unit*, GetTargetName()), distance); }
+bool ReachTargetAction::Execute(Event /*event*/)
+{
+    Unit* target = AI_VALUE(Unit*, GetTargetName());
+    // Heal and resurrect reaches use this class too. Only hostile targets get the stack.
+    if (target && bot->IsValidAttackTarget(target) && bot->GetGroup() && !botAI->IsTank(bot))
+    {
+        bool holdBack = PlayerbotAI::IsRanged(bot) || botAI->IsHeal(bot);
+        WorldLocation spot;
+        if (holdBack && GetBehindTankNearHealerLocation(botAI, bot, spot, target))
+        {
+            float dx = spot.GetPositionX() - target->GetPositionX();
+            float dy = spot.GetPositionY() - target->GetPositionY();
+            float dz = spot.GetPositionZ() - target->GetPositionZ();
+            float len = std::sqrt(dx * dx + dy * dy + dz * dz);
+            float destX = spot.GetPositionX();
+            float destY = spot.GetPositionY();
+            float destZ = spot.GetPositionZ();
+            if (len > distance && len > 0.5f)
+            {
+                float scale = distance / len;
+                destX = target->GetPositionX() + dx * scale;
+                destY = target->GetPositionY() + dy * scale;
+                destZ = target->GetPositionZ() + dz * scale;
+            }
+
+            // The stack spot is behind the tank's victim. If clamping toward spell range
+            // crossed onto the mob side of that spot, stay on the stack instead of looping.
+            float destToMob = target->GetExactDist2d(destX, destY);
+            if (destToMob + 1.0f < spot.GetExactDist2d(target))
+            {
+                destX = spot.GetPositionX();
+                destY = spot.GetPositionY();
+                destZ = spot.GetPositionZ();
+            }
+
+            bot->UpdateAllowedPositionZ(destX, destY, destZ);
+
+            if (bot->GetExactDist(destX, destY, destZ) <= 2.5f)
+                return false;
+
+            return MoveTo(bot->GetMapId(), destX, destY, destZ, false, false, false, true,
+                          MovementPriority::MOVEMENT_COMBAT, true);
+        }
+
+        if (!holdBack && GetTankSideMeleeLocation(botAI, bot, target, distance, spot))
+        {
+            if (bot->IsWithinCombatRange(target, distance))
+                return false;
+
+            return MoveTo(bot->GetMapId(), spot.GetPositionX(), spot.GetPositionY(), spot.GetPositionZ(), false, false,
+                          false, true, MovementPriority::MOVEMENT_COMBAT, true);
+        }
+    }
+
+    return ReachCombatTo(target, distance);
+}
 
 bool ReachTargetAction::isUseful()
 {
@@ -30,10 +86,14 @@ bool ReachTargetAction::isUseful()
         return false;
     }
     Unit* target = GetTarget();
-    if (!target || bot->IsWithinCombatRange(target, distance))
+    if (!target)
         return false;
 
-    return !(ChasesEnemy() && IsChaseLeashed(target));
+    if (!bot->IsWithinCombatRange(target, distance))
+        return !(ChasesEnemy() && IsChaseLeashed(target));
+
+    return sPlayerbotAIConfig.coaHoldBehindTank && bot->IsValidAttackTarget(target) &&
+           (PlayerbotAI::IsRanged(bot) || botAI->IsHeal(bot)) && BotIsInFrontOfLivingTank(botAI, bot, target);
 }
 
 Unit* ReachTargetAction::ChaseAnchor() const
@@ -112,8 +172,9 @@ bool ReachLineOfSightAction::Execute(Event /*event*/)
 
 Player* ReachLineOfSightAction::FindGroupMemberInSightOf(Unit* target)
 {
-    Player* nearest = nullptr;
-    float nearestDistance = sPlayerbotAIConfig.sightDistance;
+    Player* best = nullptr;
+    int bestRank = 3;
+    float bestDistance = sPlayerbotAIConfig.sightDistance;
     float range = botAI->GetRange("spell");
 
     for (GroupReference* ref = bot->GetGroup()->GetFirstMember(); ref; ref = ref->next())
@@ -124,17 +185,28 @@ Player* ReachLineOfSightAction::FindGroupMemberInSightOf(Unit* target)
             continue;
 
         float distance = bot->GetExactDist(member);
-        if (distance >= nearestDistance || distance <= GROUP_SIGHT_SPOT_DISTANCE)
+        if (distance <= GROUP_SIGHT_SPOT_DISTANCE || distance >= sPlayerbotAIConfig.sightDistance)
             continue;
 
         if (!member->IsWithinCombatRange(target, range) || !member->IsWithinLOSInMap(target))
             continue;
 
-        nearest = member;
-        nearestDistance = distance;
+        // Step to the healer, then the tank. Anyone else is a last resort.
+        int rank = 2;
+        if (botAI->IsHeal(member))
+            rank = 0;
+        else if (botAI->IsTank(member))
+            rank = 1;
+
+        if (rank < bestRank || (rank == bestRank && distance < bestDistance))
+        {
+            best = member;
+            bestRank = rank;
+            bestDistance = distance;
+        }
     }
 
-    return nearest;
+    return best;
 }
 
 bool ReachLineOfSightAction::isUseful()

@@ -92,6 +92,13 @@ public:
     EnemyOutOfSpellRangeTrigger(PlayerbotAI* botAI);
 };
 
+class InFrontOfTankTrigger : public Trigger
+{
+public:
+    InFrontOfTankTrigger(PlayerbotAI* botAI) : Trigger(botAI, "in front of tank") {}
+    bool IsActive() override;
+};
+
 class PartyMemberToHealOutOfSpellRangeTrigger : public OutOfRangeTrigger
 {
 public:
