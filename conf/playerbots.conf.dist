@@ -1611,6 +1611,12 @@ AiPlayerbot.CoaStickyTarget = 1
 # feared mob) and snares slow it down; a skull mark still comes first, and tanks keep the pack.
 # Default: 1 (enabled)
 AiPlayerbot.CoaFocusRunners = 1
+
+# A target that steps out of sight for a moment (pillar, wall, a player in the way) is kept:
+# the bot walks around instead of dropping the fight and taking the same target back next
+# update. Works best with CoaRegainLineOfSight.
+# Default: 1 (enabled)
+AiPlayerbot.CoaKeepTargetOutOfSight = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds
