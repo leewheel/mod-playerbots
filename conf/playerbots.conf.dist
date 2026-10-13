@@ -1624,9 +1624,9 @@ AiPlayerbot.CoaKeepTargetOutOfSight = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaBodyPullGuard = 1
 
-# In a dungeon or raid fight, a bot no longer runs after an enemy farther than healing range from the
-# main tank (from its healer, for a tank): casters and melee stopped dying alone at an add
-# spawn point. A tank may still fetch an enemy nobody holds yet (the pull).
+# In a dungeon or raid fight, a bot no longer runs after an enemy farther than healing range
+# from the main tank (from its healer, for a tank): casters and melee stopped dying alone at an
+# add spawn point. A tank may still fetch an enemy nobody holds yet (the pull).
 # Default: 1 (enabled)
 AiPlayerbot.CoaChaseLeash = 1
 
@@ -1643,7 +1643,6 @@ AiPlayerbot.CoaHoldBehindTank = 1
 # for damage dealers.
 # Default: 1 (enabled)
 AiPlayerbot.CoaLfgMissingRoles = 1
-#@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds
 #        Description: With CoaSmartTank, a CoA damage dealer lets the tank open: on a target no tank
