@@ -424,6 +424,7 @@ public:
     bool coaSmartDispel;
     bool coaAvoidMarkedAlly;
     bool coaMeleeNoRangedHardcast;
+    bool coaLootMakeRoom;
     bool coaBossKnowledge;
     bool coaRecruitSameFaction;
     bool coaBotSurname;

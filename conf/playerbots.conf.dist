@@ -1674,6 +1674,12 @@ AiPlayerbot.CoaAvoidMarkedAlly = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaMeleeNoRangedHardcast = 1
 
+# A bot whose bags are full (or, for a random bot, over 80% full) no longer leaves a quest item or
+# an item of uncommon quality or better on the corpse: it destroys its cheapest grey item to make
+# room for it. Works in dungeons for the bots of a real player too.
+# Default: 1 (enabled)
+AiPlayerbot.CoaLootMakeRoom = 1
+
 #    AiPlayerbot.CoaTankOpenerSeconds
 #        Description: With CoaSmartTank, a CoA damage dealer lets the tank open: on a target no tank
 #                     has touched yet it waits at most this many seconds, then goes all out. Read

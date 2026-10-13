@@ -789,6 +789,7 @@ bool PlayerbotAIConfig::Initialize()
     coaSmartDispel = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSmartDispel", true, false);
     coaAvoidMarkedAlly = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaAvoidMarkedAlly", true, false);
     coaMeleeNoRangedHardcast = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaMeleeNoRangedHardcast", true, false);
+    coaLootMakeRoom = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaLootMakeRoom", true, false);
     coaBossKnowledge = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaBossKnowledge", true);
     coaRecruitSameFaction = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaRecruitSameFaction", true);
     coaBotSurname = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaBotSurname", true);
