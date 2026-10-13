@@ -8,6 +8,7 @@
 #include "GenericTriggers.h"
 #include "NearestNpcsValue.h"
 #include "ObjectAccessor.h"
+#include "OnyActions.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
 
@@ -15,7 +16,7 @@ OnyxiaDeepBreathTrigger::OnyxiaDeepBreathTrigger(PlayerbotAI* botAI) : Trigger(b
 
 bool OnyxiaDeepBreathTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
+    Unit* boss = GetOnyxiaBossForBot(botAI);
     if (!boss || !boss->HasUnitState(UNIT_STATE_CASTING))
         return false;
 
@@ -48,7 +49,8 @@ OnyxiaNearTailTrigger::OnyxiaNearTailTrigger(PlayerbotAI* botAI) : Trigger(botAI
 bool OnyxiaNearTailTrigger::IsActive()
 {
 // By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找（汉化库英文名匹配不上）
-    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
+// By leewheel 2026-10-13 取目标改走 GetOnyxiaBossForBot：10184 取不到时再试 60 级用的 301000
+    Unit* boss = GetOnyxiaBossForBot(botAI);
     if (!boss || PlayerbotAI::IsTank(bot))
         return false;
 
@@ -65,7 +67,7 @@ RaidOnyxiaFireballSplashTrigger::RaidOnyxiaFireballSplashTrigger(PlayerbotAI* bo
 
 bool RaidOnyxiaFireballSplashTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
+    Unit* boss = GetOnyxiaBossForBot(botAI);
     if (!boss || !boss->HasUnitState(UNIT_STATE_CASTING))
         return false;
 
@@ -93,7 +95,7 @@ RaidOnyxiaWhelpsSpawnTrigger::RaidOnyxiaWhelpsSpawnTrigger(PlayerbotAI* botAI) :
 
 bool RaidOnyxiaWhelpsSpawnTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
+    Unit* boss = GetOnyxiaBossForBot(botAI);
     if (!boss)
         return false;
 

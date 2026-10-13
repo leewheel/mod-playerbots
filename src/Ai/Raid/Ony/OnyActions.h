@@ -8,11 +8,42 @@
 #ifndef PLAYERBOTS_ONYACTIONS_H
 #define PLAYERBOTS_ONYACTIONS_H
 
+#include "AiObjectContext.h"
 #include "AttackAction.h"
 #include "GenericSpellActions.h"
 #include "MovementActions.h"
 
 class PlayerbotAI;
+
+// By leewheel 2026-10-13 黑龙 boss 的 entry 在 60 级团本与 80 级副本里不是同一个：
+//   60 级用 NPC_ONYXIA_40 = 301000（creature_template.ScriptName = boss_onyxia_40，
+//   刷新点 spawnMask = 4 即 10 人英雄难度），80 级用 NPC_ONYXIA = 10184。
+//   原代码只按 "10184" 取目标，而打 60 级黑龙时 10184 那条刷新（spawnMask = 3）根本不生成，
+//   于是避深呼吸 / 杀雏龙 / 远离龙蛋 / 侧移四套战术全部恒不激活。此处叠加"依次尝试两个 entry"，
+//   取数方式与原逻辑一致，只多出 301000 这一路；10184 仍然优先，不影响 80 级副本。
+// End By leewheel
+inline Unit* GetOnyxiaBossForBot(PlayerbotAI* botAI)
+{
+    if (!botAI)
+        return nullptr;
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    if (!context)
+        return nullptr;
+
+    if (Unit* boss = context->GetValue<Unit*>("find target", "10184")->Get())
+        return boss;
+
+    return context->GetValue<Unit*>("find target", "301000")->Get();
+}
+
+// By leewheel 2026-10-13 雏龙 entry 同理：60 级是 NPC_ONYXIAN_WHELP_40 = 301001，
+//   80 级是 NPC_ONYXIAN_WHELP = 11262。原来只认 11262，打 60 级时永远找不到雏龙可打。
+// End By leewheel
+inline bool IsOnyxiaWhelpEntry(uint32 entry)
+{
+    return entry == 11262 || entry == 301001;
+}
 
 class RaidOnyxiaMoveToSideAction : public MovementAction
 {

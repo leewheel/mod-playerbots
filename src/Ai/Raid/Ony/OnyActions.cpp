@@ -13,7 +13,7 @@
 
 bool RaidOnyxiaMoveToSideAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
+    Unit* boss = GetOnyxiaBossForBot(botAI);
     if (!boss)
         return false;
 
@@ -44,7 +44,7 @@ bool RaidOnyxiaMoveToSideAction::Execute(Event /*event*/)
 
 bool RaidOnyxiaSpreadOutAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
+    Unit* boss = GetOnyxiaBossForBot(botAI);
 
     if (!boss)
         return false;
@@ -70,7 +70,7 @@ bool RaidOnyxiaSpreadOutAction::Execute(Event /*event*/)
 
 bool RaidOnyxiaMoveToSafeZoneAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "10184");
+    Unit* boss = GetOnyxiaBossForBot(botAI);
     if (!boss)
         return false;
 
@@ -117,7 +117,8 @@ bool RaidOnyxiaKillWhelpsAction::Execute(Event /*event*/)
 {
     Unit* currentTarget = AI_VALUE(Unit*, "current target");
     // If already attacking a whelp, don't swap targets
-    if (currentTarget && currentTarget->GetEntry() == 11262)
+    // By leewheel 2026-10-13 雏龙 entry 兼容 60 级（301001）与 80 级（11262）
+    if (currentTarget && IsOnyxiaWhelpEntry(currentTarget->GetEntry()))
     {
         return false;
     }
@@ -128,7 +129,7 @@ bool RaidOnyxiaKillWhelpsAction::Execute(Event /*event*/)
         if (!unit || !unit->IsAlive() || !unit->IsInWorld())
             continue;
 
-        if (unit->GetEntry() == 11262)  // Onyxia Whelp
+        if (IsOnyxiaWhelpEntry(unit->GetEntry()))  // Onyxia Whelp
         {
             // bot->Yell("Attacking Whelps!", LANG_UNIVERSAL);
             return Attack(unit);
