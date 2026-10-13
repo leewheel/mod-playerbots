@@ -5,6 +5,7 @@
  */
 
 #include "LootObjectStack.h"
+#include "GameObjectAI.h"
 #include "LootMgr.h"
 #include "Object.h"
 #include "ObjectAccessor.h"
@@ -309,6 +310,23 @@ bool LootObject::IsLootPossible(Player* bot)
     GameObject* go = botAI->GetGameObject(guid);
     if (go && (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE) || !go->isSpawned()))
         return false;
+
+    // Some scripts give each viewer its own flags: a worldforged pickup this character has already
+    // looted is locked and not selectable for it alone, while the object itself stays openable for
+    // everyone else. A bot has no client to receive those flags, so it ran to the pickup, was
+    // refused, followed its group back and ran out again for ever. Ask for the flags its client
+    // would get.
+    if (go)
+    {
+        if (GameObjectAI* ai = go->AI())
+        {
+            uint16 dynFlags = 0;
+            uint32 goFlags = 0;
+            ai->BuildClientFlags(bot, dynFlags, goFlags);
+            if (goFlags & (GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE))
+                return false;
+        }
+    }
 
     // Conditional objects (quest chests, goobers, ...) are gated client-side on quest state.
     // A bot has no client, so make the same call the server makes for one.
