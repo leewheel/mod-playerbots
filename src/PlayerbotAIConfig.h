@@ -422,6 +422,7 @@ public:
     bool coaKeepCombatEngine;
     bool coaNoFacingWhileMoving;
     bool coaSmartDispel;
+    bool coaAvoidMarkedAlly;
     bool coaBossKnowledge;
     bool coaRecruitSameFaction;
     bool coaBotSurname;

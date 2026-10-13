@@ -787,6 +787,7 @@ bool PlayerbotAIConfig::Initialize()
     coaKeepCombatEngine = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaKeepCombatEngine", true, false);
     coaNoFacingWhileMoving = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaNoFacingWhileMoving", true, false);
     coaSmartDispel = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSmartDispel", true, false);
+    coaAvoidMarkedAlly = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaAvoidMarkedAlly", true, false);
     coaBossKnowledge = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaBossKnowledge", true);
     coaRecruitSameFaction = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaRecruitSameFaction", true);
     coaBotSurname = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaBotSurname", true);

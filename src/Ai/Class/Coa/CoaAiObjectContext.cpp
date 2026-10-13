@@ -3541,6 +3541,168 @@ public:
 };
 
 /*
+ * AiPlayerbot.CoaAvoidMarkedAlly: a harmful aura that makes its carrier hurt the allies around him (a
+ * bomb, a brand, a beacon) is read from the spell data: an aura that triggers, or spreads, a damaging
+ * or controlling spell on the carrier's allies in an area. A spell meant to be shared (damage split
+ * among those it hits) is left out: the group has to stack for it. Radius 0: no danger.
+ * Idea from the boss scripts of the forks (ArkosLUL a14a69517fc, XT-002 Gravity Bomb carriers; the
+ * MoveAwayFromPlayerWithDebuffAction of Yogg-Saron, Baltharus, Saviana), made generic for CoA content.
+ */
+bool HurtsCarrierAllies(SpellEffectInfo const& effect)
+{
+    switch (effect.TargetA.GetTarget())
+    {
+        case TARGET_UNIT_CASTER_AREA_PARTY: case TARGET_UNIT_SRC_AREA_ALLY: case TARGET_UNIT_SRC_AREA_PARTY:
+        case TARGET_UNIT_CASTER_AREA_RAID: case TARGET_UNIT_DEST_AREA_ALLY:
+            break;
+        default:
+            return false;
+    }
+
+    return IsDamage(effect) || (IsAuraEffect(effect) && IsControlAura(effect));
+}
+
+float MarkRadius(SpellInfo const* aura)
+{
+    static std::mutex lock;
+    static std::unordered_map<uint32, float> radii;
+    {
+        std::lock_guard<std::mutex> guard(lock);
+        auto const known = radii.find(aura->Id);
+        if (known != radii.end())
+            return known->second;
+    }
+
+    float radius = 0.0f;
+    for (SpellEffectInfo const& effect : aura->Effects)
+    {
+        // An aura spread to the carrier's allies around him.
+        if ((effect.Effect == SPELL_EFFECT_APPLY_AREA_AURA_FRIEND || effect.Effect == SPELL_EFFECT_APPLY_AREA_AURA_PARTY ||
+             effect.Effect == SPELL_EFFECT_APPLY_AREA_AURA_RAID) &&
+            (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE || IsControlAura(effect)))
+            radius = std::max(radius, effect.CalcRadius());
+
+        // What the aura casts from the carrier, now (periodic) or when it ends (trigger rider).
+        if (!effect.TriggerSpell)
+            continue;
+        SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell);
+        if (!triggered || triggered->HasAttribute(SPELL_ATTR0_CU_SHARE_DAMAGE))
+            continue;
+        for (SpellEffectInfo const& hit : triggered->Effects)
+            if (HurtsCarrierAllies(hit))
+                radius = std::max(radius, hit.CalcRadius());
+    }
+
+    // Beyond this the spot search below finds nothing anyway.
+    radius = std::min(radius, 30.0f);
+
+    std::lock_guard<std::mutex> guard(lock);
+    radii[aura->Id] = radius;
+    return radius;
+}
+
+// The radius of the most dangerous mark the unit carries, 0 without one.
+float CarriedMarkRadius(Unit* unit)
+{
+    float radius = 0.0f;
+    for (auto const& [auraId, application] : unit->GetAppliedAuras())
+        if (!application->IsPositive())
+            radius = std::max(radius, MarkRadius(application->GetBase()->GetSpellInfo()));
+    return radius;
+}
+
+struct MarkedHazard
+{
+    Player* center;
+    float radius;
+};
+
+// What the bot has to keep away from: every marked member around it, or, when the bot carries the
+// mark, every other member.
+std::vector<MarkedHazard> MarkedHazards(Player* bot)
+{
+    std::vector<MarkedHazard> hazards;
+    if (!sPlayerbotAIConfig.coaAvoidMarkedAlly || !bot->GetGroup() || !bot->IsInCombat())
+        return hazards;
+
+    std::vector<Player*> const members = NearbyGroup(bot);
+    if (float const own = CarriedMarkRadius(bot))
+    {
+        for (Player* member : members)
+            if (member != bot)
+                hazards.push_back({ member, own });
+        return hazards;
+    }
+
+    for (Player* member : members)
+        if (member != bot)
+            if (float const radius = CarriedMarkRadius(member))
+                hazards.push_back({ member, radius });
+    return hazards;
+}
+
+class CoaMarkedAllyTrigger : public Trigger
+{
+public:
+    CoaMarkedAllyTrigger(PlayerbotAI* botAI) : Trigger(botAI, "coa marked ally", 1) {}
+
+    bool IsActive() override
+    {
+        for (MarkedHazard const& hazard : MarkedHazards(bot))
+            if (bot->GetExactDist2d(hazard.center) < hazard.radius + 1.0f)
+                return true;
+        return false;
+    }
+};
+
+// Steps out of the reach of the marked members, or away from everyone while the bot carries the mark.
+class CoaAvoidMarkedAllyAction : public MovementAction
+{
+public:
+    CoaAvoidMarkedAllyAction(PlayerbotAI* botAI) : MovementAction(botAI, "coa avoid marked ally") {}
+
+    bool Execute(Event /*event*/) override
+    {
+        std::vector<MarkedHazard> const hazards = MarkedHazards(bot);
+        if (hazards.empty())
+            return false;
+
+        float bestX = 0.0f, bestY = 0.0f, bestScore = -1.0f;
+        float const z = bot->GetPositionZ();
+        for (int i = 0; i < 16; ++i)
+        {
+            float const angle = i * 2.0f * float(M_PI) / 16.0f;
+            for (float step = 3.0f; step <= 33.0f; step += 3.0f)
+            {
+                float const x = bot->GetPositionX() + step * std::cos(angle);
+                float const y = bot->GetPositionY() + step * std::sin(angle);
+                float margin = std::numeric_limits<float>::max();
+                for (MarkedHazard const& hazard : hazards)
+                    margin = std::min(margin, hazard.center->GetExactDist2d(x, y) - hazard.radius - 2.0f);
+                if (margin < 0.0f || !bot->IsWithinLOS(x, y, z))
+                    continue;
+                // The nearest safe spot, not the farthest: the bot keeps fighting from there.
+                float const score = 100.0f - step;
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestX = x;
+                    bestY = y;
+                }
+                break;
+            }
+        }
+
+        if (bestScore < 0.0f)
+            return false;
+
+        return MoveTo(bot->GetMapId(), bestX, bestY, z, false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true);
+    }
+
+    bool isPossible() override { return bot->CanFreeMove(); }
+};
+
+/*
  * Adds first (AiPlayerbot.CoaDungeonPriorities). In a dungeon fight a damage dealer switches to a
  * totem, ward or add that heals or shields its side (see CoaDungeonPriorities::HealsOrProtects)
  * within 30 yards: bots kept hitting the boss while a Healing Ward healed it back, and an
@@ -3880,6 +4042,8 @@ public:
         triggers.push_back(new TriggerNode("coa enemy casting", { NextAction("coa interrupt", InterruptPriority()) }));
         triggers.push_back(new TriggerNode("coa dispel", { NextAction("coa dispel", DispelPriority()) }));
         triggers.push_back(new TriggerNode("coa dispel control", { NextAction("coa dispel", DispelControlPriority()) }));
+        // A step out of a marked member's reach comes before any cast, as "avoid aoe" does.
+        triggers.push_back(new TriggerNode("coa marked ally", { NextAction("coa avoid marked ally", ACTION_EMERGENCY + 4) }));
         triggers.push_back(new TriggerNode("coa enemy buff", { NextAction("coa purge", PurgePriority()) }));
         // Just above "dps assist" (50), which would otherwise turn the bot back to the boss first.
         triggers.push_back(new TriggerNode("coa priority add", { NextAction("coa priority add", ACTION_DISPEL + 1) }));
@@ -4378,6 +4542,7 @@ public:
         creators["coa taunt"] = &CoaActionFactoryInternal::coa_taunt;
         creators["coa defensive"] = &CoaActionFactoryInternal::coa_defensive;
         creators["coa dispel"] = &CoaActionFactoryInternal::coa_dispel;
+        creators["coa avoid marked ally"] = &CoaActionFactoryInternal::coa_avoid_marked_ally;
         creators["coa purge"] = &CoaActionFactoryInternal::coa_purge;
         creators["coa priority add"] = &CoaActionFactoryInternal::coa_priority_add;
         creators["coa interrupt"] = &CoaActionFactoryInternal::coa_interrupt;
@@ -4406,6 +4571,7 @@ private:
     static Action* coa_taunt(PlayerbotAI* botAI) { return new CoaTauntAction(botAI); }
     static Action* coa_defensive(PlayerbotAI* botAI) { return new CoaDefensiveAction(botAI); }
     static Action* coa_dispel(PlayerbotAI* botAI) { return new CoaDispelAction(botAI); }
+    static Action* coa_avoid_marked_ally(PlayerbotAI* botAI) { return new CoaAvoidMarkedAllyAction(botAI); }
     static Action* coa_purge(PlayerbotAI* botAI) { return new CoaPurgeAction(botAI); }
     static Action* coa_priority_add(PlayerbotAI* botAI) { return new CoaPriorityAddAction(botAI); }
     static Action* coa_interrupt(PlayerbotAI* botAI) { return new CoaInterruptAction(botAI); }
@@ -4425,6 +4591,7 @@ public:
     {
         creators["coa dispel"] = &CoaTriggerFactoryInternal::coa_dispel;
         creators["coa dispel control"] = &CoaTriggerFactoryInternal::coa_dispel_control;
+        creators["coa marked ally"] = &CoaTriggerFactoryInternal::coa_marked_ally;
         creators["coa enemy casting"] = &CoaTriggerFactoryInternal::coa_enemy_casting;
         creators["coa enemy buff"] = &CoaTriggerFactoryInternal::coa_enemy_buff;
         creators["coa priority add"] = &CoaTriggerFactoryInternal::coa_priority_add;
@@ -4443,6 +4610,7 @@ public:
 private:
     static Trigger* coa_dispel(PlayerbotAI* botAI) { return new CoaDispelTrigger(botAI); }
     static Trigger* coa_dispel_control(PlayerbotAI* botAI) { return new CoaDispelControlTrigger(botAI); }
+    static Trigger* coa_marked_ally(PlayerbotAI* botAI) { return new CoaMarkedAllyTrigger(botAI); }
     static Trigger* coa_enemy_casting(PlayerbotAI* botAI) { return new CoaEnemyCastingTrigger(botAI); }
     static Trigger* coa_enemy_buff(PlayerbotAI* botAI) { return new CoaEnemyBuffTrigger(botAI); }
     static Trigger* coa_priority_add(PlayerbotAI* botAI) { return new CoaPriorityAddTrigger(botAI); }
