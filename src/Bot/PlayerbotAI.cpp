@@ -1714,6 +1714,12 @@ void PlayerbotAI::DoNextAction(bool min)
         {
             aiObjectContext->GetValue<Unit*>("current target")->Set(nullptr);
         }
+
+        if (sPlayerbotAIConfig.coaKeepCombatEngine && !aiObjectContext->GetValue<GuidVector>("attackers")->Get().empty())
+        {
+            ChangeEngine(BOT_STATE_COMBAT);
+            return;
+        }
     }
 
     // AiPlayerbot.Coa.AncestralCombatFix: a Barbarian that stays in combat from one pack to the next, or

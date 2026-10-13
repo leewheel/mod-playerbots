@@ -98,6 +98,7 @@ public:
     DropTargetAction(PlayerbotAI* botAI) : Action(botAI, "drop target") {}
 
     bool Execute(Event event) override;
+    bool isUseful() override;
 };
 
 #endif

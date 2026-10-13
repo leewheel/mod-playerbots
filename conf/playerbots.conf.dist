@@ -1571,6 +1571,12 @@ AiPlayerbot.CoaRegainLineOfSight = 1
 # cast nothing.
 # Default: 1 (enabled)
 AiPlayerbot.CoaNoFacingWhileMoving = 1
+
+# A bot in a fight with an enemy at hand always runs its combat strategies. A healer whose
+# target went invalid dropped into the out of combat strategies, where "coa heal" does not
+# exist, and healed nobody until something hit it (boss submerged, flying phase).
+# Default: 1 (enabled)
+AiPlayerbot.CoaKeepCombatEngine = 1
 #@FORKS22@
 
 #    AiPlayerbot.CoaTankOpenerSeconds
