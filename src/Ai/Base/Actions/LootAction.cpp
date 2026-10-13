@@ -75,6 +75,9 @@ bool OpenLootAction::Execute(Event /*event*/)
     bool result = DoLoot(lootObject);
     if (result)
     {
+        if (lootObject.guid.IsGameObject())
+            LootObject::RememberOpened(bot, botAI->GetGameObject(lootObject.guid));
+
         AI_VALUE(LootObjectStack*, "available loot")->Remove(lootObject.guid);
         context->GetValue<LootObject>("loot target")->Set(LootObject());
     }

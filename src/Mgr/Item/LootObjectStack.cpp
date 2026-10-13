@@ -12,7 +12,58 @@
 #include "Playerbots.h"
 #include "Unit.h"
 
+#include <mutex>
+#include <unordered_map>
+#include <unordered_set>
+
 #define MAX_LOOT_OBJECT_COUNT 200
+
+namespace
+{
+std::mutex openedChestsLock;
+std::unordered_map<ObjectGuid, std::unordered_set<ObjectGuid::LowType>> openedChests;
+}
+
+bool LootObject::IsRerolledChest(GameObject const* go)
+{
+    if (!go || go->GetGoType() != GAMEOBJECT_TYPE_CHEST || !go->GetSpawnId())
+        return false;
+
+    GameObjectTemplate const* info = go->GetGOInfo();
+    return info && !info->IsDespawnAtAction() && !info->chest.chestRestockTime;
+}
+
+void LootObject::RememberOpened(Player* bot, GameObject const* go)
+{
+    if (!bot || !IsRerolledChest(go))
+        return;
+
+    std::lock_guard<std::mutex> guard(openedChestsLock);
+    openedChests[bot->GetGUID()].insert(go->GetSpawnId());
+}
+
+bool LootObject::HasOpened(Player* bot, GameObject const* go)
+{
+    if (!bot || !IsRerolledChest(go))
+        return false;
+
+    std::lock_guard<std::mutex> guard(openedChestsLock);
+    auto itr = openedChests.find(bot->GetGUID());
+    return itr != openedChests.end() && itr->second.count(go->GetSpawnId());
+}
+
+bool LootObject::NeedsQuestItemFrom(Player* bot, GameObject const* go)
+{
+    GameObjectQuestItemList const* items = sObjectMgr->GetGameObjectQuestItemList(go->GetEntry());
+    if (!items)
+        return false;
+
+    for (uint32 itemId : *items)
+        if (itemId && IsNeededForQuest(bot, itemId))
+            return true;
+
+    return false;
+}
 
 LootTarget::LootTarget(ObjectGuid guid) : guid(guid), asOfTime(time(nullptr)) {}
 
@@ -331,6 +382,11 @@ bool LootObject::IsLootPossible(Player* bot)
     // Conditional objects (quest chests, goobers, ...) are gated client-side on quest state.
     // A bot has no client, so make the same call the server makes for one.
     if (go && go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_INTERACT_COND) && !go->ActivateToQuest(bot))
+        return false;
+
+    // A chest that stays and rolls new loot for every opener (worldforged pickups) is opened once: under
+    // group loot rules each opening started a new roll, so the party drew its item again and again.
+    if (go && HasOpened(bot, go) && !NeedsQuestItemFrom(bot, go))
         return false;
 
     // Loot already rolled that holds nothing this bot may take: a worldforged pickup it has spent is
