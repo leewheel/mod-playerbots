@@ -97,16 +97,16 @@ enum class KaraNpcs : uint32
     NPC_TITO                        = 17548,
 
     // Terestian Illhoof
+    // By leewheel 2026-10-13 合并 brighton the-lab：auto-merge 把本核组(含 NPC_DEMON_CHAINS)与
+    //   上游重排后的同名组各留一份造成枚举重定义 ⇒ 合并为一段；DEMON_CHAINS=17248 为本核既有
+    //   值，保留不删。
     NPC_TERESTIAN_ILLHOOF         = 15688,
     NPC_DEMON_CHAINS              = 17248,
     NPC_KILREK                    = 17229,
+    // End By leewheel
 
     // The Curator
     NPC_THE_CURATOR                 = 15691,
-
-    // Terestian Illhoof
-    NPC_TERESTIAN_ILLHOOF           = 15688,
-    NPC_KILREK                      = 17229,
 
     // Shade of Aran
     NPC_CONJURED_ELEMENTAL          = 17167,
