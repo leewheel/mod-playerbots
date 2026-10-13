@@ -2,8 +2,8 @@
 --
 -- Rows are chosen by their CONTENT (name + owner 0 + action_line), never by id or idx: the ids differ
 -- from one installation to the next. Re-runnable: once applied it changes nothing. Rows with
--- owner <> 0 are never touched. The file name sorts after zz_coa_rotation_corrections_1_9.sql
--- ('.' < '_'), so it applies on top of the 1.9 rows. Rotations are cached per process
+-- owner <> 0 are never touched. The file name sorts after zz_coa_rotation_corrections_2_1_1_b.sql, so it
+-- applies on top of every earlier rotation file (the rows come from the 1.9 file). Rotations are cached per process
 -- (CustomStrategy::actionLinesCache): the change shows after a worldserver restart.
 --
 -- Time Out! (802229, ranks 803896 and 803897) is a Chronomancer class spell from level 14, so every
