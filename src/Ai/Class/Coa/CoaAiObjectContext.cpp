@@ -1950,7 +1950,10 @@ bool HasBuffOfCategory(Unit* unit, uint32 category, uint32 exceptSpellId)
             continue;
 
         SpellInfo const* auraInfo = application->GetBase()->GetSpellInfo();
-        if (auraInfo && auraInfo->GetCategory() == category)
+        // An aura hidden from the player is a marker, not a buff it chose: Draconic Form Hidden (704262)
+        // shares its category with the Draconic Aspect form (802117), and the Pyromancers who carried it
+        // never took their form (mightyrathalos, 14/10).
+        if (auraInfo && auraInfo->GetCategory() == category && !auraInfo->HasAttribute(SPELL_ATTR0_DO_NOT_DISPLAY))
             return true;
     }
 

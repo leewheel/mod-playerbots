@@ -28,6 +28,10 @@ Many fixes from ladiabale's test runs and pull requests (thanks!).
 - A healer with no heal over time known no longer keeps trying one on the tank: a Fleshweaver did, and nothing
   answered the tank between 65 and 85% health.
 
+### Fixes
+- **Pyromancer Draconic** bots carrying the hidden Draconic Form aura (704262) take their Draconic Aspect form again:
+  that hidden marker shares the form's spell category and counted as a buff already worn (thanks mightyrathalos).
+
 ### Bots
 - **Lower spell ranks usable again** after a bot is rebuilt at a lower level: the rank kept below a removed one
   stayed inactive until the next login, and its rotation rows failed (ladiabale).
