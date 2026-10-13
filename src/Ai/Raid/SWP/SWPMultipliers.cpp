@@ -30,7 +30,7 @@
 using namespace SwpHelpers;
 using namespace EncounterHelpers;
 
-// General
+// Shared
 
 // Without this, bots are able to drink after Kil'jaeden's Hands go down. I assume it's due to the
 // issue reported here: https://github.com/azerothcore/azerothcore-wotlk/issues/22122.
@@ -79,11 +79,21 @@ float SunwellControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
     if (AI_VALUE2(Unit*, "find target", "25840"))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "24850") ||
-        AI_VALUE2(Unit*, "find target", "24882") ||
-        AI_VALUE2(Unit*, "find target", "25166") ||
-        AI_VALUE2(Unit*, "find target", "25741") ||
-        AI_VALUE2(Unit*, "find target", "25315") ? 0.0f : 1.0f;
+    // By leewheel 2026-10-13 合并 brighton the-lab：采纳上游 swpBosses 数组遍历结构，按本核铁律
+    //   把 find target 英文名换回 NPC entry（与上游一一对应：kil'jaeden=25315 / m'uru=25741 /
+    //   grand warlock alythess=25166 / brutallus=24882 / kalecgos=24850）。
+    static constexpr std::array swpBosses = {
+        "25315", "25741", "25166", "24882", "24850",
+    };
+
+    for (char const* name : swpBosses)
+    {
+        if (AI_VALUE2(Unit*, "find target", name))
+            return 0.0f;
+    }
+
+    return 1.0f;
+    // End By leewheel
 }
 
 float SunwellDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
@@ -191,7 +201,7 @@ float KalecgosWaitToDecurseMultiplier::GetValueInEncounter(Action* action)
     if (!target)
         return 1.0f;
 
-    // Like Illidan's Shadowfiends, the spread from player-to-player is a separate spell
+    // Like with Illidan's Shadowfiends, the spread from player-to-player is a separate spell.
     Aura* curse = target->GetAura(Id(SwpSpells::SPELL_CURSE_OF_BOUNDLESS_AGONY));
     if (!curse)
         curse = target->GetAura(Id(SwpSpells::SPELL_CURSE_OF_BOUNDLESS_AGONY_SEC));

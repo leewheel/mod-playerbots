@@ -15,7 +15,7 @@
 #include "MovementActions.h"
 #include <vector>
 
-// General
+// Shared
 
 class KarazhanResetEncounterStatesAction : public Action
 {

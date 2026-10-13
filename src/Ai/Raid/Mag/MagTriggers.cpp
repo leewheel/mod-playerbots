@@ -44,7 +44,7 @@ bool MagtheridonAssistTanksShouldTankChannelersTrigger::IsActiveInEncounter()
         PlayerbotAI::IsAssistTankOfIndex(bot, 1, true);
 }
 
-bool MagtheridonPullingWestAndEastChannelersTrigger::IsActiveInEncounter()
+bool MagtheridonHunterShouldMisdirectChannelersTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
@@ -81,7 +81,7 @@ bool MagtheridonShouldBeTankedTrigger::IsActiveInEncounter()
     return magtheridon->GetVictim() == bot || PlayerbotAI::IsMainTank(bot);
 }
 
-bool MagtheridonShouldSpreadRangedTrigger::IsActiveInEncounter()
+bool MagtheridonRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
         return false;

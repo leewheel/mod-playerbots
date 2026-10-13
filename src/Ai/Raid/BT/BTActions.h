@@ -377,6 +377,14 @@ public:
     IllidariCouncilMainTankPositionGathiosAction(PlayerbotAI* botAI)
         : AttackAction(botAI, "illidari council main tank position gathios") {}
     bool Execute(Event event) override;
+    bool ResetTankStep()
+    {
+        if (_tankStep == 0)
+            return false;
+
+        _tankStep = 0;
+        return true;
+    }
 
 private:
     uint8 _tankStep = 0;
@@ -412,6 +420,14 @@ public:
     IllidariCouncilMageTankPositionZerevorAction(PlayerbotAI* botAI)
         : AttackAction(botAI, "illidari council mage tank position zerevor") {}
     bool Execute(Event event) override;
+    bool ResetTankStep()
+    {
+        if (_tankStep == 0)
+            return false;
+
+        _tankStep = 0;
+        return true;
+    }
 
 private:
     uint8 _tankStep = 0;
@@ -433,7 +449,7 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool ShouldAttackMalande(Unit* malande, Unit* zerevor) const;
+    bool ShouldAttackMalande(Unit* malande, Unit* gathios, Unit* zerevor) const;
 };
 
 class IllidariCouncilDisperseRangedAction : public MovementAction
@@ -462,6 +478,14 @@ public:
 
 // Illidan Stormrage <The Betrayer>
 
+class IllidanStormragePositionForPullAction : public MovementAction
+{
+public:
+    IllidanStormragePositionForPullAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "illidan stormrage position for pull") {}
+    bool Execute(Event event) override;
+};
+
 class IllidanStormrageMisdirectToTanksAction : public Action
 {
 public:
@@ -482,14 +506,9 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool MoveToCageTrap(Unit* illidan, GameObject* trap);
-    Position FindSafestNearbyPosition(
-        std::vector<Unit*> const& flameCrashes, float maxRadius, float hazardRadius);
-    bool IsPathSafeFromFlameCrashes(Position const& start,
-        Position const& end, std::vector<Unit*> const& flameCrashes, float hazardRadius);
-
-    ObjectGuid _cageTrapGuid;
-    Position _cageTrapDestination;
+    float _ringAngle = 0.0f;
+    uint32 _ringPhaseStartTime = 0;
+    ObjectGuid _lastFlameCrash;
 };
 
 class IllidanStormrageIsolateBotWithParasiteAction : public MovementAction
@@ -498,10 +517,6 @@ public:
     IllidanStormrageIsolateBotWithParasiteAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "illidan stormrage isolate bot with parasite") {}
     bool Execute(Event event) override;
-
-private:
-    bool InfectedBotMoveFromGroup(Position const& targetPos);
-    bool FreezeTrapShadowfiend(Position const& targetPos);
 };
 
 class IllidanStormrageSetEarthbindTotemAction : public Action
@@ -523,6 +538,14 @@ public:
     IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction(PlayerbotAI* botAI)
         : AttackAction(botAI, "illidan stormrage assist tanks handle flames of azzinoth") {}
     bool Execute(Event event) override;
+    bool ResetTankStep()
+    {
+        if (_tankStep == 0)
+            return false;
+
+        _tankStep = 0;
+        return true;
+    }
 
 private:
     bool RepositionToAvoidEyeBlast(BtHelpers::EyeBlastDangerArea const& dangerArea);
@@ -541,6 +564,22 @@ public:
 private:
     ReactStates _previousReactState = REACT_DEFENSIVE;
     bool _setPassive = false;
+};
+
+class IllidanStormrageCommandPetAttackShadowfiendAction : public Action
+{
+public:
+    IllidanStormrageCommandPetAttackShadowfiendAction(PlayerbotAI* botAI)
+        : Action(botAI, "illidan stormrage command pet attack shadowfiend") {}
+    bool Execute(Event event) override;
+};
+
+class IllidanStormrageCommandPetAttackShadowDemonAction : public Action
+{
+public:
+    IllidanStormrageCommandPetAttackShadowDemonAction(PlayerbotAI* botAI)
+        : Action(botAI, "illidan stormrage command pet attack shadow demon") {}
+    bool Execute(Event event) override;
 };
 
 class IllidanStormragePositionAboveGrateAction : public MovementAction
@@ -567,11 +606,27 @@ public:
     bool Execute(Event event) override;
 };
 
-class IllidanStormrageMoveAwayFromLandingPointAction : public MovementAction
+class IllidanStormragePositionForLandingAction : public MovementAction
 {
 public:
-    IllidanStormrageMoveAwayFromLandingPointAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "illidan stormrage move away from landing point") {}
+    IllidanStormragePositionForLandingAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "illidan stormrage position for landing") {}
+    bool Execute(Event event) override;
+};
+
+class IllidanStormrageMeleeStopAttackingAction : public Action
+{
+public:
+    IllidanStormrageMeleeStopAttackingAction(PlayerbotAI* botAI)
+        : Action(botAI, "illidan stormrage melee stop attacking") {}
+    bool Execute(Event event) override;
+};
+
+class IllidanStormrageStopShootingAction : public Action
+{
+public:
+    IllidanStormrageStopShootingAction(PlayerbotAI* botAI)
+        : Action(botAI, "illidan stormrage stop shooting") {}
     bool Execute(Event event) override;
 };
 
@@ -583,8 +638,7 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool FanOutBehindInHumanPhase(Unit* illidan, Group* group);
-    bool SpreadInCircleInDemonPhase(Unit* illidan, Group* group);
+    bool FindDemonFormSlot(Unit const& illidan, Position& spot);
 };
 
 class IllidanStormrageMeleeGoSomewhereToNotDieAction : public MovementAction
@@ -595,11 +649,13 @@ public:
     bool Execute(Event event) override;
 };
 
-class IllidanStormrageWarlockTankHandleDemonBossAction : public AttackAction
+// A movement action, not an attack, so the hold multiplier leaves it alone: it holds its own
+// casts.
+class IllidanStormrageWarlockTankHandleDemonBossAction : public MovementAction
 {
 public:
     IllidanStormrageWarlockTankHandleDemonBossAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "illidan stormrage warlock tank handle demon boss") {}
+        : MovementAction(botAI, "illidan stormrage warlock tank handle demon boss") {}
     bool Execute(Event event) override;
 };
 
@@ -609,6 +665,9 @@ public:
     IllidanStormrageDpsPrioritizeAddsAction(PlayerbotAI* botAI)
         : AttackAction(botAI, "illidan stormrage dps prioritize adds") {}
     bool Execute(Event event) override;
+
+private:
+    Unit* FindShadowfiendForMelee();
 };
 
 class IllidanStormrageUseCageTrapAction : public MovementAction

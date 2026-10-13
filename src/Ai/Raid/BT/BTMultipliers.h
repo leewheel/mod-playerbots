@@ -309,6 +309,19 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+// Ranged interrupts are invaluable for Circle of Healing.
+class IllidariCouncilSaveInterruptsForCircleOfHealingMultiplier
+    : public BlackTempleEncounterMultiplier
+{
+public:
+    IllidariCouncilSaveInterruptsForCircleOfHealingMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+              botAI, "illidari council save interrupts for circle of healing") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 class IllidariCouncilWaitForDpsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
@@ -321,34 +334,30 @@ protected:
 
 // Illidan Stormrage <The Betrayer>
 
-class IllidanStormrageControlTankActionsMultiplier : public BlackTempleEncounterMultiplier
+// Not gated on the encounter, which starts as the speech ends.
+class IllidanStormrageHoldPullPositionsMultiplier : public Multiplier
 {
 public:
-    IllidanStormrageControlTankActionsMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage control tank actions") {}
+    IllidanStormrageHoldPullPositionsMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "illidan stormrage hold pull positions") {}
 
-protected:
-    float GetValueInEncounter(Action* action) override;
+    float GetValue(Action* action) override;
 };
 
-class IllidanStormrageDisableDefaultTargetingMultiplier : public BlackTempleEncounterMultiplier
+class IllidanStormrageControlMovementAndTargetingMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    IllidanStormrageDisableDefaultTargetingMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage disable default targeting") {}
+    IllidanStormrageControlMovementAndTargetingMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidan stormrage control movement and targeting") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
-};
 
-class IllidanStormrageControlNonTankMovementMultiplier : public BlackTempleEncounterMultiplier
-{
-public:
-    IllidanStormrageControlNonTankMovementMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage control non-tank movement") {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
+private:
+    float GetAssistValue(bool isTankAssist);
+    float GetTankValue(Action* action);
+    float GetNonTankValue(Action* action);
 };
 
 class IllidanStormrageUseEarthbindTotemMultiplier : public BlackTempleEncounterMultiplier
@@ -356,6 +365,26 @@ class IllidanStormrageUseEarthbindTotemMultiplier : public BlackTempleEncounterM
 public:
     IllidanStormrageUseEarthbindTotemMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(botAI, "illidan stormrage use earthbind totem") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class IllidanStormrageShadowfiendBirtherHoldMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    IllidanStormrageShadowfiendBirtherHoldMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage shadowfiend birther hold") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class IllidanStormrageHoldGuardianSummonsMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    IllidanStormrageHoldGuardianSummonsMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage hold guardian summons") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

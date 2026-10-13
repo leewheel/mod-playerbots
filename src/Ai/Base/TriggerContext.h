@@ -272,6 +272,7 @@ public:
         creators["do quest status"] = &TriggerContext::do_quest_status;
         creators["travel flight status"] = &TriggerContext::travel_flight_status;
         creators["outdoor pvp status"] = &TriggerContext::outdoor_pvp_status;
+        creators["do gather status"] = &TriggerContext::do_gather_status;
         creators["can self resurrect"] = &TriggerContext::can_self_resurrect;
         creators["can fish"] = &TriggerContext::can_fish;
         creators["can use fishing bobber"] = &TriggerContext::can_use_fishing_bobber;
@@ -516,8 +517,11 @@ private:
     static Trigger* do_quest_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_DO_QUEST); }
     static Trigger* travel_flight_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_TRAVEL_FLIGHT); }
     static Trigger* outdoor_pvp_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_OUTDOOR_PVP); }
-// By leewheel 2026-10-06 合并 brighton the-lab（#2846 Standardize usage of PlayerbotAI* botAI）：
+    // By leewheel 2026-10-06 合并 brighton the-lab（#2846 Standardize usage of PlayerbotAI* botAI）：
     //   上游把形参名 ai 统一为 botAI，冲突处采纳上游命名，并保留本 fork 新增的标记/躲技能触发器。
+    // By leewheel 2026-10-13 合并 brighton the-lab（#2539 RPG_DO_GATHER）：采纳上游新增采集状态触发器。
+    static Trigger* do_gather_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_DO_GATHER); }
+    // End By leewheel
     static Trigger* can_self_resurrect(PlayerbotAI* botAI) { return new SelfResurrectTrigger(botAI); }
     static Trigger* can_fish(PlayerbotAI* botAI) { return new CanFishTrigger(botAI); }
     static Trigger* can_use_fishing_bobber(PlayerbotAI* botAI) { return new CanUseFishingBobberTrigger(botAI); }

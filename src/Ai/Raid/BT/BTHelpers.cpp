@@ -20,6 +20,7 @@
 #include <cmath>
 #include <limits>
 #include <list>
+#include <tuple>
 
 using namespace EncounterHelpers;
 
@@ -41,6 +42,59 @@ Player* GetCachedPlayer(PlayerbotAI* botAI, char const* value)
     return player && player->IsAlive() ? player : nullptr;
 }
 
+// A point distance yd from Illidan and angle off the line from him through the grate centre,
+// positive toward the warlock tank's side.
+Position GetDemonFormPoint(
+    Position const& illidan, float inwardAngle, float distance, float angle)
+{
+    float const bearing = inwardAngle - angle;
+    return Position(
+        illidan.GetPositionX() + distance * std::cos(bearing),
+        illidan.GetPositionY() + distance * std::sin(bearing), illidan.GetPositionZ());
+}
+
+// One row of Demon Form slots 6 yd apart, from highAngle down, each with its angle. Kept only
+// 22 yd or more from the warlock spot (Shadow Blast hits 20 yd round its victim) and within 36 yd
+// of the grate centre.
+std::vector<std::pair<float, Position>> GetDemonFormRow(
+    Position const& illidan, float inwardAngle, Position const& warlockSpot, float distance,
+    float highAngle, float lowAngle, bool halfStepIn)
+{
+    constexpr float slotSpacing = 6.0f;
+    constexpr float warlockClearance = 22.0f;
+    constexpr float maxCentreDistance = 36.0f;
+
+    float const step = slotSpacing / distance;
+    float const firstAngle = halfStepIn ? highAngle - step / 2.0f : highAngle;
+    int32 const count = static_cast<int32>(std::floor((firstAngle - lowAngle) / step)) + 1;
+
+    std::vector<std::pair<float, Position>> row;
+    for (int32 i = 0; i < count; ++i)
+    {
+        float const angle = firstAngle - i * step;
+        Position const point = GetDemonFormPoint(illidan, inwardAngle, distance, angle);
+        if (point.GetExactDist2d(warlockSpot) >= warlockClearance &&
+            ILLIDAN_GRATE_CENTRE.GetExactDist2d(point) <= maxCentreDistance)
+        {
+            row.emplace_back(angle, point);
+        }
+    }
+
+    return row;
+}
+
+// The place of guid in first and then second, each sorted by GUID; -1 if in neither.
+int32 GetRosterIndex(
+    std::vector<ObjectGuid> first, std::vector<ObjectGuid> second, ObjectGuid guid)
+{
+    std::sort(first.begin(), first.end());
+    std::sort(second.begin(), second.end());
+    first.insert(first.end(), second.begin(), second.end());
+
+    auto const it = std::find(first.begin(), first.end(), guid);
+    return it == first.end() ? -1 : static_cast<int32>(std::distance(first.begin(), it));
+}
+
 }
 
 // Shared
@@ -50,10 +104,10 @@ bool MisdirectTargetToTank(PlayerbotAI* botAI, Unit* target, Player* tank)
     if (!target || !tank)
         return false;
 
-    if (botAI->CanCastSpell("misdirection", tank))
-        return botAI->CastSpell("misdirection", tank);
+    if (botAI->CanCastSpell(Id(BtSpells::SPELL_MISDIRECTION), tank))
+        return botAI->CastSpell(Id(BtSpells::SPELL_MISDIRECTION), tank);
 
-    if (!botAI->GetBot()->HasAura(Id(BtSpells::SPELL_MISDIRECTION)))
+    if (!botAI->GetBot()->HasAura(Id(BtSpells::SPELL_MISDIRECTION_AURA)))
         return false;
 
     return botAI->CanCastSpell("steady shot", target) && botAI->CastSpell("steady shot", target);
@@ -194,11 +248,8 @@ bool CanBuildChaoticCharge(SpellInfo const* spellInfo, bool triggered, uint8 dep
 
 bool IsLinkedSisterOfPleasure(Unit* unit)
 {
-    if (!unit || unit->GetEntry() != Id(BtNpcs::NPC_SISTER_OF_PLEASURE) ||
-        !unit->IsAlive())
-    {
+    if (!unit || unit->GetEntry() != Id(BtNpcs::NPC_SISTER_OF_PLEASURE) || !unit->IsAlive())
         return false;
-    }
 
     Aura* bonds = unit->GetAura(Id(BtSpells::SPELL_SHARED_BONDS));
     Unit* pain = bonds ? bonds->GetCaster() : nullptr;
@@ -507,7 +558,7 @@ float GetSupremusHazardRadius(SupremusHazard const& hazard, SupremusHazardZone z
     return zone == SupremusHazardZone::Damage ? hazard.damageRadius : hazard.safeRadius;
 }
 
-}
+} // end anonymous namespace (Supremus)
 
 bool IsSupremusKitePhase(Unit* supremus)
 {
@@ -877,9 +928,8 @@ std::vector<std::vector<Player*>> GetGurtoggRangedRotationGroups(Player* bot)
     {
         Player* member = ref->GetSource();
         if (!member || member->GetMapId() != BT_MAP_ID || !member->IsAlive() ||
-            !GET_PLAYERBOT_AI(member) ||
-            member->HasAura(Id(BtSpells::SPELL_PLAYER_FEL_RAGE)) ||
-            !PlayerbotAI::IsRanged(member))
+            !GET_PLAYERBOT_AI(member) || !PlayerbotAI::IsRanged(member) ||
+            member->HasAura(Id(BtSpells::SPELL_PLAYER_FEL_RAGE)))
         {
             continue;
         }
@@ -1127,9 +1177,20 @@ bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin)
     return false;
 }
 
-bool IsMalandeInZerevorPatch(Unit* malande, Unit* zerevor)
+// Gathios's Consecration reaches her only at the pull, while he is still beside her on the dais.
+bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor)
 {
-    return malande && IsInZerevorPatch(zerevor, *malande);
+    if (!malande)
+        return false;
+
+    if (gathios)
+    {
+        DynamicObject* consecration = gathios->GetDynObject(Id(BtSpells::SPELL_CONSECRATION));
+        if (consecration && consecration->GetExactDist2d(malande) < consecration->GetRadius())
+            return true;
+    }
+
+    return IsInZerevorPatch(zerevor, *malande);
 }
 
 bool IsZerevorOnMageTank(PlayerbotAI* botAI, Unit* zerevor)
@@ -1269,6 +1330,7 @@ uint32 GetReadySpellLock(Creature* pet, Unit* target)
 // Illidan Stormrage <The Betrayer>
 
 std::unordered_map<uint32, IllidanPhase> illidanLastPhase;
+std::unordered_map<uint32, IllidanPhase> illidanPreviousPhase;
 std::unordered_map<uint32, uint32> illidanPhaseStartTime;
 std::unordered_map<uint32, uint32> illidanFlamePhaseStartTime;
 std::unordered_map<uint32, ObjectGuid> eastFlameGuid;
@@ -1315,21 +1377,264 @@ bool IsIllidanDeathScene(Unit* illidan)
     return illidan && illidan->GetHealth() == 1;
 }
 
-std::vector<Unit*> GetAllFlameCrashes(Player* bot)
+bool IsIllidanSpeechInProgress(Player* bot)
 {
-    std::vector<Unit*> flameCrashes;
-    std::list<Creature*> creatureList;
-    constexpr float searchRadius = 30.0f;
-    bot->GetCreatureListWithEntryInGrid(
-        creatureList, Id(BtNpcs::NPC_FLAME_CRASH), searchRadius);
-
-    for (Creature* creature : creatureList)
+    if (IsEncounterInProgress(bot, BT_MAP_ID) ||
+        bot->GetExactDist(ILLIDAN_SPEECH_POSITION) > ILLIDAN_SPEECH_SEARCH_RADIUS)
     {
-        if (creature && creature->IsAlive())
-            flameCrashes.push_back(creature);
+        return false;
     }
 
-    return flameCrashes;
+    Creature* illidan = bot->FindNearestCreature(
+        Id(BtNpcs::NPC_ILLIDAN_STORMRAGE), ILLIDAN_SPEECH_SEARCH_RADIUS, true);
+
+    return illidan && illidan->getStandState() == UNIT_STAND_STATE_STAND &&
+        illidan->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) && !illidan->IsInCombat();
+}
+
+bool IsIllidanPhaseStartWithin(Unit const& illidan, uint32 durationMs)
+{
+    auto const it = illidanPhaseStartTime.find(illidan.GetInstanceId());
+    return it == illidanPhaseStartTime.end() ||
+        getMSTimeDiff(it->second, getMSTime()) < durationMs;
+}
+
+bool IsIllidanLandingWait(Unit const& illidan, IllidanPhase phase)
+{
+    if (phase == IllidanPhase::Landing)
+        return true;
+
+    if (phase != IllidanPhase::Grounded ||
+        illidan.GetExactDist2d(ILLIDAN_GRATE_CENTRE) >= ILLIDAN_LANDING_RELEASE_DISTANCE)
+    {
+        return false;
+    }
+
+    return IsIllidanPhaseStartWithin(illidan, ILLIDAN_LANDING_WAIT_MS);
+}
+
+bool IsIllidanDemonFormEnding(Unit const& illidan)
+{
+    auto const it = illidanPhaseStartTime.find(illidan.GetInstanceId());
+    return it != illidanPhaseStartTime.end() && getMSTimeDiff(it->second, getMSTime()) >=
+        ILLIDAN_DEMON_FORM_DURATION_MS - ILLIDAN_DEMON_FORM_WALK_IN_MS;
+}
+
+IllidanDpsHold GetIllidanHoldWindow(Unit* illidan)
+{
+    if (!illidan || illidan->GetHealthPct() <= ILLIDAN_BURN_HEALTH_PCT)
+        return IllidanDpsHold::None;
+
+    IllidanPhase const phase = GetIllidanPhase(illidan);
+    if (phase == IllidanPhase::Demon)
+    {
+        if (illidan->GetHealthPct() <= ILLIDAN_DEMON_FORM_NO_PUSH_HEALTH_PCT)
+            return IllidanDpsHold::DemonFormNoPush;
+
+        if (IsIllidanDemonFormEnding(*illidan))
+            return IllidanDpsHold::DemonFormEnd;
+
+        return IsIllidanPhaseStartWithin(*illidan, ILLIDAN_DEMON_FORM_DPS_WAIT_MS) ?
+            IllidanDpsHold::DemonFormStart : IllidanDpsHold::DemonFormMiddle;
+    }
+
+    bool isAfterReset = phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded;
+    if (phase == IllidanPhase::Maiev)
+    {
+        auto const it = illidanPreviousPhase.find(illidan->GetInstanceId());
+        isAfterReset = it != illidanPreviousPhase.end() && it->second == IllidanPhase::Demon;
+    }
+
+    return isAfterReset && IsIllidanPhaseStartWithin(*illidan, ILLIDAN_RESET_DPS_WAIT_MS) ?
+        IllidanDpsHold::AfterReset : IllidanDpsHold::None;
+}
+
+IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan)
+{
+    IllidanDpsHold const window = GetIllidanHoldWindow(illidan);
+    Player* bot = botAI->GetBot();
+    if (window == IllidanDpsHold::DemonFormStart)
+    {
+        return GetIllidanWarlockTank(botAI) == bot ? IllidanDpsHold::None : window;
+    }
+    else if (window == IllidanDpsHold::DemonFormMiddle)
+    {
+        return PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot) ?
+            window : IllidanDpsHold::None;
+    }
+    else if (window == IllidanDpsHold::AfterReset || window == IllidanDpsHold::DemonFormEnd)
+    {
+        return PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot) ?
+            IllidanDpsHold::None : window;
+    }
+
+    return window;
+}
+
+float GetGrateAngle(Position const& position)
+{
+    return ILLIDAN_GRATE_CENTRE.GetAngle(&position);
+}
+
+Position GetRingPoint(float angle, float radius)
+{
+    return Position(
+        ILLIDAN_GRATE_CENTRE.GetPositionX() + radius * std::cos(angle),
+        ILLIDAN_GRATE_CENTRE.GetPositionY() + radius * std::sin(angle),
+        ILLIDAN_GRATE_CENTRE.GetPositionZ());
+}
+
+Position GetIllidanLeadSpot(Unit const& illidan, Position const& ringPoint)
+{
+    float const angle = illidan.GetAngle(&ringPoint);
+    return Position(
+        ringPoint.GetPositionX() + ILLIDAN_CHASE_STOP_DISTANCE * std::cos(angle),
+        ringPoint.GetPositionY() + ILLIDAN_CHASE_STOP_DISTANCE * std::sin(angle),
+        ringPoint.GetPositionZ());
+}
+
+Position GetIllidanSettleSpot(Unit const& illidan)
+{
+    float const radius = ILLIDAN_GRATE_CENTRE.GetExactDist2d(&illidan) + ILLIDAN_TANK_OFFSET;
+    return GetRingPoint(GetGrateAngle(illidan), radius);
+}
+
+Position GetGrateSlot(size_t index)
+{
+    constexpr size_t innerSlots = 6;
+    constexpr size_t outerSlots = 12;
+    constexpr float fullCircle = 2.0f * static_cast<float>(M_PI);
+
+    size_t const slot = index % ILLIDAN_RANGED_SLOT_COUNT;
+    if (slot == 0)
+        return ILLIDAN_GRATE_CENTRE;
+
+    if (slot <= innerSlots)
+    {
+        float const angle = fullCircle * static_cast<float>(slot - 1) / innerSlots;
+        return GetRingPoint(angle, ILLIDAN_GRATE_INNER_RADIUS);
+    }
+
+    float const angle =
+        fullCircle * (static_cast<float>(slot - 1 - innerSlots) + 0.5f) / outerSlots;
+    return GetRingPoint(angle, ILLIDAN_GRATE_OUTER_RADIUS);
+}
+
+DemonFormLayout GetDemonFormLayout(Unit const& illidan)
+{
+    constexpr float degree = static_cast<float>(M_PI) / 180.0f;
+    // Ranged DPS rows are inside 31 yd, in spell reach of him, and healer rows behind them; both
+    // are filled from the warlock's side. Melee rows lie behind the healers, centred between the
+    // warlock and the far end of the ranged DPS, and are filled nearest him first.
+    constexpr std::array rangedRows = { 25.2f, 31.0f };
+    constexpr std::array healerRows = { 36.8f, 42.6f };
+    constexpr std::array meleeRows = { 48.4f, 54.2f, 60.0f };
+    constexpr float rangedHighAngle = 40.0f * degree;
+    constexpr float healerHighAngle = 60.0f * degree;
+    constexpr float lowAngle = -90.0f * degree;
+    constexpr float meleeHalfArc = 40.0f * degree;
+    // Heals reach 43 yd centre to centre.
+    constexpr float healReach = 41.0f;
+
+    float const inwardAngle = illidan.GetAngle(&ILLIDAN_GRATE_CENTRE);
+
+    DemonFormLayout layout;
+    layout.warlockSpot = GetDemonFormPoint(
+        illidan, inwardAngle, ILLIDAN_WARLOCK_SPOT_DISTANCE, ILLIDAN_WARLOCK_SPOT_ANGLE);
+    layout.mainTankWaitSpot = GetDemonFormPoint(
+        illidan, inwardAngle, ILLIDAN_MAIN_TANK_WAIT_DISTANCE, ILLIDAN_MAIN_TANK_WAIT_ANGLE);
+    layout.pickupSpot = GetDemonFormPoint(
+        illidan, inwardAngle, ILLIDAN_TANK_OFFSET, static_cast<float>(M_PI));
+    layout.runSpot = GetIllidanShadowfiendRunSpot(illidan, IllidanPhase::Demon);
+
+    auto const fromWarlockSide =
+        [](std::pair<float, Position> const& a, std::pair<float, Position> const& b)
+    {
+        return a.first > b.first;
+    };
+
+    std::vector<std::pair<float, Position>> ranged;
+    std::vector<std::pair<float, Position>> healers;
+    for (size_t i = 0; i < rangedRows.size(); ++i)
+    {
+        std::vector<std::pair<float, Position>> const rangedRow = GetDemonFormRow(
+            illidan, inwardAngle, layout.warlockSpot, rangedRows[i], rangedHighAngle, lowAngle,
+            i % 2 == 1);
+        ranged.insert(ranged.end(), rangedRow.begin(), rangedRow.end());
+
+        std::vector<std::pair<float, Position>> const healerRow = GetDemonFormRow(
+            illidan, inwardAngle, layout.warlockSpot, healerRows[i], healerHighAngle, lowAngle,
+            i % 2 == 1);
+        healers.insert(healers.end(), healerRow.begin(), healerRow.end());
+    }
+
+    if (ranged.empty())
+        return layout;
+
+    std::stable_sort(ranged.begin(), ranged.end(), fromWarlockSide);
+    if (ranged.size() > ILLIDAN_RANGED_SLOT_COUNT)
+        ranged.resize(ILLIDAN_RANGED_SLOT_COUNT);
+
+    for (std::pair<float, Position> const& slot : ranged)
+        layout.rangedSlots.push_back(slot.second);
+
+    std::stable_sort(healers.begin(), healers.end(), fromWarlockSide);
+    for (std::pair<float, Position> const& slot : healers)
+    {
+        if (layout.healerSlots.size() < ILLIDAN_HEALER_SLOT_COUNT &&
+            slot.second.GetExactDist2d(layout.warlockSpot) <= healReach)
+        {
+            layout.healerSlots.push_back(slot.second);
+        }
+    }
+
+    float nearestToRunSpot = std::numeric_limits<float>::max();
+    for (size_t i = 0; i < layout.rangedSlots.size(); ++i)
+    {
+        float const distance = layout.rangedSlots[i].GetExactDist2d(layout.runSpot);
+        if (distance < nearestToRunSpot)
+        {
+            nearestToRunSpot = distance;
+            layout.trapSlot = i;
+        }
+    }
+
+    float const meleeCentreAngle = (ILLIDAN_WARLOCK_SPOT_ANGLE + ranged.back().first) / 2.0f;
+    for (size_t i = 0; i < meleeRows.size(); ++i)
+    {
+        std::vector<std::pair<float, Position>> row = GetDemonFormRow(
+            illidan, inwardAngle, layout.warlockSpot, meleeRows[i],
+            meleeCentreAngle + meleeHalfArc, meleeCentreAngle - meleeHalfArc, i % 2 == 1);
+        std::stable_sort(
+            row.begin(), row.end(),
+            [meleeCentreAngle](
+                std::pair<float, Position> const& a, std::pair<float, Position> const& b)
+            {
+                return std::abs(a.first - meleeCentreAngle) <
+                    std::abs(b.first - meleeCentreAngle);
+            });
+
+        for (std::pair<float, Position> const& slot : row)
+        {
+            if (layout.meleeSlots.size() < ILLIDAN_MELEE_SLOT_COUNT)
+                layout.meleeSlots.push_back(slot.second);
+        }
+    }
+
+    return layout;
+}
+
+Position GetIllidanShadowfiendRunSpot(Unit const& illidan, IllidanPhase phase)
+{
+    if (phase == IllidanPhase::Demon)
+    {
+        float const inwardAngle = illidan.GetAngle(&ILLIDAN_GRATE_CENTRE);
+        return GetDemonFormPoint(
+            illidan, inwardAngle, ILLIDAN_DEMON_RUN_SPOT_DISTANCE, ILLIDAN_DEMON_RUN_SPOT_ANGLE);
+    }
+
+    return GetRingPoint(
+        GetGrateAngle(illidan) + ILLIDAN_RUN_SPOT_ANGLE, ILLIDAN_RUN_SPOT_DISTANCE);
 }
 
 std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot)
@@ -1360,38 +1665,182 @@ std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot)
     return { eastFlame, westFlame };
 }
 
-// (1) First priority is an assistant Warlock (real player or bot)
-// (2) If no assistant Warlock, then look for any Warlock bot
 ObjectGuid FindIllidanWarlockTankGuid(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return ObjectGuid::Empty;
 
-    Player* fallbackWarlock = nullptr;
-
+    ObjectGuid assistantWarlock;
+    ObjectGuid botWarlock;
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || member->GetMapId() != BT_MAP_ID || !member->IsAlive() ||
-            member->getClass() != CLASS_WARLOCK)
-        {
+        if (!member || member->GetMapId() != BT_MAP_ID || member->getClass() != CLASS_WARLOCK)
             continue;
+
+        ObjectGuid const guid = member->GetGUID();
+        if (group->IsAssistant(guid))
+        {
+            if (assistantWarlock.IsEmpty() || guid < assistantWarlock)
+                assistantWarlock = guid;
         }
-
-        if (group->IsAssistant(member->GetGUID()))
-            return member->GetGUID();
-
-        if (!fallbackWarlock && GET_PLAYERBOT_AI(member))
-            fallbackWarlock = member;
+        else if (GET_PLAYERBOT_AI(member) && (botWarlock.IsEmpty() || guid < botWarlock))
+        {
+            botWarlock = guid;
+        }
     }
 
-    return fallbackWarlock ? fallbackWarlock->GetGUID() : ObjectGuid::Empty;
+    return assistantWarlock.IsEmpty() ? botWarlock : assistantWarlock;
 }
 
 Player* GetIllidanWarlockTank(PlayerbotAI* botAI)
 {
     return GetCachedPlayer(botAI, "illidan stormrage warlock tank");
+}
+
+ObjectGuid FindIllidanTrapHunterGuid(Player* bot)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return ObjectGuid::Empty;
+
+    ObjectGuid trapHunter;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || member->GetMapId() != BT_MAP_ID || member->getClass() != CLASS_HUNTER ||
+            !GET_PLAYERBOT_AI(member))
+        {
+            continue;
+        }
+
+        if (trapHunter.IsEmpty() || member->GetGUID() < trapHunter)
+            trapHunter = member->GetGUID();
+    }
+
+    return trapHunter;
+}
+
+ObjectGuid GetIllidanTrapHunterGuid(PlayerbotAI* botAI)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    return context->GetValue<ObjectGuid>("illidan stormrage trap hunter")->Get();
+}
+
+bool IsIllidanTrapHunter(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    return bot->getClass() == CLASS_HUNTER && GetIllidanTrapHunterGuid(botAI) == bot->GetGUID();
+}
+
+int32 GetIllidanRangedIndex(
+    PlayerbotAI* botAI, size_t slotCount, size_t trapSlot, bool inDemonForm)
+{
+    Player* bot = botAI->GetBot();
+    Group* group = bot->GetGroup();
+    if (!group)
+        return -1;
+
+    ObjectGuid const mainTank = PlayerbotAI::GetMainTankGuid(group);
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    ObjectGuid const warlockTankGuid = inDemonForm ?
+        context->GetValue<ObjectGuid>("illidan stormrage warlock tank")->Get() : ObjectGuid::Empty;
+    ObjectGuid const trapHunter = GetIllidanTrapHunterGuid(botAI);
+
+    std::vector<ObjectGuid> healers;
+    std::vector<ObjectGuid> rangedDps;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || member->GetMapId() != BT_MAP_ID || !GET_PLAYERBOT_AI(member))
+            continue;
+
+        ObjectGuid const guid = member->GetGUID();
+        if (guid == mainTank || guid == warlockTankGuid || guid == trapHunter)
+            continue;
+
+        if (PlayerbotAI::IsHeal(member))
+        {
+            if (!inDemonForm)
+                healers.push_back(guid);
+        }
+        else if (PlayerbotAI::IsRanged(member))
+        {
+            rangedDps.push_back(guid);
+        }
+    }
+
+    int32 const rosterIndex = GetRosterIndex(healers, rangedDps, bot->GetGUID());
+    bool const skipsTrapSlot = !trapHunter.IsEmpty() && trapSlot < slotCount;
+    size_t const fillCount = skipsTrapSlot ? slotCount - 1 : slotCount;
+    if (rosterIndex < 0 || fillCount == 0)
+        return -1;
+
+    size_t slot = static_cast<size_t>(rosterIndex) % fillCount;
+    if (skipsTrapSlot && slot >= trapSlot)
+        ++slot;
+
+    return static_cast<int32>(slot);
+}
+
+int32 GetIllidanHealerIndex(PlayerbotAI* botAI, size_t slotCount)
+{
+    Player* bot = botAI->GetBot();
+    Group* group = bot->GetGroup();
+    if (!group || slotCount == 0)
+        return -1;
+
+    std::vector<ObjectGuid> healers;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (member && member->GetMapId() == BT_MAP_ID && GET_PLAYERBOT_AI(member) &&
+            PlayerbotAI::IsHeal(member))
+        {
+            healers.push_back(member->GetGUID());
+        }
+    }
+
+    int32 const rosterIndex = GetRosterIndex(healers, {}, bot->GetGUID());
+    if (rosterIndex < 0)
+        return -1;
+
+    return static_cast<int32>(static_cast<size_t>(rosterIndex) % slotCount);
+}
+
+int32 GetIllidanMeleeIndex(PlayerbotAI* botAI, size_t slotCount)
+{
+    Player* bot = botAI->GetBot();
+    Group* group = bot->GetGroup();
+    if (!group || slotCount == 0)
+        return -1;
+
+    ObjectGuid const mainTank = PlayerbotAI::GetMainTankGuid(group);
+
+    std::vector<ObjectGuid> meleeDps;
+    std::vector<ObjectGuid> tanks;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || member->GetMapId() != BT_MAP_ID || !GET_PLAYERBOT_AI(member))
+            continue;
+
+        ObjectGuid const guid = member->GetGUID();
+        if (guid == mainTank)
+            continue;
+
+        if (PlayerbotAI::IsTank(member))
+            tanks.push_back(guid);
+        else if (!PlayerbotAI::IsHeal(member) && PlayerbotAI::IsMelee(member))
+            meleeDps.push_back(guid);
+    }
+
+    int32 const rosterIndex = GetRosterIndex(meleeDps, tanks, bot->GetGUID());
+    if (rosterIndex < 0)
+        return -1;
+
+    return static_cast<int32>(static_cast<size_t>(rosterIndex) % slotCount);
 }
 
 bool HasParasiticShadowfiend(Player* player)
@@ -1403,35 +1852,59 @@ bool HasParasiticShadowfiend(Player* player)
         player->HasAura(Id(BtSpells::SPELL_PARASITIC_SHADOWFIEND_2));
 }
 
-// The first bot hunter that doesn't have Parasitic Shadowfiend
-bool IsIllidanTrapperHunter(Player* bot)
+GuidVector FindParasiticShadowfiendGuids(PlayerbotAI* botAI)
 {
-    if (bot->getClass() != CLASS_HUNTER)
-        return false;
+    std::list<Creature*> creatures;
+    botAI->GetBot()->GetCreatureListWithEntryInGrid(
+        creatures, Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND), ILLIDAN_ADD_SEARCH_RADIUS);
 
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    GuidVector shadowfiends;
+    for (Creature* creature : creatures)
     {
-        Player* member = ref->GetSource();
-        if (!member || member->GetMapId() != BT_MAP_ID || !member->IsAlive())
-            continue;
-
-        if (member->getClass() != CLASS_HUNTER || !GET_PLAYERBOT_AI(member) ||
-            HasParasiticShadowfiend(member))
-        {
-            continue;
-        }
-
-        return member == bot;
+        if (creature->IsAlive())
+            shadowfiends.push_back(creature->GetGUID());
     }
 
-    return false;
+    return shadowfiends;
 }
 
-ObjectGuid FindBotWithParasiticShadowfiendGuid(Player* bot)
+Unit* GetNearestParasiticShadowfiend(PlayerbotAI* botAI, Unit const& unit)
+{
+    auto const& shadowfiends =
+        botAI->GetAiObjectContext()->GetValue<GuidVector>("parasitic shadowfiends")->RefGet();
+
+    Unit* nearest = nullptr;
+    float nearestDistance = std::numeric_limits<float>::max();
+    for (ObjectGuid const& guid : shadowfiends)
+    {
+        Unit* shadowfiend = botAI->GetUnit(guid);
+        if (!shadowfiend || !shadowfiend->IsAlive())
+            continue;
+
+        float const distance = unit.GetExactDist2d(shadowfiend);
+        if (distance < nearestDistance)
+        {
+            nearestDistance = distance;
+            nearest = shadowfiend;
+        }
+    }
+
+    return nearest;
+}
+
+bool IsIllidanShadowfiendBirther(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    if (HasParasiticShadowfiend(bot))
+        return false;
+
+    Unit* shadowfiend = GetNearestParasiticShadowfiend(botAI, *bot);
+    return shadowfiend &&
+        bot->GetExactDist2d(shadowfiend) <= ILLIDAN_SHADOWFIEND_BIRTHER_DISTANCE &&
+        shadowfiend->GetHealthPct() >= ILLIDAN_SHADOWFIEND_FINISH_HEALTH_PCT;
+}
+
+ObjectGuid FindPlayerWithParasiticShadowfiendGuid(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group)
@@ -1440,19 +1913,152 @@ ObjectGuid FindBotWithParasiticShadowfiendGuid(Player* bot)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (member && member->IsAlive() && GET_PLAYERBOT_AI(member) &&
-            HasParasiticShadowfiend(member))
-        {
+        if (member && member->IsAlive() && HasParasiticShadowfiend(member))
             return member->GetGUID();
-        }
     }
 
     return ObjectGuid::Empty;
 }
 
-Player* GetBotWithParasiticShadowfiend(PlayerbotAI* botAI)
+Player* GetPlayerWithParasiticShadowfiend(PlayerbotAI* botAI)
 {
-    return GetCachedPlayer(botAI, "illidan stormrage bot with parasitic shadowfiend");
+    return GetCachedPlayer(botAI, "illidan stormrage player with parasitic shadowfiend");
+}
+
+std::vector<ShadowDemon> FindShadowDemons(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    std::list<Creature*> creatures;
+    bot->GetCreatureListWithEntryInGrid(
+        creatures, Id(BtNpcs::NPC_SHADOW_DEMON), ILLIDAN_ADD_SEARCH_RADIUS);
+
+    std::vector<ShadowDemon> shadowDemons;
+    for (Creature* creature : creatures)
+    {
+        if (creature->IsAlive())
+            shadowDemons.push_back({ creature->GetGUID(), ObjectGuid::Empty });
+    }
+
+    Group* group = bot->GetGroup();
+    if (shadowDemons.empty() || !group)
+        return shadowDemons;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || member->GetMapId() != BT_MAP_ID)
+            continue;
+
+        for (Unit* unit : { static_cast<Unit*>(member), static_cast<Unit*>(member->GetPet()) })
+        {
+            if (!unit || !unit->IsAlive())
+                continue;
+
+            Aura const* paralyze = unit->GetAura(Id(BtSpells::SPELL_PARALYZE));
+            if (!paralyze)
+                continue;
+
+            for (ShadowDemon& shadowDemon : shadowDemons)
+            {
+                if (shadowDemon.demon == paralyze->GetCasterGUID())
+                    shadowDemon.target = unit->GetGUID();
+            }
+        }
+    }
+
+    return shadowDemons;
+}
+
+Unit* GetShadowDemonToAttack(PlayerbotAI* botAI, Unit const& from)
+{
+    // A Demon walks 4 yd/s, so a yard is a quarter second.
+    constexpr float targetDistanceStep = 1.0f;
+    constexpr uint32 walkingToWarlock = 0;
+    constexpr uint32 walking = 1;
+    constexpr uint32 idle = 2;
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    auto const& shadowDemons =
+        context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet();
+    ObjectGuid const warlockTank =
+        context->GetValue<ObjectGuid>("illidan stormrage warlock tank")->Get();
+
+    Unit* best = nullptr;
+    std::tuple<uint32, uint32, float> bestKey = {
+        std::numeric_limits<uint32>::max(), 0, 0.0f };
+    for (ShadowDemon const& shadowDemon : shadowDemons)
+    {
+        Unit* demon = botAI->GetUnit(shadowDemon.demon);
+        if (!demon || !demon->IsAlive())
+            continue;
+
+        Unit* target =
+            shadowDemon.target.IsEmpty() ? nullptr : botAI->GetUnit(shadowDemon.target);
+        uint32 rank = idle;
+        uint32 step = 0;
+        if (target && target->IsAlive())
+        {
+            rank = shadowDemon.target == warlockTank ? walkingToWarlock : walking;
+            step = static_cast<uint32>(demon->GetExactDist2d(target) / targetDistanceStep);
+        }
+
+        std::tuple<uint32, uint32, float> const key = { rank, step, from.GetExactDist2d(demon) };
+        if (key < bestKey)
+        {
+            bestKey = key;
+            best = demon;
+        }
+    }
+
+    return best;
+}
+
+Unit* GetShadowDemonForMelee(PlayerbotAI* botAI, Unit const& illidan, Unit const& from)
+{
+    constexpr float auraOfDreadClearance = 15.0f;
+    constexpr float shadowBlastClearance = 24.0f;
+
+    Unit* victim = illidan.GetVictim();
+    Unit* nearest = nullptr;
+    std::pair<bool, float> nearestKey = { true, std::numeric_limits<float>::max() };
+    auto const& shadowDemons = botAI->GetAiObjectContext()
+        ->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet();
+    for (ShadowDemon const& shadowDemon : shadowDemons)
+    {
+        Unit* demon = botAI->GetUnit(shadowDemon.demon);
+        if (!demon || !demon->IsAlive() ||
+            demon->GetDistance2d(&illidan) <= auraOfDreadClearance ||
+            (victim && demon->GetDistance2d(victim) <= shadowBlastClearance))
+        {
+            continue;
+        }
+
+        Unit* target =
+            shadowDemon.target.IsEmpty() ? nullptr : botAI->GetUnit(shadowDemon.target);
+        bool const isIdle = !target || !target->IsAlive();
+        std::pair<bool, float> const key = { isIdle, from.GetExactDist2d(demon) };
+        if (key < nearestKey)
+        {
+            nearestKey = key;
+            nearest = demon;
+        }
+    }
+
+    return nearest;
+}
+
+Unit* GetShadowDemonForPet(PlayerbotAI* botAI, Pet const& pet)
+{
+    uint32 const entry = pet.GetEntry();
+    if (entry == NPC_IMP || entry == NPC_WATER_ELEMENTAL_TEMP ||
+        entry == NPC_WATER_ELEMENTAL_PERM)
+    {
+        return GetShadowDemonToAttack(botAI, pet);
+    }
+
+    Unit* illidan =
+        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "22917")->Get();
+    return illidan ? GetShadowDemonForMelee(botAI, *illidan, pet) : nullptr;
 }
 
 EyeBlastDangerArea GetEyeBlastDangerArea(Player* bot)

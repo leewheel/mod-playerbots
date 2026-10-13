@@ -47,7 +47,7 @@ bool IsHazardousMovement(Action* action)
 
 }
 
-// General
+// Shared
 
 float ZulAmanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
 {
@@ -58,16 +58,23 @@ float ZulAmanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     Unit* boss = nullptr;
-    if (Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863"))
-        boss = zuljin;
-    else if (Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239"))
-        boss = malacrass;
-    else if (Unit* janalai = AI_VALUE2(Unit*, "find target", "23578"))
-        boss = janalai;
-    else if (Unit* nalorakk = AI_VALUE2(Unit*, "find target", "23576"))
-        boss = nalorakk;
-    else if (Unit* akilzon = AI_VALUE2(Unit*, "find target", "23574"))
-        boss = akilzon;
+    // By leewheel 2026-10-13 合并 brighton the-lab：采纳上游 zulAmanBosses 数组遍历结构（新增 halazzi），
+    //   按本核铁律把 find target 英文名换回 NPC entry（entry 已双源核定：上游 ZAHelpers.h
+    //   NPC_* 常量 + acore_world.creature_template 实查一致）：
+    //   zul'jin=23863 / hex lord malacrass=24239 / halazzi=23577 / jan'alai=23578 / nalorakk=23576 / akil'zon=23574
+    static constexpr std::array zulAmanBosses = {
+        "23863", "24239", "23577", "23578", "23576", "23574",
+    };
+
+    for (char const* name : zulAmanBosses)
+    {
+        if (Unit* target = AI_VALUE2(Unit*, "find target", name))
+        {
+            boss = target;
+            break;
+        }
+    }
+    // End By leewheel
 
     if (!boss)
         return 1.0f;
@@ -75,7 +82,7 @@ float ZulAmanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
     if (boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
         return 0.0f;
 
-    // Further restrictions on Bloodlust for Zul'jin and Jan'alai
+    // Further restrictions on Bloodlust for Zul'jin and Jan'alai.
     if (bot->getClass() != CLASS_SHAMAN)
         return 1.0f;
 
@@ -85,7 +92,7 @@ float ZulAmanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
     }
 
-    // Zul'jin: hold until Phase 3 (or later)
+    // Zul'jin: hold until Phase 3 (or later).
     if (boss->GetEntry() == Id(ZaNpcs::NPC_ZULJIN))
     {
         return (boss->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_EAGLE)) ||
@@ -93,7 +100,7 @@ float ZulAmanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
             boss->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_DRAGONHAWK))) ? 1.0f : 0.0f;
     }
 
-    // Jan'alai: hold until time to burn Hatchlings (see comments to the constants in ZAHelpers.h)
+    // Jan'alai: hold until time to burn Hatchlings (see comments to the constants in ZAHelpers.h).
     if (boss->GetEntry() == Id(ZaNpcs::NPC_JANALAI))
     {
         if (boss->GetHealthPct() <= JANALAI_HATCH_ALL_HEALTH_PCT)
@@ -106,7 +113,7 @@ float ZulAmanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
     return 1.0f;
 }
 
-// Malacrass siphoning a Warrior soul and Zul'jin have very similar Whirlwinds
+// Malacrass siphoning a Warrior soul and Zul'jin in troll form have very similar Whirlwinds.
 float ZulAmanAvoidWhirlwindMultiplier::GetValueInEncounter(Action* action)
 {
     if (!IsApproachMovement(action) && !dynamic_cast<CastKillingSpreeAction*>(action))
@@ -375,7 +382,7 @@ float HexLordMalacrassStayAwayFromFreezingTrapMultiplier::GetValueInEncounter(Ac
 
 // Zul'jin
 
-float ZuljinStopAttackingDuringPhaseChangeMultiplier::GetValueInEncounter(Action* action)
+float ZuljinNoAttackingDuringPhaseChangeMultiplier::GetValueInEncounter(Action* action)
 {
     if (PlayerbotAI::IsTank(bot))
         return 1.0f;

@@ -16,7 +16,7 @@
 using namespace KaraHelpers;
 using namespace EncounterHelpers;
 
-// General
+// Shared
 
 bool KarazhanNoEncounterInProgressTrigger::IsActive()
 {

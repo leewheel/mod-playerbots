@@ -14,7 +14,7 @@
 using namespace TkHelpers;
 using namespace EncounterHelpers;
 
-// General
+// Shared
 
 bool TempestKeepNoEncounterInProgressTrigger::IsActive()
 {
@@ -48,7 +48,7 @@ bool CrimsonHandCenturionCastsArcaneFlurryTrigger::IsActive()
 
 // Al'ar <Phoenix God>
 
-bool AlarPullingBossTrigger::IsActiveInEncounter()
+bool AlarHunterShouldMisdirectTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
@@ -72,7 +72,7 @@ bool AlarFliesBetweenPlatformsTrigger::IsActiveInEncounter()
     return locationIndex != POINT_QUILL_OR_DIVE_IDX && locationIndex != POINT_MIDDLE_IDX;
 }
 
-bool AlarEmbersExplodeUponDeathTrigger::IsActiveInEncounter()
+bool AlarEmbersShouldBeTankedTrigger::IsActiveInEncounter()
 {
     return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "19551");
 }
@@ -211,7 +211,7 @@ bool KaelthasSunstriderChasedByThaladredTrigger::IsActiveInEncounter()
     return phase != PHASE_NONE;
 }
 
-bool KaelthasSunstriderPullingTankableAdvisorsTrigger::IsActiveInEncounter()
+bool KaelthasSunstriderHunterShouldMisdirectAdvisorsTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;

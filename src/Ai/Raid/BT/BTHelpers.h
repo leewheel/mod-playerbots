@@ -19,6 +19,7 @@
 
 class Creature;
 class GameObject;
+class Pet;
 class Player;
 class PlayerbotAI;
 class SpellInfo;
@@ -99,6 +100,7 @@ enum class BtSpells : uint32
     SPELL_CAGED                     = 40695,
     SPELL_PARASITIC_SHADOWFIEND_1   = 41917, // cast by Illidan (primary infection)
     SPELL_PARASITIC_SHADOWFIEND_2   = 41914, // cast by Shadowfiend on contact (secondary infection)
+    SPELL_PARALYZE                  = 41083, // cast by a Shadow Demon on the unit it walks to
 
     // Druid
     SPELL_TREE_OF_LIFE              = 33891,
@@ -106,7 +108,8 @@ enum class BtSpells : uint32
     // Hunter
     SPELL_FEIGN_DEATH               =  5384,
     SPELL_FROST_TRAP                = 13809,
-    SPELL_MISDIRECTION              = 35079,
+    SPELL_MISDIRECTION              = 34477,
+    SPELL_MISDIRECTION_AURA         = 35079, // the aura on the hunter
 
     // Mage
     SPELL_COUNTERSPELL              =  2139,
@@ -145,10 +148,12 @@ enum class BtNpcs : uint32
     NPC_ESSENCE_OF_DESIRE           = 23419,
 
     // Illidari Council
+    NPC_GATHIOS_THE_SHATTERER       = 22949,
     NPC_HIGH_NETHERMANCER_ZEREVOR   = 22950,
     NPC_LADY_MALANDE                = 22951,
 
     // Illidan Stormrage <The Betrayer>
+    NPC_ILLIDAN_STORMRAGE           = 22917,
     NPC_FLAME_OF_AZZINOTH           = 22997,
     NPC_DEMON_FIRE                  = 23069,
     NPC_ILLIDAN_DB_TARGET           = 23070,
@@ -458,10 +463,11 @@ inline std::array const GATHIOS_TANK_POSITIONS = {
     Position{ 655.571f, 261.377f, 271.687f },
     Position{ 673.789f, 274.139f, 271.689f },
 };
-// The second spot is a placeholder, to be measured in game.
 inline std::array const ZEREVOR_TANK_POSITIONS = {
-    Position{ 686.219f, 377.644f, 271.689f },
-    Position{ 672.219f, 377.644f, 271.689f },
+    // Position{ 689.749f, 371.569f, 271.660f },
+    // Position{ 674.892f, 374.334f, 271.688f },
+    Position{ 660.325f, 357.568f, 271.688f },
+    Position{ 679.657f, 356.482f, 271.699f },
 };
 
 extern std::unordered_map<uint32, uint32> councilDpsWaitTimer;
@@ -469,7 +475,7 @@ inline constexpr uint32 ZEREVOR_MAGE_TANK_CACHE_INTERVAL_MS = 1000;
 inline constexpr uint32 COUNCIL_DPS_WAIT_MS = 5 * IN_MILLISECONDS;
 inline constexpr float COUNCIL_AOE_THREAT_CLEARANCE = 15.0f;
 inline constexpr float COUNCIL_RANGED_SPREAD_DISTANCE = 4.0f;
-inline constexpr float COUNCIL_ZEREVOR_SEARCH_RADIUS = 100.0f;
+inline constexpr float COUNCIL_MEMBER_SEARCH_RADIUS = 100.0f;
 // Bots heal out to HealDistance, 38.5 yd by default.
 inline constexpr float MAGE_TANK_HEALER_MAX_DISTANCE = 38.0f;
 // A patch on the mage tank reaches 11.9 yd from where it stood.
@@ -489,7 +495,7 @@ bool HasDangerousCouncilAura(Player* bot);
 bool IsVerasVanished(Unit* veras);
 bool CanInterruptCircleOfHealing(Unit* malande);
 bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin = 0.0f);
-bool IsMalandeInZerevorPatch(Unit* malande, Unit* zerevor);
+bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor);
 bool IsZerevorOnMageTank(PlayerbotAI* botAI, Unit* zerevor);
 bool IsMageTankHealerPositionSafe(Position const& point, Player* mageTank, Unit* zerevor);
 bool FindMageTankHealerPosition(
@@ -513,6 +519,18 @@ enum class IllidanPhase : uint8
     Maiev,
 };
 
+// Damage on him is held after each threat reset, so the tank that should have him acts first.
+enum class IllidanDpsHold : uint8
+{
+    None,
+    AfterReset,      // Phase 1 and Phase 3 starts, and Phase 5 straight from Demon Form;
+                     // everyone but the Main Tank
+    DemonFormStart,  // everyone but the warlock tank
+    DemonFormMiddle, // from the start hold to the walk-in; the Main Tank only
+    DemonFormEnd,    // from the Main Tank's walk-in to the reset; everyone but the Main Tank
+    DemonFormNoPush, // 33% or below in the form, so he leaves it above 30%; everyone
+};
+
 struct EyeBlastDangerArea
 {
     Position start;
@@ -520,9 +538,109 @@ struct EyeBlastDangerArea
     float width;
 };
 
+// Phase 4 places, from where Demon Form roots him and the line from him through the grate
+// centre. Ranged DPS slots are in spell reach of him and healer slots behind them, each filled
+// from the warlock's side; trapSlot is the trap hunter's among the ranged DPS slots.
+struct DemonFormLayout
+{
+    Position warlockSpot;
+    Position mainTankWaitSpot;
+    Position pickupSpot;
+    Position runSpot;
+    std::vector<Position> rangedSlots;
+    size_t trapSlot = 0;
+    std::vector<Position> healerSlots;
+    std::vector<Position> meleeSlots;
+};
+
+// A Shadow Demon and the unit carrying its Paralyze, the one it walks to; target is empty once
+// that unit is dead, which in AC leaves the Demon idle.
+struct ShadowDemon
+{
+    ObjectGuid demon = ObjectGuid::Empty;
+    ObjectGuid target = ObjectGuid::Empty;
+};
+
 inline constexpr uint32 ILLIDAN_WARLOCK_TANK_CACHE_INTERVAL_MS = 1000;
 inline constexpr uint32 PARASITIC_SHADOWFIEND_CACHE_INTERVAL_MS = 200;
+inline constexpr uint32 ILLIDAN_TRAP_HUNTER_CACHE_INTERVAL_MS = 1000;
+inline constexpr uint32 ILLIDAN_SPEECH_CACHE_INTERVAL_MS = 1000;
+inline constexpr uint32 SHADOW_DEMON_CACHE_INTERVAL_MS = 200;
+// From any bot on the summit, about 90 yd reaches the far edge.
+inline constexpr float ILLIDAN_ADD_SEARCH_RADIUS = 100.0f;
+// From his spot this takes in Akama's, 81 yd away, where the speech is started.
+inline constexpr float ILLIDAN_SPEECH_SEARCH_RADIUS = 100.0f;
+// A bot this close to its place is in it.
+inline constexpr float ILLIDAN_SPOT_TOLERANCE = 1.0f;
+// A bot without the Shadowfiend debuff this close to a Shadowfiend is where a debuff just ended.
+inline constexpr float ILLIDAN_SHADOWFIEND_BIRTHER_DISTANCE = 8.0f;
+// Below this a Shadowfiend is finished off: melee take one in their melee range, and its birther
+// acts again.
+inline constexpr float ILLIDAN_SHADOWFIEND_FINISH_HEALTH_PCT = 50.0f;
+// After landing, everyone else leaves the landing stack once he is led this far from the grate
+// centre, or 3 s after the threat reset, whichever comes first.
+inline constexpr float ILLIDAN_LANDING_RELEASE_DISTANCE = 15.0f;
+// At or below this he is burnt down: no hold and no stop.
+inline constexpr float ILLIDAN_BURN_HEALTH_PCT = 5.0f;
+// At or below this in Demon Form nobody damages him, so he changes back above 30%.
+inline constexpr float ILLIDAN_DEMON_FORM_NO_PUSH_HEALTH_PCT = 33.0f;
+inline constexpr uint32 ILLIDAN_RESET_DPS_WAIT_MS = 3 * IN_MILLISECONDS;
+// The warlock tank has him to itself for the 12.23 s transform and about 2 s more.
+inline constexpr uint32 ILLIDAN_DEMON_FORM_DPS_WAIT_MS = 14 * IN_MILLISECONDS;
+// Demon Form ends, with a threat reset, this long after the transform starts.
+inline constexpr uint32 ILLIDAN_DEMON_FORM_DURATION_MS = 72230;
+// The Main Tank walks in, and everyone else stops damaging him, this long before the end.
+inline constexpr uint32 ILLIDAN_DEMON_FORM_WALK_IN_MS = 3 * IN_MILLISECONDS;
+inline constexpr uint32 ILLIDAN_LANDING_WAIT_MS = 3 * IN_MILLISECONDS;
+// Hunters misdirect onto the Main Tank this long from each Phase 1, 3 and 5 start.
+inline constexpr uint32 ILLIDAN_PHASE_START_MISDIRECT_MS = 3 * IN_MILLISECONDS;
 
+// Tank ring: he is held 25 yd from the grate centre with the Main Tank 6 yd outward of him, so he
+// faces out and the raid stands inside.
+inline constexpr float ILLIDAN_RING_RADIUS = 25.0f;
+inline constexpr float ILLIDAN_TANK_OFFSET = 6.0f;
+// He doesn't step while his victim is within his chase range (7.5 + 1.5 + 0.5) of his centre.
+inline constexpr float ILLIDAN_CHASE_STOP_DISTANCE = 9.5f;
+// Each Flame Crash moves him this far counterclockwise round the centre.
+inline constexpr float ILLIDAN_RING_STEP_ANGLE = 20.0f * static_cast<float>(M_PI) / 180.0f;
+// He is on his ring point within this distance.
+inline constexpr float ILLIDAN_RING_POINT_TOLERANCE = 1.5f;
+// A Flame Crash this close to the Main Tank was cast on it.
+inline constexpr float ILLIDAN_FLAME_CRASH_ON_TANK_DISTANCE = 9.0f;
+
+// Phases 3 and 5: the centre, six at 6 yd and twelve at 12 yd, in that fill order.
+inline constexpr size_t ILLIDAN_RANGED_SLOT_COUNT = 19;
+inline constexpr float ILLIDAN_GRATE_INNER_RADIUS = 6.0f;
+inline constexpr float ILLIDAN_GRATE_OUTER_RADIUS = 12.0f;
+// The trap hunter's: slot 10, the outer one 75 deg counterclockwise of north.
+inline constexpr size_t ILLIDAN_GRATE_TRAP_SLOT = 9;
+inline constexpr size_t ILLIDAN_HEALER_SLOT_COUNT = 8;
+inline constexpr size_t ILLIDAN_MELEE_SLOT_COUNT = 15;
+
+// Shadowfiend run spots. Phases 1, 3 and 5: from the grate centre, counterclockwise of his
+// bearing. Phase 4: from him, behind the ranged DPS, beside the healers and in front of the melee.
+inline constexpr float ILLIDAN_RUN_SPOT_DISTANCE = 27.0f;
+inline constexpr float ILLIDAN_RUN_SPOT_ANGLE = 90.0f * static_cast<float>(M_PI) / 180.0f;
+inline constexpr float ILLIDAN_DEMON_RUN_SPOT_DISTANCE = 39.6f;
+inline constexpr float ILLIDAN_DEMON_RUN_SPOT_ANGLE = -16.0f * static_cast<float>(M_PI) / 180.0f;
+
+// Phase 4, from him and off his inward line, positive toward the warlock tank's side. His reach is
+// 1.5 in Demon Form, so a 30 yd spell reaches 33 yd on him: the warlock tank stands 2 yd inside.
+inline constexpr float ILLIDAN_WARLOCK_SPOT_DISTANCE = 31.0f;
+inline constexpr float ILLIDAN_WARLOCK_SPOT_ANGLE = 75.0f * static_cast<float>(M_PI) / 180.0f;
+inline constexpr float ILLIDAN_MAIN_TANK_WAIT_DISTANCE = 17.0f;
+inline constexpr float ILLIDAN_MAIN_TANK_WAIT_ANGLE = -115.0f * static_cast<float>(M_PI) / 180.0f;
+
+// World trigger 22515.
+inline Position const ILLIDAN_GRATE_CENTRE = { 676.021f, 305.455f, 353.582f };
+// He kneels here and stands here for his speech.
+inline Position const ILLIDAN_SPEECH_POSITION = { 705.732f, 304.988f, 353.925f };
+// The Main Tank waits this far north of the centre at the pull, so he stops on the ring.
+inline Position const ILLIDAN_PULL_TANK_POSITION = { 691.521f, 305.455f, 353.790f };
+// While he lands, the Main Tank waits 6 yd north of the landing point and everyone else 22 yd
+// south of the centre.
+inline Position const ILLIDAN_LANDING_TANK_POSITION = { 682.648f, 304.761f, 353.920f };
+inline Position const ILLIDAN_LANDING_STACK_POSITION = { 654.021f, 305.455f, 353.790f };
 inline Position const ILLIDAN_LANDING_POSITION = { 676.648f, 304.761f, 354.189f };
 inline Position const ILLIDAN_N_GRATE_POSITION = { 682.100f, 306.000f, 353.192f };
 inline Position const ILLIDAN_E_GRATE_POSITION = { 673.500f, 298.500f, 353.192f };
@@ -556,6 +674,8 @@ inline std::array const W_GLAIVE_TANK_POSITIONS = {
 };
 
 extern std::unordered_map<uint32, IllidanPhase> illidanLastPhase;
+// The phase before the current one, so Phase 5 straight from Demon Form shows as a reset.
+extern std::unordered_map<uint32, IllidanPhase> illidanPreviousPhase;
 extern std::unordered_map<uint32, uint32> illidanPhaseStartTime;
 extern std::unordered_map<uint32, uint32> illidanFlamePhaseStartTime;
 extern std::unordered_map<uint32, ObjectGuid> eastFlameGuid;
@@ -563,14 +683,70 @@ extern std::unordered_map<uint32, ObjectGuid> westFlameGuid;
 
 IllidanPhase GetIllidanPhase(Unit* illidan);
 bool IsIllidanDeathScene(Unit* illidan);
-std::vector<Unit*> GetAllFlameCrashes(Player* bot);
+// He is up and talking after Akama's gossip, still immune to players and out of combat.
+bool IsIllidanSpeechInProgress(Player* bot);
+// The phase started less than durationMs ago; until the mechanic tracker stamps it, it has just
+// started.
+bool IsIllidanPhaseStartWithin(Unit const& illidan, uint32 durationMs);
+// Everyone but the Main Tank waits at the landing stack while he lands, and then until the Main
+// Tank has led him out or 3 s have passed since the threat reset.
+bool IsIllidanLandingWait(Unit const& illidan, IllidanPhase phase);
+// In Demon Form: the last 3 s, from the Main Tank's walk-in to the reset.
+bool IsIllidanDemonFormEnding(Unit const& illidan);
+// The hold window that is running, before who it spares is decided.
+IllidanDpsHold GetIllidanHoldWindow(Unit* illidan);
+// The hold this bot is in, for the hold multiplier and any stop block.
+IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan);
+// The game angle of a point seen from the grate centre: 0 north, rising counterclockwise.
+float GetGrateAngle(Position const& position);
+Position GetRingPoint(float angle, float radius);
+// The Main Tank's two ring spots: 9.5 yd past his ring point on the line from him, so he follows
+// and stops on it; then 6 yd outward of him, so he only turns and faces out.
+Position GetIllidanLeadSpot(Unit const& illidan, Position const& ringPoint);
+Position GetIllidanSettleSpot(Unit const& illidan);
+Position GetGrateSlot(size_t index);
+DemonFormLayout GetDemonFormLayout(Unit const& illidan);
+Position GetIllidanShadowfiendRunSpot(Unit const& illidan, IllidanPhase phase);
 std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot);
+// The warlock tank is an assistant warlock (player or bot), else the warlock bot with the lowest
+// GUID; dead or alive, for the whole fight, since losing it wipes the raid anyway.
 ObjectGuid FindIllidanWarlockTankGuid(Player* bot);
+// Null while the warlock tank is dead.
 Player* GetIllidanWarlockTank(PlayerbotAI* botAI);
+// The trap hunter is the first hunter bot by GUID, dead or alive, for the whole fight.
+ObjectGuid FindIllidanTrapHunterGuid(Player* bot);
+ObjectGuid GetIllidanTrapHunterGuid(PlayerbotAI* botAI);
+bool IsIllidanTrapHunter(PlayerbotAI* botAI);
+// Slot lists are bots on the map, the dead kept, each part by GUID: ranged are healers, then
+// ranged DPS; melee are melee DPS, then tanks. The Main Tank and the trap hunter are left out, and
+// in Demon Form the warlock tank and the healers too, who have their own list. The index wraps
+// round slotCount, skipping trapSlot while there is a trap hunter; -1 if the bot isn't in the list.
+int32 GetIllidanRangedIndex(
+    PlayerbotAI* botAI, size_t slotCount, size_t trapSlot, bool inDemonForm);
+int32 GetIllidanHealerIndex(PlayerbotAI* botAI, size_t slotCount);
+int32 GetIllidanMeleeIndex(PlayerbotAI* botAI, size_t slotCount);
 bool HasParasiticShadowfiend(Player* player);
-bool IsIllidanTrapperHunter(Player* bot);
-ObjectGuid FindBotWithParasiticShadowfiendGuid(Player* bot);
-Player* GetBotWithParasiticShadowfiend(PlayerbotAI* botAI);
+// An entry search, since a Shadowfiend is out of combat, and so not in attackers, until it turns
+// aggressive 2.4 s after spawning.
+GuidVector FindParasiticShadowfiendGuids(PlayerbotAI* botAI);
+Unit* GetNearestParasiticShadowfiend(PlayerbotAI* botAI, Unit const& unit);
+// No Shadowfiend debuff and a living Shadowfiend close by, as where a debuff just ended, while
+// that Shadowfiend isn't yet nearly dead.
+bool IsIllidanShadowfiendBirther(PlayerbotAI* botAI);
+// Humans included, so the trap hunter traps for them too.
+ObjectGuid FindPlayerWithParasiticShadowfiendGuid(Player* bot);
+Player* GetPlayerWithParasiticShadowfiend(PlayerbotAI* botAI);
+// An entry search, so it doesn't rely on the Demons being in attackers (unchecked); each Demon's
+// target is the group member or pet carrying its Paralyze.
+std::vector<ShadowDemon> FindShadowDemons(PlayerbotAI* botAI);
+// For ranged and healers: a Demon walking to the warlock tank first, then the one nearest its
+// target, ties going to the one nearest `from`; idle Demons last.
+Unit* GetShadowDemonToAttack(PlayerbotAI* botAI, Unit const& from);
+// For melee: the Demon nearest `from` clear of Aura of Dread round him and of Shadow Blast round
+// his victim, one still walking to a target before an idle one.
+Unit* GetShadowDemonForMelee(PlayerbotAI* botAI, Unit const& illidan, Unit const& from);
+// Imps and water elementals take Demons as ranged do, other pets as melee do.
+Unit* GetShadowDemonForPet(PlayerbotAI* botAI, Pet const& pet);
 EyeBlastDangerArea GetEyeBlastDangerArea(Player* bot);
 bool IsPositionInEyeBlastDangerArea(Position const& pos, EyeBlastDangerArea const& area);
 GameObject* FindNearestCageTrap(PlayerbotAI* botAI);

@@ -20,8 +20,8 @@ void RaidMagtheridonStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("magtheridon assist tanks attack last two channelers", ACTION_RAID) }));
     // End By leewheel
 
-    triggers.push_back(new TriggerNode("magtheridon pulling west and east channelers",
-        { NextAction("magtheridon misdirect hellfire channelers to main tank", ACTION_RAID + 1) }));
+    triggers.push_back(new TriggerNode("magtheridon hunter should misdirect channelers",
+        { NextAction("magtheridon misdirect channelers to main tank", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("magtheridon should assign dps priority",
         { NextAction("magtheridon assign dps priority", ACTION_RAID) }));
@@ -32,7 +32,7 @@ void RaidMagtheridonStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("magtheridon should be tanked",
         { NextAction("magtheridon main tank position boss", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("magtheridon should spread ranged",
+    triggers.push_back(new TriggerNode("magtheridon ranged should spread",
         { NextAction("magtheridon spread ranged", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("magtheridon standing in debris",

@@ -178,6 +178,9 @@ public:
             &RaidBlackTempleActionContext::illidari_council_manage_dps_timer;
 
         // Illidan Stormrage <The Betrayer>
+        creators["illidan stormrage position for pull"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_position_for_pull;
+
         creators["illidan stormrage misdirect to tanks"] =
             &RaidBlackTempleActionContext::illidan_stormrage_misdirect_to_tanks;
 
@@ -196,6 +199,12 @@ public:
         creators["illidan stormrage control pet aggression"] =
             &RaidBlackTempleActionContext::illidan_stormrage_control_pet_aggression;
 
+        creators["illidan stormrage command pet attack shadowfiend"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_command_pet_attack_shadowfiend;
+
+        creators["illidan stormrage command pet attack shadow demon"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_command_pet_attack_shadow_demon;
+
         creators["illidan stormrage position above grate"] =
             &RaidBlackTempleActionContext::illidan_stormrage_position_above_grate;
 
@@ -205,8 +214,14 @@ public:
         creators["illidan stormrage cancel immunity"] =
             &RaidBlackTempleActionContext::illidan_stormrage_cancel_immunity;
 
-        creators["illidan stormrage move away from landing point"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_move_away_from_landing_point;
+        creators["illidan stormrage position for landing"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_position_for_landing;
+
+        creators["illidan stormrage melee stop attacking"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_melee_stop_attacking;
+
+        creators["illidan stormrage stop shooting"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_stop_shooting;
 
         creators["illidan stormrage disperse ranged"] =
             &RaidBlackTempleActionContext::illidan_stormrage_disperse_ranged;
@@ -475,6 +490,10 @@ private:
     }
 
     // Illidan Stormrage <The Betrayer>
+    static Action* illidan_stormrage_position_for_pull(PlayerbotAI* botAI)
+    {
+        return new IllidanStormragePositionForPullAction(botAI);
+    }
     static Action* illidan_stormrage_misdirect_to_tanks(PlayerbotAI* botAI)
     {
         return new IllidanStormrageMisdirectToTanksAction(botAI);
@@ -499,6 +518,14 @@ private:
     {
         return new IllidanStormrageControlPetAggressionAction(botAI);
     }
+    static Action* illidan_stormrage_command_pet_attack_shadowfiend(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageCommandPetAttackShadowfiendAction(botAI);
+    }
+    static Action* illidan_stormrage_command_pet_attack_shadow_demon(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageCommandPetAttackShadowDemonAction(botAI);
+    }
     static Action* illidan_stormrage_position_above_grate(PlayerbotAI* botAI)
     {
         return new IllidanStormragePositionAboveGrateAction(botAI);
@@ -511,9 +538,17 @@ private:
     {
         return new IllidanStormrageCancelImmunityAction(botAI);
     }
-    static Action* illidan_stormrage_move_away_from_landing_point(PlayerbotAI* botAI)
+    static Action* illidan_stormrage_position_for_landing(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageMoveAwayFromLandingPointAction(botAI);
+        return new IllidanStormragePositionForLandingAction(botAI);
+    }
+    static Action* illidan_stormrage_melee_stop_attacking(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageMeleeStopAttackingAction(botAI);
+    }
+    static Action* illidan_stormrage_stop_shooting(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageStopShootingAction(botAI);
     }
     static Action* illidan_stormrage_disperse_ranged(PlayerbotAI* botAI)
     {

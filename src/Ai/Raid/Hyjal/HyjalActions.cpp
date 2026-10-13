@@ -24,7 +24,9 @@ using namespace EncounterHelpers;
 // feet, which on Hyjal's terrain fails outright--MoveTo returns false and the bot simply stands
 // there, with no error and nothing suppressing it. The destination's Z belongs in the arrival test,
 // never in the step
-// General
+// Shared
+// （By leewheel 2026-10-13 合并 brighton the-lab：节标题随上游由 General 改为 Shared；
+//   上方 MoveTo Z 语义的踩坑注释是本核实测结论，必须保留。）
 
 bool HyjalResetEncounterStatesAction::Execute(Event /*event*/)
 {
@@ -69,16 +71,17 @@ bool HyjalMisdirectBossToMainTankAction::Execute(Event /*event*/)
     if (!mainTank || !mainTank->IsAlive())
         return false;
 
-    if (botAI->CanCastSpell("misdirection", mainTank))
-        return botAI->CastSpell("misdirection", mainTank);
+    if (botAI->CanCastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), mainTank))
+        return botAI->CastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), mainTank);
 
-    if (bot->HasAura(Id(HyjalSpells::SPELL_MISDIRECTION)) &&
-        botAI->CanCastSpell("steady shot", boss))
-    {
-        return botAI->CastSpell("steady shot", boss);
-    }
+    // By leewheel 2026-10-13 合并 brighton the-lab(c3e1911d 统一 TBC raid)：aura 判定改为
+    //   SPELL_MISDIRECTION_AURA=35079（core spell_hunter.cpp:55：35079=Misdirection(Proc)，
+    //   即猎人身上的 aura；本核旧写法查施放法术 34477 语义有误），收尾跟随上游 steady shot。
+    if (!bot->HasAura(Id(HyjalSpells::SPELL_MISDIRECTION_AURA)))
+        return false;
 
-    return false;
+    return botAI->CanCastSpell("steady shot", boss) && botAI->CastSpell("steady shot", boss);
+    // End By leewheel
 }
 
 bool HyjalMainTankPositionBossAction::Execute(Event /*event*/)
@@ -211,16 +214,18 @@ bool AnetheronMisdirectBossAndInfernalsToTanksAction::Execute(Event /*event*/)
     if (!tankTarget || !enemyTarget)
         return false;
 
-    if (botAI->CanCastSpell("misdirection", tankTarget))
-        return botAI->CastSpell("misdirection", tankTarget);
+    // By leewheel 2026-10-13 合并 brighton the-lab(c3e1911d)：①误导按 spell id(34477) 施放；
+    //   ②aura 判定改为 SPELL_MISDIRECTION_AURA=35079（猎人身上的 Misdirection(Proc) aura，
+    //   core spell_hunter.cpp:55 实锤）；③收尾跟随上游 steady shot。
+    //   变量名沿用本核 tankTarget/enemyTarget（上游侧的 tank/enemy 在本文件上下文不存在）。
+    if (botAI->CanCastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), tankTarget))
+        return botAI->CastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), tankTarget);
 
-    if (bot->HasAura(Id(HyjalSpells::SPELL_MISDIRECTION)) &&
-        botAI->CanCastSpell("steady shot", enemyTarget))
-    {
-        return botAI->CastSpell("steady shot", enemyTarget);
-    }
+    if (!bot->HasAura(Id(HyjalSpells::SPELL_MISDIRECTION_AURA)))
+        return false;
 
-    return false;
+    return botAI->CanCastSpell("steady shot", enemyTarget) && botAI->CastSpell("steady shot", enemyTarget);
+    // End By leewheel
 }
 
 bool AnetheronSpreadRangedInCircleAction::Execute(Event /*event*/)

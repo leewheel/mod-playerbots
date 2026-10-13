@@ -311,40 +311,36 @@ float KaelthasSunstriderControlMisdirectionMultiplier::GetValueInEncounter(Actio
     return phase != PHASE_NONE && phase != PHASE_FINAL ? 0.0f : 1.0f;
 }
 
-// This multiplier is not needed right now because Soulshatter is cast only when there are
-// multiple enemies. That's probably not the right approach and should be fixed, so this multiplier
-// remains here but commented out in anticipation of a future correction to Soulshatter usage.
-// By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游注释措辞。上游同一批提交已同步注释
-//   TKMultipliers.h 的类声明与 TKStrategy.cpp 的注册行，故此处只能保持停用 —— 若保留活代码定义，
-//   会因类未声明而编译失败。原实现体内的 entry 化写法（19622 凯尔萨斯 / 20062 大星术师卡普尼恩）
-//   一并保留在下方注释中备查。
+// By leewheel 2026-10-13 合并 brighton the-lab：上游已重新启用本乘数（TKMultipliers.h:152 类声明、
+//   TKStrategy.cpp:151 注册行均已恢复），本核原"保持停用"的前提不复存在 ⇒ 恢复活代码实现，
+//   并按本核铁律把 find target 英文名换回 NPC entry（kael'thas sunstrider=19622 /
+//   grand astromancer capernian=20062，沿用 2026-09-13 注释中备查的 entry）。
 // End By leewheel
-// float KaelthasSunstriderDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(Action* action)
-// {
-//     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-//         return 1.0f;
-//
-//     if (bot->getClass() != CLASS_WARLOCK)
-//         return 1.0f;
-//
-//     if (!dynamic_cast<CastSoulshatterAction*>(action))
-//         return 1.0f;
-//
-//     Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
-//     if (!kaelthas)
-//         return 1.0f;
-//
-//     uint32 const phase = GetKaelthasTkPhase(kaelthas);
-//     if (phase != PHASE_SINGLE_ADVISOR && phase != PHASE_ALL_ADVISORS)
-//         return 1.0f;
-//
-//     Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
-//     if (!IsAdvisorActive(capernian))
-//         return 1.0f;
-//
-//     return IsCapernianTank(bot) ? 0.0f : 1.0f;
-// }
-// End By leewheel
+float KaelthasSunstriderDisableWarlockTankSoulshatterMultiplier::GetValueInEncounter(Action* action)
+{
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (bot->getClass() != CLASS_WARLOCK)
+        return 1.0f;
+
+    if (!dynamic_cast<CastSoulshatterAction*>(action))
+        return 1.0f;
+
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    if (!kaelthas)
+        return 1.0f;
+
+    uint32 const phase = GetKaelthasTkPhase(kaelthas);
+    if (phase != PHASE_SINGLE_ADVISOR && phase != PHASE_ALL_ADVISORS)
+        return 1.0f;
+
+    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
+    if (!IsAdvisorActive(capernian))
+        return 1.0f;
+
+    return IsCapernianTank(bot) ? 0.0f : 1.0f;
+}
 
 float KaelthasSunstriderKeepDistanceFromCapernianMultiplier::GetValueInEncounter(Action* action)
 {
@@ -429,8 +425,7 @@ float KaelthasSunstriderManageAutomaticTargetingMultiplier::GetValueInEncounter(
     if (isDpsAssist)
         return 0.0f;
 
-    // TankAssistAction
-    // All tanks are blocked during advisor and final phases.
+    // TankAssistAction: all tanks are blocked during advisor and final phases.
     if (phase == PHASE_SINGLE_ADVISOR || phase == PHASE_ALL_ADVISORS || phase == PHASE_FINAL)
         return 0.0f;
 
@@ -489,7 +484,7 @@ float KaelthasSunstriderPrepareForPhase3Multiplier::GetValueInEncounter(Action* 
 }
 
 // Bloodlust/Heroism and other major cooldowns should be saved until Phase 3.
-float KaelthasSunstriderDelayCooldownsMultiplier::GetValueInEncounter(Action* action)
+float KaelthasSunstriderDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;

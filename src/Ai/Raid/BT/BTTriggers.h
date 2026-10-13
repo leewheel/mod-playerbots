@@ -33,8 +33,6 @@ protected:
 class BlackTempleNoEncounterInProgressTrigger : public Trigger
 {
 public:
-    // Throttled to once per second. This trigger is true for all trash and downtime and, being
-    // for between-encounter clean-up, has no real urgency to it.
     BlackTempleNoEncounterInProgressTrigger(PlayerbotAI* botAI)
         : Trigger(botAI, "black temple no encounter in progress", 1000) {}
     bool IsActive() override;
@@ -525,6 +523,15 @@ protected:
 
 // Illidan Stormrage <The Betrayer>
 
+// Not gated on the encounter, which starts as the speech ends, so throttled to once per second.
+class IllidanStormrageShouldPositionForPullTrigger : public Trigger
+{
+public:
+    IllidanStormrageShouldPositionForPullTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "illidan stormrage should position for pull", 1000) {}
+    bool IsActive() override;
+};
+
 class IllidanStormrageHunterShouldMisdirectTrigger : public BlackTempleEncounterTrigger
 {
 public:
@@ -535,11 +542,11 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidanStormrageCastsFlameCrashTrigger : public BlackTempleEncounterTrigger
+class IllidanStormrageShouldBeTankedTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidanStormrageCastsFlameCrashTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage casts flame crash") {}
+    IllidanStormrageShouldBeTankedTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should be tanked") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -587,6 +594,26 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
+class IllidanStormragePetShouldAttackShadowfiendTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidanStormragePetShouldAttackShadowfiendTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage pet should attack shadowfiend") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class IllidanStormragePetShouldAttackShadowDemonTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidanStormragePetShouldAttackShadowDemonTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage pet should attack shadow demon") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 class IllidanStormrageGrateIsSafeFromFlamesTrigger : public BlackTempleEncounterTrigger
 {
 public:
@@ -617,11 +644,32 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidanStormragePreparesToLandTrigger : public BlackTempleEncounterTrigger
+class IllidanStormrageShouldPositionForLandingTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidanStormragePreparesToLandTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage prepares to land") {}
+    IllidanStormrageShouldPositionForLandingTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage should position for landing") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class IllidanStormrageMeleeShouldStopAttackingTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidanStormrageMeleeShouldStopAttackingTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage melee should stop attacking") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class IllidanStormrageShouldStopShootingTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidanStormrageShouldStopShootingTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should stop shooting") {}
 
 protected:
     bool IsActiveInEncounter() override;

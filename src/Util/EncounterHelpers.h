@@ -9,6 +9,7 @@
 
 #include "Common.h"
 #include "Position.h"
+#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -44,6 +45,9 @@ bool MarkTargetWithCross(Player* bot, Unit* target);
 bool MarkTargetWithMoon(Player* bot, Unit* target);
 bool ClearTargetIcon(Player* bot, uint8 iconId);
 //By leewheel 2026-08-26 合并保留双签名：brighton 2参数版本 + 本分支带目标指针的扩展重载
+//By leewheel 2026-10-13 合并 brighton the-lab（#2912 ClearStrategyTargetIcon）：采纳上游新增声明。
+bool ClearStrategyTargetIcon(Player* bot, uint8 iconId, std::initializer_list<uint32> entries);
+// End By leewheel
 void SetRtiTarget(PlayerbotAI* botAI, std::string const& rtiName);
 void SetRtiTarget(PlayerbotAI* botAI, const std::string& rtiName, Unit* target);
 // Fork note: keeps the extended signature (botAI + optional exclude) so the mechanic tracker

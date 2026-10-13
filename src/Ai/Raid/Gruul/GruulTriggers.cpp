@@ -12,7 +12,7 @@
 using namespace GruulHelpers;
 using namespace EncounterHelpers;
 
-// General
+// Shared
 
 bool GruulsLairNoEncounterInProgressTrigger::IsActive()
 {
@@ -102,7 +102,7 @@ bool HighKingMaulgarWildFelStalkerSpawnedTrigger::IsActiveInEncounter()
     return bot->getClass() == CLASS_WARLOCK && !GetNearbyWildFelStalkers(botAI).empty();
 }
 
-bool HighKingMaulgarPullingOgreCouncilTrigger::IsActiveInEncounter()
+bool HighKingMaulgarHunterShouldMisdirectTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
@@ -125,7 +125,7 @@ bool GruulTheDragonkillerRangedShouldSpreadTrigger::IsActiveInEncounter()
     return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "19044");
 }
 
-bool GruulTheDragonkillerInCaveInTrigger::IsActiveInEncounter()
+bool GruulTheDragonkillerBotInCaveInTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-09-12 按 AGENTS.md 第81条修正历史遗留英文名: 19044 = 屠龙者格鲁尔
     // End By leewheel

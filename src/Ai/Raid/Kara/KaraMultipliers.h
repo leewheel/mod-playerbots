@@ -15,7 +15,7 @@
 #include "Multiplier.h"
 #include <string>
 
-// General
+// Shared
 
 class KarazhanEncounterMultiplier : public Multiplier
 {

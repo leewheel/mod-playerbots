@@ -12,7 +12,7 @@
 #include "MovementActions.h"
 #include "Position.h"
 
-// General
+// Shared
 
 class HyjalResetEncounterStatesAction : public Action
 {
@@ -43,6 +43,7 @@ private:
 // 判定距离以及坦克自身血量是否中断不同，因此它们共享一个类并在注册时命名。
 //
 // bailBelowHealthPct 在默认值时无需特判：能执行此动作的机器人血量必然大于零
+// （By leewheel 2026-10-13 合并 brighton the-lab：与上游英文注释同义，保留本核中文详注。）
 class HyjalMainTankPositionBossAction : public AttackAction
 {
 public:
@@ -59,7 +60,6 @@ private:
     float const _bailBelowHealthPct;
 };
 
-// Remove Mark of Kaz'rogal and Doomfire in certain cases
 class HyjalRemoveDangerousDotAction : public Action
 {
 public:

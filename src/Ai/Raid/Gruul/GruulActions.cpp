@@ -17,7 +17,7 @@
 using namespace GruulHelpers;
 using namespace EncounterHelpers;
 
-// General
+// Shared
 
 bool GruulsLairResetEncounterStatesAction::Execute(Event /*event*/)
 {
@@ -32,10 +32,16 @@ bool GruulsLairResetEncounterStatesAction::Execute(Event /*event*/)
         reset = true;
     }
 
-    if (IsMechanicTrackerBot(bot, GRUUL_MAP_ID) && !AI_VALUE2(bool, "combat", "self target"))
+    if (IsMechanicTrackerBot(bot, GRUUL_MAP_ID))
     {
-        reset |= ClearTargetIcon(bot, RtiTargetValue::skullIndex);
-        reset |= ClearTargetIcon(bot, RtiTargetValue::crossIndex);
+        reset |= ClearStrategyTargetIcon(bot, RtiTargetValue::skullIndex, {
+            Id(GruulNpcs::NPC_BLINDEYE_THE_SEER),
+            Id(GruulNpcs::NPC_OLM_THE_SUMMONER),
+            Id(GruulNpcs::NPC_KIGGLER_THE_CRAZED),
+            Id(GruulNpcs::NPC_HIGH_KING_MAULGAR),
+        });
+        reset |= ClearStrategyTargetIcon(
+            bot, RtiTargetValue::crossIndex, { Id(GruulNpcs::NPC_KROSH_FIREHAND) });
     }
 
     return reset;
@@ -346,16 +352,19 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     if (!ogreTarget || !tankTarget || !tankTarget->IsAlive())
         return false;
 
-    if (botAI->CanCastSpell("misdirection", tankTarget))
-        return botAI->CastSpell("misdirection", tankTarget);
+    // By leewheel 2026-10-13 合并 brighton the-lab(c3e1911d 统一 TBC raid)：采纳上游新逻辑 ——
+    //   ① 误导按 spell id(34477) 施放，不再走字符串名查找；② 输出前提改为"猎人身上有误导 aura"，
+    //   用 SPELL_MISDIRECTION_AURA=35079（core spell_hunter.cpp:55 实锤：34477=施放法术，
+    //   35079=Misdirection(Proc) 即猎人身上的 aura；本核旧写法查 34477 语义有误）。
+    //   变量名沿用本核 tankTarget/ogreTarget（上游侧的 tank/ogre 在本文件上下文不存在）。
+    if (botAI->CanCastSpell(Id(GruulSpells::SPELL_MISDIRECTION), tankTarget))
+        return botAI->CastSpell(Id(GruulSpells::SPELL_MISDIRECTION), tankTarget);
 
-    if (bot->HasAura(Id(GruulSpells::SPELL_MISDIRECTION)) &&
-        botAI->CanCastSpell("steady shot", ogreTarget))
-    {
-        return botAI->CastSpell("steady shot", ogreTarget);
-    }
+    if (!bot->HasAura(Id(GruulSpells::SPELL_MISDIRECTION_AURA)))
+        return false;
 
-    return false;
+    return botAI->CanCastSpell("steady shot", ogreTarget) && botAI->CastSpell("steady shot", ogreTarget);
+    // End By leewheel
 }
 
 // Gruul the Dragonkiller

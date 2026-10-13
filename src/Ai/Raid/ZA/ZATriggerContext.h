@@ -15,7 +15,7 @@ class RaidZulAmanTriggerContext : public NamedObjectContext<Trigger>
 public:
     RaidZulAmanTriggerContext()
     {
-        // General
+        // Shared
         creators["zul'aman no encounter in progress"] =
             &RaidZulAmanTriggerContext::zulaman_no_encounter_in_progress;
 
@@ -24,7 +24,8 @@ public:
             &RaidZulAmanTriggerContext::amanishi_medicine_man_summoned_ward;
 
         // Akil'zon <Eagle Avatar>
-        creators["akil'zon pulling boss"] = &RaidZulAmanTriggerContext::akilzon_pulling_boss;
+        creators["akil'zon hunter should misdirect"] =
+            &RaidZulAmanTriggerContext::akilzon_hunter_should_misdirect;
 
         creators["akil'zon should be tanked"] =
             &RaidZulAmanTriggerContext::akilzon_should_be_tanked;
@@ -39,7 +40,8 @@ public:
             &RaidZulAmanTriggerContext::akilzon_should_track_electrical_storm;
 
         // Nalorakk <Bear Avatar>
-        creators["nalorakk pulling boss"] = &RaidZulAmanTriggerContext::nalorakk_pulling_boss;
+        creators["nalorakk hunter should misdirect"] =
+            &RaidZulAmanTriggerContext::nalorakk_hunter_should_misdirect;
 
         creators["nalorakk spread for surge"] =
             &RaidZulAmanTriggerContext::nalorakk_spread_for_surge;
@@ -48,7 +50,8 @@ public:
             &RaidZulAmanTriggerContext::nalorakk_both_forms_should_be_tanked;
 
         // Jan'alai <Dragonhawk Avatar>
-        creators["jan'alai pulling boss"] = &RaidZulAmanTriggerContext::janalai_pulling_boss;
+        creators["jan'alai hunter should misdirect"] =
+            &RaidZulAmanTriggerContext::janalai_hunter_should_misdirect;
 
         creators["jan'alai should be tanked"] =
             &RaidZulAmanTriggerContext::janalai_should_be_tanked;
@@ -62,7 +65,8 @@ public:
             &RaidZulAmanTriggerContext::janalai_amanishi_hatchers_spawned;
 
         // Halazzi <Lynx Avatar>
-        creators["halazzi pulling boss"] = &RaidZulAmanTriggerContext::halazzi_pulling_boss;
+        creators["halazzi hunter should misdirect"] =
+            &RaidZulAmanTriggerContext::halazzi_hunter_should_misdirect;
 
         creators["halazzi should be tanked"] = &RaidZulAmanTriggerContext::halazzi_should_be_tanked;
 
@@ -72,8 +76,8 @@ public:
         creators["halazzi should focus dps"] = &RaidZulAmanTriggerContext::halazzi_should_focus_dps;
 
         // Hex Lord Malacrass
-        creators["hex lord malacrass pulling boss"] =
-            &RaidZulAmanTriggerContext::hex_lord_malacrass_pulling_boss;
+        creators["hex lord malacrass hunter should misdirect"] =
+            &RaidZulAmanTriggerContext::hex_lord_malacrass_hunter_should_misdirect;
 
         creators["hex lord malacrass should prioritize adds"] =
             &RaidZulAmanTriggerContext::hex_lord_malacrass_should_prioritize_adds;
@@ -85,7 +89,8 @@ public:
             &RaidZulAmanTriggerContext::hex_lord_malacrass_freezing_trap_placed;
 
         // Zul'jin
-        creators["zul'jin pulling boss"] = &RaidZulAmanTriggerContext::zuljin_pulling_boss;
+        creators["zul'jin hunter should misdirect"] =
+            &RaidZulAmanTriggerContext::zuljin_hunter_should_misdirect;
 
         creators["zul'jin should be tanked"] = &RaidZulAmanTriggerContext::zuljin_should_be_tanked;
 
@@ -103,7 +108,7 @@ public:
     }
 
 private:
-    // General
+    // Shared
     static Trigger* zulaman_no_encounter_in_progress(PlayerbotAI* botAI)
     {
         return new ZulAmanNoEncounterInProgressTrigger(botAI);
@@ -116,11 +121,17 @@ private:
     }
 
     // Akil'zon <Eagle Avatar>
-// By leewheel 2026-10-05 合并brighton the-lab: bossName 保留本核 NPC entry(铁律: find-target 一律 entry),
-    //   上游侧改为英文名 "akil'zon" 等, 本核不采纳; 其余格式跟随上游大括号换行风格
-    static Trigger* akilzon_pulling_boss(PlayerbotAI* botAI)
+    // By leewheel 2026-10-13 合并 brighton the-lab：上游把 ZulAmanPullingBossTrigger（"on the pull"）
+    //   整体替换为 ZulAmanHunterShouldMisdirectTrigger（"after the pull"，ZATriggers.h:54，旧类已删），
+    //   新触发器 IsActiveInEncounter() 内部直接 find target(_bossName)（ZATriggers.cpp:31）
+    //   ⇒ 按本核铁律把 bossName 换回 NPC entry（entry 已双源核定：上游 ZAHelpers.h NPC_* 常量 +
+    //   acore_world.creature_template 实查一致）：akil'zon=23574 / nalorakk=23576 / jan'alai=23578 /
+    //   halazzi=23577 / hex lord malacrass=24239 / zul'jin=23863。
+    // End By leewheel
+    static Trigger* akilzon_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new ZulAmanPullingBossTrigger(botAI, "akil'zon pulling boss", "23574");
+        return new ZulAmanHunterShouldMisdirectTrigger(
+            botAI, "akil'zon hunter should misdirect", "23574");
     }
     static Trigger* akilzon_should_be_tanked(PlayerbotAI* botAI)
     {
@@ -140,9 +151,10 @@ private:
     }
 
     // Nalorakk <Bear Avatar>
-static Trigger* nalorakk_pulling_boss(PlayerbotAI* botAI)
+    static Trigger* nalorakk_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new ZulAmanPullingBossTrigger(botAI, "nalorakk pulling boss", "23576");
+        return new ZulAmanHunterShouldMisdirectTrigger(
+            botAI, "nalorakk hunter should misdirect", "23576");
     }
     static Trigger* nalorakk_spread_for_surge(PlayerbotAI* botAI)
     {
@@ -154,9 +166,10 @@ static Trigger* nalorakk_pulling_boss(PlayerbotAI* botAI)
     }
 
     // Jan'alai <Dragonhawk Avatar>
-static Trigger* janalai_pulling_boss(PlayerbotAI* botAI)
+    static Trigger* janalai_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new ZulAmanPullingBossTrigger(botAI, "jan'alai pulling boss", "23578");
+        return new ZulAmanHunterShouldMisdirectTrigger(
+            botAI, "jan'alai hunter should misdirect", "23578");
     }
     static Trigger* janalai_should_be_tanked(PlayerbotAI* botAI)
     {
@@ -176,9 +189,10 @@ static Trigger* janalai_pulling_boss(PlayerbotAI* botAI)
     }
 
     // Halazzi <Lynx Avatar>
-static Trigger* halazzi_pulling_boss(PlayerbotAI* botAI)
+    static Trigger* halazzi_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new ZulAmanPullingBossTrigger(botAI, "halazzi pulling boss", "23577");
+        return new ZulAmanHunterShouldMisdirectTrigger(
+            botAI, "halazzi hunter should misdirect", "23577");
     }
     static Trigger* halazzi_should_be_tanked(PlayerbotAI* botAI)
     {
@@ -194,10 +208,10 @@ static Trigger* halazzi_pulling_boss(PlayerbotAI* botAI)
     }
 
     // Hex Lord Malacrass
-    static Trigger* hex_lord_malacrass_pulling_boss(PlayerbotAI* botAI)
+    static Trigger* hex_lord_malacrass_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new ZulAmanPullingBossTrigger(
-            botAI, "hex lord malacrass pulling boss", "24239");
+        return new ZulAmanHunterShouldMisdirectTrigger(
+            botAI, "hex lord malacrass hunter should misdirect", "24239");
     }
     static Trigger* hex_lord_malacrass_should_prioritize_adds(PlayerbotAI* botAI)
     {
@@ -213,9 +227,10 @@ static Trigger* halazzi_pulling_boss(PlayerbotAI* botAI)
     }
 
     // Zul'jin
-static Trigger* zuljin_pulling_boss(PlayerbotAI* botAI)
+    static Trigger* zuljin_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new ZulAmanPullingBossTrigger(botAI, "zul'jin pulling boss", "23863");
+        return new ZulAmanHunterShouldMisdirectTrigger(
+            botAI, "zul'jin hunter should misdirect", "23863");
     }
     static Trigger* zuljin_should_be_tanked(PlayerbotAI* botAI)
     {

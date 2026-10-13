@@ -26,6 +26,7 @@
 // End By leewheel
 #include <mysqld_error.h>
 #include "AllMapScript.h"
+#include "GatherNodeMgr.h"
 #include "GlobalScript.h"
 #include "GuildTaskMgr.h"
 #include "PlayerScript.h"
@@ -578,6 +579,11 @@ public:
         PlayerbotSpellRepository::Instance().Initialize();
         CheckMountStateAction::LoadPreferredMounts();
 
+        // By leewheel 2026-10-13 合并 brighton the-lab（#2539 RPG_DO_GATHER）：采纳上游采集节点索引加载。
+        LOG_INFO("server.loading", "Loading gather node index...");
+        GatherNodeMgr::instance().Load();
+        // End By leewheel
+
         // By leewheel 2026-09-03 加载战场游走节点图(移植自NPCBots, 供战场策略按节点决策)
         BgWanderGraph::instance()->Load();
         // End By leewheel
@@ -653,10 +659,10 @@ public:
 void AddPlayerbotsSecureLoginScripts();
 void AddPlayerbotsSelfBotAfkScripts();
 void AddSC_MagtheridonBotScripts();
-void AddSC_BlackTempleBotScripts();
 void AddSC_SerpentshrineCavernBotScripts();
 void AddSC_TempestKeepBotScripts();
 void AddSC_HyjalBotScripts();
+void AddSC_BlackTempleBotScripts();
 void AddSC_SunwellBotScripts();
 void AddSC_IcecrownBotScripts();
 void AddSC_RubySanctumBotScripts();
@@ -718,10 +724,10 @@ void AddPlayerbotsScripts()
     AddPlayerbotsCommandscripts();
     PlayerBotsGuildValidationScript();
     AddSC_MagtheridonBotScripts();
-    AddSC_BlackTempleBotScripts();
     AddSC_SerpentshrineCavernBotScripts();
     AddSC_TempestKeepBotScripts();
     AddSC_HyjalBotScripts();
+    AddSC_BlackTempleBotScripts();
     AddSC_SunwellBotScripts();
     AddSC_IcecrownBotScripts();
     AddSC_RubySanctumBotScripts();
