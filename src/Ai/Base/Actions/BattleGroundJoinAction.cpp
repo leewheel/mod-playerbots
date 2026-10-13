@@ -11,6 +11,7 @@
 #include "ArenaSeasonMgr.h"
 #include "BattlegroundMgr.h"
 #include "Event.h"
+#include "Group.h"
 #include "GroupMgr.h"
 #include "LFGMgr.h"
 #include "PlayerbotAI.h"
