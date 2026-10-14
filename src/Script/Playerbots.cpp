@@ -26,7 +26,10 @@
 #include "cmath"
 
 // Shown to players at login: bump it with every CoA Bots release.
-static constexpr char const* COA_BOTS_VERSION = "2.3";
+static constexpr char const* COA_BOTS_VERSION = "2.3.1";
+
+// For ".playerbots version", which still answers when a host removed the login message.
+char const* CoaBotsVersion() { return COA_BOTS_VERSION; }
 
 class PlayerbotsDatabaseScript : public DatabaseScript
 {

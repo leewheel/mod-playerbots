@@ -21,6 +21,8 @@
 
 using namespace Acore::ChatCommands;
 
+char const* CoaBotsVersion();  // Playerbots.cpp
+
 class playerbots_commandscript : public CommandScript
 {
 public:
@@ -45,6 +47,7 @@ public:
             {"pmon", HandlePerfMonCommand, SEC_GAMEMASTER, Console::Yes},
             {"rndbot", HandleRandomPlayerbotCommand, SEC_GAMEMASTER, Console::Yes},
             {"coa", HandleCoaRecruitCommand, SEC_PLAYER, Console::No},
+            {"version", HandleVersionCommand, SEC_PLAYER, Console::Yes},
             {"debug", playerbotsDebugCommandTable},
             {"account", playerbotsAccountCommandTable},
         };
@@ -54,6 +57,15 @@ public:
         };
 
         return commandTable;
+    }
+
+    // .playerbots version : the CoA Bots version and where its source is. The login message says the same,
+    // but a host may have removed it; the GPLv2 still wants that message kept on public servers.
+    static bool HandleVersionCommand(ChatHandler* handler)
+    {
+        handler->PSendSysMessage("CoA Bots v{} (mod-playerbots) https://github.com/Zyth45/mod-playerbots",
+                                 CoaBotsVersion());
+        return true;
     }
 
     static bool HandlePlayerbotCommand(ChatHandler* handler, char const* args)
