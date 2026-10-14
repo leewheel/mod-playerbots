@@ -105,7 +105,6 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
     }
 
     const uint8 race = raceOptions[urand(0, raceOptions.size() - 1)];
-    // Gnoll (83) and Saberon (97) of the custom races module only have a male model.
     // Added races with a male model only (the core's IsAscensionMaleOnlyRace, same list as the client's creation
     // screen): a female of these races has no body in the client, or wears gear stretched across the screen.
     bool const maleOnly = race == 15 || race == 17 || race == 18 || (race >= 23 && race <= 26) || race == 32 ||
