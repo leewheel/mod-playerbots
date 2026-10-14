@@ -39,6 +39,12 @@ Many fixes from ladiabale's test runs and pull requests (thanks!).
   and give one up at their next gear-up: their weapon strikes failed with it (ladiabale).
 - **Preferred mounts** (`mount <spell>`) are found again when the playerbots database has another name than
   `acore_playerbots`, and survive a restart (ladiabale).
+- **Alts no longer run circles around you**: the "ranged and healers behind the tank" placement from 2.2 could take
+  you for the tank and followed your facing out of combat. It is now off by default (`CoaHoldBehindTank = 1` to try
+  it, combat only).
+- **Battlegrounds**: a bot hit by a player while capturing an Arathi Basin (or other base) flag fights back instead
+  of restarting the capture under the hits.
+
 ### Combat, arenas and group play
 Each behaviour change has its own switch in `playerbots.conf` (all on by default, `0` turns one off).
 - **Stability**: a pair of settings written the wrong way round (MaxRandomBots under MinRandomBots, and the other

@@ -774,7 +774,7 @@ bool PlayerbotAIConfig::Initialize()
     coaSmartHeal = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSmartHeal", true);
     coaSmartTank = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSmartTank", true);
     coaLfgMissingRoles = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaLfgMissingRoles", true, false);
-    coaHoldBehindTank = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaHoldBehindTank", true, false);
+    coaHoldBehindTank = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaHoldBehindTank", false, false);
     coaChaseLeash = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaChaseLeash", true, false);
     coaBodyPullGuard = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaBodyPullGuard", true, false);
     coaKeepTargetOutOfSight = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaKeepTargetOutOfSight", true, false);

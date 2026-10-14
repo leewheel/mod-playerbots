@@ -1640,8 +1640,9 @@ AiPlayerbot.CoaChaseLeash = 1
 # the healer when it is already back there), step back when they end up on the mob's side,
 # and melee close on the tank's side of the mob. Follow between pulls uses the same spot. Works
 # with the CoA healer rules (within 18 yards of the tank): the spot is 12 yards behind it.
-# Default: 1 (enabled)
-AiPlayerbot.CoaHoldBehindTank = 1
+# Off since 2.3: it could take a player who is not a tank for the group's tank.
+# Default: 0 (disabled)
+AiPlayerbot.CoaHoldBehindTank = 0
 
 # Dungeon finder: random damage dealers hold back only while a queued party of real players
 # still misses a tank or a healer that no queued bot covers. The old test held them back
