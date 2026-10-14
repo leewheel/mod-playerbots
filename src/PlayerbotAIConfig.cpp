@@ -764,7 +764,7 @@ bool PlayerbotAIConfig::Initialize()
     excludedBotRaces.clear();
     LoadList<std::vector<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.ExcludedBotRaces", "", false),
                                   excludedBotRaces);
-    LoadList<std::vector<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.CrashingBotRaces", "65,72,77,80,81"),
+    LoadList<std::vector<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.CrashingBotRaces", "65,72,77,80,81,82,97", false),
                                   excludedBotRaces);
     customRacesForBots = sConfigMgr->GetOption<bool>("CoACustomRaces.BotsEnable", false, false);
     coaSpecRotations = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSpecRotations", true);
