@@ -3794,6 +3794,21 @@ bool BGTactics::atFlag(std::vector<BattleBotPath*> const& vPaths, std::vector<ui
         break;
     }
 
+    // A player hitting the bot is fought first: each hit interrupts the capture, so a bot pulled to a flag
+    // kept restarting it and let itself be killed when its attacker stood a bit away from the flag.
+    if (targetFlag && bgType != BATTLEGROUND_WS)
+    {
+        for (Unit* attacker : bot->getAttackers())
+        {
+            if (attacker && attacker->IsAlive() && attacker->GetCharmerOrOwnerPlayerOrPlayerItself() &&
+                bot->IsWithinDistInMap(attacker, 40.0f))
+            {
+                context->GetValue<Unit*>("current target")->Set(attacker);
+                return false;
+            }
+        }
+    }
+
     // If we found a valid flag/base to interact with
     if (bgType != BATTLEGROUND_WS && bgType != BATTLEGROUND_AV)
     {
