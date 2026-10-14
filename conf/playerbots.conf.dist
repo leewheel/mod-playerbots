@@ -1676,7 +1676,7 @@ AiPlayerbot.CoaMeleeNoRangedHardcast = 1
 
 # A bot whose bags are full (or, for a random bot, over 80% full) no longer leaves a quest item or
 # an item of uncommon quality or better on the corpse: it destroys its cheapest grey item to make
-# room for it. Works in dungeons for the bots of a real player too.
+# room for it. Random bots only: the bags of a real player's own bots are never touched.
 # Default: 1 (enabled)
 AiPlayerbot.CoaLootMakeRoom = 1
 
