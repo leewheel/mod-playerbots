@@ -1,6 +1,6 @@
 # CoA Bots — changelog
 
-## v2.3 — in progress
+## v2.3 — Your reports, better cleanses and healers, smarter PvP (October 2026)
 
 Many fixes from ladiabale's test runs and pull requests (thanks!).
 

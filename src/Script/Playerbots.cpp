@@ -26,7 +26,7 @@
 #include "cmath"
 
 // Shown to players at login: bump it with every CoA Bots release.
-static constexpr char const* COA_BOTS_VERSION = "2.2.1";
+static constexpr char const* COA_BOTS_VERSION = "2.3";
 
 class PlayerbotsDatabaseScript : public DatabaseScript
 {
