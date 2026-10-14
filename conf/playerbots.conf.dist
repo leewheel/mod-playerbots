@@ -1644,6 +1644,19 @@ AiPlayerbot.CoaChaseLeash = 1
 # Default: 0 (disabled)
 AiPlayerbot.CoaHoldBehindTank = 0
 
+# Real players take the place of random bots, so the world keeps about the same population. Percentage
+# of a bot removed per real player online: 100 = one bot fewer per player (500 bots, 40 players online:
+# 460 bots), 50 = one bot fewer per two players. Bots leave a few at a time, never while grouped, in a
+# dungeon, a battleground, an arena or a queue, and come back when players log out. Your alt bots and
+# other bots of a real player are not random bots: never counted, never removed.
+# Default: 0 (disabled)
+AiPlayerbot.CoaPlayersReplaceBots = 0
+
+# Random bots always kept with CoaPlayersReplaceBots, however many players are online (e.g. 100 keeps
+# a hundred bots for the auction house, the battlegrounds and the dungeon finder).
+# Default: 0
+AiPlayerbot.CoaPlayersReplaceBotsMin = 0
+
 # Dungeon finder: random damage dealers hold back only while a queued party of real players
 # still misses a tank or a healer that no queued bot covers. The old test held them back
 # whenever a queued player was not tank and healer at once, nearly always, so players waited

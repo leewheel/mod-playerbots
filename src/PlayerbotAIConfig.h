@@ -410,6 +410,8 @@ public:
     bool coaSmartTank;
     bool coaLfgMissingRoles;
     bool coaHoldBehindTank;
+    uint32 coaPlayersReplaceBots;
+    uint32 coaPlayersReplaceBotsMin;
     bool coaChaseLeash;
     bool coaBodyPullGuard;
     bool coaKeepTargetOutOfSight;

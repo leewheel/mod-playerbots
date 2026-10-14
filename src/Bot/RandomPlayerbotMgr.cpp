@@ -176,7 +176,70 @@ double botPIDImpl::calculate(double setpoint, double pv)
 
 botPIDImpl::~botPIDImpl() {}
 
-uint32 RandomPlayerbotMgr::GetMaxAllowedBotCount() { return GetEventValue(0, "bot_count"); }
+uint32 RandomPlayerbotMgr::GetMaxAllowedBotCount() { return GetTargetBotCount(); }
+
+// AiPlayerbot.CoaPlayersReplaceBots: real players take the place of random bots, so the world keeps about the same
+// population. At 100 (%), 500 bots and 40 players online leave 460 bots; never fewer than CoaPlayersReplaceBotsMin.
+// Alt bots and other bots of a real player are not random bots and are never counted or removed.
+uint32 RandomPlayerbotMgr::GetTargetBotCount()
+{
+    uint32 const count = GetEventValue(0, "bot_count");
+    if (!sPlayerbotAIConfig.coaPlayersReplaceBots || !count)
+        return count;
+
+    uint32 const players = sWorldSessionMgr->GetActiveSessionCount();
+    uint32 const replaced = players * sPlayerbotAIConfig.coaPlayersReplaceBots / 100;
+    uint32 const floor = std::min(count, sPlayerbotAIConfig.coaPlayersReplaceBotsMin);
+    return replaced >= count - floor ? floor : count - replaced;
+}
+
+// Sends random bots home while more are in the world than the players leave room for, a few per pass. A margin keeps
+// a player logging in and out from swapping bots each time. Bots grouped, in a dungeon, a battleground, an arena or a
+// queue stay: ProcessBot() then logs out the ones marked here.
+void RandomPlayerbotMgr::CoaTrimBotsForPlayers(uint32 target)
+{
+    if (!sPlayerbotAIConfig.coaPlayersReplaceBots)
+        return;
+
+    // Bots already leaving stay in currentBots until ProcessBot() logs them out: not counted again.
+    uint32 staying = 0;
+    for (uint32 const bot : currentBots)
+        if (GetEventValue(bot, "add"))
+            ++staying;
+
+    if (staying <= target + 2 + target / 100)
+        return;
+
+    uint32 const toRemove =
+        std::min<uint32>(staying - target, std::max<uint32>(1, sPlayerbotAIConfig.randomBotsPerInterval));
+    std::vector<uint32> picked;
+    for (uint32 const bot : currentBots)
+    {
+        if (picked.size() >= toRemove)
+            break;
+
+        if (!GetEventValue(bot, "add"))
+            continue;  // already leaving
+
+        Player* player = GetPlayerBot(ObjectGuid::Create<HighGuid::Player>(bot));
+        if (player && (player->GetGroup() || player->InBattleground() || player->InArena() ||
+                       player->InBattlegroundQueue() || !player->IsInWorld() || player->GetMap()->IsDungeon()))
+            continue;
+
+        picked.push_back(bot);
+    }
+
+    for (uint32 const bot : picked)
+    {
+        SetEventValue(bot, "add", 0, 0);
+        if (!GetPlayerBot(ObjectGuid::Create<HighGuid::Player>(bot)))
+            currentBots.erase(bot);  // not in the world yet: nothing to log out
+    }
+
+    if (!picked.empty())
+        LOG_INFO("playerbots", "{} random bots leave for real players ({} staying, {} wanted)", picked.size(),
+                 staying - picked.size(), target);
+}
 
 void RandomPlayerbotMgr::LogPlayerLocation()
 {
@@ -314,7 +377,10 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
                             sPlayerbotAIConfig.randomBotCountChangeMaxInterval));
     }
 
+    maxAllowedBotCount = GetTargetBotCount();
+
     GetBots();
+    CoaTrimBotsForPlayers(maxAllowedBotCount);
     // Copied deliberately: ProcessBot() erases from currentBots while this is
     // being iterated below, so the loops must run over a snapshot.
     std::unordered_set<uint32> availableBots = currentBots;
@@ -650,7 +716,7 @@ bool RandomPlayerbotMgr::IsAccountType(uint32 accountId, uint8 accountType)
 // Phase 4 is reached if and only if the value of RandomBotAccountCount is lower than it should.
 uint32 RandomPlayerbotMgr::AddRandomBots()
 {
-    uint32 maxAllowedBotCount = GetEventValue(0, "bot_count");
+    uint32 maxAllowedBotCount = GetTargetBotCount();
     static time_t missingBotsTimer = 0;
 
     if (currentBots.size() < maxAllowedBotCount)
@@ -2671,7 +2737,7 @@ void RandomPlayerbotMgr::GetBots()
         PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_RANDOM_BOTS_BY_OWNER_AND_EVENT);
     stmt->SetData(0, 0);
     stmt->SetData(1, "add");
-    uint32 maxAllowedBotCount = GetEventValue(0, "bot_count");
+    uint32 maxAllowedBotCount = GetTargetBotCount();
     if (PreparedQueryResult result = PlayerbotsDatabase.Query(stmt))
     {
         do
