@@ -1162,7 +1162,7 @@ std::string AnnounceText(CoaLfgSettings const& settings)
             name[0] = char(std::toupper(static_cast<unsigned char>(name[0])));
         where += (where.empty() ? "" : " or ") + name;
     }
-    return "|cff66ccff[Bots]|r Need a healer, a tank or damage? Say |cffffff00lfg bot heal|r, "
+    return "|cff66ccff[SquidBots]|r Need a healer, a tank or damage? Say |cffffff00lfg bot heal|r, "
            "|cffffff00lfg bot tank|r, |cffffff00lfg bot dps|r or |cffffff00lfg bot heal tank dps|r in the " +
            where + " channel, then invite the bots that whisper you.";
 }

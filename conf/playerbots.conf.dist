@@ -2173,7 +2173,7 @@ AiPlayerbot.CoaLfgCooldown = 15
 AiPlayerbot.CoaLfgAnnounceMinutes = 10
 
 #    AiPlayerbot.CoaLfgAnnounceText
-#        Description: That message. Empty: "[Bots] Need a healer, a tank or damage? Say lfg bot
+#        Description: That message. Empty: "[SquidBots] Need a healer, a tank or damage? Say lfg bot
 #                     heal, lfg bot tank, lfg bot dps or lfg bot heal tank dps in the General or
 #                     LookingForGroup channel, then invite the bots that whisper you."
 #        Default:     (empty)

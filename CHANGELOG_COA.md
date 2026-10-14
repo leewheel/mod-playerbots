@@ -4,6 +4,7 @@
 
 - **`.playerbots version`** gives the CoA Bots version and its source, for players and the console: the login
   message says it too, but a host may have removed it (keep it on a public server, the GPLv2 asks for the link).
+- The realm message on how to ask the bots for a healer, a tank or damage now starts with **[SquidBots]**.
 
 ## v2.3 — Your reports, better cleanses and healers, smarter PvP (October 2026)
 
