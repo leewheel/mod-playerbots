@@ -293,8 +293,11 @@ bool BotIsInFrontOfLivingTank(PlayerbotAI* botAI, Player* bot, Unit* target)
 
 WorldLocation MoveAheadFormation::GetLocation()
 {
+    // In combat only: out of it "behind" follows the tank's facing, so a following bot ran circles around
+    // a tank player turning the camera.
     WorldLocation behindTank;
-    if (GetBehindTankNearHealerLocation(botAI, bot, behindTank, AI_VALUE(Unit*, "current target")))
+    if (bot->IsInCombat() &&
+        GetBehindTankNearHealerLocation(botAI, bot, behindTank, AI_VALUE(Unit*, "current target")))
         return behindTank;
 
     Player* master = GetMaster();
