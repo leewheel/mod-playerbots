@@ -5,7 +5,9 @@
 ### Tanks and dungeons
 - **The tank walks its route again**: the guard that keeps bots from walking into an idle pack in a dungeon
   (`AiPlayerbot.CoaBodyPullGuard`, 2.2) no longer applies to the tank, who goes to the packs it means to pull. A tank
-  leading a group of bots stood still off its route until the run timed out.
+  leading a group of bots stood still off its route until the run timed out. In a group led by a real player the
+  guard is off for every bot: nearly every step in a dungeon room came within its distance, so the bots stayed
+  behind, then ran through the packs to the player once he fought.
 - A tank always takes back an enemy hitting one of its group, however far from the healer.
 - **Melee out of the boss's cone**: behind or beside a creature, melee bots stand more than 2 yd from its centre, where
   a cone hits at any angle (a Barbarian died behind Tinkerer Gizlock to every Dragon Gun). Not against players.
