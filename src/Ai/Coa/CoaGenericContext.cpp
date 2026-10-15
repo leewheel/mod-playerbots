@@ -95,6 +95,11 @@ bool CoaCastAction::isUseful()
     return true;
 }
 
+bool CoaBuffPartyAction::isUseful()
+{
+    return AI_VALUE2(uint32, "spell id", spell) && BuffOnPartyAction::isUseful();
+}
+
 bool CoaCastMeleeAction::isUseful()
 {
     if (!CastMeleeSpellAction::isUseful() || CoaPullsAheadOfTank(bot, GetTarget()))

@@ -205,10 +205,7 @@ public:
         spell = qual;
     }
     std::string const getName() override { return "cast buff party::" + qualifier; }
-    bool isUseful() override
-    {
-        return context->GetValue<uint32>("spell id", spell)->Get() && BuffOnPartyAction::isUseful();
-    }
+    bool isUseful() override;
 };
 
 /* Removing a harmful effect from a group member.
