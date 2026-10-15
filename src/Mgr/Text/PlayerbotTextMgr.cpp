@@ -39,7 +39,15 @@ void PlayerbotTextMgr::LoadBotTexts()
             text[0] = fields[1].Get<std::string>();
             uint8 sayType = fields[2].Get<uint8>();
             uint8 replyType = fields[3].Get<uint8>();
-            for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
+            // By leewheel 2026-10-16 修复 acore 上游 #28081（allow modules to support a new locale）
+            // 把 TOTAL_LOCALES 从 9 扩到 16（slot 9..15 留给模块注册）导致的越界段错误：
+            // 表 ai_playerbot_texts 的 locale 列固定为 text_loc1..text_loc8（对应 LocaleConstant
+            // 1..8 即 LOCALE_koKR..LOCALE_ruRU），SELECT 恒为 12 列。循环上界必须绑定表 schema，
+            // 不能跟 TOTAL_LOCALES 挂钩——原写法 i 跑到 15 会越界读 fields[12..18] 的垃圾字段，
+            // Field::GetDataString 用坏指针构造 std::string 时 ACCESS_VIOLATION（启动即崩，
+            // 转储指 LoadBotTexts+328）。上游 core 侧同批适配模式为绑定已注册列数（见
+            // ObjectMgr::LoadAcoreStrings），此处按表固定 8 列遍历到 LOCALE_ruRU。
+            for (uint8 i = 1; i <= LOCALE_ruRU; ++i)
             {
                 text[i] = fields[i + 3].Get<std::string>();
             }
