@@ -563,6 +563,16 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
+class IllidanStormrageShouldTrackInfectionsTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidanStormrageShouldTrackInfectionsTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should track infections") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 class IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger : public BlackTempleEncounterTrigger
 {
 public:

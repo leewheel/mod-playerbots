@@ -609,18 +609,19 @@ bool IllidanStormrageShouldBeTankedTrigger::IsActiveInEncounter()
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    if (phase == IllidanPhase::None || phase == IllidanPhase::Flying)
+    if (phase == IllidanPhase::None || phase == IllidanPhase::Flying ||
+        phase == IllidanPhase::Dying)
+    {
         return false;
+    }
 
     return PlayerbotAI::IsMainTank(bot);
 }
 
-// An infected bot runs to the run spot. The trap hunter goes there while someone else is infected
-// and its Frost Trap is ready.
+// An infected bot runs to the run spot, and so does a trap hunter on duty, to lay its Frost Trap.
 bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncounter()
 {
-    bool const isInfected = HasParasiticShadowfiend(bot);
-    if (!isInfected && !IsIllidanTrapHunter(botAI))
+    if (!HasParasiticShadowfiend(bot) && !IsIllidanTrapHunterOnDuty(botAI))
         return false;
 
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
@@ -628,17 +629,57 @@ bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncount
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    if (phase == IllidanPhase::None || phase == IllidanPhase::Flying)
+    if (phase == IllidanPhase::None || phase == IllidanPhase::Flying ||
+        phase == IllidanPhase::Dying)
+    {
+        return false;
+    }
+
+    return !PlayerbotAI::IsTank(bot) || !PlayerbotAI::IsMainTank(bot);
+}
+
+// The mechanic tracker records each new infection while there is a run spot, keeps looking for a
+// trap hunter while none is ready, and drops an entry once its debuff is gone or the phase
+// changes.
+bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
+{
+    if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
-    if (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot))
+    // By leewheel 2026-10-16 合并：find target 按铁律换回 entry 22917。
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    if (!illidan)
         return false;
 
-    if (isInfected)
-        return true;
+    auto const& infected = context->GetValue<GuidVector>(
+        "illidan stormrage players with parasitic shadowfiend")->RefGet();
+    IllidanPhase const phase = GetIllidanPhase(illidan);
+    bool const hasRunSpot = phase != IllidanPhase::None && phase != IllidanPhase::Flying &&
+        phase != IllidanPhase::Dying;
+    auto const it = illidanInfections.find(bot->GetInstanceId());
+    bool const hasInfections = it != illidanInfections.end();
+    if (hasInfections)
+    {
+        for (auto const& [player, infection] : it->second)
+        {
+            if (std::find(infected.begin(), infected.end(), player) == infected.end())
+                return true;
 
-    return !bot->HasSpellCooldown(Id(BtSpells::SPELL_FROST_TRAP)) &&
-        GetPlayerWithParasiticShadowfiend(botAI);
+            if (hasRunSpot && (infection.phase != phase || !infection.isTrapAssigned))
+                return true;
+        }
+    }
+
+    if (!hasRunSpot)
+        return false;
+
+    for (ObjectGuid const& guid : infected)
+    {
+        if (!hasInfections || !it->second.contains(guid))
+            return true;
+    }
+
+    return false;
 }
 
 // By leewheel 2026-10-15 合并 brighton 20970179：采纳上游删除 IllidanStormrageParasiticShadowfiendsRunWildTrigger
@@ -814,8 +855,10 @@ bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
+    // By leewheel 2026-10-16 合并：上游 9c982d91 有意移除 SPELL_CAGED 检查，采纳上游版；
+    // find target 按铁律换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan || illidan->HasAura(Id(BtSpells::SPELL_CAGED)))
+    if (!illidan)
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
@@ -865,8 +908,9 @@ bool IllidanStormrageWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
 bool IllidanStormrageShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 {
     IllidanPhase const phase =
+        // By leewheel 2026-10-16 合并：采纳上游新增 Dying 阶段防护；find target 换回 entry 22917。
         GetIllidanPhase(AI_VALUE2(Unit*, "find target", "22917"));
-    if (phase == IllidanPhase::None)
+    if (phase == IllidanPhase::None || phase == IllidanPhase::Dying)
         return false;
 
     if (PlayerbotAI::IsHeal(bot))

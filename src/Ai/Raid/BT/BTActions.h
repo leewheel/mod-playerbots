@@ -27,12 +27,12 @@ public:
 
 // Used for High Warlord Naj'entus, Supremus, Teron Gorefiend, Gurtogg Bloodboil and Mother
 // Shahraz.
-class BlackTempleMisdirectToMainTankAction : public AttackAction
+class BlackTempleMisdirectToMainTankAction : public Action
 {
 public:
     BlackTempleMisdirectToMainTankAction(
         PlayerbotAI* botAI, std::string const& name, std::string const& bossName)
-        : AttackAction(botAI, name), _bossName(bossName) {}
+        : Action(botAI, name), _bossName(bossName) {}
     bool Execute(Event event) override;
 
 private:
@@ -123,6 +123,7 @@ public:
     HighWarlordNajentusRemoveImpalingSpineAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "high warlord naj'entus remove impaling spine") {}
     bool Execute(Event event) override;
+    bool ResetEncounterState();
 
 private:
     ObjectGuid _spineGuid;
@@ -145,6 +146,7 @@ public:
     HighWarlordNajentusThrowImpalingSpineAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "high warlord naj'entus throw impaling spine") {}
     bool Execute(Event event) override;
+    bool ResetEncounterState();
 
 private:
     uint32 _throwDelay = 0;
@@ -165,6 +167,7 @@ class SupremusKiteBossAction : public MovementAction
 public:
     SupremusKiteBossAction(PlayerbotAI* botAI) : MovementAction(botAI, "supremus kite boss") {}
     bool Execute(Event event) override;
+    bool ResetEncounterState();
 
 private:
     struct KitePlan
@@ -190,6 +193,7 @@ public:
     SupremusMoveAwayFromFireAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "supremus move away from fire") {}
     bool Execute(Event event) override;
+    bool ResetEncounterState();
 
 private:
     bool FindSafestNearbyPosition(
@@ -205,6 +209,7 @@ public:
     SupremusReachAroundFireAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "supremus reach around fire") {}
     bool Execute(Event event) override;
+    bool ResetEncounterState();
 
 private:
     int8 _lastSide = 1;
@@ -363,11 +368,11 @@ private:
 
 // Illidari Council
 
-class IllidariCouncilMisdirectToTanksAction : public AttackAction
+class IllidariCouncilMisdirectToTanksAction : public Action
 {
 public:
     IllidariCouncilMisdirectToTanksAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "illidari council misdirect to tanks") {}
+        : Action(botAI, "illidari council misdirect to tanks") {}
     bool Execute(Event event) override;
 };
 
@@ -504,12 +509,14 @@ public:
     IllidanStormrageMainTankRepositionBossAction(PlayerbotAI* botAI)
         : AttackAction(botAI, "illidan stormrage main tank reposition boss") {}
     bool Execute(Event event) override;
+    bool ResetEncounterState();
 
 private:
     uint32 _phaseStartTime = 0;
     ObjectGuid _lastFlameCrash;
     Position _leadSpot;
     bool _isLeading = false;
+    bool _hasPassedWalkInWaypoint = false;
 };
 
 class IllidanStormrageIsolateBotWithParasiteAction : public MovementAction
@@ -518,6 +525,20 @@ public:
     IllidanStormrageIsolateBotWithParasiteAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "illidan stormrage isolate bot with parasite") {}
     bool Execute(Event event) override;
+};
+
+class IllidanStormrageTrackInfectionsAction : public Action
+{
+public:
+    IllidanStormrageTrackInfectionsAction(PlayerbotAI* botAI)
+        : Action(botAI, "illidan stormrage track infections") {}
+    bool Execute(Event event) override;
+
+private:
+    bool FindTrapHunter(
+        Player const& infected, Position const& runSpot,
+        std::unordered_map<ObjectGuid, BtHelpers::IllidanInfection> const& infections,
+        ObjectGuid& hunter);
 };
 
 namespace BtHelpers
@@ -559,19 +580,11 @@ private:
     bool _setPassive = false;
 };
 
-class IllidanStormrageCommandPetAttackShadowfiendAction : public Action
+class IllidanStormrageCommandPetAttackAddAction : public Action
 {
 public:
-    IllidanStormrageCommandPetAttackShadowfiendAction(PlayerbotAI* botAI)
-        : Action(botAI, "illidan stormrage command pet attack shadowfiend") {}
-    bool Execute(Event event) override;
-};
-
-class IllidanStormrageCommandPetAttackShadowDemonAction : public Action
-{
-public:
-    IllidanStormrageCommandPetAttackShadowDemonAction(PlayerbotAI* botAI)
-        : Action(botAI, "illidan stormrage command pet attack shadow demon") {}
+    IllidanStormrageCommandPetAttackAddAction(PlayerbotAI* botAI)
+        : Action(botAI, "illidan stormrage command pet attack add") {}
     bool Execute(Event event) override;
 };
 
