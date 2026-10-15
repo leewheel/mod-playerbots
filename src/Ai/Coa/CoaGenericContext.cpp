@@ -11,6 +11,7 @@
 #include "CellImpl.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "Group.h"
 #include "Helpers.h"
 #include "ObjectMgr.h"
 #include "Playerbots.h"
@@ -25,6 +26,83 @@
 #include <cstdlib>
 #include <algorithm>
 #include <limits>
+
+// How far an enemy cleave, cone or spin around the caster reaches; 0 when the spell reaches its target.
+static float CoaCasterCentredReach(Player* bot, SpellInfo const* info)
+{
+    float reach = 0.0f;
+    for (SpellEffectInfo const& effect : info->Effects)
+    {
+        if (!effect.IsEffect())
+            continue;
+        uint32 const a = effect.TargetA.GetTarget();
+        uint32 const b = effect.TargetB.GetTarget();
+        bool const cone = a == TARGET_UNIT_CONE_ENEMY_24 || a == TARGET_UNIT_CONE_ENEMY_54 || a == TARGET_UNIT_CONE_ENEMY_104;
+        bool const around = a == TARGET_SRC_CASTER && b == TARGET_UNIT_SRC_AREA_ENEMY;
+        if (!cone && !around)
+            return 0.0f;
+        reach = std::max(reach, effect.CalcRadius(bot));
+    }
+    return reach;
+}
+
+// Whether the bot holds the power the spell costs (CanCastSpell probes ignoring it).
+static bool CoaHasPowerFor(Player* bot, SpellInfo const* info)
+{
+    if (info->PowerType >= MAX_POWERS)
+        return true;
+    int32 const cost = info->CalcPowerCost(bot, info->GetSchoolMask());
+    return cost <= 0 || int32(bot->GetPower(Powers(info->PowerType))) >= cost;
+}
+
+// In a dungeon a damage dealer or healer does not open on an idle creature while its group has a living tank: the
+// tank pulls. Houndmaster's Call and Unleash the Hounds sent the hounds through 60 idle mobs, Blood Steward included.
+static bool CoaPullsAheadOfTank(Player* bot, Unit* target)
+{
+    if (!target || !target->IsCreature() || target->IsInCombat() || !bot->GetMap()->IsDungeon() ||
+        PlayerbotAI::IsTank(bot) || !bot->IsHostileTo(target))
+        return false;
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (member && member != bot && member->IsAlive() && member->GetMapId() == bot->GetMapId() &&
+            PlayerbotAI::IsTank(member))
+            return true;
+    }
+    return false;
+}
+
+bool CoaCastAction::isUseful()
+{
+    if (!CastSpellAction::isUseful())
+        return false;
+    if (CoaPullsAheadOfTank(bot, GetTarget()))
+        return false;
+    uint32 const id = AI_VALUE2(uint32, "spell id", spell);
+    SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
+    if (!info)
+        return true;
+    if (!CoaHasPowerFor(bot, info))
+        return false;
+    // Celestial Cleave cast 20 yd from its target hit nothing and logged OK
+    Unit* target = GetTarget();
+    if (target && target != bot)
+        if (float const reach = CoaCasterCentredReach(bot, info))
+            return bot->IsWithinDistInMap(target, reach + target->GetCombatReach());
+    return true;
+}
+
+bool CoaCastMeleeAction::isUseful()
+{
+    if (!CastMeleeSpellAction::isUseful() || CoaPullsAheadOfTank(bot, GetTarget()))
+        return false;
+    uint32 const id = AI_VALUE2(uint32, "spell id", spell);
+    SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
+    return !info || CoaHasPowerFor(bot, info);
+}
 
 // The dispel type of a cure spell, taken from the spell itself.
 //
@@ -212,7 +290,7 @@ static Aura* CoaWornBuff(PlayerbotAI* botAI, std::string const& name, Unit* targ
 bool CoaCastBuffAction::isUseful()
 {
     Unit* target = GetTarget();
-    if (!target || !CastSpellAction::isUseful())
+    if (!target || !AI_VALUE2(uint32, "spell id", spell) || !CastSpellAction::isUseful())
         return false;
     return ai::buff::BuffBelowRefreshTarget(botAI, CoaWornBuff(botAI, spell, target, isOwner, checkDuration),
                                             beforeDuration);
@@ -223,13 +301,16 @@ bool CoaBuffMissingTrigger::IsActive()
     Unit* target = GetTarget();
     bool active = target && ai::buff::BuffBelowRefreshTarget(
                                 botAI, CoaWornBuff(botAI, spell, target, checkIsOwner, checkDuration), beforeDuration);
+    bool cooling = false;
     if (active)
     {
+        // no id: a spell the bot has not learned (Greater Rite at level 48 read IMPOSSIBLE every tick)
         uint32 const id = AI_VALUE2(uint32, "spell id", spell);
         SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
-        active = !CoaHealerAvoidsForm(bot, info) && CoaRotationMayCast(botAI, bot, info);
+        active = info && !CoaHealerAvoidsForm(bot, info) && CoaRotationMayCast(botAI, bot, info);
+        cooling = active && bot->HasSpellCooldown(id);
     }
-    return backoff.Allow(active);
+    return backoff.Allow(active, cooling);
 }
 
 /* How long a debuff target must still live, with AiPlayerbot.CoaShortLivedDebuffs.
@@ -376,12 +457,14 @@ bool CoaDebuffMissingTrigger::IsActive()
     else
         active = DebuffTrigger::IsActive();
 
+    bool cooling = false;
     if (active)
     {
         uint32 const id = AI_VALUE2(uint32, "spell id", spell);
         active = !CoaHealerSavesManaFrom(bot, id ? sSpellMgr->GetSpellInfo(id) : nullptr);
+        cooling = active && id && bot->HasSpellCooldown(id);
     }
-    return backoff.Allow(active);
+    return backoff.Allow(active, cooling);
 }
 
 bool CoaCastDebuffAction::isUseful()

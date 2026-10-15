@@ -124,8 +124,14 @@ bool ReachTargetAction::IsChaseLeashed(Unit* target) const
         !bot->GetMap()->IsDungeon())
         return false;
 
-    if (PlayerbotAI::IsTank(bot) && !target->GetVictim())
-        return false;
+    if (PlayerbotAI::IsTank(bot))
+    {
+        // a tank always takes back an enemy hitting one of its group, however far it stands from the healer
+        Unit* victim = target->GetVictim();
+        Player* hit = victim ? victim->GetCharmerOrOwnerPlayerOrPlayerItself() : nullptr;
+        if (!victim || (hit && bot->IsInSameGroupWith(hit)))
+            return false;
+    }
 
     Unit* anchor = ChaseAnchor();
     if (!anchor || anchor == bot || !anchor->IsAlive() || anchor->GetMapId() != bot->GetMapId())

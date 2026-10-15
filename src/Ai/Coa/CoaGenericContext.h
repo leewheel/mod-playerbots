@@ -60,8 +60,34 @@
         std::string const getName() override { return Label "::" + qualifier; } \
     };
 
-COA_QUALIFIED_CAST(CoaCastAction, CastSpellAction, "cast")
-COA_QUALIFIED_CAST(CoaCastMeleeAction, CastMeleeSpellAction, "cast melee")
+/* "cast::<spell>" - as the original, but a cleave or cone centred on the bot is not cast from beyond its reach,
+ * and no spell the bot lacks the power for (the probe ignores power, so the line ran and failed every tick). */
+class CoaCastAction : public CastSpellAction, public Qualified
+{
+public:
+    CoaCastAction(PlayerbotAI* botAI) : CastSpellAction(botAI, "") {}
+    void Qualify(std::string const qual) override
+    {
+        Qualified::Qualify(qual);
+        spell = qual;
+    }
+    std::string const getName() override { return "cast::" + qualifier; }
+    bool isUseful() override;
+};
+
+/* "cast melee::<spell>" - as the original, not without the power for it. */
+class CoaCastMeleeAction : public CastMeleeSpellAction, public Qualified
+{
+public:
+    CoaCastMeleeAction(PlayerbotAI* botAI) : CastMeleeSpellAction(botAI, "") {}
+    void Qualify(std::string const qual) override
+    {
+        Qualified::Qualify(qual);
+        spell = qual;
+    }
+    std::string const getName() override { return "cast melee::" + qualifier; }
+    bool isUseful() override;
+};
 /* "cast buff::<spell>" - as the original, a passive aura of the same name not taken for the buff (CoaWornBuff). */
 class CoaCastBuffAction : public CastBuffSpellAction, public Qualified
 {
@@ -179,6 +205,10 @@ public:
         spell = qual;
     }
     std::string const getName() override { return "cast buff party::" + qualifier; }
+    bool isUseful() override
+    {
+        return context->GetValue<uint32>("spell id", spell)->Get() && BuffOnPartyAction::isUseful();
+    }
 };
 
 /* Removing a harmful effect from a group member.
@@ -407,13 +437,15 @@ struct CoaLineBackoff
     uint32 activeSince = 0;
     uint32 asideUntil = 0;
 
-    bool Allow(bool active)
+    // cooling: the spell is on its cooldown. A buff shorter than its cooldown is missing all that time, which
+    // is no sign the line never lands (Unbridled Rage, Light's Hope waited 15-30 s per cycle once ready).
+    bool Allow(bool active, bool cooling = false)
     {
         uint32 const now = getMSTime();
         if (asideUntil && getMSTimeDiff(now, asideUntil) > 0 && getMSTimeDiff(now, asideUntil) < 60 * IN_MILLISECONDS)
             return false;  // still set aside
         asideUntil = 0;
-        if (!active)
+        if (!active || cooling)
         {
             activeSince = 0;
             return false;

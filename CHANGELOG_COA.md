@@ -1,5 +1,36 @@
 # CoA Bots — changelog
 
+## v2.4 — in progress
+
+### Tanks and dungeons
+- **The tank walks its route again**: the guard that keeps bots from walking into an idle pack in a dungeon
+  (`AiPlayerbot.CoaBodyPullGuard`, 2.2) no longer applies to the tank, who goes to the packs it means to pull. A tank
+  leading a group of bots stood still off its route until the run timed out.
+- A tank always takes back an enemy hitting one of its group, however far from the healer.
+- **Melee out of the boss's cone**: behind or beside a creature, melee bots stand more than 2 yd from its centre, where
+  a cone hits at any angle (a Barbarian died behind Tinkerer Gizlock to every Dragon Gun). Not against players.
+  The cone dodge also steps out when a bot stands that close.
+- In a dungeon, damage dealers and healers no longer open on an idle creature while their group has a living tank:
+  the tank pulls (Houndmaster's hounds pulled whole packs, Blood Steward included).
+
+### All classes
+- Buffs on a cooldown are cast when ready again: a buff shorter than its cooldown was set aside as "never lands" and
+  came 15-30 s late (Unbridled Rage, Light's Hope).
+- Buff lines skip spells the bot has not learned yet, and rotation lines skip a spell the bot lacks the power for
+  (they failed every tick before the next line could run).
+- A cleave or cone around the caster is no longer cast from beyond its reach (Celestial Cleave from 20 yd).
+
+### Rotations (`zz_coa_rotation_corrections_2_4.sql`, default rotations only, rows chosen by content)
+- **Guardian Vanguard / Reaper Domination** (tanks): Shield Challenge and Writhe taunt at 30 yd, Unyielding Stand on
+  packs; no more Reclaim Standards right after placing the standard (Vanguard, Gladiator).
+- **Reaper**: Soul Strike and Requiem before Reap; no single-target Rites aimed at the enemy.
+- **Ranger**: Survival Potion under low health, not at the pull; Archery drops its stealth-only spells.
+- **Sun Cleric Blessings**: Bless and Daybreak on the wounded ally, Ascension on group damage; no Vow of Grace,
+  Radiance or Blazing Chariot lines; Gavel of Light in melee only.
+- **Starcaller Sentinel**: Moon Arrow at medium mana. **Witch Hunter**: no Infiltrate in rotations, no Stoicism with
+  nothing on the bot. **Chronomancer Infinite**: Discordance higher. Dead lines removed (Templar Chastise, Barbarian
+  Whirling Advance, Runemaster Palm Sigil: Fire, Incarnation of Chaos, Wand of Time).
+
 ## v2.3.1 — Version command (October 2026)
 
 - **`.playerbots version`** gives the CoA Bots version and its source, for players and the console: the login

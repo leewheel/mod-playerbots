@@ -378,6 +378,9 @@ private:
                 case Shape::Cone:
                     if (!tank && distance < danger.radius + reach && enemy->isInFront(bot, danger.arc + 0.5f))
                         return dryRun || SideStep(enemy, danger.arc, info);
+                    // within the bot's boundary (at least 2 yd) a cone hits at any angle, behind the caster too
+                    if (!tank && bot->GetExactDist(enemy) < std::max(bot->GetBoundaryRadius(), MIN_MELEE_REACH) + 0.5f)
+                        return dryRun || Dodge(enemy->GetPosition(), std::max(bot->GetBoundaryRadius(), MIN_MELEE_REACH) + 1.0f, info);
                     return false;
                 case Shape::AtDest:
                     if (spell->m_targets.HasDst())

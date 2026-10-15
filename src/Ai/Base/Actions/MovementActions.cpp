@@ -175,6 +175,11 @@ bool MovementAction::IsBodyPullRisk(float x, float y, float z)
     if (master && master->IsInCombat())
         return false;
 
+    // The tank walks to the packs it means to pull: refusing those steps left a dungeon clear tank standing off
+    // its route until the run timed out (Scholomance 0/11 after 8 min), and a tank lagging behind its group.
+    if (PlayerbotAI::IsTank(bot) || botAI->HasStrategy("dc", BOT_STATE_NON_COMBAT))
+        return false;
+
     Unit* intendedTarget = AI_VALUE(Unit*, "current target");
     for (ObjectGuid const& guid : AI_VALUE(GuidVector, "possible targets no los"))
     {
@@ -2445,6 +2450,20 @@ Player* CombatFormationMoveAction::NearestGroupMember(float dis)
     return result;
 }
 
+// Distance to pass GetNearPoint, which adds back only the target's reach. Against a creature the bot keeps more
+// than its boundary (at least 2 yd) from the centre, where cones hit at any angle: parked at 1 yd behind Tinkerer Gizlock, a
+// Barbarian died to every Dragon Gun. Players move too much for a fixed spot.
+static float MeleeSpotDistance(Player* bot, Unit* target)
+{
+    float center = std::max(bot->GetExactDist(target), bot->GetMeleeRange(target) / 2) - bot->GetCombatReach();
+    if (!target->IsPlayer() && !bot->InBattleground() && !bot->InArena())
+    {
+        float const nearest = std::max(bot->GetBoundaryRadius(), MIN_MELEE_REACH) + 0.5f;
+        center = std::clamp(center, nearest, std::max(nearest, bot->GetMeleeRange(target) - 0.5f));
+    }
+    return center - target->GetCombatReach();
+}
+
 bool TankFaceAction::Execute(Event /*event*/)
 {
     Unit* target = AI_VALUE(Unit*, "current target");
@@ -2478,8 +2497,7 @@ bool TankFaceAction::Execute(Event /*event*/)
     float goodAngle2 = Position::NormalizeOrientation(averageAngle - M_PI * 3 / 5);
 
     // if dist < bot->GetMeleeRange(target) / 2, target will move backward
-    float dist = std::max(bot->GetExactDist(target), bot->GetMeleeRange(target) / 2) - bot->GetCombatReach() -
-                 target->GetCombatReach();
+    float dist = MeleeSpotDistance(bot, target);
     std::vector<Position> availablePos;
     float x, y, z;
     target->GetNearPoint(bot, x, y, z, 0.0f, dist, goodAngle1);
@@ -2717,8 +2735,7 @@ bool SetBehindTargetAction::Execute(Event /*event*/)
     float goodAngle1 = Position::NormalizeOrientation(target->GetOrientation() + M_PI * 3 / 5);
     float goodAngle2 = Position::NormalizeOrientation(target->GetOrientation() - M_PI * 3 / 5);
 
-    float dist = std::max(bot->GetExactDist(target), bot->GetMeleeRange(target) / 2) - bot->GetCombatReach() -
-                 target->GetCombatReach();
+    float dist = MeleeSpotDistance(bot, target);
     std::vector<Position> availablePos;
     float x, y, z;
     target->GetNearPoint(bot, x, y, z, 0.0f, dist, goodAngle1);
