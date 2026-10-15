@@ -1005,6 +1005,29 @@ static RatedSolo GetRatedSolo(Player* player, BattlegroundQueueTypeId queueTypeI
     return RatedSolo::None;
 }
 
+// A random bot leaves a battleground queue that will not start: 2 minutes after the last real player of that queue
+// left it, or after 10 minutes in any case. Bots had filled a queue to 26/20 for a duo who then left it; the battle
+// never started and the next players of that bracket waited behind them. Queues the bots fill on their own
+// (RandomBotAutoJoinBG) keep them while no player is queued.
+static bool LeavesStuckBgQueue(Player* bot, BattlegroundQueueTypeId queueTypeId, BattlegroundInfo const& info)
+{
+    if (bot->InBattleground() || bot->GetGroup())
+        return false;
+    BattlegroundQueue& queue = sBattlegroundMgr->GetBattlegroundQueue(queueTypeId);
+    GroupQueueInfo ginfo;
+    if (!queue.GetPlayerGroupInfoData(bot->GetGUID(), &ginfo) || ginfo.IsInvitedToBGInstanceGUID)
+        return false;
+    uint32 const waited = getMSTimeDiff(ginfo.JoinTime, GameTime::GetGameTimeMS().count());
+    bool const noPlayer = !sPlayerbotAIConfig.randomBotAutoJoinBG && !(info.bgAlliancePlayerCount + info.bgHordePlayerCount);
+    if (waited < (noPlayer ? 2 : 10) * MINUTE * IN_MILLISECONDS)
+        return false;
+    bot->RemoveBattlegroundQueueId(queueTypeId);
+    queue.RemovePlayer(bot->GetGUID(), true);
+    LOG_DEBUG("playerbots", "Bot {} left battleground queue {} after {} s ({})", bot->GetName(), uint32(queueTypeId),
+              waited / IN_MILLISECONDS, noPlayer ? "no player queued" : "never started");
+    return true;
+}
+
 void RandomPlayerbotMgr::CheckBgQueue()
 {
     if (!BgCheckTimer)
@@ -1252,6 +1275,8 @@ void RandomPlayerbotMgr::CheckBgQueue()
             }
             else
             {
+                if (LeavesStuckBgQueue(bot, queueTypeId, BattlegroundData[queueTypeId][bracketId]))
+                    continue;
                 if (teamId == TEAM_ALLIANCE)
                 {
                     BattlegroundData[queueTypeId][bracketId].bgAllianceBotCount++;

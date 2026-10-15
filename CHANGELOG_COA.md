@@ -13,6 +13,11 @@
 - In a dungeon, damage dealers and healers no longer open on an idle creature while their group has a living tank:
   the tank pulls (Houndmaster's hounds pulled whole packs, Blood Steward included).
 
+### Battlegrounds
+- Random bots leave a battleground queue that will not start: 2 minutes after the last real player left it, or after
+  10 minutes in any case. Bots had filled a queue to 26/20 for two players who then left it, and the next players of
+  that bracket could not get a battle.
+
 ### All classes
 - Buffs on a cooldown are cast when ready again: a buff shorter than its cooldown was set aside as "never lands" and
   came 15-30 s late (Unbridled Rage, Light's Hope).
