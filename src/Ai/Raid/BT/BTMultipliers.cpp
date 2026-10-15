@@ -839,6 +839,9 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTankMovementValu
     if (!isMove && !isSpell)
         return 1.0f;
 
+    if (dynamic_cast<CombatFormationMoveAction*>(action) || dynamic_cast<FollowAction*>(action))
+        return 0.0f;
+
     bool const isGapCloser = dynamic_cast<CastReachTargetSpellAction*>(action);
 
     // By leewheel 2026-10-15 合并：采纳上游版——illidan/phase 均为参数，移除遮蔽参数的函数内重声明。

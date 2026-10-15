@@ -104,8 +104,8 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("gurtogg bloodboil melee should stay behind",
         { NextAction("gurtogg bloodboil melee move behind", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("gurtogg bloodboil should avoid fel rage target",
-        { NextAction("gurtogg bloodboil avoid fel rage target", ACTION_RAID + 2) }));
+    triggers.push_back(new TriggerNode("gurtogg bloodboil ranged should avoid frontal cone",
+        { NextAction("gurtogg bloodboil ranged move out of frontal cone", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("gurtogg bloodboil fel rage on bot",
         { NextAction("gurtogg bloodboil lead boss to tank position", ACTION_RAID + 1) }));
@@ -356,17 +356,27 @@ void AppendShadowyConstructExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 
 // Tanks and melee never pick Illidan's Shadowfiends themselves; ranged and pets kill them, and
 // melee only finish one in their reach, from dps prioritize adds.
-void AppendParasiticShadowfiendExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
+void AppendParasiticShadowfiendMeleeExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
+{
+    if (!PlayerbotAI::IsMelee(botAI->GetBot()))
+        return;
+
+    auto const& shadowfiends =
+        botAI->GetAiObjectContext()->GetValue<GuidVector>("parasitic shadowfiends")->RefGet();
+    exclusions.insert(shadowfiends.begin(), shadowfiends.end());
+}
+
+void AppendIllidanDemonFormMeleeExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
     if (!PlayerbotAI::IsMelee(botAI->GetBot()))
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    if (!context->GetValue<Unit*>("find target", "22917")->Get())
-        return;
-
-    auto const& shadowfiends = context->GetValue<GuidVector>("parasitic shadowfiends")->RefGet();
-    exclusions.insert(shadowfiends.begin(), shadowfiends.end());
+    // By leewheel 2026-10-16 合并 brighton 7ff17291：采纳上游 Demon 阶段 melee 排除 illidan 本体；
+    // find target 按铁律换回 entry 22917。
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    if (illidan && GetIllidanPhase(illidan) == IllidanPhase::Demon)
+        exclusions.insert(illidan->GetGUID());
 }
 
 } // end anonymous namespace
@@ -388,5 +398,6 @@ void RaidBlackTempleStrategy::AppendTargetExclusions(
         AppendShadeOfAkamaTankExclusions(botAI, exclusions);
 
     AppendShadowyConstructExclusions(botAI, exclusions);
-    AppendParasiticShadowfiendExclusions(botAI, exclusions);
+    AppendParasiticShadowfiendMeleeExclusions(botAI, exclusions);
+    AppendIllidanDemonFormMeleeExclusions(botAI, exclusions);
 }
