@@ -175,6 +175,12 @@ bool MovementAction::IsBodyPullRisk(float x, float y, float z)
     if (master && master->IsInCombat())
         return false;
 
+    // A real player leads the group and picks the way: within a dungeon room nearly every step of the followers came
+    // within an idle pack's aggro distance + 3 yd, so they stood behind; once the player fought, the guard lifted and
+    // they ran to him through the packs, pulling half of Shadowfang Keep (15/10).
+    if (IsRealPlayer(master))
+        return false;
+
     // The tank walks to the packs it means to pull: refusing those steps left a dungeon clear tank standing off
     // its route until the run timed out (Scholomance 0/11 after 8 min), and a tank lagging behind its group.
     if (PlayerbotAI::IsTank(bot) || botAI->HasStrategy("dc", BOT_STATE_NON_COMBAT))
