@@ -100,6 +100,8 @@ public:
     }
     std::string const getName() override { return "cast buff::" + qualifier; }
     bool isUseful() override;
+    // a buff makes no threat: the threat hold held Light's Hope, which takes threat away, 530 times in two runs
+    ActionThreatType getThreatType() override { return ActionThreatType::None; }
 };
 /* "cast debuff::<spell>" - as the original. With AiPlayerbot.CoaShortLivedDebuffs, the target only has
  * to live as long as the spell needs (CoaDebuffNeedLifeTime), not the fixed 8 s of the original. */

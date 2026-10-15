@@ -100,5 +100,21 @@ DELETE FROM `playerbots_custom_strategy`
  WHERE `owner` = 0 AND `name` = 'barbarian-ancestry'
    AND `action_line` = 'can cast::Whirling Advance>cast melee::Whirling Advance!5';
 
+-- 9. 5 yd strikes on debuff rows, which have no melee check: Break failed 601 times and Condemn 196 times from range.
+CALL coa24_set('barbarian-ancestry', 'debuff missing::Break>cast debuff::Break!78', 'debuff missing::Break>cast melee::Break!78');
+CALL coa24_set('barbarian-brutality', 'debuff missing::Break>cast debuff::Break!76', 'debuff missing::Break>cast melee::Break!76');
+CALL coa24_set('templar-crusader', 'debuff missing::Condemn>cast debuff::Condemn!84', 'debuff missing::Condemn>cast melee::Condemn!84');
+CALL coa24_set('templar-crusader', 'debuff missing::Condemn>cast debuff::Condemn!12', 'debuff missing::Condemn>cast melee::Condemn!12');
+CALL coa24_set('templar-crusader', 'debuff missing::Blade of Faith>cast debuff::Blade of Faith!29', 'debuff missing::Blade of Faith>cast melee::Blade of Faith!29');
+CALL coa24_set('templar-oathkeeper', 'debuff missing::Condemn>cast debuff::Condemn!84', 'debuff missing::Condemn>cast melee::Condemn!84');
+CALL coa24_set('templar-oathkeeper', 'debuff missing::Blade of Faith>cast debuff::Blade of Faith!84', 'debuff missing::Blade of Faith>cast melee::Blade of Faith!84');
+CALL coa24_set('templar-zealot', 'debuff missing::Condemn>cast debuff::Condemn!86', 'debuff missing::Condemn>cast melee::Condemn!86');
+
+-- 10. Guardian tanks enchant the shield with Spiked Reinforcement (threat) before Jagged; the enchant lasts an hour.
+CALL coa24_set('guardian-vanguard', 'can cast::Jagged Reinforcement>cast melee::Jagged Reinforcement!21', 'can cast::Jagged Reinforcement>cast melee::Jagged Reinforcement!3');
+CALL coa24_set('guardian-vanguard', 'can cast::Spiked Reinforcement>cast melee::Spiked Reinforcement!4', 'can cast::Spiked Reinforcement>cast melee::Spiked Reinforcement!21');
+CALL coa24_set('guardian-gladiator', 'can cast::Jagged Reinforcement>cast melee::Jagged Reinforcement!22', 'can cast::Jagged Reinforcement>cast melee::Jagged Reinforcement!3');
+CALL coa24_set('guardian-gladiator', 'can cast::Spiked Reinforcement>cast melee::Spiked Reinforcement!4', 'can cast::Spiked Reinforcement>cast melee::Spiked Reinforcement!22');
+
 DROP PROCEDURE IF EXISTS coa24_add;
 DROP PROCEDURE IF EXISTS coa24_set;

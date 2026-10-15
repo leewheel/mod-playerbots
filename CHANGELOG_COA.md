@@ -19,6 +19,12 @@
 - Buff lines skip spells the bot has not learned yet, and rotation lines skip a spell the bot lacks the power for
   (they failed every tick before the next line could run).
 - A cleave or cone around the caster is no longer cast from beyond its reach (Celestial Cleave from 20 yd).
+- Purges only aim at enemies within their own reach (Gavel of Wrath, 5 yd, was aimed at 30 yd).
+- Buffs are no longer held by the threat hold (Light's Hope, which lowers threat, was held 530 times in two runs).
+- A silenced bot no longer counts on its dispels, kicks and other silenced spells as ready.
+- The attack kit skips a self-aura the bot already wears (Searing Quiver) and cleanses that deal no damage
+  (Resonance Rune).
+- Rotations: Break, Condemn and Blade of Faith in melee only; Guardian tanks enchant Spiked Reinforcement first.
 
 ### Rotations (`zz_coa_rotation_corrections_2_4.sql`, default rotations only, rows chosen by content)
 - **Guardian Vanguard / Reaper Domination** (tanks): Shield Challenge and Writhe taunt at 30 yd, Unyielding Stand on

@@ -1029,10 +1029,14 @@ bool HasReadyAbility(PlayerbotAI* botAI, Player* bot, Filter wanted)
 {
     auto const& benched = static_cast<CoaAiObjectContext*>(botAI->GetAiObjectContext())->benchedSpells;
     time_t const now = time(nullptr);
+    // a silenced bot is not ready to cast what a silence stops (a Runemaster's dispels failed 478 times in Sonic Burst)
+    bool const silenced = bot->HasUnitFlag(UNIT_FLAG_SILENCED);
 
     for (Usable const& spell : KnownAbilities(bot, wanted))
     {
         SpellInfo const* const info = EffectiveSpell(bot, spell.info);
+        if (silenced && info->PreventionType == SPELL_PREVENTION_TYPE_SILENCE)
+            continue;
         if (!bot->HasSpellCooldown(info->Id) && !IsBenched(benched, spell.info->Id, now) &&
             (info == spell.info || !IsBenched(benched, info->Id, now)))
             return true;
@@ -1054,6 +1058,10 @@ bool IsAttack(uint16 kind, bool tank)
 
     // Heals, buffs, defensives and dispels have their own actions.
     if (!(kind & (KIND_HOSTILE | KIND_DAMAGE)))
+        return false;
+    // A cleanse that also purges an enemy deals no damage: Resonance Rune, a 1.5 s cast on a 60 s cooldown, went
+    // 52 times as an attack against 11 cleanses.
+    if ((kind & KIND_DISPEL) && !(kind & KIND_DAMAGE))
         return false;
 
     // A taunt pulls aggro off the tank, with or without damage: only tanks use it. A Witch Hunter
@@ -1693,6 +1701,23 @@ SpellInfo const* CastFirst(PlayerbotAI* botAI, Player* bot, std::vector<Usable> 
         {
             note(spell.info->Id, SKIPPED_BENCHED);
             continue;
+        }
+
+        // An attack that only puts an aura on the caster, already worn: Searing Quiver, a lasting self-aura, was
+        // recast 282 times in one run while it was up (a quarter of that Ranger's attack casts).
+        if (usage == 0 && bot->HasAura(info->Id))
+        {
+            bool selfOnly = false;
+            for (SpellEffectInfo const& effect : info->Effects)
+            {
+                if (!effect.IsEffect())
+                    continue;
+                selfOnly = effect.IsAura() && effect.TargetA.GetTarget() == TARGET_UNIT_CASTER;
+                if (!selfOnly)
+                    break;
+            }
+            if (selfOnly)
+                continue;
         }
 
         // A melee cleave or spin hits around the bot, not at its target: cast from afar it only
@@ -3245,12 +3270,19 @@ PurgeChoice FindPurge(PlayerbotAI* botAI, Player* bot, std::vector<Usable> const
     auto const& benched = static_cast<CoaAiObjectContext*>(botAI->GetAiObjectContext())->benchedSpells;
     time_t const now = time(nullptr);
     uint32 mask = 0;
+    // The reach of the ready purges: Gavel of Wrath reaches 5 yd, and aimed at enemies up to 30 yd away it landed
+    // once in 324 tries.
+    float reach = 0.0f;
     for (Usable const& spell : purges)
     {
         SpellInfo const* const info = EffectiveSpell(bot, spell.info);
         if (!bot->HasSpellCooldown(info->Id) && !IsBenched(benched, spell.info->Id, now) && !IsBenched(benched, info->Id, now))
+        {
             mask |= spell.purgeMask;
+            reach = std::max(reach, info->GetMaxRange(false, bot));
+        }
     }
+    reach = std::min(reach > 0.0f ? reach : 30.0f, 30.0f);
     if (!mask)
         return choice;
 
@@ -3260,7 +3292,7 @@ PurgeChoice FindPurge(PlayerbotAI* botAI, Player* bot, std::vector<Usable> const
         if (arena)
         {
             Player* enemy = unit ? unit->ToPlayer() : nullptr;
-            if (!enemy || !enemy->IsAlive() || !bot->IsHostileTo(enemy) || !bot->IsWithinDistInMap(enemy, 30.0f) ||
+            if (!enemy || !enemy->IsAlive() || !bot->IsHostileTo(enemy) || !bot->IsWithinDistInMap(enemy, reach) ||
                 !bot->IsWithinLOSInMap(enemy))
                 return false;
             if (SpellInfo const* buff = PurgeableBuff(enemy, mask, nowMs))
@@ -3275,7 +3307,7 @@ PurgeChoice FindPurge(PlayerbotAI* botAI, Player* bot, std::vector<Usable> const
         Creature* creature = unit ? unit->ToCreature() : nullptr;
         if (!creature || !creature->IsAlive() ||
             !(creature->IsDungeonBoss() || creature->isWorldBoss() || creature->isElite()) ||
-            !bot->IsWithinDistInMap(creature, 30.0f))
+            !bot->IsWithinDistInMap(creature, reach))
             return false;
         if (SpellInfo const* buff = PurgeableBuff(creature, mask, nowMs))
         {
@@ -3578,7 +3610,8 @@ public:
 
     bool IsActive() override
     {
-        if (!sPlayerbotAIConfig.coaSmartDispel || !ClassHas(bot, KIND_DISPEL))
+        // a dispel on cooldown or under a silence: 165 tries and no cast in one run
+        if (!sPlayerbotAIConfig.coaSmartDispel || !ClassHas(bot, KIND_DISPEL) || !HasReadyAbility(botAI, bot, IsGroupDispel))
             return false;
 
         std::vector<Usable> const spells = KnownAbilities(bot, IsGroupDispel);
