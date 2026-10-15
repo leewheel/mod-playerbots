@@ -1413,11 +1413,11 @@ AiPlayerbot.GatherOnlySkillUp = 1
 # Default: "" (none)
 # AiPlayerbot.ExcludedBotRaces = ""
 
-# Custom races never given to random bots, on top of AiPlayerbot.ExcludedBotRaces: they crash the client or play
-# badly. 65 (Test Race), 72 and 77 (Skyborne), 80 and 81 (Darkfallen): the module's author; 82 (Sethrak): a male
-# crashes the client (ilusixn#27); 97 (Saberon): Hunters equip no weapon, Shamans recast Rockbiter (ilusixn#32).
-# Default: "65,72,77,80,81,82,97"
-AiPlayerbot.CrashingBotRaces = "65,72,77,80,81,82,97"
+# Custom races never given to random bots, on top of AiPlayerbot.ExcludedBotRaces, from a race by race client test
+# (15/10): 32 (Thin Human) and 97 (Saberon) crash a client that sees them, 72 and 77 (Skyborne) have no model in the
+# patched client. 65, 80, 81 and 82 showed no crash as bots (Sethrak only crashes when played, at its first login).
+# Default: "32,72,77,97"
+AiPlayerbot.CrashingBotRaces = "32,72,77,97"
 
 # Authored combat rotations for the Conquest of Azeroth specializations.
 # Off: CoA bots are driven by the runtime classifier alone, which picks a spell
