@@ -116,5 +116,39 @@ CALL coa24_set('guardian-vanguard', 'can cast::Spiked Reinforcement>cast melee::
 CALL coa24_set('guardian-gladiator', 'can cast::Jagged Reinforcement>cast melee::Jagged Reinforcement!22', 'can cast::Jagged Reinforcement>cast melee::Jagged Reinforcement!3');
 CALL coa24_set('guardian-gladiator', 'can cast::Spiked Reinforcement>cast melee::Spiked Reinforcement!4', 'can cast::Spiked Reinforcement>cast melee::Spiked Reinforcement!22');
 
+-- 11. Player tips from the spec pages (14-15/10).
+-- Healers keep their covenant on the tank: Abyssal Covenant (Heretic) and Bless (Sun Cleric) go on the tank when it
+-- lacks them; Bless on the hurt ally (5.) stays below.
+CALL coa24_add('cultist-heretic', 'can cast::Abyssal Covenant>cast heal tank::Abyssal Covenant!83.5');
+CALL coa24_add('sun-cleric-blessings', 'can cast::Bless>cast heal tank::Bless!85.5');
+-- Sun Cleric Blessings: no Shoot, Wand, Horusath Blast, Gavel of Wrath, Chains of Light or a lone Solar Invocation:
+-- Ascension (it stays on the group heal lines); Gavel of Grace only when out of mana; Dawnfall on big packs;
+-- Devotion of Grace when missing; Paragon and Solar Prayer when the healer itself is low.
+DELETE FROM `playerbots_custom_strategy`
+ WHERE `owner` = 0 AND `name` = 'sun-cleric-blessings'
+   AND `action_line` IN ('can cast::Shoot>cast::Shoot!2', 'can cast::Wand>cast::Wand!1',
+                         'can cast::Horusath Blast>cast::Horusath Blast!18', 'can cast::Gavel of Wrath>cast::Gavel of Wrath!8',
+                         'can cast::Chains of Light>cast::Chains of Light!7',
+                         'can cast::Solar Invocation: Ascension>cast::Solar Invocation: Ascension!10');
+CALL coa24_set('sun-cleric-blessings', 'can cast::Gavel of Grace>cast melee::Gavel of Grace!28', 'low mana>cast melee::Gavel of Grace!28');
+CALL coa24_set('sun-cleric-blessings', 'can cast::Dawnfall>cast::Dawnfall!15', 'high aoe>cast::Dawnfall!15');
+CALL coa24_set('sun-cleric-blessings', 'can cast::Devotion of Grace>cast::Devotion of Grace!2', 'buff missing::Devotion of Grace>cast buff::Devotion of Grace!2');
+CALL coa24_set('sun-cleric-blessings', 'buff missing::Paragon>cast buff::Paragon!17', 'low health>cast buff::Paragon!30');
+CALL coa24_add('sun-cleric-blessings', 'low health>cast heal::Solar Prayer!31');
+-- Knight of Xoroth Defiance: Flesh Hook on a single target only; Meatsaw opens on packs; Shieldgore on cooldown;
+-- Chains of Malice as a ranged taunt; Black Shield, Sacrificial Circle and Juggernaut kept for low health, one by one.
+DELETE FROM `playerbots_custom_strategy`
+ WHERE `owner` = 0 AND `name` = 'knight-of-xoroth-defiance' AND `action_line` = 'medium aoe>cast melee::Flesh Hook!88';
+CALL coa24_set('knight-of-xoroth-defiance', 'can cast::Meatsaw>cast melee::Meatsaw!4', 'medium aoe>cast melee::Meatsaw!87.5');
+CALL coa24_add('knight-of-xoroth-defiance', 'can cast::Shieldgore>cast melee::Shieldgore!81');
+CALL coa24_add('knight-of-xoroth-defiance', 'lose aggro>cast::Chains of Malice!93');
+CALL coa24_add('knight-of-xoroth-defiance', 'low health>cast buff::Black Shield!91');
+CALL coa24_add('knight-of-xoroth-defiance', 'low health>cast::Sacrificial Circle!89');
+CALL coa24_set('knight-of-xoroth-defiance', 'buff missing::Juggernaut>cast buff::Juggernaut!30', 'critical health>cast buff::Juggernaut!90');
+-- Witch Doctor Shadowhunting: Shadowflare went out again and again on packs; it is put back only when missing.
+CALL coa24_set('witch-doctor-shadowhunting', 'light aoe>cast::Shadowflare!80', 'debuff missing::Shadowflare>cast debuff::Shadowflare!80');
+DELETE FROM `playerbots_custom_strategy`
+ WHERE `owner` = 0 AND `name` = 'witch-doctor-shadowhunting' AND `action_line` = 'can cast::Shadowflare>cast::Shadowflare!11';
+
 DROP PROCEDURE IF EXISTS coa24_add;
 DROP PROCEDURE IF EXISTS coa24_set;
