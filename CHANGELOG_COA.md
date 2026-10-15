@@ -73,6 +73,17 @@
   nothing on the bot. **Chronomancer Infinite**: Discordance higher. Dead lines removed (Templar Chastise, Barbarian
   Whirling Advance, Runemaster Palm Sigil: Fire, Incarnation of Chaos, Wand of Time).
 
+### Rotations — from the specs site reports (thanks kuribo)
+- **Cultist Heretic / Sun Cleric Blessings** (healers): Abyssal Covenant and Bless kept on the tank, so it gets the
+  extra healing; Bless on the wounded ally stays below.
+- **Sun Cleric Blessings**: no Shoot, Wand, Horusath Blast, Gavel of Wrath or Chains of Light; Ascension only on group
+  damage; Gavel of Grace only when out of mana; Dawnfall on big packs; Devotion of Grace when missing; Paragon and
+  Solar Prayer when the healer itself is low.
+- **Knight of Xoroth Defiance** (tank): Flesh Hook on a single target only, Meatsaw on packs, Shieldgore on cooldown,
+  Chains of Malice to take a target back; Black Shield, Sacrificial Circle and Juggernaut kept for low health, one at
+  a time instead of on cooldown.
+- **Witch Doctor Shadowhunting**: Shadowflare put back only when missing instead of cast again and again on packs.
+
 ## v2.3.1 — Version command (October 2026)
 
 - **`.playerbots version`** gives the CoA Bots version and its source, for players and the console: the login
