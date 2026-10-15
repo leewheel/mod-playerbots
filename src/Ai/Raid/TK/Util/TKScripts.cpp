@@ -24,7 +24,7 @@ public:
     void OnSpellCast(
         Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
     {
-        if (spellInfo->Id != Id(TkSpells::SPELL_ARCANE_ORB))
+        if (!caster || spellInfo->Id != Id(TkSpells::SPELL_ARCANE_ORB))
             return;
 
         // By leewheel 2026-10-13 acore 上游 #26152（GameObjects cast their own spells）后

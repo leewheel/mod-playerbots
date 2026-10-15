@@ -196,9 +196,6 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage parasitic shadowfiend on group member",
         { NextAction("illidan stormrage isolate bot with parasite", ACTION_RAID + 3) }));
 
-    // triggers.push_back(new TriggerNode("illidan stormrage parasitic shadowfiends run wild",
-    //     { NextAction("illidan stormrage set earthbind totem", ACTION_RAID + 1) }));
-
     triggers.push_back(new TriggerNode("illidan stormrage flames of azzinoth should be tanked",
         { NextAction(
             "illidan stormrage assist tanks handle flames of azzinoth", ACTION_EMERGENCY + 1) }));
@@ -238,10 +235,10 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("illidan stormrage disperse ranged", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage this expansion hates melee",
-        { NextAction("illidan stormrage melee go somewhere to not die", ACTION_RAID + 2) }));
+        { NextAction("illidan stormrage melee stay away from demon form", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage warlock should tank demon form",
-        { NextAction("illidan stormrage warlock tank handle demon boss", ACTION_EMERGENCY + 9) }));
+        { NextAction("illidan stormrage warlock tank handle demon form", ACTION_EMERGENCY + 9) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage should assign dps priority",
         { NextAction("illidan stormrage dps prioritize adds", ACTION_EMERGENCY + 1) }));
@@ -310,10 +307,10 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     // Illidan Stormrage <The Betrayer>
     multipliers.push_back(new IllidanStormrageHoldPullPositionsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageControlMovementAndTargetingMultiplier(botAI));
-    // multipliers.push_back(new IllidanStormrageUseEarthbindTotemMultiplier(botAI));
-    multipliers.push_back(new IllidanStormrageShadowfiendBirtherHoldMultiplier(botAI));
+    multipliers.push_back(new IllidanStormrageNearNewShadowfiendMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageHoldGuardianSummonsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageWaitForDpsMultiplier(botAI));
+    multipliers.push_back(new IllidanStormrageDisableTankSoulshatterMultiplier(botAI));
 }
 
 namespace
@@ -388,10 +385,5 @@ void RaidBlackTempleStrategy::AppendTargetExclusions(
         AppendShadeOfAkamaTankExclusions(botAI, exclusions);
 
     AppendShadowyConstructExclusions(botAI, exclusions);
-
-    if (type == TargetValueExclusionType::TankTarget ||
-        type == TargetValueExclusionType::DpsTarget)
-    {
-        AppendParasiticShadowfiendExclusions(botAI, exclusions);
-    }
+    AppendParasiticShadowfiendExclusions(botAI, exclusions);
 }

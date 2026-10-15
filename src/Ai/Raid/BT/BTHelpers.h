@@ -60,8 +60,8 @@ enum class BtSpells : uint32
     SPELL_SPIRIT_SHIELD             = 40322,
 
     // Gurtogg Bloodboil
-    SPELL_BOSS_FEL_RAGE             = 40594,
-    SPELL_PLAYER_FEL_RAGE           = 40604,
+    SPELL_BOSS_FEL_RAGE             = 40594, // Is dropped for the final 2s of phase 2
+    SPELL_PLAYER_FEL_RAGE           = 40604, // Lasts the entirety of phase 2 (30s)
     SPELL_INSIGNIFICANCE            = 40618,
     SPELL_BLOODBOIL                 = 42005,
 
@@ -116,7 +116,6 @@ enum class BtSpells : uint32
     SPELL_SPELLSTEAL                = 30449,
 
     // Shaman
-    SPELL_EARTHBIND_TOTEM           =  2484,
     SPELL_WIND_SHEAR                = 57994,
 
     // Warlock (Felhunter)
@@ -125,6 +124,7 @@ enum class BtSpells : uint32
 
     // Warrior
     SPELL_SPELL_REFLECTION          = 23920,
+    SPELL_VIGILANCE                 = 50720,
 };
 
 enum class BtNpcs : uint32
@@ -189,8 +189,7 @@ bool IsInRectangle(
 // This bot's own point in that rectangle, the same every call and spread between bots, at the
 // bot's Z. Falls back to centre when the way from centre to the point is blocked.
 Position GetBotPointInRectangle(
-    Player* bot, Position const& centre, Position const& facing, float halfWidth,
-    float halfDepth);
+    Player* bot, Position const& centre, Position const& facing, float halfWidth, float halfDepth);
 
 // Trash
 
@@ -301,23 +300,11 @@ inline constexpr float SUPREMUS_KITE_SAFETY_MARGIN = 3.0f;
 inline constexpr float SUPREMUS_KITE_STEP_DISTANCE = 3.5f;
 inline constexpr uint8 SUPREMUS_KITE_HEADINGS = 16;
 inline constexpr float SUPREMUS_REACH_STEP_DISTANCE = 3.5f;
-// He evades when his own position leaves this box (instance_black_temple.cpp boundaries). He
-// follows the kiter in a straight line and the box is convex, so a kiter inside it keeps him in.
-// inline constexpr float SUPREMUS_BOUNDARY_MIN_X = 556.1f;
-// inline constexpr float SUPREMUS_BOUNDARY_MAX_X = 850.2f;
-// inline constexpr float SUPREMUS_BOUNDARY_MIN_Y = 542.0f;
-// inline constexpr float SUPREMUS_BOUNDARY_MAX_Y = 1001.0f;
-// inline constexpr float SUPREMUS_KITE_BOUNDARY_MARGIN = 10.0f;
-// A rectangular area in front of the Black Temple entrance that is wide open. Min_X to Max_X is
-// pretty close to the width of the courtyard, but the length extends much farther beyond Max_Y.
-// However, extending Max_Y any further moves into a battlefield area with destroyed war marchines
-// and other debris all over, which block movement.
+// The Y boundaries run from the top of the ramp leading up into the temple to just before reaching
+// the vestibule inside the courtyard gate. The X boundaries are pretty close to spanning the entire
+// width of the courtyard
 inline constexpr float SUPREMUS_BOUNDARY_MIN_X = 587.0f;
 inline constexpr float SUPREMUS_BOUNDARY_MAX_X = 820.0f;
-// inline constexpr float SUPREMUS_BOUNDARY_MIN_Y = 675.0f;
-// inline constexpr float SUPREMUS_BOUNDARY_MAX_Y = 745.0f;
-// These boundaries run from the top of the ramp leading up into the temple to just before reaching
-// the vestibule inside the courtyard gate.
 inline constexpr float SUPREMUS_BOUNDARY_MIN_Y = 590.0f;
 inline constexpr float SUPREMUS_BOUNDARY_MAX_Y = 970.0f;
 
@@ -381,7 +368,6 @@ inline Position const GOREFIEND_TANK_POSITION = { 597.653f, 402.284f, 187.090f }
 inline Position const GOREFIEND_DIE_POSITION  = { 525.709f, 377.177f, 193.203f };
 
 GuidVector FindShadowyConstructGuids(PlayerbotAI* botAI);
-
 // A triggered cast records neither its cooldown nor the global cooldown, so both come from the
 // spell data. False if the cast fails.
 bool CastVengefulSpiritSpell(Unit* spirit, Unit* target, uint32 spellId);
@@ -464,10 +450,10 @@ inline std::array const GATHIOS_TANK_POSITIONS = {
     Position{ 673.789f, 274.139f, 271.689f },
 };
 inline std::array const ZEREVOR_TANK_POSITIONS = {
-    // Position{ 689.749f, 371.569f, 271.660f },
-    // Position{ 674.892f, 374.334f, 271.688f },
-    Position{ 660.325f, 357.568f, 271.688f },
-    Position{ 679.657f, 356.482f, 271.699f },
+    Position{ 654.854f, 352.502f, 271.689f },
+    Position{ 644.597f, 338.875f, 271.688f },
+    // Position{ 660.325f, 357.568f, 271.688f },
+    // Position{ 679.657f, 356.482f, 271.699f },
 };
 
 extern std::unordered_map<uint32, uint32> councilDpsWaitTimer;
@@ -483,7 +469,7 @@ inline constexpr float MAGE_TANK_HEALER_MIN_DISTANCE = 12.5f;
 // Zerevor casts Arcane Explosion when anyone is within 10 yd plus both combat reaches (14.65 yd).
 inline constexpr float ZEREVOR_ARCANE_EXPLOSION_SAFE_DISTANCE = 15.0f;
 // A patch reaches a player whose centre is within its radius plus both object sizes (1.9 yd).
-inline constexpr float ZEREVOR_PATCH_MARGIN = 2.5f;
+inline constexpr float COUNCIL_PATCH_MARGIN = 2.5f;
 inline constexpr int32 CIRCLE_OF_HEALING_REACTION_MS = 200;
 // A ranged bot whose own cast would end with less than this left on Circle of Healing drops it.
 inline constexpr int32 CIRCLE_OF_HEALING_CASTER_MARGIN_MS = 500;
@@ -495,11 +481,14 @@ bool HasDangerousCouncilAura(Player* bot);
 bool IsVerasVanished(Unit* veras);
 bool CanInterruptCircleOfHealing(Unit* malande);
 bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin = 0.0f);
+bool IsInCouncilPatch(Position const& point, Unit* gathios, Unit* zerevor, float margin = 0.0f);
 bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor);
 bool IsZerevorOnMageTank(PlayerbotAI* botAI, Unit* zerevor);
 bool IsMageTankHealerPositionSafe(Position const& point, Player* mageTank, Unit* zerevor);
 bool FindMageTankHealerPosition(
     Player* bot, Player* mageTank, Unit* zerevor, Position& destination);
+bool FindMalandeTankPosition(
+    Player* bot, Unit* malande, Unit* gathios, Unit* zerevor, Position& destination);
 bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range);
 Unit* GetCouncilPetTarget(PlayerbotAI* botAI, Creature* pet);
 uint32 GetReadySpellLock(Creature* pet, Unit* target);
@@ -507,16 +496,17 @@ uint32 GetReadySpellLock(Creature* pet, Unit* target);
 // Illidan Stormrage <The Betrayer>
 
 // Fight phases 1 to 5 are Initial, Flying, Grounded, Demon and Maiev; Landing runs from the last
-// Flame's death until he is back on the ground.
+// Flame's death until he is back on the ground. Dying is during the 1 HP death scene.
 enum class IllidanPhase : uint8
 {
-    None, // also Maiev's arrival and the death scene
+    None, // also Maiev's arrival
     Initial,
     Flying,
     Landing,
     Grounded,
     Demon,
     Maiev,
+    Dying,
 };
 
 // Damage on him is held after each threat reset, so the tank that should have him acts first.
@@ -599,12 +589,13 @@ inline constexpr uint32 ILLIDAN_PHASE_START_MISDIRECT_MS = 3 * IN_MILLISECONDS;
 // faces out and the raid stands inside.
 inline constexpr float ILLIDAN_RING_RADIUS = 25.0f;
 inline constexpr float ILLIDAN_TANK_OFFSET = 6.0f;
-// He doesn't step while his victim is within his chase range (7.5 + 1.5 + 0.5) of his centre.
-inline constexpr float ILLIDAN_CHASE_STOP_DISTANCE = 9.5f;
-// Each Flame Crash moves him this far counterclockwise round the centre.
-inline constexpr float ILLIDAN_RING_STEP_ANGLE = 20.0f * static_cast<float>(M_PI) / 180.0f;
-// He is on his ring point within this distance.
-inline constexpr float ILLIDAN_RING_POINT_TOLERANCE = 1.5f;
+// On each Flame Crash the Main Tank walks to the ring point this far counterclockwise of him. He
+// runs up close behind a walking tank and stops about 30 deg on, back on the ring.
+inline constexpr float ILLIDAN_RING_LEAD_ANGLE = 35.0f * static_cast<float>(M_PI) / 180.0f;
+// While he is this close to the grate centre, as after landing, the Main Tank leads him straight
+// out along its own bearing to the lead radius; he stops 22 to 28 yd out.
+inline constexpr float ILLIDAN_PICKUP_DISTANCE = 15.0f;
+inline constexpr float ILLIDAN_PICKUP_LEAD_RADIUS = 28.0f;
 // A Flame Crash this close to the Main Tank was cast on it.
 inline constexpr float ILLIDAN_FLAME_CRASH_ON_TANK_DISTANCE = 9.0f;
 
@@ -682,7 +673,6 @@ extern std::unordered_map<uint32, ObjectGuid> eastFlameGuid;
 extern std::unordered_map<uint32, ObjectGuid> westFlameGuid;
 
 IllidanPhase GetIllidanPhase(Unit* illidan);
-bool IsIllidanDeathScene(Unit* illidan);
 // He is up and talking after Akama's gossip, still immune to players and out of combat.
 bool IsIllidanSpeechInProgress(Player* bot);
 // The phase started less than durationMs ago; until the mechanic tracker stamps it, it has just
@@ -700,20 +690,22 @@ IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan);
 // The game angle of a point seen from the grate centre: 0 north, rising counterclockwise.
 float GetGrateAngle(Position const& position);
 Position GetRingPoint(float angle, float radius);
-// The Main Tank's two ring spots: 9.5 yd past his ring point on the line from him, so he follows
-// and stops on it; then 6 yd outward of him, so he only turns and faces out.
-Position GetIllidanLeadSpot(Unit const& illidan, Position const& ringPoint);
+// 6 yd outward of him. A tank walking there from within 9.5 yd only turns him to face out.
 Position GetIllidanSettleSpot(Unit const& illidan);
 Position GetGrateSlot(size_t index);
 DemonFormLayout GetDemonFormLayout(Unit const& illidan);
 Position GetIllidanShadowfiendRunSpot(Unit const& illidan, IllidanPhase phase);
 std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot);
+bool IsWestFlameOfAzzinothTank(Player* bot);
+bool IsEastFlameOfAzzinothTank(Player* bot);
+bool IsFlameOfAzzinothTank(Player* bot);
 // The warlock tank is an assistant warlock (player or bot), else the warlock bot with the lowest
 // GUID; dead or alive, for the whole fight, since losing it wipes the raid anyway.
 ObjectGuid FindIllidanWarlockTankGuid(Player* bot);
 // Null while the warlock tank is dead.
 Player* GetIllidanWarlockTank(PlayerbotAI* botAI);
-// The trap hunter is the first hunter bot by GUID, dead or alive, for the whole fight.
+bool IsIllidanWarlockTank(PlayerbotAI* botAI);
+// The trap hunter is the first assistant hunter or bot hunter by GUID, dead or alive.
 ObjectGuid FindIllidanTrapHunterGuid(Player* bot);
 ObjectGuid GetIllidanTrapHunterGuid(PlayerbotAI* botAI);
 bool IsIllidanTrapHunter(PlayerbotAI* botAI);
@@ -732,7 +724,7 @@ GuidVector FindParasiticShadowfiendGuids(PlayerbotAI* botAI);
 Unit* GetNearestParasiticShadowfiend(PlayerbotAI* botAI, Unit const& unit);
 // No Shadowfiend debuff and a living Shadowfiend close by, as where a debuff just ended, while
 // that Shadowfiend isn't yet nearly dead.
-bool IsIllidanShadowfiendBirther(PlayerbotAI* botAI);
+bool IsNearNewParasiticShadowfiend(PlayerbotAI* botAI);
 // Humans included, so the trap hunter traps for them too.
 ObjectGuid FindPlayerWithParasiticShadowfiendGuid(Player* bot);
 Player* GetPlayerWithParasiticShadowfiend(PlayerbotAI* botAI);

@@ -15,7 +15,6 @@ public:
         creators["mutilate"] = &mutilate;
         creators["envenom"] = &envenom;
         creators["backstab"] = &backstab;
-        creators["rupture"] = &rupture;
     }
 
 private:
@@ -43,15 +42,6 @@ private:
             "backstab",
             /*P*/ {},
             /*A*/ { NextAction("sinister strike") },
-            /*C*/ {}
-        );
-    }
-    static ActionNode* rupture([[maybe_unused]] PlayerbotAI* botAI)
-    {
-        return new ActionNode(
-            "rupture",
-            /*P*/ {},
-            /*A*/ { NextAction("eviscerate") },
             /*C*/ {}
         );
     }
@@ -139,26 +129,9 @@ void AssassinationRogueStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
         )
     );
 
-    triggers.push_back(
-        new TriggerNode(
-            "medium threat",
-            {
-                NextAction("vanish", ACTION_HIGH),
-            }
-        )
-    );
-
-    triggers.push_back(
-        new TriggerNode(
-            "low health",
-            {
-                NextAction("evasion", ACTION_HIGH + 9),
-                NextAction("feint", ACTION_HIGH + 8)
-            }
-        )
-    );
-
     // By leewheel 2026-09-01 盗贼准备冷却经济学（NPCBots bot_rogue_ai.cpp:913-940 移植，同 Dps 策略）
+    // 2026-10-15 合并 brighton 903b3c6b：上游把通用触发器上移 GenericRogueStrategy（vanish/evasion/
+    // kick/critical health 等随之上移），本核自定义 preparation 触发器上游没有，按叠加原则保留于此。
     triggers.push_back(
         new TriggerNode(
             "preparation",
@@ -168,60 +141,4 @@ void AssassinationRogueStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
         )
     );
     // End By leewheel
-
-    triggers.push_back(
-        new TriggerNode(
-            "critical health",
-            {
-                NextAction("cloak of shadows", ACTION_HIGH + 7)
-            }
-        )
-    );
-
-    triggers.push_back(
-        new TriggerNode(
-            "kick",
-            {
-                NextAction("kick", ACTION_INTERRUPT + 2),
-            }
-        )
-    );
-
-    triggers.push_back(
-        new TriggerNode(
-            "kick on enemy healer",
-            {
-                NextAction("kick on enemy healer", ACTION_INTERRUPT + 1),
-            }
-        )
-    );
-
-    triggers.push_back(
-        new TriggerNode(
-            "medium aoe",
-            {
-                NextAction("fan of knives", ACTION_NORMAL + 5),
-            }
-        )
-    );
-
-    triggers.push_back(
-        new TriggerNode(
-            "low tank threat",
-            {
-                NextAction("tricks of the trade on main tank", ACTION_HIGH + 7),
-            }
-        )
-    );
-
-    triggers.push_back(
-        new TriggerNode(
-            "enemy out of melee",
-            {
-                NextAction("stealth", ACTION_HIGH + 3),
-                NextAction("sprint", ACTION_HIGH + 2),
-                NextAction("reach melee", ACTION_HIGH + 1),
-            }
-        )
-    );
 }

@@ -266,17 +266,22 @@ bool GurtoggBloodboilShouldPositionForBloodboilTrigger::IsActiveInEncounter()
 
 bool GurtoggBloodboilMeleeShouldStayBehindTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsMelee(bot) || bot->HasAura(Id(BtSpells::SPELL_PLAYER_FEL_RAGE)))
+    if (!PlayerbotAI::IsMelee(bot))
         return false;
 
     Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
     if (!gurtogg)
         return false;
 
+    if (bot->HasAura(Id(BtSpells::SPELL_PLAYER_FEL_RAGE)))
+        return false;
+
     Unit* felRageTarget = GetGurtoggFelRageTarget(gurtogg);
-    return felRageTarget &&
-        bot->GetExactDist2d(GetGurtoggFelRageMeleePosition(bot, gurtogg, felRageTarget)) >
-            GURTOGG_FEL_RAGE_MELEE_TOLERANCE;
+    if (!felRageTarget)
+        return false;
+
+    return bot->GetExactDist2d(GetGurtoggFelRageMeleePosition(bot, gurtogg, felRageTarget)) >
+        GURTOGG_FEL_RAGE_MELEE_TOLERANCE;
 }
 
 // Melee go behind him instead.
@@ -296,9 +301,13 @@ bool GurtoggBloodboilShouldAvoidFelRageTargetTrigger::IsActiveInEncounter()
     // Arcing Smash only hits in front of him, but he turns faster than bots can react, so at the
     // start of Fel Rage everyone near the target moves regardless of side.
     Aura* felRage = gurtogg->GetAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE));
-    return (felRage && felRage->GetMaxDuration() - felRage->GetDuration() <
-            GURTOGG_FEL_RAGE_EARLY_AVOID_MS) ||
-        gurtogg->HasInArc(static_cast<float>(M_PI), bot);
+    if (felRage &&
+        felRage->GetMaxDuration() - felRage->GetDuration() < GURTOGG_FEL_RAGE_EARLY_AVOID_MS)
+    {
+        return true;
+    }
+
+    return gurtogg->HasInArc(static_cast<float>(M_PI), bot);
 }
 
 bool GurtoggBloodboilFelRageOnBotTrigger::IsActiveInEncounter()
@@ -387,6 +396,7 @@ bool MotherShahrazTanksArePositioningBossTrigger::IsActiveInEncounter()
         return false;
 
     constexpr float shahrazMeleeStartHealthPct = 90.0f;
+    // By leewheel 2026-10-15 合并：find target 按铁律换回 entry 22947。
     Unit* shahraz = AI_VALUE2(Unit*, "find target", "22947");
     if (!shahraz || shahraz->GetHealthPct() < shahrazMeleeStartHealthPct)
         return false;
@@ -450,15 +460,10 @@ bool IllidariCouncilGathiosCastsJudgementOfCommandTrigger::IsActiveInEncounter()
 // she isn't immune to.
 bool IllidariCouncilMalandeCastsCircleOfHealingTrigger::IsActiveInEncounter()
 {
-    switch (bot->getClass())
+    if (bot->getClass() == CLASS_DRUID || bot->getClass() == CLASS_HUNTER ||
+        bot->getClass() == CLASS_PALADIN || bot->getClass() == CLASS_PRIEST)
     {
-        case CLASS_DRUID:
-        case CLASS_HUNTER:
-        case CLASS_PALADIN:
-        case CLASS_PRIEST:
-            return false;
-        default:
-            break;
+        return false;
     }
 
     if (!PlayerbotAI::IsDps(bot) || IsZerevorMageTank(botAI))
@@ -636,28 +641,8 @@ bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncount
         GetPlayerWithParasiticShadowfiend(botAI);
 }
 
-bool IllidanStormrageParasiticShadowfiendsRunWildTrigger::IsActiveInEncounter()
-{
-    if (bot->getClass() != CLASS_SHAMAN)
-        return false;
-
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan)
-        return false;
-
-    IllidanPhase const phase = GetIllidanPhase(illidan);
-    if (phase == IllidanPhase::None || phase == IllidanPhase::Flying)
-        return false;
-
-    ObjectGuid const guid = bot->m_SummonSlot[SUMMON_SLOT_TOTEM_EARTH];
-    if (guid.IsEmpty())
-        return true;
-
-    Creature* totem = bot->GetMap()->GetCreature(guid);
-    return !totem || totem->GetDistance(bot) > 20.0f ||
-        totem->GetUInt32Value(UNIT_CREATED_BY_SPELL) != Id(BtSpells::SPELL_EARTHBIND_TOTEM);
-}
-
+// By leewheel 2026-10-15 合并 brighton 20970179：采纳上游删除 IllidanStormrageParasiticShadowfiendsRunWildTrigger
+// （"remove earthbind"：shaman 地缚图腾逻辑随触发器一并移除，.h 与注册处已同步删除）。
 bool IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsTank(bot))
@@ -667,8 +652,7 @@ bool IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger::IsActiveInEncounter(
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Flying)
         return false;
 
-    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) ||
-        PlayerbotAI::IsAssistTankOfIndex(bot, 1, true);
+    return IsFlameOfAzzinothTank(bot);
 }
 
 bool IllidanStormragePetsDieToFireTrigger::IsActiveInEncounter()
@@ -741,15 +725,14 @@ bool IllidanStormrageGrateIsSafeFromFlamesTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return true;
 
-    return !PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
-        !PlayerbotAI::IsAssistTankOfIndex(bot, 1, true);
+    return !IsFlameOfAzzinothTank(bot);
 }
 
 // Ice Block, Divine Shield and Cloak of Shadows each clear both debuffs on use.
 bool IllidanStormrageImmunityCanClearDebuffTrigger::IsActiveInEncounter()
 {
-    uint32 const spellId = GetSelfImmunitySpell(bot);
-    if (!spellId || PlayerbotAI::IsTank(bot))
+    bool const isPaladin = bot->getClass() == CLASS_PALADIN;
+    if (!isPaladin && bot->getClass() != CLASS_MAGE && bot->getClass() != CLASS_ROGUE)
         return false;
 
     if (!bot->HasAura(Id(BtSpells::SPELL_DARK_BARRAGE)) &&
@@ -758,10 +741,13 @@ bool IllidanStormrageImmunityCanClearDebuffTrigger::IsActiveInEncounter()
         return false;
     }
 
-    return botAI->CanCastSpell(spellId, bot);
+    if (isPaladin)
+        return !PlayerbotAI::IsMainTank(bot);
+
+    return true;
 }
 
-// Below half health the immunity may be holding off something else, so it is kept.
+// Below half health, the immunity may be holding off something else, so it is kept.
 bool IllidanStormrageImmunityNoLongerNeededTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_MAGE &&
@@ -769,9 +755,6 @@ bool IllidanStormrageImmunityNoLongerNeededTrigger::IsActiveInEncounter()
     {
         return false;
     }
-
-    if (PlayerbotAI::IsTank(bot))
-        return false;
 
     uint32 const spellId = GetSelfImmunitySpell(bot);
     if (!spellId || !bot->HasAura(spellId))
@@ -787,11 +770,15 @@ bool IllidanStormrageImmunityNoLongerNeededTrigger::IsActiveInEncounter()
 // An infected bot runs to the run spot instead.
 bool IllidanStormrageShouldPositionForLandingTrigger::IsActiveInEncounter()
 {
-    if ((PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)) || HasParasiticShadowfiend(bot))
+    if ((PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)))
         return false;
 
+    // By leewheel 2026-10-15 合并：采纳上游版（新增寄生暗影恶魔时不占落点位），find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    return illidan && IsIllidanLandingWait(*illidan, GetIllidanPhase(illidan));
+    if (!illidan || !IsIllidanLandingWait(*illidan, GetIllidanPhase(illidan)))
+        return false;
+
+    return !HasParasiticShadowfiend(bot);
 }
 
 // At the transform, and at 33% or below in Demon Form, melee and tanks still on him end their
@@ -802,11 +789,8 @@ bool IllidanStormrageMeleeShouldStopAttackingTrigger::IsActiveInEncounter()
         return false;
 
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan ||
-        (bot->GetVictim() != illidan && AI_VALUE(Unit*, "current target") != illidan))
-    {
+    if (!illidan || (bot->GetVictim() != illidan && AI_VALUE(Unit*, "current target") != illidan))
         return false;
-    }
 
     IllidanDpsHold const window = GetIllidanHoldWindow(illidan);
     return window == IllidanDpsHold::DemonFormStart || window == IllidanDpsHold::DemonFormNoPush;
@@ -836,7 +820,7 @@ bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
 
-    if (phase == IllidanPhase::Demon && GetIllidanWarlockTank(botAI) == bot)
+    if (phase == IllidanPhase::Demon && IsIllidanWarlockTank(botAI))
         return false;
 
     if (IsIllidanLandingWait(*illidan, phase))
@@ -852,8 +836,16 @@ bool IllidanStormrageThisExpansionHatesMeleeTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsMelee(bot) || (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)))
         return false;
 
+    // By leewheel 2026-10-15 合并：采纳上游版（新增暗影恶魔目标时不占恶魔形态位），find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    return illidan && GetIllidanPhase(illidan) == IllidanPhase::Demon;
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
+        return false;
+
+    if (HasParasiticShadowfiend(bot))
+        return false;
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    return !target || target->GetEntry() != Id(BtNpcs::NPC_SHADOW_DEMON);
 }
 
 bool IllidanStormrageWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
@@ -865,7 +857,7 @@ bool IllidanStormrageWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return false;
 
-    return GetIllidanWarlockTank(botAI) == bot;
+    return IsIllidanWarlockTank(botAI);
 }
 
 // Tanks other than the Main Tank join the melee in Phases 1, 3, 4 and 5; while he flies the
@@ -894,12 +886,11 @@ bool IllidanStormrageShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 
 bool IllidanStormrageMaievPlacedCageTrapTrigger::IsActiveInEncounter()
 {
+    // By leewheel 2026-10-15 合并：采纳上游版——死亡场景语义已并入 GetIllidanPhase
+    // （IllidanPhase::Dying，见 106beaae），IsIllidanDeathScene helper 已删除；find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan || IsIllidanDeathScene(illidan) ||
-        GetIllidanPhase(illidan) != IllidanPhase::Maiev)
-    {
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Maiev)
         return false;
-    }
 
     GameObject* trap = FindNearestCageTrap(botAI);
     if (!trap)
@@ -935,11 +926,10 @@ bool IllidanStormrageMaievPlacedCageTrapTrigger::IsActiveInEncounter()
 
 bool IllidanStormrageShouldManageDpsTimersTrigger::IsActiveInEncounter()
 {
-    if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
-        return false;
-
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    return illidan && !IsIllidanDeathScene(illidan);
+    // By leewheel 2026-10-15 合并：采纳上游版（死亡场景语义已并入 GetIllidanPhase::Dying），
+    // find target 换回 entry 22917。
+    return IsMechanicTrackerBot(bot, BT_MAP_ID) &&
+        AI_VALUE2(Unit*, "find target", "22917");
 }
 
 // Destroying hazards behind phases is not gated behind CheatMask
@@ -949,13 +939,15 @@ bool IllidanStormrageShouldClearHazardsBetweenPhasesTrigger::IsActiveInEncounter
     if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
+    // By leewheel 2026-10-15 合并：采纳上游版（死亡场景语义已并入 GetIllidanPhase::Dying），
+    // find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan || IsIllidanDeathScene(illidan))
+    if (!illidan)
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    return phase == IllidanPhase::Landing || phase == IllidanPhase::Flying ||
-        phase == IllidanPhase::Demon;
+    return phase == IllidanPhase::Landing /* || phase == IllidanPhase::Flying ||
+        phase == IllidanPhase::Demon */;
 }
 
 bool IllidanStormrageCheatTrigger::IsActiveInEncounter()

@@ -170,6 +170,7 @@ public:
     {
         // By leewheel 2026-10-13 acore 上游 #26152（GameObjects cast their own spells）后
         // OnSpellCast 的 caster 参数可能为 null（GameObject 施法时），必须判空，否则段错误。
+        // 2026-10-15 合并：brighton a00d894a 同步加了 caster 判空（三目写法），语义等价，保本核写法。
         if (!caster)
             return;
 
@@ -204,7 +205,7 @@ public:
 
     void OnSpellPrepare(Spell* spell, Unit* caster, SpellInfo const* spellInfo) override
     {
-        if (spellInfo->Id != Id(SwpSpells::SPELL_ENCAPSULATE))
+        if (!caster || spellInfo->Id != Id(SwpSpells::SPELL_ENCAPSULATE))
             return;
 
         if (Player* target = GetFirstPlayerSpellTarget(spell, caster))
@@ -239,8 +240,8 @@ public:
 
     void OnSpellPrepare(Spell* spell, Unit* caster, SpellInfo const* spellInfo) override
     {
-        if (spellInfo->Id != Id(SwpSpells::SPELL_CONFLAGRATION) &&
-            spellInfo->Id != Id(SwpSpells::SPELL_BLAZE))
+        if (!caster || (spellInfo->Id != Id(SwpSpells::SPELL_CONFLAGRATION) &&
+            spellInfo->Id != Id(SwpSpells::SPELL_BLAZE)))
         {
             return;
         }
@@ -264,7 +265,7 @@ public:
     void OnSpellCast(
         Spell* spell, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
     {
-        if (spellInfo->Id != Id(SwpSpells::SPELL_ENTROPIUS_DARKNESS))
+        if (!caster || spellInfo->Id != Id(SwpSpells::SPELL_ENTROPIUS_DARKNESS))
             return;
 
         Player* target = GetFirstPlayerSpellTarget(spell, caster);
@@ -286,7 +287,7 @@ public:
     void OnSpellCast(
         Spell* /*spell*/, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
     {
-        if (spellInfo->Id != Id(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS))
+        if (!caster || spellInfo->Id != Id(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS))
             return;
 
         // By leewheel 2026-10-13 acore 上游 #26152 后 caster 可能为 null（GameObject 施法），判空防护。

@@ -13,6 +13,7 @@
 #include "MageActions.h"
 #include "Playerbots.h"
 #include "ReachTargetActions.h"
+#include "ShamanActions.h"
 
 using namespace GruulHelpers;
 using namespace EncounterHelpers;
@@ -128,7 +129,25 @@ float HighKingMaulgarAvoidWhirlwindMultiplier::GetValueInEncounter(Action* actio
     return bot->GetExactDist2d(maulgar) < MAULGAR_WHIRLWIND_HOLD_DISTANCE ? 0.0f : 1.0f;
 }
 
-float HighKingMaulgarControlHunterActionsMultiplier::GetValueInEncounter(Action* action)
+float HighKingMaulgarLetMageTankStealSpellShieldMultiplier::GetValueInEncounter(Action* action)
+{
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
+        return 1.0f;
+
+    if (bot->getClass() != CLASS_HUNTER && bot->getClass() != CLASS_SHAMAN)
+        return 1.0f;
+
+    if (!dynamic_cast<CastPurgeAction*>(action) &&
+        !dynamic_cast<CastTranquilizingShotAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    Unit* target = action->GetTarget();
+    return target && target->GetEntry() == Id(GruulNpcs::NPC_KROSH_FIREHAND) ? 0.0f : 1.0f;
+}
+
+float HighKingMaulgarControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -136,23 +155,16 @@ float HighKingMaulgarControlHunterActionsMultiplier::GetValueInEncounter(Action*
     if (bot->getClass() != CLASS_HUNTER)
         return 1.0f;
 
-    bool const isMainTankMisdirect = dynamic_cast<CastMisdirectionOnMainTankAction*>(action);
-    if (!isMainTankMisdirect && !dynamic_cast<CastTranquilizingShotAction*>(action))
+    if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
         return 1.0f;
 
     // Krosh/Kiggler will be the last to die before Maulgar.
     // When only Maulgar is left, the standard Misdirection strategy is fine.
-    // By leewheel 2026-09-05 合并：boss按entry规则查找，krosh 用 18832(而非上游的 "krosh firehand")
-    Unit* krosh = AI_VALUE2(Unit*, "find target", "18832");
-    if (isMainTankMisdirect &&
-        (krosh || AI_VALUE2(Unit*, "find target", "18835")))
-    {
-        return 0.0f;
-    }
-
-    // By leewheel 2026-09-05 合并：沿用上游单一krosh变量(去除此前冗余重定义), 上游改变更见commit
-    // Tranquilizing Shot removes Spell Shield, which the mage tank needs to survive.
-    return krosh && action->GetTarget() == krosh ? 0.0f : 1.0f;
+    // By leewheel 2026-10-15 合并 brighton 043c7e1e：采纳上游重构版（ControlHunterActionsMultiplier
+    // → ControlMisdirectionMultiplier，TranquilizingShot/Purge 的压制移交新增的
+    // LetMageTankStealSpellShieldMultiplier）；find target 按铁律换回 entry（krosh=18832 / kiggler=18835）。
+    return AI_VALUE2(Unit*, "find target", "18832") ||
+        AI_VALUE2(Unit*, "find target", "18835") ? 0.0f : 1.0f;
 }
 
 float HighKingMaulgarControlMageTankActionsMultiplier::GetValueInEncounter(Action* action)

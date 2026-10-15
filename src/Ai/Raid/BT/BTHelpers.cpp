@@ -126,8 +126,7 @@ bool IsInRectangle(
 }
 
 Position GetBotPointInRectangle(
-    Player* bot, Position const& centre, Position const& facing, float halfWidth,
-    float halfDepth)
+    Player* bot, Position const& centre, Position const& facing, float halfWidth, float halfDepth)
 {
     // Keeps points off the edge, so a bot that arrives counts as inside.
     constexpr float edgeInset = 0.5f;
@@ -1177,20 +1176,22 @@ bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin)
     return false;
 }
 
-// Gathios's Consecration reaches her only at the pull, while he is still beside her on the dais.
-bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor)
+bool IsInCouncilPatch(Position const& point, Unit* gathios, Unit* zerevor, float margin)
 {
-    if (!malande)
-        return false;
-
     if (gathios)
     {
         DynamicObject* consecration = gathios->GetDynObject(Id(BtSpells::SPELL_CONSECRATION));
-        if (consecration && consecration->GetExactDist2d(malande) < consecration->GetRadius())
+        if (consecration && consecration->GetExactDist2d(point) < consecration->GetRadius() + margin)
             return true;
     }
 
-    return IsInZerevorPatch(zerevor, *malande);
+    return IsInZerevorPatch(zerevor, point, margin);
+}
+
+// Gathios's Consecration reaches her only at the pull, while he is still beside her on the dais.
+bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor)
+{
+    return malande && IsInCouncilPatch(*malande, gathios, zerevor);
 }
 
 bool IsZerevorOnMageTank(PlayerbotAI* botAI, Unit* zerevor)
@@ -1207,8 +1208,25 @@ bool IsMageTankHealerPositionSafe(Position const& point, Player* mageTank, Unit*
     return toMageTank <= MAGE_TANK_HEALER_MAX_DISTANCE &&
         toMageTank >= MAGE_TANK_HEALER_MIN_DISTANCE &&
         zerevor->GetExactDist2d(point) >= ZEREVOR_ARCANE_EXPLOSION_SAFE_DISTANCE &&
-        !IsInZerevorPatch(zerevor, point, ZEREVOR_PATCH_MARGIN);
+        !IsInZerevorPatch(zerevor, point, COUNCIL_PATCH_MARGIN);
 }
+
+namespace
+{
+
+// A blocked navmesh raycast cuts the point short and still returns true, so a moved point is a miss.
+bool CanWalkStraightTo(Player* bot, Position const& point)
+{
+    constexpr float clampTolerance = 0.5f;
+    float x = point.GetPositionX();
+    float y = point.GetPositionY();
+    float z = point.GetPositionZ();
+    return bot->GetMap()->CheckCollisionAndGetValidCoords(
+               bot, bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), x, y, z) &&
+        point.GetExactDist2d(x, y) <= clampTolerance;
+}
+
+} // namespace
 
 // The nearest safe point on two rings round the mage tank that the bot can walk to in a straight
 // line and that has line of sight to the mage tank.
@@ -1241,17 +1259,57 @@ bool FindMageTankHealerPosition(
 
     for (Position const& candidate : candidates)
     {
-        float x = candidate.GetPositionX();
-        float y = candidate.GetPositionY();
-        float z = candidate.GetPositionZ();
-        if (!bot->GetMap()->CheckCollisionAndGetValidCoords(
-                bot, bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), x, y, z) ||
-            !mageTank->IsWithinLOS(x, y, z))
+        if (!CanWalkStraightTo(bot, candidate) ||
+            !mageTank->IsWithinLOS(
+                candidate.GetPositionX(), candidate.GetPositionY(), candidate.GetPositionZ()))
         {
             continue;
         }
 
-        destination = Position(x, y, bot->GetPositionZ());
+        destination = candidate;
+        return true;
+    }
+
+    return false;
+}
+
+// The nearest point within melee range of Malande, clear of every council patch, that the bot can
+// walk to in a straight line.
+bool FindMalandeTankPosition(
+    Player* bot, Unit* malande, Unit* gathios, Unit* zerevor, Position& destination)
+{
+    static constexpr std::array ringFractions = { 0.5f, 0.85f };
+    constexpr uint8 pointsPerRing = 16;
+    float const meleeRange = bot->GetMeleeRange(malande);
+
+    std::vector<Position> candidates;
+    for (float fraction : ringFractions)
+    {
+        float const radius = meleeRange * fraction;
+        for (uint8 i = 0; i < pointsPerRing; ++i)
+        {
+            float const angle = 2.0f * static_cast<float>(M_PI) * i / pointsPerRing;
+            Position const point(
+                malande->GetPositionX() + radius * std::cos(angle),
+                malande->GetPositionY() + radius * std::sin(angle), bot->GetPositionZ());
+            if (!IsInCouncilPatch(point, gathios, zerevor, COUNCIL_PATCH_MARGIN))
+                candidates.push_back(point);
+        }
+    }
+
+    std::sort(
+        candidates.begin(), candidates.end(),
+        [bot](Position const& a, Position const& b)
+        {
+            return bot->GetExactDist2d(a) < bot->GetExactDist2d(b);
+        });
+
+    for (Position const& candidate : candidates)
+    {
+        if (!CanWalkStraightTo(bot, candidate))
+            continue;
+
+        destination = candidate;
         return true;
     }
 
@@ -1338,8 +1396,11 @@ std::unordered_map<uint32, ObjectGuid> westFlameGuid;
 
 IllidanPhase GetIllidanPhase(Unit* illidan)
 {
-    if (!illidan || IsIllidanDeathScene(illidan))
+    if (!illidan)
         return IllidanPhase::None;
+
+    if (illidan->GetHealth() == 1)
+        return IllidanPhase::Dying;
 
     float const healthPct = illidan->GetHealthPct();
     if (illidan->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
@@ -1370,11 +1431,6 @@ IllidanPhase GetIllidanPhase(Unit* illidan)
     }
 
     return healthPct > 30.0f ? IllidanPhase::Grounded : IllidanPhase::Maiev;
-}
-
-bool IsIllidanDeathScene(Unit* illidan)
-{
-    return illidan && illidan->GetHealth() == 1;
 }
 
 bool IsIllidanSpeechInProgress(Player* bot)
@@ -1455,7 +1511,7 @@ IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan)
     Player* bot = botAI->GetBot();
     if (window == IllidanDpsHold::DemonFormStart)
     {
-        return GetIllidanWarlockTank(botAI) == bot ? IllidanDpsHold::None : window;
+        return IsIllidanWarlockTank(botAI) ? IllidanDpsHold::None : window;
     }
     else if (window == IllidanDpsHold::DemonFormMiddle)
     {
@@ -1482,15 +1538,6 @@ Position GetRingPoint(float angle, float radius)
         ILLIDAN_GRATE_CENTRE.GetPositionX() + radius * std::cos(angle),
         ILLIDAN_GRATE_CENTRE.GetPositionY() + radius * std::sin(angle),
         ILLIDAN_GRATE_CENTRE.GetPositionZ());
-}
-
-Position GetIllidanLeadSpot(Unit const& illidan, Position const& ringPoint)
-{
-    float const angle = illidan.GetAngle(&ringPoint);
-    return Position(
-        ringPoint.GetPositionX() + ILLIDAN_CHASE_STOP_DISTANCE * std::cos(angle),
-        ringPoint.GetPositionY() + ILLIDAN_CHASE_STOP_DISTANCE * std::sin(angle),
-        ringPoint.GetPositionZ());
 }
 
 Position GetIllidanSettleSpot(Unit const& illidan)
@@ -1665,6 +1712,21 @@ std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot)
     return { eastFlame, westFlame };
 }
 
+bool IsWestFlameOfAzzinothTank(Player* bot)
+{
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
+}
+
+bool IsEastFlameOfAzzinothTank(Player* bot)
+{
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 1, true);
+}
+
+bool IsFlameOfAzzinothTank(Player* bot)
+{
+    return IsEastFlameOfAzzinothTank(bot) || IsWestFlameOfAzzinothTank(bot);
+}
+
 ObjectGuid FindIllidanWarlockTankGuid(Player* bot)
 {
     Group* group = bot->GetGroup();
@@ -1699,27 +1761,42 @@ Player* GetIllidanWarlockTank(PlayerbotAI* botAI)
     return GetCachedPlayer(botAI, "illidan stormrage warlock tank");
 }
 
+bool IsIllidanWarlockTank(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    return bot->getClass() == CLASS_WARLOCK && GetIllidanWarlockTank(botAI) == bot;
+}
+
 ObjectGuid FindIllidanTrapHunterGuid(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return ObjectGuid::Empty;
 
-    ObjectGuid trapHunter;
+    ObjectGuid assistantHunter;
+    ObjectGuid botHunter;
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || member->GetMapId() != BT_MAP_ID || member->getClass() != CLASS_HUNTER ||
-            !GET_PLAYERBOT_AI(member))
+        if (!member || !member->IsAlive() || member->GetMapId() != BT_MAP_ID ||
+            member->getClass() != CLASS_HUNTER)
         {
             continue;
         }
 
-        if (trapHunter.IsEmpty() || member->GetGUID() < trapHunter)
-            trapHunter = member->GetGUID();
+        ObjectGuid const guid = member->GetGUID();
+        if (group->IsAssistant(guid))
+        {
+            if (assistantHunter.IsEmpty() || guid < assistantHunter)
+                assistantHunter = guid;
+        }
+        else if (GET_PLAYERBOT_AI(member) && (botHunter.IsEmpty() || guid < botHunter))
+        {
+            botHunter = guid;
+        }
     }
 
-    return trapHunter;
+    return assistantHunter.IsEmpty() ? botHunter : assistantHunter;
 }
 
 ObjectGuid GetIllidanTrapHunterGuid(PlayerbotAI* botAI)
@@ -1892,15 +1969,17 @@ Unit* GetNearestParasiticShadowfiend(PlayerbotAI* botAI, Unit const& unit)
     return nearest;
 }
 
-bool IsIllidanShadowfiendBirther(PlayerbotAI* botAI)
+bool IsNearNewParasiticShadowfiend(PlayerbotAI* botAI)
 {
     Player* bot = botAI->GetBot();
     if (HasParasiticShadowfiend(bot))
         return false;
 
     Unit* shadowfiend = GetNearestParasiticShadowfiend(botAI, *bot);
-    return shadowfiend &&
-        bot->GetExactDist2d(shadowfiend) <= ILLIDAN_SHADOWFIEND_BIRTHER_DISTANCE &&
+    if (!shadowfiend)
+        return false;
+
+    return bot->GetExactDist2d(shadowfiend) <= ILLIDAN_SHADOWFIEND_BIRTHER_DISTANCE &&
         shadowfiend->GetHealthPct() >= ILLIDAN_SHADOWFIEND_FINISH_HEALTH_PCT;
 }
 

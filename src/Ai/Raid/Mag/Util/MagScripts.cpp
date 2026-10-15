@@ -34,6 +34,7 @@ public:
     {
         // By leewheel 2026-10-13 acore 上游 #26152（GameObjects cast their own spells）后
         // OnSpellCast 的 caster 参数可能为 null（GameObject 施法时），必须判空，否则段错误。
+        // 2026-10-15 合并：brighton a00d894a 同步加了判空，双方一致。
         if (!caster)
             return;
 
