@@ -81,7 +81,7 @@ CALL coa24_set('starcaller-sentinel', 'low mana>cast::Moon Arrow!60', 'medium ma
 -- 7. Witch Hunter: Infiltrate is refused in any instance and was retried every tick (2,331 times); Stoicism, a
 --    3 min defensive, went off with nothing on the bot (coa defensive already uses it).
 DELETE FROM `playerbots_custom_strategy`
- WHERE `owner` = 0 AND `name` LIKE 'witch-hunter-%' AND `action_line` LIKE 'can cast::Infiltrate>cast::Infiltrate!%';
+ WHERE `owner` = 0 AND `name` LIKE 'witch-hunter-%' AND `action_line` LIKE 'can cast::Infiltrate>%::Infiltrate!%';
 DELETE FROM `playerbots_custom_strategy`
  WHERE `owner` = 0 AND `name` = 'witch-hunter-houndmaster' AND `action_line` = 'buff missing::Stoicism>cast buff::Stoicism!11';
 
