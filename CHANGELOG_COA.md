@@ -1,5 +1,31 @@
 # CoA Bots — changelog
 
+## v2.5 — in progress
+
+### Dungeons
+- **Area spells no longer pull the next pack** (`AiPlayerbot.CoaAoeNoIdlePull`, on by default): in a dungeon or a
+  raid, a bot no longer casts an area spell that would also hit a creature not yet fighting (a tank's Thunder Clap
+  pulled the Ring of Law spectators in Blackrock Depths).
+- Ragefire Chasm, Taragaman (Heroic/Mythic): the bots hide behind the earth pillar before Massive Fire Nova, the tank
+  once the cast starts.
+- Scarlet Monastery, Arcanist Doan: the bots run out of Detonation (36 yd) as soon as the Arcane Bubble is up.
+- Random bots join a random dungeon only within 5 levels of the real players waiting for it.
+
+### Loot and gear
+- Heirlooms and other level-scaled items (Felforged sets) are rated by their real values at the bot's level.
+- No more useless enchants at bot creation (every caster had +12 Dodge on its cloak); armor enchants now count.
+- Optional: `AiPlayerbot.LootNeedLevelLookahead` (off by default) lets bots NEED and keep gear a few levels above
+  them, to wear it when they reach its level.
+
+### Players and bots
+- Party frames are refreshed a few seconds after your own bots log in: no more "Unknown" or "Offline" until /reload.
+- Random bots no longer take again the quests they have just dropped to free their quest log (accept / drop loops).
+
+### Server
+- Optional: `AiPlayerbot.RandomBotSaveInterval` (seconds, 0 = unchanged) spaces out the autosave of random bots
+  without a real master: fewer database writes with thousands of bots.
+- The spawn of a creature is found in memory instead of a world database query on the map thread.
+
 ## v2.4 — in progress
 
 ### Players and bots
