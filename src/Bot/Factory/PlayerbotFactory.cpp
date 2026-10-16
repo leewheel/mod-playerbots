@@ -572,11 +572,13 @@ PlayerbotFactory::PlayerbotFactory(Player* bot, uint32 level, uint32 itemQuality
                                                                sPlayerbotAIConfig.randomGearQualityLimit);
         this->itemQuality = sPlayerbotAIConfig.randomGearQualityLimit;
         this->gearScoreLimit = gs;
-        // Epic gear is for the bots at the top level only: below it they keep to rare.
-        static uint32 const epicMinLevel = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaEpicGearMinLevel", 60);
-        if (this->itemQuality > ITEM_QUALITY_RARE && level < epicMinLevel)
-            this->itemQuality = ITEM_QUALITY_RARE;
     }
+
+    // Epic gear is for the bots at the top level only: below it they keep to rare. Every way of gearing a bot comes
+    // through here: a bot added by its player (legendary limit) or regeared by autogear wore epics at level 13 (#39).
+    static uint32 const epicMinLevel = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaEpicGearMinLevel", 60);
+    if (this->itemQuality > ITEM_QUALITY_RARE && level < epicMinLevel)
+        this->itemQuality = ITEM_QUALITY_RARE;
 }
 
 // Worldforged items (Conquest of Azeroth): found in the open world, their entries above those of the
