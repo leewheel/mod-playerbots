@@ -122,6 +122,15 @@ AiPlayerbot.DisabledWithoutRealPlayer = 0
 AiPlayerbot.DisabledWithoutRealPlayerLoginDelay = 30
 AiPlayerbot.DisabledWithoutRealPlayerLogoutDelay = 300
 
+# Autosave interval for randombots, in seconds
+# Default: 0 (randombots autosave every PlayerSaveInterval, like players)
+# The core autosaves every character in the world every PlayerSaveInterval (15 minutes by default).
+# With thousands of randombots that is a steady stream of database writes. A longer interval here
+# only spaces out their autosaves: bots still save on logout, at shutdown and when the code saves
+# them on purpose. A randombot whose master is a real player is back on the normal interval from
+# its next save. Values shorter than PlayerSaveInterval are ignored.
+AiPlayerbot.RandomBotSaveInterval = 0
+
 ####################################################################################################
 
 ###################################

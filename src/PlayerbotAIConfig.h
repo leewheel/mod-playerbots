@@ -176,6 +176,7 @@ public:
     uint32 randomBotPrintStatsInterval;
     uint32 minRandomBotsPriceChangeInterval, maxRandomBotsPriceChangeInterval;
     uint32 disabledWithoutRealPlayerLoginDelay, disabledWithoutRealPlayerLogoutDelay;
+    uint32 randomBotSaveInterval;
     bool randomBotJoinLfg;
 
     // Professions

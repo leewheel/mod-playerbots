@@ -24,6 +24,7 @@
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
 #include "cmath"
+#include <algorithm>
 
 // Shown to players at login: bump it with every CoA Bots release.
 static constexpr char const* COA_BOTS_VERSION = "2.4";
@@ -78,6 +79,7 @@ class PlayerbotsPlayerScript : public PlayerScript
 public:
     PlayerbotsPlayerScript() : PlayerScript("PlayerbotsPlayerScript", {
         PLAYERHOOK_ON_LOGIN,
+        PLAYERHOOK_ON_SAVE,
         PLAYERHOOK_ON_AFTER_UPDATE,
         PLAYERHOOK_ON_BEFORE_CRITERIA_PROGRESS,
         PLAYERHOOK_ON_BEFORE_ACHI_COMPLETE,
@@ -115,6 +117,25 @@ public:
     {
         if (player && GET_PLAYERBOT_AI(player))
             PlayerbotHolder::JoinBotChannels(player);
+    }
+
+    // Player::SaveToDB has just set the next autosave to PlayerSaveInterval. For a randombot without a real
+    // player as master, push it out to AiPlayerbot.RandomBotSaveInterval: fewer database writes with
+    // thousands of bots.
+    void OnPlayerSave(Player* player) override
+    {
+        uint32 const interval =
+            std::min<uint32>(sPlayerbotAIConfig.randomBotSaveInterval, UINT32_MAX / IN_MILLISECONDS) * IN_MILLISECONDS;
+        if (interval <= player->GetSaveTimer() || !player->GetSession() || !player->GetSession()->IsBot() ||
+            !sRandomPlayerbotMgr.IsRandomBot(player))
+            return;
+
+        if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(player))
+            if (Player* master = botAI->GetMaster())
+                if (master->GetSession() && !master->GetSession()->IsBot())
+                    return;
+
+        player->SetSaveTimer(interval);
     }
 
     void OnPlayerLogin(Player* player) override
