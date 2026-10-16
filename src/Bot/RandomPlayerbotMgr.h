@@ -215,6 +215,9 @@ public:
     std::map<uint32, std::map<uint32, std::map<TeamId, uint32>>> VisualBots;
     std::map<uint32, std::map<uint32, std::map<uint32, uint32>>> Supporters;
     std::map<TeamId, std::vector<uint32>> LfgDungeons;
+    // A random dungeon spans the whole range of its dungeons: true when a bot of this level is within a few
+    // levels of the real players of its team waiting for that dungeon (or when none waits for it).
+    bool IsNearLfgPlayerLevels(TeamId team, uint32 dungeonId, uint32 level);
     // A queued real player of this team still lacks a tank or a healer: damage dealers hold back.
     std::array<std::atomic<bool>, 2> LfgNeedTankOrHeal{};
     void CheckBgQueue();
@@ -329,6 +332,10 @@ private:
     std::map<uint32, std::map<uint32, std::vector<WorldLocation>>> rpgLocsCacheLevel;
     std::map<TeamId, std::map<BattlegroundTypeId, std::vector<uint32>>> BattleMastersCache;
     std::unordered_map<uint32, ObjectGuid::LowType> BattleMasterSpawnIds;
+    // Lowest and highest level of the real players of a team waiting for a dungeon. Written by CheckLfgQueue,
+    // read by the bots from the map update threads.
+    std::map<TeamId, std::map<uint32, std::pair<uint8, uint8>>> lfgPlayerLevels;
+    std::mutex lfgPlayerLevelsLock;
     // Bot AI reads and writes these values from the map update threads.
     std::mutex eventCacheLock;
     std::unordered_map<uint32, BotEventCache> eventCache;

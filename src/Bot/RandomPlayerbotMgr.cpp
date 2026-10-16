@@ -1623,6 +1623,7 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     // Clear LFG list
     LfgDungeons[TEAM_ALLIANCE].clear();
     LfgDungeons[TEAM_HORDE].clear();
+    std::map<TeamId, std::map<uint32, std::pair<uint8, uint8>>> playerLevels;
     bool needTankOrHeal[2] = {false, false};
     uint32 partiesWithoutTank[2] = {0, 0};
     uint32 partiesWithoutHeal[2] = {0, 0};
@@ -1648,6 +1649,13 @@ void RandomPlayerbotMgr::CheckLfgQueue()
                     continue;
 
                 LfgDungeons[player->GetTeamId()].push_back(dungeon->id);
+                uint8 const level = player->GetLevel();
+                auto [levels, added] = playerLevels[player->GetTeamId()].try_emplace(dungeon->id, level, level);
+                if (!added)
+                {
+                    levels->second.first = std::min(levels->second.first, level);
+                    levels->second.second = std::max(levels->second.second, level);
+                }
             }
 
             if (!sPlayerbotAIConfig.coaLfgMissingRoles)
@@ -1706,7 +1714,30 @@ void RandomPlayerbotMgr::CheckLfgQueue()
     LfgNeedTankOrHeal[TEAM_ALLIANCE] = needTankOrHeal[TEAM_ALLIANCE];
     LfgNeedTankOrHeal[TEAM_HORDE] = needTankOrHeal[TEAM_HORDE];
 
+    {
+        std::lock_guard<std::mutex> lock(lfgPlayerLevelsLock);
+        lfgPlayerLevels.swap(playerLevels);
+    }
+
     LOG_DEBUG("playerbots", "LFG Queue check finished");
+}
+
+bool RandomPlayerbotMgr::IsNearLfgPlayerLevels(TeamId team, uint32 dungeonId, uint32 level)
+{
+    // Seen: bots of level 18-19 joined a player of 13 in Ragefire Chasm through the random dungeon.
+    constexpr uint32 LFG_PLAYER_LEVEL_SPREAD = 5;
+
+    std::lock_guard<std::mutex> lock(lfgPlayerLevelsLock);
+    auto const teamLevels = lfgPlayerLevels.find(team);
+    if (teamLevels == lfgPlayerLevels.end())
+        return true;
+
+    auto const levels = teamLevels->second.find(dungeonId);
+    if (levels == teamLevels->second.end())
+        return true;
+
+    return level + LFG_PLAYER_LEVEL_SPREAD >= levels->second.first &&
+           level <= levels->second.second + LFG_PLAYER_LEVEL_SPREAD;
 }
 
 void RandomPlayerbotMgr::CheckPlayers()
