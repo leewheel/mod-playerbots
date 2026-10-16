@@ -65,5 +65,8 @@ CALL coa25_add('sun-cleric-blessings', 'aura stacks::Dawn,20>cast::Dawn!84.5');
 --    when the Tomb King is ready rather than whenever its buff is missing.
 CALL coa25_set('necromancer-animation', 'buff missing::Call of the Grave>cast buff::Call of the Grave!92', 'can cast::Animate: Tomb King>cast buff::Call of the Grave!92');
 
+-- 6. Primalist Mountain King (player tip): Ursoc's Bellow sat under Quake and Primal Rush, always castable: never cast.
+CALL coa25_set('primalist-mountain-king', 'debuff missing::Ursoc''s Bellow>cast melee::Ursoc''s Bellow!31', 'debuff missing::Ursoc''s Bellow>cast melee::Ursoc''s Bellow!85.5');
+
 DROP PROCEDURE IF EXISTS coa25_add;
 DROP PROCEDURE IF EXISTS coa25_set;
