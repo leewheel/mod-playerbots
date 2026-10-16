@@ -2,7 +2,24 @@
 
 ## v2.5 — in progress
 
+### Combat
+- Bots no longer cast a spell their target would reflect (Warlord Kalithresh's 6 s full reflect sent back about a
+  hundred casts in one Steamvault run); a cast in progress is cut when the target raises a reflect.
+- A group member under a boss's mind control (Blackheart the Inciter) is no longer attacked by the other bots, and a
+  charmed bot no longer runs its own actions against its charmer.
+- Spells for the bot itself or its friends on a rotation line (Mana Module, Auto Resuscitation Device, Essence of
+  Malygos, Void Shield) are cast on the bot instead of being aimed at the enemy, which never worked.
+- Feared, stunned, confused or silenced, a bot no longer tries the spells it cannot use in that state (310 heals tried
+  under Hellmaw's fear) and no longer sets them aside for later.
+- Rotations: Cultist Dreadnought taunts and throws Twilight Shieldtoss from range and uses Sanity Tap when low on mana;
+  Tinker Invention no longer builds Rusthound (6 s cast) in fights; Knight of Xoroth Defiance spends 6 Demonfire on
+  Suffuse and Melt and keeps Burning Rage / Demon Heart up; Sun Cleric Blessings casts Holy Form, Circle of Valor,
+  Blessing of Light, Chosen of the Light, its Vows and Dawn at 20 stacks; Necromancer Animation keeps Call of the
+  Grave for the Tomb King; Primalist Mountain King casts Ursoc's Bellow.
+
 ### Dungeons
+- In a dungeon, a dead bot no longer waits for ever: once the fight is over it releases when no living healer of
+  the group is inside, or after two minutes if nobody raised it (#37).
 - **Area spells no longer pull the next pack** (`AiPlayerbot.CoaAoeNoIdlePull`, on by default): in a dungeon or a
   raid, a bot no longer casts an area spell that would also hit a creature not yet fighting (a tank's Thunder Clap
   pulled the Ring of Law spectators in Blackrock Depths).
@@ -12,6 +29,10 @@
 - Random bots join a random dungeon only within 5 levels of the real players waiting for it.
 
 ### Loot and gear
+- No epic gear below `AiPlayerbot.CoaEpicGearMinLevel` however the bot is geared: bots you add and autogear now keep
+  to it too (epics at level 13, #39).
+- Your own characters added as bots can spend their free talent points by themselves along their level build
+  (`AiPlayerbot.AutoPickTalentsAltBots`, off by default; "talents autopick" does it on demand).
 - Heirlooms and other level-scaled items (Felforged sets) are rated by their real values at the bot's level.
 - No more useless enchants at bot creation (every caster had +12 Dodge on its cloak); armor enchants now count.
 - Optional: `AiPlayerbot.LootNeedLevelLookahead` (off by default) lets bots NEED and keep gear a few levels above
