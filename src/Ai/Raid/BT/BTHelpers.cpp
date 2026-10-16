@@ -1521,7 +1521,7 @@ IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan)
         return PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot) ?
             window : IllidanDpsHold::None;
     }
-    else if (window == IllidanDpsHold::AfterReset || window == IllidanDpsHold::DemonFormEnd)
+    else if (window == IllidanDpsHold::AfterReset)
     {
         return PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot) ?
             IllidanDpsHold::None : window;
@@ -1593,10 +1593,8 @@ DemonFormLayout GetDemonFormLayout(Unit const& illidan)
         illidan, inwardAngle, ILLIDAN_WARLOCK_SPOT_DISTANCE, ILLIDAN_WARLOCK_SPOT_ANGLE);
     layout.mainTankWaitSpot = GetDemonFormPoint(
         illidan, inwardAngle, ILLIDAN_MAIN_TANK_WAIT_DISTANCE, ILLIDAN_MAIN_TANK_WAIT_ANGLE);
-    layout.walkInWaypoint = GetDemonFormPoint(
-        illidan, inwardAngle, ILLIDAN_WALK_IN_WAYPOINT_DISTANCE, ILLIDAN_WALK_IN_WAYPOINT_ANGLE);
     layout.pickupSpot = GetDemonFormPoint(
-        illidan, inwardAngle, ILLIDAN_TANK_OFFSET, static_cast<float>(M_PI));
+        illidan, inwardAngle, ILLIDAN_PICKUP_SPOT_DISTANCE, ILLIDAN_PICKUP_SPOT_ANGLE);
 
     auto const fromWarlockSide =
         [](std::pair<float, Position> const& a, std::pair<float, Position> const& b)
@@ -1683,13 +1681,15 @@ Position GetIllidanRecordedRunSpot(PlayerbotAI* botAI, Unit const& illidan, Illi
     auto const it = illidanInfections.find(bot->GetInstanceId());
     if (it != illidanInfections.end())
     {
+        // Entries are kept while he flies, from the phase before.
+        bool const isFlying = phase == IllidanPhase::Flying;
         auto const own = it->second.find(bot->GetGUID());
-        if (own != it->second.end() && own->second.phase == phase)
+        if (own != it->second.end() && (isFlying || own->second.phase == phase))
             return own->second.runSpot;
 
         for (auto const& [player, infection] : it->second)
         {
-            if (infection.hunter == bot->GetGUID() && infection.phase == phase)
+            if (infection.hunter == bot->GetGUID() && (isFlying || infection.phase == phase))
                 return infection.runSpot;
         }
     }
@@ -1820,6 +1820,19 @@ bool IsIllidanTrapHunterOnDuty(PlayerbotAI* botAI)
     return false;
 }
 
+bool IsIllidanRunSpotKeptInFlight(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    auto const it = illidanInfections.find(bot->GetInstanceId());
+    if (it == illidanInfections.end())
+        return false;
+
+    if (HasParasiticShadowfiend(bot) && it->second.contains(bot->GetGUID()))
+        return true;
+
+    return IsIllidanTrapHunterOnDuty(botAI);
+}
+
 bool IsFrostTrapPatchAt(Player* bot, Position const& runSpot, int32 minDurationMs)
 {
     std::list<WorldObject*> objects;
@@ -1941,6 +1954,44 @@ int32 GetIllidanMeleeIndex(PlayerbotAI* botAI, size_t slotCount)
         return -1;
 
     return static_cast<int32>(static_cast<size_t>(rosterIndex) % slotCount);
+}
+
+int32 GetIllidanGrateIndex(PlayerbotAI* botAI, Unit const& illidan)
+{
+    constexpr bool inDemonForm = false;
+    int32 const index = GetIllidanRangedIndex(botAI, ILLIDAN_RANGED_SLOT_COUNT, inDemonForm);
+    if (index < 0)
+        return index;
+
+    Player* warlockTank = GetIllidanWarlockTank(botAI);
+    PlayerbotAI* warlockTankAI = warlockTank ? GET_PLAYERBOT_AI(warlockTank) : nullptr;
+    if (!warlockTankAI)
+        return index;
+
+    float const inwardAngle = illidan.GetAngle(&ILLIDAN_GRATE_CENTRE);
+    Position const warlockSpot = GetDemonFormPoint(
+        illidan, inwardAngle, ILLIDAN_WARLOCK_SPOT_DISTANCE, ILLIDAN_WARLOCK_SPOT_ANGLE);
+    int32 warlockSlot = 0;
+    float nearestDistance = std::numeric_limits<float>::max();
+    for (size_t i = 0; i < ILLIDAN_RANGED_SLOT_COUNT; ++i)
+    {
+        float const distance = GetGrateSlot(i).GetExactDist2d(warlockSpot);
+        if (distance < nearestDistance)
+        {
+            nearestDistance = distance;
+            warlockSlot = static_cast<int32>(i);
+        }
+    }
+
+    if (warlockTank == botAI->GetBot())
+        return warlockSlot;
+
+    if (index != warlockSlot)
+        return index;
+
+    int32 const warlockIndex =
+        GetIllidanRangedIndex(warlockTankAI, ILLIDAN_RANGED_SLOT_COUNT, inDemonForm);
+    return warlockIndex < 0 ? index : warlockIndex;
 }
 
 bool HasParasiticShadowfiend(Player* player)
@@ -2113,9 +2164,10 @@ Unit* GetShadowDemonToAttack(PlayerbotAI* botAI, Unit const& from)
 
 Unit* GetShadowDemonForMelee(PlayerbotAI* botAI, Unit const& illidan, Unit const& from)
 {
-    // Centre distances, as the spells measure. Aura of Dread gets no margin for the bot's reach,
-    // since the Demon walks on while melee close in.
-    constexpr float auraOfDreadClearance = 15.0f;
+    // Centre distances, as the spells measure. Demons spawn 5 yd from him and walk out toward the
+    // raid, so melee running in from their slots meet one well outside Aura of Dread's 15 yd even
+    // if they leave at 8.
+    // constexpr float illidanClearance = 8.0f;
     constexpr float shadowBlastClearance = 23.0f;
 
     Unit* victim = illidan.GetVictim();
@@ -2127,7 +2179,7 @@ Unit* GetShadowDemonForMelee(PlayerbotAI* botAI, Unit const& illidan, Unit const
     {
         Unit* demon = botAI->GetUnit(shadowDemon.demon);
         if (!demon || !demon->IsAlive() ||
-            demon->GetExactDist2d(&illidan) <= auraOfDreadClearance ||
+            // demon->GetExactDist2d(&illidan) <= illidanClearance ||
             (victim && demon->GetExactDist2d(victim) <= shadowBlastClearance))
         {
             continue;

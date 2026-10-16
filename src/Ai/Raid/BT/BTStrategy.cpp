@@ -243,6 +243,9 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage warlock should tank demon form",
         { NextAction("illidan stormrage warlock tank handle demon form", ACTION_EMERGENCY + 9) }));
 
+    triggers.push_back(new TriggerNode("illidan stormrage warlock should seed shadow demons",
+        { NextAction("illidan stormrage seed shadow demons", ACTION_EMERGENCY + 10) }));
+
     triggers.push_back(new TriggerNode("illidan stormrage should assign dps priority",
         { NextAction("illidan stormrage dps prioritize adds", ACTION_EMERGENCY + 1) }));
 
@@ -255,8 +258,8 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage should clear hazards between phases",
         { NextAction("illidan stormrage destroy hazards", ACTION_EMERGENCY + 10) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage cheat",
-        { NextAction("illidan stormrage handle adds cheat", ACTION_EMERGENCY + 10) }));
+    // triggers.push_back(new TriggerNode("illidan stormrage cheat",
+    //     { NextAction("illidan stormrage handle adds cheat", ACTION_EMERGENCY + 10) }));
 }
 
 void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)

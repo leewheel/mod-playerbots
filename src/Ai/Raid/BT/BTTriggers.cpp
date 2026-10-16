@@ -629,11 +629,11 @@ bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncount
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    if (phase == IllidanPhase::None || phase == IllidanPhase::Flying ||
-        phase == IllidanPhase::Dying)
-    {
+    if (phase == IllidanPhase::None || phase == IllidanPhase::Dying)
         return false;
-    }
+
+    if (phase == IllidanPhase::Flying)
+        return IsIllidanRunSpotKeptInFlight(botAI);
 
     return !PlayerbotAI::IsTank(bot) || !PlayerbotAI::IsMainTank(bot);
 }
@@ -693,7 +693,7 @@ bool IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger::IsActiveInEncounter(
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Flying)
         return false;
 
-    return IsFlameOfAzzinothTank(bot);
+    return IsFlameOfAzzinothTank(bot) && !IsIllidanRunSpotKeptInFlight(botAI);
 }
 
 bool IllidanStormragePetsDieToFireTrigger::IsActiveInEncounter()
@@ -761,6 +761,9 @@ bool IllidanStormrageGrateIsSafeFromFlamesTrigger::IsActiveInEncounter()
 {
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Flying)
+        return false;
+
+    if (IsIllidanRunSpotKeptInFlight(botAI))
         return false;
 
     if (!PlayerbotAI::IsTank(bot))
@@ -903,13 +906,37 @@ bool IllidanStormrageWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
     return IsIllidanWarlockTank(botAI);
 }
 
+// Every warlock, the warlock tank included, starts Seed of Corruption on him just before the
+// Shadow Demons appear round him; the raid's damage on him sets it off as they spawn.
+bool IllidanStormrageWarlockShouldSeedShadowDemonsTrigger::IsActiveInEncounter()
+{
+    if (bot->getClass() != CLASS_WARLOCK)
+        return false;
+
+    // By leewheel 2026-10-16 合并：采纳上游新增术士 seed 阴影恶魔触发器；find target 换回 NPC entry 22917。
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
+        return false;
+
+    if (GetIllidanDpsHold(botAI, illidan) != IllidanDpsHold::None)
+        return false;
+
+    uint32 const seedStartMs = ILLIDAN_SHADOW_DEMON_SPAWN_MS - ILLIDAN_SEED_LEAD_MS;
+    uint32 const seedEndMs = ILLIDAN_SHADOW_DEMON_SPAWN_MS + ILLIDAN_SEED_LATE_MS;
+    return !IsIllidanPhaseStartWithin(*illidan, seedStartMs) &&
+        IsIllidanPhaseStartWithin(*illidan, seedEndMs);
+}
+
 // Tanks other than the Main Tank join the melee in Phases 1, 3, 4 and 5; while he flies the
-// assist tanks have the Flames. Healers take Shadow Demons as targets in Demon Form.
+// assist tanks have the Flames. The Main Tank joins them on Shadow Demons in Demon Form until its
+// walk-in. Healers take Shadow Demons as targets in Demon Form.
 bool IllidanStormrageShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 {
-    IllidanPhase const phase =
-        // By leewheel 2026-10-16 合并：采纳上游新增 Dying 阶段防护；find target 换回 entry 22917。
-        GetIllidanPhase(AI_VALUE2(Unit*, "find target", "22917"));
+    // By leewheel 2026-10-16 合并：采纳上游版（主坦 walk-in 逻辑需要 illidan 变量，
+    // 下游 IsIllidanDemonFormEnding(*illidan, ...) 依赖它）；find target 换回 NPC entry 22917
+    // （base creature_template.sql + acore_world.creature_template 双方核定：22917 = Illidan Stormrage / boss_illidan_stormrage）。
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    IllidanPhase const phase = GetIllidanPhase(illidan);
     if (phase == IllidanPhase::None || phase == IllidanPhase::Dying)
         return false;
 
@@ -925,7 +952,11 @@ bool IllidanStormrageShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
         return false;
     }
 
-    return !PlayerbotAI::IsMainTank(bot);
+    if (!PlayerbotAI::IsMainTank(bot))
+        return true;
+
+    return phase == IllidanPhase::Demon &&
+        !IsIllidanDemonFormEnding(*illidan, ILLIDAN_MAIN_TANK_WALK_IN_MS);
 }
 
 bool IllidanStormrageMaievPlacedCageTrapTrigger::IsActiveInEncounter()

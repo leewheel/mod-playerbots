@@ -552,7 +552,7 @@ public:
     bool ResetEncounterState()
     {
         if (!_phaseStartTime && _lastFlameCrash.IsEmpty() && _leadSpot == Position() &&
-            !_isLeading && !_hasPassedWalkInWaypoint)
+            !_isLeading)
         {
             return false;
         }
@@ -561,16 +561,16 @@ public:
         _lastFlameCrash.Clear();
         _leadSpot = Position();
         _isLeading = false;
-        _hasPassedWalkInWaypoint = false;
         return true;
     }
 
 private:
+    bool CastPickupOpener(Unit* illidan);
+
     uint32 _phaseStartTime = 0;
     ObjectGuid _lastFlameCrash;
     Position _leadSpot;
     bool _isLeading = false;
-    bool _hasPassedWalkInWaypoint = false;
 };
 
 class IllidanStormrageIsolateBotWithParasiteAction : public MovementAction
@@ -716,6 +716,14 @@ class IllidanStormrageWarlockTankHandleDemonFormAction : public MovementAction
 public:
     IllidanStormrageWarlockTankHandleDemonFormAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "illidan stormrage warlock tank handle demon form") {}
+    bool Execute(Event event) override;
+};
+
+class IllidanStormrageSeedShadowDemonsAction : public Action
+{
+public:
+    IllidanStormrageSeedShadowDemonsAction(PlayerbotAI* botAI)
+        : Action(botAI, "illidan stormrage seed shadow demons") {}
     bool Execute(Event event) override;
 };
 
