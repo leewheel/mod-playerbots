@@ -187,6 +187,11 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
     if (attacker->IsFriendlyTo(bot))
         return false;
 
+    // A group member under a boss's mind control (Blackheart) turns hostile but stays a teammate.
+    if (Player* member = attacker->ToPlayer(); member && bot->IsInSameRaidWith(member) &&
+                                                       !(bot->duel && bot->duel->Opponent == member))
+        return false;
+
     // Critter exception
     if (attacker->GetCreatureType() == CREATURE_TYPE_CRITTER && !attacker->IsInCombat())
         return false;

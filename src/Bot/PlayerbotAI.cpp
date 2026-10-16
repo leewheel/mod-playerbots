@@ -5,6 +5,8 @@
  */
 
 #include "PlayerbotAI.h"
+
+#include <functional>
 #include "RaceMgr.h"
 #include "CoaSpecialization.h"
 #include "AiFactory.h"
@@ -322,6 +324,13 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (!CanUpdateAI())
         return;
 
+    // Under a mind control the charmer's AI drives the bot: its own engine kept casting and moving against it.
+    if (bot->IsCharmed())
+    {
+        YieldThread(bot, GetReactDelay());
+        return;
+    }
+
     // Handle a spell that is still in its preparing phase (including channeled spells).
     Spell* currentSpell = bot->GetCurrentSpell(CURRENT_GENERIC_SPELL);
     if (!currentSpell)
@@ -346,6 +355,14 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
                 Unit* spellTarget = currentSpell->m_targets.GetUnitTarget();
                 // Interrupt if target is dead or spell can't target dead units
                 if (spellTarget && !spellTarget->IsAlive() && !spellInfo->IsAllowingDeadTarget())
+                {
+                    bot->InterruptSpell(currentSpell->GetCurrentContainer());
+                    YieldThread(bot, GetReactDelay());
+                    return;
+                }
+
+                // The target raised a reflect during the cast: the spell would come back at the bot.
+                if (spellTarget && WouldBeReflected(bot, spellInfo, spellTarget))
                 {
                     bot->InterruptSpell(currentSpell->GetCurrentContainer());
                     YieldThread(bot, GetReactDelay());
@@ -2573,6 +2590,52 @@ int32 PlayerbotAI::GetMeleeIndex(Player* player)
     return 0;
 }
 
+// Spell::Spell's m_canReflect rule, then the chance Unit::SpellHitResult rolls. Under half, the bot casts anyway: a
+// passive 10 % reflect must not stop it fighting. Before 2.5 nothing looked: in the Steamvault two bots started 100
+// casts on Kalithresh during his 6 s full reflect (ladiabale, 16/10).
+bool PlayerbotAI::WouldBeReflected(Unit* caster, SpellInfo const* spellInfo, Unit* target)
+{
+    if (!caster || !spellInfo || !target || target == caster || !caster->IsValidAttackTarget(target))
+        return false;
+
+    if (!target->HasAuraType(SPELL_AURA_REFLECT_SPELLS) && !target->HasAuraType(SPELL_AURA_REFLECT_SPELLS_SCHOOL))
+        return false;
+
+    std::function<bool(SpellInfo const*, uint8)> reflected = [&](SpellInfo const* info, uint8 depth)
+    {
+        bool const canReflect = info->DmgClass == SPELL_DAMAGE_CLASS_MAGIC &&
+                                !info->HasAttribute(SPELL_ATTR0_IS_ABILITY) &&
+                                !info->HasAttribute(SPELL_ATTR1_NO_REFLECTION) &&
+                                !info->HasAttribute(SPELL_ATTR0_NO_IMMUNITIES) && !info->IsPassive() &&
+                                (!info->IsPositive() || info->HasEffect(SPELL_EFFECT_DISPEL));
+        if (canReflect)
+        {
+            int32 chance = target->GetTotalAuraModifier(SPELL_AURA_REFLECT_SPELLS);
+            chance += target->GetTotalAuraModifierByMiscMask(SPELL_AURA_REFLECT_SPELLS_SCHOOL, info->GetSchoolMask());
+            if (chance >= 50)
+                return true;
+        }
+
+        if (depth >= 2)
+            return false;
+
+        for (SpellEffectInfo const& effect : info->Effects)
+        {
+            bool const triggers = effect.Effect == SPELL_EFFECT_TRIGGER_SPELL ||
+                                  effect.Effect == SPELL_EFFECT_TRIGGER_MISSILE ||
+                                  effect.ApplyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL;
+            if (!triggers || !effect.TriggerSpell || effect.TriggerSpell == info->Id)
+                continue;
+            if (SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell))
+                if (reflected(triggered, depth + 1))
+                    return true;
+        }
+        return false;
+    };
+
+    return reflected(spellInfo, 0);
+}
+
 bool PlayerbotAI::IsTank(Player* player, bool bySpec)
 {
     PlayerbotAI* botAi = GET_PLAYERBOT_AI(player);
@@ -3838,6 +3901,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
             // Otherwise, allow Deep Freeze even if immune
         }
 
+        if (WouldBeReflected(bot, spellInfo, target))
+            return false;
+
         if (bot != target && ServerFacade::instance().GetDistance2d(bot, target) > sPlayerbotAIConfig.sightDistance)
         {
             if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
@@ -4070,6 +4136,9 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
 
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
     if (!spellInfo)
+        return false;
+
+    if (WouldBeReflected(bot, spellInfo, target))
         return false;
 
     Pet* pet = bot->GetPet();

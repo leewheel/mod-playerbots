@@ -433,6 +433,9 @@ public:
     void Reset(bool full = false);
     void LeaveOrDisbandGroup();
     static bool IsTank(Player* player, bool bySpec = false);
+    // The target would most likely send this spell back (Kalithresh's Warlord's Rage, a reflect stance): the spell
+    // itself or the spells it triggers, two levels down.
+    static bool WouldBeReflected(Unit* caster, SpellInfo const* spellInfo, Unit* target);
     // AiPlayerbot.CoaGearByContent: look at the bot's gear within the next two seconds (it just queued).
     void CoaCheckGearSoon() { coaGearCheckedAt = getMSTime() - 8000; }
     // Last time the bot was seen in a battleground, an arena or their queue (RandomPlayerbotMgr::CoaUpdateGear).

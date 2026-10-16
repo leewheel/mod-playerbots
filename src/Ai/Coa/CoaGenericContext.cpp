@@ -75,6 +75,78 @@ static bool CoaPullsAheadOfTank(Player* bot, Unit* target)
     return false;
 }
 
+// A spell for the bot itself or a friend: no effect aims at an enemy, and the spell is helpful or lands only on the
+// caster or its friends. A rotation line "cast::" aims at the current target: Mana Module, Auto Resuscitation Device,
+// Essence of Malygos and Void Shield were aimed at the enemy and never cast (ladiabale, 16/10).
+static bool CoaSpellForSelfOrFriend(SpellInfo const* info)
+{
+    bool friendlyOnly = true;
+    bool any = false;
+    for (SpellEffectInfo const& effect : info->Effects)
+    {
+        if (!effect.IsEffect())
+            continue;
+        any = true;
+        for (uint32 const target : { effect.TargetA.GetTarget(), effect.TargetB.GetTarget() })
+        {
+            switch (target)
+            {
+                case 0:
+                case TARGET_UNIT_CASTER:
+                case TARGET_SRC_CASTER:
+                case TARGET_DEST_CASTER:
+                case TARGET_UNIT_TARGET_ALLY:
+                case TARGET_UNIT_TARGET_PARTY:
+                case TARGET_UNIT_TARGET_RAID:
+                case TARGET_UNIT_CASTER_AREA_PARTY:
+                case TARGET_UNIT_CASTER_AREA_RAID:
+                case TARGET_UNIT_SRC_AREA_ALLY:
+                case TARGET_UNIT_SRC_AREA_PARTY:
+                case TARGET_UNIT_PET:
+                case TARGET_UNIT_MASTER:
+                    break;
+                case TARGET_UNIT_TARGET_ENEMY:
+                case TARGET_DEST_TARGET_ENEMY:
+                case TARGET_UNIT_SRC_AREA_ENEMY:
+                case TARGET_UNIT_DEST_AREA_ENEMY:
+                case TARGET_UNIT_CONE_ENEMY_24:
+                case TARGET_UNIT_CONE_ENEMY_54:
+                case TARGET_UNIT_CONE_ENEMY_104:
+                // Friend or foe (a Holy Shock): the line's target decides.
+                case TARGET_UNIT_TARGET_ANY:
+                case TARGET_DEST_TARGET_ANY:
+                    return false;
+                default:
+                    friendlyOnly = false;
+                    break;
+            }
+        }
+    }
+    return any && (friendlyOnly || info->IsPositive());
+}
+
+// The bot's own spell for "cast::" and "cast melee::" lines whose spell is not for an enemy.
+static Unit* CoaSelfTargetFor(PlayerbotAI* botAI, Player* bot, std::string const& spell)
+{
+    uint32 const id = botAI->GetAiObjectContext()->GetValue<uint32>("spell id", spell)->Get();
+    SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
+    return info && CoaSpellForSelfOrFriend(info) ? bot : nullptr;
+}
+
+Unit* CoaCastAction::GetTarget()
+{
+    if (Unit* self = CoaSelfTargetFor(botAI, bot, spell))
+        return self;
+    return CastSpellAction::GetTarget();
+}
+
+Unit* CoaCastMeleeAction::GetTarget()
+{
+    if (Unit* self = CoaSelfTargetFor(botAI, bot, spell))
+        return self;
+    return CastMeleeSpellAction::GetTarget();
+}
+
 bool CoaCastAction::isUseful()
 {
     if (!CastSpellAction::isUseful())

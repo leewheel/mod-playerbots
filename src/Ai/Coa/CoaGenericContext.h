@@ -73,6 +73,7 @@ public:
     }
     std::string const getName() override { return "cast::" + qualifier; }
     bool isUseful() override;
+    Unit* GetTarget() override;
 };
 
 /* "cast melee::<spell>" - as the original, not without the power for it. */
@@ -87,6 +88,7 @@ public:
     }
     std::string const getName() override { return "cast melee::" + qualifier; }
     bool isUseful() override;
+    Unit* GetTarget() override;
 };
 /* "cast buff::<spell>" - as the original, a passive aura of the same name not taken for the buff (CoaWornBuff). */
 class CoaCastBuffAction : public CastBuffSpellAction, public Qualified

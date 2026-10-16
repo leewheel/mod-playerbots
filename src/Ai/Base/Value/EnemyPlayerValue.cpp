@@ -16,6 +16,18 @@ static bool CoaPvpRuleset(Unit const* unit)
     return unit->HasAura(1004019) || (unit->HasAura(1004119) && !unit->HasAura(9931032));
 }
 
+// A member of the bot's group, or a friendly player under a mind control: not someone to fight. At Blackheart the
+// charmed members were picked as enemies from the combat references and from the party attackers (ladiabale, 16/10).
+static bool CoaTeammate(Player* bot, Unit* unit)
+{
+    Player* player = unit ? unit->ToPlayer() : nullptr;
+    if (!player || (bot->duel && bot->duel->Opponent == player))
+        return false;
+    if (bot->IsInSameRaidWith(player))
+        return true;
+    return player->IsCharmed() && player->GetTeamId(true) == bot->GetTeamId(true);
+}
+
 bool NearestEnemyPlayersValue::AcceptUnit(Unit* unit)
 {
     // Apply parent's filtering first (includes level difference checks)
@@ -72,7 +84,7 @@ Unit* EnemyPlayerValue::Calculate()
     for (auto const& [guid, combatRef] : bot->GetCombatManager().GetPvPCombatRefs())
     {
         Unit* pTarget = combatRef->GetOther(bot);
-        if (!pTarget || pTarget == pVictim || !pTarget->IsPlayer() || !pTarget->CanSeeOrDetect(bot) ||
+        if (!pTarget || pTarget == pVictim || !pTarget->IsPlayer() || CoaTeammate(bot, pTarget) || !pTarget->CanSeeOrDetect(bot) ||
             !bot->IsWithinDist(pTarget, VISIBILITY_DISTANCE_NORMAL))
             continue;
 
@@ -106,7 +118,7 @@ Unit* EnemyPlayerValue::Calculate()
         if (!pTarget)
             continue;
 
-        if (pTarget == pVictim)
+        if (pTarget == pVictim || CoaTeammate(bot, pTarget))
             continue;
 
         if (bot->GetTeamId() == TEAM_HORDE)
@@ -148,7 +160,7 @@ Unit* EnemyPlayerValue::Calculate()
                     continue;
 
                 if (Unit* pAttacker = pMember->getAttackerForHelper())
-                    if (pAttacker->IsPlayer() && bot->IsWithinDist(pAttacker, maxAggroDistance * 2.0f) &&
+                    if (pAttacker->IsPlayer() && !CoaTeammate(bot, pAttacker) && bot->IsWithinDist(pAttacker, maxAggroDistance * 2.0f) &&
                         bot->IsWithinLOSInMap(pAttacker) && pAttacker != pVictim && pAttacker->CanSeeOrDetect(bot))
                         return pAttacker;
             }
