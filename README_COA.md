@@ -13,6 +13,11 @@ This `coa` branch of mod-playerbots adds bots for the **Conquest of Azeroth cust
 ## Current status
 
 > [!NOTE]
+> **CoA Bots 2.4 (16 October 2026)**: delivered by the **SquidBots launcher**. Smarter dungeons (the tank walks its
+> route, melee out of the boss's cone, damage dealers wait for the pull), buffs on a cooldown back on time, rotations
+> from players' tips, bots leave a battleground queue that will never start, every module's settings in the right place
+> (no more log flood), and a clean server stop. Built on jealous-sound's `main` of 15 October 2026 (`9dc61efc`).
+>
 > **CoA Bots 2.1 (12 October 2026)**: 1v1 skirmish and a ready pylon in arenas, smarter arena bots (kiting, pillars,
 > focus), your alts managed from SquidBots Lite (bot sheet, mounts, talents), dungeon fixes from headless test runs,
 > and a core fix for servers that slowed down over hours. Built on jealous-sound's `main` of 12 October 2026
@@ -36,16 +41,16 @@ This `coa` branch of mod-playerbots adds bots for the **Conquest of Azeroth cust
 > One specialization is set aside by default, **Bloodmage Eternal** (`CoaExcludedSpecializations = 99`): it still
 > does not play correctly on the current core.
 
-Full history from 1.1 to 2.1: **[CHANGELOG_COA.md](CHANGELOG_COA.md)** (also `CHANGELOG.md` in the CoA Bots package).
+Full history from 1.1 to 2.4: **[CHANGELOG_COA.md](CHANGELOG_COA.md)** (also `CHANGELOG.md` in the CoA Bots package).
 
 ## Download
 
 | You have | Take |
 |---|---|
-| the **CoA Server Manager** | nothing to do: it installs the newest `v*` tag of this module (2.1 = tag `v2.1`) |
-| CoA Bots 2.0 | the **CoA Bots 2.1 update** (links on the CoA Discord), run `Update-2.1.bat` |
-| CoA Bots 1.9.1, 1.9, 1.8 or the CoA repack of 30/09 | the **full repack with CoA Bots 2.1**, or the 2.0 update then the 2.1 one |
-| nothing yet | the **full repack with CoA Bots 2.1** (links on the CoA Discord) |
+| the **CoA Server Manager** | nothing to do: it installs the newest `v*` tag of this module (2.4 = tag `v2.4`) |
+| CoA Bots 2.0, 2.1, 2.2 or 2.3 | the **SquidBots launcher**: it shows "Update available", one click (backup, stop, update, restart) |
+| CoA Bots 1.9.1, 1.9, 1.8 or the CoA repack of 30/09 | the 2.4 update of the launcher takes these too |
+| nothing yet | the **full 2.0 repack** from the launcher, then let it update to 2.4 |
 
 Companions: the **[SquidBots Lite](https://github.com/Zyth45/squidbots-addon)** addon (in the package) and the
 **[SquidBots dashboard](https://github.com/Zyth45/squidbots-dashboard)** with its Armory (in the package, and in the
@@ -58,7 +63,8 @@ and tell what the bots were doing (class, level, dungeon or open world) if you k
 
 | jealous-sound | This module |
 |---|---|
-| **`main`** of 12 October 2026 (`d5ff1cfa`), release main-20261012-e91c0624 | tag **`v2.1`**, branch `coa` |
+| **`main`** of 15 October 2026 (`9dc61efc`), release main-20261016-2ab3ebca | tag **`v2.4`**, branch `coa` |
+| `main` of 12 October 2026 (`d5ff1cfa`), release main-20261012-e91c0624 | tags `v2.1` to `v2.3.1` |
 | `main` of 11 October 2026 (`0a0a21d3`), release main-20261011-a543922b | tag `v2.0` |
 | repack main-20261007 | tags `v1.9`, `v1.9.1`, `v1.9.2` |
 | repack main-20260930 / core of 4 October | tags `v1.8`, `v1.8.1` |
@@ -66,7 +72,8 @@ and tell what the bots were doing (class, level, dungeon or open world) if you k
 
 jealous-sound's `main` carries everything the bots need from the core (the mod-playerbots hooks and the CoA
 specialization API). **No fork of the core is needed**: the module goes into `modules/`, which the core's
-`.gitignore` leaves alone. The CoA Bots packages add a crash fix under load and the Icecrown summon leak fix, on branch `coa-bots-2.1` of
+`.gitignore` leaves alone. The CoA Bots packages add fixes for four crashes under load, a missing setting logged once per load and a server
+stop that no longer hangs, on branch `coa-bots-2.4` of
 [Zyth45/azerothcore-wotlk-coa](https://github.com/Zyth45/azerothcore-wotlk-coa).
 
 ## Build
