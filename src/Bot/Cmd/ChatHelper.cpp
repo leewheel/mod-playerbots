@@ -1100,6 +1100,9 @@ std::string ChatHelper::ResolveChatCommandAlias(std::string const& command)
         // By leewheel 2026-09-21 给 mod-dungeon-clear 的机器人聊天命令加中文别名。
         //   表的匹配是「整串精确匹配」，故中文别名整条写全（含空格）。
         //   英文原名（dc on / dc off / dungeon clear on / …）继续可用，中英共存。
+        //   ⚠ 带子参数的命令（清副本 拉怪 开启 / 清副本 去打 <boss>）不在此表做整串
+        //   别名——整串映射会丢子参数；走 ParseChatCommand 拆词 + action 内归一化，
+        //   见下方 2026-10-16 补充注释。
         {"清副本 开启", "dc on"},
         {"清副本 开始", "dc on"},
         {"开始清副本", "dc on"},
@@ -1107,10 +1110,33 @@ std::string ChatHelper::ResolveChatCommandAlias(std::string const& command)
         {"清副本 停止", "dc off"},
         {"停止清副本", "dc off"},
         {"清副本 暂停", "dc pause"},
+        {"清副本 继续", "dc pause"},       // pause 是开关：暂停中再说一次即继续
         {"清副本 跳过", "dc skip"},
         {"清副本 拉怪", "dc pull"},
         {"清副本 状态", "dc status"},
         {"清副本 首领", "dc bosses"},
+        // By leewheel 2026-10-16 模块重入后补齐：带参命令与剩余子命令。
+        //   注意「清副本 拉怪 开启/关闭/动态」这类带参命令**不**做整串别名——
+        //   整串 alias 成 "dc pull" 会丢掉子参数；正确路径是 ParseChatCommand
+        //   拆词后 name="清副本 拉怪"→"dc pull" 命中、param="开启" 原样传给
+        //   DcPullAction::Execute 的中文归一化。同理「清副本 去打 <boss>」。
+        {"清副本 去打", "dc go"},          // 用法：清副本 去打 <boss名或entry数字>
+        {"清副本 去往", "dc go"},
+        {"清副本 分翼", "dc wing"},
+        {"清副本 翼", "dc wing"},
+        {"清副本 配置", "dc config"},
+        {"清副本 观战", "dc spectate"},
+        // End By leewheel
+
+        // ==================== 副本指挥（mod-dungeon-lead）====================
+        // By leewheel 2026-10-16 给 mod-dungeon-lead 的坦克密语命令加中文别名。
+        //   startdungeon/stopdungeon 是注册进 AI 上下文的触发器名，玩家密语坦克即触发；
+        //   子命令（暂停/继续/重置/调试/状态/测试）由 StartDungChatShortcutAction::Execute
+        //   内的中文参数归一化处理（2026-10-16），此处只映射根命令。
+        {"开始副本", "startdungeon"},
+        {"开始带副本", "startdungeon"},
+        {"停止副本", "stopdungeon"},
+        {"结束副本", "stopdungeon"},
         // End By leewheel
     };
 
