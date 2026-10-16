@@ -68,6 +68,7 @@
   Chains of Malice to take a target back; Black Shield, Sacrificial Circle and Juggernaut kept for low health, one at
   a time instead of on cooldown.
 - **Witch Doctor Shadowhunting**: Shadowflare put back only when missing instead of cast again and again on packs.
+- **Venomancer Rot and Vizier**: Weaver Form instead of Spider Form. With the 2.4 core, Spider Form forbids their spells and a bot in it only cast Blight Venom.
 
 ## v2.3.1 — Version command (October 2026)
 

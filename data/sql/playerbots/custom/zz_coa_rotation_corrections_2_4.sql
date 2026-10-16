@@ -150,5 +150,10 @@ CALL coa24_set('witch-doctor-shadowhunting', 'light aoe>cast::Shadowflare!80', '
 DELETE FROM `playerbots_custom_strategy`
  WHERE `owner` = 0 AND `name` = 'witch-doctor-shadowhunting' AND `action_line` = 'can cast::Shadowflare>cast::Shadowflare!11';
 
+-- 12. Venomancer Rot and Vizier: the 2.4 core reads the shapeshift masks of the forms above 32, so Spider Form now
+-- forbids their casts and a bot in it only cast Blight Venom (Rot fights at 200-400 a second). They take Weaver Form.
+CALL coa24_set('venomancer-rot', 'buff missing::Spider Form>cast buff::Spider Form!95', 'buff missing::Weaver Form>cast buff::Weaver Form!95');
+CALL coa24_set('venomancer-vizier', 'buff missing::Spider Form>cast buff::Spider Form!95', 'buff missing::Weaver Form>cast buff::Weaver Form!95');
+
 DROP PROCEDURE IF EXISTS coa24_add;
 DROP PROCEDURE IF EXISTS coa24_set;
