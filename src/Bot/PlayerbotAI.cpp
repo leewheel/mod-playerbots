@@ -11,6 +11,7 @@
 #include "CoaSpecialization.h"
 #include "AiFactory.h"
 #include "BudgetValues.h"
+#include "CellImpl.h"
 #include "ChannelMgr.h"
 #include "CharacterPackets.h"
 #include "ChatHelper.h"
@@ -24,6 +25,8 @@
 #include "ExternalEventHelper.h"
 #include "GameObjectData.h"
 #include "GameTime.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "GuildMgr.h"
 #include "Helpers.h"
 #include "LFGMgr.h"
@@ -74,6 +77,70 @@ constexpr uint32 SPELL_TITAN_GRIP = 49152;
 constexpr uint32 SPELL_DK_FROST_PRESENCE = 48263;
 constexpr uint32 SPELL_GRAVITY_LAPSE_TK = 39432;
 constexpr uint32 SPELL_GRAVITY_LAPSE_MGT = 44226;
+
+// A creature an enemy area spell centred on (x, y, z) would hit although it isn't fighting yet:
+// neutral or hostile, attackable, not a critter, totem, trigger or player-controlled unit.
+class IdleCreatureInAoeCheck
+{
+public:
+    IdleCreatureInAoeCheck(Player* bot, SpellInfo const* spellInfo, float x, float y, float z, float radius,
+                           Unit const* skip)
+        : _bot(bot), _spellInfo(spellInfo), _x(x), _y(y), _z(z), _radius(radius), _skip(skip) {}
+
+    bool operator()(Unit* unit)
+    {
+        Creature* creature = unit->ToCreature();
+        if (!creature || creature == _skip || !creature->IsAlive() || creature->IsInCombat() ||
+            creature->IsInEvadeMode())
+            return false;
+
+        if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger() ||
+            creature->IsControlledByPlayer() || !creature->IsVisible())
+            return false;
+
+        return creature->IsWithinDist3d(_x, _y, _z, _radius) && _bot->IsValidAttackTarget(creature, _spellInfo);
+    }
+
+private:
+    Player* _bot;
+    SpellInfo const* _spellInfo;
+    float _x, _y, _z, _radius;
+    Unit const* _skip;
+};
+}
+
+bool PlayerbotAI::AoeWouldPullIdleCreature(SpellInfo const* spellInfo, float x, float y, float z, Unit const* skip)
+{
+    // AiPlayerbot.CoaAoeNoIdlePull, in dungeons and raids only: outside, a pulled mob is one more mob, and the
+    // grid search would run for every area spell of thousands of random bots.
+    if (!sPlayerbotAIConfig.coaAoeNoIdlePull || !bot->GetMap() || !bot->GetMap()->IsDungeon())
+        return false;
+
+    if (!spellInfo || spellInfo->IsPositive() || !spellInfo->IsAffectingArea())
+        return false;
+
+    float radius = 0.0f;
+    for (uint8 i = EFFECT_0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const& effect = spellInfo->Effects[i];
+        if (!effect.IsEffect())
+            continue;
+
+        bool const enemyArea = (effect.TargetA.IsArea() && effect.TargetA.GetCheckType() == TARGET_CHECK_ENEMY) ||
+                               (effect.TargetB.IsArea() && effect.TargetB.GetCheckType() == TARGET_CHECK_ENEMY);
+        if (enemyArea || effect.IsEffect(SPELL_EFFECT_PERSISTENT_AREA_AURA))
+            radius = std::max(radius, effect.CalcRadius(bot));
+    }
+
+    if (radius <= 0.0f)
+        return false;
+
+    Unit* found = nullptr;
+    IdleCreatureInAoeCheck check(bot, spellInfo, x, y, z, radius, skip);
+    Acore::UnitSearcher<IdleCreatureInAoeCheck> searcher(bot, found, check);
+    // The check adds each creature's own size, so search a little wider than the spell's radius.
+    Cell::VisitObjects(x, y, bot->GetMap(), searcher, radius + 10.0f);
+    return found != nullptr;
 }
 
 std::vector<std::string> PlayerbotAI::dispel_whitelist = {
@@ -3877,6 +3944,21 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
         return false;
     }
 
+    // Area spells land around the bot unless they are aimed at a unit or a spot (then around the target).
+    // Don't pull creatures that aren't fighting yet with them: a tank's Thunder Clap pulled the Ring of Law
+    // spectators in Blackrock Depths, and the group's area spells kept pulling more.
+    Unit* aoeCenter =
+        (spellInfo->GetExplicitTargetMask() & (TARGET_FLAG_DEST_LOCATION | TARGET_FLAG_UNIT_MASK)) ? target : bot;
+    if (AoeWouldPullIdleCreature(spellInfo, aoeCenter->GetPositionX(), aoeCenter->GetPositionY(),
+                                 aoeCenter->GetPositionZ(), target))
+    {
+        if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
+            LOG_DEBUG("playerbots", "Can cast spell failed. Area spell would pull an idle creature. - target name: {}, spellid: {}, bot name: {}",
+                target->GetName(), spellid, bot->GetName());
+
+        return false;
+    }
+
     uint32 CastingTime = !spellInfo->IsChanneled() ? spellInfo->CalcCastTime(bot) : spellInfo->GetDuration();
     // bool interruptOnMove = spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT;
     if ((CastingTime || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
@@ -4049,6 +4131,9 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, float x, float y, float z, bool c
         if (bot->GetDistance(x, y, z) > sPlayerbotAIConfig.sightDistance)
             return false;
     }
+
+    if (AoeWouldPullIdleCreature(spellInfo, x, y, z))
+        return false;
 
     Spell* spell = new Spell(bot, spellInfo, TRIGGERED_NONE);
 

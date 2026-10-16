@@ -430,6 +430,7 @@ public:
     bool coaAvoidMarkedAlly;
     bool coaMeleeNoRangedHardcast;
     bool coaLootMakeRoom;
+    bool coaAoeNoIdlePull;
     bool coaPvpTrinket;
     bool coaArenaPurge;
     bool coaBossKnowledge;
