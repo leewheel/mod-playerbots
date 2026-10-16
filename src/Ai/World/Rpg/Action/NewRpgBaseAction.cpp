@@ -326,6 +326,11 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
         if (!quest)
             continue;
 
+        // Dropped by OrganizeQuestLog: taking it again at once made accept / drop loops (two quests taken
+        // 2,000 times in 4 hours by one bot).
+        if (botAI->lowPriorityQuest.find(item.QuestId) != botAI->lowPriorityQuest.end())
+            continue;
+
         QuestStatus const& status = bot->GetQuestStatus(item.QuestId);
         if (status == QUEST_STATUS_NONE && bot->CanTakeQuest(quest, false) && bot->CanAddQuest(quest, false) &&
             IsQuestWorthDoing(quest) && IsQuestCapableDoing(quest))
@@ -645,6 +650,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
                     "Quest dropped %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             botAI->rpgStatistic.questDropped++;
+            botAI->lowPriorityQuest.insert(questId);
             dropped++;
         }
     }
@@ -677,6 +683,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
                     "Quest dropped %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             botAI->rpgStatistic.questDropped++;
+            botAI->lowPriorityQuest.insert(questId);
             dropped++;
         }
     }
@@ -821,6 +828,9 @@ bool NewRpgBaseAction::HasQuestToAcceptOrReward(WorldObject* object)
         QuestMenuItem const& item = menu.GetItem(idx);
         Quest const* quest = sObjectMgr->GetQuestTemplate(item.QuestId);
         if (!quest)
+            continue;
+
+        if (botAI->lowPriorityQuest.find(item.QuestId) != botAI->lowPriorityQuest.end())
             continue;
 
         QuestStatus const& status = bot->GetQuestStatus(item.QuestId);
