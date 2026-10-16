@@ -14,7 +14,7 @@
 - No more log flood: every module settings file is installed where the server reads it (Mythic+ included), the
   settings new cores add are filled in with their defaults, a missing setting is reported once per load, the
   playerbots log keeps warnings only, and a console log over 50 MB is set aside at start.
-- SquidBots Lite 2.3.1: "Ask for all three" keeps a tank and a healer among the offers.
+- SquidBots Lite 2.4: "Ask for all three" keeps a tank and a healer among the offers.
 
 ### Tanks and dungeons
 - **The tank walks its route again**: the guard that keeps bots from walking into an idle pack in a dungeon
