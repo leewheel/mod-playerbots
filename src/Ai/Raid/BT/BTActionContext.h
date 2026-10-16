@@ -223,6 +223,9 @@ public:
         creators["illidan stormrage disperse ranged"] =
             &RaidBlackTempleActionContext::illidan_stormrage_disperse_ranged;
 
+        creators["illidan stormrage reach shadow demon"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_reach_shadow_demon;
+
         creators["illidan stormrage melee stay away from demon form"] =
             &RaidBlackTempleActionContext::illidan_stormrage_melee_stay_away_from_demon_form;
 
@@ -232,8 +235,8 @@ public:
         creators["illidan stormrage seed shadow demons"] =
             &RaidBlackTempleActionContext::illidan_stormrage_seed_shadow_demons;
 
-        creators["illidan stormrage dps prioritize adds"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_dps_prioritize_adds;
+        creators["illidan stormrage assign target priority"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_assign_target_priority;
 
         creators["illidan stormrage use cage trap"] =
             &RaidBlackTempleActionContext::illidan_stormrage_use_cage_trap;
@@ -241,11 +244,8 @@ public:
         creators["illidan stormrage manage dps timers"] =
             &RaidBlackTempleActionContext::illidan_stormrage_manage_dps_timers;
 
-        creators["illidan stormrage destroy hazards"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_destroy_hazards;
-
-        creators["illidan stormrage handle adds cheat"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_handle_adds_cheat;
+        creators["illidan stormrage clear hazards"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_clear_hazards;
     }
 
 private:
@@ -550,6 +550,10 @@ private:
     {
         return new IllidanStormrageDisperseRangedAction(botAI);
     }
+    static Action* illidan_stormrage_reach_shadow_demon(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageReachShadowDemonAction(botAI);
+    }
     static Action* illidan_stormrage_melee_stay_away_from_demon_form(PlayerbotAI* botAI)
     {
         return new IllidanStormrageMeleeStayAwayFromDemonFormAction(botAI);
@@ -562,9 +566,9 @@ private:
     {
         return new IllidanStormrageSeedShadowDemonsAction(botAI);
     }
-    static Action* illidan_stormrage_dps_prioritize_adds(PlayerbotAI* botAI)
+    static Action* illidan_stormrage_assign_target_priority(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageDpsPrioritizeAddsAction(botAI);
+        return new IllidanStormrageAssignTargetPriorityAction(botAI);
     }
     static Action* illidan_stormrage_use_cage_trap(PlayerbotAI* botAI)
     {
@@ -574,13 +578,9 @@ private:
     {
         return new IllidanStormrageManageDpsTimersAction(botAI);
     }
-    static Action* illidan_stormrage_destroy_hazards(PlayerbotAI* botAI)
+    static Action* illidan_stormrage_clear_hazards(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageDestroyHazardsAction(botAI);
-    }
-    static Action* illidan_stormrage_handle_adds_cheat(PlayerbotAI* botAI)
-    {
-        return new IllidanStormrageHandleAddsCheatAction(botAI);
+        return new IllidanStormrageClearHazardsAction(botAI);
     }
 };
 

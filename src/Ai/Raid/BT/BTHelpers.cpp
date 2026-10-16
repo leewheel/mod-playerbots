@@ -27,11 +27,6 @@
 
 using namespace EncounterHelpers;
 
-// By leewheel 2026-10-12 合并上游 BT 重构后：本文件所有 "find target" 参数一律改为按 NPC
-//   entry 查找（本服为汉化客户端/库，英文名匹配不上）。entry 均实查
-//   data/sql/base/db_world/creature_template.sql 与 acore_world.creature_template 核定。
-// End By leewheel
-
 namespace BtHelpers
 {
 
@@ -57,10 +52,10 @@ Position GetDemonFormPoint(
 }
 
 // One row of Demon Form slots 6 yd apart, from highAngle down, each with its angle. Kept only
-// 22 yd or more from the warlock spot (Shadow Blast hits 20 yd round its victim) and within 36 yd
-// of the grate centre.
+// 22 yd or more from the warlock position (Shadow Blast hits 20 yd round its victim) and within
+// 36 yd of the grate centre.
 std::vector<std::pair<float, Position>> GetDemonFormRow(
-    Position const& illidan, float inwardAngle, Position const& warlockSpot, float distance,
+    Position const& illidan, float inwardAngle, Position const& warlockTankPosition, float distance,
     float highAngle, float lowAngle, bool halfStepIn)
 {
     constexpr float slotSpacing = 6.0f;
@@ -76,7 +71,7 @@ std::vector<std::pair<float, Position>> GetDemonFormRow(
     {
         float const angle = firstAngle - i * step;
         Position const point = GetDemonFormPoint(illidan, inwardAngle, distance, angle);
-        if (point.GetExactDist2d(warlockSpot) >= warlockClearance &&
+        if (point.GetExactDist2d(warlockTankPosition) >= warlockClearance &&
             ILLIDAN_GRATE_CENTRE.GetExactDist2d(point) <= maxCentreDistance)
         {
             row.emplace_back(angle, point);
@@ -96,6 +91,26 @@ int32 GetRosterIndex(
 
     auto const it = std::find(first.begin(), first.end(), guid);
     return it == first.end() ? -1 : static_cast<int32>(std::distance(first.begin(), it));
+}
+
+// Dead or alive; null if no group member has the job (an offline tank among them).
+Player* FindFlameOfAzzinothTank(Player* bot, bool isEast)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return nullptr;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (member && (isEast ? IsEastFlameOfAzzinothTank(member) :
+                                IsWestFlameOfAzzinothTank(member)))
+        {
+            return member;
+        }
+    }
+
+    return nullptr;
 }
 
 }
@@ -246,7 +261,7 @@ bool CanBuildChaoticCharge(SpellInfo const* spellInfo, bool triggered, uint8 dep
     return builds;
 }
 
-}
+} // end anonymous namespace (Trash)
 
 bool IsLinkedSisterOfPleasure(Unit* unit)
 {
@@ -629,6 +644,7 @@ std::vector<SupremusHazard> FindSupremusHazards(PlayerbotAI* botAI)
 
     // In the tank phase stock avoid aoe handles Molten Flame; it sidesteps, keeping bots near.
     Unit* supremus =
+        // By leewheel 2026-10-17 合并：find target 按铁律换回 entry 22898（supremus）。
         botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "22898")->Get();
     if (!IsSupremusKitePhase(supremus))
         return hazards;
@@ -1030,6 +1046,7 @@ Position GetGurtoggFelRageMeleePosition(Player* bot, Unit* gurtogg, Unit* felRag
 float FindGurtoggSecondTankThreat(PlayerbotAI* botAI)
 {
     Unit* gurtogg =
+        // By leewheel 2026-10-17 合并：find target 按铁律换回 entry 22948（gurtogg bloodboil）。
         botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "22948")->Get();
     if (!gurtogg)
         return 0.0f;
@@ -1184,14 +1201,17 @@ bool IsInCouncilPatch(Position const& point, Unit* gathios, Unit* zerevor, float
     if (gathios)
     {
         DynamicObject* consecration = gathios->GetDynObject(Id(BtSpells::SPELL_CONSECRATION));
-        if (consecration && consecration->GetExactDist2d(point) < consecration->GetRadius() + margin)
+        if (consecration &&
+            consecration->GetExactDist2d(point) < consecration->GetRadius() + margin)
+        {
             return true;
+        }
     }
 
     return IsInZerevorPatch(zerevor, point, margin);
 }
 
-// Gathios's Consecration reaches her only at the pull, while he is still beside her on the dais.
+// Gathios's Consecration reaches Malande only at the pull, while he is beside her on the dais.
 bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor)
 {
     return malande && IsInCouncilPatch(*malande, gathios, zerevor);
@@ -1445,7 +1465,7 @@ bool IsIllidanSpeechInProgress(Player* bot)
     }
 
     Creature* illidan = bot->FindNearestCreature(
-        Id(BtNpcs::NPC_ILLIDAN_STORMRAGE), ILLIDAN_SPEECH_SEARCH_RADIUS, true);
+        Id(BtNpcs::NPC_ILLIDAN_STORMRAGE), ILLIDAN_SPEECH_SEARCH_RADIUS);
 
     return illidan && illidan->getStandState() == UNIT_STAND_STATE_STAND &&
         illidan->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) && !illidan->IsInCombat();
@@ -1458,18 +1478,18 @@ bool IsIllidanPhaseStartWithin(Unit const& illidan, uint32 durationMs)
         getMSTimeDiff(it->second, getMSTime()) < durationMs;
 }
 
-bool IsIllidanLandingWait(Unit const& illidan, IllidanPhase phase)
+IllidanPhase GetIllidanPhaseBefore(Unit const& illidan, IllidanPhase phase)
 {
-    if (phase == IllidanPhase::Landing)
-        return true;
+    uint32 const instanceId = illidan.GetInstanceId();
+    auto const recorded = illidanLastPhase.find(instanceId);
+    if (recorded == illidanLastPhase.end())
+        return IllidanPhase::None;
 
-    if (phase != IllidanPhase::Grounded ||
-        illidan.GetExactDist2d(ILLIDAN_GRATE_CENTRE) >= ILLIDAN_LANDING_RELEASE_DISTANCE)
-    {
-        return false;
-    }
+    if (recorded->second != phase)
+        return recorded->second;
 
-    return IsIllidanPhaseStartWithin(illidan, ILLIDAN_LANDING_WAIT_MS);
+    auto const previous = illidanPreviousPhase.find(instanceId);
+    return previous != illidanPreviousPhase.end() ? previous->second : IllidanPhase::None;
 }
 
 bool IsIllidanDemonFormEnding(Unit const& illidan, uint32 durationMs)
@@ -1485,10 +1505,17 @@ IllidanDpsHold GetIllidanHoldWindow(Unit* illidan)
         return IllidanDpsHold::None;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
+    // The tracker stamps a new phase's start on its next tick, and until then the start time is
+    // the old phase's, so a change it hasn't recorded yet counts as a phase just started.
+    auto const recorded = illidanLastPhase.find(illidan->GetInstanceId());
+    bool const isUnrecorded = recorded == illidanLastPhase.end() || recorded->second != phase;
     if (phase == IllidanPhase::Demon)
     {
         if (illidan->GetHealthPct() <= ILLIDAN_DEMON_FORM_NO_PUSH_HEALTH_PCT)
             return IllidanDpsHold::DemonFormNoPush;
+
+        if (isUnrecorded)
+            return IllidanDpsHold::DemonFormStart;
 
         if (IsIllidanDemonFormEnding(*illidan, ILLIDAN_DEMON_FORM_END_HOLD_MS))
             return IllidanDpsHold::DemonFormEnd;
@@ -1499,13 +1526,11 @@ IllidanDpsHold GetIllidanHoldWindow(Unit* illidan)
 
     bool isAfterReset = phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded;
     if (phase == IllidanPhase::Maiev)
-    {
-        auto const it = illidanPreviousPhase.find(illidan->GetInstanceId());
-        isAfterReset = it != illidanPreviousPhase.end() && it->second == IllidanPhase::Demon;
-    }
+        isAfterReset = GetIllidanPhaseBefore(*illidan, phase) == IllidanPhase::Demon;
 
-    return isAfterReset && IsIllidanPhaseStartWithin(*illidan, ILLIDAN_RESET_DPS_WAIT_MS) ?
-        IllidanDpsHold::AfterReset : IllidanDpsHold::None;
+    bool const isStarting =
+        isUnrecorded || IsIllidanPhaseStartWithin(*illidan, ILLIDAN_RESET_DPS_WAIT_MS);
+    return isAfterReset && isStarting ? IllidanDpsHold::AfterReset : IllidanDpsHold::None;
 }
 
 IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan)
@@ -1543,7 +1568,7 @@ Position GetRingPoint(float angle, float radius)
         ILLIDAN_GRATE_CENTRE.GetPositionZ());
 }
 
-Position GetIllidanSettleSpot(Unit const& illidan)
+Position GetIllidanSettlePosition(Unit const& illidan)
 {
     float const radius = ILLIDAN_GRATE_CENTRE.GetExactDist2d(&illidan) + ILLIDAN_TANK_OFFSET;
     return GetRingPoint(GetGrateAngle(illidan), radius);
@@ -1589,12 +1614,12 @@ DemonFormLayout GetDemonFormLayout(Unit const& illidan)
     float const inwardAngle = illidan.GetAngle(&ILLIDAN_GRATE_CENTRE);
 
     DemonFormLayout layout;
-    layout.warlockSpot = GetDemonFormPoint(
-        illidan, inwardAngle, ILLIDAN_WARLOCK_SPOT_DISTANCE, ILLIDAN_WARLOCK_SPOT_ANGLE);
-    layout.mainTankWaitSpot = GetDemonFormPoint(
+    layout.warlockTankPosition = GetDemonFormPoint(
+        illidan, inwardAngle, ILLIDAN_WARLOCK_POSITION_DISTANCE, ILLIDAN_WARLOCK_POSITION_ANGLE);
+    layout.mainTankWaitPosition = GetDemonFormPoint(
         illidan, inwardAngle, ILLIDAN_MAIN_TANK_WAIT_DISTANCE, ILLIDAN_MAIN_TANK_WAIT_ANGLE);
-    layout.pickupSpot = GetDemonFormPoint(
-        illidan, inwardAngle, ILLIDAN_PICKUP_SPOT_DISTANCE, ILLIDAN_PICKUP_SPOT_ANGLE);
+    layout.mainTankPickupPosition = GetDemonFormPoint(
+        illidan, inwardAngle, ILLIDAN_PICKUP_POSITION_DISTANCE, ILLIDAN_PICKUP_POSITION_ANGLE);
 
     auto const fromWarlockSide =
         [](std::pair<float, Position> const& a, std::pair<float, Position> const& b)
@@ -1607,13 +1632,13 @@ DemonFormLayout GetDemonFormLayout(Unit const& illidan)
     for (size_t i = 0; i < rangedRows.size(); ++i)
     {
         std::vector<std::pair<float, Position>> const rangedRow = GetDemonFormRow(
-            illidan, inwardAngle, layout.warlockSpot, rangedRows[i], rangedHighAngle, lowAngle,
-            i % 2 == 1);
+            illidan, inwardAngle, layout.warlockTankPosition, rangedRows[i], rangedHighAngle,
+            lowAngle, i % 2 == 1);
         ranged.insert(ranged.end(), rangedRow.begin(), rangedRow.end());
 
         std::vector<std::pair<float, Position>> const healerRow = GetDemonFormRow(
-            illidan, inwardAngle, layout.warlockSpot, healerRows[i], healerHighAngle, lowAngle,
-            i % 2 == 1);
+            illidan, inwardAngle, layout.warlockTankPosition, healerRows[i], healerHighAngle,
+            lowAngle, i % 2 == 1);
         healers.insert(healers.end(), healerRow.begin(), healerRow.end());
     }
 
@@ -1631,17 +1656,17 @@ DemonFormLayout GetDemonFormLayout(Unit const& illidan)
     for (std::pair<float, Position> const& slot : healers)
     {
         if (layout.healerSlots.size() < ILLIDAN_HEALER_SLOT_COUNT &&
-            slot.second.GetExactDist2d(layout.warlockSpot) <= healReach)
+            slot.second.GetExactDist2d(layout.warlockTankPosition) <= healReach)
         {
             layout.healerSlots.push_back(slot.second);
         }
     }
 
-    float const meleeCentreAngle = (ILLIDAN_WARLOCK_SPOT_ANGLE + ranged.back().first) / 2.0f;
+    float const meleeCentreAngle = (ILLIDAN_WARLOCK_POSITION_ANGLE + ranged.back().first) / 2.0f;
     for (size_t i = 0; i < meleeRows.size(); ++i)
     {
         std::vector<std::pair<float, Position>> row = GetDemonFormRow(
-            illidan, inwardAngle, layout.warlockSpot, meleeRows[i],
+            illidan, inwardAngle, layout.warlockTankPosition, meleeRows[i],
             meleeCentreAngle + meleeHalfArc, meleeCentreAngle - meleeHalfArc, i % 2 == 1);
         std::stable_sort(
             row.begin(), row.end(),
@@ -1662,39 +1687,58 @@ DemonFormLayout GetDemonFormLayout(Unit const& illidan)
     return layout;
 }
 
-Position GetIllidanShadowfiendRunSpot(Unit const& illidan, IllidanPhase phase)
+Position GetIllidanInfectionPosition(Unit const& illidan, IllidanPhase phase)
 {
     if (phase == IllidanPhase::Demon)
     {
         float const inwardAngle = illidan.GetAngle(&ILLIDAN_GRATE_CENTRE);
         return GetDemonFormPoint(
-            illidan, inwardAngle, ILLIDAN_DEMON_RUN_SPOT_DISTANCE, ILLIDAN_DEMON_RUN_SPOT_ANGLE);
+            illidan, inwardAngle, ILLIDAN_DEMON_INFECTION_POSITION_DISTANCE,
+            ILLIDAN_DEMON_INFECTION_POSITION_ANGLE);
     }
 
     return GetRingPoint(
-        GetGrateAngle(illidan) + ILLIDAN_RUN_SPOT_ANGLE, ILLIDAN_RUN_SPOT_DISTANCE);
+        GetGrateAngle(illidan) + ILLIDAN_INFECTION_POSITION_ANGLE,
+        ILLIDAN_INFECTION_POSITION_DISTANCE);
 }
 
-Position GetIllidanRecordedRunSpot(PlayerbotAI* botAI, Unit const& illidan, IllidanPhase phase)
+IllidanPhase GetIllidanInfectionPositionPhase(Unit const& illidan, IllidanPhase phase)
 {
+    if (phase != IllidanPhase::Demon ||
+        !IsIllidanPhaseStartWithin(illidan, ILLIDAN_DEMON_TRANSFORM_MS))
+    {
+        return phase;
+    }
+
+    IllidanPhase const previous = GetIllidanPhaseBefore(illidan, phase);
+    return previous != IllidanPhase::None ? previous : IllidanPhase::Grounded;
+}
+
+Position GetIllidanRecordedInfectionPosition(
+    PlayerbotAI* botAI, Unit const& illidan, IllidanPhase phase)
+{
+    IllidanPhase const infectionPhase = GetIllidanInfectionPositionPhase(illidan, phase);
     Player* bot = botAI->GetBot();
     auto const it = illidanInfections.find(bot->GetInstanceId());
     if (it != illidanInfections.end())
     {
-        // Entries are kept while he flies, from the phase before.
+        // Entries from the phase before are kept while he flies.
         bool const isFlying = phase == IllidanPhase::Flying;
         auto const own = it->second.find(bot->GetGUID());
-        if (own != it->second.end() && (isFlying || own->second.phase == phase))
-            return own->second.runSpot;
+        if (own != it->second.end() && (isFlying || own->second.phase == infectionPhase))
+            return own->second.infectionPosition;
 
         for (auto const& [player, infection] : it->second)
         {
-            if (infection.hunter == bot->GetGUID() && (isFlying || infection.phase == phase))
-                return infection.runSpot;
+            if (infection.hunter == bot->GetGUID() &&
+                (isFlying || infection.phase == infectionPhase))
+            {
+                return infection.infectionPosition;
+            }
         }
     }
 
-    return GetIllidanShadowfiendRunSpot(illidan, phase);
+    return GetIllidanInfectionPosition(illidan, infectionPhase);
 }
 
 std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot)
@@ -1727,17 +1771,38 @@ std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot)
 
 bool IsWestFlameOfAzzinothTank(Player* bot)
 {
-    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 0);
 }
 
 bool IsEastFlameOfAzzinothTank(Player* bot)
 {
-    return PlayerbotAI::IsAssistTankOfIndex(bot, 1, true);
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 1);
 }
 
 bool IsFlameOfAzzinothTank(Player* bot)
 {
     return IsEastFlameOfAzzinothTank(bot) || IsWestFlameOfAzzinothTank(bot);
+}
+
+Unit* GetAssignedFlameOfAzzinoth(Player* bot)
+{
+    bool const isEastTank = IsEastFlameOfAzzinothTank(bot);
+    if (!isEastTank && !IsWestFlameOfAzzinothTank(bot))
+        return nullptr;
+
+    auto const [eastFlame, westFlame] = GetFlamesOfAzzinoth(bot);
+    Unit* ownFlame = isEastTank ? eastFlame : westFlame;
+    if (ownFlame)
+        return ownFlame;
+
+    // An unrecorded own Flame hasn't spawned yet; a recorded one is dead.
+    auto const& ownFlameGuid = isEastTank ? eastFlameGuid : westFlameGuid;
+    Unit* otherFlame = isEastTank ? westFlame : eastFlame;
+    if (!otherFlame || !ownFlameGuid.contains(bot->GetInstanceId()))
+        return nullptr;
+
+    Player* otherTank = FindFlameOfAzzinothTank(bot, !isEastTank);
+    return !otherTank || !otherTank->IsAlive() ? otherFlame : nullptr;
 }
 
 ObjectGuid FindIllidanWarlockTankGuid(Player* bot)
@@ -1780,6 +1845,18 @@ bool IsIllidanWarlockTank(PlayerbotAI* botAI)
     return bot->getClass() == CLASS_WARLOCK && GetIllidanWarlockTank(botAI) == bot;
 }
 
+bool CastIllidanLifeTapIfLow(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    if (bot->GetPowerPct(POWER_MANA) >= ILLIDAN_LIFE_TAP_MANA_PCT ||
+        bot->GetHealthPct() <= ILLIDAN_LIFE_TAP_HEALTH_PCT)
+    {
+        return false;
+    }
+
+    return botAI->CanCastSpell("life tap", bot) && botAI->CastSpell("life tap", bot);
+}
+
 GuidVector FindIllidanTrapHunterGuids(Player* bot)
 {
     Group* group = bot->GetGroup();
@@ -1820,7 +1897,7 @@ bool IsIllidanTrapHunterOnDuty(PlayerbotAI* botAI)
     return false;
 }
 
-bool IsIllidanRunSpotKeptInFlight(PlayerbotAI* botAI)
+bool IsIllidanInfectionPositionKeptInFlight(PlayerbotAI* botAI)
 {
     Player* bot = botAI->GetBot();
     auto const it = illidanInfections.find(bot->GetInstanceId());
@@ -1833,7 +1910,7 @@ bool IsIllidanRunSpotKeptInFlight(PlayerbotAI* botAI)
     return IsIllidanTrapHunterOnDuty(botAI);
 }
 
-bool IsFrostTrapPatchAt(Player* bot, Position const& runSpot, int32 minDurationMs)
+bool IsFrostTrapPatchAt(Player* bot, Position const& infectionPosition, int32 minDurationMs)
 {
     std::list<WorldObject*> objects;
     Acore::AllWorldObjectsInRange check(bot, ILLIDAN_ADD_SEARCH_RADIUS);
@@ -1845,7 +1922,7 @@ bool IsFrostTrapPatchAt(Player* bot, Position const& runSpot, int32 minDurationM
     {
         DynamicObject* patch = object->ToDynObject();
         if (patch && patch->GetSpellId() == Id(BtSpells::SPELL_FROST_TRAP_AURA) &&
-            patch->GetExactDist2d(runSpot) < patch->GetRadius() &&
+            patch->GetExactDist2d(infectionPosition) < patch->GetRadius() &&
             patch->GetDuration() >= minDurationMs)
         {
             return true;
@@ -1969,13 +2046,13 @@ int32 GetIllidanGrateIndex(PlayerbotAI* botAI, Unit const& illidan)
         return index;
 
     float const inwardAngle = illidan.GetAngle(&ILLIDAN_GRATE_CENTRE);
-    Position const warlockSpot = GetDemonFormPoint(
-        illidan, inwardAngle, ILLIDAN_WARLOCK_SPOT_DISTANCE, ILLIDAN_WARLOCK_SPOT_ANGLE);
+    Position const warlockTankPosition = GetDemonFormPoint(
+        illidan, inwardAngle, ILLIDAN_WARLOCK_POSITION_DISTANCE, ILLIDAN_WARLOCK_POSITION_ANGLE);
     int32 warlockSlot = 0;
     float nearestDistance = std::numeric_limits<float>::max();
     for (size_t i = 0; i < ILLIDAN_RANGED_SLOT_COUNT; ++i)
     {
-        float const distance = GetGrateSlot(i).GetExactDist2d(warlockSpot);
+        float const distance = GetGrateSlot(i).GetExactDist2d(warlockTankPosition);
         if (distance < nearestDistance)
         {
             nearestDistance = distance;
@@ -1996,9 +2073,6 @@ int32 GetIllidanGrateIndex(PlayerbotAI* botAI, Unit const& illidan)
 
 bool HasParasiticShadowfiend(Player* player)
 {
-    if (!player)
-        return false;
-
     return player->HasAura(Id(BtSpells::SPELL_PARASITIC_SHADOWFIEND_1)) ||
         player->HasAura(Id(BtSpells::SPELL_PARASITIC_SHADOWFIEND_2));
 }
@@ -2118,7 +2192,7 @@ std::vector<ShadowDemon> FindShadowDemons(PlayerbotAI* botAI)
     return shadowDemons;
 }
 
-Unit* GetShadowDemonToAttack(PlayerbotAI* botAI, Unit const& from)
+Unit* GetShadowDemonForRangedToAttack(PlayerbotAI* botAI, Unit const& from)
 {
     // A Demon walks 4 yd/s, so a yard is a quarter second.
     constexpr float targetDistanceStep = 1.0f;
@@ -2162,25 +2236,46 @@ Unit* GetShadowDemonToAttack(PlayerbotAI* botAI, Unit const& from)
     return best;
 }
 
-Unit* GetShadowDemonForMelee(PlayerbotAI* botAI, Unit const& illidan, Unit const& from)
+Unit* GetShadowDemonWalkingToWarlockTank(PlayerbotAI* botAI)
 {
-    // Centre distances, as the spells measure. Demons spawn 5 yd from him and walk out toward the
-    // raid, so melee running in from their slots meet one well outside Aura of Dread's 15 yd even
-    // if they leave at 8.
-    // constexpr float illidanClearance = 8.0f;
-    constexpr float shadowBlastClearance = 23.0f;
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    ObjectGuid const warlockTank =
+        context->GetValue<ObjectGuid>("illidan stormrage warlock tank")->Get();
+    if (warlockTank.IsEmpty())
+        return nullptr;
 
-    Unit* victim = illidan.GetVictim();
+    auto const& shadowDemons =
+        context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet();
+    for (ShadowDemon const& shadowDemon : shadowDemons)
+    {
+        if (shadowDemon.target != warlockTank)
+            continue;
+
+        Unit* demon = botAI->GetUnit(shadowDemon.demon);
+        Unit* target = botAI->GetUnit(shadowDemon.target);
+        if (demon && demon->IsAlive() && target && target->IsAlive())
+            return demon;
+    }
+
+    return nullptr;
+}
+
+Unit* GetShadowDemonForMeleeToAttack(PlayerbotAI* botAI, Unit const& from)
+{
+    // Demons spawn 5 yd from him and walk out toward the raid, so melee running in from their
+    // slots meet one well outside Aura of Dread's 15 yd even if they leave immediately.
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    ObjectGuid const warlockTank =
+        context->GetValue<ObjectGuid>("illidan stormrage warlock tank")->Get();
     Unit* nearest = nullptr;
     std::pair<bool, float> nearestKey = { true, std::numeric_limits<float>::max() };
-    auto const& shadowDemons = botAI->GetAiObjectContext()
-        ->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet();
+    auto const& shadowDemons =
+        context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet();
     for (ShadowDemon const& shadowDemon : shadowDemons)
     {
         Unit* demon = botAI->GetUnit(shadowDemon.demon);
         if (!demon || !demon->IsAlive() ||
-            // demon->GetExactDist2d(&illidan) <= illidanClearance ||
-            (victim && demon->GetExactDist2d(victim) <= shadowBlastClearance))
+            (!warlockTank.IsEmpty() && shadowDemon.target == warlockTank))
         {
             continue;
         }
@@ -2199,18 +2294,16 @@ Unit* GetShadowDemonForMelee(PlayerbotAI* botAI, Unit const& illidan, Unit const
     return nearest;
 }
 
-Unit* GetShadowDemonForPet(PlayerbotAI* botAI, Pet const& pet)
+Unit* GetShadowDemonForPetToAttack(PlayerbotAI* botAI, Pet const& pet)
 {
     uint32 const entry = pet.GetEntry();
     if (entry == NPC_IMP || entry == NPC_WATER_ELEMENTAL_TEMP ||
         entry == NPC_WATER_ELEMENTAL_PERM)
     {
-        return GetShadowDemonToAttack(botAI, pet);
+        return GetShadowDemonForRangedToAttack(botAI, pet);
     }
 
-    Unit* illidan =
-        botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "22917")->Get();
-    return illidan ? GetShadowDemonForMelee(botAI, *illidan, pet) : nullptr;
+    return GetShadowDemonForMeleeToAttack(botAI, pet);
 }
 
 EyeBlastDangerArea GetEyeBlastDangerArea(Player* bot)
@@ -2253,7 +2346,8 @@ bool IsPositionInEyeBlastDangerArea(Position const& pos, EyeBlastDangerArea cons
 {
     float const dx = area.end.GetPositionX() - area.start.GetPositionX();
     float const dy = area.end.GetPositionY() - area.start.GetPositionY();
-    float const length = area.start.GetExactDist2d(area.end.GetPositionX(), area.end.GetPositionY());
+    float const length =
+        area.start.GetExactDist2d(area.end.GetPositionX(), area.end.GetPositionY());
 
     if (length < 0.1f)
         return false;

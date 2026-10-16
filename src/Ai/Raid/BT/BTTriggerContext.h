@@ -227,8 +227,11 @@ public:
         creators["illidan stormrage ranged should spread"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_ranged_should_spread;
 
-        creators["illidan stormrage this expansion hates melee"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_this_expansion_hates_melee;
+        creators["illidan stormrage ranged should reach shadow demon"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_ranged_should_reach_shadow_demon;
+
+        creators["illidan stormrage melee should stay away from demon form"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_should_stay_away_from_demon_form;
 
         creators["illidan stormrage warlock should tank demon form"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_warlock_should_tank_demon_form;
@@ -236,8 +239,8 @@ public:
         creators["illidan stormrage warlock should seed shadow demons"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_warlock_should_seed_shadow_demons;
 
-        creators["illidan stormrage should assign dps priority"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_should_assign_dps_priority;
+        creators["illidan stormrage should assign target priority"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_should_assign_target_priority;
 
         creators["illidan stormrage maiev placed cage trap"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_maiev_placed_cage_trap;
@@ -245,11 +248,8 @@ public:
         creators["illidan stormrage should manage dps timers"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_should_manage_dps_timers;
 
-        creators["illidan stormrage should clear hazards between phases"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_should_clear_hazards_between_phases;
-
-        creators["illidan stormrage cheat"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_cheat;
+        creators["illidan stormrage should clear hazards before landing"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_should_clear_hazards_before_landing;
     }
 
 private:
@@ -548,9 +548,13 @@ private:
     {
         return new IllidanStormrageRangedShouldSpreadTrigger(botAI);
     }
-    static Trigger* illidan_stormrage_this_expansion_hates_melee(PlayerbotAI* botAI)
+    static Trigger* illidan_stormrage_ranged_should_reach_shadow_demon(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageThisExpansionHatesMeleeTrigger(botAI);
+        return new IllidanStormrageRangedShouldReachShadowDemonTrigger(botAI);
+    }
+    static Trigger* illidan_stormrage_should_stay_away_from_demon_form(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageMeleeShouldStayAwayFromDemonFormTrigger(botAI);
     }
     static Trigger* illidan_stormrage_warlock_should_tank_demon_form(PlayerbotAI* botAI)
     {
@@ -560,9 +564,9 @@ private:
     {
         return new IllidanStormrageWarlockShouldSeedShadowDemonsTrigger(botAI);
     }
-    static Trigger* illidan_stormrage_should_assign_dps_priority(PlayerbotAI* botAI)
+    static Trigger* illidan_stormrage_should_assign_target_priority(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageShouldAssignDpsPriorityTrigger(botAI);
+        return new IllidanStormrageShouldAssignTargetPriorityTrigger(botAI);
     }
     static Trigger* illidan_stormrage_maiev_placed_cage_trap(PlayerbotAI* botAI)
     {
@@ -572,13 +576,9 @@ private:
     {
         return new IllidanStormrageShouldManageDpsTimersTrigger(botAI);
     }
-    static Trigger* illidan_stormrage_should_clear_hazards_between_phases(PlayerbotAI* botAI)
+    static Trigger* illidan_stormrage_should_clear_hazards_before_landing(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageShouldClearHazardsBetweenPhasesTrigger(botAI);
-    }
-    static Trigger* illidan_stormrage_cheat(PlayerbotAI* botAI)
-    {
-        return new IllidanStormrageCheatTrigger(botAI);
+        return new IllidanStormrageShouldClearHazardsBeforeLandingTrigger(botAI);
     }
 };
 

@@ -32,10 +32,6 @@
 
 using namespace BtHelpers;
 using namespace EncounterHelpers;
-// By leewheel 2026-10-13 合并 brighton the-lab：整文件采纳上游重构版（council edits/c3e1911d 等，
-//   上游 318+/139- 远大于本核 entry 化 34+/29-），find target 英文名换回 NPC entry
-//   （16 个映射见 BTActions.cpp 头部注释，已对 acore_world.creature_template 复核 16/16）。
-// End By leewheel
 
 namespace
 {
@@ -89,9 +85,9 @@ bool IsHeldAtIllidanLandingStack(Action* action)
         !dynamic_cast<IllidanStormrageIsolateBotWithParasiteAction*>(action);
 }
 
-// A bot waiting out a Shadowfiend debuff at the run spot chases nothing, since its run there
-// stops once it arrives. In Demon Form everyone keeps to their place; melee leave theirs only to
-// reach a Shadow Demon.
+// A bot waiting out a Shadowfiend debuff at the infection position chases nothing, since its run
+// there stops once it arrives. In Demon Form everyone keeps to their place; melee leave theirs only
+// to reach a Shadow Demon.
 bool IsHeldIllidanChase(PlayerbotAI* botAI, Action* action, IllidanPhase phase)
 {
     Player* bot = botAI->GetBot();
@@ -115,6 +111,30 @@ bool IsHeldIllidanChase(PlayerbotAI* botAI, Action* action, IllidanPhase phase)
 
     Unit* target = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
     return !target || target->GetEntry() != Id(BtNpcs::NPC_SHADOW_DEMON);
+}
+
+// Healing threat reaches him from any healer, so in a hold heals wait until he is on the tank
+// that should have him. Through the transform he is stunned and takes none, and in Maiev's
+// arrival nobody takes damage under Shadow Prison, while a heal in the gap before he wakes
+// reaches him.
+bool IsHeldIllidanHeal(PlayerbotAI* botAI, Unit* illidan, Action* action)
+{
+    if (!dynamic_cast<CastHealingSpellAction*>(action))
+        return false;
+
+    IllidanPhase const phase = GetIllidanPhase(illidan);
+    if (phase == IllidanPhase::None)
+        return true;
+
+    if (phase == IllidanPhase::Flying || GetIllidanDpsHold(botAI, illidan) == IllidanDpsHold::None)
+        return false;
+
+    if (illidan->HasUnitState(UNIT_STATE_CONTROLLED))
+        return false;
+
+    Player* tank = phase == IllidanPhase::Demon ?
+        GetIllidanWarlockTank(botAI) : GetGroupMainTank(botAI->GetBot());
+    return !tank || illidan->GetThreatMgr().GetLastVictim() != tank;
 }
 
 // Summons that fight on their own, unlike pets, which the strategy can set passive.
@@ -393,7 +413,7 @@ float GurtoggBloodboilControlMovementMultiplier::GetValueInEncounter(Action* act
         dynamic_cast<FollowAction*>(action) ||
         dynamic_cast<FleeAction*>(action) ||
         IsRepositionAction(bot, action);
-    // The Fel Rage target only walks him to the tank spot.
+    // The Fel Rage target only walks him to the tank position.
     bool const isFelRageTargetMove = bot->HasAura(Id(BtSpells::SPELL_PLAYER_FEL_RAGE)) &&
         dynamic_cast<MovementAction*>(action) && !dynamic_cast<AttackAction*>(action) &&
         !dynamic_cast<BlackTemplePositionBossAction*>(action);
@@ -598,8 +618,6 @@ float IllidariCouncilControlMovementAndTargetingMultiplier::GetTankValue(Action*
     if (!isStockMove && !isAoeThreat && !IsTauntAction(bot, action))
         return 1.0f;
 
-    // By leewheel 2026-10-15 合并：采纳上游版（三个议会成员都活着才继续），find target 按铁律换回 entry
-    // （gathios=22949 / zerevor=22950 / malande=22951）。
     Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
     Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
     Unit* malande = AI_VALUE2(Unit*, "find target", "22951");
@@ -763,7 +781,6 @@ float IllidanStormrageHoldPullPositionsMultiplier::GetValue(Action* action)
 
 float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter(Action* action)
 {
-    // By leewheel 2026-10-15 合并：find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return 1.0f;
@@ -778,6 +795,11 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter
     if (phase == IllidanPhase::None || phase == IllidanPhase::Dying)
         return 1.0f;
 
+    // Unselectable while he flies and lands, he is an invalid target, and dropping him would take
+    // a bot out of the combat engine, where its heals and rotation are.
+    if (dynamic_cast<DropTargetAction*>(action))
+        return phase == IllidanPhase::Flying || phase == IllidanPhase::Landing ? 0.0f : 1.0f;
+
     bool const isTankAssist = dynamic_cast<TankAssistAction*>(action);
     bool const isDpsAssist = dynamic_cast<DpsAssistAction*>(action);
     if (isTankAssist || isDpsAssist || dynamic_cast<CastDebuffSpellOnAttackerAction*>(action))
@@ -789,16 +811,15 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter
     if (PlayerbotAI::IsTank(bot))
         return GetTankMovementValue(illidan, phase, action);
 
-    return GetNonTankMovementValue(illidan, phase, action);
+    return GetNonTankMovementValue(phase, action);
 }
 
-// Tanks take their targets from their own actions or dps prioritize adds, except the assist tanks
-// while he lands. Ranged DPS, melee in Phases 1, 3 and 5, and everyone in Demon Form take theirs
-// from dps prioritize adds.
+// Tanks take their targets from their own actions or assign target priority, except the assist
+// tanks while he lands. Ranged DPS, melee in Phases 1, 3 and 5, and everyone in Demon Form take
+// theirs from assign target priority.
 float IllidanStormrageControlMovementAndTargetingMultiplier::GetTargetingValue(
     IllidanPhase phase, Action* action, bool isTankAssist, bool isDpsAssist)
 {
-    // By leewheel 2026-10-15 合并：采纳上游版——phase 由参数传入，移除本核保留的函数内重算冗余。
     if (isTankAssist)
         return phase == IllidanPhase::Landing && !PlayerbotAI::IsMainTank(bot) ? 1.0f : 0.0f;
 
@@ -828,10 +849,11 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTargetingValue(
 }
 
 // On the ground and while he lands, the Main Tank moves only by its ring action, and its
-// gap-closers are held, since he always comes to it, except on Shadow Demons; the other tanks wait
-// at the landing stack with everyone else, and keep to their Demon Form slots as melee. While he
-// flies, the Main Tank holds the grate and the assist tanks the Flames of Azzinoth, each moving
-// only by its own action or to the Shadowfiend run spot.
+// gap-closers are held, since he always comes to it, except on Shadow Demons and while he is on
+// someone else on the ground; the other tanks wait at the landing stack with everyone else, and
+// keep to their Demon Form slots as melee. While he flies, the Main Tank holds the grate and the
+// assist tanks the Flames of Azzinoth, each moving only by its own action or to the Shadowfiend
+// infection position, except that a Flame tank uses its own logic while its Flame is off it.
 float IllidanStormrageControlMovementAndTargetingMultiplier::GetTankMovementValue(
     Unit* illidan, IllidanPhase phase, Action* action)
 {
@@ -845,7 +867,6 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTankMovementValu
 
     bool const isGapCloser = dynamic_cast<CastReachTargetSpellAction*>(action);
 
-    // By leewheel 2026-10-15 合并：采纳上游版——illidan/phase 均为参数，移除遮蔽参数的函数内重声明。
     if (phase == IllidanPhase::Initial || phase == IllidanPhase::Landing ||
         phase == IllidanPhase::Grounded || phase == IllidanPhase::Demon ||
         phase == IllidanPhase::Maiev)
@@ -855,11 +876,17 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTankMovementValu
             if (IsHeldIllidanChase(botAI, action, phase))
                 return 0.0f;
 
-            if (phase == IllidanPhase::Demon || !IsIllidanLandingWait(*illidan, phase))
+            if (phase != IllidanPhase::Landing)
                 return 1.0f;
 
             return isGapCloser || IsHeldAtIllidanLandingStack(action) ? 0.0f : 1.0f;
         }
+
+        // While he is on someone else on the ground, the tank's own logic takes him back.
+        bool const isGround = phase == IllidanPhase::Initial ||
+            phase == IllidanPhase::Grounded || phase == IllidanPhase::Maiev;
+        if (isGround && illidan->GetVictim() != bot)
+            return 1.0f;
 
         // In Demon Form it chases a Shadow Demon with the melee until it walks in.
         bool const canChaseDemon = phase == IllidanPhase::Demon &&
@@ -887,8 +914,18 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTankMovementValu
         if (!isMove)
             return 1.0f;
 
-        return dynamic_cast<IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction*>(action) ||
-            dynamic_cast<IllidanStormrageIsolateBotWithParasiteAction*>(action) ? 1.0f : 0.0f;
+        if (dynamic_cast<IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction*>(action) ||
+            dynamic_cast<IllidanStormrageIsolateBotWithParasiteAction*>(action))
+        {
+            return 1.0f;
+        }
+
+        if (dynamic_cast<AvoidAoeAction*>(action) || IsHeldIllidanChase(botAI, action, phase))
+            return 0.0f;
+
+        // While its Flame isn't on it, the tank's own logic takes the Flame back.
+        Unit* flame = GetAssignedFlameOfAzzinoth(bot);
+        return flame && flame->GetVictim() != bot ? 1.0f : 0.0f;
     }
 
     // Flying phase: tanks other than the flame tanks
@@ -902,7 +939,7 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTankMovementValu
 }
 
 float IllidanStormrageControlMovementAndTargetingMultiplier::GetNonTankMovementValue(
-    Unit* illidan, IllidanPhase phase, Action* action)
+    IllidanPhase phase, Action* action)
 {
     bool const isBlockedMove =
         (dynamic_cast<CombatFormationMoveAction*>(action) &&
@@ -919,12 +956,11 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetNonTankMovementV
     if (!isBlockedMove && !isPhaseMove && !isLandingMove)
         return 1.0f;
 
-    // By leewheel 2026-10-15 合并：采纳上游版——illidan 为函数参数，移除遮蔽参数的重声明。
     if (isBlockedMove)
         return 0.0f;
 
-    // Everyone waits at the landing stack until he has been led out.
-    if (IsIllidanLandingWait(*illidan, phase))
+    // Everyone waits at the landing stack while he lands.
+    if (phase == IllidanPhase::Landing)
         return 0.0f;
 
     if (!isPhaseMove)
@@ -947,8 +983,6 @@ float IllidanStormrageNearNewShadowfiendMultiplier::GetValueInEncounter(Action* 
     if (!castSpellAction && !isAttackAction)
         return 1.0f;
 
-    // By leewheel 2026-10-15 合并 brighton b8a7379a：采纳上游重构版——旧
-    // ShadowfiendBirtherHoldMultiplier（含 shaman 图腾段）已改名/统一进本类，find target 换回 entry 22917。
     if (!AI_VALUE2(Unit*, "find target", "22917"))
         return 1.0f;
 
@@ -984,8 +1018,10 @@ float IllidanStormrageHoldGuardianSummonsMultiplier::GetValueInEncounter(Action*
 // still switch a bot from him to an add.
 float IllidanStormrageWaitForDpsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!IsDpsHoldCandidate(bot, action) ||
-        dynamic_cast<IllidanStormrageDpsPrioritizeAddsAction*>(action))
+    bool const isHeal = dynamic_cast<CastHealingSpellAction*>(action);
+    if (!isHeal &&
+        (!IsDpsHoldCandidate(bot, action) ||
+         dynamic_cast<IllidanStormrageAssignTargetPriorityAction*>(action)))
     {
         return 1.0f;
     }
@@ -994,23 +1030,28 @@ float IllidanStormrageWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     if (!illidan)
         return 1.0f;
 
-    // The Flame tanks get 6s head start on the Flames of Azzinoth.
+    if (isHeal)
+        return IsHeldIllidanHeal(botAI, illidan, action) ? 0.0f : 1.0f;
+
+    // The Flame tanks get 6s head start on the Flames of Azzinoth, counted from when the tracker
+    // records the first, since a Flame is in combat with nobody for its first 2 s.
     if (GetIllidanPhase(illidan) == IllidanPhase::Flying)
     {
         constexpr uint32 flamePhaseDpsWaitMs = 6 * IN_MILLISECONDS;
         auto const it = illidanFlamePhaseStartTime.find(illidan->GetInstanceId());
-        bool const inWindow = it == illidanFlamePhaseStartTime.end() ||
+        bool const inWindow = it != illidanFlamePhaseStartTime.end() &&
             getMSTimeDiff(it->second, getMSTime()) < flamePhaseDpsWaitMs;
 
-        // By leewheel 2026-10-15 合并：采纳上游版（IsFlameOfAzzinothTank helper 判定），
-        // find target 换回 entry 22997。
-        if (inWindow && AI_VALUE2(Unit*, "find target", "22997") &&
-            !IsFlameOfAzzinothTank(bot))
-        {
-            return GetDpsHoldValue(bot, action);
-        }
+        if (!inWindow || IsFlameOfAzzinothTank(bot))
+            return 1.0f;
 
-        return 1.0f;
+        // Only damage on the Flames is held, never damage on Shadowfiends. Attacks and dots on an
+        // attacker have their own target; other spells go on the current target.
+        bool const hasOwnTarget = dynamic_cast<AttackAction*>(action) ||
+            dynamic_cast<CastDebuffSpellOnAttackerAction*>(action);
+        Unit* target = hasOwnTarget ? action->GetTarget() : AI_VALUE(Unit*, "current target");
+        bool const isOnFlame = target && target->GetEntry() == Id(BtNpcs::NPC_FLAME_OF_AZZINOTH);
+        return isOnFlame ? GetDpsHoldValue(bot, action) : 1.0f;
     }
 
     if (GetIllidanDpsHold(botAI, illidan) == IllidanDpsHold::None)
@@ -1035,10 +1076,31 @@ float IllidanStormrageDisableTankSoulshatterMultiplier::GetValueInEncounter(Acti
     if (!dynamic_cast<CastSoulshatterAction*>(action))
         return 1.0f;
 
-    // By leewheel 2026-10-15 合并：find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return 1.0f;
 
     return IsIllidanWarlockTank(botAI) ? 0.0f : 1.0f;
+}
+
+// While Shadow Demons are up, the only area damage is the warlocks' Seed of Corruption on them,
+// which has its own action.
+float IllidanStormrageDisableAoeOnShadowDemonsMultiplier::GetValueInEncounter(Action* action)
+{
+    // Heals report AoE threat too.
+    if (dynamic_cast<CastHealingSpellAction*>(action))
+        return 1.0f;
+
+    auto castSpellAction = dynamic_cast<CastSpellAction*>(action);
+    bool const isAoe = IsAoeThreatAction(bot, action) ||
+        (castSpellAction && castSpellAction->getThreatType() == Action::ActionThreatType::Aoe);
+    if (!isAoe)
+        return 1.0f;
+
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
+        return 1.0f;
+
+    return context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet().empty() ?
+        1.0f : 0.0f;
 }

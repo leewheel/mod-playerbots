@@ -292,7 +292,8 @@ class GurtoggBloodboilRangedShouldAvoidFrontalConeTrigger : public BlackTempleEn
 {
 public:
     GurtoggBloodboilRangedShouldAvoidFrontalConeTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil ranged should avoid frontal cone") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "gurtogg bloodboil ranged should avoid frontal cone") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -685,11 +686,23 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidanStormrageThisExpansionHatesMeleeTrigger : public BlackTempleEncounterTrigger
+class IllidanStormrageRangedShouldReachShadowDemonTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidanStormrageThisExpansionHatesMeleeTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage this expansion hates melee") {}
+    IllidanStormrageRangedShouldReachShadowDemonTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage ranged should reach shadow demon") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class IllidanStormrageMeleeShouldStayAwayFromDemonFormTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidanStormrageMeleeShouldStayAwayFromDemonFormTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage melee should stay away from demon form") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -717,11 +730,11 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidanStormrageShouldAssignDpsPriorityTrigger : public BlackTempleEncounterTrigger
+class IllidanStormrageShouldAssignTargetPriorityTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidanStormrageShouldAssignDpsPriorityTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should assign dps priority") {}
+    IllidanStormrageShouldAssignTargetPriorityTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should assign target priority") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -747,22 +760,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidanStormrageShouldClearHazardsBetweenPhasesTrigger : public BlackTempleEncounterTrigger
+class IllidanStormrageShouldClearHazardsBeforeLandingTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidanStormrageShouldClearHazardsBetweenPhasesTrigger(PlayerbotAI* botAI)
+    IllidanStormrageShouldClearHazardsBeforeLandingTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage should clear hazards between phases") {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
-
-class IllidanStormrageCheatTrigger : public BlackTempleEncounterTrigger
-{
-public:
-    IllidanStormrageCheatTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage cheat") {}
+            botAI, "illidan stormrage should clear hazards before landing") {}
 
 protected:
     bool IsActiveInEncounter() override;

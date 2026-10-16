@@ -67,11 +67,13 @@ public:
 
 // High Warlord Naj'entus
 
-class HighWarlordNajentusDisableCombatFormationMoveMultiplier : public BlackTempleEncounterMultiplier
+class HighWarlordNajentusDisableCombatFormationMoveMultiplier
+    : public BlackTempleEncounterMultiplier
 {
 public:
     HighWarlordNajentusDisableCombatFormationMoveMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "high warlord naj'entus disable combat formation move") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "high warlord naj'entus disable combat formation move") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -358,7 +360,7 @@ private:
     float GetTargetingValue(
         BtHelpers::IllidanPhase phase, Action* action, bool isTankAssist, bool isDpsAssist);
     float GetTankMovementValue(Unit* illidan, BtHelpers::IllidanPhase phase, Action* action);
-    float GetNonTankMovementValue(Unit* illidan, BtHelpers::IllidanPhase phase, Action* action);
+    float GetNonTankMovementValue(BtHelpers::IllidanPhase phase, Action* action);
 };
 
 class IllidanStormrageNearNewShadowfiendMultiplier : public BlackTempleEncounterMultiplier
@@ -396,6 +398,17 @@ class IllidanStormrageDisableTankSoulshatterMultiplier : public BlackTempleEncou
 public:
     IllidanStormrageDisableTankSoulshatterMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(botAI, "illidan stormrage disable tank soulshatter") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class IllidanStormrageDisableAoeOnShadowDemonsMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    IllidanStormrageDisableAoeOnShadowDemonsMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidan stormrage disable aoe on shadow demons") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

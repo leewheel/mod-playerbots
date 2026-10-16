@@ -609,16 +609,18 @@ bool IllidanStormrageShouldBeTankedTrigger::IsActiveInEncounter()
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    if (phase == IllidanPhase::None || phase == IllidanPhase::Flying ||
-        phase == IllidanPhase::Dying)
-    {
+    if (phase == IllidanPhase::Flying || phase == IllidanPhase::Dying)
         return false;
-    }
+
+    // In Maiev's arrival, only once the tank is out of Shadow Prison.
+    if (phase == IllidanPhase::None && bot->HasAura(Id(BtSpells::SPELL_SHADOW_PRISON)))
+        return false;
 
     return PlayerbotAI::IsMainTank(bot);
 }
 
-// An infected bot runs to the run spot, and so does a trap hunter on duty, to lay its Frost Trap.
+// An infected bot runs to the infection position, and so does a trap hunter on duty, to lay its
+// Frost Trap. The Main Tank never runs, and the warlock tank not in Demon Form.
 bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncounter()
 {
     if (!HasParasiticShadowfiend(bot) && !IsIllidanTrapHunterOnDuty(botAI))
@@ -633,14 +635,17 @@ bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncount
         return false;
 
     if (phase == IllidanPhase::Flying)
-        return IsIllidanRunSpotKeptInFlight(botAI);
+        return IsIllidanInfectionPositionKeptInFlight(botAI);
+
+    if (phase == IllidanPhase::Demon && IsIllidanWarlockTank(botAI))
+        return false;
 
     return !PlayerbotAI::IsTank(bot) || !PlayerbotAI::IsMainTank(bot);
 }
 
-// The mechanic tracker records each new infection while there is a run spot, keeps looking for a
-// trap hunter while none is ready, and drops an entry once its debuff is gone or the phase
-// changes.
+// The mechanic tracker records each new infection while there is a shadowfiend birthing position,
+// keeps looking for a trap hunter while none is ready, and drops an entry once its debuff is gone
+// or the shadowfiend phase changes.
 bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
 {
     if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
@@ -654,8 +659,9 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
     auto const& infected = context->GetValue<GuidVector>(
         "illidan stormrage players with parasitic shadowfiend")->RefGet();
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    bool const hasRunSpot = phase != IllidanPhase::None && phase != IllidanPhase::Flying &&
-        phase != IllidanPhase::Dying;
+    IllidanPhase const infectionPhase = GetIllidanInfectionPositionPhase(*illidan, phase);
+    bool const hasInfectionPosition = phase != IllidanPhase::None &&
+        phase != IllidanPhase::Flying && phase != IllidanPhase::Dying;
     auto const it = illidanInfections.find(bot->GetInstanceId());
     bool const hasInfections = it != illidanInfections.end();
     if (hasInfections)
@@ -665,12 +671,15 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
             if (std::find(infected.begin(), infected.end(), player) == infected.end())
                 return true;
 
-            if (hasRunSpot && (infection.phase != phase || !infection.isTrapAssigned))
+            if (hasInfectionPosition &&
+                (infection.phase != infectionPhase || !infection.isTrapAssigned))
+            {
                 return true;
+            }
         }
     }
 
-    if (!hasRunSpot)
+    if (!hasInfectionPosition)
         return false;
 
     for (ObjectGuid const& guid : infected)
@@ -693,7 +702,7 @@ bool IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger::IsActiveInEncounter(
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Flying)
         return false;
 
-    return IsFlameOfAzzinothTank(bot) && !IsIllidanRunSpotKeptInFlight(botAI);
+    return IsFlameOfAzzinothTank(bot) && !IsIllidanInfectionPositionKeptInFlight(botAI);
 }
 
 bool IllidanStormragePetsDieToFireTrigger::IsActiveInEncounter()
@@ -712,26 +721,42 @@ bool IllidanStormragePetsDieToFireTrigger::IsActiveInEncounter()
 }
 
 // Hunter and warlock pets take the Shadowfiends, which never attack pets.
+// Hunter and warlock pets in Phases 1, 3 and 5. In Demon Form every pet, passive then, once no
+// Shadow Demon is left for it.
 bool IllidanStormragePetShouldAttackShadowfiendTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_HUNTER && bot->getClass() != CLASS_WARLOCK)
-        return false;
-
     Pet* pet = bot->GetPet();
-    if (!pet || !pet->IsAlive() || pet->HasReactState(REACT_PASSIVE))
+    if (!pet || !pet->IsAlive())
         return false;
 
     Unit* victim = pet->GetVictim();
-    if (victim && victim->GetEntry() == Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND))
+    uint32 const victimEntry = victim && victim->IsAlive() ? victim->GetEntry() : 0;
+    if (victimEntry == Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND) ||
+        victimEntry == Id(BtNpcs::NPC_SHADOW_DEMON))
+    {
         return false;
+    }
 
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    if (phase != IllidanPhase::Initial && phase != IllidanPhase::Grounded &&
-        phase != IllidanPhase::Maiev)
+    if (phase == IllidanPhase::Demon)
+    {
+        if (GetShadowDemonForPetToAttack(botAI, *pet))
+            return false;
+    }
+    else if (phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded ||
+        phase == IllidanPhase::Maiev)
+    {
+        if ((bot->getClass() != CLASS_HUNTER && bot->getClass() != CLASS_WARLOCK) ||
+            pet->HasReactState(REACT_PASSIVE))
+        {
+            return false;
+        }
+    }
+    else
     {
         return false;
     }
@@ -754,7 +779,7 @@ bool IllidanStormragePetShouldAttackShadowDemonTrigger::IsActiveInEncounter()
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return false;
 
-    return GetShadowDemonForPet(botAI, *pet);
+    return GetShadowDemonForPetToAttack(botAI, *pet);
 }
 
 bool IllidanStormrageGrateIsSafeFromFlamesTrigger::IsActiveInEncounter()
@@ -763,7 +788,7 @@ bool IllidanStormrageGrateIsSafeFromFlamesTrigger::IsActiveInEncounter()
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Flying)
         return false;
 
-    if (IsIllidanRunSpotKeptInFlight(botAI))
+    if (IsIllidanInfectionPositionKeptInFlight(botAI))
         return false;
 
     if (!PlayerbotAI::IsTank(bot))
@@ -811,15 +836,18 @@ bool IllidanStormrageImmunityNoLongerNeededTrigger::IsActiveInEncounter()
     return AI_VALUE2(Unit*, "find target", "22917");
 }
 
-// An infected bot runs to the run spot instead.
+// An infected bot runs to the infection position instead.
 bool IllidanStormrageShouldPositionForLandingTrigger::IsActiveInEncounter()
 {
     if ((PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)))
         return false;
 
-    // By leewheel 2026-10-15 合并：采纳上游版（新增寄生暗影恶魔时不占落点位），find target 换回 entry 22917。
+    // By leewheel 2026-10-17 合并：采纳上游版——旧依赖的 IsIllidanLandingWait 辅助函数已随
+    // 上游 879a6a7d8「shadow demon and shadowfiend handling」一并删除（BTHelpers.h/.cpp 均无），
+    // 保留旧写法会导致未定义引用；改为直接判 Landing 语义等价
+    // （GetIllidanPhase(nullptr) 返回 None ≠ Landing，空指针安全）。find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan || !IsIllidanLandingWait(*illidan, GetIllidanPhase(illidan)))
+    if (GetIllidanPhase(illidan) != IllidanPhase::Landing)
         return false;
 
     return !HasParasiticShadowfiend(bot);
@@ -869,15 +897,35 @@ bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (phase == IllidanPhase::Demon && IsIllidanWarlockTank(botAI))
         return false;
 
-    if (IsIllidanLandingWait(*illidan, phase))
+    // While a Demon walks to the warlock tank, ranged DPS may leave their slots to reach it.
+    if (phase == IllidanPhase::Demon && !PlayerbotAI::IsHeal(bot) &&
+        GetShadowDemonWalkingToWarlockTank(botAI))
+    {
         return false;
+    }
 
     return phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded ||
         phase == IllidanPhase::Demon || phase == IllidanPhase::Maiev;
 }
 
-// Melee and tanks take their Demon Form slots; the Main Tank has its own spots.
-bool IllidanStormrageThisExpansionHatesMeleeTrigger::IsActiveInEncounter()
+// Ranged DPS walk into spell reach of a Shadow Demon walking to the warlock tank, whose death
+// wipes the raid. Healers stay to heal.
+bool IllidanStormrageRangedShouldReachShadowDemonTrigger::IsActiveInEncounter()
+{
+    if (!PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsHeal(bot) || HasParasiticShadowfiend(bot))
+        return false;
+
+    // By leewheel 2026-10-17 合并：本 trigger 为上游本轮新增，find target 按铁律换回 entry 22917。
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon || IsIllidanWarlockTank(botAI))
+        return false;
+
+    Unit* demon = GetShadowDemonWalkingToWarlockTank(botAI);
+    return demon && !bot->IsWithinCombatRange(demon, botAI->GetRange("spell"));
+}
+
+// Melee and tanks take their Demon Form slots; the Main Tank has its own positions.
+bool IllidanStormrageMeleeShouldStayAwayFromDemonFormTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsMelee(bot) || (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)))
         return false;
@@ -906,8 +954,9 @@ bool IllidanStormrageWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
     return IsIllidanWarlockTank(botAI);
 }
 
-// Every warlock, the warlock tank included, starts Seed of Corruption on him just before the
-// Shadow Demons appear round him; the raid's damage on him sets it off as they spawn.
+// Every warlock, the warlock tank included, casts Seed of Corruption on the Shadow Demons while
+// two or more are alive. They all walk toward the raid, so a Seed going off on one usually
+// catches others.
 bool IllidanStormrageWarlockShouldSeedShadowDemonsTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_WARLOCK)
@@ -918,19 +967,16 @@ bool IllidanStormrageWarlockShouldSeedShadowDemonsTrigger::IsActiveInEncounter()
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return false;
 
-    if (GetIllidanDpsHold(botAI, illidan) != IllidanDpsHold::None)
+    if (IsIllidanPhaseStartWithin(*illidan, ILLIDAN_SHADOW_DEMON_SPAWN_MS))
         return false;
 
-    uint32 const seedStartMs = ILLIDAN_SHADOW_DEMON_SPAWN_MS - ILLIDAN_SEED_LEAD_MS;
-    uint32 const seedEndMs = ILLIDAN_SHADOW_DEMON_SPAWN_MS + ILLIDAN_SEED_LATE_MS;
-    return !IsIllidanPhaseStartWithin(*illidan, seedStartMs) &&
-        IsIllidanPhaseStartWithin(*illidan, seedEndMs);
+    return context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet().size() >= 2;
 }
 
 // Tanks other than the Main Tank join the melee in Phases 1, 3, 4 and 5; while he flies the
 // assist tanks have the Flames. The Main Tank joins them on Shadow Demons in Demon Form until its
 // walk-in. Healers take Shadow Demons as targets in Demon Form.
-bool IllidanStormrageShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
+bool IllidanStormrageShouldAssignTargetPriorityTrigger::IsActiveInEncounter()
 {
     // By leewheel 2026-10-16 合并：采纳上游版（主坦 walk-in 逻辑需要 illidan 变量，
     // 下游 IsIllidanDemonFormEnding(*illidan, ...) 依赖它）；find target 换回 NPC entry 22917
@@ -1007,33 +1053,20 @@ bool IllidanStormrageShouldManageDpsTimersTrigger::IsActiveInEncounter()
         AI_VALUE2(Unit*, "find target", "22917");
 }
 
-// Destroying hazards behind phases is not gated behind CheatMask
-// The strategy simply cannot work without doing this
-bool IllidanStormrageShouldClearHazardsBetweenPhasesTrigger::IsActiveInEncounter()
+// Destroying hazards after phase 2 is not gated behind CheatMask. The strategy simply cannot work
+// without doing this.
+bool IllidanStormrageShouldClearHazardsBeforeLandingTrigger::IsActiveInEncounter()
 {
     if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
-    // By leewheel 2026-10-15 合并：采纳上游版（死亡场景语义已并入 GetIllidanPhase::Dying），
-    // find target 换回 entry 22917。
+    // By leewheel 2026-10-17 合并：采纳上游版；find target 换回 entry 22917。
+    //
+    // 注：本处同时删除了原 HEAD 侧的 IllidanStormrageCheatTrigger::IsActiveInEncounter 实现。
+    // 该 trigger 的类声明（BTTriggers.h）与动作注册（BTActionContext.h 的
+    // "illidan stormrage handle adds cheat"）已在上游本轮迭代中彻底移除，四个相关文件均查无
+    // 痕迹 ⇒ 保留 .cpp 实现将因子类不存在而无法编译；BTStrategy 中对应 trigger 早已注释停用，
+    // 无行为损失。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan)
-        return false;
-
-    IllidanPhase const phase = GetIllidanPhase(illidan);
-    return phase == IllidanPhase::Landing /* || phase == IllidanPhase::Flying ||
-        phase == IllidanPhase::Demon */;
-}
-
-bool IllidanStormrageCheatTrigger::IsActiveInEncounter()
-{
-    if (!botAI->HasCheat(BotCheatMask::raid) || !PlayerbotAI::IsDps(bot))
-        return false;
-
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan)
-        return false;
-
-    IllidanPhase const phase = GetIllidanPhase(illidan);
-    return phase == IllidanPhase::Flying || phase == IllidanPhase::Demon;
+    return illidan && GetIllidanPhase(illidan) == IllidanPhase::Landing;
 }

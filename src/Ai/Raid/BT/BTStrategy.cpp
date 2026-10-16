@@ -237,7 +237,10 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage ranged should spread",
         { NextAction("illidan stormrage disperse ranged", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage this expansion hates melee",
+    triggers.push_back(new TriggerNode("illidan stormrage ranged should reach shadow demon",
+        { NextAction("illidan stormrage reach shadow demon", ACTION_RAID + 2) }));
+
+    triggers.push_back(new TriggerNode("illidan stormrage melee should stay away from demon form",
         { NextAction("illidan stormrage melee stay away from demon form", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage warlock should tank demon form",
@@ -246,8 +249,8 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage warlock should seed shadow demons",
         { NextAction("illidan stormrage seed shadow demons", ACTION_EMERGENCY + 10) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage should assign dps priority",
-        { NextAction("illidan stormrage dps prioritize adds", ACTION_EMERGENCY + 1) }));
+    triggers.push_back(new TriggerNode("illidan stormrage should assign target priority",
+        { NextAction("illidan stormrage assign target priority", ACTION_EMERGENCY + 1) }));
 
     // triggers.push_back(new TriggerNode("illidan stormrage maiev placed cage trap",
     //     { NextAction("illidan stormrage use cage trap", ACTION_EMERGENCY + 1) }));
@@ -255,11 +258,8 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage should manage dps timers",
         { NextAction("illidan stormrage manage dps timers", ACTION_EMERGENCY + 11) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage should clear hazards between phases",
-        { NextAction("illidan stormrage destroy hazards", ACTION_EMERGENCY + 10) }));
-
-    // triggers.push_back(new TriggerNode("illidan stormrage cheat",
-    //     { NextAction("illidan stormrage handle adds cheat", ACTION_EMERGENCY + 10) }));
+    triggers.push_back(new TriggerNode("illidan stormrage should clear hazards before landing",
+        { NextAction("illidan stormrage clear hazards", ACTION_EMERGENCY + 10) }));
 }
 
 void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
@@ -317,6 +317,7 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new IllidanStormrageHoldGuardianSummonsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageWaitForDpsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageDisableTankSoulshatterMultiplier(botAI));
+    multipliers.push_back(new IllidanStormrageDisableAoeOnShadowDemonsMultiplier(botAI));
 }
 
 namespace
@@ -358,7 +359,7 @@ void AppendShadowyConstructExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 }
 
 // Tanks and melee never pick Illidan's Shadowfiends themselves; ranged and pets kill them, and
-// melee only finish one in their reach, from dps prioritize adds.
+// melee only finish one in their reach, from assign target priority.
 void AppendParasiticShadowfiendMeleeExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
     if (!PlayerbotAI::IsMelee(botAI->GetBot()))
