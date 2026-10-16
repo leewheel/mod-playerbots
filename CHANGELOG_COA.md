@@ -2,30 +2,15 @@
 
 ## v2.4 — in progress
 
-### Added races (multirace), off by default
-- The server can now offer **extra playable races** (Worgen, Dracthyr, Eredar, Vulpera, Nightborne, Mechagnome,
-  Haranir, Jinyu, Darkfallen and more), with the CoA Custom work of ilusixn and the Esteria races. One switch,
-  `CoACustomRaces.Enable` in `coa_custom_races.conf`: off by default, the server is exactly the usual CoA one.
-  Players need the patched client to play or meet these races.
-- `CoA-Bots\coa_multirace.py` (and the launcher's Multirace switch) turns it on or off, server stopped: switching off,
-  players' characters of an added race take a base race of their side (their race and looks are kept and come back
-  when switched on again); random bots are rebuilt with or without the added races.
-- From a race by race client test: Thin Human (32) and Saberon (97) crash a client that sees them, both Skyborne
-  (72, 77) have no model yet: never bots, and like the Sethrak (82, crash at its first login) not creatable
-  (`CoACustomRaces.DisabledRaces`). Characters already created keep their race.
-
-### Bots and the added races
-- Random bots take the added races when `CoACustomRaces.BotsEnable = 1`, every race about equally, minus
-  `AiPlayerbot.CrashingBotRaces` (default 32, 72, 77, 97).
-- Races above id 32 take their side from the race table (they all counted as Horde); races with one model make male
-  bots only (Tuskarr, Taunka, Vrykul, Broken, Fel Orc, Forest/Ice Troll, Skeleton, Thin Human, Furbolg, Ogre,
-  Earthen, Gnoll, Saberon), the Alpha Goblin female bots only (its male has no head yet).
+### Players and bots
 - **Real players take the place of random bots** (`AiPlayerbot.CoaPlayersReplaceBots`, off by default): at 100,
   500 bots and 40 players online leave 460 bots; `AiPlayerbot.CoaPlayersReplaceBotsMin` keeps a floor. Idea by
   CWO4PapaBear.
+- Bots are ready for the added races edition (later): with this core they keep the usual races, nothing changes.
 
 ### Server and repack
-- Core on the latest Conquest of Azeroth main (15/10): about 95 new fixes since 2.3.
+- Core on the latest Conquest of Azeroth main (15/10): about 95 new fixes since 2.3, plus fixes for four crashes
+  seen under a heavy bot load.
 - No more log flood: every module settings file is installed where the server reads it (Mythic+ included), the
   settings new cores add are filled in with their defaults, a missing setting is reported once per load, the
   playerbots log keeps warnings only, and a console log over 50 MB is set aside at start.
