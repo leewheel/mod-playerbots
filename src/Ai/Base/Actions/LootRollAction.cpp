@@ -66,6 +66,8 @@ bool LootRollAction::Execute(Event /*event*/)
                 case ITEM_CLASS_ARMOR:
                     if (usage == ITEM_USAGE_EQUIP || usage == ITEM_USAGE_REPLACE || usage == ITEM_USAGE_BAD_EQUIP)
                         vote = NEED;
+                    else if (usage == ITEM_USAGE_KEEP)
+                        vote = NEED;  // an upgrade a few levels on (LootNeedLevelLookahead)
                     else if (usage != ITEM_USAGE_NONE)
                         vote = GREED;
                     break;

@@ -104,6 +104,10 @@ ItemUsage ItemUsageValue::Calculate()
     if (equip != ITEM_USAGE_NONE)
         return equip;
 
+    ItemUsage lookahead = QueryItemUsageForLookahead(proto, randomPropertyId);
+    if (lookahead != ITEM_USAGE_NONE)
+        return lookahead;
+
     // Get item instance to check if it's soulbound
     Item* item = bot->GetItemByEntry(proto->ItemId);
     bool isSoulbound = item && item->IsSoulBound();
@@ -164,9 +168,74 @@ ItemUsage ItemUsageValue::Calculate()
     return ITEM_USAGE_NONE;
 }
 
-ItemUsage ItemUsageValue::QueryItemUsageForEquip(ItemTemplate const* itemProto, int32 randomPropertyId)
+// Gear a few levels above the bot that it will be able to wear soon. Scored as if it could wear it now,
+// and only kept if nothing at least as good for the same slot is already waiting in its bags.
+ItemUsage ItemUsageValue::QueryItemUsageForLookahead(ItemTemplate const* proto, int32 randomPropertyId)
 {
-    if (bot->BotCanUseItem(itemProto) != EQUIP_ERR_OK)
+    uint32 const lookahead = sPlayerbotAIConfig.lootNeedLevelLookahead;
+    if (!lookahead || (proto->Class != ITEM_CLASS_WEAPON && proto->Class != ITEM_CLASS_ARMOR))
+        return ITEM_USAGE_NONE;
+
+    if (proto->RequiredLevel <= bot->GetLevel() || proto->RequiredLevel > bot->GetLevel() + lookahead)
+        return ITEM_USAGE_NONE;
+
+    ItemUsage usage = QueryItemUsageForEquip(proto, randomPropertyId, true);
+    if (usage != ITEM_USAGE_EQUIP && usage != ITEM_USAGE_REPLACE)
+        return ITEM_USAGE_NONE;
+
+    StatsWeightCalculator calculator(bot);
+    calculator.SetItemSetBonus(false);
+    calculator.SetOverflowPenalty(false);
+    if (sRandomPlayerbotMgr.IsSpecPvp(bot->GetGUID().GetCounter(), bot->getClass()))
+        calculator.SetPvpSpec(true);
+
+    float const score = calculator.CalculateItem(proto->ItemId, randomPropertyId);
+    uint8 const slot = botAI->FindEquipSlot(proto, NULL_SLOT, true);
+
+    uint8 slots = 1;
+    if (proto->InventoryType == INVTYPE_FINGER || proto->InventoryType == INVTYPE_TRINKET ||
+        (proto->InventoryType == INVTYPE_WEAPON && bot->CanDualWield()))
+        slots = 2;
+
+    // Count waiting items (bags only, too high to wear yet) that beat this one for the same slot.
+    // Ties go to the lower item id so two equal items don't each discard the other.
+    // Items are walked directly: asking for their "item usage" here would recurse.
+    uint32 better = 0;
+    auto consider = [&](Item* item)
+    {
+        if (!item)
+            return;
+        ItemTemplate const* other = item->GetTemplate();
+        if (!other || other->ItemId == proto->ItemId || other->RequiredLevel <= bot->GetLevel())
+            return;
+        if (other->Class != ITEM_CLASS_WEAPON && other->Class != ITEM_CLASS_ARMOR)
+            return;
+        if (botAI->FindEquipSlot(other, NULL_SLOT, true) != slot)
+            return;
+        InventoryResult use = bot->BotCanUseItem(other);
+        if (use != EQUIP_ERR_OK && use != EQUIP_ERR_CANT_EQUIP_LEVEL_I)
+            return;
+        float const otherScore =
+            calculator.CalculateItem(other->ItemId, item->GetInt32Value(ITEM_FIELD_RANDOM_PROPERTIES_ID));
+        if (otherScore > score || (otherScore == score && other->ItemId < proto->ItemId))
+            ++better;
+    };
+
+    for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+        consider(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, i));
+    for (uint8 b = INVENTORY_SLOT_BAG_START; b < INVENTORY_SLOT_BAG_END; ++b)
+        if (Bag* bag = bot->GetBagByPos(b))
+            for (uint32 j = 0; j < bag->GetBagSize(); ++j)
+                consider(bag->GetItemByPos(j));
+
+    return better >= slots ? ITEM_USAGE_NONE : ITEM_USAGE_KEEP;
+}
+
+ItemUsage ItemUsageValue::QueryItemUsageForEquip(ItemTemplate const* itemProto, int32 randomPropertyId, bool lookahead)
+{
+    // With lookahead, a too-high required level is the one failure allowed.
+    InventoryResult canUse = bot->BotCanUseItem(itemProto);
+    if (canUse != EQUIP_ERR_OK && !(lookahead && canUse == EQUIP_ERR_CANT_EQUIP_LEVEL_I))
         return ITEM_USAGE_NONE;
 
     if (itemProto->InventoryType == INVTYPE_NON_EQUIP)
@@ -181,7 +250,8 @@ ItemUsage ItemUsageValue::QueryItemUsageForEquip(ItemTemplate const* itemProto, 
     pItem->RemoveFromUpdateQueueOf(bot);
     delete pItem;
 
-    if (result != EQUIP_ERR_OK && result != EQUIP_ERR_CANT_CARRY_MORE_OF_THIS)
+    if (result != EQUIP_ERR_OK && result != EQUIP_ERR_CANT_CARRY_MORE_OF_THIS &&
+        !(lookahead && result == EQUIP_ERR_CANT_EQUIP_LEVEL_I))
         return ITEM_USAGE_NONE;
 
     // Check if unique items are equipped or not
@@ -246,7 +316,8 @@ ItemUsage ItemUsageValue::QueryItemUsageForEquip(ItemTemplate const* itemProto, 
     if (itemProto->Class == ITEM_CLASS_WEAPON && !sRandomItemMgr.CanEquipWeapon(itemProto, bot->getClass()))
         shouldEquip = false;
     if (itemProto->Class == ITEM_CLASS_ARMOR &&
-        !sRandomItemMgr.CanEquipArmor(itemProto, bot->getClass(), bot->GetLevel()))
+        !sRandomItemMgr.CanEquipArmor(itemProto, bot->getClass(),
+                                      lookahead ? uint32(itemProto->RequiredLevel) : bot->GetLevel()))
         shouldEquip = false;
 
     uint8 possibleSlots = 1;
