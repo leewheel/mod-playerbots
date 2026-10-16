@@ -103,7 +103,7 @@ float StatsWeightCalculator::CalculateItem(uint32 itemId, int32 randomPropertyId
 
     Reset();
 
-    collector_->CollectItemStats(proto);
+    collector_->CollectItemStats(proto, lvl);
 
     if (randomPropertyIds != 0)
         CalculateRandomProperty(randomPropertyIds, itemId);
@@ -129,7 +129,8 @@ float StatsWeightCalculator::CalculateItem(uint32 itemId, int32 randomPropertyId
         // Heirloom items scale with player level
         // Use player level as effective item level for heirlooms - Quality EPIC
         // Else - Blend with item quality and level for normal items
-        if (proto->Quality == ITEM_QUALITY_HEIRLOOM)
+        // Other level-scaled items (CoA's Felforged sets, item level 10) scale the same way.
+        if (proto->Quality == ITEM_QUALITY_HEIRLOOM || (proto->ScalingStatDistribution && proto->ScalingStatValue))
             weight_ *= PlayerbotFactory::CalcMixedGearScore(lvl, ITEM_QUALITY_EPIC);
         else
             weight_ *= PlayerbotFactory::CalcMixedGearScore(proto->ItemLevel, proto->Quality);
