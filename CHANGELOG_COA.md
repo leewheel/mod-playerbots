@@ -15,7 +15,10 @@
   Tinker Invention no longer builds Rusthound (6 s cast) in fights; Knight of Xoroth Defiance spends 6 Demonfire on
   Suffuse and Melt and keeps Burning Rage / Demon Heart up; Sun Cleric Blessings casts Holy Form, Circle of Valor,
   Blessing of Light, Chosen of the Light, its Vows and Dawn at 20 stacks; Necromancer Animation keeps Call of the
-  Grave for the Tomb King; Primalist Mountain King casts Ursoc's Bellow.
+  Grave for the Tomb King; Primalist Mountain King casts Ursoc's Bellow; Venomancer Vizier takes Vizier Form.
+- Sun Cleric Blessings takes Final Vows instead of Taking Vows at level 50.
+- Out of combat, bots no longer keep recasting buffs of under a minute, fight cooldowns (a Bloodmage Fleshweaver cast
+  Scarlet Delirium again and again between fights).
 
 ### Dungeons
 - In a dungeon, a dead bot no longer waits for ever: once the fight is over it releases when no living healer of

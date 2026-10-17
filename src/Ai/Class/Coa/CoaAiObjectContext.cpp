@@ -3533,6 +3533,11 @@ public:
                 if (member != bot && !(spell.kind & KIND_ALLY_CAST))
                     continue;
 
+                // A buff of under a minute is a fight cooldown, not one to keep up between fights: a Bloodmage
+                // Fleshweaver cast Scarlet Delirium (40 s) again and again out of combat (player report, 10/10).
+                if (!(spell.kind & KIND_STANCE) && spell.info->GetMaxDuration() > 0 && spell.info->GetMaxDuration() < 60000)
+                    continue;
+
                 // A buff raising its bearer's threat goes on a tank only.
                 if (!(spell.kind & KIND_STANCE) && RaisesThreat(spell.info) && !PlayerbotAI::IsTank(member))
                     continue;

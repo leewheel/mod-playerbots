@@ -68,5 +68,8 @@ CALL coa25_set('necromancer-animation', 'buff missing::Call of the Grave>cast bu
 -- 6. Primalist Mountain King (player tip): Ursoc's Bellow sat under Quake and Primal Rush, always castable: never cast.
 CALL coa25_set('primalist-mountain-king', 'debuff missing::Ursoc''s Bellow>cast melee::Ursoc''s Bellow!31', 'debuff missing::Ursoc''s Bellow>cast melee::Ursoc''s Bellow!85.5');
 
+-- 7. Venomancer Vizier (player tip): the healer takes its own Vizier Form when the buff is missing, not Weaver Form.
+CALL coa25_set('venomancer-vizier', 'buff missing::Weaver Form>cast buff::Weaver Form!95', 'buff missing::Vizier Form>cast buff::Vizier Form!95');
+
 DROP PROCEDURE IF EXISTS coa25_add;
 DROP PROCEDURE IF EXISTS coa25_set;
