@@ -34,7 +34,6 @@
 - Your own characters added as bots can spend their free talent points by themselves along their level build
   (`AiPlayerbot.AutoPickTalentsAltBots`, off by default; "talents autopick" does it on demand).
 - Heirlooms and other level-scaled items (Felforged sets) are rated by their real values at the bot's level.
-- No more useless enchants at bot creation (every caster had +12 Dodge on its cloak); armor enchants now count.
 - Optional: `AiPlayerbot.LootNeedLevelLookahead` (off by default) lets bots NEED and keep gear a few levels above
   them, to wear it when they reach its level.
 
