@@ -22,7 +22,8 @@
 
 ### Dungeons
 - In a dungeon, a dead bot no longer waits for ever: once the fight is over it releases when no living healer of
-  the group is inside, or after two minutes if nobody raised it (#37).
+  the group is inside, or after two minutes if nobody raised it (#37). On a Manastorm floor it always waits: the
+  floor raises its dead when it is cleared.
 - **Area spells no longer pull the next pack** (`AiPlayerbot.CoaAoeNoIdlePull`, on by default): in a dungeon or a
   raid, a bot no longer casts an area spell that would also hit a creature not yet fighting (a tank's Thunder Clap
   pulled the Ring of Law spectators in Blackrock Depths).

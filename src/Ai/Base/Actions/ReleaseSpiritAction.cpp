@@ -202,6 +202,11 @@ bool AutoReleaseSpiritAction::CanStillBeRaised() const
 
 bool AutoReleaseSpiritAction::ShouldAutoRelease() const
 {
+    // A scripted private instance (a Manastorm floor) raises its dead itself when the floor is cleared, and has
+    // resurrection charges; a bot that released left the scene and lost its place in the run.
+    if (bot->GetScriptedPrivateMapId() != MAPID_INVALID)
+        return false;
+
     if (!bot->GetGroup())
         return true;
 
