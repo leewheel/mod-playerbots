@@ -4405,6 +4405,9 @@ public:
         if (!sPlayerbotAIConfig.coaSmartTank || !PlayerbotAI::IsTank(bot) || bot->IsInCombat() || !bot->IsAlive() ||
             !bot->GetMap()->IsDungeon())
             return false;
+        // A Manastorm floor is one room with its boss: the tank pulled the boss across it on its own (17/10).
+        if (bot->GetScriptedPrivateMapId() != MAPID_INVALID)
+            return false;
         Player* master = GroupPlayer(botAI, bot);
         if (!master || !OnSameInstance(bot, master))
             return false;
