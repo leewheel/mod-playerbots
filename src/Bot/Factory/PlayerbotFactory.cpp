@@ -5734,9 +5734,7 @@ void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
                     continue;
 
                 float score = calculator.CalculateEnchant(enchant_id);
-                // A zero score used to win the tie, so casters got +12 Dodge on their cloak when the pool had
-                // nothing they weight; leave the slot empty rather than enchant it with nothing useful.
-                if (score > 0.0f && score >= bestScore)
+                if (score >= bestScore)
                 {
                     bestScore = score;
                     bestEnchantId = enchant_id;

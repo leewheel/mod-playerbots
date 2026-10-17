@@ -277,20 +277,6 @@ void StatsCollector::CollectEnchantStats(SpellItemEnchantmentEntry const* enchan
                 CollectByItemStatType(enchant_spell_id, enchant_amount);
                 break;
             }
-            case ITEM_ENCHANTMENT_TYPE_RESISTANCE:
-            {
-                // Armor enchants are stored as resistance with school 0 (Superior Defense) and scored 0 for every
-                // spec. Other schools have no stat type or weight yet.
-                if (enchant_spell_id != SPELL_SCHOOL_NORMAL)
-                    break;
-
-                // for item random suffix
-                if (!enchant_amount)
-                    enchant_amount = default_enchant_amount;
-
-                stats[STATS_TYPE_ARMOR] += enchant_amount;
-                break;
-            }
             default:
                 break;
         }
