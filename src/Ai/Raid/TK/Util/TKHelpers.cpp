@@ -344,6 +344,31 @@ Creature* GetLegendaryWeaponByState(PlayerbotAI* botAI, uint32 weaponEntry, bool
 
 } // end anonymous namespace
 
+// By leewheel 2026-10-17 合并恢复：brighton 早已删除 GetKaelthasTk，但本核 TKActions
+// 仍在调用（isKaelthasAttackable 判断）。随上游版 TKHelpers.cpp 重采而丢失，从
+// backup-before-merge-brighton-20261017b 原样找回。
+Unit* GetKaelthasTk(PlayerbotAI* botAI)
+{
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    // By leewheel 2026-09-05 合并：Kael'thas按entry规则查找(19622)，替代上游名字查找
+    if (Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622"))
+        return kaelthas;
+    // End By leewheel
+
+    Player* bot = botAI->GetBot();
+    auto const& creatureStore = bot->GetMap()->GetCreatureBySpawnIdStore();
+    auto const it = creatureStore.find(KAELTHAS_DB_GUID);
+    if (it == creatureStore.end())
+        return nullptr;
+
+    Creature* kaelthas = it->second;
+    if (!kaelthas || bot->GetExactDist2d(kaelthas) > KAELTHAS_ROOM_SEARCH_DISTANCE)
+        return nullptr;
+
+    return kaelthas;
+}
+// End By leewheel
+
 uint32 GetKaelthasTkPhase(Unit* kaelthas)
 {
     if (!kaelthas)
