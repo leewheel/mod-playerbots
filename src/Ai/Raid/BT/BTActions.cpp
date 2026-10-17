@@ -219,14 +219,15 @@ bool ShadowmoonReaverStopWandAction::Execute(Event /*event*/)
 
 // Imps, water elementals, succubi and felhunters are kept off Reavers while anything else can be
 // attacked. With only Reavers left, the pet waits passive by its owner while one is unsafe, and
-// may attack them otherwise.
+// is sent onto them otherwise.
 bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
 {
     Guardian* pet = bot->GetGuardianPet();
     if (!pet)
         return false;
 
-    if (context->GetValue<GuidVector>("shadowmoon reavers")->RefGet().empty())
+    auto const& reavers = context->GetValue<GuidVector>("shadowmoon reavers")->RefGet();
+    if (reavers.empty())
         return RestoreReactState(pet);
 
     Unit* target = FindPetTargetOtherThanReaver(botAI);
@@ -236,7 +237,7 @@ bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
             return false;
 
         _previousReactState = pet->GetReactState();
-        _setPassive = true;
+        _passivePet = pet->GetGUID();
         pet->AttackStop();
         pet->InterruptNonMeleeSpells(false);
         pet->SetReactState(REACT_PASSIVE);
@@ -252,12 +253,63 @@ bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
 
     bool const restored = RestoreReactState(pet);
     Unit* victim = pet->GetVictim();
-    if (!target || !victim || !victim->IsAlive() ||
-        victim->GetEntry() != Id(BtNpcs::NPC_SHADOWMOON_REAVER))
+    if ((!victim || !victim->IsAlive()) && !pet->HasReactState(REACT_PASSIVE))
     {
+        // Idle, as after waiting passive: sent to the other target, else to a Reaver now that
+        // all are safe, the owner's target first.
+        if (target)
+            return CommandPetAttack(pet, target);
+
+        auto const canAttackReaver = [pet](Unit* unit)
+        {
+            return unit && unit->IsAlive() &&
+                unit->GetEntry() == Id(BtNpcs::NPC_SHADOWMOON_REAVER) &&
+                pet->IsValidAttackTarget(unit);
+        };
+
+        Unit* ownerTarget = AI_VALUE(Unit*, "current target");
+        if (canAttackReaver(ownerTarget))
+            return CommandPetAttack(pet, ownerTarget);
+
+        for (ObjectGuid const& guid : reavers)
+        {
+            Unit* reaver = botAI->GetUnit(guid);
+            if (canAttackReaver(reaver))
+                return CommandPetAttack(pet, reaver);
+        }
+
         return restored;
     }
 
+    //By leewheel 2026年10月18日 上游本行未判 victim 为空，存在真实崩溃路径：
+    // 宠处于 REACT_PASSIVE 时 GetVictim() 恒为 nullptr，而上面 256 行的整块 if
+    // 因 !pet->HasReactState(REACT_PASSIVE) 为假而整个跳过 ⇒ 直接落到本行解引用空 victim。
+    // 可达场景很普通：玩家把宠设为被动（或宠被重新召唤后 _passivePet 与新宠 GUID 不符，
+    // RestoreReactState 提前返回 false 而未把姿态恢复回来），此时宠既被动又无 victim。
+    // 处置：补上 victim 空判，沿用上游「无目标可改则原样返回」的语义。
+    if (!victim || !target || victim->GetEntry() != Id(BtNpcs::NPC_SHADOWMOON_REAVER))
+        //End By leewheel
+        return restored;
+
+    return CommandPetAttack(pet, target);
+}
+
+bool ShadowmoonReaverControlCasterPetAction::RestoreReactState(Guardian* pet)
+{
+    if (_passivePet.IsEmpty())
+        return false;
+
+    bool const isSamePet = pet->GetGUID() == _passivePet;
+    _passivePet.Clear();
+    if (!isSamePet)
+        return false;
+
+    pet->SetReactState(_previousReactState);
+    return true;
+}
+
+bool ShadowmoonReaverControlCasterPetAction::CommandPetAttack(Guardian* pet, Unit* target)
+{
     pet->AttackStop();
     pet->InterruptNonMeleeSpells(false);
     pet->ClearUnitState(UNIT_STATE_FOLLOW);
@@ -275,31 +327,10 @@ bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
     return true;
 }
 
-bool ShadowmoonReaverControlCasterPetAction::RestoreReactState(Guardian* pet)
-{
-    if (!_setPassive)
-        return false;
-
-    pet->SetReactState(_previousReactState);
-    _setPassive = false;
-    return true;
-}
-
 // High Warlord Naj'entus
 
 bool HighWarlordNajentusDisperseRangedAction::Execute(Event /*event*/)
 {
-    Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
-    if (!najentus)
-        return false;
-
-    constexpr uint32 minInterval = 0;
-    if (bot->GetExactDist2d(najentus) < NAJENTUS_RANGED_DISTANCE_FROM_BOSS &&
-        FleePosition(najentus->GetPosition(), NAJENTUS_RANGED_DISTANCE_FROM_BOSS, minInterval))
-    {
-        return true;
-    }
-
     Player* nearestPlayer = GetNearestPlayerInRadius(bot, NAJENTUS_RANGED_SPREAD_DISTANCE);
     return nearestPlayer &&
         FleePosition(nearestPlayer->GetPosition(), NAJENTUS_RANGED_SPREAD_DISTANCE);
@@ -421,6 +452,7 @@ bool HighWarlordNajentusThrowImpalingSpineAction::Execute(Event /*event*/)
 
     bot->CastStop();
     botAI->ImbueItem(spine, najentus);
+    BtState(bot->GetInstanceId()).najentusSpineThrowTime = getMSTime();
     _throwDelay = 0;
     return true;
 }

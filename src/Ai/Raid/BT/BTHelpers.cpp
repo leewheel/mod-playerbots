@@ -14,6 +14,7 @@
 #include "PathGenerator.h"
 #include "PetDefines.h"
 #include "Playerbots.h"
+#include "RtiTargetValue.h"
 #include "Spell.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
@@ -266,14 +267,17 @@ bool CanBuildChaoticCharge(SpellInfo const* spellInfo, bool triggered, uint8 dep
 
 } // end anonymous namespace (Trash)
 
-bool IsLinkedSisterOfPleasure(Unit* unit)
+Unit* GetLinkedSisterOfPain(Unit* pleasure)
 {
-    if (!unit || unit->GetEntry() != Id(BtNpcs::NPC_SISTER_OF_PLEASURE) || !unit->IsAlive())
-        return false;
+    if (!pleasure || pleasure->GetEntry() != Id(BtNpcs::NPC_SISTER_OF_PLEASURE) ||
+        !pleasure->IsAlive())
+    {
+        return nullptr;
+    }
 
-    Aura* bonds = unit->GetAura(Id(BtSpells::SPELL_SHARED_BONDS));
+    Aura* bonds = pleasure->GetAura(Id(BtSpells::SPELL_SHARED_BONDS));
     Unit* pain = bonds ? bonds->GetCaster() : nullptr;
-    return pain && pain->IsAlive();
+    return pain && pain->IsAlive() ? pain : nullptr;
 }
 
 Unit* FindLinkedSisterOfPleasure(PlayerbotAI* botAI)
@@ -283,11 +287,21 @@ Unit* FindLinkedSisterOfPleasure(PlayerbotAI* botAI)
         sisters, Id(BtNpcs::NPC_SISTER_OF_PLEASURE), SISTER_OF_PLEASURE_SEARCH_RADIUS);
     for (Creature* sister : sisters)
     {
-        if (IsLinkedSisterOfPleasure(sister))
+        if (GetLinkedSisterOfPain(sister))
             return sister;
     }
 
     return nullptr;
+}
+
+Unit* GetSkullSisterOfPain(Player* bot)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return nullptr;
+
+    return GetLinkedSisterOfPain(
+        ObjectAccessor::GetUnit(*bot, group->GetTargetIcon(RtiTargetValue::skullIndex)));
 }
 
 GuidVector FindShadowmoonReaverGuids(PlayerbotAI* botAI)
@@ -591,6 +605,13 @@ Player* FindNajentusSpineThrower(Player* bot, Unit* najentus)
     }
 
     return thrower;
+}
+
+bool IsNajentusSpineInFlight(Player* bot)
+{
+    BtInstanceState const* state = FindBtState(bot->GetInstanceId());
+    return state && state->najentusSpineThrowTime &&
+        GetMSTimeDiffToNow(*state->najentusSpineThrowTime) < NAJENTUS_HURL_SPINE_FLIGHT_MS;
 }
 
 // Supremus
@@ -2441,9 +2462,10 @@ bool BtResetInstance(uint32 instanceId)
 
     BtInstanceState const& state = it->second;
     bool const wasSet = state.najentusSpineAssignments || state.najentusSpineThrower ||
-        state.councilDpsWaitTimer || state.illidanLastPhase || state.illidanPreviousPhase ||
-        state.illidanPhaseStartTime || state.illidanFlamePhaseStartTime || state.eastFlameGuid ||
-        state.westFlameGuid || state.illidanInfections;
+        state.najentusSpineThrowTime || state.councilDpsWaitTimer || state.illidanLastPhase ||
+        state.illidanPreviousPhase || state.illidanPhaseStartTime ||
+        state.illidanFlamePhaseStartTime || state.eastFlameGuid || state.westFlameGuid ||
+        state.illidanInfections;
 
     btStates.erase(it);
     return wasSet;

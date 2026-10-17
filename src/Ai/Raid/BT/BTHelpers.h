@@ -228,9 +228,13 @@ inline constexpr uint32 SHADOWMOON_REAVER_CACHE_INTERVAL_MS = 1000;
 // Searched by entry around the marking bot, so it finds her without line of sight.
 inline constexpr float SISTER_OF_PLEASURE_SEARCH_RADIUS = 100.0f;
 
-// A living Sister of Pleasure carrying Shared Bonds from a living Sister of Pain.
-bool IsLinkedSisterOfPleasure(Unit* unit);
+// The living Sister of Pain whose Shared Bonds a living Sister of Pleasure carries; null for any
+// other unit.
+Unit* GetLinkedSisterOfPain(Unit* pleasure);
 Unit* FindLinkedSisterOfPleasure(PlayerbotAI* botAI);
+// The Sister of Pain linked to the skulled Sister of Pleasure. The skull is read by GUID, so a
+// Pleasure out of sight still counts.
+Unit* GetSkullSisterOfPain(Player* bot);
 GuidVector FindShadowmoonReaverGuids(PlayerbotAI* botAI);
 // True for a Shadowmoon Reaver while magic would build Chaotic Charge on her: from the start of
 // Spell Absorption until it ends, from the margin before her earliest recast, and before her
@@ -248,23 +252,24 @@ Unit* FindPetTargetOtherThanReaver(PlayerbotAI* botAI);
 
 // High Warlord Naj'entus
 
+// Impales can overlap (every 20 s, 30 s stun), so one entry per impaled player.
 struct NajentusSpineAssignment
 {
     ObjectGuid impaled;
     ObjectGuid remover;
 };
 
-inline constexpr float NAJENTUS_RANGED_DISTANCE_FROM_BOSS = 10.0f;
 // Needle Spine Explosion hits allies within 6 yd of each player struck.
 inline constexpr float NAJENTUS_RANGED_SPREAD_DISTANCE = 7.0f;
 // Hurl Spine (39948) range, counted beyond both combat reaches as Spell::CheckRange does.
 inline constexpr float NAJENTUS_HURL_SPINE_RANGE = 25.0f;
 // How far inside that range a thrower walking in stops.
 inline constexpr float NAJENTUS_HURL_SPINE_APPROACH_MARGIN = 2.0f;
+// A spine flies up to 1.25 s and breaks the shield on landing, and the throw is a queued packet,
+// so no spine is thrown this long after the last one.
+inline constexpr uint32 NAJENTUS_HURL_SPINE_FLIGHT_MS = 2 * IN_MILLISECONDS;
 
 inline Position const NAJENTUS_TANK_POSITION = { 438.515f, 772.436f, 11.931f };
-
-// Impales can overlap (every 20 s, 30 s stun), so one entry per impaled player.
 
 bool IsNajentusImpaled(Player* player);
 // An impaled group member with no living remover assigned, for the mechanic tracker to assign.
@@ -278,6 +283,7 @@ bool IsNajentusSpineThrower(Player* bot);
 Player* GetNajentusSpineThrower(Player* bot);
 // The bot holding a spine nearest Naj'entus that can throw it.
 Player* FindNajentusSpineThrower(Player* bot, Unit* najentus);
+bool IsNajentusSpineInFlight(Player* bot);
 
 // Supremus
 
@@ -832,6 +838,7 @@ struct BtInstanceState
 {
     std::optional<std::vector<NajentusSpineAssignment>> najentusSpineAssignments;
     std::optional<ObjectGuid> najentusSpineThrower;
+    std::optional<uint32> najentusSpineThrowTime;
     std::optional<uint32> councilDpsWaitTimer;
     std::optional<IllidanPhase> illidanLastPhase;
     // The phase before the current one, so Phase 5 straight from Demon Form shows as a reset.

@@ -323,6 +323,18 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
 namespace
 {
 
+// Non-tanks leave the skulled Pleasure's Sister of Pain to her, since Pleasure takes the damage
+// for both.
+void AppendSisterOfPainExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
+{
+    Player* bot = botAI->GetBot();
+    if (PlayerbotAI::IsTank(bot))
+        return;
+
+    if (Unit* pain = GetSkullSisterOfPain(bot))
+        exclusions.insert(pain->GetGUID());
+}
+
 void AppendShadowmoonReaverExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
     Player* bot = botAI->GetBot();
@@ -393,7 +405,10 @@ void RaidBlackTempleStrategy::AppendTargetExclusions(
         return;
 
     if (type != TargetValueExclusionType::TankTarget)
+    {
+        AppendSisterOfPainExclusions(botAI, exclusions);
         AppendShadowmoonReaverExclusions(botAI, exclusions);
+    }
 
     if (!IsEncounterInProgress(bot, BT_MAP_ID))
         return;

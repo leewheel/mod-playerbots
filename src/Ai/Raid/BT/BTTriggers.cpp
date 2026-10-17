@@ -8,7 +8,6 @@
 #include "BTHelpers.h"
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
-#include "RtiTargetValue.h"
 #include "SharedDefines.h"
 #include "Spell.h"
 #include <algorithm>
@@ -39,17 +38,14 @@ bool BlackTempleHunterShouldMisdirectTrigger::IsActiveInEncounter()
 bool SisterOfPleasureShouldBeFocusedTrigger::IsActive()
 {
     if (IsMechanicTrackerBot(bot, BT_MAP_ID))
-    {
-        Unit* skull = botAI->GetUnit(bot->GetGroup()->GetTargetIcon(RtiTargetValue::skullIndex));
-        return !IsLinkedSisterOfPleasure(skull) && FindLinkedSisterOfPleasure(botAI);
-    }
+        return !GetSkullSisterOfPain(bot) && FindLinkedSisterOfPleasure(botAI);
 
     if (PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* target = AI_VALUE(Unit*, "current target");
     return target && target->GetEntry() == Id(BtNpcs::NPC_SISTER_OF_PAIN) &&
-        IsLinkedSisterOfPleasure(AI_VALUE2(Unit*, "find target", "22964"));
+        GetSkullSisterOfPain(bot) == target;
 }
 
 bool ShadowmoonReaverWandBuildsChargesTrigger::IsActive()
@@ -84,12 +80,15 @@ bool HighWarlordNajentusRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
+    //By leewheel 2026年10月18日 上游本轮此处为英文名 "high warlord naj'entus"；
+    // 本核生物名为中文，英文 qualifier 做子串匹配恒失败（见 src/Ai/Base/Value/TargetValue.cpp 08-21 修复注释）
+    // ⇒ 按三方核定映射表回退 entry 22887（实库 creature_template + base + 历史映射表）。
     Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
     if (!najentus)
+        //End By leewheel
         return false;
 
-    return bot->GetExactDist2d(najentus) < NAJENTUS_RANGED_DISTANCE_FROM_BOSS ||
-        GetNearestPlayerInRadius(bot, NAJENTUS_RANGED_SPREAD_DISTANCE);
+    return GetNearestPlayerInRadius(bot, NAJENTUS_RANGED_SPREAD_DISTANCE);
 }
 
 bool HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger::IsActiveInEncounter()
@@ -121,7 +120,7 @@ bool HighWarlordNajentusNeedsSpineThrowerTrigger::IsActiveInEncounter()
 
 bool HighWarlordNajentusHasTidalShieldTrigger::IsActiveInEncounter()
 {
-    if (!IsNajentusSpineThrower(bot))
+    if (!IsNajentusSpineThrower(bot) || IsNajentusSpineInFlight(bot))
         return false;
 
     Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
