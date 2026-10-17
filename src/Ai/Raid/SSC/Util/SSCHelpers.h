@@ -16,7 +16,6 @@
 #include <mutex>
 #include <optional>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
 class Creature;
@@ -106,6 +105,9 @@ enum class SscNpcs : uint32
     // Trash
     NPC_WATER_ELEMENTAL_TOTEM    = 22236,
 
+    // Hydross the Unstable <Duke of Currents>
+    NPC_HYDROSS_THE_UNSTABLE     = 21216,
+
     // The Lurker Below
     NPC_THE_LURKER_BELOW         = 21217,
     NPC_COILFANG_GUARDIAN        = 21873,
@@ -116,6 +118,7 @@ enum class SscNpcs : uint32
     NPC_SHADOW_OF_LEOTHERAS      = 21875,
 
     // Morogrim Tidewalker
+    NPC_MOROGRIM_TIDEWALKER      = 21213,
     NPC_TIDEWALKER_LURKER        = 21920,
 
     // Fathom-Lord Karathress
@@ -128,6 +131,7 @@ enum class SscNpcs : uint32
     NPC_FATHOM_SPOREBAT          = 22120,
 
     // Lady Vashj <Coilfang Matron>
+    NPC_LADY_VASHJ               = 21212,
     NPC_ENCHANTED_ELEMENTAL      = 21958,
     NPC_COILFANG_ELITE           = 22055,
     NPC_COILFANG_STRIDER         = 22056,
@@ -867,24 +871,6 @@ auto WithSscState(uint32 instanceId, Fn&& fn) -> decltype(fn(std::declval<SscIns
 }
 
 bool SscResetInstance(uint32 instanceId);
-
-template <typename T, typename U>
-bool EmplaceIfUnset(std::optional<T>& field, U&& value)
-{
-    if (field)
-        return false;
-
-    field.emplace(std::forward<U>(value));
-    return true;
-}
-
-template <typename T>
-bool ResetIfSet(std::optional<T>& field)
-{
-    bool const wasSet = field.has_value();
-    field.reset();
-    return wasSet;
-}
 
 }
 

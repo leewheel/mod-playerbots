@@ -15,9 +15,6 @@
 
 using namespace BtHelpers;
 using namespace EncounterHelpers;
-// By leewheel 2026-10-13 合并 brighton the-lab：整文件采纳上游重构版（上游 159+/48- 远大于
-//   本核 entry 化 60+/55-），find target 英文名换回 NPC entry（映射见 BTActions.cpp 头部注释）。
-// End By leewheel
 
 // Shared
 
@@ -395,10 +392,9 @@ bool MotherShahrazTanksArePositioningBossTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsMelee(bot) || !PlayerbotAI::IsDps(bot))
         return false;
 
-    constexpr float shahrazMeleeStartHealthPct = 90.0f;
-    // By leewheel 2026-10-15 合并：find target 按铁律换回 entry 22947。
+    constexpr float meleeEngageHealthPct = 90.0f;
     Unit* shahraz = AI_VALUE2(Unit*, "find target", "22947");
-    if (!shahraz || shahraz->GetHealthPct() < shahrazMeleeStartHealthPct)
+    if (!shahraz || shahraz->GetHealthPct() < meleeEngageHealthPct)
         return false;
 
     Unit* victim = shahraz->GetVictim();
@@ -631,7 +627,7 @@ bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncount
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    if (phase == IllidanPhase::None || phase == IllidanPhase::Dying)
+    if (phase == IllidanPhase::None)
         return false;
 
     if (phase == IllidanPhase::Flying)
@@ -651,7 +647,6 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
     if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
-    // By leewheel 2026-10-16 合并：find target 按铁律换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
@@ -660,13 +655,13 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
         "illidan stormrage players with parasitic shadowfiend")->RefGet();
     IllidanPhase const phase = GetIllidanPhase(illidan);
     IllidanPhase const infectionPhase = GetIllidanInfectionPositionPhase(*illidan, phase);
-    bool const hasInfectionPosition = phase != IllidanPhase::None &&
-        phase != IllidanPhase::Flying && phase != IllidanPhase::Dying;
-    auto const it = illidanInfections.find(bot->GetInstanceId());
-    bool const hasInfections = it != illidanInfections.end();
-    if (hasInfections)
+    bool const hasInfectionPosition = phase != IllidanPhase::None && phase != IllidanPhase::Flying;
+    BtInstanceState const* state = FindBtState(bot->GetInstanceId());
+    auto const* infections =
+        state && state->illidanInfections ? &*state->illidanInfections : nullptr;
+    if (infections)
     {
-        for (auto const& [player, infection] : it->second)
+        for (auto const& [player, infection] : *infections)
         {
             if (std::find(infected.begin(), infected.end(), player) == infected.end())
                 return true;
@@ -684,15 +679,13 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
 
     for (ObjectGuid const& guid : infected)
     {
-        if (!hasInfections || !it->second.contains(guid))
+        if (!infections || !infections->contains(guid))
             return true;
     }
 
     return false;
 }
 
-// By leewheel 2026-10-15 合并 brighton 20970179：采纳上游删除 IllidanStormrageParasiticShadowfiendsRunWildTrigger
-// （"remove earthbind"：shaman 地缚图腾逻辑随触发器一并移除，.h 与注册处已同步删除）。
 bool IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsTank(bot))
@@ -729,16 +722,19 @@ bool IllidanStormragePetShouldAttackShadowfiendTrigger::IsActiveInEncounter()
     if (!pet || !pet->IsAlive())
         return false;
 
-    Unit* victim = pet->GetVictim();
-    uint32 const victimEntry = victim && victim->IsAlive() ? victim->GetEntry() : 0;
-    if (victimEntry == Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND) ||
-        victimEntry == Id(BtNpcs::NPC_SHADOW_DEMON))
-    {
-        return false;
-    }
-
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
+        return false;
+
+    // A pet's hit puts its owner on the Shadowfiend's threat list, the only entry it can act on,
+    // so while its owner has just birthed Shadowfiends the pet is called off them.
+    Unit* victim = pet->GetVictim();
+    uint32 const victimEntry = victim && victim->IsAlive() ? victim->GetEntry() : 0;
+    bool const isNearNewShadowfiend = IsNearNewParasiticShadowfiend(botAI);
+    if (victimEntry == Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND))
+        return isNearNewShadowfiend;
+
+    if (victimEntry == Id(BtNpcs::NPC_SHADOW_DEMON) || isNearNewShadowfiend)
         return false;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
@@ -842,10 +838,6 @@ bool IllidanStormrageShouldPositionForLandingTrigger::IsActiveInEncounter()
     if ((PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)))
         return false;
 
-    // By leewheel 2026-10-17 合并：采纳上游版——旧依赖的 IsIllidanLandingWait 辅助函数已随
-    // 上游 879a6a7d8「shadow demon and shadowfiend handling」一并删除（BTHelpers.h/.cpp 均无），
-    // 保留旧写法会导致未定义引用；改为直接判 Landing 语义等价
-    // （GetIllidanPhase(nullptr) 返回 None ≠ Landing，空指针安全）。find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (GetIllidanPhase(illidan) != IllidanPhase::Landing)
         return false;
@@ -886,8 +878,6 @@ bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    // By leewheel 2026-10-16 合并：上游 9c982d91 有意移除 SPELL_CAGED 检查，采纳上游版；
-    // find target 按铁律换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
@@ -915,7 +905,6 @@ bool IllidanStormrageRangedShouldReachShadowDemonTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsHeal(bot) || HasParasiticShadowfiend(bot))
         return false;
 
-    // By leewheel 2026-10-17 合并：本 trigger 为上游本轮新增，find target 按铁律换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon || IsIllidanWarlockTank(botAI))
         return false;
@@ -930,7 +919,6 @@ bool IllidanStormrageMeleeShouldStayAwayFromDemonFormTrigger::IsActiveInEncounte
     if (!PlayerbotAI::IsMelee(bot) || (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)))
         return false;
 
-    // By leewheel 2026-10-15 合并：采纳上游版（新增暗影恶魔目标时不占恶魔形态位），find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return false;
@@ -962,7 +950,6 @@ bool IllidanStormrageWarlockShouldSeedShadowDemonsTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_WARLOCK)
         return false;
 
-    // By leewheel 2026-10-16 合并：采纳上游新增术士 seed 阴影恶魔触发器；find target 换回 NPC entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return false;
@@ -978,9 +965,6 @@ bool IllidanStormrageWarlockShouldSeedShadowDemonsTrigger::IsActiveInEncounter()
 // walk-in. Healers take Shadow Demons as targets in Demon Form.
 bool IllidanStormrageShouldAssignTargetPriorityTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-10-16 合并：采纳上游版（主坦 walk-in 逻辑需要 illidan 变量，
-    // 下游 IsIllidanDemonFormEnding(*illidan, ...) 依赖它）；find target 换回 NPC entry 22917
-    // （base creature_template.sql + acore_world.creature_template 双方核定：22917 = Illidan Stormrage / boss_illidan_stormrage）。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     IllidanPhase const phase = GetIllidanPhase(illidan);
     if (phase == IllidanPhase::None || phase == IllidanPhase::Dying)
@@ -1007,8 +991,6 @@ bool IllidanStormrageShouldAssignTargetPriorityTrigger::IsActiveInEncounter()
 
 bool IllidanStormrageMaievPlacedCageTrapTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-10-15 合并：采纳上游版——死亡场景语义已并入 GetIllidanPhase
-    // （IllidanPhase::Dying，见 106beaae），IsIllidanDeathScene helper 已删除；find target 换回 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Maiev)
         return false;
@@ -1047,8 +1029,6 @@ bool IllidanStormrageMaievPlacedCageTrapTrigger::IsActiveInEncounter()
 
 bool IllidanStormrageShouldManageDpsTimersTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-10-15 合并：采纳上游版（死亡场景语义已并入 GetIllidanPhase::Dying），
-    // find target 换回 entry 22917。
     return IsMechanicTrackerBot(bot, BT_MAP_ID) &&
         AI_VALUE2(Unit*, "find target", "22917");
 }
@@ -1060,13 +1040,6 @@ bool IllidanStormrageShouldClearHazardsBeforeLandingTrigger::IsActiveInEncounter
     if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
         return false;
 
-    // By leewheel 2026-10-17 合并：采纳上游版；find target 换回 entry 22917。
-    //
-    // 注：本处同时删除了原 HEAD 侧的 IllidanStormrageCheatTrigger::IsActiveInEncounter 实现。
-    // 该 trigger 的类声明（BTTriggers.h）与动作注册（BTActionContext.h 的
-    // "illidan stormrage handle adds cheat"）已在上游本轮迭代中彻底移除，四个相关文件均查无
-    // 痕迹 ⇒ 保留 .cpp 实现将因子类不存在而无法编译；BTStrategy 中对应 trigger 早已注释停用，
-    // 无行为损失。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     return illidan && GetIllidanPhase(illidan) == IllidanPhase::Landing;
 }

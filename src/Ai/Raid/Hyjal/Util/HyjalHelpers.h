@@ -7,12 +7,12 @@
 #ifndef PLAYERBOTS_HYJALHELPERS_H
 #define PLAYERBOTS_HYJALHELPERS_H
 
+#include "Common.h"
 #include "ObjectGuid.h"
 #include "Position.h"
-#include <cmath>
 #include <functional>
+#include <optional>
 #include <type_traits>
-#include <unordered_map>
 #include <vector>
 
 class Player;
@@ -61,10 +61,21 @@ enum class HyjalSpells : uint32
 
 enum class HyjalNpcs : uint32
 {
+    // Rage Winterchill
+    NPC_RAGE_WINTERCHILL  = 17767,
+
     // Anetheron
+    NPC_ANETHERON         = 17808,
     NPC_TOWERING_INFERNAL = 17818,
 
+    // Kaz'rogal
+    NPC_KAZROGAL          = 17888,
+
+    // Azgalor
+    NPC_AZGALOR           = 17842,
+
     // Archimonde
+    NPC_ARCHIMONDE        = 17968,
     NPC_DOOMFIRE          = 18095,
 };
 
@@ -74,8 +85,8 @@ struct BlockedArc
     float center;
     float halfWidth;
 };
+
 // Shared
-// （By leewheel 2026-10-13 合并 brighton the-lab：节标题随上游由 General 改为 Shared。）
 
 inline constexpr uint32 HYJAL_MAP_ID = 534;
 // The interval matches the default Playerbots.ReactDelay.
@@ -94,9 +105,6 @@ bool GetMeleeHazardManeuverStep(
     Player* bot, Unit* boss, std::vector<Position> const& hazards, float hazardRadius,
     std::vector<BlockedArc> const& extraBlocked, float& stepX, float& stepY, float& stepZ,
     std::function<bool(float, float)> const& isAcceptable = {});
-
-// Every ranged raid member on the map, in group order. The dead are kept in the list so that a
-// death does not shift every survivor's ring index.
 std::vector<Player*> GetRangedMembers(Player* bot);
 bool GetRangedRingStep(
     Player* bot, Position const& center, float healerRadius, float dpsRadius, float& stepX,
@@ -108,7 +116,6 @@ bool GetRangedRingStep(
 // not be increased by CombatReach, but the range of persistent ground-based AoEs is bugged in AC.
 inline constexpr float DEATH_AND_DECAY_RADIUS = 22.0f;
 // Out to this distance, movement is controlled only by the avoidance action.
-// By leewheel 2026-09-08 合并: 采纳 brighton 控制半径命名 CONTROL_RADIUS (原本地 MELEE_CONTROL_RADIUS 废弃)
 inline constexpr float DEATH_AND_DECAY_CONTROL_RADIUS =
     DEATH_AND_DECAY_RADIUS + HAZARD_CONTROL_MARGIN;
 inline constexpr float DEATH_AND_DECAY_SEARCH_RADIUS =
@@ -200,7 +207,6 @@ bool HasMarkOfKazrogal(Player* bot);
 // range is due to an AC bug.
 inline constexpr float RAIN_OF_FIRE_RADIUS = 17.0f;
 // Out to this distance, movement is controlled only by the avoidance action.
-// By leewheel 2026-09-08 合并: 采纳 brighton 控制半径命名 CONTROL_RADIUS (原本地 MELEE_CONTROL_RADIUS 废弃)
 inline constexpr float RAIN_OF_FIRE_CONTROL_RADIUS = RAIN_OF_FIRE_RADIUS + HAZARD_CONTROL_MARGIN;
 inline constexpr float RAIN_OF_FIRE_SEARCH_RADIUS =
     RAIN_OF_FIRE_CONTROL_RADIUS + HAZARD_SEARCH_MARGIN;
@@ -222,8 +228,6 @@ bool IsInRainOfFire(PlayerbotAI* botAI);
 bool IsDoomed(Player* bot);
 // The first assist tank picks up Doomguards, unless it has Doom, in which case the second assist
 // tank takes over.
-// By leewheel 2026-09-08 合并: 保留本服单参签名 (原 HEAD 段中重复的 CLEAVE_CHAIN_RADIUS/CLEAVE_DANGER_ARC/
-// IsSafeFromAzgalorCleave 声明与上方公共段重复, 已删除)
 bool IsDoomguardTank(Player* bot);
 bool AnyGroupMemberHasDoom(Player* bot);
 
@@ -231,8 +235,8 @@ bool AnyGroupMemberHasDoom(Player* bot);
 
 struct AirBurstData
 {
-    ObjectGuid targetGuid;
-    uint32 castTime;
+    ObjectGuid targetGuid = ObjectGuid::Empty;
+    uint32 castTime = 0;
 };
 
 inline constexpr float AIR_BURST_SAFE_DISTANCE = 15.0f;
@@ -249,12 +253,11 @@ inline constexpr float DOOMFIRE_SEARCH_RADIUS =
     DOOMFIRE_FIELD_RADIUS + DOOMFIRE_DANGER_RADIUS + HAZARD_SEARCH_MARGIN; // 30y
 // General spread to prevent clumping due to the risk of Air Burst.
 inline constexpr float ARCHIMONDE_RANGED_SPREAD_DISTANCE = 10.0f;
-// By leewheel 2026-08-30 合并：保留本服扩展常量(散布节流间隔, HyjalActions使用)，采用上游注释措辞
-inline constexpr uint32 ARCHIMONDE_RANGED_SPREAD_INTERVAL = 3000;
 
 // Up the hill a bit, for space from the World Tree. The tank walks him here at the pull only.
 // Archimonde slaps so the tank will pause moving whenever below 60% HP.
 inline Position const ARCHIMONDE_INITIAL_POSITION = { 5640.502f, -3421.238f, 1587.453f };
+
 // Invincibility applied by Tyrande when Archimonde is at 10% HP. Used to cut off boss strategies
 // since the fight is effectively over at this point.
 bool HasProtectionOfElune(Player* bot);
@@ -263,9 +266,17 @@ bool IsPositionNearDoomfire(PlayerbotAI* botAI, float x, float y, float radius);
 // Every live Doomfire trail patch the cache holds, for callers that rely on a scoring system to
 // determine where bots should move to.
 std::vector<Position> GetDoomfirePositions(PlayerbotAI* botAI);
-extern std::unordered_map<uint32, AirBurstData> archimondeAirBurstTargets;
-// By leewheel 2026-09-08 合并: 保留本服指针版签名(与 HyjalActions/HyjalTriggers 调用一致), 不采纳 brighton 值版
-AirBurstData* GetPendingAirBurstCast(uint32 instanceId);
+bool GetPendingAirBurstCast(uint32 instanceId, AirBurstData& airBurst);
+
+// Shared encounter state
+
+struct HyjalInstanceState
+{
+    std::optional<AirBurstData> archimondeAirBurstTarget;
+};
+
+HyjalInstanceState& HyjalState(uint32 instanceId);
+bool HyjalResetInstance(uint32 instanceId);
 
 }
 

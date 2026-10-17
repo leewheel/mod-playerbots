@@ -12,6 +12,8 @@
 #include "ObjectGuid.h"
 #include "PlayerbotCommandServer.h"
 #include "PlayerbotMgr.h"
+#include <mutex>
+#include <set>
 #include <unordered_set>
 
 // By leewheel 2026-08-01
@@ -336,6 +338,7 @@ private:
     void FixLevelDistribution();                                    // 遍历在线bot批量修复（控制台命令）
     // End By leewheel
     uint32 GetZoneLevel(uint16 mapId, float teleX, float teleY, float teleZ);
+    void UpdatePlayerZones();
     std::vector<WorldLocation> GetPlayerZoneTeleportLocations(std::vector<WorldLocation> const& locs, Player* bot);
     typedef void (RandomPlayerbotMgr::*ConsoleCommandHandler)(Player*);
     std::vector<Player*> players;
@@ -351,6 +354,9 @@ private:
     time_t AmbienceReshuffleTimer;
     // End By leewheel
     uint32 playersLevel;
+    // Written on the world thread, read from map threads.
+    std::set<std::pair<uint32, uint32>> _playerZones;
+    std::mutex _playerZonesLock;
 
     // Account lists
     std::vector<uint32> rndBotTypeAccounts;             // Accounts marked as RNDbot (type 1)

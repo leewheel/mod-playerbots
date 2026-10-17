@@ -28,7 +28,6 @@
 #include "WarlockActions.h"
 #include "WarriorActions.h"
 #include "WipeAction.h"
-#include <array>
 
 using namespace BtHelpers;
 using namespace EncounterHelpers;
@@ -45,6 +44,20 @@ bool IsRepositionAction(Player* bot, Action* action)
 bool IsKillingSpree(Player* bot, Action* action)
 {
     return bot->getClass() == CLASS_ROGUE && dynamic_cast<CastKillingSpreeAction*>(action);
+}
+
+bool IsReliquaryEssence(uint32 entry)
+{
+    return entry == Id(BtNpcs::NPC_ESSENCE_OF_SUFFERING) ||
+        entry == Id(BtNpcs::NPC_ESSENCE_OF_DESIRE) || entry == Id(BtNpcs::NPC_ESSENCE_OF_ANGER);
+}
+
+// The bosses whose DPS cooldowns are held only for their first 5%.
+bool IsBlackTempleBossHeldAtPull(uint32 entry)
+{
+    return entry == Id(BtNpcs::NPC_HIGH_WARLORD_NAJENTUS) ||
+        entry == Id(BtNpcs::NPC_TERON_GOREFIEND) || entry == Id(BtNpcs::NPC_GURTOGG_BLOODBOIL) ||
+        entry == Id(BtNpcs::NPC_MOTHER_SHAHRAZ) || entry == Id(BtNpcs::NPC_GATHIOS_THE_SHATTERER);
 }
 
 bool IsDpsHoldCandidate(Player* bot, Action* action)
@@ -174,7 +187,34 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-    if (Unit* illidan = AI_VALUE2(Unit*, "find target", "22917"))
+    // One pass by entry over what this bot is on the threat list of, where a find target per boss
+    // name walks the list once per name.
+    Unit* illidan = nullptr;
+    Unit* supremus = nullptr;
+    Unit* essence = nullptr;
+    Unit* boss = nullptr;
+    bool isReliquary = false;
+    for (auto const& [guid, ref] : bot->GetThreatMgr().GetThreatenedByMeList())
+    {
+        Unit* unit = ref->GetOwner();
+        if (!unit)
+            continue;
+
+        uint32 const entry = unit->GetEntry();
+        if (entry == Id(BtNpcs::NPC_ILLIDAN_STORMRAGE))
+            illidan = unit;
+        else if (entry == Id(BtNpcs::NPC_RELIQUARY_OF_THE_LOST))
+            isReliquary = true;
+        // An essence walking home at 1 health stays on the threat lists.
+        else if (IsReliquaryEssence(entry) && !unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+            essence = unit;
+        else if (entry == Id(BtNpcs::NPC_SUPREMUS))
+            supremus = unit;
+        else if (IsBlackTempleBossHeldAtPull(entry))
+            boss = unit;
+    }
+
+    if (illidan)
     {
         if (illidan->GetHealthPct() <= 62.0f)
             return 1.0f;
@@ -188,36 +228,18 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action
 
         return illidan->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 1.0f : 0.0f;
     }
-
-    if (AI_VALUE2(Unit*, "find target", "22856"))
+    else if (isReliquary)
     {
-        // An essence walking home at 1 health stays on the threat lists.
-        for (char const* name :
-             { "essence of suffering", "essence of desire", "essence of anger" })
-        {
-            Unit* essence = AI_VALUE2(Unit*, "find target", name);
-            if (essence && !essence->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
-                return essence->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
-        }
-
-        return 0.0f;
+        return !essence || essence->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
-
-    if (Unit* supremus = AI_VALUE2(Unit*, "find target", "22898"))
+    else if (supremus)
     {
         return IsSupremusKitePhase(supremus) ||
             supremus->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
-
-    static constexpr std::array blackTempleBosses = {
-        "high warlord naj'entus", "teron gorefiend", "gurtogg bloodboil", "mother shahraz",
-        "gathios the shatterer",
-    };
-
-    for (char const* name : blackTempleBosses)
+    else if (boss)
     {
-        if (Unit* boss = AI_VALUE2(Unit*, "find target", name))
-            return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+        return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
     return 1.0f;
@@ -741,9 +763,9 @@ float IllidariCouncilWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     if (!IsDpsHoldCandidate(bot, action))
         return 1.0f;
 
-    auto it = councilDpsWaitTimer.find(bot->GetInstanceId());
-    if (it == councilDpsWaitTimer.end() ||
-        getMSTimeDiff(it->second, getMSTime()) >= COUNCIL_DPS_WAIT_MS)
+    BtInstanceState const* state = FindBtState(bot->GetInstanceId());
+    if (!state || !state->councilDpsWaitTimer ||
+        getMSTimeDiff(*state->councilDpsWaitTimer, getMSTime()) >= COUNCIL_DPS_WAIT_MS)
     {
         return 1.0f;
     }
@@ -792,8 +814,18 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter
     }
 
     IllidanPhase phase = GetIllidanPhase(illidan);
-    if (phase == IllidanPhase::None || phase == IllidanPhase::Dying)
+    if (phase == IllidanPhase::None)
         return 1.0f;
+
+    // In the death scene only an infected bot is held, so nothing pulls it off its infection
+    // position.
+    if (phase == IllidanPhase::Dying)
+    {
+        bool const isHeldMove = dynamic_cast<FollowAction*>(action) ||
+            dynamic_cast<CombatFormationMoveAction*>(action) ||
+            IsHeldIllidanChase(botAI, action, phase);
+        return isHeldMove && HasParasiticShadowfiend(bot) ? 0.0f : 1.0f;
+    }
 
     // Unselectable while he flies and lands, he is an invalid target, and dropping him would take
     // a bot out of the combat engine, where its heals and rotation are.
@@ -1038,9 +1070,9 @@ float IllidanStormrageWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     if (GetIllidanPhase(illidan) == IllidanPhase::Flying)
     {
         constexpr uint32 flamePhaseDpsWaitMs = 6 * IN_MILLISECONDS;
-        auto const it = illidanFlamePhaseStartTime.find(illidan->GetInstanceId());
-        bool const inWindow = it != illidanFlamePhaseStartTime.end() &&
-            getMSTimeDiff(it->second, getMSTime()) < flamePhaseDpsWaitMs;
+        BtInstanceState const* state = FindBtState(illidan->GetInstanceId());
+        bool const inWindow = state && state->illidanFlamePhaseStartTime &&
+            getMSTimeDiff(*state->illidanFlamePhaseStartTime, getMSTime()) < flamePhaseDpsWaitMs;
 
         if (!inWindow || IsFlameOfAzzinothTank(bot))
             return 1.0f;

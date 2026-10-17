@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "KaraMultipliers.h"
 #include "AttackAction.h"
 #include "ChooseTargetActions.h"
@@ -52,20 +49,14 @@ float KarazhanSetTremorTotemMultiplier::GetValue(Action* action)
     if (nightbane && nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
         return 0.0f;
 
-// By leewheel 2026-09-27 合并brighton the-lab：brighton 用名字，本分支按规则 entry 化
-    //   （17225=Nightbane, 15547=Spectral Charger, 17521=Big Bad Wolf, 15550=Attumen? 17521=大灰狼），
-    //   采纳 upstream 查三个坐骑/狼判定的逻辑并 entry 化。
     if (AI_VALUE2(Unit*, "find target", "15547") ||
         AI_VALUE2(Unit*, "find target", "17521") ||
-        AI_VALUE2(Unit*, "find target", "17225"))
+        AI_VALUE2(Unit*, "find target", "17546"))
     {
         return 0.0f;
     }
 
-// By leewheel 2026-09-27 合并brighton the-lab：除上述三个命中减速外其余返回 1（采纳 upstream，
-    //   HEAD 在第53行三个判定后此处的 17521 复查属于冗余，舍去）
     return 1.0f;
-    // End By leewheel
 }
 
 float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
@@ -187,12 +178,13 @@ float AttumenTheHuntsmanWaitForDpsMultiplier::GetValueInEncounter(Action* action
     if (PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
-    auto it = attumenDpsWaitTimer.find(attumen->GetMap()->GetInstanceId());
-    if (it == attumenDpsWaitTimer.end())
+    std::optional<uint32> const& waitStart =
+        KaraState(attumen->GetInstanceId()).attumenDpsWaitTimer;
+    if (!waitStart)
         return 0.0f; // Timer blocking dps if not set yet is intentional in all cases
 
     constexpr uint32 dpsWaitMs = 5 * IN_MILLISECONDS;
-    return getMSTimeDiff(it->second, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(*waitStart, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
 }
 
 // Maiden of Virtue
@@ -253,9 +245,6 @@ float TheCuratorDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action
     return AI_VALUE2(Unit*, "find target", "15691") ? 0.0f : 1.0f;
 }
 
-// By leewheel 2026-09-29 合并brighton 07e47c61: 上游 aa92ee90 删除 Curator 延缓英勇/嗜血
-//   multiplier（含 .h 声明与 Strategy 注册），此处同步移除函数体
-// End By leewheel
 // Terestian Illhoof
 
 float TerestianIllhoofDontDotFiendishImpsMultiplier::GetValueInEncounter(Action* action)
@@ -388,12 +377,13 @@ float NetherspiteWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     if (!netherspite || IsBanishPhase(netherspite))
         return 1.0f;
 
-    auto it = netherspiteDpsWaitTimer.find(netherspite->GetMap()->GetInstanceId());
-    if (it == netherspiteDpsWaitTimer.end())
+    std::optional<uint32> const& waitStart =
+        KaraState(netherspite->GetInstanceId()).netherspiteDpsWaitTimer;
+    if (!waitStart)
         return 0.0f;
 
     constexpr uint32 dpsWaitMs = 5 * IN_MILLISECONDS;
-    return getMSTimeDiff(it->second, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(*waitStart, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
 }
 
 // Prince Malchezaar
@@ -449,9 +439,6 @@ float PrinceMalchezaarEnfeebleMultiplier::GetValueInEncounter(Action* action)
     return 1.0f;
 }
 
-// By leewheel 2026-09-29 合并brighton 07e47c61: 上游 aa92ee90 删除王子延缓英勇/嗜血
-//   multiplier（含 .h 声明与 Strategy 注册），此处同步移除函数体
-// End By leewheel
 // Nightbane
 
 // Pets tend to run out of bounds and cause skeletons to spawn off the map
@@ -501,12 +488,13 @@ float NightbaneWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     if (PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
-    auto it = nightbaneDpsWaitTimer.find(nightbane->GetMap()->GetInstanceId());
-    if (it == nightbaneDpsWaitTimer.end())
+    std::optional<uint32> const& waitStart =
+        KaraState(nightbane->GetInstanceId()).nightbaneDpsWaitTimer;
+    if (!waitStart)
         return 0.0f;
 
     constexpr uint32 dpsWaitMs = 8 * IN_MILLISECONDS;
-    return getMSTimeDiff(it->second, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(*waitStart, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
 }
 
 float NightbaneDisableAvoidAoeMultiplier::GetValueInEncounter(Action* action)
@@ -556,12 +544,11 @@ float NightbaneDisableMovementMultiplier::GetValueInEncounter(Action* action)
         return 0.0f;
 
     // After 35s, Nightbane goes to land, and bots freely follow their master
-    // By leewheel 2026-08-29 合并：采用对侧修正(旧代码find判断写反：找到计时器反而return 0，找不到会解引用end迭代器导致UB)
-    auto const it = nightbaneFlightPhaseStartTimer.find(nightbane->GetInstanceId());
-    if (it == nightbaneFlightPhaseStartTimer.end())
+    std::optional<uint32> const& flightStart =
+        KaraState(nightbane->GetInstanceId()).nightbaneFlightPhaseStartTimer;
+    if (!flightStart)
         return 0.0f;
-    // End By leewheel
 
     constexpr uint32 flightPhaseDurationMs = 35 * IN_MILLISECONDS;
-    return getMSTimeDiff(it->second, getMSTime()) < flightPhaseDurationMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(*flightStart, getMSTime()) < flightPhaseDurationMs ? 0.0f : 1.0f;
 }

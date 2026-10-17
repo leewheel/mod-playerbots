@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "KaraActions.h"
 #include "EncounterHelpers.h"
 #include "KaraHelpers.h"
@@ -28,8 +25,6 @@ using namespace EncounterHelpers;
 
 bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
 {
-    // 合并brighton 2026-08-26: 统一重置三色光束/大灰狼run状态与blocker, 机械追踪器额外清DPS等待计时
-    //By leewheel 2026年8月26日
     uint32 const instanceId = bot->GetInstanceId();
     bool reset = false;
 
@@ -54,9 +49,7 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
         reset = true;
     }
 
-    reset |= currentRedBlocker.erase(instanceId) > 0;
-    reset |= currentGreenBlocker.erase(instanceId) > 0;
-    reset |= currentBlueBlocker.erase(instanceId) > 0;
+    reset |= KaraResetBeamBlockers(instanceId);
 
     Action* wolfAction = context->GetAction("big bad wolf little red riding hood run away");
     if (wolfAction &&
@@ -86,26 +79,15 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
         Id(KaraNpcs::NPC_TERESTIAN_ILLHOOF),
     });
 
-    reset |= attumenDpsWaitTimer.erase(instanceId) > 0;
-    reset |= netherspiteDpsWaitTimer.erase(instanceId) > 0;
-    reset |= nightbaneDpsWaitTimer.erase(instanceId) > 0;
-    reset |= nightbaneFlightPhaseStartTimer.erase(instanceId) > 0;
+    reset |= KaraResetInstance(instanceId);
 
     return reset;
-    //End By leewheel
 }
 
 bool KarazhanSetTremorTotemAction::Execute(Event /*event*/)
 {
-// By leewheel 2026-09-05 合并：采纳上游"去掉恐惧结界(fear ward)动作"的简化写法。
-    //  上游在KaraActions.h一并删除了KarazhanCastFearProtectionSpellAction类，
-    //  本地旧写法里祭司走恐惧结界的分支实际上被萨满专属触发器门控，属死代码，故一并移除。
-    //  颤地图腾的目标与Nightbane飞行高度校验已上移到上层触发器部门，此处直接施放即可。
-    //By leewheel 2026-09-27 合并brighton the-lab：brighton 内联 Id(...)，本分支提取 constexpr 局部，
-    //  语义完全等价，保留本地写法。
-    constexpr uint32 tremorTotem = Id(KaraSpells::SPELL_TREMOR_TOTEM);
-    return botAI->CanCastSpell(tremorTotem, bot) && botAI->CastSpell(tremorTotem, bot);
-    // End By leewheel
+    return botAI->CanCastSpell(Id(KaraSpells::SPELL_TREMOR_TOTEM), bot) &&
+        botAI->CastSpell(Id(KaraSpells::SPELL_TREMOR_TOTEM), bot);
 }
 
 // Trash
@@ -241,33 +223,26 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::StackBehindAttumen(Unit* attumen)
 
 bool AttumenTheHuntsmanSetDpsTimerAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-08-29 合并：采用对侧GetMSTimeDiff计时重构(与BT/SSC统一)，entry规则不变
     uint32 const now = getMSTime();
-    return attumenDpsWaitTimer.try_emplace(bot->GetInstanceId(), now).second;
-    // End By leewheel
+    return EmplaceIfUnset(KaraState(bot->GetInstanceId()).attumenDpsWaitTimer, now);
 }
 
 // Moroes
 
 bool MoroesMarkTargetAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-08-29 entry化：Moroes六位宾客改用entry查找(经acore原版库3309验证)，
-    // 顺序保持原有标记优先级
     static constexpr std::array moroesGuests = {
-        "19875", // Baroness Dorothea Millstipe
-        "19872", // Lady Catriona Von'Indi
-        "17007", // Lady Keira Berrybuck
-        "19874", // Baron Rafe Dreuger
-        "19876", // Lord Robin Daris
-        "19873", // Lord Crispin Ference
+        "baroness dorothea millstipe",
+        "lady catriona von'indi",
+        "lady keira berrybuck",
+        "baron rafe dreuger",
+        "lord robin daris",
+        "lord crispin ference",
     };
-    // End By leewheel
 
-    // By leewheel 2026-09-04 合并brighton-chi/the-lab: 循环变量声明随上游east-const风格,
-    // 变量名保留本分支 entry(数组内容是entry而非上游的名字)。
-    for (char const* entry : moroesGuests)
+    for (char const* name : moroesGuests)
     {
-        if (Unit* guest = AI_VALUE2(Unit*, "find target", entry))
+        if (Unit* guest = AI_VALUE2(Unit*, "find target", name))
             return MarkTargetWithSkull(bot, guest);
     }
 
@@ -476,8 +451,7 @@ bool WizardOfOzScorchStrawmanAction::Execute(Event /*event*/)
 {
     Unit* strawman = AI_VALUE2(Unit*, "find target", "17543");
     return strawman &&
-        botAI->CanCastSpell("scorch", strawman) &&
-        botAI->CastSpell("scorch", strawman);
+        botAI->CanCastSpell("scorch", strawman) && botAI->CastSpell("scorch", strawman);
 }
 
 // The Curator
@@ -524,13 +498,8 @@ bool TheCuratorSpreadRangedAction::Execute(Event /*event*/)
 
 bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-08-29 entry化：目标改用entry查找(经acore原版库3309验证)
     static constexpr std::array illhoofTargets = {
-        "17248", // Demon Chains
-        "17229", // Kil'rek
-        "15688", // Terestian Illhoof
-    };
-    // End By leewheel
+        "demon chains", "kil'rek", "terestian illhoof", };
 
     for (char const* name : illhoofTargets)
     {
@@ -940,16 +909,15 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
     if (!netherspite)
         return false;
 
-    // By leewheel 2026-08-29 合并：采用对侧GetMSTimeDiff计时重构与2参数IsMechanicTrackerBot重载，entry规则不变
-    uint32 const instanceId = netherspite->GetInstanceId();
+    std::optional<uint32>& dpsWaitTimer =
+        KaraState(netherspite->GetInstanceId()).netherspiteDpsWaitTimer;
     uint32 const now = getMSTime();
     bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
-    // End By leewheel
     bool didSomething = false;
 
     if (IsBanishPhase(netherspite))
     {
-        if (isMechanicTracker && netherspiteDpsWaitTimer.erase(instanceId) > 0)
+        if (isMechanicTracker && ResetIfSet(dpsWaitTimer))
             didSomething = true;
 
         Action* redAction = context->GetAction("netherspite block red beam");
@@ -973,7 +941,7 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
             didSomething = true;
         }
     }
-    else if (isMechanicTracker && netherspiteDpsWaitTimer.try_emplace(instanceId, now).second)
+    else if (isMechanicTracker && EmplaceIfUnset(dpsWaitTimer, now))
     {
         didSomething = true;
     }
@@ -1381,13 +1349,17 @@ bool NightbaneControlPetAggressionAction::Execute(Event /*event*/)
         return false;
 
     if (nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z && pet->GetReactState() == REACT_PASSIVE)
+    {
         pet->SetReactState(REACT_DEFENSIVE);
+        return true;
+    }
 
     if (nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z && pet->GetReactState() != REACT_PASSIVE)
     {
         pet->AttackStop();
         pet->CastStop();
         pet->SetReactState(REACT_PASSIVE);
+        return true;
     }
 
     return false;
@@ -1472,11 +1444,9 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
     if (!nightbane)
         return false;
 
-    // By leewheel 2026-08-29 合并：采用对侧GetMSTimeDiff计时重构与2参数IsMechanicTrackerBot重载，entry规则不变
-    uint32 const instanceId = nightbane->GetInstanceId();
+    KaraInstanceState& state = KaraState(nightbane->GetInstanceId());
     uint32 const now = getMSTime();
     bool const isMechanicTracker = IsMechanicTrackerBot(bot, KARA_MAP_ID);
-    // End By leewheel
     bool didSomething = false;
 
     if (nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
@@ -1490,20 +1460,14 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
 
         if (isMechanicTracker)
         {
-            if (nightbaneFlightPhaseStartTimer.erase(instanceId) > 0)
-                didSomething = true;
-
-            if (nightbaneDpsWaitTimer.try_emplace(instanceId, now).second)
-                didSomething = true;
+            didSomething |= ResetIfSet(state.nightbaneFlightPhaseStartTimer);
+            didSomething |= EmplaceIfUnset(state.nightbaneDpsWaitTimer, now);
         }
     }
     else if (isMechanicTracker)
     {
-        if (nightbaneDpsWaitTimer.erase(instanceId) > 0)
-            didSomething = true;
-
-        if (nightbaneFlightPhaseStartTimer.try_emplace(instanceId, now).second)
-            didSomething = true;
+        didSomething |= ResetIfSet(state.nightbaneDpsWaitTimer);
+        didSomething |= EmplaceIfUnset(state.nightbaneFlightPhaseStartTimer, now);
     }
 
     return didSomething;

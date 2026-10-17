@@ -11,6 +11,7 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include <array>
+#include <optional>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
@@ -135,7 +136,11 @@ enum class BtNpcs : uint32
     NPC_SISTER_OF_PLEASURE          = 22964,
     NPC_SHADOWMOON_REAVER           = 22879,
 
+    // High Warlord Naj'entus
+    NPC_HIGH_WARLORD_NAJENTUS       = 22887,
+
     // Supremus
+    NPC_SUPREMUS                    = 22898,
     NPC_SUPREMUS_VOLCANO            = 23085,
 
     // Shade of Akama
@@ -143,10 +148,20 @@ enum class BtNpcs : uint32
     NPC_ASHTONGUE_SORCERER          = 23215,
 
     // Teron Gorefiend
+    NPC_TERON_GOREFIEND             = 22871,
     NPC_SHADOWY_CONSTRUCT           = 23111,
 
+    // Gurtogg Bloodboil
+    NPC_GURTOGG_BLOODBOIL           = 22948,
+
     // Reliquary of Souls
+    NPC_RELIQUARY_OF_THE_LOST       = 22856,
+    NPC_ESSENCE_OF_SUFFERING        = 23418,
     NPC_ESSENCE_OF_DESIRE           = 23419,
+    NPC_ESSENCE_OF_ANGER            = 23420,
+
+    // Mother Shahraz
+    NPC_MOTHER_SHAHRAZ              = 22947,
 
     // Illidari Council
     NPC_GATHIOS_THE_SHATTERER       = 22949,
@@ -210,9 +225,6 @@ inline constexpr uint32 REAVER_ABSORPTION_MIN_RECAST_MS = 30 * IN_MILLISECONDS;
 inline constexpr uint32 REAVER_MAGIC_MARGIN_MS = 5 * IN_MILLISECONDS;
 inline constexpr uint32 SHADOWMOON_REAVER_CACHE_INTERVAL_MS = 1000;
 
-extern std::unordered_map<uint32, std::unordered_map<ObjectGuid, uint32>>
-    shadowmoonReaverAbsorptionStart;
-
 // Searched by entry around the marking bot, so it finds her without line of sight.
 inline constexpr float SISTER_OF_PLEASURE_SEARCH_RADIUS = 100.0f;
 
@@ -225,6 +237,9 @@ GuidVector FindShadowmoonReaverGuids(PlayerbotAI* botAI);
 // first one.
 bool IsShadowmoonReaverUnsafeForMagic(Unit* unit);
 bool IsAnyShadowmoonReaverUnsafeForMagic(PlayerbotAI* botAI);
+// Reavers are trash, so this runs on every reset and drops only a dead or vanished Reaver's
+// timing; a pack still being fought keeps its own.
+bool PruneShadowmoonReaverAbsorptionStarts(Player* bot);
 ChaoticChargeReach GetChaoticChargeReach(SpellInfo const* spellInfo);
 // Imps, water elementals, succubi and felhunters, whose attacks build Chaotic Charge.
 bool IsChargeBuildingPet(Unit* unit);
@@ -250,8 +265,6 @@ inline constexpr float NAJENTUS_HURL_SPINE_APPROACH_MARGIN = 2.0f;
 inline Position const NAJENTUS_TANK_POSITION = { 438.515f, 772.436f, 11.931f };
 
 // Impales can overlap (every 20 s, 30 s stun), so one entry per impaled player.
-extern std::unordered_map<uint32, std::vector<NajentusSpineAssignment>> najentusSpineAssignments;
-extern std::unordered_map<uint32, ObjectGuid> najentusSpineThrower;
 
 bool IsNajentusImpaled(Player* player);
 // An impaled group member with no living remover assigned, for the mechanic tracker to assign.
@@ -458,7 +471,6 @@ inline std::array const ZEREVOR_TANK_POSITIONS = {
     // Position{ 679.657f, 356.482f, 271.699f },
 };
 
-extern std::unordered_map<uint32, uint32> councilDpsWaitTimer;
 inline constexpr uint32 ZEREVOR_MAGE_TANK_CACHE_INTERVAL_MS = 1000;
 inline constexpr uint32 COUNCIL_DPS_WAIT_MS = 5 * IN_MILLISECONDS;
 inline constexpr float COUNCIL_AOE_THREAT_CLEARANCE = 15.0f;
@@ -547,6 +559,7 @@ struct DemonFormLayout
     Position warlockTankPosition;
     Position mainTankWaitPosition;
     Position mainTankPickupPosition;
+    Position mainTankStepInPosition;
     std::vector<Position> rangedSlots;
     std::vector<Position> healerSlots;
     std::vector<Position> meleeSlots;
@@ -603,6 +616,10 @@ inline constexpr uint32 ILLIDAN_DEMON_FORM_END_HOLD_MS = 3 * IN_MILLISECONDS;
 // The Main Tank's walk-in, about 44 yd, starts this long before the end. No Flame Burst comes in
 // the last 14 s.
 inline constexpr uint32 ILLIDAN_MAIN_TANK_WALK_IN_MS = 10 * IN_MILLISECONDS;
+// For the last 1.3 s it steps in about 8 yd, so at the reset it is in his melee range (his reach
+// is 7.5 again) while he finishes his last Shadow Blast, and can hit before his first victim
+// check; at most one Aura of Dread tick.
+inline constexpr uint32 ILLIDAN_MAIN_TANK_STEP_IN_MS = 1300;
 // Shadow Demons appear this long after the transform starts, 30 s after he turns aggressive.
 inline constexpr uint32 ILLIDAN_SHADOW_DEMON_SPAWN_MS = 42230;
 // Between Seeds (about 890 mana each at 70) and between the warlock tank's Searing Pains (about
@@ -663,10 +680,12 @@ inline constexpr float ILLIDAN_WARLOCK_POSITION_ANGLE = 75.0f * static_cast<floa
 inline constexpr float ILLIDAN_MAIN_TANK_WAIT_DISTANCE = 48.4f;
 inline constexpr float ILLIDAN_MAIN_TANK_WAIT_ANGLE = -35.0f * static_cast<float>(M_PI) / 180.0f;
 // At the end, walk straight to the pickup position in front of the raid, just outside Aura of Dread
-// and 22.5 yd from the warlock tank (Shadow Blast 20). Illidan keeps the warlock tank as his victim
-// through the reset and runs at it, past the Main Tank.
+// and 22.5 yd from the warlock tank (Shadow Blast 20), then step in on the same bearing to 9 yd,
+// 25.4 yd from the warlock tank. At the reset any threat beats his old victim's 0, Replenishment
+// and HoT ticks included, so the tank must hit first.
 inline constexpr float ILLIDAN_PICKUP_POSITION_DISTANCE = 17.0f;
 inline constexpr float ILLIDAN_PICKUP_POSITION_ANGLE = 30.0f * static_cast<float>(M_PI) / 180.0f;
+inline constexpr float ILLIDAN_STEP_IN_POSITION_DISTANCE = 9.0f;
 
 // World trigger 22515.
 inline Position const ILLIDAN_GRATE_CENTRE = { 676.021f, 305.455f, 353.582f };
@@ -710,17 +729,6 @@ inline std::array const W_GLAIVE_TANK_POSITIONS = {
     Position{ 690.889f, 324.277f, 354.204f },
 };
 
-extern std::unordered_map<uint32, IllidanPhase> illidanLastPhase;
-// The phase before the current one, so Phase 5 straight from Demon Form shows as a reset.
-extern std::unordered_map<uint32, IllidanPhase> illidanPreviousPhase;
-extern std::unordered_map<uint32, uint32> illidanPhaseStartTime;
-extern std::unordered_map<uint32, uint32> illidanFlamePhaseStartTime;
-extern std::unordered_map<uint32, ObjectGuid> eastFlameGuid;
-extern std::unordered_map<uint32, ObjectGuid> westFlameGuid;
-// Each infected player's infection, kept until the debuff is gone or the phase changes.
-extern std::unordered_map<uint32, std::unordered_map<ObjectGuid, IllidanInfection>>
-    illidanInfections;
-
 IllidanPhase GetIllidanPhase(Unit* illidan);
 // He is up and talking after Akama's gossip, still immune to players and out of combat.
 bool IsIllidanSpeechInProgress(Player* bot);
@@ -747,7 +755,7 @@ DemonFormLayout GetDemonFormLayout(Unit const& illidan);
 Position GetIllidanInfectionPosition(Unit const& illidan, IllidanPhase phase);
 // The phase whose infection position applies: the Demon Form transform counts as the phase before
 // it, so an infection from Phase 3 or 5 keeps its position and its Shadowfiends don't come out on
-// a walk across the raid.
+// a walk across the raid. The death scene counts as the phase before it too.
 IllidanPhase GetIllidanInfectionPositionPhase(Unit const& illidan, IllidanPhase phase);
 // The infection position recorded for the bot's own infection, else for the infection it traps for,
 // else where one would be recorded now.
@@ -771,7 +779,7 @@ bool IsIllidanWarlockTank(PlayerbotAI* botAI);
 bool CastIllidanLifeTapIfLow(PlayerbotAI* botAI);
 // The trap hunters in the order they take infections: hunter bots by GUID, dead or alive.
 GuidVector FindIllidanTrapHunterGuids(Player* bot);
-// Assigned to an infection whose debuff is still on, with Frost Trap ready.
+// Assigned to an infection whose debuff is still on, with Frost Trap ready, and not infected.
 bool IsIllidanTrapHunterOnDuty(PlayerbotAI* botAI);
 // While he flies, a bot infected before he took off waits at the infection position until its
 // Shadowfiends are out, tanks included (the raid can't move away from them in Phase 2), and its
@@ -817,6 +825,28 @@ Unit* GetShadowDemonForPetToAttack(PlayerbotAI* botAI, Pet const& pet);
 EyeBlastDangerArea GetEyeBlastDangerArea(Player* bot);
 bool IsPositionInEyeBlastDangerArea(Position const& pos, EyeBlastDangerArea const& area);
 GameObject* FindNearestCageTrap(PlayerbotAI* botAI);
+
+// Shared encounter state
+
+struct BtInstanceState
+{
+    std::optional<std::vector<NajentusSpineAssignment>> najentusSpineAssignments;
+    std::optional<ObjectGuid> najentusSpineThrower;
+    std::optional<uint32> councilDpsWaitTimer;
+    std::optional<IllidanPhase> illidanLastPhase;
+    // The phase before the current one, so Phase 5 straight from Demon Form shows as a reset.
+    std::optional<IllidanPhase> illidanPreviousPhase;
+    std::optional<uint32> illidanPhaseStartTime;
+    std::optional<uint32> illidanFlamePhaseStartTime;
+    std::optional<ObjectGuid> eastFlameGuid;
+    std::optional<ObjectGuid> westFlameGuid;
+    // Each infected player's infection, kept until the debuff is gone or the phase changes.
+    std::optional<std::unordered_map<ObjectGuid, IllidanInfection>> illidanInfections;
+};
+
+BtInstanceState& BtState(uint32 instanceId);
+BtInstanceState* FindBtState(uint32 instanceId);
+bool BtResetInstance(uint32 instanceId);
 
 }
 

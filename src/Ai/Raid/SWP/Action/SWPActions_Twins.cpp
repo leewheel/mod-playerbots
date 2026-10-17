@@ -58,7 +58,9 @@ bool EredarTwinsAnnounceAlythessTankAction::Execute(Event /*event*/)
     if (source == AlythessTankSource::Unresolved || !alythessTank)
         return false;
 
-    eredarTwinsTankAssignments[bot->GetInstanceId()].announcementMs = getMSTime();
+    std::optional<EredarTwinsTankAssignment>& assignment =
+        EredarTwinsState(bot->GetInstanceId()).tankAssignment;
+    (assignment ? *assignment : assignment.emplace()).announcementMs = getMSTime();
 
     std::map<std::string, std::string> placeholders = {{"%bot", alythessTank->GetName()}};
     std::string text;
@@ -138,7 +140,6 @@ bool EredarTwinsMisdirectToTanksAction::Execute(Event /*event*/)
     Player* tank = nullptr;
     if (hunterIndex == 0)
     {
-        // 业务逻辑采纳brighton(alythessTank优先)，boss名称按项目规则用entry(25166=grand warlock alythess) --By leewheel 2026-09-06
         boss = AI_VALUE2(Unit*, "find target", "25166");
         tank = alythessTank;
     }
@@ -339,13 +340,9 @@ bool EredarTwinsStackInRoomCenterAction::Execute(Event /*event*/)
 
 bool EredarTwinsDpsPrioritizeSacrolashAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-09-10 合并brighton ea343e67(fix twins bugs): 其已删除RecordEredarTwinsDpsHoldStart辅助函数,
-    // 改为直接写入起始时间戳, 此处随之采用内联写法
     // Start the 8s clock for tanks to get aggro first.
-    // End By leewheel
-    eredarTwinsDpsHoldStartMs.try_emplace(bot->GetInstanceId(), getMSTime());
+    EmplaceIfUnset(EredarTwinsState(bot->GetInstanceId()).dpsHoldStartMs, getMSTime());
 
-    // boss名称按entry规则: 25165=lady sacrolash, 25166=grand warlock alythess --By leewheel 2026-09-06
     Unit* sacrolash = AI_VALUE2(Unit*, "find target", "25165");
     Unit* twinTarget =
         sacrolash ? sacrolash : AI_VALUE2(Unit*, "find target", "25166");

@@ -11,7 +11,9 @@
 #include <cmath>
 #include <limits>
 #include <list>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 using namespace EncounterHelpers;
@@ -22,11 +24,12 @@ namespace HyjalHelpers
 namespace
 {
 
+std::mutex hyjalStateMutex;
+std::unordered_map<uint32, HyjalInstanceState> hyjalStates;
+
 std::vector<Position> const& GetCachedHazardPositions(PlayerbotAI* botAI, char const* value)
 {
-    static std::vector<Position> const none;
-    return botAI ? botAI->GetAiObjectContext()->GetValue<std::vector<Position>>(value)->RefGet()
-        : none;
+    return botAI->GetAiObjectContext()->GetValue<std::vector<Position>>(value)->RefGet();
 }
 
 // The span of a ring that a circular ground hazard covers.
@@ -114,72 +117,42 @@ bool FindNearestUnblockedAngle(
 }
 
 // A step towards a point on a circle, at the angle nearest to preferred that the bot can reach.
-// By leewheel 2026-09-08 合并: 头文件公开声明已随 brighton 移除, 本函数退化为 .cpp 内部helper,
-// 默认参数在定义处补齐以维持 GetRangedRingStep 的 11 参调用
 bool FindStepToCircle(
     Player* bot, Position const& center, float radius, float preferredAngle, float moveDist,
     float& stepX, float& stepY, float& stepZ, std::function<bool(float, float)> const& isAcceptable,
-    float* chosenX, float* chosenY, bool allowUnvalidatedFallback = false)
+    float* chosenX, float* chosenY)
 {
     float const centerX = center.GetPositionX();
     float const centerY = center.GetPositionY();
 
-    // Counted rather than accumulated so the search always spans 180 degrees
     constexpr uint8 fanSteps = 8;
     constexpr float fanStep = static_cast<float>(M_PI) / fanSteps;
 
-    // Two searches at most. The first asks whether each step can actually be taken. The second runs
-    // for actions that would rather move badly than not move. MovementAction::MoveAway does the
-    // same: a failed collision check downgrades how the bot moves, not whether it moves.
-    uint8 const sweeps = allowUnvalidatedFallback ? 2 : 1;
-    for (uint8 sweep = 0; sweep < sweeps; ++sweep)
+    for (uint8 step = 0; step <= fanSteps; ++step)
     {
-        bool const validate = (sweep == 0);
-
-        for (uint8 step = 0; step <= fanSteps; ++step)
+        float const delta = fanStep * step;
+        uint8 const candidates = (step == 0) ? 1 : 2;
+        for (uint8 i = 0; i < candidates; ++i)
         {
-            float const delta = fanStep * step;
-            uint8 const candidates = (step == 0) ? 1 : 2;
-            for (uint8 i = 0; i < candidates; ++i)
-            {
-                float const angle = preferredAngle + (i == 0 ? delta : -delta);
-                float const targetX = centerX + std::cos(angle) * radius;
-                float const targetY = centerY + std::sin(angle) * radius;
+            float const angle = preferredAngle + (i == 0 ? delta : -delta);
+            float const targetX = centerX + std::cos(angle) * radius;
+            float const targetY = centerY + std::sin(angle) * radius;
 
-                if (isAcceptable && !isAcceptable(targetX, targetY))
-                    continue;
+            if (isAcceptable && !isAcceptable(targetX, targetY))
+                continue;
 
-                if (validate)
-                {
-                    if (!CanTakeStepTowards(bot, targetX, targetY, moveDist, stepX, stepY, stepZ))
-                        continue;
-                }
-                else
-                {
-                    float const botX = bot->GetPositionX();
-                    float const botY = bot->GetPositionY();
-                    float const distance = bot->GetExactDist2d(targetX, targetY);
+            if (!CanTakeStepTowards(bot, targetX, targetY, moveDist, stepX, stepY, stepZ))
+                continue;
 
-                    constexpr float minStepDistance = 0.5f;
-                    if (distance < minStepDistance)
-                        continue;
+            if (isAcceptable && !isAcceptable(stepX, stepY))
+                continue;
 
-                    float const stepDistance = std::min(moveDist, distance);
-                    stepX = botX + ((targetX - botX) / distance) * stepDistance;
-                    stepY = botY + ((targetY - botY) / distance) * stepDistance;
-                    stepZ = bot->GetPositionZ();
-                }
+            if (chosenX)
+                *chosenX = targetX;
+            if (chosenY)
+                *chosenY = targetY;
 
-                if (isAcceptable && !isAcceptable(stepX, stepY))
-                    continue;
-
-                if (chosenX)
-                    *chosenX = targetX;
-                if (chosenY)
-                    *chosenY = targetY;
-
-                return true;
-            }
+            return true;
         }
     }
 
@@ -199,10 +172,9 @@ bool GetHazardEscapeStep(
     if (bot->GetExactDist2d(centerX, centerY) <= 0.1f)
         escapeAngle = bot->GetOrientation();
 
-    // By leewheel 2026-09-08 合并: 保留本服两段搜索兜底参数(逃生时移动优先于原地不动), 与 2026-08-30 行为一致
     return FindStepToCircle(
-        bot, hazard, escapeRadius, escapeAngle, moveDist, stepX, stepY, stepZ, isAcceptable,
-        nullptr, nullptr, true);
+        bot, hazard, escapeRadius, escapeAngle, moveDist, stepX, stepY, stepZ,
+        isAcceptable, nullptr, nullptr);
 }
 
 struct RangedGroups
@@ -533,7 +505,7 @@ float GetKazrogalRangedArcSpan(float radius)
     return 2.0f * std::asin(ratio < 1.0f ? ratio : 1.0f);
 }
 
-bool IsKazrogalManaUser(PlayerbotAI* botAI) // By leewheel 2026-09-06 采纳brighton botAI参数签名
+bool IsKazrogalManaUser(PlayerbotAI* botAI)
 {
     Player* bot = botAI->GetBot();
     switch (bot->getClass())
@@ -576,8 +548,6 @@ std::vector<Position> GetRainOfFirePositions(PlayerbotAI* botAI)
     return GetCachedHazardPositions(botAI, "hyjal rain of fire");
 }
 
-// 逃离最近的火雨可能会让机器人走进第二个火雨池，该池随即成为最近目标并被逃离。
-// 这会逐步自行化解，且并不比站在第一个池中更糟
 bool GetNearestRainOfFirePosition(PlayerbotAI* botAI, Position& pool)
 {
     Player* bot = botAI->GetBot();
@@ -619,9 +589,7 @@ bool IsDoomed(Player* bot)
     return bot->HasAura(Id(HyjalSpells::SPELL_DOOM));
 }
 
-// Standing behind Azgalor is immune at any range, which is where melee want to be anyway. The
-// range clause only matters for anyone who has to pass through his front
-bool IsDoomguardTank(Player* bot) // By leewheel 2026-08-30 合并上游单参签名(原botAI参数未使用)
+bool IsDoomguardTank(Player* bot)
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;
@@ -654,8 +622,6 @@ bool AnyGroupMemberHasDoom(Player* bot)
 
 // Archimonde
 
-std::unordered_map<uint32, AirBurstData> archimondeAirBurstTargets;
-
 bool HasProtectionOfElune(Player* bot)
 {
     return bot->HasAura(Id(HyjalSpells::SPELL_PROTECTION_OF_ELUNE));
@@ -666,9 +632,6 @@ std::vector<Position> GetDoomfirePositions(PlayerbotAI* botAI)
     return GetCachedHazardPositions(botAI, "hyjal doomfire trail");
 }
 
-// Centre to centre, as every other hazard test here measures. This used to lean on the grid
-// search's own range check, which quietly pads by both object sizes--so the radius handed in
-// reached about two yards further than it said, and disagreed with IsPositionNearDoomfire below
 bool IsNearDoomfire(PlayerbotAI* botAI, float radius)
 {
     Player* bot = botAI->GetBot();
@@ -692,21 +655,42 @@ bool IsPositionNearDoomfire(PlayerbotAI* botAI, float x, float y, float radius)
     return false;
 }
 
-AirBurstData* GetPendingAirBurstCast(uint32 instanceId)
+bool GetPendingAirBurstCast(uint32 instanceId, AirBurstData& airBurst)
 {
-    auto instanceIt = archimondeAirBurstTargets.find(instanceId);
-    if (instanceIt == archimondeAirBurstTargets.end())
-        return nullptr;
+    std::optional<AirBurstData>& pending = HyjalState(instanceId).archimondeAirBurstTarget;
+    if (!pending)
+        return false;
 
     constexpr uint32 airBurstReactionWindow = 2000;
     uint32 const now = getMSTime();
-    if (getMSTimeDiff(instanceIt->second.castTime, now) >= airBurstReactionWindow)
+    if (getMSTimeDiff(pending->castTime, now) >= airBurstReactionWindow)
     {
-        archimondeAirBurstTargets.erase(instanceIt);
-        return nullptr;
+        pending.reset();
+        return false;
     }
 
-    return &instanceIt->second;
+    airBurst = *pending;
+    return true;
+}
+
+// Shared encounter state
+
+HyjalInstanceState& HyjalState(uint32 instanceId)
+{
+    std::lock_guard lock(hyjalStateMutex);
+    return hyjalStates[instanceId];
+}
+
+bool HyjalResetInstance(uint32 instanceId)
+{
+    std::lock_guard lock(hyjalStateMutex);
+    auto it = hyjalStates.find(instanceId);
+    if (it == hyjalStates.end())
+        return false;
+
+    bool const wasSet = it->second.archimondeAirBurstTarget.has_value();
+    hyjalStates.erase(it);
+    return wasSet;
 }
 
 }

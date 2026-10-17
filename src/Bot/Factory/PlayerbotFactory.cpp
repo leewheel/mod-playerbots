@@ -1077,11 +1077,6 @@ void PlayerbotFactory::Randomize(bool incremental)
             pmo->finish();
     }
 
-    // By leewheel 2026-08-30 法术书重建完成后清理动作条失效按钮, 防止下次登录加载报
-    // "ActionButton loading problem"(萨满图腾条等高阶法术残留)
-    CleanupInvalidActionButtons();
-    // End By leewheel
-
     pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "PlayerbotFactory_Save");
     LOG_DEBUG("playerbots", "Saving to DB...");
     bot->SetMoney(urand(level * 100000, level * 5 * 100000));
@@ -1339,24 +1334,6 @@ void PlayerbotFactory::InitConsumables()
             break;
     }
 
-    // By leewheel 2026-08-29
-    // PVP 自保物资：为所有职业的 bot 补充绷带（按等级选可用最高档，存量补足到 20），
-    //   配合 PVP 自保动作组（低血量安全窗口打绷带恢复，见 PvpSurvivalActions）。
-    //   绷带 entry 从高到低：厚灵纹/灵纹/厚魔纹/魔纹/厚丝质/丝质/厚亚麻/丝线/亚麻。
-    // End By leewheel
-    {
-        std::vector<uint32> bandages = {34721, 21990, 14529, 8545, 6451, 6450, 3530, 2581, 1251};
-        for (uint32 itemId : bandages)
-        {
-            ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
-            if (!proto || proto->RequiredLevel > level)
-                continue;
-
-            items.push_back({itemId, 20});
-            break;
-        }
-    }
-
     for (std::pair<uint32, uint32> item : items)
     {
         int count = (int)item.second - (int)bot->GetItemCount(item.first);
@@ -1373,7 +1350,7 @@ void PlayerbotFactory::InitPetTalents()
     Pet* pet = bot->GetPet();
     if (!pet)
     {
-        // LOG_INFO("playerbots", "{} init pet talents failed with no 宠物", bot->GetName().c_str());
+        // LOG_INFO("playerbots", "{} init pet talents failed with no pet", bot->GetName().c_str());
         return;
     }
     CreatureTemplate const* ci = pet->GetCreatureTemplate();
@@ -1555,8 +1532,7 @@ void PlayerbotFactory::InitPet()
             if (onlyWolf && itr->second.family != CREATURE_FAMILY_WOLF)
                 continue;
 
-// Exclude configured pet families
-            // By leewheel 2026-10-07 合并 #2854：配置成员随上游改为 PascalCase（excludedHunterPetFamilies -> ExcludedHunterPetFamilies）。
+            // Exclude configured pet families
             if (std::find(sPlayerbotAIConfig.ExcludedHunterPetFamilies.begin(),
                           sPlayerbotAIConfig.ExcludedHunterPetFamilies.end(),
                           itr->second.family) != sPlayerbotAIConfig.ExcludedHunterPetFamilies.end())
@@ -1609,7 +1585,7 @@ void PlayerbotFactory::InitPet()
             // visual effect for levelup
             pet->SetUInt32Value(UNIT_FIELD_LEVEL, bot->GetLevel());
 
-            // caster have 宠物 now
+            // caster have pet now
             bot->SetMinion(pet, true);
 
             pet->InitTalentForLevel();
@@ -1708,31 +1684,6 @@ void PlayerbotFactory::ClearSpells()
         bot->removeSpell(*i, SPEC_MASK_ALL, false);
     }
 }
-
-// By leewheel 2026-08-30 清理动作条失效法术按钮
-// Randomize重建法术书(ClearSpells/removeSpell)或resetTalents遗忘天赋法术(如愤怒图腾3738)后,
-// 动作条(尤其萨满图腾条132-135)可能仍引用已不存在的法术, 导致core登录加载校验失败刷
-// "ActionButton loading problem"错误日志。此处主动移除失效按钮, 让错误不再发生。
-void PlayerbotFactory::CleanupInvalidActionButtons()
-{
-    uint32 removed = 0;
-    for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-    {
-        ActionButton const* ab = bot->GetActionButton(button);
-        if (!ab || ab->GetType() != ACTION_BUTTON_SPELL)
-            continue;
-
-        if (bot->HasSpell(ab->GetAction()))
-            continue;
-
-        bot->removeActionButton(button);
-        ++removed;
-    }
-
-    if (removed)
-        LOG_INFO("playerbots", "机器人 {} 清理动作条失效法术按钮 {} 个(法术书重建后残留)", bot->GetName(), removed);
-}
-// End By leewheel
 
 void PlayerbotFactory::ResetQuests()
 {
@@ -2038,21 +1989,6 @@ private:
 
 bool PlayerbotFactory::CanEquipArmor(ItemTemplate const* proto)
 {
-    // By leewheel 2026-07-18
-    // 修复：检查物品的职业和种族限制（AllowableClass/AllowableRace）
-    // 原因：原代码只检查护甲类型技能（板甲/锁甲/皮甲/布甲/盾牌），
-    //       没有检查物品的 AllowableClass 字段，导致职业间套装混穿：
-    //       - 布甲职业（法师/术士/牧师）互相穿套装
-    //       - 板甲职业（战士/圣骑士/死亡骑士）互相穿套装
-    //       套装在 item_template 中通过 AllowableClass 标记了职业限制，
-    //       必须与 bot 的职业掩码做位与判断，为0则该职业不可装备。
-    //       与 Acore 核心代码 PlayerStorage.cpp 的判断方式一致。
-    if (proto->AllowableClass && (proto->AllowableClass & bot->getClassMask()) == 0)
-        return false;
-    if (proto->AllowableRace && (proto->AllowableRace & bot->getRaceMask()) == 0)
-        return false;
-    // End By leewheel
-
     if (proto->SubClass == ITEM_SUBCLASS_ARMOR_PLATE && !bot->HasSkill(SKILL_PLATE_MAIL))
     {
         return false;
@@ -2168,15 +2104,6 @@ void PlayerbotFactory::AddItemStats(uint32 mod, uint8& sp, uint8& ap, uint8& tan
 
 bool PlayerbotFactory::CanEquipWeapon(ItemTemplate const* proto)
 {
-    // By leewheel 2026-07-18
-    // 修复：检查物品的职业和种族限制（AllowableClass/AllowableRace）
-    // 原因：与 CanEquipArmor 同理，防止职业专属武器被错误分配
-    if (proto->AllowableClass && (proto->AllowableClass & bot->getClassMask()) == 0)
-        return false;
-    if (proto->AllowableRace && (proto->AllowableRace & bot->getRaceMask()) == 0)
-        return false;
-    // End By leewheel
-
     switch (bot->getClass())
     {
         case CLASS_PRIEST:
@@ -2191,20 +2118,15 @@ bool PlayerbotFactory::CanEquipWeapon(ItemTemplate const* proto)
                 return false;
             break;
         case CLASS_WARRIOR:
-            // By leewheel 2026-07-18
-            // 修复：移除战士的法杖(STAFF)允许
-            // 原因：战士不应使用法杖，法杖是法系武器，对战士无属性收益
-            //       且战士有足够的武器选择（剑/斧/锤/长柄/匕首/拳套/弓/枪/弩/投掷）
             if (proto->SubClass != ITEM_SUBCLASS_WEAPON_MACE2 && proto->SubClass != ITEM_SUBCLASS_WEAPON_AXE &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_POLEARM && proto->SubClass != ITEM_SUBCLASS_WEAPON_SWORD2 &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_MACE && proto->SubClass != ITEM_SUBCLASS_WEAPON_SWORD &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_GUN && proto->SubClass != ITEM_SUBCLASS_WEAPON_CROSSBOW &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_BOW && proto->SubClass != ITEM_SUBCLASS_WEAPON_THROWN &&
                 proto->SubClass != ITEM_SUBCLASS_WEAPON_AXE2 && proto->SubClass != ITEM_SUBCLASS_WEAPON_FIST &&
-                proto->SubClass != ITEM_SUBCLASS_WEAPON_DAGGER)
+                proto->SubClass != ITEM_SUBCLASS_WEAPON_DAGGER && proto->SubClass != ITEM_SUBCLASS_WEAPON_STAFF)
                 return false;
             break;
-            // End By leewheel
         case CLASS_PALADIN:
         case CLASS_DEATH_KNIGHT:
             if (proto->SubClass != ITEM_SUBCLASS_WEAPON_MACE2 && proto->SubClass != ITEM_SUBCLASS_WEAPON_POLEARM &&
@@ -2475,14 +2397,11 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
 
     // Pre-select CC-break trinket for PvP specs: best available by item level
     // that the bot meets the level requirement for.
-    // By leewheel 2026-09-01: 老大要求"解控饰品是必需品"——从仅 PVP spec 扩大到所有 50+ bot，
-    // 保证随时进战场都有徽章可用。修正原"人类/亡灵种族徽章共享CD豁免"的错误认知：
-    // 3.3.5 中 Every Man for Himself(59752)/Will of the Forsaken(20599) 与饰品徽章(42292)
-    // 是**独立 2 分钟 CD 不共享**（亡灵正因双解控才是PVP首选种族），NPCBots 的使用逻辑
-    // 同样不分种族。真人标准配装=种族解控+徽章双保险，故全种族强制佩戴。
-    // End By leewheel
+    // Humans (Every Man for Himself) and Undead (Will of the Forsaken) have a
+    // racial that shares the PvP trinket cooldown, so they don't need one.
+    bool racialHasCcBreak = (bot->getRace() == RACE_HUMAN || bot->getRace() == RACE_UNDEAD_PLAYER);
     uint32 pvpTrinket1 = 0;
-    if (level >= 50)
+    if (isPvp && level >= 50 && !racialHasCcBreak)
     {
         for (uint32 itemId : ccBreakTrinketCache)
         {
@@ -2557,10 +2476,55 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
         if (urand(0, 100) < 100 * sPlayerbotAIConfig.RandomGearLoweringChance && desiredQuality > ITEM_QUALITY_NORMAL)
             desiredQuality--;
 
+        uint32 const windowFloor = uint32(std::max((int32)bot->GetLevel() - delta, 0));
+        uint32 levelTop = bot->GetLevel();
+        uint32 levelFloor = windowFloor;
+        int32 const topQuality = desiredQuality;
+        bool belowWindow = false;
+        bool foundWearable = false;  // a candidate under the gear score limit passes the equip checks below
+        // Nothing fits next to a two-hander, so searching on would only cost time.
+        bool const offhandBlocked = slot == EQUIPMENT_SLOT_OFFHAND && bot->IsTwoHandUsed() && !bot->CanTitanGrip();
+
+        auto hasWearableCandidate = [&]() -> bool
+        {
+            for (auto const& candidate : items[slot])
+            {
+                uint16 dest;
+                if (CanEquipItem(sObjectMgr->GetItemTemplate(candidate.first)) &&
+                    CanEquipUnseenItem(slot, dest, candidate.first))
+                    return true;
+            }
+            return false;
+        };
+
+        // After green: with a gear score limit and nothing green or better under it that the bot can wear in the
+        // usual window, search the lower required levels from the top quality again before white and grey.
+        auto nextSearchStep = [&]() -> bool
+        {
+            if (desiredQuality == ITEM_QUALITY_UNCOMMON)
+            {
+                if (gearScoreLimit != 0 && !offhandBlocked)
+                    foundWearable = hasWearableCandidate();
+                if (!belowWindow && gearScoreLimit != 0 && windowFloor > 0 && !offhandBlocked && !foundWearable)
+                {
+                    belowWindow = true;
+                    levelTop = windowFloor;
+                    levelFloor = 0;
+                    desiredQuality = std::min<int32>(topQuality, ITEM_QUALITY_EPIC);  // no legendary in the cache
+                    return true;
+                }
+                levelTop = bot->GetLevel();
+                levelFloor = windowFloor;
+            }
+            return desiredQuality-- > ITEM_QUALITY_POOR;
+        };
+
         do
         {
-            for (uint32 requiredLevel = bot->GetLevel(); requiredLevel > uint32(std::max((int32)bot->GetLevel() - delta, 0));
-                 requiredLevel--)
+            // Grey and white skip the limit only as a last resort, when no better quality found anything wearable.
+            bool const shouldCheckGS = desiredQuality > ITEM_QUALITY_NORMAL || foundWearable;
+
+            for (uint32 requiredLevel = levelTop; requiredLevel > levelFloor; requiredLevel--)
             {
                 for (InventoryType inventoryType : GetPossibleInventoryTypeListBySlot((EquipmentSlots)slot))
                 {
@@ -2584,11 +2548,6 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
                         if (!proto)
                             continue;
 
-                        if (excludeHeirloom && proto->Quality == ITEM_QUALITY_HEIRLOOM)
-                            continue;
-
-                        bool shouldCheckGS = desiredQuality > ITEM_QUALITY_NORMAL;
-
                         if (shouldCheckGS && gearScoreLimit != 0 &&
                             CalcMixedGearScore(proto->ItemLevel, proto->Quality) > gearScoreLimit)
                         {
@@ -2599,6 +2558,13 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
 
                         if (proto->Quality != uint32(desiredQuality))
                             continue;
+
+                        // By leewheel 2026-10-17 合并上游 PR#2924 重构后叠加回本核独有功能：
+                        // excludeHeirloom 由 SetExcludeHeirloom 控制，QuickPartyHelper/FastGroup/
+                        // ZhaoYufeng 的 randgear 依赖它剥除传家宝，缺了会静默失效。
+                        if (excludeHeirloom && proto->Quality == ITEM_QUALITY_HEIRLOOM)
+                            continue;
+                        // End By leewheel
 
                         if (proto->Class == ITEM_CLASS_ARMOR &&
                             (slot == EQUIPMENT_SLOT_HEAD || slot == EQUIPMENT_SLOT_SHOULDERS ||
@@ -2622,7 +2588,7 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
                     }
                 }
             }
-        } while (items[slot].size() < 25 && desiredQuality-- > ITEM_QUALITY_POOR);
+        } while (items[slot].size() < 25 && nextSearchStep());
 
         std::vector<std::pair<uint32, int32>>& ids = items[slot];
         if (ids.empty())
@@ -4014,6 +3980,42 @@ void PlayerbotFactory::ClearAllItems()
     IterateItems(&visitor, ITERATE_ALL_ITEMS);
 }
 
+static void DestroyObsoleteAmmo(Player* bot, ItemTemplate const* ammo)
+{
+    std::vector<Item*> obsolete;
+    auto const collect = [&](Item* item)
+    {
+        ItemTemplate const* proto = item->GetTemplate();
+        if (proto->Class != ITEM_CLASS_PROJECTILE || proto->ItemId == ammo->ItemId)
+            return;
+
+        if (proto->SubClass != ammo->SubClass)
+        {
+            obsolete.push_back(item);
+            return;
+        }
+
+        // Ranked as in RandomItemMgr::BuildCacheAmmo(); ammo above the stocked kind can only come from a player
+        uint32 const stack = proto->GetMaxStackSize();
+        uint32 const ammoStack = ammo->GetMaxStackSize();
+        if (stack < ammoStack || (stack == ammoStack && proto->ItemLevel <= ammo->ItemLevel))
+            obsolete.push_back(item);
+    };
+
+    for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        if (Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            collect(item);
+
+    for (uint8 bagSlot = INVENTORY_SLOT_BAG_START; bagSlot < INVENTORY_SLOT_BAG_END; ++bagSlot)
+        if (Bag* bag = bot->GetBagByPos(bagSlot))
+            for (uint32 slot = 0; slot < bag->GetBagSize(); ++slot)
+                if (Item* item = bag->GetItemByPos(slot))
+                    collect(item);
+
+    for (Item* item : obsolete)
+        bot->DestroyItem(item->GetBagSlot(), item->GetSlot(), true);
+}
+
 void PlayerbotFactory::InitAmmo()
 {
     uint8 const botClass = bot->getClass();
@@ -4046,13 +4048,25 @@ void PlayerbotFactory::InitAmmo()
     if (!entry)
         return;
 
+    ItemTemplate const* ammoProto = sObjectMgr->GetItemTemplate(entry);
+    if (!ammoProto)
+        return;
+
+    DestroyObsoleteAmmo(bot, ammoProto);
+
     uint32 count = bot->GetItemCount(entry);
     uint32 maxCount = botClass == CLASS_HUNTER ? 6000 : 1000;
 
     if (count < maxCount)
     {
-        if (Item* newItem = StoreNewItemInInventorySlot(bot, entry, maxCount - count))
-            newItem->AddToUpdateQueueOf(bot);
+        // Stock as much as fits: each stack destroyed above has freed a slot for a full stack of the new ammo
+        ItemPosCountVec dest;
+        bot->CanStoreNewItem(INVENTORY_SLOT_BAG_0, NULL_SLOT, dest, entry, maxCount - count);
+        if (!dest.empty())
+        {
+            if (Item* newItem = bot->StoreNewItem(dest, entry, true))
+                newItem->AddToUpdateQueueOf(bot);
+        }
     }
 
     bot->SetAmmo(entry);
@@ -4146,20 +4160,6 @@ void PlayerbotFactory::InitMounts()
             slow = {33660, 35020, 35022, 35018};
             fast = {35025, 35025, 35027};
             break;
-        case RACE_VRYKUL:  // Worgen - uses Running Wild racial
-            slow = {87840};
-            fast = {87840};
-            break;
-        case RACE_GOBLIN:     // Uses faction mounts via default
-        case RACE_FEL_ORC:
-        case RACE_NAGA:
-        case RACE_BROKEN:
-        case RACE_SKELETON:
-        case RACE_TUSKARR:
-        case RACE_FOREST_TROLL:
-        case RACE_TAUNKA:
-        case RACE_NORTHREND_SKELETON:
-        case RACE_ICE_TROLL:
         default:
             if (bot->GetTeamId() == TEAM_HORDE)
             { // Orc mounts
@@ -5367,7 +5367,7 @@ void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
                     continue;
 
                 float score = calculator.CalculateEnchant(enchant_id);
-                if (score >= bestScore)
+                if (score > 0.0f && score >= bestScore)
                 {
                     bestScore = score;
                     bestEnchantId = enchant_id;

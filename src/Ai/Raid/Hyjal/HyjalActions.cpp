@@ -54,7 +54,7 @@ bool HyjalResetEncounterStatesAction::Execute(Event /*event*/)
         reset = true;
     }
 
-    reset |= archimondeAirBurstTargets.erase(bot->GetInstanceId()) > 0;
+    reset |= HyjalResetInstance(bot->GetInstanceId());
 
     return reset;
     //End By leewheel

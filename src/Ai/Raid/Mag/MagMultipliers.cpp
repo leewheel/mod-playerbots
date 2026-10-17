@@ -35,24 +35,18 @@ float MagtheridonUseManticronCubeMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
     }
 
-    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游把 IsCubeClicker 判定前移的结构
     if (!IsCubeClicker(bot))
         return 1.0f;
 
-// By leewheel 2026-09-09 合并brighton: boss按entry规则用17257, 采纳brighton加IsMagtheridonActive活性判定
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return 1.0f;
-    // End By leewheel
 
-    // By leewheel 2026-09-13 合并brighton 8c96a663: 此处原重复的 IsCubeClicker 判定已随上游前移而删除
-    // （2026-08-26 的"简化计时判定"写法已并入上游代码）
-    // End By leewheel
-    auto timerIt = blastNovaTimer.find(bot->GetInstanceId());
-    if (timerIt == blastNovaTimer.end())
+    std::optional<uint32> const& blastNovaTimer = MagState(bot->GetInstanceId()).blastNovaTimer;
+    if (!blastNovaTimer)
         return 1.0f;
 
-    return getMSTimeDiff(timerIt->second, getMSTime()) >= BLAST_NOVA_INTERIM_MS ? 0.0f : 1.0f;
+    return getMSTimeDiff(*blastNovaTimer, getMSTime()) >= BLAST_NOVA_INTERIM_MS ? 0.0f : 1.0f;
 }
 
 float MagtheridonHoldDpsMultiplier::GetValueInEncounter(Action* action)
@@ -70,13 +64,11 @@ float MagtheridonHoldDpsMultiplier::GetValueInEncounter(Action* action)
     if (PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
-    //By leewheel 2026-09-15 合并brighton b2f6e460：采纳上游把 dpsWaitTimer 统一改名为 magDpsWaitTimer，
-    //  并把 6 秒等待时长提取为公共常量 MAG_DPS_HOLD_MS（我方 2026-08-26 的局部 dpsWaitMs 写法随之退役）
-    auto it = magDpsWaitTimer.find(magtheridon->GetInstanceId());
-    if (it == magDpsWaitTimer.end())
+    std::optional<uint32> const& waitStart = MagState(magtheridon->GetInstanceId()).magDpsWaitTimer;
+    if (!waitStart)
         return 0.0f;
 
-    return getMSTimeDiff(it->second, getMSTime()) <= MAG_DPS_HOLD_MS ? 0.0f : 1.0f;
+    return getMSTimeDiff(*waitStart, getMSTime()) <= MAG_DPS_HOLD_MS ? 0.0f : 1.0f;
 }
 
 float MagtheridonControlTankActionsMultiplier::GetValueInEncounter(Action* action)
@@ -121,21 +113,18 @@ float MagtheridonAvoidDebrisDangerMultiplier::GetValueInEncounter(Action* action
         return 1.0f;
     }
 
-// By leewheel 2026-09-09 合并brighton: 采纳brighton细化(仅抑制移动/施法类action), boss按entry规则用17257
     if (!dynamic_cast<MovementAction*>(action) &&
         !dynamic_cast<CastReachTargetSpellAction*>(action))
     {
         return 1.0f;
     }
 
-    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游新增的 IsCeilingCollapsed 判定, 保留 entry 化
     if (!IsCeilingCollapsed(bot))
         return 1.0f;
 
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return 1.0f;
-    // End By leewheel
 
     constexpr float debrisSuppressionZone = 15.0f;
     return IsPositionInActiveDebris(

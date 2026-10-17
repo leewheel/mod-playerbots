@@ -12,22 +12,23 @@
 #include "Playerbots.h"
 #include <algorithm>
 #include <list>
+#include <mutex>
 
 using namespace EncounterHelpers;
 
 namespace MagHelpers
 {
 
-std::unordered_map<uint32, uint32> magDpsWaitTimer;
-std::unordered_map<uint32, uint32> blastNovaTimer;
-std::unordered_map<uint32, bool> lastBlastNovaState;
-std::unordered_set<uint32> ceilingCollapseApplied;
-std::unordered_map<uint32, std::unordered_map<ObjectGuid, CubeInfo>> botToCubeAssignments;
+namespace
+{
+
+std::mutex magStateMutex;
+std::unordered_map<uint32, MagInstanceState> magStates;
+
+}
 
 std::vector<uint32> const MANTICRON_CUBE_DB_GUIDS = { 43157, 43158, 43159, 43160, 43161 };
 
-// Get the positions of all Manticron Cubes by their database GUIDs
-//By leewheel 2026-09-15 合并brighton b2f6e460：签名采纳上游单行写法（语义完全未变）
 std::vector<CubeInfo> GetAllCubeInfosByDbGuids(Map* map, std::vector<uint32> const& cubeDbGuids)
 {
     std::vector<CubeInfo> cubes;
@@ -117,9 +118,7 @@ bool IsMagtheridonActive(Unit* magtheridon)
 
 bool IsCubeClicker(Player* bot)
 {
-    auto mapIt = botToCubeAssignments.find(bot->GetMap()->GetInstanceId());
-    return mapIt != botToCubeAssignments.end() &&
-        mapIt->second.find(bot->GetGUID()) != mapIt->second.end();
+    return MagState(bot->GetInstanceId()).botToCubeAssignments.contains(bot->GetGUID());
 }
 
 bool IsBlastNovaCasting(Unit* magtheridon)
@@ -129,7 +128,7 @@ bool IsBlastNovaCasting(Unit* magtheridon)
 
 bool IsCeilingCollapsed(Player* bot)
 {
-    return ceilingCollapseApplied.contains(bot->GetInstanceId());
+    return MagState(bot->GetInstanceId()).ceilingCollapseApplied;
 }
 
 std::vector<Position> FindDebrisPositions(Player* bot)
@@ -186,6 +185,29 @@ bool IsPositionInConflagration(std::vector<GameObject*> const& blazes, float x, 
 bool IsPositionInActiveConflagration(PlayerbotAI* botAI, float x, float y)
 {
     return IsPositionInConflagration(GetActiveConflagrations(botAI), x, y);
+}
+
+// Shared encounter state
+
+MagInstanceState& MagState(uint32 instanceId)
+{
+    std::lock_guard lock(magStateMutex);
+    return magStates[instanceId];
+}
+
+bool MagResetInstance(uint32 instanceId)
+{
+    std::lock_guard lock(magStateMutex);
+    auto it = magStates.find(instanceId);
+    if (it == magStates.end())
+        return false;
+
+    MagInstanceState const& state = it->second;
+    bool const wasSet = state.magDpsWaitTimer || state.blastNovaTimer || state.lastBlastNovaState ||
+        state.ceilingCollapseApplied || !state.botToCubeAssignments.empty();
+
+    magStates.erase(it);
+    return wasSet;
 }
 
 }

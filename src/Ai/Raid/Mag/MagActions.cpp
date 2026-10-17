@@ -20,14 +20,8 @@ using namespace EncounterHelpers;
 
 bool MagtheridonResetEncounterStatesAction::Execute(Event /*event*/)
 {
-    uint32 const instanceId = bot->GetInstanceId();
     bool reset = false;
-
-    reset |= magDpsWaitTimer.erase(instanceId) > 0;
-    reset |= blastNovaTimer.erase(instanceId) > 0;
-    reset |= lastBlastNovaState.erase(instanceId) > 0;
-    reset |= ceilingCollapseApplied.erase(instanceId) > 0;
-    reset |= botToCubeAssignments.erase(instanceId) > 0;
+    reset |= MagResetInstance(bot->GetInstanceId());
     reset |= ClearStrategyTargetIcon(
         bot, RtiTargetValue::skullIndex, { Id(MagNpcs::NPC_HELLFIRE_CHANNELER) });
 
@@ -43,11 +37,7 @@ bool MagtheridonMainTankAttackFirstThreeChannelersAction::Execute(Event /*event*
         channeler = GetChanneler(bot, EAST_CHANNELER_DB_GUID);
 
     if (channeler)
-    {
-        if (AI_VALUE(Unit*, "current target") != channeler)
-            return Attack(channeler);
-        return false;
-    }
+        return AI_VALUE(Unit*, "current target") != channeler && Attack(channeler);
 
     // After first three channelers are dead, wait for Magtheridon to activate.
     Position const& position = WAITING_FOR_MAGTHERIDON_POSITION;
@@ -128,19 +118,17 @@ bool MagtheridonMisdirectChannelersToMainTankAction::Execute(Event /*event*/)
         }
     }
 
-    //By leewheel 2026-08-26 合并：采用对侧新增的存活校验
     Player* mainTank = GetGroupMainTank(bot);
     if (!mainTank || !mainTank->IsAlive())
         return false;
 
-    Creature* targetChanneler = nullptr;
+    Creature* channeler = nullptr;
     if (hunterIndex == 0)
-        targetChanneler = GetChanneler(bot, WEST_CHANNELER_DB_GUID);
+        channeler = GetChanneler(bot, WEST_CHANNELER_DB_GUID);
     else if (hunterIndex == 1)
-        targetChanneler = GetChanneler(bot, EAST_CHANNELER_DB_GUID);
-    // End By leewheel
+        channeler = GetChanneler(bot, EAST_CHANNELER_DB_GUID);
 
-    if (!targetChanneler)
+    if (!channeler)
         return false;
 
     if (botAI->CanCastSpell(Id(MagSpells::SPELL_MISDIRECTION), mainTank))
@@ -149,10 +137,8 @@ bool MagtheridonMisdirectChannelersToMainTankAction::Execute(Event /*event*/)
     if (!bot->HasAura(Id(MagSpells::SPELL_MISDIRECTION_AURA)))
         return false;
 
-    if (botAI->CanCastSpell("steady shot", targetChanneler))
-        return botAI->CastSpell("steady shot", targetChanneler);
-
-    return false;
+    return botAI->CanCastSpell("steady shot", channeler) &&
+        botAI->CastSpell("steady shot", channeler);
 }
 
 bool MagtheridonAssignDpsPriorityAction::Execute(Event /*event*/)
@@ -280,7 +266,6 @@ bool MagtheridonSpreadRangedAction::Execute(Event /*event*/)
         FleePosition(magtheridon->GetPosition(), safeDistFromBoss, minInterval))
     {
         return true;
-        // By leewheel 2026-09-09 合并brighton: 采纳brighton简化(移除blastNovaTimer时间判定, FleePosition成功即返回)
     }
 
     constexpr float safeDistFromPlayer = 6.0f;
@@ -316,12 +301,9 @@ bool MagtheridonUseManticronCubeAction::Execute(Event /*event*/)
 
 CubeInfo const* MagtheridonUseManticronCubeAction::GetAssignedCube()
 {
-    auto mapIt = botToCubeAssignments.find(bot->GetMap()->GetInstanceId());
-    if (mapIt == botToCubeAssignments.end())
-        return nullptr;
-
-    auto it = mapIt->second.find(bot->GetGUID());
-    return it != mapIt->second.end() ? &it->second : nullptr;
+    auto const& assignments = MagState(bot->GetInstanceId()).botToCubeAssignments;
+    auto it = assignments.find(bot->GetGUID());
+    return it != assignments.end() ? &it->second : nullptr;
 }
 
 bool MagtheridonUseManticronCubeAction::HandleCubeRelease(Unit* magtheridon)
@@ -397,13 +379,11 @@ bool MagtheridonUseManticronCubeAction::HandleCubeInteraction(GameObject* cube)
 
 bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(CubeInfo const& cubeInfo)
 {
-    // By leewheel 2026-09-09 合并brighton: 采纳brighton简化(移除重复INTERIM判定, 靠下方stagger控制时机), 保留GetMap()取实例id
-    auto timerIt = blastNovaTimer.find(bot->GetMap()->GetInstanceId());
-    if (timerIt == blastNovaTimer.end())
+    std::optional<uint32> const& blastNovaTimer = MagState(bot->GetInstanceId()).blastNovaTimer;
+    if (!blastNovaTimer)
         return false;
-    // End By leewheel
 
-    if (getMSTimeDiff(timerIt->second, getMSTime()) < BLAST_NOVA_INTERIM_MS)
+    if (getMSTimeDiff(*blastNovaTimer, getMSTime()) < BLAST_NOVA_INTERIM_MS)
         return false;
 
     // If a hazard appears at the waiting position, find a new waiting position at the same distance
@@ -522,31 +502,30 @@ bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
 
 bool MagtheridonUpdateTimersAndAssignmentsAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-09-09 合并brighton: boss按entry规则用17257, 采纳brighton加IsMagtheridonActive活性判定
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return false;
-    // End By leewheel
 
-    uint32 const instanceId = magtheridon->GetMap()->GetInstanceId();
+    uint32 const instanceId = magtheridon->GetInstanceId();
     uint32 const now = getMSTime();
+    MagInstanceState& state = MagState(instanceId);
 
     bool const isCasting = IsBlastNovaCasting(magtheridon);
-    bool& lastState = lastBlastNovaState.try_emplace(instanceId, false).first->second;
+    bool& lastState = state.lastBlastNovaState ?
+        *state.lastBlastNovaState : state.lastBlastNovaState.emplace(false);
     if (isCasting && !lastState)
-        blastNovaTimer[instanceId] = now;
+        state.blastNovaTimer = now;
 
     lastState = isCasting;
 
     bool updated = false;
-    updated |= blastNovaTimer.try_emplace(instanceId, now).second;
-    updated |= magDpsWaitTimer.try_emplace(instanceId, now).second;
+    updated |= EmplaceIfUnset(state.blastNovaTimer, now);
+    updated |= EmplaceIfUnset(state.magDpsWaitTimer, now);
 
-    if (magtheridon->GetHealthPct() < CEILING_COLLAPSE_HP_PCT &&
-        !ceilingCollapseApplied.contains(instanceId))
+    if (magtheridon->GetHealthPct() < CEILING_COLLAPSE_HP_PCT && !state.ceilingCollapseApplied)
     {
-        blastNovaTimer[instanceId] += CEILING_COLLAPSE_DELAY_MS;
-        ceilingCollapseApplied.insert(instanceId);
+        *state.blastNovaTimer += CEILING_COLLAPSE_DELAY_MS;
+        state.ceilingCollapseApplied = true;
         updated = true;
     }
 
@@ -558,9 +537,8 @@ bool MagtheridonUpdateTimersAndAssignmentsAction::Execute(Event /*event*/)
 bool MagtheridonUpdateTimersAndAssignmentsAction::AssignCubeClickers(
     uint32 instanceId, Unit* magtheridon)
 {
-    // By leewheel 2026-09-09 合并brighton: 移除函数内重复的instanceId遮蔽声明(改用参数), 消除shadow警告
     std::vector<CubeInfo> cubes = GetAllCubeInfosByDbGuids(bot->GetMap(), MANTICRON_CUBE_DB_GUIDS);
-    auto& assignment = botToCubeAssignments[instanceId];
+    auto& assignment = MagState(instanceId).botToCubeAssignments;
     Group* group = bot->GetGroup();
 
     if (!group || cubes.empty())
@@ -646,11 +624,11 @@ bool MagtheridonUpdateTimersAndAssignmentsAction::AssignCubeClickers(
 
 bool MagtheridonUpdateTimersAndAssignmentsAction::NeedsCubeReassignment(uint32 instanceId)
 {
-    auto mapIt = botToCubeAssignments.find(instanceId);
-    if (mapIt == botToCubeAssignments.end() || mapIt->second.empty())
+    auto const& assignment = MagState(instanceId).botToCubeAssignments;
+    if (assignment.empty())
         return true;
 
-    for (auto const& pair : mapIt->second)
+    for (auto const& pair : assignment)
     {
         Player* assigned = ObjectAccessor::FindPlayer(pair.first);
         if (!assigned || !assigned->IsAlive() || assigned->GetMapId() != MAG_MAP_ID)
@@ -659,4 +637,3 @@ bool MagtheridonUpdateTimersAndAssignmentsAction::NeedsCubeReassignment(uint32 i
 
     return false;
 }
-// 合并brighton 2026-08-26: 移除已并入MagtheridonResetEncounterStatesAction的旧EraseTimersAndTrackers函数 --By leewheel 2026年8月26日

@@ -11,6 +11,16 @@
 #include "Random.h"
 #include "WorldSessionMgr.h"
 
+namespace
+{
+// %item prefixes %item_link, and the map's reverse order replaces the longer key first.
+void ApplyPlaceholders(std::string& text, std::map<std::string, std::string> const& placeholders)
+{
+    for (auto it = placeholders.rbegin(); it != placeholders.rend(); ++it)
+        PlayerbotTextMgr::replaceAll(text, it->first, it->second);
+}
+}
+
 void PlayerbotTextMgr::replaceAll(std::string& str, std::string const& from, std::string const& to)
 {
     if (from.empty())
@@ -107,8 +117,7 @@ std::string PlayerbotTextMgr::GetBotText(std::string name, std::map<std::string,
     if (botText.empty())
         return "";
 
-    for (std::map<std::string, std::string>::iterator i = placeholders.begin(); i != placeholders.end(); ++i)
-        replaceAll(botText, i->first, i->second);
+    ApplyPlaceholders(botText, placeholders);
 
     return botText;
 }
@@ -121,9 +130,13 @@ std::string PlayerbotTextMgr::GetBotTextOrDefault(std::string name, std::string 
     auto const itr = botTexts.find(name);
     if (itr != botTexts.end() && !itr->second.empty())
     {
+        // By leewheel 2026-10-17 合并：保留本核写法——库里确实有该文本时优先用真实文本
+        // （GetBotText 内部按 locale 优先级取，含占位符替换），取不到再落到默认值；
+        // 上游 PR 直接 ApplyPlaceholders(defaultText) 会绕过汉化文本库，故不采纳。
         std::string botText = GetBotText(name, placeholders);
         if (!botText.empty())
             return botText;
+        // End By leewheel
     }
 
     for (std::map<std::string, std::string>::iterator i = placeholders.begin(); i != placeholders.end(); ++i)
@@ -162,8 +175,7 @@ std::string PlayerbotTextMgr::GetBotText(ChatReplyType replyType, std::map<std::
     BotTextEntry textEntry = proper_list[urand(0, proper_list.size() - 1)];
     std::string botText =
         !textEntry.m_text[GetLocalePriority()].empty() ? textEntry.m_text[GetLocalePriority()] : textEntry.m_text[0];
-    for (auto& placeholder : placeholders)
-        replaceAll(botText, placeholder.first, placeholder.second);
+    ApplyPlaceholders(botText, placeholders);
 
     return botText;
 }

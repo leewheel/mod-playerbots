@@ -27,6 +27,7 @@
 #include "SSCActions.h"
 #include "SSCHelpers.h"
 #include "ShamanActions.h"
+#include "ThreatManager.h"
 #include "WarlockActions.h"
 #include "WarriorActions.h"
 #include <algorithm>
@@ -114,6 +115,28 @@ bool IsAnyVashjAddUntanked(PlayerbotAI* botAI)
     return false;
 }
 
+bool IsSscBoss(uint32 entry)
+{
+    return entry == Id(SscNpcs::NPC_HYDROSS_THE_UNSTABLE) ||
+        entry == Id(SscNpcs::NPC_THE_LURKER_BELOW) ||
+        entry == Id(SscNpcs::NPC_LEOTHERAS_THE_BLIND) ||
+        entry == Id(SscNpcs::NPC_FATHOM_LORD_KARATHRESS) ||
+        entry == Id(SscNpcs::NPC_MOROGRIM_TIDEWALKER) ||
+        entry == Id(SscNpcs::NPC_LADY_VASHJ);
+}
+
+Unit* GetSscBoss(Player* bot)
+{
+    for (auto const& [guid, ref] : bot->GetThreatMgr().GetThreatenedByMeList())
+    {
+        Unit* unit = ref->GetOwner();
+        if (unit && IsSscBoss(unit->GetEntry()))
+            return unit;
+    }
+
+    return nullptr;
+}
+
 } // end anonymous namespace
 
 // Shared
@@ -129,24 +152,30 @@ float SscControlMisdirectionMultiplier::GetValueInEncounter(Action* action)
     if (!dynamic_cast<CastMisdirectionOnMainTankAction*>(action))
         return 1.0f;
 
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
-    if (vashj && GetLadyVashjPhase(vashj) != 1)
-        return 0.0f;
+    Unit* boss = GetSscBoss(bot);
+    if (!boss)
+        return 1.0f;
 
-    if (Unit* leotheras = AI_VALUE2(Unit*, "find target", "21215"))
+    uint32 const bossEntry = boss->GetEntry();
+    if (bossEntry == Id(SscNpcs::NPC_LADY_VASHJ))
+        return GetLadyVashjPhase(boss) != 1 ? 0.0f : 1.0f;
+
+    if (bossEntry == Id(SscNpcs::NPC_LEOTHERAS_THE_BLIND))
     {
         if (HasInnerDemon(bot))
             return 0.0f;
 
-        if (IsLeotherasChannelingWhirlwind(leotheras))
+        if (IsLeotherasChannelingWhirlwind(boss))
             return 0.0f;
 
         if (GetLeotherasDemonOrShadow(botAI) && GetLeotherasWarlockTank(bot))
             return 0.0f;
+
+        return 1.0f;
     }
 
-    return AI_VALUE2(Unit*, "find target", "21214") ||
-        AI_VALUE2(Unit*, "find target", "21216") ? 0.0f : 1.0f;
+    return bossEntry == Id(SscNpcs::NPC_FATHOM_LORD_KARATHRESS) ||
+        bossEntry == Id(SscNpcs::NPC_HYDROSS_THE_UNSTABLE) ? 0.0f : 1.0f;
 }
 
 float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
@@ -160,10 +189,13 @@ float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
     bool const isBloodlust = bot->getClass() == CLASS_SHAMAN &&
         (dynamic_cast<CastBloodlustAction*>(action) || dynamic_cast<CastHeroismAction*>(action));
 
+    Unit* boss = GetSscBoss(bot);
+    uint32 const bossEntry = boss ? boss->GetEntry() : 0;
+
     // Vashj: Bloodlust/Heroism are phase 3 only; other dps cooldowns can be used from phase 2.
-    if (Unit* vashj = AI_VALUE2(Unit*, "find target", "21212"))
+    if (bossEntry == Id(SscNpcs::NPC_LADY_VASHJ))
     {
-        int8 const phase = GetLadyVashjPhase(vashj);
+        int8 const phase = GetLadyVashjPhase(boss);
         if (phase == 3)
             return 1.0f;
 
@@ -171,44 +203,33 @@ float SscDelayDpsCooldownsMultiplier::GetValue(Action* action)
     }
 
     // Tidewalker: Bloodlust/Heroism are phase 2 only, once the raid is stacked in the corner.
-    if (Unit* tidewalker = AI_VALUE2(Unit*, "find target", "21213"))
+    if (bossEntry == Id(SscNpcs::NPC_MOROGRIM_TIDEWALKER))
     {
         if (isBloodlust)
-            return tidewalker->GetHealthPct() <= TIDEWALKER_PHASE_2_HEALTH_PCT ? 1.0f : 0.0f;
+            return boss->GetHealthPct() <= TIDEWALKER_PHASE_2_HEALTH_PCT ? 1.0f : 0.0f;
 
-        return tidewalker->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+        return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
-// By leewheel 2026-10-07 合并brighton the-lab：上游用英文名(fathom-lord karathress/
-    //   fathom-guard tidalvess)，按项目规则第97条保留本分支 entry 化
-    //   （21214=Fathom-Lord Karathress，21965=Fathom-Guard Tidalvess）。
-    if (AI_VALUE2(Unit*, "find target", "21214"))
+    // Karathress: Hold until Tidalvess, the first council member in the kill order, is under 95%.
+    if (bossEntry == Id(SscNpcs::NPC_FATHOM_LORD_KARATHRESS))
     {
-        // FLK: Hold until Tidalvess, the first council member in the kill order, is under 95%.
         Unit* tidalvess = AI_VALUE2(Unit*, "find target", "21965");
-        // End By leewheel
         return tidalvess && tidalvess->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
     // Lurker: No dps cooldowns while spouting or submerged.
-    // By leewheel 2026-10-07 合并brighton后复查：上游用英文名 "the lurker below"，本服
-    //   creature_template 名已汉化，英文名在 FindTargetValue 匹配不上，按规则 entry 化 21217
-    //   （深水领主卡拉瑟雷斯 The Lurker Below）。
-    if (Unit* lurker = AI_VALUE2(Unit*, "find target", "21217"))
-    // End By leewheel
+    if (bossEntry == Id(SscNpcs::NPC_THE_LURKER_BELOW))
     {
-        if (!IsLurkerSurfacedAndCalm(lurker))
+        if (!IsLurkerSurfacedAndCalm(boss))
             return 0.0f;
 
-        return lurker->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+        return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
     }
 
     // Hydross and Leotheras: Only the standard hold on pull until 95%.
-    // By leewheel 2026-10-07 合并brighton后复查：同上，英文名 "hydross the unstable" 改 entry 21216
-    //   （Hydross the Unstable）。
-    if (Unit* hydross = AI_VALUE2(Unit*, "find target", "21216"))
-    // End By leewheel
-        return hydross->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
+    if (bossEntry == Id(SscNpcs::NPC_HYDROSS_THE_UNSTABLE))
+        return boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT ? 0.0f : 1.0f;
 
     if (bot->GetExactDist(LEOTHERAS_SPAWN_POSITION) > LEOTHERAS_SEARCH_DISTANCE)
         return 1.0f;

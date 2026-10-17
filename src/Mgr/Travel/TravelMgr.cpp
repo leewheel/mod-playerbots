@@ -4499,11 +4499,14 @@ std::vector<std::vector<uint32>> TravelMgr::GetOptimalFlightDestinations(Player*
 const std::vector<WorldLocation> TravelMgr::GetTeleportLocations(Player* bot)
 {
     uint32 level = bot->GetLevel();
-    uint8 isAlliance = bot->GetTeamId() == TEAM_ALLIANCE;
-    if (sPlayerbotAIConfig.EnableNewRpgStrategy)
-        return isAlliance ? allianceHubsPerLevelCache[level] : hordeHubsPerLevelCache[level];
+    std::map<uint8, std::vector<WorldLocation>> const& cache =
+        !sPlayerbotAIConfig.EnableNewRpgStrategy ? locsPerLevelCache
+        : bot->GetTeamId() == TEAM_ALLIANCE      ? allianceHubsPerLevelCache
+                                                 : hordeHubsPerLevelCache;
 
-    return locsPerLevelCache[level];
+    // Called from map threads: find() must not insert.
+    auto itr = cache.find(static_cast<uint8>(level));
+    return itr != cache.end() ? itr->second : std::vector<WorldLocation>();
 }
 
 const std::vector<WorldLocation> TravelMgr::GetTravelHubs(Player* bot)
@@ -4889,5 +4892,17 @@ void TravelMgr::PrepareDestinationCache()
             break;
         }
     }
+    // By leewheel 2026-10-17 合并：采纳上游新增的按等级缓存预建（locsPerLevelCache 等
+    // 四张表按 1..maxLevel 逐级占位，避免查询期重复建桶），日志保留本核中文文案。
+    for (uint32 level = 1; level <= maxLevel; ++level)
+    {
+        uint8 const key = static_cast<uint8>(level);
+        locsPerLevelCache.try_emplace(key);
+        allianceHubsPerLevelCache.try_emplace(key);
+        hordeHubsPerLevelCache.try_emplace(key);
+        bankerLocsPerLevelCache.try_emplace(key);
+    }
+    // End By leewheel
+
     LOG_INFO("playerbots", ">> 已收集 {} 个飞行管理员、{} 个旅店老板和 {} 个银行职员位置。", flightMastersCount, innkeepersCount, bankerCount);
 }
