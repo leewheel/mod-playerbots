@@ -2,6 +2,17 @@
 
 ## v2.5 — in progress
 
+### Core (repack)
+- **Auction house bot** (mod-ah-bot-plus), **on by default**: a seller (Gavelgrin) keeps about 3000 auctions of items
+  you can get in game, nothing above level 60 and no TBC/WotLK goods, and buys what players sell. Turn it off with
+  `AuctionHouseBot.Enable = false` in `configs\modules\mod_ahbot.conf` (server stopped).
+- **Manastorm Endless**, **off by default** (`Manastorm.Enable = 0` in `configs\modules\manastorm-endless.conf`):
+  its tables and data are always installed (the server needs them at start); to play it, the game client needs the
+  Manastorm client files (Interface files of the CoA client patch). Optional core feature, not supported by the CoA
+  Bots team.
+- The core's one-button rotation assist is **off** (`CoA.RotationAssist.Enable = 0` in `coa.conf`). Optional core
+  feature, not supported by the CoA Bots team.
+
 ### Combat
 - Bots no longer cast a spell their target would reflect (Warlord Kalithresh's 6 s full reflect sent back about a
   hundred casts in one Steamvault run); a cast in progress is cut when the target raises a reflect.
