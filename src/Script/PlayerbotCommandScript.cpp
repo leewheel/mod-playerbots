@@ -46,7 +46,7 @@ public:
             {"gtask", HandleGuildTaskCommand, SEC_GAMEMASTER, Console::Yes},
             {"pmon", HandlePerfMonCommand, SEC_GAMEMASTER, Console::Yes},
             {"rndbot", HandleRandomPlayerbotCommand, SEC_GAMEMASTER, Console::Yes},
-            {"coa", HandleCoaRecruitCommand, SEC_PLAYER, Console::No},
+            {"coa", HandleCoaRecruitCommand, SEC_PLAYER, Console::Yes},
             {"version", HandleVersionCommand, SEC_PLAYER, Console::Yes},
             {"debug", playerbotsDebugCommandTable},
             {"account", playerbotsAccountCommandTable},
@@ -88,7 +88,14 @@ public:
         std::string const wanted = line.substr(0, space);
         std::string const className = space == std::string::npos ? "" : line.substr(space + 1);
 
-        bool const gameMaster = handler->GetSession() && handler->GetSession()->GetSecurity() >= SEC_GAMEMASTER;
+        // The server console (and SOAP) may regear the bots, nothing else: the rest needs a player to group with.
+        bool const console = !handler->GetSession();
+        if (console && wanted != "regear")
+        {
+            handler->SendSysMessage("From the console: .playerbots coa regear [level].");
+            return true;
+        }
+        bool const gameMaster = console || handler->GetSession()->GetSecurity() >= SEC_GAMEMASTER;
 
         if (wanted == "raid")
         {
