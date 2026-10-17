@@ -59,8 +59,6 @@ bool RageWinterchillMeleeNearDeathAndDecayTrigger::IsActiveInEncounter()
     if (PlayerbotAI::IsMainTank(bot))
         return false;
 
-    // 同步 brighton 2026-09-08 重构: 触发范围统一为危险控制半径(池边缘+5码控制带), 与multiplier/机动helper一致,
-    // 覆盖"通往boss路径被抑制"的整段范围, 使本动作成为该区域内唯一能移动bot的机制
     return IsNearDeathAndDecay(botAI, DEATH_AND_DECAY_CONTROL_RADIUS);
 }
 
@@ -97,12 +95,6 @@ bool AnetheronRangedShouldSpreadTrigger::IsActiveInEncounter()
     return !GetInfernalToAttack(botAI, anetheron);
 }
 
-// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名IsActiveInEncounter(brighton的encounter门控框架)
-// By leewheel 2026-09-12 合并brighton b72069ab(trigger renames): 类名随之改为 AnetheronNearInfernoTargetTrigger
-// Whoever is holding Anetheron stays put: walking him across the platform costs the raid more than
-// a two second stun costs one bot. The Inferno target itself is excluded because it has its own job
-// -- carrying the summon to the gathering spot -- and nothing it does avoids a stun centred on it
-// End By leewheel
 bool AnetheronNearInfernoTargetTrigger::IsActiveInEncounter()
 {
     Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
@@ -136,7 +128,6 @@ bool AnetheronInfernalsPulseImmolationTrigger::IsActiveInEncounter()
     if (PlayerbotAI::IsTank(bot))
         return false;
 
-    // By leewheel 2026-09-05 清理英文遗留：Anetheron按entry规则(17808)
     if (!AI_VALUE2(Unit*, "find target", "17808"))
         return false;
 
@@ -182,13 +173,9 @@ bool KazrogalCanSplitMalevolentCleaveDamageTrigger::IsActiveInEncounter()
 
 bool KazrogalRangedShouldAvoidWarStompTrigger::IsActiveInEncounter()
 {
-    // This is what puts ranged on the arc, so it is ranged that belong in it. Melee mana users--a
-    // ret paladin, an enhancement shaman--pass every other test here and would be walked out to a
-    // slot they have no business in, then dragged back by ReachMelee the moment they arrived
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    // By leewheel 2026-08-30 合并上游简化(去掉mana user前置判断)；entry规则查怪(17888=kaz'rogal)
     if (!AI_VALUE2(Unit*, "find target", "17888"))
         return false;
 
@@ -200,8 +187,8 @@ bool KazrogalLowOnManaTrigger::IsActiveInEncounter()
     if (!IsKazrogalManaUser(botAI))
         return false;
 
-    // 同步 brighton 2026-09-08 重构: 猎人与术士均不逃离 -- 猎人只靠蝰蛇守护,
-    // 术士靠生命分流/暗影之幕应对印记(低血也强制分流, 见KazrogalWarlockManageManaAction)
+    // Hunters and Warlocks never run away. They rely only on Aspect of the Viper and Life Tap/
+    // Shadow Ward, respectively.
     if (bot->getClass() == CLASS_HUNTER || bot->getClass() == CLASS_WARLOCK)
         return false;
 
@@ -295,7 +282,6 @@ bool KazrogalImmunityNoLongerNeededTrigger::IsActiveInEncounter()
     if (bot->GetHealthPct() <= keepImmunityHealthPct)
         return false;
 
-    // By leewheel 2026-09-05 清理英文遗留：Kaz'rogal按entry规则(17888)
     return AI_VALUE2(Unit*, "find target", "17888");
 }
 
@@ -313,7 +299,6 @@ bool AzgalorRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (IsDoomed(bot))
         return false;
 
-    // 同步 brighton 2026-09-08 重构: 抑制半径统一为CONTROL_RADIUS, 与multiplier一致
     return !IsNearRainOfFire(botAI, RAIN_OF_FIRE_CONTROL_RADIUS);
 }
 
@@ -335,8 +320,6 @@ bool AzgalorMeleeNearRainOfFireTrigger::IsActiveInEncounter()
     if (IsDoomguardTank(bot))
         return false;
 
-    // 同步 brighton 2026-09-08 重构: 近战触发范围统一为CONTROL_RADIUS, 覆盖"其他移动被清零"的整段,
-    // 本动作是火雨范围内唯一能移动bot的机制 --By leewheel 2026-09-08
     return IsNearRainOfFire(botAI, RAIN_OF_FIRE_CONTROL_RADIUS);
 }
 
@@ -367,8 +350,10 @@ bool AzgalorShouldControlDoomguardsTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "17842"))
         return false;
 
-    // 保留本地entry化(boss/小怪英文名一律改用NPC entry, 项目规则), 17864=末日守卫 --By leewheel 2026-09-08
-    return AI_VALUE2(Unit*, "find target", "17864") || AnyGroupMemberHasDoom(bot);
+    if (AI_VALUE2(Unit*, "find target", "17864"))
+        return true;
+
+    return AnyGroupMemberHasDoom(bot);
 }
 
 bool AzgalorShouldDivideDpsTrigger::IsActiveInEncounter()
@@ -399,16 +384,10 @@ bool ArchimondeCastingAirBurstTrigger::IsActiveInEncounter()
     if (HasProtectionOfElune(bot))
         return false;
 
-    if (PlayerbotAI::IsMainTank(bot))
-        return false;
-
-    return GetPendingAirBurstCast(bot->GetMap()->GetInstanceId());
+    AirBurstData airBurst;
+    return GetPendingAirBurstCast(bot->GetInstanceId(), airBurst);
 }
 
-// By leewheel 2026-09-04 合并冲突解决: 采纳brighton新方法名IsActiveInEncounter
-// No longer gated to the opening. Ranged drift back together across a fight this long, and the
-// spread is cheap: the action rate limits itself and the Doomfire multiplier removes it near a
-// trail, so leaving it live costs nothing where it would otherwise get in the way
 bool ArchimondeRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
@@ -428,12 +407,6 @@ bool ArchimondeNearDoomfireTrigger::IsActiveInEncounter()
     if (HasProtectionOfElune(bot))
         return false;
 
-    // The same radius the multiplier suppresses at, so the action owns movement across exactly the
-    // area cleared for it. Nothing it does reaches further: the push only has a magnitude inside
-    // DOOMFIRE_DANGER_RADIUS, the trapped sweep needs a patch inside DOOMFIRE_BURN_RADIUS, and past
-    // this ordinary movement is free again and closes the gap to Archimonde perfectly well. Gating
-    // here rather than in the action is what keeps the 18y field sweep off every bot on every tick
-    // of a fight where a trail is usually nowhere near them
     return IsNearDoomfire(botAI, DOOMFIRE_CONTROL_RADIUS);
 }
 

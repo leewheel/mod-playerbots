@@ -17,23 +17,12 @@
 using namespace HyjalHelpers;
 using namespace EncounterHelpers;
 
-// Every mover here walks in short steps rather than handing MoveTo a far destination, and the Z it
-// seeds MoveTo with is always the bot's own. That is not a detail: MoveTo seeds SearchForBestPath
-// with the Z it is given, and the search resolves a point only a few yards ahead. Passing the
-// destination's Z instead asks it to reconcile ground fifty yards away with ground under the bot's
-// feet, which on Hyjal's terrain fails outright--MoveTo returns false and the bot simply stands
-// there, with no error and nothing suppressing it. The destination's Z belongs in the arrival test,
-// never in the step
 // Shared
-// （By leewheel 2026-10-13 合并 brighton the-lab：节标题随上游由 General 改为 Shared；
-//   上方 MoveTo Z 语义的踩坑注释是本核实测结论，必须保留。）
 
 bool HyjalResetEncounterStatesAction::Execute(Event /*event*/)
 {
     bool reset = false;
 
-    // 合并brighton 2026-08-26: 直接重置各行动初始位置状态, 不再依赖find target守卫(17808/17767/17888)
-    //By leewheel 2026年8月26日
     Action* winterchillAction = context->GetAction("rage winterchill spread ranged in circle");
     if (winterchillAction && static_cast<RageWinterchillSpreadRangedInCircleAction*>(
             winterchillAction)->ResetWinterchillPositionReached())
@@ -57,7 +46,6 @@ bool HyjalResetEncounterStatesAction::Execute(Event /*event*/)
     reset |= HyjalResetInstance(bot->GetInstanceId());
 
     return reset;
-    //End By leewheel
 }
 
 bool HyjalMisdirectBossToMainTankAction::Execute(Event /*event*/)
@@ -66,7 +54,6 @@ bool HyjalMisdirectBossToMainTankAction::Execute(Event /*event*/)
     if (!boss)
         return false;
 
-    //By leewheel 2026-08-26 合并：采用对侧1参数签名+存活校验，变量名随本文件上下文
     Player* mainTank = GetGroupMainTank(bot);
     if (!mainTank || !mainTank->IsAlive())
         return false;
@@ -74,14 +61,10 @@ bool HyjalMisdirectBossToMainTankAction::Execute(Event /*event*/)
     if (botAI->CanCastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), mainTank))
         return botAI->CastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), mainTank);
 
-    // By leewheel 2026-10-13 合并 brighton the-lab(c3e1911d 统一 TBC raid)：aura 判定改为
-    //   SPELL_MISDIRECTION_AURA=35079（core spell_hunter.cpp:55：35079=Misdirection(Proc)，
-    //   即猎人身上的 aura；本核旧写法查施放法术 34477 语义有误），收尾跟随上游 steady shot。
     if (!bot->HasAura(Id(HyjalSpells::SPELL_MISDIRECTION_AURA)))
         return false;
 
     return botAI->CanCastSpell("steady shot", boss) && botAI->CastSpell("steady shot", boss);
-    // End By leewheel
 }
 
 bool HyjalMainTankPositionBossAction::Execute(Event /*event*/)
@@ -137,8 +120,6 @@ bool RageWinterchillSpreadRangedInCircleAction::Execute(Event /*event*/)
     if (_winterchillPositionReached)
         return false;
 
-    // 同步 brighton 2026-09-08 重构: 远程环形站位收敛为统一helper(治疗25码/远程35码双半径),
-    // 目标不可达时由helper内判定"已就位", 避免反复请求移动 --By leewheel 2026-09-08
     constexpr float healerRadius = 25.0f;
     constexpr float dpsRadius = 35.0f;
     float moveX;
@@ -159,10 +140,6 @@ bool RageWinterchillSpreadRangedInCircleAction::Execute(Event /*event*/)
 // Melee looks for an open position within the boss's melee range. If one isn't available (likely
 // the case if D&D lands on melee, with its 20y radius), then melee takes the shortest path out of
 // the hazard and waits it out.
-//
-// Two jobs, since the suppression that comes with this action reaches past the pool itself: inside
-// the pool it is an escape, and from there out to DEATH_AND_DECAY_CONTROL_RADIUS it is the
-// only thing that can walk the bot back onto Winterchill's ring
 bool RageWinterchillMeleeManeuverThroughDeathAndDecayAction::Execute(Event /*event*/)
 {
     Unit* winterchill = AI_VALUE2(Unit*, "find target", "17767");
@@ -173,8 +150,6 @@ bool RageWinterchillMeleeManeuverThroughDeathAndDecayAction::Execute(Event /*eve
     if (!GetDeathAndDecayPosition(botAI, pool))
         return false;
 
-    // 同步 brighton 2026-09-08 重构: 近战在死亡凋零环上的机动收敛为统一helper,
-    // 环上无空位时仅在身处池内才向外逃跑, 已出圈则原地等待(helper内部判定) --By leewheel 2026-09-08
     float moveX;
     float moveY;
     float moveZ;
@@ -197,37 +172,33 @@ bool AnetheronMisdirectBossAndInfernalsToTanksAction::Execute(Event /*event*/)
     if (!anetheron)
         return false;
 
-    Player* tankTarget = nullptr;
-    Unit* enemyTarget = nullptr;
+    Player* tank = nullptr;
+    Unit* enemy = nullptr;
     if (anetheron->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
     {
-        //By leewheel 2026-08-26 合并：保留本文件变量命名，采用对侧1参数签名
-        tankTarget = GetGroupMainTank(bot);
-        enemyTarget = anetheron;
+        tank = GetGroupMainTank(bot);
+        enemy = anetheron;
     }
     else if (Unit* infernal = GetLooseInfernal(botAI))
     {
-        tankTarget = GetInfernalTank(bot);
-        enemyTarget = infernal;
+        tank = GetInfernalTank(bot);
+        enemy = infernal;
     }
 
-    if (!tankTarget || !enemyTarget)
+    if (!enemy || !tank || !tank->IsAlive())
         return false;
 
-    // By leewheel 2026-10-13 合并 brighton the-lab(c3e1911d)：①误导按 spell id(34477) 施放；
-    //   ②aura 判定改为 SPELL_MISDIRECTION_AURA=35079（猎人身上的 Misdirection(Proc) aura，
-    //   core spell_hunter.cpp:55 实锤）；③收尾跟随上游 steady shot。
-    //   变量名沿用本核 tankTarget/enemyTarget（上游侧的 tank/enemy 在本文件上下文不存在）。
-    if (botAI->CanCastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), tankTarget))
-        return botAI->CastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), tankTarget);
+    if (botAI->CanCastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), tank))
+        return botAI->CastSpell(Id(HyjalSpells::SPELL_MISDIRECTION), tank);
 
     if (!bot->HasAura(Id(HyjalSpells::SPELL_MISDIRECTION_AURA)))
         return false;
 
-    return botAI->CanCastSpell("steady shot", enemyTarget) && botAI->CastSpell("steady shot", enemyTarget);
-    // End By leewheel
+    return botAI->CanCastSpell("steady shot", enemy) && botAI->CastSpell("steady shot", enemy);
 }
 
+// As with Winterchill, this is just an initial spread, though in the case of Anetheron, bots still
+// try to spread a bit throughout the fight because of Carrion Swarm
 bool AnetheronSpreadRangedInCircleAction::Execute(Event /*event*/)
 {
     if (_anetheronPositionReached)
@@ -240,8 +211,6 @@ bool AnetheronSpreadRangedInCircleAction::Execute(Event /*event*/)
         return false;
     }
 
-    // 同步 brighton 2026-09-08 重构: 阿纳塞隆远程环形站位收敛为统一helper(治疗27码/远程34码),
-    // 已就位判定与不可达兜底均在helper内部完成 --By leewheel 2026-09-08
     constexpr float healerRadius = 27.0f;
     constexpr float dpsRadius = 34.0f;
     float moveX;
@@ -276,9 +245,6 @@ bool AnetheronMoveAwayFromInfernoTargetAction::Execute(Event /*event*/)
     return FleePosition(infernoTarget->GetPosition(), INFERNAL_ESCAPE_DISTANCE, minInterval);
 }
 
-// Infernals cannot be taunted, so nothing the tank does will pull one off its victim. What moves
-// an Infernal is its victim walking, and the summon itself lands wherever its target stands when
-// the 3.5s cast ends. Both cases are the same job: carry it to the gathering spot
 bool AnetheronBringInfernalToInfernalTankAction::Execute(Event /*event*/)
 {
     constexpr float arrivalDist = 2.0f;
@@ -292,13 +258,11 @@ bool AnetheronBringInfernalToInfernalTankAction::Execute(Event /*event*/)
     }
 
     return MoveTo(
-        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-// Stand where the Infernals are being gathered and let stock tank assist work through whatever has
-// arrived. There is no pick-up to perform: Infernals are immune to taunt, so holding them is plain
-// threat work, and the exclusions in the strategy are what keep this bot on them and off Anetheron
+// Note that Infernals cannot be taunted.
 bool AnetheronInfernalTankTakePositionAction::Execute(Event /*event*/)
 {
     constexpr float arrivalDist = 3.0f;
@@ -313,8 +277,8 @@ bool AnetheronInfernalTankTakePositionAction::Execute(Event /*event*/)
     }
 
     return MoveTo(
-        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
+        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
 // An Infernal burns everything within 10y of itself, so anybody who is not tanking it leaves.
@@ -331,9 +295,7 @@ bool AnetheronGetOutOfImmolationAction::Execute(Event /*event*/)
 // Melee stay on Anetheron throughout. Ranged attack Infernals if they are reasonably nearby.
 bool AnetheronAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-08-30 合并上游重构(拆分Immolation逃离+GetInfernalToAttack helper)；entry规则查怪
     Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
-    // End By leewheel
     if (!anetheron)
         return false;
 
@@ -345,18 +307,10 @@ bool AnetheronAssignDpsPriorityAction::Execute(Event /*event*/)
         // Wait for the tank to pick up the Infernal before attacking directly
         Player* infernalTank = GetInfernalTank(bot);
         if (!infernalTank || infernal->GetVictim() == infernalTank)
-        {
-            if (AI_VALUE(Unit*, "current target") != infernal)
-                return Attack(infernal);
-
-            return false;
-        }
+            return AI_VALUE(Unit*, "current target") != infernal && Attack(infernal);
     }
 
-    if (AI_VALUE(Unit*, "current target") != anetheron)
-        return Attack(anetheron);
-
-    return false;
+    return AI_VALUE(Unit*, "current target") != anetheron && Attack(anetheron);
 }
 
 // Kaz'rogal
@@ -378,8 +332,8 @@ bool KazrogalAssistTanksMoveInFrontAction::Execute(Event /*event*/)
     }
 
     return MoveTo(
-        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
 bool KazrogalSpreadRangedInArcAction::Execute(Event /*event*/)
@@ -392,9 +346,7 @@ bool KazrogalSpreadRangedInArcAction::Execute(Event /*event*/)
     size_t const count = rangedMembers.size();
     size_t const botIndex = std::distance(rangedMembers.begin(), findIt);
 
-    // By leewheel 2026-08-30 合并上游helper重构；entry规则查怪(17888=kaz'rogal)
     Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
-    // End By leewheel
     if (!kazrogal)
         return false;
 
@@ -416,9 +368,6 @@ bool KazrogalSpreadRangedInArcAction::Execute(Event /*event*/)
         return false;
 
     return MoveTo(
-        // By leewheel 2026-09-13 合并brighton caa4094e: 采纳上游 b5a282be —— CanTakeStepTowards 新增
-        //   moveZ 输出参数后，MoveTo 应使用该步进高度 moveZ，而非当前 bot->GetPositionZ()（后者会把
-        //   斜坡/台阶上的水平移动强行拉平回原地高度）。
         HYJAL_MAP_ID, moveX, moveY, moveZ, false, false, false, false,
         MovementPriority::MOVEMENT_COMBAT, true, false);
 }
@@ -437,16 +386,8 @@ bool KazrogalMoveAwayFromGroupAction::Execute(Event /*event*/)
 
     float const step = MARK_ESCAPE_DISTANCE - bot->GetExactDist2d(nearestPlayer);
 
-    // Away from whoever is nearest. For two bots side by side on the arc that is very nearly
-    // tangential, which is the direction that separates a pair fastest. Running straight out from
-    // Kaz'rogal instead would barely separate them at all: radial escape scales the gap by the
-    // radius, so neighbours a yard and a half apart would have to reach the far side of the base
-    // before they made 16.
-    //
-    // Except where that player is further out than the bot, since away-from-them then points back
-    // into the raid. There Kaz'rogal is the reference instead: radially out is at least progress,
-    // and it can never be inward. Both branches are MoveAway, which fans nine headings against
-    // collision before giving up--worth having where fences and war machines flank every approach
+    // Away from whoever is nearest. This combination of away from Kaz'rogal and nearest player
+    // gets the bots a distance away from the boss before spreading sideways.
     Unit* kazrogal = AI_VALUE2(Unit*, "find target", "17888");
     if (kazrogal && nearestPlayer->GetExactDist2d(kazrogal) > bot->GetExactDist2d(kazrogal))
         return MoveAway(kazrogal, step);
@@ -470,14 +411,10 @@ bool KazrogalCancelImmunityAction::Execute(Event /*event*/)
     return true;
 }
 
-// Life Tap first, because it is the only one of the two that removes the problem rather than
-// softening it: mana bought back above the danger line keeps the warlock out of the escape
-// entirely. Shadow Ward is what is left once health is too low to trade
+// Life Tap first, then cast Shadow Ward if there isn't enough health to do so
 bool KazrogalWarlockManageManaAction::Execute(Event /*event*/)
 {
     if (bot->GetPower(POWER_MANA) <= MARK_LIFE_TAP_MANA &&
-        // 同步 brighton 2026-09-08: 移除低血量门槛, 卡兹罗加印记期间低血也强制生命分流,
-        // 避免蓝量耗尽引爆印记祸及全团(暗影之幕兜底生存) --By leewheel 2026-09-08
         botAI->CanCastSpell("life tap", bot) && botAI->CastSpell("life tap", bot))
     {
         return true;
@@ -497,7 +434,7 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
     if (!azgalor)
         return false;
 
-    constexpr float safeDistFromBoss = 30.0f; // 约20码 + 首领与机器人各自的战斗范围
+    constexpr float safeDistFromBoss = 30.0f; // arbitrary, but ~20 yards + both CombatReaches
     constexpr uint32 minInterval = 0;
 
     if (bot->GetExactDist2d(azgalor) < safeDistFromBoss &&
@@ -515,14 +452,15 @@ bool AzgalorDisperseRangedAction::Execute(Event /*event*/)
     if (doomguard && AI_VALUE(Unit*, "current target") == doomguard)
         return false;
 
+    // Don't spread if focused on the Doomguard. There's actually not much space due to the need
+    // to maintain significant distance from Azgalor as a proxy to avoid getting in Cleave distance.
     constexpr float safeDistFromPlayer = 5.0f;
     Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistFromPlayer);
     return nearestPlayer && FleePosition(nearestPlayer->GetPosition(), safeDistFromPlayer);
 }
 
-// 与冬泉谷暗影伤害池的情况相同，但有两处不同：阿兹加洛可同时存在多个火雨池，
-// 且无论火焰在做什么，他的正面弧形区域都会被顺劈链封锁。两者都只是同一圆环上的
-// 更多被阻断的弧线。绝不用站火中的安全去换顺劈安全——火焰是持续掉血，顺劈是致命一击
+// Similar to D&D avoidance, but there are two notable differences to account for: two RoFs can be
+// active at a time, and escape cannot take the bot into Azgalor's frontal arc due to the Cleave.
 bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
 {
     Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
@@ -536,8 +474,6 @@ bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
     std::vector<BlockedArc> const cleaveArc = {
         { azgalor->GetOrientation(), CLEAVE_DANGER_ARC / 2.0f } };
 
-    // 同步 brighton 2026-09-08 重构: 火雨+顺劈双重威胁下的近战机动收敛为统一helper,
-    // 由helper综合火雨池与正面顺劈弧计算可站角度, 无可站角度且身处火中时朝最近池外逃 --By leewheel 2026-09-08
     auto cleaveSafe = [azgalor](float x, float y)
     {
         return IsSafeFromAzgalorCleave(azgalor, x, y);
@@ -557,8 +493,8 @@ bool AzgalorMeleeManeuverThroughFireAction::Execute(Event /*event*/)
         MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
-// 与冬泉谷凋零的远程规避同理(默认配置下的强制规避范围不足, 此处需>20码才安全), 但阿兹加洛可
-// 同时存在多个火雨池, 故总是离开最近的一个; 踏出此池却踩进另一池的情况由下一tick再次执行处理
+// Like with Winterchill, this is essentially a forced "avoid aoe" due to the default config being
+// insufficient (in this case, >20y would be needed for safety).
 bool AzgalorRangedGetOutOfRainOfFireAction::Execute(Event /*event*/)
 {
     Position pool;
@@ -569,7 +505,6 @@ bool AzgalorRangedGetOutOfRainOfFireAction::Execute(Event /*event*/)
     return FleePosition(pool, RAIN_OF_FIRE_RADIUS, minInterval);
 }
 
-// 该站位点位于萨尔要塞下方两条通路之间
 bool AzgalorMoveToDoomguardTankAction::Execute(Event /*event*/)
 {
     constexpr float arrivalDist = 5.0f;
@@ -583,8 +518,8 @@ bool AzgalorMoveToDoomguardTankAction::Execute(Event /*event*/)
     }
 
     return MoveTo(
-        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 bool AzgalorTankPositionDoomguardAction::Execute(Event /*event*/)
@@ -592,9 +527,7 @@ bool AzgalorTankPositionDoomguardAction::Execute(Event /*event*/)
     Position const& position = AZGALOR_DOOMGUARD_POSITION;
     constexpr float arrivalDist = 3.0f;
 
-    // By leewheel 2026-08-30 合并上游重构(GetTankPositionStep helper)；entry规则查怪(17864=lesser doomguard)
     Unit* doomguard = AI_VALUE2(Unit*, "find target", "17864");
-    // End By leewheel
     if (doomguard)
     {
         if (AI_VALUE(Unit*, "current target") != doomguard)
@@ -605,7 +538,7 @@ bool AzgalorTankPositionDoomguardAction::Execute(Event /*event*/)
     }
     else if (bot->GetExactDist2d(position) <= arrivalDist)
     {
-        // If at position and no Doomguard, just wait
+        // If at position and still no Doomguard, just wait.
         return true;
     }
 
@@ -617,12 +550,13 @@ bool AzgalorTankPositionDoomguardAction::Execute(Event /*event*/)
         return false;
 
     return MoveTo(
-        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
+        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-// Only nearbyish ranged DPS should attack Doomguards; 65 yards should get to the
-// side of Azgalor but not bring in any ranged standing in front
+// Only ranged DPS within 70y should attack Doomguards. This distance seems to reach enough bots to
+// get decent DPS on the adds but not reach too far (which risks ranged running in front of Azgalor
+// to get to the Doomguard or just wasting time).
 bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
 {
     Unit* azgalor = AI_VALUE2(Unit*, "find target", "17842");
@@ -639,8 +573,9 @@ bool AzgalorDetermineDpsPriorityAction::Execute(Event /*event*/)
     }
     else
     {
+        constexpr float doomguardEngageDist = 70.0f;
         Unit* doomguard = AI_VALUE2(Unit*, "find target", "17864");
-        if (doomguard && bot->GetExactDist2d(doomguard) < 70.0f)
+        if (doomguard && bot->GetExactDist2d(doomguard) < doomguardEngageDist)
             target = doomguard;
         else
             target = azgalor;
@@ -665,58 +600,41 @@ bool ArchimondeSetTremorTotemAction::Execute(Event /*event*/)
 // when nobody is left in melee range. Thus, the avoidance is to get away from the tank.
 bool ArchimondeKeepAirBurstAwayFromTankAction::Execute(Event /*event*/)
 {
-    Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank || bot == mainTank)
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
+    if (!archimonde)
         return false;
 
-    // Recorded when the cast begins, so this is only ever answered during the cast
-    AirBurstData* data = GetPendingAirBurstCast(bot->GetMap()->GetInstanceId());
-    if (!data)
+    Unit* activeTank = archimonde->GetVictim();
+    if (!activeTank)
         return false;
 
-    // Only a burst centred on the main tank or on this bot can catch the two of them together
-    if (data->targetGuid != mainTank->GetGUID() && data->targetGuid != bot->GetGUID())
+    AirBurstData airBurst;
+    if (!GetPendingAirBurstCast(bot->GetInstanceId(), airBurst))
         return false;
 
-    float const distanceToMainTank = bot->GetExactDist2d(mainTank);
-    if (distanceToMainTank >= AIR_BURST_SAFE_DISTANCE)
+    if (airBurst.targetGuid != activeTank->GetGUID() && airBurst.targetGuid != bot->GetGUID())
         return false;
 
-    return MoveAway(mainTank, AIR_BURST_SAFE_DISTANCE - distanceToMainTank);
+    float const distanceToActiveTank = bot->GetExactDist2d(activeTank);
+    if (distanceToActiveTank >= AIR_BURST_SAFE_DISTANCE)
+        return false;
+
+    return MoveAway(activeTank, AIR_BURST_SAFE_DISTANCE - distanceToActiveTank);
 }
 
-// Runs all fight, not just off the pull. Ranged start stacked from the run in and drift back
-// together afterwards, and a clump is what turns one Air Burst into a raid-wide one. The interval
-// keeps it a periodic nudge rather than something contending for every tick, and the Doomfire
-// multiplier takes it out entirely near a trail so it never argues with the avoidance
 bool ArchimondeSpreadRangedAction::Execute(Event /*event*/)
 {
     Player* nearestPlayer = GetNearestPlayerInRadius(bot, ARCHIMONDE_RANGED_SPREAD_DISTANCE);
     if (!nearestPlayer)
         return false;
 
+    constexpr uint32 minInterval = 3000;
     return FleePosition(
-        nearestPlayer->GetPosition(), ARCHIMONDE_RANGED_SPREAD_DISTANCE,
-        ARCHIMONDE_RANGED_SPREAD_INTERVAL);
+        nearestPlayer->GetPosition(), ARCHIMONDE_RANGED_SPREAD_DISTANCE, minInterval);
 }
 
-// Two jobs, because the suppression that comes with this action reaches further than its push does.
-// Inside DOOMFIRE_DANGER_RADIUS it shoves the bot clear; from there out to DOOMFIRE_CONTROL_RADIUS
-// the push has faded to nothing but no other movement is allowed yet, so this has to be what walks
-// the bot back to Archimonde. Without that second half a bot that dodged a trail stands exactly
-// where it was pushed while the tank drags him out of reach, and only starts chasing once the trail
-// burns out
 bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
 {
-    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
-    if (!archimonde)
-        return false;
-
-    // Each trail patch is its own dynamic object that expires on its own after 18s, so the live set
-    // of them is the trail. The cached set spans DOOMFIRE_SEARCH_RADIUS; the field loop below
-    // narrows it to DOOMFIRE_FIELD_RADIUS so patches the bot has not reached yet still get a say in
-    // which way it goes, while the trapped sweep reads it whole--a bearing is only worth taking if
-    // nothing sits near where it lands, and that includes patches beyond the field
     std::vector<Position> const trail = GetDoomfirePositions(botAI);
 
     float const botX = bot->GetPositionX();
@@ -747,28 +665,13 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
         }
     }
 
-    // Direction comes from the whole field, distance only from what is actually dangerous. Keeping
-    // them apart is what holds the two properties the suppression band rests on: the push still
-    // fades to exactly nothing at the danger radius, and a dense cluster can no longer sum to a
-    // shove longer than the bot needs and carry it clean past the band
     float norm = std::sqrt(totalDx * totalDx + totalDy * totalDy);
     float moveDist = (nearest && nearestDistance < DOOMFIRE_DANGER_RADIUS) ?
         DOOMFIRE_DANGER_RADIUS - nearestDistance : 0.0f;
 
-    // Boxed in: patches on opposite sides cancel and the field has no direction left to give. That
-    // is precisely when holding is worst, because the bot is standing in fire taking damage. Sweep
-    // for the bearing whose landing point sits furthest from anything and take it, crossing a patch
-    // on the way if that is what it costs. Picking "away from the nearest" instead would only trade
-    // one patch for its neighbour and walk back again next tick
     constexpr float minFieldStrength = 0.05f;
     if (nearest && nearestDistance < DOOMFIRE_BURN_RADIUS && norm < minFieldStrength)
     {
-        // Two passes, as FindStepToCircle does. Archimonde is fought on a wooded hill, and trees
-        // and fallen logs sit in the navmesh--a bearing that is open on the fire alone may not be
-        // walkable at all, and MoveTo does not say so: an incomplete path is accepted with the
-        // destination quietly replaced by wherever the ray stopped, which can be back in the fire.
-        // So prefer a bearing the bot can actually walk, and only when none can be walked take the
-        // best of the rest, because moving badly still beats standing here burning
         constexpr uint8 fanSteps = 12;
         constexpr float escapeStep = 10.0f;
         bool found = false;
@@ -784,8 +687,6 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
                 float const testX = botX + std::cos(angle) * DOOMFIRE_DANGER_RADIUS;
                 float const testY = botY + std::sin(angle) * DOOMFIRE_DANGER_RADIUS;
 
-                // Ranked rather than vetoed. Boxed in is exactly the case where every bearing fails
-                // an outright test, so the question has to be which is least bad, not which passes
                 float clearance = DOOMFIRE_FIELD_RADIUS;
                 for (Position const& patch : trail)
                     clearance = std::min(clearance, patch.GetExactDist2d(testX, testY));
@@ -813,6 +714,10 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
         moveDist = norm;
     }
 
+    Unit* archimonde = AI_VALUE2(Unit*, "find target", "17968");
+    if (!archimonde)
+        return false;
+
     if (norm > 0.0f && moveDist >= 0.5f)
     {
         float const targetX = botX + (totalDx / norm) * moveDist;
@@ -828,16 +733,6 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
             false, false, priority, true, backwards);
     }
 
-    // Nothing is pushing the bot, so take over the chase. That this only happens where the action's
-    // own suppression would otherwise hold the bot is the trigger's doing--it fires on the same
-    // DOOMFIRE_CONTROL_RADIUS the multiplier suppresses at, so past that ordinary movement is free
-    // again and there is nothing here to take over from
-    //
-    // Each side has to be asked in its own units. GetRange hands back the edge-to-edge figure
-    // ReachSpellAction is built with, and IsWithinCombatRange is what consumes it--adding both
-    // combat reaches. Measured instead against a raw centre-to-centre distance it would walk ranged
-    // in by the whole of Archimonde's hitbox, toward the very trail they just dodged. GetMeleeRange
-    // already carries both reaches, so the melee side compares centre to centre directly
     bool const inPosition = PlayerbotAI::IsRanged(bot) ?
         bot->IsWithinCombatRange(archimonde, botAI->GetRange("spell")) :
         bot->GetExactDist2d(archimonde) <= bot->GetMeleeRange(archimonde) - MELEE_RANGE_INSET;
@@ -853,20 +748,12 @@ bool ArchimondeAvoidDoomfireAction::Execute(Event /*event*/)
             bot, archimonde->GetPosition(), arrivalDist, nullptr, moveX, moveY, backwards))
     {
         return false;
-        // By leewheel 2026-09-13 合并brighton caa4094e: 采纳上游重构 —— moveX/moveY 已由上方
-        //   GetStepToPosition 求出（第 843~848 行），此处闭合 if 即可；我方旧版在该处又按
-        //   botX/botY/distToBoss 手工重算了一次 moveX/moveY，与上方 float moveX; 声明重复定义。
     }
 
-    // A trail lying between the bot and Archimonde is the ordinary case for ranged, not a corner
-    // one: it walks the floor they stand off. Stepping into it only to be shoved straight back out
-    // is the bounce this whole arrangement exists to prevent, so a step that would land inside the
-    // danger radius is simply not taken. Asked of the destination rather than of the direction,
-    // which is what makes it exact--the trail blocks the path or it does not
     if (IsPositionNearDoomfire(botAI, moveX, moveY, DOOMFIRE_DANGER_RADIUS))
         return false;
 
     return MoveTo(
-        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+        HYJAL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
