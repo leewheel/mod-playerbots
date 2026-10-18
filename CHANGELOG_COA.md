@@ -17,8 +17,8 @@
 - **Modules** tab: the auction house (on by default) with an **Empty the auction house** button (only the bot's
   auctions go, bidders are refunded); Manastorm Endless and the rotation assist (off by default), with a notice when
   Manastorm is switched on (game client from the official PTR launcher).
-- **Beta channel**: tick "Receive beta versions" in Settings to get test versions early; everyone else stays on the
-  stable one.
+- **Undo the last update**: Management > Backups puts the server back exactly as before the last CoA Bots update
+  (database and files), not only after an error.
 - "The bots are arriving: X / 500" while they log in after a start, so a high tick at start is no longer alarming.
 - Smoother updates: the server restarts by itself after an update if it was running, the test start shows a plain
   sentence with a timer, the download size is right.
