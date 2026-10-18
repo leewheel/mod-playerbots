@@ -668,9 +668,7 @@ bool CanSupremusCatchStandingBot(Player* bot, Unit* supremus)
 
 bool IsSupremusVolcanoErupting(Unit* volcano)
 {
-    return volcano && volcano->IsAlive() &&
-        (volcano->HasAura(Id(BtSpells::SPELL_VOLCANIC_GEYSER)) ||
-         volcano->HasUnitState(UNIT_STATE_CASTING));
+    return volcano && volcano->IsAlive() && volcano->HasAura(Id(BtSpells::SPELL_VOLCANIC_GEYSER));
 }
 
 std::vector<SupremusHazard> FindSupremusHazards(PlayerbotAI* botAI)
@@ -761,11 +759,27 @@ float GetLineLengthInSupremusHazards(
     return total;
 }
 
+bool CanWalkThroughSupremusFire(Player* bot)
+{
+    switch (bot->getClass())
+    {
+        case CLASS_PALADIN:
+            return bot->HasAura(Id(BtSpells::SPELL_DIVINE_SHIELD));
+        case CLASS_PRIEST:
+            return bot->HasAura(Id(BtSpells::SPELL_DISPERSION));
+        default:
+            return false;
+    }
+}
+
 bool GetSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit*& target, float& range)
 {
     Player* bot = botAI->GetBot();
     target = nullptr;
     range = 0.0f;
+
+    if (CanWalkThroughSupremusFire(bot))
+        return false;
 
     // Stock reach doesn't break a channel either.
     if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
@@ -947,6 +961,9 @@ GuidVector FindShadowyConstructGuids(PlayerbotAI* botAI)
 
 bool CastVengefulSpiritSpell(Unit* spirit, Unit* target, uint32 spellId)
 {
+    if (!spirit || !target)
+        return false;
+
     static constexpr std::array spiritSpells = {
         Id(BtSpells::SPELL_SPIRIT_STRIKE),
         Id(BtSpells::SPELL_SPIRIT_LANCE),
@@ -1065,17 +1082,18 @@ Position const& GetGurtoggBloodboilPosition(Player* bot)
 // The Fel Rage target taunts him onto itself, so it is his victim.
 Unit* GetGurtoggFelRageTarget(Unit* gurtogg)
 {
-    if (!gurtogg->HasAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE)))
+    if (!gurtogg || !gurtogg->HasAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE)))
         return nullptr;
 
     Unit* victim = gurtogg->GetVictim();
     return victim && victim->HasAura(Id(BtSpells::SPELL_PLAYER_FEL_RAGE)) ? victim : nullptr;
 }
 
-Position GetGurtoggFelRageMeleePosition(Player* bot, Unit* gurtogg, Unit* felRageTarget)
+Position GetGurtoggFelRageMeleePosition(
+    Player* bot, Unit const& gurtogg, Unit const& felRageTarget)
 {
-    float const axisAngle = gurtogg->GetAngle(felRageTarget);
-    float relativeAngle = Position::NormalizeOrientation(gurtogg->GetAngle(bot) - axisAngle);
+    float const axisAngle = gurtogg.GetAngle(&felRageTarget);
+    float relativeAngle = Position::NormalizeOrientation(gurtogg.GetAngle(bot) - axisAngle);
     if (relativeAngle > M_PI)
         relativeAngle -= 2.0f * M_PI;
 
@@ -1087,8 +1105,8 @@ Position GetGurtoggFelRageMeleePosition(Player* bot, Unit* gurtogg, Unit* felRag
     }
 
     return Position(
-        gurtogg->GetPositionX() + GURTOGG_FEL_RAGE_MELEE_DISTANCE * std::cos(angle),
-        gurtogg->GetPositionY() + GURTOGG_FEL_RAGE_MELEE_DISTANCE * std::sin(angle),
+        gurtogg.GetPositionX() + GURTOGG_FEL_RAGE_MELEE_DISTANCE * std::cos(angle),
+        gurtogg.GetPositionY() + GURTOGG_FEL_RAGE_MELEE_DISTANCE * std::sin(angle),
         bot->GetPositionZ());
 }
 

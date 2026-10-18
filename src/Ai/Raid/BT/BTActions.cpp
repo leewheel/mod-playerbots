@@ -175,6 +175,12 @@ bool BlackTemplePositionBossAction::Execute(Event /*event*/)
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
+bool BlackTempleSpreadRangedAction::Execute(Event /*event*/)
+{
+    Player* nearestPlayer = GetNearestPlayerInRadius(bot, _distance);
+    return nearestPlayer && FleePosition(nearestPlayer->GetPosition(), _distance);
+}
+
 bool BlackTempleCastSpellReflectionAction::Execute(Event /*event*/)
 {
     return botAI->CanCastSpell(Id(BtSpells::SPELL_SPELL_REFLECTION), bot) &&
@@ -329,13 +335,6 @@ bool ShadowmoonReaverControlCasterPetAction::CommandPetAttack(Guardian* pet, Uni
 
 // High Warlord Naj'entus
 
-bool HighWarlordNajentusDisperseRangedAction::Execute(Event /*event*/)
-{
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, NAJENTUS_RANGED_SPREAD_DISTANCE);
-    return nearestPlayer &&
-        FleePosition(nearestPlayer->GetPosition(), NAJENTUS_RANGED_SPREAD_DISTANCE);
-}
-
 bool HighWarlordNajentusAssignSpineRemoverAction::Execute(Event /*event*/)
 {
     Player* impaled = FindNajentusUnassignedImpaledPlayer(bot);
@@ -377,14 +376,13 @@ bool HighWarlordNajentusRemoveImpalingSpineAction::Execute(Event /*event*/)
 
     bool const atSpine = bot->GetExactDist2d(spineGo) <= 3.0f;
 
-    // One reaction delay per spine. If already in range, delay between 1 and 2s to click. If not
-    // yet in range, delay between 2 and 3s to move and click immediately when in range.
+    // One reaction delay of 1 to 2 s per spine, before clicking or walking to it.
     if (spineGo->GetGUID() != _spineGuid)
     {
         _spineGuid = spineGo->GetGUID();
         _usedSpine = false;
         _reactionStartTime = getMSTime();
-        _reactionDelay = atSpine ? urand(1000, 2000) : urand(2000, 3000);
+        _reactionDelay = urand(1000, 2000);
     }
 
     if (_usedSpine || GetMSTimeDiffToNow(_reactionStartTime) < _reactionDelay)
@@ -459,13 +457,6 @@ bool HighWarlordNajentusThrowImpalingSpineAction::Execute(Event /*event*/)
 
 // Supremus
 
-bool SupremusDisperseRangedAction::Execute(Event /*event*/)
-{
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, SUPREMUS_RANGED_SPREAD_DISTANCE);
-    return nearestPlayer &&
-        FleePosition(nearestPlayer->GetPosition(), SUPREMUS_RANGED_SPREAD_DISTANCE);
-}
-
 namespace // Supremus
 {
 
@@ -534,8 +525,12 @@ bool SupremusKiteBossAction::Execute(Event /*event*/)
     if (!supremus)
         return false;
 
+    // Only its own last step holds the kite; a fire walk begun before the fixate gives way.
     constexpr MovementPriority priority = MovementPriority::MOVEMENT_FORCED;
-    if (IsWaitingForLastMove(priority))
+    LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+    if (lastMove.msTime != _lastStepTime)
+        lastMove.Set(nullptr);
+    else if (IsWaitingForLastMove(priority))
         return false;
 
     float const timeRemaining = GetSupremusFixateTimeRemaining(supremus);
@@ -619,10 +614,16 @@ bool SupremusKiteBossAction::Execute(Event /*event*/)
             continue;
         }
 
+        if (!MoveTo(
+                BT_MAP_ID, stepX, stepY, stepZ, false, false, false, false, priority, true,
+                false))
+        {
+            return false;
+        }
+
         _lastAngle = plan.angle;
-        _lastStepTime = getMSTime();
-        return MoveTo(
-            BT_MAP_ID, stepX, stepY, stepZ, false, false, false, false, priority, true, false);
+        _lastStepTime = lastMove.msTime;
+        return true;
     }
 
     return false;
@@ -683,6 +684,10 @@ float SupremusKiteBossAction::SimulateChase(
 
 bool SupremusMoveAwayFromFireAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_FORCED;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     std::vector<SupremusHazard> const& hazards = GetSupremusHazards(botAI);
     if (!IsInSupremusHazard(
             hazards, bot->GetPositionX(), bot->GetPositionY(), SupremusHazardZone::Safe))
@@ -710,11 +715,11 @@ bool SupremusMoveAwayFromFireAction::Execute(Event /*event*/)
     bot->CastStop();
     return MoveTo(
         BT_MAP_ID, destination.GetPositionX(), destination.GetPositionY(), bot->GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        false, false, false, false, priority, true, false);
 }
 
-// The nearest position a yard clear of every hazard's safe zone that the bot can run to in a s
-// traight line. A bot not yet burning takes only a route that stays out of every damage zone, and
+// The nearest position a yard clear of every hazard's safe zone that the bot can run to in a
+// straight line. A bot not yet burning takes only a route that stays out of every damage zone, and
 // otherwise holds: walled in, running through fire is worse than waiting at its edge. A burning bot
 // takes the route with the least ground under fire, then the nearest.
 bool SupremusMoveAwayFromFireAction::FindSafestNearbyPosition(
@@ -848,10 +853,13 @@ bool SupremusReachAroundFireAction::Execute(Event /*event*/)
         if (!CanTakeStepTowards(bot, x, y, SUPREMUS_REACH_STEP_DISTANCE, stepX, stepY, stepZ))
             return false;
 
+        // Only a turned step commits to a side; walking straight leaves the next turn free.
         if (turns > 0)
+        {
             _lastSide = side;
+            _lastStepTime = getMSTime();
+        }
 
-        _lastStepTime = getMSTime();
         return MoveTo(
             BT_MAP_ID, stepX, stepY, stepZ, false, false, false, false, priority, true, false);
     };
@@ -1015,19 +1023,17 @@ bool TeronGorefiendControlAndDestroyShadowyConstructsAction::Execute(Event /*eve
         if (victim && CastVengefulSpiritSpell(spirit, victim, Id(BtSpells::SPELL_SPIRIT_SHIELD)))
             return true;
 
-        constexpr float spiritStrikeRange = 5.0f;
-        float const currentDistance = spirit->GetDistance2d(gorefiend);
         bool moving = false;
-        if (currentDistance > spiritStrikeRange)
+        if (!spirit->IsWithinMeleeRange(gorefiend))
         {
-            float const moveDistance = currentDistance - spiritStrikeRange;
+            float const distance = spirit->GetExactDist2d(gorefiend);
+            float const moveDistance = distance - gorefiend->GetCombatReach();
             float const dX = gorefiend->GetPositionX() - spirit->GetPositionX();
             float const dY = gorefiend->GetPositionY() - spirit->GetPositionY();
 
             spirit->GetMotionMaster()->MovePoint(
-                0, spirit->GetPositionX() + dX / currentDistance * moveDistance,
-                spirit->GetPositionY() + dY / currentDistance * moveDistance,
-                spirit->GetPositionZ());
+                0, spirit->GetPositionX() + dX / distance * moveDistance,
+                spirit->GetPositionY() + dY / distance * moveDistance, spirit->GetPositionZ());
 
             moving = true;
         }
@@ -1172,7 +1178,7 @@ bool GurtoggBloodboilMeleeMoveBehindAction::Execute(Event /*event*/)
     if (!felRageTarget)
         return false;
 
-    Position const position = GetGurtoggFelRageMeleePosition(bot, gurtogg, felRageTarget);
+    Position const position = GetGurtoggFelRageMeleePosition(bot, *gurtogg, *felRageTarget);
     return MoveTo(
         BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
         false, false, false, false, MovementPriority::MOVEMENT_FORCED);
@@ -1761,13 +1767,6 @@ bool IllidariCouncilPositionMageTankHealerAction::Execute(Event /*event*/)
     return MoveTo(
         BT_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false, priority, true,
         false);
-}
-
-bool IllidariCouncilDisperseRangedAction::Execute(Event /*event*/)
-{
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, COUNCIL_RANGED_SPREAD_DISTANCE);
-    return nearestPlayer &&
-        FleePosition(nearestPlayer->GetPosition(), COUNCIL_RANGED_SPREAD_DISTANCE);
 }
 
 bool IllidariCouncilCommandPetTargetAction::Execute(Event /*event*/)
@@ -2612,7 +2611,7 @@ bool IllidanStormrageStopShootingAction::Execute(Event /*event*/)
     return true;
 }
 
-bool IllidanStormrageDisperseRangedAction::Execute(Event /*event*/)
+bool IllidanStormrageSpreadRangedAction::Execute(Event /*event*/)
 {
     if (HasParasiticShadowfiend(bot))
         return false;
@@ -2652,7 +2651,7 @@ bool IllidanStormrageDisperseRangedAction::Execute(Event /*event*/)
 }
 
 // Phase 4: healers in the healer slots and ranged DPS in theirs, each by roster.
-bool IllidanStormrageDisperseRangedAction::FindDemonFormSlot(
+bool IllidanStormrageSpreadRangedAction::FindDemonFormSlot(
     Unit const& illidan, Position& position)
 {
     DemonFormLayout const layout = GetDemonFormLayout(illidan);
@@ -2676,7 +2675,7 @@ bool IllidanStormrageDisperseRangedAction::FindDemonFormSlot(
 }
 
 // Short steps toward the Demon, so the bot stops once in reach, never into Aura of Dread or near
-// Shadow Blast round his victim. Disperse ranged brings it back once the Demon is dead.
+// Shadow Blast round his victim. Spread ranged brings it back once the Demon is dead.
 bool IllidanStormrageReachShadowDemonAction::Execute(Event /*event*/)
 {
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");

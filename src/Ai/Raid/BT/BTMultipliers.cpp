@@ -318,7 +318,8 @@ float SupremusFocusOnAvoidanceInKitePhaseMultiplier::GetValueInEncounter(Action*
         return 1.0f;
     }
 
-    if (dynamic_cast<SupremusKiteBossAction*>(action))
+    // Attack doesn't move the bot, and a fixated bot that dropped its target needs it to pick one.
+    if (dynamic_cast<SupremusKiteBossAction*>(action) || dynamic_cast<AttackAction*>(action))
         return 1.0f;
 
     Unit* supremus = AI_VALUE2(Unit*, "find target", "22898");
@@ -357,6 +358,10 @@ float SupremusDisableAvoidAoeInKitePhaseMultiplier::GetValueInEncounter(Action* 
 float ShadeOfAkamaDontDropOutOfSightTargetMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<DropTargetAction*>(action))
+        return 1.0f;
+
+    // Only melee dps walk back into sight; anyone else drops the target and picks another.
+    if (!PlayerbotAI::IsDps(bot) || !PlayerbotAI::IsMelee(bot))
         return 1.0f;
 
     Unit* target = AI_VALUE(Unit*, "current target");
@@ -410,21 +415,6 @@ float TeronGorefiendSpiritsAttackShadowyConstructsMultiplier::GetValueInEncounte
     return dynamic_cast<WipeAction*>(action) ? 1.0f : 0.0f;
 }
 
-float TeronGorefiendDisableAttackingConstructsMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (!PlayerbotAI::IsRangedDps(bot))
-        return 1.0f;
-
-    auto castSpellAction = dynamic_cast<CastSpellAction*>(action);
-    if (!castSpellAction || castSpellAction->getThreatType() != Action::ActionThreatType::Aoe)
-        return 1.0f;
-
-    return AI_VALUE2(Unit*, "find target", "22871") ? 0.0f : 1.0f;
-}
-
 // Gurtogg Bloodboil
 
 float GurtoggBloodboilControlMovementMultiplier::GetValueInEncounter(Action* action)
@@ -449,12 +439,11 @@ float GurtoggBloodboilControlMovementMultiplier::GetValueInEncounter(Action* act
 float GurtoggBloodboilNoThreatRedirectsDuringFelRageMultiplier::GetValueInEncounter(
     Action* action)
 {
-    if (!IsTauntAction(bot, action) &&
-        !dynamic_cast<CastMisdirectionOnMainTankAction*>(action) &&
-        !dynamic_cast<BlackTempleMisdirectToMainTankAction*>(action))
-    {
+    bool const isMisdirect = bot->getClass() == CLASS_HUNTER &&
+        (dynamic_cast<CastMisdirectionOnMainTankAction*>(action) ||
+         dynamic_cast<BlackTempleMisdirectToMainTankAction*>(action));
+    if (!isMisdirect && !IsTauntAction(bot, action))
         return 1.0f;
-    }
 
     Unit* gurtogg = AI_VALUE2(Unit*, "find target", "22948");
     return gurtogg && gurtogg->HasAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE)) ? 0.0f : 1.0f;
@@ -497,15 +486,17 @@ float GurtoggBloodboilHoldThreatMultiplier::GetValueInEncounter(Action* action)
     if (!gurtogg)
         return 1.0f;
 
-    if (action->GetTarget() != gurtogg && AI_VALUE(Unit*, "current target") != gurtogg)
+    if (AI_VALUE(Unit*, "current target") != gurtogg && action->GetTarget() != gurtogg)
         return 1.0f;
 
     float const secondTankThreat = AI_VALUE(float, "gurtogg bloodboil second tank threat");
     if (secondTankThreat <= 0.0f)
         return 1.0f;
 
-    return gurtogg->GetThreatMgr().GetThreat(bot) >= secondTankThreat * GURTOGG_THREAT_HOLD_RATIO ?
-        0.0f : 1.0f;
+    if (gurtogg->GetThreatMgr().GetThreat(bot) < secondTankThreat * GURTOGG_THREAT_HOLD_RATIO)
+        return 1.0f;
+
+    return dynamic_cast<CastHealingSpellAction*>(action) ? 1.0f : GetDpsHoldValue(bot, action);
 }
 
 // Reliquary of Souls

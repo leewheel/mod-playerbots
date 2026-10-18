@@ -47,6 +47,7 @@ enum class BtSpells : uint32
 
     // Supremus
     SPELL_SNARE_SELF                = 41922,
+    SPELL_VOLCANIC_ERUPTION         = 40276,
     SPELL_VOLCANIC_GEYSER           = 42055,
     SPELL_MOLTEN_FLAME_PATCH        = 40253, // the patches' dynamic objects
 
@@ -116,6 +117,12 @@ enum class BtSpells : uint32
     // Mage
     SPELL_COUNTERSPELL              =  2139,
     SPELL_SPELLSTEAL                = 30449,
+
+    // Paladin
+    SPELL_DIVINE_SHIELD             =   642,
+
+    // Priest
+    SPELL_DISPERSION                = 47585,
 
     // Shaman
     SPELL_WIND_SHEAR                = 57994,
@@ -331,12 +338,12 @@ inline constexpr float SUPREMUS_BOUNDARY_MAX_Y = 970.0f;
 
 bool IsSupremusKitePhase(Unit* supremus);
 // Fixates fall every 10s from the start of the kite phase. Snare Self's apply time is in whole
-// seconds, so this can run up to 1s long.
+// seconds, as is the game time it is read against, so this can run up to 2s long.
 float GetSupremusFixateTimeRemaining(Unit* supremus);
 float GetSupremusCatchDistance(Player* bot, Unit* supremus);
 // Whether he would reach the bot before the fixate ends if it stood still.
 bool CanSupremusCatchStandingBot(Player* bot, Unit* supremus);
-// Erupting from its 1s cast until Volcanic Geyser ends, about 19s of its full 30s duration.
+// Erupting while Volcanic Geyser lasts: the first 18s of its 30s, from the moment it appears.
 bool IsSupremusVolcanoErupting(Unit* volcano);
 // Molten Flame only in the kite phase; in the tank phase stock avoid aoe handles it.
 std::vector<SupremusHazard> FindSupremusHazards(PlayerbotAI* botAI);
@@ -348,6 +355,8 @@ bool IsInSupremusHazard(
 float GetLineLengthInSupremusHazards(
     std::vector<SupremusHazard> const& hazards, Position const& from, Position const& to,
     SupremusHazardZone zone);
+// With Divine Shield or Dispersion a bot may walk through fire, but not stop in it.
+bool CanWalkThroughSupremusFire(Player* bot);
 // The target and range stock reach would use; true when its straight walk into range passes
 // through a hazard's safe zone.
 bool GetSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit*& target, float& range);
@@ -359,7 +368,8 @@ inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MIN_X = 406.8f;
 inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MAX_X = 564.0f;
 inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MIN_Y = 327.9f;
 inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MAX_Y = 473.5f;
-inline constexpr float SHADE_OF_AKAMA_ADD_SEARCH_RADIUS = 80.0f;
+// Reaches every channeler from anywhere in his room, so every bot gets the same kill order.
+inline constexpr float SHADE_OF_AKAMA_ADD_SEARCH_RADIUS = 150.0f;
 inline constexpr uint32 SHADE_OF_AKAMA_ADD_CACHE_INTERVAL_MS = 1000;
 inline constexpr float PATH_STEP_DISTANCE = 3.5f;
 
@@ -404,9 +414,9 @@ inline constexpr float GURTOGG_RANGED_HALF_WIDTH = 5.0f;
 inline constexpr float GURTOGG_RANGED_HALF_DEPTH = 2.0f;
 // Groups swap this long after a Bloodboil lands, not as it lands.
 inline constexpr int32 GURTOGG_ROTATION_DELAY_MS = 2 * IN_MILLISECONDS;
-// Arcing Smash during Fel Rage reaches about 11.5 yd from him, and he stays within about 8 yd of
-// the Fel Rage target, so the cleave can't reach past about 10 yd from that player. Everyone else
-// in front of him steps off his line to that player to keep this far away.
+// Arcing Smash during Fel Rage reaches 11.5 yd from him, and he stays within about 14 yd of the
+// Fel Rage target, so the cleave can't reach past about 14 yd from that player. Everyone else in
+// front of him steps off his line to that player to keep this far away.
 inline constexpr float GURTOGG_FEL_RAGE_AVOID_DISTANCE = 15.0f;
 inline constexpr float GURTOGG_FEL_RAGE_AVOID_MARGIN = 1.0f;
 // Melee without Fel Rage stand this far behind him during it, opposite the Fel Rage target. A bot
@@ -427,7 +437,8 @@ inline Position const GURTOGG_SOAKER_POSITION = { 769.348f, 280.116f, 63.780f };
 Position const& GetGurtoggBloodboilPosition(Player* bot);
 // The player he is fixed on during Fel Rage, or nullptr outside it.
 Unit* GetGurtoggFelRageTarget(Unit* gurtogg);
-Position GetGurtoggFelRageMeleePosition(Player* bot, Unit* gurtogg, Unit* felRageTarget);
+Position GetGurtoggFelRageMeleePosition(
+    Player* bot, Unit const& gurtogg, Unit const& felRageTarget);
 // 0 with fewer than two tanks on his threat list.
 float FindGurtoggSecondTankThreat(PlayerbotAI* botAI);
 

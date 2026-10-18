@@ -173,6 +173,9 @@ bool SupremusNearFireTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "22898"))
         return false;
 
+    if (bot->isMoving() && CanWalkThroughSupremusFire(bot))
+        return false;
+
     return IsInSupremusHazard(
         GetSupremusHazards(botAI), bot->GetPositionX(), bot->GetPositionY(),
         SupremusHazardZone::Safe);
@@ -276,7 +279,7 @@ bool GurtoggBloodboilMeleeShouldStayBehindTrigger::IsActiveInEncounter()
     if (!felRageTarget)
         return false;
 
-    return bot->GetExactDist2d(GetGurtoggFelRageMeleePosition(bot, gurtogg, felRageTarget)) >
+    return bot->GetExactDist2d(GetGurtoggFelRageMeleePosition(bot, *gurtogg, *felRageTarget)) >
         GURTOGG_FEL_RAGE_MELEE_TOLERANCE;
 }
 
