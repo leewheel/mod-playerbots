@@ -61,11 +61,7 @@ CALL coa25_add('sun-cleric-blessings', 'medium mana>cast buff::Vow of Grace!26.6
 CALL coa25_add('sun-cleric-blessings', 'buff missing::Vow of Light>cast buff::Vow of Light!26.5');
 CALL coa25_add('sun-cleric-blessings', 'aura stacks::Dawn,20>cast::Dawn!84.5');
 
--- 5. Necromancer Animation (player tip): Call of the Grave makes the next Tomb King or Plaguefather instant; it is cast
---    when the Tomb King is ready rather than whenever its buff is missing.
-CALL coa25_set('necromancer-animation', 'buff missing::Call of the Grave>cast buff::Call of the Grave!92', 'can cast::Animate: Tomb King>cast buff::Call of the Grave!92');
-
--- 6. Primalist Mountain King (player tip): Ursoc's Bellow sat under Quake and Primal Rush, always castable: never cast.
+-- 5. Primalist Mountain King (player tip): Ursoc's Bellow sat under Quake and Primal Rush, always castable: never cast.
 CALL coa25_set('primalist-mountain-king', 'debuff missing::Ursoc''s Bellow>cast melee::Ursoc''s Bellow!31', 'debuff missing::Ursoc''s Bellow>cast melee::Ursoc''s Bellow!85.5');
 
 DROP PROCEDURE IF EXISTS coa25_add;
