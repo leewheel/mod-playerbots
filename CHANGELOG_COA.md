@@ -1,6 +1,6 @@
 # CoA Bots — changelog
 
-## v2.5 — in progress
+## v2.5 — Auction house, Manastorm, smarter casts and your reports (October 2026)
 
 ### Core (repack)
 - **Auction house bot** (mod-ah-bot-plus), **on by default**: a seller (Gavelgrin) keeps about 3000 auctions of items
@@ -12,6 +12,21 @@
   Bots team.
 - The core's one-button rotation assist is **off** (`CoA.RotationAssist.Enable = 0` in `coa.conf`). Optional core
   feature, not supported by the CoA Bots team.
+
+### SquidBots launcher 0.3.25
+- **Modules** tab: the auction house (on by default) with an **Empty the auction house** button (only the bot's
+  auctions go, bidders are refunded); Manastorm Endless and the rotation assist (off by default), with a notice when
+  Manastorm is switched on (game client from the official PTR launcher).
+- **Beta channel**: tick "Receive beta versions" in Settings to get test versions early; everyone else stays on the
+  stable one.
+- "The bots are arriving: X / 500" while they log in after a start, so a high tick at start is no longer alarming.
+- Smoother updates: the server restarts by itself after an update if it was running, the test start shows a plain
+  sentence with a timer, the download size is right.
+- **Your game**: SquidBots Lite 2.5 is detected and installed; the realmlist check and the home page show the address
+  players really use.
+- Server settings: a "Creature difficulty" section explains the CoA scaling keys (off in CoA Bots).
+- Fixes: servers opened to the network are no longer reset to 127.0.0.1; a crash counts once and can be put away;
+  clearer messages when a launcher update fails or the bots are missing from a repack. Green/red module switches.
 
 ### Combat
 - Bots no longer cast a spell their target would reflect (Warlord Kalithresh's 6 s full reflect sent back about a
@@ -61,7 +76,13 @@
   without a real master: fewer database writes with thousands of bots.
 - The spawn of a creature is found in memory instead of a world database query on the map thread.
 
-## v2.4 — in progress
+### SquidBots Lite 2.5 (addon)
+- Role icons, the bot menu and the alerts on Ascension's raid-style party frames too (`/sbl raidframes off` to
+  stop).
+- Role icons cut cleanly from Ascension's role texture; a bot joining from the dungeon finder gets its role too.
+- **Bots > Take my quests**: every bot next to the quest giver takes your quests, alts included (`accept *`).
+
+## v2.4 — Dungeon fixes, players replace bots, every module's settings (October 2026)
 
 ### Players and bots
 - **Real players take the place of random bots** (`AiPlayerbot.CoaPlayersReplaceBots`, off by default): at 100,
