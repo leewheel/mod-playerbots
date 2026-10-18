@@ -3,6 +3,9 @@
 ## v2.5 — Auction house, Manastorm, smarter casts and your reports (October 2026)
 
 ### Core (repack)
+- **New map data** from the CoA dev team: the maps, vmaps and mmaps of the CoA custom zones the repack lacked
+  (bots fell through the ground there) and fuller paths for the bots. It makes 2.5 a **big update** (about 2 GB to
+  download, 5.3 GB of map files): the old map folders are set aside in the update's backup, and Undo puts them back.
 - **Auction house bot** (mod-ah-bot-plus), **on by default**: a seller (Gavelgrin) keeps about 3000 auctions of items
   you can get in game, nothing above level 60 and no TBC/WotLK goods, and buys what players sell. Turn it off with
   `AuctionHouseBot.Enable = false` in `configs\modules\mod_ahbot.conf` (server stopped).
