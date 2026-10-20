@@ -3,6 +3,7 @@
 #include "AscensionCoATalentState.h"
 #include "AscensionSpecialization.h"
 #include "AscensionWildcard.h"
+#include "CoaWildcardPicks.h"
 #include "Config.h"
 #include "Log.h"
 #include "Player.h"
@@ -18,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <tuple>
 #include <unordered_map>
@@ -37,6 +39,8 @@ constexpr uint32 SPELL_PATH_INTELLECT = 84866;
 constexpr uint32 SPELL_PATH_HEALING = 84867;
 // The glow of a level up, shown to everyone around.
 constexpr uint32 SPELL_LEVEL_UP_VISUAL = 24298;
+// The entry that teaches Auto Shot: without it a Hero cannot shoot its bow or gun.
+constexpr uint32 ENTRY_AUTO_SHOT = 40309;
 
 // A bot tries this many sets of starting abilities and keeps the best, as a player rerolls until the four fit.
 constexpr uint32 STARTER_DRAWS = 1024;
@@ -211,11 +215,6 @@ uint32 Grouping(std::vector<SpellInfo const*> const& spells)
     return paired(specs) ? 2 : paired(classes) ? 1 : 0;
 }
 
-// How well four starting abilities suit a role, best first: forms that work, what the role needs (healer: a heal
-// and a damage spell to quest with; tank: threat and a damage spell; damage: two of a group and a support
-// ability), more of the role's own abilities, then their synergy with each other.
-using StarterFit = std::tuple<bool, uint32, uint32, uint32, uint32>;
-
 // The fighting style a damage dealer drafts for, kept by its GUID: weapon strikes, shots or spells, a third each,
 // so that a realm's Heroes are not nearly all melee Agility (the draws hold more strikes than anything else).
 uint8 DpsStyleOf(Player const* bot)
@@ -223,74 +222,159 @@ uint8 DpsStyleOf(Player const* bot)
     return uint8(((uint64(bot->GetGUID().GetCounter()) * 2654435761u) >> 12) % 3);
 }
 
-uint32 StyleCount(std::vector<SpellInfo const*> const& spells, uint8 style)
+WildcardArchetype ArchetypeOf(CoaRole role, uint8 dpsStyle)
 {
-    uint32 const wanted = style == 0 ? SPELL_DAMAGE_CLASS_MELEE : style == 1 ? SPELL_DAMAGE_CLASS_RANGED : SPELL_DAMAGE_CLASS_MAGIC;
-    return uint32(std::count_if(spells.begin(), spells.end(),
-        [wanted](SpellInfo const* info) { return info->DmgClass == wanted && !Heals(info); }));
+    switch (role)
+    {
+        case CoaRole::Tank:
+            return WildcardArchetype::Tank;
+        case CoaRole::Heal:
+            return WildcardArchetype::Heal;
+        default:
+            return dpsStyle == 0 ? WildcardArchetype::Melee :
+                   dpsStyle == 1 ? WildcardArchetype::Ranged : WildcardArchetype::Caster;
+    }
 }
 
-StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, CoaRole role, uint8 style)
+// A shot takes the range of a ranged weapon; a strike hits with the weapon in melee; a spell is magic. Thunder Clap
+// and its Smash versions, of the ranged damage class but cast around the Hero, are none of them.
+bool Shot(SpellInfo const* info)
+{
+    return info->RangeEntry && (info->RangeEntry->Flags & SPELL_RANGE_RANGED);
+}
+
+bool Strike(SpellInfo const* info)
+{
+    return !Shot(info) && info->DmgClass == SPELL_DAMAGE_CLASS_MELEE;
+}
+
+bool MagicAttack(SpellInfo const* info)
+{
+    return !Shot(info) && info->DmgClass == SPELL_DAMAGE_CLASS_MAGIC;
+}
+
+SpellInfo const* FirstRankOf(uint32 entryId)
+{
+    std::vector<uint32> const* ranks = entryId ? RankSpellsOf(entryId) : nullptr;
+    return ranks && !ranks->empty() ? sSpellMgr->GetSpellInfo(ranks->front()) : nullptr;
+}
+
+// What an archetype makes of an entry: its weight in the picks table, plus or minus for the way the entry attacks (a
+// caster has no use for a weapon strike, a ranged Hero for a melee one). Below -1 it is a roll to spend a Scroll of
+// Fortune on.
+int32 ArchetypeScore(uint32 entryId, WildcardArchetype archetype)
+{
+    int32 score = WildcardPickWeight(entryId, archetype);
+    SpellInfo const* info = FirstRankOf(entryId);
+    if (!info || info->IsPassive())
+        return score;
+    if (Heals(info))
+        return score + (archetype == WildcardArchetype::Heal ? 1 : 0);
+    if (archetype == WildcardArchetype::Tank && Threatens(info))
+        return score + 1;
+    if (!Damages(info))
+        return score;
+
+    bool const shot = Shot(info);
+    bool const strike = Strike(info);
+    bool const spell = MagicAttack(info);
+    switch (archetype)
+    {
+        case WildcardArchetype::Melee:
+            return score + (strike ? 1 : shot ? -2 : spell ? -1 : 0);
+        case WildcardArchetype::Ranged:
+            return score + (shot ? 1 : strike ? -2 : spell ? -1 : 0);
+        case WildcardArchetype::Caster:
+            return score + (spell ? 1 : strike || shot ? -2 : 0);
+        case WildcardArchetype::Tank:
+            return score + (shot ? -2 : 0);
+        default:
+            return score + (strike || shot ? -2 : 0);
+    }
+}
+
+// How well four starting abilities suit an archetype, best first: forms that work; what it cannot do without (tank:
+// threat and a damage spell; healer: a heal and a damage spell to quest with; melee: two strikes; ranged: Auto Shot
+// and a shot; caster: two damage spells); the picks table and the way they attack; what the role needs (damage: two
+// of a group and a support ability); more of the role's own abilities; then their synergy with each other.
+using StarterFit = std::tuple<bool, bool, int32, uint32, uint32, uint32>;
+
+StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardArchetype archetype)
 {
     std::vector<SpellInfo const*> spells;
     std::vector<uint32> entries;
     for (AscensionWildcard::Slot const& slot : starters)
-    {
-        std::vector<uint32> const* ranks = slot.EntryId ? RankSpellsOf(slot.EntryId) : nullptr;
-        if (SpellInfo const* info = ranks && !ranks->empty() ? sSpellMgr->GetSpellInfo(ranks->front()) : nullptr)
+        if (SpellInfo const* info = FirstRankOf(slot.EntryId))
         {
             spells.push_back(info);
             entries.push_back(slot.EntryId);
         }
-    }
 
     uint32 heals = 0;
     uint32 damage = 0;
     uint32 threat = 0;
     uint32 support = 0;
+    uint32 strikes = 0;
+    uint32 shots = 0;
+    uint32 magic = 0;
     for (SpellInfo const* info : spells)
     {
-        heals += Heals(info) ? 1 : 0;
-        damage += Damages(info) ? 1 : 0;
+        bool const heal = Heals(info);
+        bool const hurts = Damages(info);
+        heals += heal ? 1 : 0;
+        damage += hurts ? 1 : 0;
         threat += Threatens(info) ? 1 : 0;
         support += Supports(info) ? 1 : 0;
+        if (hurts && !heal)
+        {
+            strikes += Strike(info) ? 1 : 0;
+            shots += Shot(info) ? 1 : 0;
+            magic += MagicAttack(info) ? 1 : 0;
+        }
     }
+    bool const autoShot = std::find(entries.begin(), entries.end(), ENTRY_AUTO_SHOT) != entries.end();
 
+    bool essential = false;
     uint32 needs = 0;
     uint32 depth = 0;
-    switch (role)
+    switch (archetype)
     {
-        case CoaRole::Heal:
+        case WildcardArchetype::Heal:
+            essential = heals && damage;
             needs = (heals ? 1 : 0) + (damage ? 1 : 0);
             depth = heals;
             break;
-        case CoaRole::Tank:
+        case WildcardArchetype::Tank:
+            essential = threat && damage;
             needs = (threat ? 1 : 0) + (damage ? 1 : 0);
             depth = threat;
             break;
         default:
+            essential = archetype == WildcardArchetype::Melee ? strikes >= 2 :
+                        archetype == WildcardArchetype::Ranged ? autoShot && shots >= 1 : magic >= 2;
             needs = Grouping(spells) + (support ? 1 : 0);
             depth = damage;
             break;
     }
 
+    int32 picks = 0;
     uint32 synergy = 0;
     for (std::size_t index = 0; index < entries.size(); ++index)
     {
+        picks += ArchetypeScore(entries[index], archetype);
         std::vector<uint32> others = entries;
         others.erase(others.begin() + index);
         synergy += AscensionWildcard::SynergyScore(AscensionWildcard::LoadedTables(), entries[index], others);
     }
-    uint32 const styled = role == CoaRole::Dps ? StyleCount(spells, style) : 0;
-    return { FormsFit(spells), styled, needs, depth, synergy };
+    return { FormsFit(spells), essential, picks, needs, depth, synergy };
 }
 
-std::size_t PickStarters(std::vector<std::vector<AscensionWildcard::Slot>> const& candidates, CoaRole role, uint8 style)
+std::size_t PickStarters(std::vector<std::vector<AscensionWildcard::Slot>> const& candidates, WildcardArchetype archetype)
 {
     std::size_t best = 0;
     StarterFit bestFit{};
     for (std::size_t index = 0; index < candidates.size(); ++index)
-        if (StarterFit const fit = FitOf(candidates[index], role, style); index == 0 || fit > bestFit)
+        if (StarterFit const fit = FitOf(candidates[index], archetype); index == 0 || fit > bestFit)
         {
             best = index;
             bestFit = fit;
@@ -331,39 +415,99 @@ bool BuildAboveLevel(Player const* bot)
     return false;
 }
 
-// The roll a bot would spend a Scroll of Fortune on, as a player rerolls what does not fit: an ability it cannot
-// cast for want of its form, else one its fighting logic never casts. The starting abilities were picked with
-// care and stay.
-uint32 MisfitOf(Player const* bot)
+// The archetype a bot drafts for: its role's, and for a damage dealer the style its GUID gives it, unless its starting
+// abilities, kept for good from level 10, were drafted for another style (a build made before the styles): it then
+// keeps to the style they play best rather than reroll everything else away from them.
+WildcardArchetype DraftArchetypeOf(Player const* bot, CoaRole role)
+{
+    WildcardArchetype const target = ArchetypeOf(role, DpsStyleOf(bot));
+    if (role != CoaRole::Dps)
+        return target;
+
+    std::vector<AscensionWildcard::Slot> starters = AscensionWildcard::Slots(bot);
+    if (starters.size() < AscensionWildcard::STARTING_ABILITY_COUNT ||
+        std::none_of(starters.begin(), starters.end(), [](AscensionWildcard::Slot const& slot) { return slot.EntryId; }))
+        return target;
+    starters.resize(AscensionWildcard::STARTING_ABILITY_COUNT);
+    if (std::get<1>(FitOf(starters, target)))
+        return target;
+
+    WildcardArchetype best = target;
+    StarterFit bestFit = FitOf(starters, target);
+    for (WildcardArchetype style : { WildcardArchetype::Melee, WildcardArchetype::Ranged, WildcardArchetype::Caster })
+        if (StarterFit const fit = FitOf(starters, style); fit > bestFit)
+        {
+            best = style;
+            bestFit = fit;
+        }
+    return best;
+}
+
+// The rolls a bot would spend a Scroll of Fortune on, first to last, as a player rerolls what does not fit: an ability
+// it cannot cast for want of its form, then one its fighting logic never casts, then the rolls its archetype has no
+// use for, worst first (a weapon strike for a caster, a shot for a melee Hero, a talent left with nothing to improve).
+// A pick of its archetype stays (Auto Shot, which the fighting logic does not cast itself), and so do the starting
+// abilities, picked with care.
+std::vector<uint32> MisfitsOf(Player const* bot, WildcardArchetype archetype)
 {
     std::vector<AscensionWildcard::Slot> const slots = AscensionWildcard::Slots(bot);
     std::vector<SpellInfo const*> spells(slots.size(), nullptr);
     std::vector<uint32> forms;
+    std::vector<uint32> entries;
     for (std::size_t index = 0; index < slots.size(); ++index)
     {
         AscensionWildcard::Slot const& slot = slots[index];
         std::vector<uint32> const* ranks = slot.EntryId ? RankSpellsOf(slot.EntryId) : nullptr;
         if (!ranks || slot.Rank < 1 || slot.Rank > ranks->size())
             continue;
+        entries.push_back(slot.EntryId);
         spells[index] = sSpellMgr->GetSpellInfo((*ranks)[slot.Rank - 1]);
         if (spells[index])
             for (uint32 form : FormsGiven(spells[index]))
                 forms.push_back(form);
     }
 
-    uint32 unused = 0;
+    std::vector<uint32> formless;
+    std::vector<uint32> unused;
+    std::vector<std::pair<int32, uint32>> offArchetype;
     for (std::size_t index = AscensionWildcard::STARTING_ABILITY_COUNT; index < slots.size(); ++index)
     {
         SpellInfo const* info = spells[index];
-        if (!info || slots[index].Locked || slots[index].Talent || info->IsPassive())
+        uint32 const entry = slots[index].EntryId;
+        if (!info || slots[index].Locked)
+            continue;
+
+        if (slots[index].Talent)
+        {
+            int32 score = WildcardPickWeight(entry, archetype);
+            std::vector<uint32> others;
+            for (uint32 other : entries)
+                if (other != entry)
+                    others.push_back(other);
+            if (score <= 0 && !AscensionWildcard::SynergyScore(AscensionWildcard::LoadedTables(), entry, others))
+                score -= 2;
+            if (score <= -2)
+                offArchetype.emplace_back(score, entry);
+            continue;
+        }
+        if (info->IsPassive())
             continue;
         if (!CastableIn(info, 0) &&
             std::none_of(forms.begin(), forms.end(), [info](uint32 form) { return CastableIn(info, form); }))
-            return slots[index].EntryId;
-        if (!unused && !CoaBotCasts(info))
-            unused = slots[index].EntryId;
+            formless.push_back(entry);
+        else if (!CoaBotCasts(info) && WildcardPickWeight(entry, archetype) <= 0)
+            unused.push_back(entry);
+        else if (int32 const score = ArchetypeScore(entry, archetype); score <= -2)
+            offArchetype.emplace_back(score, entry);
     }
-    return unused;
+
+    std::stable_sort(offArchetype.begin(), offArchetype.end(),
+                     [](auto const& left, auto const& right) { return left.first < right.first; });
+    std::vector<uint32> misfits = formless;
+    misfits.insert(misfits.end(), unused.begin(), unused.end());
+    for (auto const& misfit : offArchetype)
+        misfits.push_back(misfit.second);
+    return misfits;
 }
 
 // The higher ranks of its rolled abilities that its level allows, as a player trains them at any class trainer.
@@ -386,15 +530,19 @@ void TrainRanks(Player* bot)
     }
 }
 
-void RerollMisfits(Player* bot)
+void RerollMisfits(Player* bot, WildcardArchetype archetype)
 {
     AscensionWildcard::ClaimLevelingScrolls(bot);
     for (uint32 reroll = 0; reroll < MISFIT_REROLLS_PER_DRAFT; ++reroll)
     {
-        uint32 const misfit = MisfitOf(bot);
-        if (!misfit || !AscensionWildcard::UnlearnForReroll(bot, misfit))
+        // A roll the server will not take back (its essence is spent on what came after it) leaves the next one to try.
+        std::vector<uint32> const misfits = MisfitsOf(bot, archetype);
+        auto const rerolled = std::find_if(misfits.begin(), misfits.end(),
+            [bot](uint32 misfit) { return AscensionWildcard::UnlearnForReroll(bot, misfit); });
+        if (rerolled == misfits.end())
             return;
-        LOG_INFO("playerbots.coa", "{} rerolls Wildcard entry {} with a Scroll of Fortune", bot->GetName(), misfit);
+        LOG_INFO("playerbots.coa", "{} rerolls Wildcard entry {} with a Scroll of Fortune ({} build)", bot->GetName(),
+                 *rerolled, WildcardArchetypeName(archetype));
         AscensionWildcard::DraftBuild(bot);
     }
 }
@@ -427,8 +575,9 @@ BuildShape ShapeOf(Player const* bot)
 }
 
 // The path of the bot's role: Healing for a healer, Strength for a tank; a damage dealer takes Agility for a
-// weapon build, Intellect for a caster and Duality for a build that does both.
-uint32 PathFor(CoaRole role, BuildShape const& shape)
+// weapon build, Intellect for a caster and Duality for a build that does both. A bot that drafted for weapons or for
+// spells takes their path as long as its build holds at least as many of them as of the others.
+uint32 PathFor(CoaRole role, BuildShape const& shape, std::optional<WildcardArchetype> archetype = std::nullopt)
 {
     if (role == CoaRole::Heal)
         return PATH_HEALING;
@@ -436,6 +585,11 @@ uint32 PathFor(CoaRole role, BuildShape const& shape)
         return PATH_STRENGTH;
 
     uint32 const weapon = shape.strikes + shape.shots;
+    if (archetype == WildcardArchetype::Caster && shape.spells && shape.spells >= weapon)
+        return PATH_INTELLECT;
+    if ((archetype == WildcardArchetype::Melee || archetype == WildcardArchetype::Ranged) && weapon &&
+        weapon >= shape.spells)
+        return PATH_AGILITY;
     if (weapon > shape.spells + 1)
         return PATH_AGILITY;
     if (shape.spells > weapon + 1)
@@ -592,15 +746,16 @@ bool DraftWildcardBuild(Player* bot)
         ResetWildcardBuild(bot);
 
     CoaRole const target = TargetRoleOf(bot);
-    uint8 const dpsStyle = DpsStyleOf(bot);
+    WildcardArchetype const starterArchetype = DraftArchetypeOf(bot, target);
     AscensionWildcard::DraftBuild(bot,
-        [target, dpsStyle](std::vector<std::vector<AscensionWildcard::Slot>> const& candidates)
-        { return PickStarters(candidates, target, dpsStyle); },
+        [starterArchetype](std::vector<std::vector<AscensionWildcard::Slot>> const& candidates)
+        { return PickStarters(candidates, starterArchetype); },
         STARTER_DRAWS);
-    RerollMisfits(bot);
+    WildcardArchetype const archetype = DraftArchetypeOf(bot, target);
+    RerollMisfits(bot, archetype);
     TrainRanks(bot);
 
-    uint32 const path = PathFor(target, ShapeOf(bot));
+    uint32 const path = PathFor(target, ShapeOf(bot), archetype);
     RangeWeights const range = WeighRange(bot);
     // The server refuses a path change in combat: the bot takes its path when the fight is over.
     bool const pathDue = bot->IsInCombat() && AscensionWildcard::PrimaryStat(bot) != path;
