@@ -112,6 +112,16 @@ void StatsCollector::CollectItemStats(ItemTemplate const* proto, uint32 scalingL
 
 void StatsCollector::CollectSpellStats(uint32 spellId, float multiplier, Milliseconds spellCooldown)
 {
+    // A spell that triggers itself, directly or through others (Reborn copies do), would recurse forever.
+    thread_local uint32 depth = 0;
+    if (depth >= 8)
+        return;
+    struct Nest
+    {
+        Nest() { ++depth; }
+        ~Nest() { --depth; }
+    } const nest;
+
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
 
     if (!spellInfo)
