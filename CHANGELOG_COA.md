@@ -1,5 +1,12 @@
 # CoA Bots — changelog
 
+## v2.6 — draft (not released)
+
+### Loot and gear
+- **Best gear** (`autogear`, "Best gear for the group" in SquidBots Lite) keeps an equipped **heirloom**: it no
+  longer swaps it for a worldforged piece and leaves the heirloom in the bags. `autogear reset` still regears
+  everything from scratch.
+
 ## v2.5 — Auction house, Manastorm, smarter casts and your reports (October 2026)
 
 ### Core (repack)

@@ -3003,6 +3003,11 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance, int32
                                  !CanEquipWeapon(oldItem->GetTemplate());
         if (incremental && oldItem && !oldCannotShoot && !oldNoWeapon)
         {
+            // CoA: an equipped heirloom stays; it scales with the bot and a worldforged piece scoring a bit
+            // higher at this level would leave it in the bags.
+            if (oldItem->GetTemplate()->Quality == ITEM_QUALITY_HEIRLOOM)
+                continue;
+
             float old_score = calculator.CalculateItem(oldItem->GetEntry(), oldItem->GetItemRandomPropertyId(), slot);
             if (bestScoreForSlot < 1.2f * old_score)
                 continue;
