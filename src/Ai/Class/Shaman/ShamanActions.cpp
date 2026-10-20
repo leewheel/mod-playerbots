@@ -9,6 +9,7 @@
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
 #include "TotemsShamanStrategy.h"
+#include "CoaReborn.h"
 
 bool CastTotemAction::isUseful()
 {
@@ -98,9 +99,11 @@ bool SetTotemAction::Execute(Event /*event*/)
     uint32 totemSpell = 0;
     for (size_t i = 0; i < totemSpellIdsCount; ++i)
     {
-        if (bot->HasSpell(totemSpellIds[i]))
+        // On a Warcraft Reborn realm the bot knows the Reborn copy of the totem, not the stock rank.
+        uint32 const spellId = RebornSpellId(totemSpellIds[i]);
+        if (bot->HasSpell(spellId))
         {
-            totemSpell = totemSpellIds[i];
+            totemSpell = spellId;
             break;
         }
     }

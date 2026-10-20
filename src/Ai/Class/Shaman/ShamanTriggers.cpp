@@ -138,6 +138,15 @@ bool CallOfTheElementsTrigger::IsActive()
         return false;
     }
 
+    // Call of the Elements drops the totems of the bar: with none the bot knows on it, it would be cast in a loop.
+    bool barSet = false;
+    for (uint8 button : { TOTEM_BAR_SLOT_EARTH, TOTEM_BAR_SLOT_FIRE, TOTEM_BAR_SLOT_WATER, TOTEM_BAR_SLOT_AIR })
+        if (ActionButton const* action = bot->GetActionButton(button);
+            action && action->GetType() == ACTION_BUTTON_SPELL && bot->HasSpell(action->GetAction()))
+            barSet = true;
+    if (!barSet)
+        return false;
+
     int emptyCount = 0;
     static const uint8 slots[] = {
         SUMMON_SLOT_TOTEM_EARTH, SUMMON_SLOT_TOTEM_FIRE,
