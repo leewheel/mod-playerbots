@@ -23,7 +23,7 @@ std::vector<NextAction> MarksmanshipHunterStrategy::getDefaultActions()
         NextAction("aimed shot", 5.4f),
         NextAction("arcane shot", 5.3f),
         NextAction("steady shot", 5.2f),
-        NextAction("auto shot", 5.1f)
+        NextAction("auto shot", 20.0f)
     };
 }
 
