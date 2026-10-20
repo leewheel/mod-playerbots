@@ -15,6 +15,7 @@
 #include "CoaSpecialization.h"
 #include "Config.h"
 #include "CoaWildcard.h"
+#include "CoaReborn.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
 #include "GuildMgr.h"
@@ -2009,6 +2010,13 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
     if (IsWildcardHeroBot(bot))
         return 0;
 
+    // A Warcraft Reborn character takes the Character Advancement build of its tree instead.
+    if (IsRebornBot(bot))
+    {
+        ApplyWcrBuild(bot);
+        return GetWcrSpec(bot);
+    }
+
     uint32 specTab;
     uint8 cls = bot->getClass();
     std::map<uint8, uint32> tabs = AiFactory::GetPlayerSpecTabs(bot);
@@ -2087,6 +2095,16 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
 
 void PlayerbotFactory::InitTalentsBySpecNo(Player* bot, int specNo, bool reset)
 {
+    if (IsRebornBot(bot))
+    {
+        std::string error;
+        if (specNo >= 0 && specNo < 3)
+            SetWcrSpec(bot, uint8(specNo), error);
+        else
+            ApplyWcrBuild(bot);
+        return;
+    }
+
     if (reset)
     {
         bot->resetTalents(true);
@@ -2176,6 +2194,9 @@ void PlayerbotFactory::InitTalentsBySpecNo(Player* bot, int specNo, bool reset)
 void PlayerbotFactory::InitTalentsByParsedSpecLink(Player* bot, std::vector<std::vector<uint32>> parsedSpecLink,
                                                    bool reset)
 {
+    if (IsRebornBot(bot))
+        return;
+
     if (reset)
     {
         bot->resetTalents(true);
@@ -3935,7 +3956,10 @@ void PlayerbotFactory::InitAvailableSpells()
     cacheLock.unlock();
     for (uint32 trainerId : trainerIds)
     {
-        Trainer::Trainer* trainer = sObjectMgr->GetTrainer(trainerId);
+        // A Warcraft Reborn character is taught the Reborn rows the core serves it at the trainer.
+        Trainer::Trainer const* trainer = RebornTrainerFor(sObjectMgr->GetTrainer(trainerId), bot);
+        if (!trainer)
+            continue;
 
         for (auto& spell : trainer->GetSpells())
         {
@@ -3957,6 +3981,7 @@ void PlayerbotFactory::InitAvailableSpells()
                 bot->learnSpell(trainerSpell->SpellId, false);
         }
     }
+    ForgetStockTwins(bot);
 }
 
 // NOTE: the second parameter of Player::learnSpell is 'temporary', not
@@ -3965,99 +3990,102 @@ void PlayerbotFactory::InitAvailableSpells()
 // its class combat abilities on every relog.
 void PlayerbotFactory::InitClassSpells()
 {
+    // On a Warcraft Reborn realm, the Reborn copy of each spell.
+    auto const learn = [this](uint32 spellId, bool temporary) { bot->learnSpell(RebornSpellId(spellId), temporary); };
     int32_t level = bot->GetLevel();
     switch (bot->getClass())
     {
         case CLASS_WARRIOR:
-            bot->learnSpell(78, false);
-            bot->learnSpell(2457, false);
+            learn(78, false);
+            learn(2457, false);
             if (level >= 10)
             {
-                bot->learnSpell(71, false);    // Defensive Stance
-                bot->learnSpell(355, false);   // Taunt
-                bot->learnSpell(7386, false);  // Sunder Armor
+                learn(71, false);    // Defensive Stance
+                learn(355, false);   // Taunt
+                learn(7386, false);  // Sunder Armor
             }
             if (level >= 30)
-                bot->learnSpell(2458, false);  // Berserker Stance
+                learn(2458, false);  // Berserker Stance
             break;
         case CLASS_PALADIN:
-            bot->learnSpell(21084, false);
-            bot->learnSpell(635, false);
+            learn(21084, false);
+            learn(635, false);
             if (level >= 12)
-                bot->learnSpell(7328, false);  // Redemption
+                learn(7328, false);  // Redemption
             if (level >= 20)
-                bot->learnSpell(5502, false); // Sense Undead
+                learn(5502, false); // Sense Undead
             break;
         case CLASS_ROGUE:
-            bot->learnSpell(1752, false);
-            bot->learnSpell(2098, false);
+            learn(1752, false);
+            learn(2098, false);
             break;
         case CLASS_DEATH_KNIGHT:
-            bot->learnSpell(45477, false);
-            bot->learnSpell(47541, false);
-            bot->learnSpell(45462, false);
-            bot->learnSpell(45902, false);
+            learn(45477, false);
+            learn(47541, false);
+            learn(45462, false);
+            learn(45902, false);
             // to leave DK starting area
-            bot->learnSpell(53428, false);
-            bot->learnSpell(50977, false);
-            bot->learnSpell(49142, false);
-            bot->learnSpell(48778, false);
+            learn(53428, false);
+            learn(50977, false);
+            learn(49142, false);
+            learn(48778, false);
             break;
         case CLASS_HUNTER:
-            bot->learnSpell(2973, false);
-            bot->learnSpell(75, false);
+            learn(2973, false);
+            learn(75, false);
             if (level >= 10)
             {
-                bot->learnSpell(883, false);   // call pet
-                bot->learnSpell(1515, false);  // tame pet
-                bot->learnSpell(6991, false);  // feed pet
-                bot->learnSpell(982, false);   // revive pet
-                bot->learnSpell(2641, false);  // dismiss pet
+                learn(883, false);   // call pet
+                learn(1515, false);  // tame pet
+                learn(6991, false);  // feed pet
+                learn(982, false);   // revive pet
+                learn(2641, false);  // dismiss pet
             }
             break;
         case CLASS_PRIEST:
-            bot->learnSpell(585, false);
-            bot->learnSpell(2050, false);
+            learn(585, false);
+            learn(2050, false);
             break;
         case CLASS_MAGE:
-            bot->learnSpell(133, false);
-            bot->learnSpell(168, false);
+            learn(133, false);
+            learn(168, false);
             break;
         case CLASS_WARLOCK:
-            bot->learnSpell(687, false);
-            bot->learnSpell(686, false);
-            bot->learnSpell(688, false);  // summon imp
+            learn(687, false);
+            learn(686, false);
+            learn(688, false);  // summon imp
             if (level >= 10)
-                bot->learnSpell(697, false);  // summon voidwalker
+                learn(697, false);  // summon voidwalker
             if (level >= 20)
-                bot->learnSpell(712, false);  // summon succubus
+                learn(712, false);  // summon succubus
             if (level >= 30)
-                bot->learnSpell(691, false);  // summon felhunter
+                learn(691, false);  // summon felhunter
             break;
         case CLASS_DRUID:
-            bot->learnSpell(5176, false);
-            bot->learnSpell(5185, false);
+            learn(5176, false);
+            learn(5185, false);
             if (level >= 10)
             {
-                bot->learnSpell(5487, false);  // bear form
-                bot->learnSpell(6795, false);  // Growl
-                bot->learnSpell(6807, false);  // Maul
+                learn(5487, false);  // bear form
+                learn(6795, false);  // Growl
+                learn(6807, false);  // Maul
             }
             break;
         case CLASS_SHAMAN:
-            bot->learnSpell(403, false);
-            bot->learnSpell(331, false);
-            // bot->learnSpell(66747, false); // Totem of the Earthen Ring
+            learn(403, false);
+            learn(331, false);
+            // learn(66747, false); // Totem of the Earthen Ring
             if (level >= 4)
-                bot->learnSpell(8071, false);  // stoneskin totem
+                learn(8071, false);  // stoneskin totem
             if (level >= 10)
-                bot->learnSpell(3599, false);  // searing totem
+                learn(3599, false);  // searing totem
             if (level >= 20)
-                bot->learnSpell(5394, false);  // healing stream totem
+                learn(5394, false);  // healing stream totem
             break;
         default:
             break;
     }
+    LearnRebornBasics(bot);
 }
 
 void PlayerbotFactory::InitSpecialSpells()
@@ -4919,6 +4947,9 @@ void PlayerbotFactory::CleanupConsumables() // remove old consumables as part of
 
 void PlayerbotFactory::InitGlyphs(bool increment)
 {
+    if (IsRebornBot(bot))
+        return;
+
     bot->InitGlyphsForLevel();
     if (!increment && botAI &&
         botAI->GetAiObjectContext()->GetValue<bool>("custom_glyphs")->Get())
