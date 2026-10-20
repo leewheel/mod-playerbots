@@ -14,6 +14,7 @@
 
 #include "CoaSpecialization.h"
 
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -42,8 +43,20 @@ bool DraftWildcardBuild(Player* bot);
 // Forgets the whole build, for a bot rebuilt at a lower level than its rolls were made for.
 void ResetWildcardBuild(Player* bot);
 
-// Forgets the build of a random Wildcard Hero bot and drafts it again for its role (.playerbots wildcard redraft).
-bool RedraftWildcardBot(Player* bot);
+// Forgets the build of a random Wildcard Hero bot and drafts it again for its role (.playerbots wildcard redraft),
+// its gear picked again when its stats changed unless `reequip` is false (the caller rebuilds it).
+bool RedraftWildcardBot(Player* bot, bool reequip = true);
+
+// Makes a Wildcard Hero play `role`: a random bot keeps it for its later drafts and drafts a build of that role when
+// its own does not play it; a player's alt keeps its rolls and only takes the stat path of the role. Not in combat.
+bool SetWildcardRole(Player* bot, CoaRole role, bool reequip, std::string& error);
+
+// "tank", "healer" or "damage", as the CoA specialization lists say it.
+char const* WildcardRoleName(CoaRole role);
+
+// What the "wildcard" whisper answers: "WILDCARD <role>: <path> path (<close|ranged>), N abilities, M talents",
+// then its abilities and talents by name.
+std::vector<std::string> DescribeWildcard(Player const* bot);
 
 // True once after a draft in combat left a new stat path for later: the caller drafts again when the fight is over
 // (PlayerbotAI::ChangeEngineOnNonCombat).

@@ -7,6 +7,7 @@
 #include "Log.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
+#include "PlayerbotFactory.h"
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "SharedDefines.h"
@@ -17,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <mutex>
+#include <sstream>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -53,6 +55,14 @@ constexpr uint32 FIRST_DISPEL_TAG = 69;
 constexpr uint32 LAST_DISPEL_TAG = 76;
 // Mobility, raid, party and personal buffs, immunity, resurrection, defensives.
 constexpr std::array<uint32, 8> SUPPORT_TAGS = { 2, 3, 55, 77, 120, 121, 159, 160 };
+
+// Bot AI runs in the map update threads, so what a draft decided is kept here under a lock rather than in
+// RandomPlayerbotMgr's value cache, which only the world thread may touch: whether the bot shoots, whether
+// a draft in combat left its stat path for after the fight, and the role a player or a recruit asked it to play.
+std::mutex BuildStateLock;
+std::unordered_map<ObjectGuid::LowType, bool> Shooters;
+std::unordered_set<ObjectGuid::LowType> PathsDue;
+std::unordered_map<ObjectGuid::LowType, CoaRole> ChosenRoles;
 
 AscensionWildcard::Entry const* EntryOf(uint32 entryId)
 {
@@ -273,9 +283,18 @@ std::size_t PickStarters(std::vector<std::vector<AscensionWildcard::Slot>> const
     return best;
 }
 
-// One bot in five tanks and one in five heals, as a dungeon group wants; the GUID keeps the choice across drafts.
+// The role a bot drafts for: the one it was asked to play (talents spec, wildcard role, a recruit), else the one its
+// stat path already gives it, so that a bot made a tank stays one after a restart; else one bot in five tanks and
+// one in five heals, as a dungeon group wants, the GUID keeping the choice across drafts.
 CoaRole TargetRoleOf(Player const* bot)
 {
+    {
+        std::lock_guard<std::mutex> lock(BuildStateLock);
+        if (auto const found = ChosenRoles.find(bot->GetGUID().GetCounter()); found != ChosenRoles.end())
+            return found->second;
+    }
+    if (AscensionWildcard::PrimaryStat(bot))
+        return GetWildcardRole(bot);
     switch (bot->GetGUID().GetCounter() % 5)
     {
         case 0:
@@ -483,13 +502,6 @@ RangeWeights WeighRange(Player const* bot)
     return weights;
 }
 
-// Bot AI runs in the map update threads, so what a draft decided is kept here under a lock rather than in
-// RandomPlayerbotMgr's value cache, which only the world thread may touch: whether the bot shoots, and whether
-// a draft in combat left its stat path for after the fight.
-std::mutex BuildStateLock;
-std::unordered_map<ObjectGuid::LowType, bool> Shooters;
-std::unordered_set<ObjectGuid::LowType> PathsDue;
-
 bool Shoots(Player const* bot)
 {
     ObjectGuid::LowType const guid = bot->GetGUID().GetCounter();
@@ -605,17 +617,159 @@ bool TakeDueWildcardPath(Player const* bot)
     return PathsDue.erase(bot->GetGUID().GetCounter()) > 0;
 }
 
-bool RedraftWildcardBot(Player* bot)
+bool RedraftWildcardBot(Player* bot, bool reequip)
 {
     if (!IsWildcardHeroBot(bot) || !sRandomPlayerbotMgr.IsRandomBot(bot))
         return false;
 
+    // The reset takes the stat path away, and with it the role the bot played: it drafts for that role again.
+    CoaRole const target = TargetRoleOf(bot);
+    {
+        std::lock_guard<std::mutex> lock(BuildStateLock);
+        ChosenRoles.insert_or_assign(bot->GetGUID().GetCounter(), target);
+    }
+    uint8 const stats = GetWildcardPrimaryStats(bot);
+
     ResetWildcardBuild(bot);
     DraftWildcardBuild(bot);
+    // Its gear was picked for the stats of its old path.
+    if (reequip && GetWildcardPrimaryStats(bot) != stats)
+        PlayerbotFactory(bot, bot->GetLevel()).InitEquipment(true);
     if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot))
         botAI->ResetStrategies();
     bot->CastSpell(bot, SPELL_LEVEL_UP_VISUAL, true);
     return true;
+}
+
+bool SetWildcardRole(Player* bot, CoaRole role, bool reequip, std::string& error)
+{
+    if (!IsWildcardHeroBot(bot))
+    {
+        error = "not a Wildcard Hero";
+        return false;
+    }
+    if (bot->IsInCombat())
+    {
+        error = "not in combat";
+        return false;
+    }
+
+    if (sRandomPlayerbotMgr.IsRandomBot(bot))
+    {
+        {
+            std::lock_guard<std::mutex> lock(BuildStateLock);
+            ChosenRoles.insert_or_assign(bot->GetGUID().GetCounter(), role);
+        }
+        // Its build already plays the role: nothing to roll again.
+        if (AscensionWildcard::PrimaryStat(bot) && GetWildcardRole(bot) == role)
+            return true;
+        RedraftWildcardBot(bot, reequip);
+        if (GetWildcardRole(bot) != role)
+        {
+            error = "the new build does not play that role";
+            return false;
+        }
+        return true;
+    }
+
+    // A player's alt keeps the rolls its owner made: only its stat path changes, and the role with it.
+    uint32 const path = PathFor(role, ShapeOf(bot));
+    if (AscensionWildcard::PrimaryStat(bot) == path)
+        return true;
+    std::vector<AscensionCoATalentState::KnownEntry> upload = AscensionWildcard::KnownEntries(bot);
+    upload.erase(std::remove_if(upload.begin(), upload.end(),
+                                [](AscensionCoATalentState::KnownEntry const& known)
+                                {
+                                    return std::any_of(AscensionWildcard::PRIMARY_STAT_PATHS.begin(),
+                                                       AscensionWildcard::PRIMARY_STAT_PATHS.end(),
+                                                       [&known](AscensionWildcard::PrimaryStatPath const& candidate)
+                                                       { return candidate.EntryId == known.EntryId; });
+                                }),
+                 upload.end());
+    upload.push_back({ path, 1 });
+    AscensionWildcard::BuildChoice const choice = AscensionWildcard::ApplyBuildUpload(bot, upload);
+    if (choice.PrimaryStat != path)
+    {
+        error = choice.Result;
+        return false;
+    }
+    {
+        std::lock_guard<std::mutex> lock(BuildStateLock);
+        Shooters.erase(bot->GetGUID().GetCounter());
+    }
+    ForgetWildcardKit(bot);
+    return true;
+}
+
+char const* WildcardRoleName(CoaRole role)
+{
+    switch (role)
+    {
+        case CoaRole::Tank: return "tank";
+        case CoaRole::Heal: return "healer";
+        default:            return "damage";
+    }
+}
+
+std::vector<std::string> DescribeWildcard(Player const* bot)
+{
+    CoaRole const role = GetWildcardRole(bot);
+    char const* const position = GetWildcardStyle(bot) == CoaStyle::Melee ? "close" : "ranged";
+    char const* path = "no";
+    switch (AscensionWildcard::PrimaryStat(bot))
+    {
+        case PATH_STRENGTH:  path = "Strength"; break;
+        case PATH_AGILITY:   path = "Agility"; break;
+        case PATH_INTELLECT: path = "Intellect"; break;
+        case PATH_HEALING:   path = "Healing"; break;
+        case PATH_DUALITY:   path = "Duality"; break;
+        default:             break;
+    }
+
+    std::vector<std::string> abilities;
+    std::vector<std::string> talents;
+    for (AscensionWildcard::Slot const& slot : AscensionWildcard::Slots(bot))
+    {
+        std::vector<uint32> const* ranks = slot.EntryId ? RankSpellsOf(slot.EntryId) : nullptr;
+        if (!ranks || slot.Rank < 1 || slot.Rank > ranks->size())
+            continue;
+        SpellInfo const* info = sSpellMgr->GetSpellInfo((*ranks)[slot.Rank - 1]);
+        if (!info || !info->SpellName[0] || !*info->SpellName[0])
+            continue;
+        std::string name = info->SpellName[0];
+        if (ranks->size() > 1)
+            name += " " + std::to_string(slot.Rank);
+        (slot.Talent ? talents : abilities).push_back(name);
+    }
+
+    std::vector<std::string> lines;
+    std::ostringstream head;
+    head << "WILDCARD " << WildcardRoleName(role) << ": " << path << " path (" << position << "), "
+         << abilities.size() << " abilities, " << talents.size() << " talents";
+    lines.push_back(head.str());
+
+    // Whispers stay under the 255 characters of a chat line.
+    auto const list = [&lines](std::string const& title, std::vector<std::string> const& names)
+    {
+        std::string line = title;
+        bool first = true;
+        for (std::string const& name : names)
+        {
+            if (!first && line.size() + name.size() + 2 > 240)
+            {
+                lines.push_back(line);
+                line = title;
+                first = true;
+            }
+            line += (first ? " " : ", ") + name;
+            first = false;
+        }
+        if (!first)
+            lines.push_back(line);
+    };
+    list("Abilities:", abilities);
+    list("Talents:", talents);
+    return lines;
 }
 
 void ResetWildcardBuild(Player* bot)
