@@ -13,6 +13,7 @@
 #include "ChatHelper.h"
 #include "CoaSpecLookup.h"
 #include "CoaSpecialization.h"
+#include "CoaWildcard.h"
 #include "Event.h"
 #include "Log.h"
 #include "PlayerbotAIConfig.h"
@@ -65,6 +66,70 @@ void ChangeTalentsAction::ListCoaTalents()
     botAI->TellMaster("Talents: " + std::to_string(count));
 }
 
+namespace
+{
+// A Wildcard Hero has no specialization: its role is what it plays, listed in the format of the CoA specializations
+// ("> Wildcard Tank - tank, close") so that SquidBots Lite offers it the three roles; picking one drafts a random bot
+// a build of that role and moves an alt onto the stat path of that role (SetWildcardRole).
+std::string WildcardSpecName(CoaRole role)
+{
+    switch (role)
+    {
+        case CoaRole::Tank: return "Wildcard Tank";
+        case CoaRole::Heal: return "Wildcard Healer";
+        default:            return "Wildcard Damage";
+    }
+}
+
+char const* WildcardPosition(Player* bot, CoaRole role)
+{
+    if (role == CoaRole::Heal)
+        return "ranged";
+    if (role == CoaRole::Tank || GetCoaRole(bot) != CoaRole::Dps)
+        return "close";
+    return GetCoaStyle(bot) == CoaStyle::Melee ? "close" : "ranged";
+}
+
+std::string WildcardSpecList(Player* bot)
+{
+    std::ostringstream out;
+    CoaRole const current = GetCoaRole(bot);
+    for (CoaRole role : { CoaRole::Tank, CoaRole::Heal, CoaRole::Dps })
+        out << (role == current ? "\n> " : "\n  ") << WildcardSpecName(role) << " - " << WildcardRoleName(role)
+            << ", " << WildcardPosition(bot, role);
+    return out.str();
+}
+
+std::string WildcardSpecPick(PlayerbotAI* botAI, Player* bot, std::string const& wanted)
+{
+    std::string asked = wanted;
+    std::transform(asked.begin(), asked.end(), asked.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (asked.rfind("wildcard ", 0) == 0)
+        asked = asked.substr(9);
+
+    CoaRole role;
+    if (asked == "tank")
+        role = CoaRole::Tank;
+    else if (asked == "heal" || asked == "healer")
+        role = CoaRole::Heal;
+    else if (asked == "dps" || asked == "damage")
+        role = CoaRole::Dps;
+    else
+        return "I have no specialization called '" + wanted + "'. Try 'talents spec list'.";
+
+    std::string error;
+    if (!SetWildcardRole(bot, role, true, error))
+        return "I cannot play " + std::string(WildcardRoleName(role)) + ": " + error + ".";
+    botAI->ResetStrategies();
+
+    std::vector<std::string> const lines = DescribeWildcard(bot);
+    std::ostringstream out;
+    out << "Now " << WildcardSpecName(role) << " - " << WildcardRoleName(role) << ", " << WildcardPosition(bot, role)
+        << ", running " << (lines.empty() ? std::string("a Wildcard build") : lines.front()) << ".";
+    return out.str();
+}
+} // namespace
+
 bool ChangeTalentsAction::Execute(Event event)
 {
     auto* flag = botAI->GetAiObjectContext()->GetValue<bool>("custom_glyphs"); // Added for custom Glyphs
@@ -83,6 +148,19 @@ bool ChangeTalentsAction::Execute(Event event)
         if (param.find("help") != std::string::npos)
         {
             out << TalentsHelp();
+        }
+        else if (IsWildcardHeroBot(bot) && param.find("spec list") != std::string::npos)
+        {
+            out << WildcardSpecList(bot);
+        }
+        else if (IsWildcardHeroBot(bot) && param.rfind("spec ", 0) == 0)
+        {
+            out << WildcardSpecPick(botAI, bot, param.substr(5));
+        }
+        else if (IsWildcardHeroBot(bot) && (param == "?" || param == "list"))
+        {
+            for (std::string const& line : DescribeWildcard(bot))
+                botAI->TellMaster(line);
         }
         else if (param.find("switch") != std::string::npos)
         {
