@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -630,7 +631,7 @@ bool SwitchWcrRole(Player* bot, CoaRole role)
     if (specs.empty())
         return false;
     std::string error;
-    SetWcrSpec(bot, specs[urand(0, specs.size() - 1)], error);
+    SetWcrSpec(bot, specs[urand(0, uint32(specs.size() - 1))], error);
     return GetWcrRole(bot) == role;
 }
 
