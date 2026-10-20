@@ -277,6 +277,14 @@ CoaStyle GetCoaStyle(Player const* player)
 {
     if (IsWildcardHeroBot(player))
         return GetWildcardStyle(player);
+    // A Warcraft Reborn tree fights at its spec's range: the benches placed and scored every Reborn
+    // caster and hunter as a melee (all classes but CoA's fell through to Melee below).
+    if (IsRebornBot(player))
+    {
+        if (!IsWcrRanged(player))
+            return CoaStyle::Melee;
+        return player->getClass() == CLASS_HUNTER ? CoaStyle::Ranged : CoaStyle::Caster;
+    }
     if (!player || !IsAscensionCustomClassId(player->getClass()))
         return CoaStyle::Melee;
 
