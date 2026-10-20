@@ -731,6 +731,9 @@ bool ClassCanPlay(uint8 classId, CoaRole role)
 {
     if (IsRebornRealm())
         return WcrClassCanPlay(classId, role);
+    // A Wildcard Hero plays any role: a random one drafts a build of the role it is recruited for.
+    if (classId == CLASS_HERO && IsWildcardRealm())
+        return true;
     return IsAscensionCustomClassId(classId) && !SpecializationsByRole(classId)[uint8(role)].empty();
 }
 
@@ -895,6 +898,18 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
         }
         chosenFits = true;
     }
+    // A Wildcard Hero of another role drafts a build of this one, its gear picked below or by the rebuild.
+    bool const redrafted = !chosenFits && IsWildcardHeroBot(chosen);
+    if (redrafted)
+    {
+        std::string error;
+        if (!SetWildcardRole(chosen, role, false, error))
+        {
+            message = "Could not draft " + chosen->GetName() + " a build to play " + RoleName(role) + ": " + error + ".";
+            return false;
+        }
+        chosenFits = true;
+    }
     bool rebuilt = false;
 
     bool const blocksFinder = (master->GetLevel() >= 15 && chosen->GetLevel() < 15) ||
@@ -920,6 +935,8 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
         message = chosen->GetName() + " rolled a build for another role.";
         return false;
     }
+    if (redrafted && !rebuilt)
+        PlayerbotFactory(chosen, chosen->GetLevel()).InitEquipment(true);
 
     if (IsStockClass(chosen->getClass()))
     {
