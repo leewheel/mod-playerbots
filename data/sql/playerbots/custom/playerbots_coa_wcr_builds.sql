@@ -5,7 +5,8 @@
 --               tree. primary_stat: passed to AscensionFreepick::ApplyGuide.
 -- ord, spell_id, level: the guide, in the order its spells are taken, each from that level.
 --
--- Only the table: its rows come from a file of their own, so that this one never deletes them.
+-- Only the table: its rows are in playerbots_coa_wcr_builds_data.sql (talents only; class spells come from the
+-- Reborn trainers).
 
 CREATE TABLE IF NOT EXISTS `playerbots_coa_wcr_builds` (
   `class` TINYINT UNSIGNED NOT NULL,
