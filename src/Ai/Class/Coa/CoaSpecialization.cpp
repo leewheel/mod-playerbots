@@ -8,6 +8,7 @@
 #include "CoaLevelBuildData.h"
 #include "CoaSpecLookup.h"
 #include "CoaWildcard.h"
+#include "CoaReborn.h"
 #include "Channel.h"
 #include "Chat.h"
 #include "Config.h"
@@ -709,18 +710,16 @@ uint8 FindCoaClass(std::string const& name)
 
 namespace
 {
-// The classes of the original game (Warcraft Reborn realms play them, not the CoA classes): their role is the
-// talent tree they spent the most in, as the bot AI reads it, and they change role with a premade spec.
+// The classes of the original game, on a Warcraft Reborn realm (anywhere else they are no recruit): their role is
+// the tree of their Character Advancement build, which they change through the tree's build.
 bool IsStockClass(uint8 classId)
 {
-    return classId && classId < CLASS_BARBARIAN && classId != CLASS_HERO;
+    return IsRebornRealm() && IsRebornClass(classId);
 }
 
 CoaRole StockRole(Player* bot)
 {
-    if (PlayerbotAI::IsTank(bot, true))
-        return CoaRole::Tank;
-    return PlayerbotAI::IsHeal(bot, true) ? CoaRole::Heal : CoaRole::Dps;
+    return GetWcrRole(bot);
 }
 
 CoaRole RoleOfMember(Player* player)
@@ -730,20 +729,9 @@ CoaRole RoleOfMember(Player* player)
 
 bool ClassCanPlay(uint8 classId, CoaRole role)
 {
-    if (!IsStockClass(classId))
-        return IsAscensionCustomClassId(classId) && !SpecializationsByRole(classId)[uint8(role)].empty();
-
-    switch (role)
-    {
-        case CoaRole::Tank:
-            return classId == CLASS_WARRIOR || classId == CLASS_PALADIN || classId == CLASS_DEATH_KNIGHT ||
-                   classId == CLASS_DRUID;
-        case CoaRole::Heal:
-            return classId == CLASS_PRIEST || classId == CLASS_PALADIN || classId == CLASS_SHAMAN ||
-                   classId == CLASS_DRUID;
-        default:
-            return true;
-    }
+    if (IsRebornRealm())
+        return WcrClassCanPlay(classId, role);
+    return IsAscensionCustomClassId(classId) && !SpecializationsByRole(classId)[uint8(role)].empty();
 }
 
 bool FitsRole(Player* bot, CoaRole role)
@@ -768,30 +756,14 @@ std::string ClassName(uint8 classId)
 std::string SpecName(Player* bot)
 {
     if (IsStockClass(bot->getClass()))
-        return AiFactory::GetPlayerSpecName(bot);
+        return GetWcrSpecName(bot->getClass(), GetWcrSpec(bot));
     return std::to_string(GetAscensionActiveSpecialization(bot));
 }
 
-// Tries the premade specs of the class in a random order, PvE ones first, until the bot plays the role. Under
-// level 10 the bot has no talent point and keeps the role of its class.
+// Moves the bot to a tree of the role and takes that tree's build at its level.
 bool SwitchStockSpec(Player* bot, CoaRole role)
 {
-    uint8 const classId = bot->getClass();
-    std::vector<int> specs;
-    for (int specNo = 0; specNo < MAX_SPECNO; ++specNo)
-        if (!sPlayerbotAIConfig.premadeSpecName[classId][specNo].empty())
-            specs.push_back(specNo);
-    std::shuffle(specs.begin(), specs.end(), std::mt19937(urand(0, 0x7FFFFFFF)));
-    std::stable_partition(specs.begin(), specs.end(), [classId](int specNo)
-        { return sPlayerbotAIConfig.premadeSpecName[classId][specNo].find("pvp") == std::string::npos; });
-
-    for (int specNo : specs)
-    {
-        PlayerbotFactory::InitTalentsBySpecNo(bot, specNo, true);
-        if (StockRole(bot) == role)
-            return true;
-    }
-    return false;
+    return SwitchWcrRole(bot, role);
 }
 }  // namespace
 
@@ -842,10 +814,6 @@ Player* FindCoaRecruit(Player* master, CoaRole role, uint8 classId, std::set<Obj
         bool const fits = FitsRole(bot, role);
         if (!fits && !ClassCanPlay(bot->getClass(), role))
             continue;
-        // Without a talent point, at its level and at the master's, a stock class cannot change its role.
-        if (!fits && IsStockClass(bot->getClass()) && bot->GetLevel() < 10 && master->GetLevel() < 10)
-            continue;
-
         bool const sameMap = bot->GetMap() == master->GetMap();
         float const distance = sameMap ? master->GetDistance(bot) : 0.0f;
         // A bot close to the master's level needs no rebuild below, and keeps its own gear.
@@ -915,6 +883,20 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
     // out of the queue (Server Manager, 11/10). Under that line the bot is rebuilt at the master's level too, and so
     // is one under a master at the realm's level cap: a level 58 or 59 bot kept the group out of the end-game
     // dungeons the finder only opens to everyone at the cap.
+    // A Warcraft Reborn bot changes tree first: a rebuild below then gears it for that tree, and one not rebuilt only
+    // takes what suits its new role better.
+    bool const switchedTree = !chosenFits && IsStockClass(chosen->getClass());
+    if (switchedTree)
+    {
+        if (!SwitchStockSpec(chosen, role))
+        {
+            message = "Could not give " + chosen->GetName() + " talents to play " + RoleName(role) + ".";
+            return false;
+        }
+        chosenFits = true;
+    }
+    bool rebuilt = false;
+
     bool const blocksFinder = (master->GetLevel() >= 15 && chosen->GetLevel() < 15) ||
                               (master->GetLevel() >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) &&
                                chosen->GetLevel() < master->GetLevel());
@@ -924,6 +906,7 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
         sRandomPlayerbotMgr.SetValue(chosen, "level", level);
         PlayerbotFactory factory(chosen, level);
         factory.Randomize(false);
+        rebuilt = true;
         // The rebuild picks a specialization of its own: whether it still plays the role is
         // decided below, on what it holds now.
         chosenFits = FitsRole(chosen, role);
@@ -938,19 +921,20 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
         return false;
     }
 
-    if (!chosenFits && IsStockClass(chosen->getClass()))
+    if (IsStockClass(chosen->getClass()))
     {
-        if (!SwitchStockSpec(chosen, role))
+        if (!chosenFits)
         {
             message = "Could not give " + chosen->GetName() + " talents to play " + RoleName(role) + ".";
             return false;
         }
-
-        PlayerbotFactory factory(chosen, chosen->GetLevel());
-        factory.InitGlyphs(false);
-        factory.InitEquipment(false);
-        if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(chosen))
-            botAI->ResetStrategies();
+        if (switchedTree)
+        {
+            if (!rebuilt)
+                PlayerbotFactory(chosen, chosen->GetLevel()).InitEquipment(true);
+            if (PlayerbotAI* botAI = GET_PLAYERBOT_AI(chosen))
+                botAI->ResetStrategies();
+        }
     }
     else if (!chosenFits)
     {
@@ -1373,25 +1357,25 @@ std::string OfferText(Player* bot, CoaRole role)
         case CoaRole::Heal:
             lines = {
                 "Healer here! Level " + level + " " + className + " (" + specName + "), ready to go. Invite me if you need heals!",
-                className + " healer, level " + level + ". Mana full, bandages packed. Invite me!",
+                className + " healer, Level " + level + ". Mana full, bandages packed. Invite me!",
                 "Level " + level + " " + specName + " " + className + " looking for a group. I heal, I'll keep your tank alive.",
                 "Need heals? Level " + level + " " + className + " (" + specName + ") at your service. Just invite me.",
             };
             break;
         case CoaRole::Tank:
             lines = {
-                "Tank " + className + " level " + level + " (" + specName + ") available if you need one!",
+                "Tank " + className + " Level " + level + " (" + specName + ") available if you need one!",
                 "Level " + level + " " + className + " tank here, I'll hold the aggro. Invite me.",
-                specName + " " + className + ", level " + level + ". Point me at the boss and invite me!",
+                specName + " " + className + ", Level " + level + ". Point me at the boss and invite me!",
                 "Need a tank? Level " + level + " " + className + " ready to pull. Send me an invite.",
             };
             break;
         default:
             lines = {
-                "DPS " + className + " level " + level + " (" + specName + ") ready to go!",
+                "DPS " + className + " Level " + level + " (" + specName + ") ready to go!",
                 "Level " + level + " " + className + " here, I hit things hard. Invite me.",
-                specName + " " + className + ", level " + level + ", looking for a group. Invite me!",
-                "Need damage? Level " + level + " " + className + " at your service.",
+                specName + " " + className + ", Level " + level + ", looking for a group. Invite me!",
+                "Need damage? Level " + level + " " + className + " at your service, invite me.",
             };
             break;
     }
