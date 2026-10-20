@@ -19,6 +19,7 @@
 #include "CellImpl.h"
 #include "Config.h"
 #include "CoaSpecialization.h"
+#include "CoaWildcard.h"
 #include "GameObject.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
@@ -65,7 +66,8 @@ namespace
         return found->second;
     }
 
-    bool IsCoaBot(Player* bot) { return bot && IsAscensionCustomClassId(bot->getClass()); }
+    // A Wildcard Hero fights with the CoA logic too.
+    bool IsCoaBot(Player* bot) { return bot && (IsAscensionCustomClassId(bot->getClass()) || IsWildcardHeroBot(bot)); }
 
     bool Healer(Player* player) { return PlayerbotAI::IsHeal(player, true); }
     bool Tank(Player* player) { return PlayerbotAI::IsTank(player, true); }
