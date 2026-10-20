@@ -80,6 +80,10 @@ std::vector<NextAction> UnholyDKStrategy::getDefaultActions()
         NextAction("summon gargoyle", ACTION_DEFAULT + 0.4f),
         NextAction("horn of winter", ACTION_DEFAULT + 0.2f),
         NextAction("death coil", ACTION_DEFAULT + 0.1f),
+        // Runes left over: they turn into runic power for Death Coil.
+        NextAction("plague strike", ACTION_DEFAULT + 0.08f),
+        NextAction("icy touch", ACTION_DEFAULT + 0.07f),
+        NextAction("blood strike", ACTION_DEFAULT + 0.06f),
         NextAction("melee", ACTION_DEFAULT)
     };
 }

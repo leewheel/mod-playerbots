@@ -91,6 +91,10 @@ std::vector<NextAction> FrostDKStrategy::getDefaultActions()
     return {
         NextAction("obliterate", ACTION_DEFAULT + 0.7f),
         NextAction("frost strike", ACTION_DEFAULT + 0.4f),
+        // Runes left over (no Obliterate before level 61 on Warcraft Reborn): they turn into runic power.
+        NextAction("icy touch", ACTION_DEFAULT + 0.3f),
+        NextAction("plague strike", ACTION_DEFAULT + 0.25f),
+        NextAction("blood strike", ACTION_DEFAULT + 0.15f),
         NextAction("horn of winter", ACTION_DEFAULT + 0.1f),
         NextAction("melee", ACTION_DEFAULT)
     };
