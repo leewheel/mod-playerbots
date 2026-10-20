@@ -5,6 +5,7 @@
  */
 
 #include "DruidShapeshiftActions.h"
+#include "CoaReborn.h"
 #include "Playerbots.h"
 
 bool CastBearFormAction::isUseful()
@@ -27,7 +28,7 @@ bool CastTravelFormAction::isUseful()
     bool firstmount = bot->GetLevel() >= 20;
 
     // useful if no mount or with wsg flag
-    return !bot->IsMounted() && (!firstmount || (bot->HasAura(23333) || bot->HasAura(23335) || bot->HasAura(34976))) &&
+    return !bot->IsMounted() && (!firstmount || (HasAuraOrTwin(bot, 23333) || HasAuraOrTwin(bot, 23335) || HasAuraOrTwin(bot, 34976))) &&
            !botAI->HasAura("dash", bot);
 }
 
@@ -55,5 +56,5 @@ bool CastCancelDruidAction::isUseful() { return bot->HasAura(auraId); }
 bool CastTreeFormAction::isUseful()
 {
     constexpr uint32 SPELL_TREE_OF_LIFE = 33891;
-    return GetTarget() && CastSpellAction::isUseful() && !bot->HasAura(SPELL_TREE_OF_LIFE);
+    return GetTarget() && CastSpellAction::isUseful() && !HasAuraOrTwin(bot, SPELL_TREE_OF_LIFE);
 }

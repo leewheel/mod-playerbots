@@ -5,6 +5,7 @@
  */
 
 #include "WarlockActions.h"
+#include "CoaReborn.h"
 #include "Event.h"
 #include "Item.h"
 #include "ObjectGuid.h"
@@ -100,7 +101,7 @@ bool CastImmolationAuraAction::isUseful()
     if (!target)
         return false;
 
-    if (!bot->HasAura(47241))  // 47241 is Metamorphosis spell ID (WotLK)
+    if (!HasAuraOrTwin(bot, 47241))  // 47241 is Metamorphosis spell ID (WotLK)
         return false;
 
     return bot->IsWithinCombatRange(target, 5.0f);  // 5 yard AoE radius

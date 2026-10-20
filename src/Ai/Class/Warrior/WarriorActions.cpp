@@ -5,6 +5,7 @@
  */
 
 #include "WarriorActions.h"
+#include "CoaReborn.h"
 #include "AiFactory.h"
 #include "Playerbots.h"
 
@@ -162,8 +163,8 @@ bool CastVigilanceAction::Execute(Event /*event*/)
 
 bool CastRetaliationAction::isUseful()
 {
-    if (!bot->HasSpell(SPELL_RETALIATION) || bot->HasSpellCooldown(SPELL_RETALIATION) ||
-        bot->HasAura(SPELL_RETALIATION))
+    if (!KnowsSpellOrTwin(bot, SPELL_RETALIATION) || bot->HasSpellCooldown(RebornSpellId(SPELL_RETALIATION)) ||
+        HasAuraOrTwin(bot, SPELL_RETALIATION))
     {
         return false;
     }
@@ -217,9 +218,9 @@ Unit* CastShatteringThrowAction::GetTarget()
             continue;
 
         if (bot->IsWithinDistInMap(enemy, 25.0f) &&
-            (enemy->HasAura(SPELL_DIVINE_SHIELD) ||
-             enemy->HasAura(SPELL_ICE_BLOCK) ||
-             enemy->HasAura(SPELL_BLESSING_OF_PROTECTION)))
+            (HasAuraOrTwin(enemy, SPELL_DIVINE_SHIELD) ||
+             HasAuraOrTwin(enemy, SPELL_ICE_BLOCK) ||
+             HasAuraOrTwin(enemy, SPELL_BLESSING_OF_PROTECTION)))
         {
             return enemy;
         }
@@ -239,7 +240,7 @@ bool CastShatteringThrowAction::Execute(Event /*event*/)
 
 bool CastShatteringThrowAction::isUseful()
 {
-    if (!bot->HasSpell(SPELL_SHATTERING_THROW) || bot->HasSpellCooldown(SPELL_SHATTERING_THROW))
+    if (!KnowsSpellOrTwin(bot, SPELL_SHATTERING_THROW) || bot->HasSpellCooldown(RebornSpellId(SPELL_SHATTERING_THROW)))
         return false;
 
     GuidVector enemies = AI_VALUE(GuidVector, "possible targets");
@@ -251,9 +252,9 @@ bool CastShatteringThrowAction::isUseful()
             continue;
 
         if (bot->IsWithinDistInMap(enemy, 25.0f) &&
-            (enemy->HasAura(SPELL_DIVINE_SHIELD) ||
-             enemy->HasAura(SPELL_ICE_BLOCK) ||
-             enemy->HasAura(SPELL_BLESSING_OF_PROTECTION)))
+            (HasAuraOrTwin(enemy, SPELL_DIVINE_SHIELD) ||
+             HasAuraOrTwin(enemy, SPELL_ICE_BLOCK) ||
+             HasAuraOrTwin(enemy, SPELL_BLESSING_OF_PROTECTION)))
         {
             return true;
         }

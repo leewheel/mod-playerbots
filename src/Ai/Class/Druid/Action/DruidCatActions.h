@@ -8,6 +8,7 @@
 #define PLAYERBOTS_DRUIDCATACTIONS_H
 
 #include "GenericSpellActions.h"
+#include "CoaReborn.h"
 #include "ReachTargetActions.h"
 
 constexpr uint32 SPELL_POUNCE_RANK_1 = 9005;
@@ -68,7 +69,7 @@ public:
     bool isUseful() override
     {
         // Block Claw once Pounce is learned; Claw remains available as the stealth opener before then.
-        if (botAI->HasAura("prowl", bot) && bot->HasSpell(SPELL_POUNCE_RANK_1))
+        if (botAI->HasAura("prowl", bot) && KnowsSpellOrTwin(bot, SPELL_POUNCE_RANK_1))
             return false;
 
         return CastMeleeSpellAction::isUseful();
@@ -137,7 +138,7 @@ public:
 
     bool isUseful() override
     {
-        if (botAI->HasAura("prowl", bot) && bot->HasSpell(SPELL_RAVAGE_RANK_1))
+        if (botAI->HasAura("prowl", bot) && KnowsSpellOrTwin(bot, SPELL_RAVAGE_RANK_1))
             return false;
 
         return CastMeleeSpellAction::isUseful();

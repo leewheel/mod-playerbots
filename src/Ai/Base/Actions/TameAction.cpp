@@ -5,6 +5,7 @@
  */
 
 #include "TameAction.h"
+#include "CoaReborn.h"
 #include "DBCStructure.h"
 #include "ObjectMgr.h"
 #include "Pet.h"
@@ -29,7 +30,7 @@ bool IsExoticPet(CreatureTemplate const* creature)
 bool HasBeastMastery(Player* bot)
 {
     // Beast Mastery talent aura ID for WotLK is 53270
-    return bot->HasAura(53270);
+    return HasAuraOrTwin(bot, 53270);
 }
 
 bool TameAction::Execute(Event event)
@@ -424,7 +425,7 @@ bool TameAction::RenamePet(std::string const& newName)
     // Remove the current pet and (re-)cast Call Pet spell if the bot is a hunter
     bot->RemovePet(nullptr, PET_SAVE_AS_CURRENT, true);
     constexpr uint32 SPELL_CALL_PET = 883;
-    if (bot->getClass() == CLASS_HUNTER && bot->HasSpell(SPELL_CALL_PET))
+    if (bot->getClass() == CLASS_HUNTER && KnowsSpellOrTwin(bot, SPELL_CALL_PET))
         bot->CastSpell(bot, SPELL_CALL_PET, true);
 
     return true;

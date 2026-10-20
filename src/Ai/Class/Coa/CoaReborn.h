@@ -51,6 +51,11 @@ void LearnRebornBasics(Player* bot);
 // Forgets the stock spells whose Reborn copy the bot knows. Returns how many went.
 uint32 ForgetStockTwins(Player* bot);
 
+// A Feral Druid fighting in Cat Form or in Bear Form: from its talents (Cat Form known, Thick Hide), or for a Reborn
+// bot from the role of its tree.
+bool PlaysCatDruid(Player const* bot, uint32 catForm, uint32 thickHide);
+bool PlaysBearDruid(Player const* bot, uint32 thickHide);
+
 enum class WcrRole : uint8
 {
     Tank,

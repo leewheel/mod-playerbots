@@ -5,6 +5,7 @@
  */
 
 #include "PaladinGreaterBlessingAction.h"
+#include "CoaReborn.h"
 #include "AiFactory.h"
 #include "AiObjectContext.h"
 #include "Event.h"
@@ -71,13 +72,13 @@ namespace
             return PALADIN_BLESSING_CAPABILITY_NONE;
 
         uint8 capabilities = PALADIN_BLESSING_CAPABILITY_NONE;
-        if (player->HasAura(SPELL_IMPROVED_MIGHT_R1) ||
-            player->HasAura(SPELL_IMPROVED_MIGHT_R2))
+        if (HasAuraOrTwin(player, SPELL_IMPROVED_MIGHT_R1) ||
+            HasAuraOrTwin(player, SPELL_IMPROVED_MIGHT_R2))
         {
             capabilities |= PALADIN_BLESSING_CAPABILITY_IMPROVED_MIGHT;
         }
-        if (player->HasAura(SPELL_IMPROVED_WISDOM_R1) ||
-            player->HasAura(SPELL_IMPROVED_WISDOM_R2))
+        if (HasAuraOrTwin(player, SPELL_IMPROVED_WISDOM_R1) ||
+            HasAuraOrTwin(player, SPELL_IMPROVED_WISDOM_R2))
         {
             capabilities |= PALADIN_BLESSING_CAPABILITY_IMPROVED_WISDOM;
         }
@@ -935,15 +936,15 @@ static int32 GetBlessingCastStrength(Player* caster, BlessingType type, uint32 s
     switch (category)
     {
         case BASE_MIGHT:
-            if (caster->HasAura(SPELL_IMPROVED_MIGHT_R2))
+            if (HasAuraOrTwin(caster, SPELL_IMPROVED_MIGHT_R2))
                 return amount * 125 / 100;
-            if (caster->HasAura(SPELL_IMPROVED_MIGHT_R1))
+            if (HasAuraOrTwin(caster, SPELL_IMPROVED_MIGHT_R1))
                 return amount * 112 / 100;
             break;
         case BASE_WISDOM:
-            if (caster->HasAura(SPELL_IMPROVED_WISDOM_R2))
+            if (HasAuraOrTwin(caster, SPELL_IMPROVED_WISDOM_R2))
                 return amount * 120 / 100;
-            if (caster->HasAura(SPELL_IMPROVED_WISDOM_R1))
+            if (HasAuraOrTwin(caster, SPELL_IMPROVED_WISDOM_R1))
                 return amount * 110 / 100;
             break;
         default:

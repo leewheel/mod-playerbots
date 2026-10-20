@@ -5565,7 +5565,7 @@ uint32 PlayerbotAI::GetEquipGearScore(Player* player)
     if (main)
     {
         bool twoHand = (main->GetTemplate()->InventoryType == INVTYPE_2HWEAPON);
-        if (twoHand && !player->HasAura(SPELL_TITAN_GRIP))
+        if (twoHand && !HasAuraOrTwin(player, SPELL_TITAN_GRIP))
             ignoreOffhand = true;  // classic 2-hander
     }
     else if (!off)  // both hands empty
@@ -5610,7 +5610,7 @@ uint32 PlayerbotAI::GetEquipGearScore(Player* player)
             // If character is not warfury and have 2 hand weapon equipped, main hand will be counted twice
             if (i == SLOT_MAIN_HAND)
                 mh_type = item->GetTemplate()->InventoryType;
-            if (!player->HasAura(SPELL_TITAN_GRIP) && mh_type == INVTYPE_2HWEAPON && i == SLOT_MAIN_HAND)
+            if (!HasAuraOrTwin(player, SPELL_TITAN_GRIP) && mh_type == INVTYPE_2HWEAPON && i == SLOT_MAIN_HAND)
                 sum += item->GetTemplate()->ItemLevel;
         }
     }

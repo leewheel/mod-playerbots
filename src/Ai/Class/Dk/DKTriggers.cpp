@@ -5,6 +5,7 @@
  */
 
 #include "DKTriggers.h"
+#include "CoaReborn.h"
 #include "GenericTriggers.h"
 #include "Playerbots.h"
 #include "SharedDefines.h"
@@ -23,7 +24,7 @@ bool PestilenceGlyphTrigger::IsActive()
     {
         return false;
     }
-    if (!bot->HasAura(63334))
+    if (!HasAuraOrTwin(bot, 63334))
     {
         return false;
     }
@@ -64,7 +65,7 @@ bool NoRuneTrigger::IsActive()
 
 bool DesolationTrigger::IsActive()
 {
-    return bot->HasAura(66817) && BuffTrigger::IsActive();
+    return HasAuraOrTwin(bot, 66817) && BuffTrigger::IsActive();
 }
 
 bool DeathAndDecayCooldownTrigger::IsActive()

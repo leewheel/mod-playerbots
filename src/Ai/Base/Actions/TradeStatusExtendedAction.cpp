@@ -5,6 +5,7 @@
  */
 
 #include "TradeStatusExtendedAction.h"
+#include "CoaReborn.h"
 #include "Event.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -74,7 +75,7 @@ bool TradeStatusExtendedAction::Execute(Event event)
             }
 
             constexpr uint32 SPELL_PICK_LOCK = 1804;
-            if (bot->getClass() == CLASS_ROGUE && bot->HasSpell(SPELL_PICK_LOCK) && lockbox->IsLocked())
+            if (bot->getClass() == CLASS_ROGUE && KnowsSpellOrTwin(bot, SPELL_PICK_LOCK) && lockbox->IsLocked())
             {
                 // botAI->CastSpell(SPELL_PICK_LOCK, bot, lockbox); // Attempt to cast Pick Lock on the lockbox
                 botAI->DoSpecificAction("unlock traded item");

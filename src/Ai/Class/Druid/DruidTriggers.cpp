@@ -5,6 +5,7 @@
  */
 
 #include "DruidTriggers.h"
+#include "CoaReborn.h"
 #include "DynamicObject.h"
 #include "Player.h"
 #include "Playerbots.h"
@@ -33,7 +34,7 @@ bool BearFormTrigger::IsActive() { return !botAI->HasAnyAuraOf(bot, "bear form",
 bool TreeFormTrigger::IsActive()
 {
     constexpr uint32 SPELL_TREE_OF_LIFE = 33891;
-    return !bot->HasAura(SPELL_TREE_OF_LIFE);
+    return !HasAuraOrTwin(bot, SPELL_TREE_OF_LIFE);
 }
 
 bool CatFormTrigger::IsActive() { return !botAI->HasAura("cat form", bot); }

@@ -5,6 +5,7 @@
  */
 
 #include "WarriorTriggers.h"
+#include "CoaReborn.h"
 #include "Playerbots.h"
 
 namespace
@@ -25,7 +26,7 @@ bool BloodrageBuffTrigger::IsActive()
 
 bool VigilanceTrigger::IsActive()
 {
-    if (!bot->HasSpell(SPELL_VIGILANCE))
+    if (!KnowsSpellOrTwin(bot, SPELL_VIGILANCE))
         return false;
 
     Group* group = bot->GetGroup();
@@ -75,7 +76,7 @@ bool VigilanceTrigger::IsActive()
 
 bool ShatteringThrowTrigger::IsActive()
 {
-    if (!bot->HasSpell(SPELL_SHATTERING_THROW) || bot->HasSpellCooldown(SPELL_SHATTERING_THROW))
+    if (!KnowsSpellOrTwin(bot, SPELL_SHATTERING_THROW) || bot->HasSpellCooldown(RebornSpellId(SPELL_SHATTERING_THROW)))
         return false;
 
     GuidVector enemies = AI_VALUE(GuidVector, "possible targets");
@@ -87,9 +88,9 @@ bool ShatteringThrowTrigger::IsActive()
             continue;
 
         if (bot->IsWithinDistInMap(enemy, 25.0f) &&
-            (enemy->HasAura(SPELL_DIVINE_SHIELD) ||
-             enemy->HasAura(SPELL_ICE_BLOCK) ||
-             enemy->HasAura(SPELL_BLESSING_OF_PROTECTION)))
+            (HasAuraOrTwin(enemy, SPELL_DIVINE_SHIELD) ||
+             HasAuraOrTwin(enemy, SPELL_ICE_BLOCK) ||
+             HasAuraOrTwin(enemy, SPELL_BLESSING_OF_PROTECTION)))
         {
             return true;
         }

@@ -5,6 +5,7 @@
  */
 
 #include "FeralDruidStrategy.h"
+#include "CoaReborn.h"
 #include "Playerbots.h"
 
 class FeralDruidStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
@@ -95,7 +96,7 @@ void FeralChargeDruidStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     Player* bot = botAI->GetBot();
 
-    if (bot->HasSpell(SPELL_CAT_FORM) && !bot->HasAura(AURA_THICK_HIDE))
+    if (PlaysCatDruid(bot, SPELL_CAT_FORM, AURA_THICK_HIDE))
         triggers.push_back(new TriggerNode(
             "enemy out of melee", { NextAction("feral charge - cat", 29.0f) }));
     else

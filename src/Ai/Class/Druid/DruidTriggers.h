@@ -8,6 +8,7 @@
 #define PLAYERBOTS_DRUIDTRIGGERS_H
 
 #include "CureTriggers.h"
+#include "CoaReborn.h"
 #include "GenericTriggers.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -139,7 +140,7 @@ public:
             return false;
 
         // Cat with Omen of Clarity: spam to fish for Clearcasting procs
-        if (bot->HasAura(AURA_OMEN_OF_CLARITY))
+        if (HasAuraOrTwin(bot, AURA_OMEN_OF_CLARITY))
         {
             Unit* target = GetTarget();
             return target && target->IsAlive() && target->IsInWorld();

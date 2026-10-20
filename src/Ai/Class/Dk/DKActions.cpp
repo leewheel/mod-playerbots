@@ -5,6 +5,7 @@
  */
 
 #include "DKActions.h"
+#include "CoaReborn.h"
 #include "Duration.h"
 #include "GenericSpellActions.h"
 #include "Playerbots.h"
@@ -54,7 +55,7 @@ Unit* CastHysteriaAction::GetTarget()
     Group* group = bot->GetGroup();
     if (!group)
     {
-        if (!bot->HasAura(49016))
+        if (!HasAuraOrTwin(bot, 49016))
             return bot;
         return nullptr;
     }
@@ -72,7 +73,7 @@ Unit* CastHysteriaAction::GetTarget()
             continue;
 
         // Skip if already has hysteria
-        if (member->HasAura(49016))
+        if (HasAuraOrTwin(member, 49016))
             continue;
 
         // Priority 1: Melee DPS
@@ -95,7 +96,7 @@ Unit* CastHysteriaAction::GetTarget()
         return tank;
 
     // Fallback to self if no hysteria
-    if (!bot->HasAura(49016))
+    if (!HasAuraOrTwin(bot, 49016))
         return bot;
 
     return nullptr;

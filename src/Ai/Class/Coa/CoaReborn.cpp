@@ -351,6 +351,20 @@ bool HasAuraOrTwin(Unit const* unit, uint32 spellId, ObjectGuid caster)
     return twin != spellId && unit->HasAura(twin, caster);
 }
 
+bool PlaysCatDruid(Player const* bot, uint32 catForm, uint32 thickHide)
+{
+    if (IsRebornBot(bot))
+        return GetWcrRole(bot) != CoaRole::Tank;
+    return bot->HasSpell(catForm) && !bot->HasAura(thickHide);
+}
+
+bool PlaysBearDruid(Player const* bot, uint32 thickHide)
+{
+    if (IsRebornBot(bot))
+        return GetWcrRole(bot) == CoaRole::Tank;
+    return bot->HasAura(thickHide);
+}
+
 Trainer::Trainer const* RebornTrainerFor(Trainer::Trainer const* stock, Player const* player)
 {
     if (!stock || !IsRebornBot(player) || stock->GetTrainerType() != Trainer::Type::Class ||

@@ -5,6 +5,7 @@
  */
 
 #include "DruidActions.h"
+#include "CoaReborn.h"
 #include "AoeValues.h"
 #include "Event.h"
 #include "Playerbots.h"
@@ -75,20 +76,20 @@ bool CastWrathAction::isUseful()
 
     // --- Update Solar Eclipse tracking ---
     // Wrath is selected during Solar Eclipse (eclipse trigger at 20.0f), so we reliably see it here.
-    if (bot->HasAura(SPELL_ECLIPSE_SOLAR) && !solarTime)
+    if (HasAuraOrTwin(bot, SPELL_ECLIPSE_SOLAR) && !solarTime)
         context->GetValue<time_t>("eclipse solar proc time")->Set(now);
     // Lunar procced — Solar fishing window is over, new cycle begins
-    if (bot->HasAura(SPELL_ECLIPSE_LUNAR) && solarTime)
+    if (HasAuraOrTwin(bot, SPELL_ECLIPSE_LUNAR) && solarTime)
         context->GetValue<time_t>("eclipse solar proc time")->Set(0);
     // 30 s cooldown window expired
     if (solarTime && (now - solarTime) >= 30)
         context->GetValue<time_t>("eclipse solar proc time")->Set(0);
 
     // --- Update Lunar Eclipse tracking (belt-and-suspenders in case Starfire isn't evaluated) ---
-    if (bot->HasAura(SPELL_ECLIPSE_LUNAR) && !lunarTime)
+    if (HasAuraOrTwin(bot, SPELL_ECLIPSE_LUNAR) && !lunarTime)
         context->GetValue<time_t>("eclipse lunar proc time")->Set(now);
     // Solar procced — Lunar fishing window is over
-    if (bot->HasAura(SPELL_ECLIPSE_SOLAR) && lunarTime)
+    if (HasAuraOrTwin(bot, SPELL_ECLIPSE_SOLAR) && lunarTime)
         context->GetValue<time_t>("eclipse lunar proc time")->Set(0);
     if (lunarTime && (now - lunarTime) >= 30)
         context->GetValue<time_t>("eclipse lunar proc time")->Set(0);
@@ -108,20 +109,20 @@ bool CastStarfireAction::isUseful()
 
     // --- Update Lunar Eclipse tracking ---
     // Starfire is selected during Lunar Eclipse (eclipse trigger at 20.0f), so we reliably see it here.
-    if (bot->HasAura(SPELL_ECLIPSE_LUNAR) && !lunarTime)
+    if (HasAuraOrTwin(bot, SPELL_ECLIPSE_LUNAR) && !lunarTime)
         context->GetValue<time_t>("eclipse lunar proc time")->Set(now);
     // Solar procced — Lunar fishing window is over, new cycle begins
-    if (bot->HasAura(SPELL_ECLIPSE_SOLAR) && lunarTime)
+    if (HasAuraOrTwin(bot, SPELL_ECLIPSE_SOLAR) && lunarTime)
         context->GetValue<time_t>("eclipse lunar proc time")->Set(0);
     // 30 s cooldown window expired
     if (lunarTime && (now - lunarTime) >= 30)
         context->GetValue<time_t>("eclipse lunar proc time")->Set(0);
 
     // --- Update Solar Eclipse tracking (belt-and-suspenders in case Wrath isn't evaluated) ---
-    if (bot->HasAura(SPELL_ECLIPSE_SOLAR) && !solarTime)
+    if (HasAuraOrTwin(bot, SPELL_ECLIPSE_SOLAR) && !solarTime)
         context->GetValue<time_t>("eclipse solar proc time")->Set(now);
     // Lunar procced — Solar fishing window is over
-    if (bot->HasAura(SPELL_ECLIPSE_LUNAR) && solarTime)
+    if (HasAuraOrTwin(bot, SPELL_ECLIPSE_LUNAR) && solarTime)
         context->GetValue<time_t>("eclipse solar proc time")->Set(0);
     if (solarTime && (now - solarTime) >= 30)
         context->GetValue<time_t>("eclipse solar proc time")->Set(0);

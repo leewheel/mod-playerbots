@@ -5,6 +5,7 @@
  */
 
 #include "MageTriggers.h"
+#include "CoaReborn.h"
 #include "DynamicObject.h"
 #include "Player.h"
 #include "PlayerbotAIConfig.h"
@@ -76,7 +77,7 @@ bool FrostbiteOnTargetTrigger::IsActive()
 bool NoFocusMagicTrigger::IsActive()
 {
     constexpr uint32 SPELL_FOCUS_MAGIC = 54646;
-    if (!bot->HasSpell(SPELL_FOCUS_MAGIC))
+    if (!KnowsSpellOrTwin(bot, SPELL_FOCUS_MAGIC))
         return false;
 
     Group* group = bot->GetGroup();
@@ -89,7 +90,7 @@ bool NoFocusMagicTrigger::IsActive()
         if (!member || member == bot || !member->IsAlive())
             continue;
 
-        if (member->HasAura(SPELL_FOCUS_MAGIC, bot->GetGUID()))
+        if (HasAuraOrTwin(member, SPELL_FOCUS_MAGIC, bot->GetGUID()))
             return false;
     }
     return true;
@@ -98,7 +99,7 @@ bool NoFocusMagicTrigger::IsActive()
 bool DeepFreezeCooldownTrigger::IsActive()
 {
     constexpr uint32 SPELL_DEEP_FREEZE = 44572;
-    return !bot->HasSpell(SPELL_DEEP_FREEZE) ||
+    return !KnowsSpellOrTwin(bot, SPELL_DEEP_FREEZE) ||
            SpellCooldownTrigger::IsActive();
 }
 

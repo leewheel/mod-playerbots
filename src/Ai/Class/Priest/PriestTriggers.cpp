@@ -5,6 +5,7 @@
  */
 
 #include "PriestTriggers.h"
+#include "CoaReborn.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
@@ -45,7 +46,7 @@ bool FearWardOnMainTankTrigger::IsActive()
 
 bool ShadowformTrigger::IsActive() { return !botAI->HasAura("shadowform", bot); }
 
-bool ShadowfiendTrigger::IsActive() { return BoostTrigger::IsActive() && !bot->HasSpellCooldown(34433); }
+bool ShadowfiendTrigger::IsActive() { return BoostTrigger::IsActive() && !bot->HasSpellCooldown(RebornSpellId(34433)); }
 
 BindingHealTrigger::BindingHealTrigger(PlayerbotAI* botAI)
     : PartyMemberLowHealthTrigger(botAI, "binding heal", sPlayerbotAIConfig.lowHealth, 0)

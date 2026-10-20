@@ -5,6 +5,7 @@
  */
 
 #include "MageActions.h"
+#include "CoaReborn.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
@@ -121,7 +122,7 @@ Unit* CastFocusMagicOnPartyAction::GetTarget()
     {
         Player* member = ref->GetSource();
         if (!member || member == bot || !member->IsAlive() || member->GetMap() != bot->GetMap() ||
-            bot->GetDistance(member) > sPlayerbotAIConfig.spellDistance || member->HasAura(54646))  // Focus Magic
+            bot->GetDistance(member) > sPlayerbotAIConfig.spellDistance || HasAuraOrTwin(member, 54646))  // Focus Magic
         {
             continue;
         }

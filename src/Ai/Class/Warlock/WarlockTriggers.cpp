@@ -5,6 +5,7 @@
  */
 
 #include "WarlockTriggers.h"
+#include "CoaReborn.h"
 #include "GenericTriggers.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -108,7 +109,7 @@ bool LifeTapTrigger::IsActive()
 bool LifeTapGlyphBuffTrigger::IsActive()
 {
     constexpr uint32 SPELL_LIFE_TAP_GLYPH = 63320;
-    return bot->HasAura(SPELL_LIFE_TAP_GLYPH) && BuffTrigger::IsActive();
+    return HasAuraOrTwin(bot, SPELL_LIFE_TAP_GLYPH) && BuffTrigger::IsActive();
 }
 
 // Checks if the target has a conflicting debuff that is equal to Curse of the Elements

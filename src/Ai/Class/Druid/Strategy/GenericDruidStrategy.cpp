@@ -5,6 +5,7 @@
  */
 
 #include "GenericDruidStrategy.h"
+#include "CoaReborn.h"
 #include "AiFactory.h"
 #include "FeralDruidStrategy.h"
 #include "Playerbots.h"
@@ -62,7 +63,7 @@ void GenericDruidStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     if (tab == DRUID_TAB_FERAL)
     {
-        if (!bot->HasAura(16931) /*thick hide — bear spec*/)
+        if (!PlaysBearDruid(bot, 16931) /*thick hide — bear spec*/)
         {
             triggers.push_back(new TriggerNode("predator's swiftness and combat party member dead",
                                                { NextAction("rebirth", 29.0f) }));
@@ -125,7 +126,7 @@ void DruidCcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     }
     if (tab == DRUID_TAB_FERAL)
     {
-        if (bot->HasSpell(SPELL_CAT_FORM) && !bot->HasAura(AURA_THICK_HIDE))
+        if (PlaysCatDruid(bot, SPELL_CAT_FORM, AURA_THICK_HIDE))
         {
             triggers.push_back(new TriggerNode(
                 "predator's swiftness and cyclone", { NextAction("cyclone on cc", 42.0f) }));
@@ -181,7 +182,7 @@ void DruidAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         triggers.push_back(new TriggerNode("moonfire on attacker", { NextAction("moonfire on attacker", 5.1f) }));
     }
 
-    if (tab == DRUID_TAB_FERAL && bot->HasSpell(SPELL_CAT_FORM) && !bot->HasAura(AURA_THICK_HIDE))
+    if (tab == DRUID_TAB_FERAL && PlaysCatDruid(bot, SPELL_CAT_FORM, AURA_THICK_HIDE))
     {
         triggers.push_back(new TriggerNode("clearcasting and medium aoe", { NextAction("swipe (cat)", 25.5f) }));
         triggers.push_back(new TriggerNode("medium aoe", { NextAction("swipe (cat)", 25.0f) }));

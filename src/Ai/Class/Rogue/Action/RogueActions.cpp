@@ -5,6 +5,7 @@
  */
 
 #include "RogueActions.h"
+#include "CoaReborn.h"
 #include "Event.h"
 #include "ObjectGuid.h"
 #include "Player.h"
@@ -71,7 +72,7 @@ bool CastEnvenomAction::isUseful()
 bool CastEnvenomAction::isPossible()
 {
     // alternate to eviscerate if talents unlearned
-    return bot->HasAura(SPELL_MASTER_POISONER_RANK_3);
+    return HasAuraOrTwin(bot, SPELL_MASTER_POISONER_RANK_3);
 }
 
 bool CastTricksOfTheTradeOnMainTankAction::isUseful()

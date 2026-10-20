@@ -8,6 +8,7 @@
 #define PLAYERBOTS_HUNTERACTIONS_H
 
 #include "AiObject.h"
+#include "CoaReborn.h"
 #include "Event.h"
 #include "GenericSpellActions.h"
 #include "Unit.h"
@@ -403,7 +404,7 @@ public:
         if (!target)
             return false;
 
-        return !target->HasAura(60053);
+        return !HasAuraOrTwin(target, 60053);
     }
 };
 
@@ -423,7 +424,7 @@ public:
         if (!target)
             return false;
 
-        return !target->HasAura(60052);
+        return !HasAuraOrTwin(target, 60052);
     }
 };
 
@@ -443,7 +444,7 @@ public:
         if (!target)
             return false;
 
-        return !target->HasAura(60051);
+        return !HasAuraOrTwin(target, 60051);
     }
 };
 
@@ -463,7 +464,7 @@ public:
         if (!target)
             return false;
 
-        return !target->HasAura(53301);
+        return !HasAuraOrTwin(target, 53301);
     }
 };
 

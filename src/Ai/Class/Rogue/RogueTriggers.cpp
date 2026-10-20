@@ -5,6 +5,7 @@
  */
 
 #include "RogueTriggers.h"
+#include "CoaReborn.h"
 #include "GenericTriggers.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
@@ -35,7 +36,7 @@ bool UnstealthTrigger::IsActive()
 
 bool StealthTrigger::IsActive()
 {
-    if (bot->HasAura(SPELL_STEALTH) || bot->IsInCombat() || bot->HasSpellCooldown(SPELL_STEALTH))
+    if (HasAuraOrTwin(bot, SPELL_STEALTH) || bot->IsInCombat() || bot->HasSpellCooldown(RebornSpellId(SPELL_STEALTH)))
         return false;
 
     float distance = 30.f;
@@ -71,11 +72,11 @@ bool StealthTrigger::IsActive()
 
 bool SapTrigger::IsPossible() { return bot->GetLevel() > 10 && botAI->HasSpell("sap") && !bot->IsInCombat(); }
 
-bool SprintTrigger::IsPossible() { return bot->HasSpell(SPELL_SPRINT_RANK_1); }
+bool SprintTrigger::IsPossible() { return KnowsSpellOrTwin(bot, SPELL_SPRINT_RANK_1); }
 
 bool SprintTrigger::IsActive()
 {
-    if (bot->HasSpellCooldown(SPELL_SPRINT_RANK_1))
+    if (bot->HasSpellCooldown(RebornSpellId(SPELL_SPRINT_RANK_1)))
         return false;
 
     float distance = botAI->GetMaster() ? 45.0f : 35.0f;
