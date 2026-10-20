@@ -396,7 +396,7 @@ public:
         CastExplosiveShotBaseAction(botAI) {}
     bool Execute(Event /*event*/) override
     {
-        return botAI->CastSpell(60053, GetTarget());
+        return botAI->CastSpell(RebornSpellId(60053), GetTarget());
     }
     bool isUseful() override
     {
@@ -416,7 +416,7 @@ public:
         CastExplosiveShotBaseAction(botAI) {}
     bool Execute(Event /*event*/) override
     {
-        return botAI->CastSpell(60052, GetTarget());
+        return botAI->CastSpell(RebornSpellId(60052), GetTarget());
     }
     bool isUseful() override
     {
@@ -436,7 +436,7 @@ public:
         CastExplosiveShotBaseAction(botAI) {}
     bool Execute(Event /*event*/) override
     {
-        return botAI->CastSpell(60051, GetTarget());
+        return botAI->CastSpell(RebornSpellId(60051), GetTarget());
     }
     bool isUseful() override
     {
@@ -456,7 +456,7 @@ public:
         CastExplosiveShotBaseAction(botAI) {}
     bool Execute(Event /*event*/) override
     {
-        return botAI->CastSpell(53301, GetTarget());
+        return botAI->CastSpell(RebornSpellId(53301), GetTarget());
     }
     bool isUseful() override
     {

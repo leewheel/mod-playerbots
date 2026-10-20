@@ -133,7 +133,7 @@ bool SpiritWalkTrigger::IsActive()
 // Fires the trigger if at least 2 of the totem slots are empty or out of range.
 bool CallOfTheElementsTrigger::IsActive()
 {
-    if (!botAI->CanCastSpell(SPELL_CALL_OF_THE_ELEMENTS, bot, true))
+    if (!botAI->CanCastSpell(RebornSpellId(SPELL_CALL_OF_THE_ELEMENTS), bot, true))
     {
         return false;
     }

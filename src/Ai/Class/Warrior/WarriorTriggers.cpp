@@ -130,7 +130,7 @@ bool BattleShoutTrigger::IsActive()
     float cpBonus = 0.0f;
     for (int rank = 4; rank >= 0; --rank)
     {
-        if (bot->HasAura(SPELL_COMMANDING_PRESENCE_RANKS[rank]))
+        if (HasAuraOrTwin(bot, SPELL_COMMANDING_PRESENCE_RANKS[rank]))
         {
             cpBonus = commandingPresenceBonus[rank];
             break;
