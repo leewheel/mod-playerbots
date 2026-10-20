@@ -16,6 +16,7 @@
 #include "WorldPacket.h"
 #include "CoaSpecialization.h"
 #include "CoaWildcard.h"
+#include "CoaReborn.h"
 #include "AscensionSpecialization.h"
 
 using namespace lfg;
@@ -28,6 +29,17 @@ uint32 LfgJoinAction::GetRoles()
     if (IsCoaBot(bot))
     {
         switch (GetCoaRole(bot))
+        {
+            case CoaRole::Tank: return PLAYER_ROLE_TANK;
+            case CoaRole::Heal: return PLAYER_ROLE_HEALER;
+            default:            return PLAYER_ROLE_DAMAGE;
+        }
+    }
+
+    // A Warcraft Reborn character's role is its build's tree, not stock talents it does not have.
+    if (IsRebornBot(bot))
+    {
+        switch (GetWcrRole(bot))
         {
             case CoaRole::Tank: return PLAYER_ROLE_TANK;
             case CoaRole::Heal: return PLAYER_ROLE_HEALER;

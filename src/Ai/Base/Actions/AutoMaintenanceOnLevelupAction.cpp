@@ -8,6 +8,7 @@
 #include "CoaSpecialization.h"
 #include "CoaSpecialization.h"
 #include "CoaWildcard.h"
+#include "CoaReborn.h"
 #include "BroadcastHelper.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
@@ -38,6 +39,9 @@ bool AutoMaintenanceOnLevelupAction::Execute(Event /*event*/)
     // One Character Advancement point per level from 10.
     ApplyCoaTalents(bot);
     SpendAltBotTalentPoints(bot);
+    // A random Warcraft Reborn bot takes the talents of its tree's build due at its new level.
+    if (IsRebornBot(bot) && sRandomPlayerbotMgr.IsRandomBot(bot))
+        ApplyWcrBuild(bot);
 
     AutoPickTalents();
     AutoLearnSpell();

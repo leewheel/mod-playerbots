@@ -14,6 +14,16 @@
 #include "Playerbots.h"
 #include "ReputationMgr.h"
 #include "Trainer.h"
+#include "CoaReborn.h"
+
+namespace
+{
+// A Warcraft Reborn character is served the Reborn rows of a class trainer, as a player is.
+Trainer::Trainer* TrainerOf(Creature* npc, Player* bot)
+{
+    return IsRebornBot(bot) ? Trainer::GetTrainerFor(npc, bot) : sObjectMgr->GetTrainer(npc->GetEntry());
+}
+}  // namespace
 
 bool TrainerAction::Execute(Event event)
 {
@@ -23,7 +33,7 @@ bool TrainerAction::Execute(Event event)
     if (!target)
         return false;
 
-    Trainer::Trainer* trainer = sObjectMgr->GetTrainer(target->GetEntry());
+    Trainer::Trainer* trainer = TrainerOf(target, bot);
     if (!trainer)
         return false;
 
@@ -60,7 +70,7 @@ bool TrainerAction::isPossible()
     if (!target)
         return false;
 
-    Trainer::Trainer* trainer = sObjectMgr->GetTrainer(target->GetEntry());
+    Trainer::Trainer* trainer = TrainerOf(target, bot);
     if (!trainer)
         return false;
 
@@ -104,7 +114,7 @@ void TrainerAction::Iterate(Creature* creature, bool learnSpells, uint32 spellId
 {
     TellHeader(creature);
 
-    Trainer::Trainer* trainer = sObjectMgr->GetTrainer(creature->GetEntry());
+    Trainer::Trainer* trainer = TrainerOf(creature, bot);
     if (!trainer)
         return;
 

@@ -560,6 +560,20 @@ bool ApplyWcrBuild(Player* bot)
     return applied;
 }
 
+void EnsureWcrBuild(Player* bot)
+{
+    if (!IsRebornBot(bot) || !sRandomPlayerbotMgr.IsRandomBot(bot) || bot->IsInCombat() || !bot->IsAlive())
+        return;
+    static std::mutex lock;
+    static std::unordered_set<ObjectGuid::LowType> done;
+    {
+        std::lock_guard<std::mutex> guard(lock);
+        if (!done.insert(bot->GetGUID().GetCounter()).second)
+            return;
+    }
+    ApplyWcrBuild(bot);
+}
+
 bool SetWcrSpec(Player* bot, uint8 spec, std::string& error)
 {
     if (!IsRebornRealm())

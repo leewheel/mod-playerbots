@@ -10,6 +10,7 @@
 #include "RaceMgr.h"
 #include "CoaSpecialization.h"
 #include "CoaWildcard.h"
+#include "CoaReborn.h"
 #include "AiFactory.h"
 #include "BudgetValues.h"
 #include "CellImpl.h"
@@ -2300,6 +2301,9 @@ bool PlayerbotAI::IsRanged(Player* player, bool bySpec)
     if (IsCoaBot(player))
         return GetCoaStyle(player) != CoaStyle::Melee;
 
+    if (IsRebornBot(player))
+        return IsWcrRanged(player);
+
     int tab = AiFactory::GetPlayerSpecTab(player);
     switch (player->getClass())
     {
@@ -2346,7 +2350,7 @@ bool PlayerbotAI::IsCombo(Player* player)
 {
     // int tab = AiFactory::GetPlayerSpecTab(player);
     return player->getClass() == CLASS_ROGUE ||
-           (player->getClass() == CLASS_DRUID && player->HasAura(768));  // cat druid
+           (player->getClass() == CLASS_DRUID && HasAuraOrTwin(player, 768));  // cat druid
 }
 
 bool PlayerbotAI::IsRangedDps(Player* player, bool bySpec)
@@ -2722,6 +2726,9 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
     if (IsCoaBot(player))
         return GetCoaRole(player) == CoaRole::Tank;
 
+    if (IsRebornBot(player))
+        return GetWcrRole(player) == CoaRole::Tank;
+
     int tab = AiFactory::GetPlayerSpecTab(player);
     switch (player->getClass())
     {
@@ -2763,6 +2770,9 @@ bool PlayerbotAI::IsHeal(Player* player, bool bySpec)
     if (IsCoaBot(player))
         return GetCoaRole(player) == CoaRole::Heal;
 
+    if (IsRebornBot(player))
+        return GetWcrRole(player) == CoaRole::Heal;
+
     int tab = AiFactory::GetPlayerSpecTab(player);
     switch (player->getClass())
     {
@@ -2802,6 +2812,9 @@ bool PlayerbotAI::IsDps(Player* player, bool bySpec)
 
     if (IsCoaBot(player))
         return GetCoaRole(player) == CoaRole::Dps;
+
+    if (IsRebornBot(player))
+        return GetWcrRole(player) == CoaRole::Dps;
 
     int tab = AiFactory::GetPlayerSpecTab(player);
     switch (player->getClass())

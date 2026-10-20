@@ -77,6 +77,9 @@ bool WcrClassCanPlay(uint8 classId, CoaRole role);
 // unlearn costs paid for it. Returns false when it has no build or the core refused it (logged once).
 bool ApplyWcrBuild(Player* bot);
 
+// ApplyWcrBuild once a session for a random Reborn bot, out of combat, for bots built before their table was filled.
+void EnsureWcrBuild(Player* bot);
+
 // Stores the tree and applies its build. False with the reason in `error`.
 bool SetWcrSpec(Player* bot, uint8 spec, std::string& error);
 
