@@ -17,6 +17,7 @@
 #include "ChangeChatAction.h"
 #include "ChangeStrategyAction.h"
 #include "ChangeTalentsAction.h"
+#include "CoaWcrAction.h"
 #include "ChatShortcutActions.h"
 #include "CheatAction.h"
 #include "CustomStrategyEditAction.h"
@@ -134,6 +135,7 @@ public:
         creators["reward"] = &ChatActionContext::reward;
         creators["trade"] = &ChatActionContext::trade;
         creators["talents"] = &ChatActionContext::talents;
+        creators["wcr"] = &ChatActionContext::wcr;
         creators["spells"] = &ChatActionContext::spells;
         creators["co"] = &ChatActionContext::co;
         creators["nc"] = &ChatActionContext::nc;
@@ -272,6 +274,7 @@ private:
     static Action* dead(PlayerbotAI* botAI) { return new ChangeDeadStrategyAction(botAI); }
     static Action* spells(PlayerbotAI* botAI) { return new ListSpellsAction(botAI); }
     static Action* talents(PlayerbotAI* botAI) { return new ChangeTalentsAction(botAI); }
+    static Action* wcr(PlayerbotAI* botAI) { return new CoaWcrAction(botAI); }
 
     static Action* equip(PlayerbotAI* botAI) { return new EquipAction(botAI); }
     static Action* unequip(PlayerbotAI* botAI) { return new UnequipAction(botAI); }

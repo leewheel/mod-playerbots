@@ -24,6 +24,7 @@ static const std::unordered_set<std::string> noReplyMsgs = {
     "all ?",
     "talents",
     "talents list",
+    "wcr",
     "talents auto",
     "talk",
     "stay",
