@@ -57,6 +57,11 @@ void PlayerbotTextMgr::LoadBotTexts()
             // Field::GetDataString 用坏指针构造 std::string 时 ACCESS_VIOLATION（启动即崩，
             // 转储指 LoadBotTexts+328）。上游 core 侧同批适配模式为绑定已注册列数（见
             // ObjectMgr::LoadAcoreStrings），此处按表固定 8 列遍历到 LOCALE_ruRU。
+            // By leewheel 2026-10-21 与上游 brighton 合并冲突处置：上游 2ec63794「temp crash fix
+            // re text columns」改的是同一处崩溃，写法为 constexpr uint8 textColumns = 8，
+            // 与此处 LOCALE_ruRU(=8) 语义等价（二者均为表固定 8 列）。按「只叠加不删改」保留
+            // 本核语义化写法（绑定 LocaleConstant 而非裸魔数），并在此注明上游已同步修法，
+            // 后续若表结构再扩列，两边须同改。
             for (uint8 i = 1; i <= LOCALE_ruRU; ++i)
             {
                 text[i] = fields[i + 3].Get<std::string>();

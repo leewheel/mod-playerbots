@@ -38,14 +38,14 @@ bool BlackTempleHunterShouldMisdirectTrigger::IsActiveInEncounter()
 bool SisterOfPleasureShouldBeFocusedTrigger::IsActive()
 {
     if (IsMechanicTrackerBot(bot, BT_MAP_ID))
-        return !GetSkullSisterOfPain(bot) && FindLinkedSisterOfPleasure(botAI);
+        return !GetSkulledSisterOfPain(bot) && FindLinkedSisterOfPleasure(botAI);
 
     if (PlayerbotAI::IsTank(bot))
         return false;
 
     Unit* target = AI_VALUE(Unit*, "current target");
     return target && target->GetEntry() == Id(BtNpcs::NPC_SISTER_OF_PAIN) &&
-        GetSkullSisterOfPain(bot) == target;
+        GetSkulledSisterOfPain(bot) == target;
 }
 
 bool ShadowmoonReaverWandBuildsChargesTrigger::IsActive()
@@ -162,10 +162,12 @@ bool SupremusFixatedOnBotTrigger::IsActiveInEncounter()
         return false;
 
     // The kite multiplier holds every other mover, fire avoidance included.
-    return CanSupremusCatchStandingBot(bot, supremus) ||
-        IsInSupremusHazard(
-            GetSupremusHazards(botAI), bot->GetPositionX(), bot->GetPositionY(),
-            SupremusHazardZone::Safe);
+    if (CanSupremusCatchStandingBot(bot, supremus))
+        return true;
+
+    return IsInSupremusHazard(
+        GetSupremusHazards(botAI), bot->GetPositionX(), bot->GetPositionY(),
+        SupremusHazardZone::Safe);
 }
 
 bool SupremusNearFireTrigger::IsActiveInEncounter()
@@ -195,7 +197,10 @@ bool SupremusReachBlockedByFireTrigger::IsActiveInEncounter()
 
 bool ShadeOfAkamaShouldPrioritizeChannelersTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsDps(bot) && PlayerbotAI::IsMelee(bot) && GetShadeOfAkamaKillTarget(botAI);
+    if (!PlayerbotAI::IsDps(bot) || !PlayerbotAI::IsMelee(bot))
+        return false;
+
+    return GetShadeOfAkamaKillTarget(botAI);
 }
 
 // Teron Gorefiend
@@ -222,16 +227,15 @@ bool TeronGorefiendCastsShadowOfDeathTrigger::IsActiveInEncounter()
         return false;
 
     // Once the bolt is launched, nothing cancels it.
-    Spell* spell =
-        gorefiend->FindCurrentSpellBySpellId(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
-    return spell && spell->getState() == SPELL_STATE_PREPARING &&
-        spell->m_targets.GetUnitTarget() == bot;
+    Spell* shadow = gorefiend->FindCurrentSpellBySpellId(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
+    return shadow && shadow->getState() == SPELL_STATE_PREPARING &&
+        shadow->m_targets.GetUnitTarget() == bot;
 }
 
 bool TeronGorefiendShouldPositionForVengefulSpiritTrigger::IsActiveInEncounter()
 {
-    Aura* aura = bot->GetAura(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
-    return aura && aura->GetDuration() <= GOREFIEND_SHADOW_OF_DEATH_MOVE_MS;
+    Aura* shadow = bot->GetAura(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
+    return shadow && shadow->GetDuration() <= GOREFIEND_SHADOW_OF_DEATH_MOVE_MS;
 }
 
 bool TeronGorefiendTransformedIntoVengefulSpiritTrigger::IsActiveInEncounter()
@@ -400,8 +404,7 @@ bool MotherShahrazTanksArePositioningBossTrigger::IsActiveInEncounter()
         return false;
 
     Unit* victim = shahraz->GetVictim();
-    return !victim ||
-        victim->GetExactDist2d(SHAHRAZ_TANK_POSITION) > SHAHRAZ_POSITIONED_DISTANCE;
+    return !victim || victim->GetExactDist2d(SHAHRAZ_TANK_POSITION) > SHAHRAZ_POSITIONED_DISTANCE;
 }
 
 bool MotherShahrazRangedShouldPositionUnderPillarTrigger::IsActiveInEncounter()
@@ -471,11 +474,19 @@ bool IllidariCouncilMalandeCastsCircleOfHealingTrigger::IsActiveInEncounter()
     if (!malande)
         return false;
 
+    // By leewheel 2026-10-21 entry 铁律：上游此处用英文名 "gathios the shatterer" /
+    // "high nethermancer zerevor"，本核 creature_template 生物名为中文，TargetValue.cpp 的
+    // 英文 qualifier 子串匹配恒失败 ⇒ find target 恒返回 nullptr ⇒ 打断链静默失效。
+    // 已回退 entry（实库三核定：22949 击碎者加西奥斯 / 22950 高阶灵术师塞勒沃尔）。
+    // 上游「提取局部变量复用查询、避免重复取值」的结构本身正确，予以保留。
+    Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
+    Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
+    if (!gathios || !zerevor)
+        return false;
+
     if (PlayerbotAI::IsRanged(bot) &&
         !malande->HasAura(Id(BtSpells::SPELL_BLESSING_OF_PROTECTION)) &&
-        !IsMalandeInCouncilPatch(
-            malande, AI_VALUE2(Unit*, "find target", "22949"),
-            AI_VALUE2(Unit*, "find target", "22950")))
+        !IsMalandeInCouncilPatch(malande, gathios, zerevor))
     {
         return false;
     }
@@ -661,6 +672,7 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
     BtInstanceState const* state = FindBtState(bot->GetInstanceId());
     auto const* infections =
         state && state->illidanInfections ? &*state->illidanInfections : nullptr;
+
     if (infections)
     {
         for (auto const& [player, infection] : *infections)
@@ -733,6 +745,7 @@ bool IllidanStormragePetShouldAttackShadowfiendTrigger::IsActiveInEncounter()
     Unit* victim = pet->GetVictim();
     uint32 const victimEntry = victim && victim->IsAlive() ? victim->GetEntry() : 0;
     bool const isNearNewShadowfiend = IsNearNewParasiticShadowfiend(botAI);
+
     if (victimEntry == Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND))
         return isNearNewShadowfiend;
 
