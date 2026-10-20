@@ -215,12 +215,13 @@ std::vector<uint8> SpecsOfRole(uint8 classId, CoaRole role)
 // One in five a tank, one in five a healer when the class can, as the Wildcard bots.
 uint8 PickedSpec(Player const* bot)
 {
-    ObjectGuid::LowType const guid = bot->GetGUID().GetCounter();
-    CoaRole const wanted = guid % 5 == 0 ? CoaRole::Tank : guid % 5 == 1 ? CoaRole::Heal : CoaRole::Dps;
+    // An account's characters have consecutive guids, one per class: mixed, every class gets each role.
+    uint32 const mixed = uint32((uint64(bot->GetGUID().GetCounter()) * 2654435761u) >> 8);
+    CoaRole const wanted = mixed % 5 == 0 ? CoaRole::Tank : mixed % 5 == 1 ? CoaRole::Heal : CoaRole::Dps;
     std::vector<uint8> specs = SpecsOfRole(bot->getClass(), wanted);
     if (specs.empty())
         specs = SpecsOfRole(bot->getClass(), CoaRole::Dps);
-    return specs.empty() ? 0 : specs[(guid / 5) % specs.size()];
+    return specs.empty() ? 0 : specs[(mixed / 5) % specs.size()];
 }
 
 // The tree whose build shares the most spells with what the character holds (an alt built by its owner).
