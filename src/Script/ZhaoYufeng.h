@@ -27,6 +27,9 @@
 
 #include <ctime>
 #include <string>
+// By leewheel 20261020 bug_70: 按玩家关停名单需要 unordered_set
+#include <unordered_set>
+// End By leewheel
 
 class Player;
 
@@ -92,6 +95,16 @@ public:
     bool IsLfgExpired(uint32 teamId) const;
     void ClearLfgPending(uint32 teamId);
 
+    // ---- By leewheel 20261020 bug_70: 按玩家关停 ----
+    //  玩家反馈「.赵与风 试过之后每次组队他都会加入，有什么措施能不让他跟着入队」。
+    //  提供 .赵与风 关闭 / .赵与风 开启：关停后快速组队(FastGroup)掷骰前先查本名单，
+    //  命中关停则不把赵与风编入该玩家的队伍。名单持久化在 world 库
+    //  zhao_yufeng_optout 表（重启不丢）。随机本(LFG)路径是按阵营排队、无固定主控，
+    //  无法按玩家区分，仍走全局配置 Playerbots.ZhaoYufeng.Enabled/Chance。
+    bool IsOptedOut(ObjectGuid playerGuid) const;
+    void SetOptedOut(ObjectGuid playerGuid, bool optOut);
+    // ---- End By leewheel ----
+
 private:
     ZhaoYufengMgr() = default;
     ~ZhaoYufengMgr() = default;
@@ -114,6 +127,10 @@ private:
     uint32     m_lfgLevel[2]    = { 0, 0 };
     bool       m_lfgSummoned[2] = { false, false };
     time_t     m_lfgDeadline[2] = { 0, 0 };
+
+    // By leewheel 20261020 bug_70: 按玩家关停名单（存 characters GUID 低 32 位）
+    std::unordered_set<uint32> m_optOut;
+    // End By leewheel
 };
 
 #define sZhaoYufengMgr ZhaoYufengMgr::instance()

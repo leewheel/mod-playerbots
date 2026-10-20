@@ -211,6 +211,19 @@ void ZhaoYufengMgr::Load()
 
     LoadEntriesFromDb();
 
+    // By leewheel 20261020 bug_70: 加载按玩家关停名单（world 库 zhao_yufeng_optout）
+    m_optOut.clear();
+    if (QueryResult result = WorldDatabase.Query("SELECT guid FROM zhao_yufeng_optout"))
+    {
+        do
+        {
+            Field* fields = result->Fetch();
+            m_optOut.insert(fields[0].Get<uint32>());
+        } while (result->NextRow());
+        LOG_INFO("playerbots", "赵与风：已加载 {} 个玩家的关停名单（.赵与风 关闭）。", m_optOut.size());
+    }
+    // End By leewheel
+
     bool incomplete = false;
     for (uint32 teamIdx = 0; teamIdx < 2; ++teamIdx)
     {
@@ -291,6 +304,34 @@ bool ZhaoYufengMgr::RollChance() const
 
     return urand(0, 99) < m_chance;
 }
+
+// ============================================================
+//  By leewheel 20261020 bug_70: 按玩家关停
+//  名单持久化在 world 库 zhao_yufeng_optout(guid)。
+// ============================================================
+bool ZhaoYufengMgr::IsOptedOut(ObjectGuid playerGuid) const
+{
+    return m_optOut.count(playerGuid.GetCounter()) != 0;
+}
+
+void ZhaoYufengMgr::SetOptedOut(ObjectGuid playerGuid, bool optOut)
+{
+    uint32 const guidLow = playerGuid.GetCounter();
+    if (optOut)
+    {
+        if (!m_optOut.insert(guidLow).second)
+            return;
+        WorldDatabase.Execute("DELETE FROM zhao_yufeng_optout WHERE guid = {}", guidLow);
+        WorldDatabase.Execute("INSERT INTO zhao_yufeng_optout (guid) VALUES ({})", guidLow);
+    }
+    else
+    {
+        if (m_optOut.erase(guidLow) == 0)
+            return;
+        WorldDatabase.Execute("DELETE FROM zhao_yufeng_optout WHERE guid = {}", guidLow);
+    }
+}
+// End By leewheel
 
 // ============================================================
 //  随机本（LFG）编入状态
@@ -469,7 +510,11 @@ std::string ZhaoYufengMgr::BuildStatusText() const
 }
 
 // ============================================================
-//  命令：.赵与风
+//  命令：.赵与风 [关闭 / 开启]
+//  By leewheel 20261020 bug_70: 增加按玩家关停子命令（原状态查询完整保留）。
+//    .赵与风            —— 状态查询（与原行为一致）
+//    .赵与风 关闭       —— 本次角色此后快速组队不再编入赵与风
+//    .赵与风 开启       —— 恢复正常 25% 掷骰
 // ============================================================
 class zhaoyufeng_commandscript : public CommandScript
 {
@@ -478,15 +523,63 @@ public:
 
     static bool HandleZhaoYufengStatusCommand(ChatHandler* handler)
     {
-        handler->SendSysMessage(sZhaoYufengMgr.BuildStatusText().c_str());
+        std::string status = sZhaoYufengMgr.BuildStatusText();
+        if (Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr)
+        {
+            // By leewheel 20261020 bug_70: 状态里附带本角色当前的关停状态
+            status += player->GetName();
+            status += sZhaoYufengMgr.IsOptedOut(player->GetGUID())
+                ? "：当前已关停（快速组队不会编入赵与风），输入 .赵与风 开启 恢复。\n"
+                : "：当前未关停（快速组队按概率编入赵与风），输入 .赵与风 关闭 可关停。\n";
+            // End By leewheel
+        }
+        handler->SendSysMessage(status.c_str());
         return true;
     }
 
+    // By leewheel 20261020 bug_70: 关停/恢复子命令
+    static bool HandleZhaoYufengOptOutCommand(ChatHandler* handler, bool optOut)
+    {
+        Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
+        if (!player)
+        {
+            handler->SendSysMessage("|cffff0000[赵与风] 该命令只能由玩家在游戏内使用。|r");
+            return false;
+        }
+
+        sZhaoYufengMgr.SetOptedOut(player->GetGUID(), optOut);
+        if (optOut)
+            handler->SendSysMessage("|cFF00FF00[赵与风] 已关停：此后你的快速组队不会再编入赵与风。输入 |cffffffff.赵与风 开启|r 可恢复。|r");
+        else
+            handler->SendSysMessage("|cFF00FF00[赵与风] 已恢复：快速组队将重新按概率编入赵与风。|r");
+        return true;
+    }
+
+    static bool HandleZhaoYufengDisableCommand(ChatHandler* handler)
+    {
+        return HandleZhaoYufengOptOutCommand(handler, true);
+    }
+
+    static bool HandleZhaoYufengEnableCommand(ChatHandler* handler)
+    {
+        return HandleZhaoYufengOptOutCommand(handler, false);
+    }
+    // End By leewheel
+
     ChatCommandTable GetCommands() const override
     {
+        // By leewheel 20261020 bug_70: 由单命令改为带子命令的命令树。
+        //   空串子命令兜底 = 原状态查询，裸 .赵与风 行为不变。
+        static ChatCommandTable zhaoYufengSubTable =
+        {
+            { "关闭", HandleZhaoYufengDisableCommand, SEC_PLAYER, Console::No },
+            { "开启", HandleZhaoYufengEnableCommand,  SEC_PLAYER, Console::No },
+            { "",     HandleZhaoYufengStatusCommand,  SEC_PLAYER, Console::No },
+        };
+
         static ChatCommandTable commandTable =
         {
-            { "赵与风", HandleZhaoYufengStatusCommand, SEC_PLAYER, Console::No },
+            { "赵与风", zhaoYufengSubTable, SEC_PLAYER, Console::No },
         };
 
         return commandTable;

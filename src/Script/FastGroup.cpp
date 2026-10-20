@@ -991,7 +991,9 @@ bool DoFastGroup(Player* master, FastGroupConfigIndex configIndex, ChatHandler* 
     if (needDps > 0)
     {
         sZhaoYufengMgr.EnsureLoaded();
-        if (sZhaoYufengMgr.RollChance())
+        // By leewheel 20261020 bug_70: 主控已关停（.赵与风 关闭）则不掷骰不编入
+        if (!sZhaoYufengMgr.IsOptedOut(master->GetGUID()) && sZhaoYufengMgr.RollChance())
+        // End By leewheel
         {
             ZhaoYufengEntry const* zyfEntry = sZhaoYufengMgr.GetEntryForTeam(teamId);
             if (zyfEntry && usedGuids.find(zyfEntry->guid.GetCounter()) == usedGuids.end())
