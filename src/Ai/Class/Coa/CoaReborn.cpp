@@ -412,7 +412,7 @@ Trainer::Trainer const* RebornTrainerFor(Trainer::Trainer const* stock, Player c
     std::vector<Trainer::Spell> spells;
     for (AscensionWarcraftReborn::TrainerSpell const& row :
          TrainerSpells(*data, CurrentRealm(), stock->GetTrainerRequirement(), rows, &Exists,
-                                                 reborn))
+                       reborn))
     {
         Trainer::Spell spell;
         spell.SpellId = row.SpellId;
