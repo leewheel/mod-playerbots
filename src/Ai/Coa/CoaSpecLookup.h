@@ -15,6 +15,7 @@
 
 #include "AscensionSpecialization.h"
 #include "CoaSpecStrategies.h"
+#include "CoaWildcard.h"
 #include "ItemTemplate.h"
 #include "Player.h"
 
@@ -59,6 +60,9 @@ inline bool IsCoaRole(Player const* player, CoaSpecRole role)
 // character has chosen: a Starcaller without one is not taken for the default Sentinel here.
 inline bool CoaSpecNeedsShootingWeapon(Player const* player)
 {
+    // A Wildcard Hero whose shots weigh more than its strikes fights from range with a bow, a gun or a crossbow.
+    if (IsWildcardHeroBot(player))
+        return GetWildcardStyle(player) == CoaStyle::Ranged;
     if (!player || player->getClass() != 26)
         return false;
     uint32 const specId = GetAscensionActiveSpecialization(player);

@@ -2415,7 +2415,7 @@ bool PlayerbotFactory::CanEquipWeapon(ItemTemplate const* proto)
     // miscellaneous "weapon" with 1-1 damage), and its strikes that need a real weapon failed (Condemn,
     // Righteous Lunge, Holy Cleave: EquippedItemSubClassMask 0x2A5F3, without miscellaneous). A miscellaneous
     // item or a fishing pole is never their weapon.
-    if (IsAscensionCustomClassId(bot->getClass()) &&
+    if ((IsAscensionCustomClassId(bot->getClass()) || IsWildcardHeroBot(bot)) &&
         (proto->SubClass == ITEM_SUBCLASS_WEAPON_MISC || proto->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE))
         return false;
 
@@ -2998,7 +2998,7 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance, int32
         // does a weapon CanEquipWeapon no longer allows (a miscellaneous item held before that rule).
         bool const oldCannotShoot = slot == EQUIPMENT_SLOT_RANGED && oldItem &&
                                     CoaRangedSlotCannotShoot(bot, oldItem->GetTemplate());
-        bool const oldNoWeapon = oldItem && IsAscensionCustomClassId(bot->getClass()) &&
+        bool const oldNoWeapon = oldItem && (IsAscensionCustomClassId(bot->getClass()) || IsWildcardHeroBot(bot)) &&
                                  oldItem->GetTemplate()->Class == ITEM_CLASS_WEAPON &&
                                  !CanEquipWeapon(oldItem->GetTemplate());
         if (incremental && oldItem && !oldCannotShoot && !oldNoWeapon)
