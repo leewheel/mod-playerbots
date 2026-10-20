@@ -214,9 +214,23 @@ uint32 Grouping(std::vector<SpellInfo const*> const& spells)
 // How well four starting abilities suit a role, best first: forms that work, what the role needs (healer: a heal
 // and a damage spell to quest with; tank: threat and a damage spell; damage: two of a group and a support
 // ability), more of the role's own abilities, then their synergy with each other.
-using StarterFit = std::tuple<bool, uint32, uint32, uint32>;
+using StarterFit = std::tuple<bool, uint32, uint32, uint32, uint32>;
 
-StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, CoaRole role)
+// The fighting style a damage dealer drafts for, kept by its GUID: weapon strikes, shots or spells, a third each,
+// so that a realm's Heroes are not nearly all melee Agility (the draws hold more strikes than anything else).
+uint8 DpsStyleOf(Player const* bot)
+{
+    return uint8(((uint64(bot->GetGUID().GetCounter()) * 2654435761u) >> 12) % 3);
+}
+
+uint32 StyleCount(std::vector<SpellInfo const*> const& spells, uint8 style)
+{
+    uint32 const wanted = style == 0 ? SPELL_DAMAGE_CLASS_MELEE : style == 1 ? SPELL_DAMAGE_CLASS_RANGED : SPELL_DAMAGE_CLASS_MAGIC;
+    return uint32(std::count_if(spells.begin(), spells.end(),
+        [wanted](SpellInfo const* info) { return info->DmgClass == wanted && !Heals(info); }));
+}
+
+StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, CoaRole role, uint8 style)
 {
     std::vector<SpellInfo const*> spells;
     std::vector<uint32> entries;
@@ -267,15 +281,16 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, CoaRole r
         others.erase(others.begin() + index);
         synergy += AscensionWildcard::SynergyScore(AscensionWildcard::LoadedTables(), entries[index], others);
     }
-    return { FormsFit(spells), needs, depth, synergy };
+    uint32 const styled = role == CoaRole::Dps ? StyleCount(spells, style) : 0;
+    return { FormsFit(spells), styled, needs, depth, synergy };
 }
 
-std::size_t PickStarters(std::vector<std::vector<AscensionWildcard::Slot>> const& candidates, CoaRole role)
+std::size_t PickStarters(std::vector<std::vector<AscensionWildcard::Slot>> const& candidates, CoaRole role, uint8 style)
 {
     std::size_t best = 0;
     StarterFit bestFit{};
     for (std::size_t index = 0; index < candidates.size(); ++index)
-        if (StarterFit const fit = FitOf(candidates[index], role); index == 0 || fit > bestFit)
+        if (StarterFit const fit = FitOf(candidates[index], role, style); index == 0 || fit > bestFit)
         {
             best = index;
             bestFit = fit;
@@ -577,9 +592,10 @@ bool DraftWildcardBuild(Player* bot)
         ResetWildcardBuild(bot);
 
     CoaRole const target = TargetRoleOf(bot);
+    uint8 const dpsStyle = DpsStyleOf(bot);
     AscensionWildcard::DraftBuild(bot,
-        [target](std::vector<std::vector<AscensionWildcard::Slot>> const& candidates)
-        { return PickStarters(candidates, target); },
+        [target, dpsStyle](std::vector<std::vector<AscensionWildcard::Slot>> const& candidates)
+        { return PickStarters(candidates, target, dpsStyle); },
         STARTER_DRAWS);
     RerollMisfits(bot);
     TrainRanks(bot);
