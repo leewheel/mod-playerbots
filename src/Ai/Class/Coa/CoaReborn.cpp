@@ -384,11 +384,11 @@ Trainer::Trainer const* RebornTrainerFor(Trainer::Trainer const* stock, Player c
     // As AscensionWarcraftReborn BuildTrainers: the stock rows turned into their Reborn ranks, priced like the stock
     // spells of their level, and the Reborn abilities no stock row teaches.
     using namespace AscensionWarcraftReborn;
-    std::vector<TrainerSpell> rows;
+    std::vector<AscensionWarcraftReborn::TrainerSpell> rows;
     std::map<uint32, uint32> prices;
     for (Trainer::Spell const& spell : stock->GetSpells())
     {
-        TrainerSpell row;
+        AscensionWarcraftReborn::TrainerSpell row;
         row.SpellId = spell.SpellId;
         row.MoneyCost = spell.MoneyCost;
         row.ReqSkillLine = spell.ReqSkillLine;
@@ -400,7 +400,7 @@ Trainer::Trainer const* RebornTrainerFor(Trainer::Trainer const* stock, Player c
     }
     auto const reborn = [&prices](uint32 spellId)
     {
-        TrainerSpell row;
+        AscensionWarcraftReborn::TrainerSpell row;
         row.SpellId = spellId;
         SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
         row.ReqLevel = info ? std::min<uint32>(info->SpellLevel, 255) : 0;
@@ -410,7 +410,8 @@ Trainer::Trainer const* RebornTrainerFor(Trainer::Trainer const* stock, Player c
     };
 
     std::vector<Trainer::Spell> spells;
-    for (TrainerSpell const& row : TrainerSpells(*data, CurrentRealm(), stock->GetTrainerRequirement(), rows, &Exists,
+    for (AscensionWarcraftReborn::TrainerSpell const& row :
+         TrainerSpells(*data, CurrentRealm(), stock->GetTrainerRequirement(), rows, &Exists,
                                                  reborn))
     {
         Trainer::Spell spell;
