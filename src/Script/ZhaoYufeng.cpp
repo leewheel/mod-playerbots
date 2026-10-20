@@ -579,7 +579,9 @@ public:
 
         static ChatCommandTable commandTable =
         {
-            { "赵与风", zhaoYufengSubTable, SEC_PLAYER, Console::No },
+            // 嵌套子表的 ChatCommandBuilder 只收 (名字, 子表) 两元素，带权限参数
+            // 会让模板把子表误当处理器解析（首编 MSB/C2794 级联报错的根因）
+            { "赵与风", zhaoYufengSubTable },
         };
 
         return commandTable;
