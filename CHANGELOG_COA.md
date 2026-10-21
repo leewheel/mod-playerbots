@@ -56,6 +56,13 @@
 - **Your game**: SquidBots Lite 2.5 is detected and installed; the realmlist check and the home page show the address
   players really use.
 - Server settings: a "Creature difficulty" section explains the CoA scaling keys (off in CoA Bots).
+- **Big updates made clear**: before you click, the update window says what it replaces (here the new map files),
+  how much it downloads and how much free disk space it needs; not enough space = no update started.
+- **Large updates in several parts**: the 2.5 (with the new maps) comes in 3 files, downloaded and checked one by
+  one, in one click.
+- New "Unpacking the files" step (part 1 of 3...), and every long step shows "Still working (time)... do not close the
+  launcher".
+- Verification: a few low-level bots in Outland is now a simple info, with a clearer text.
 - Fixes: servers opened to the network are no longer reset to 127.0.0.1; a crash counts once and can be put away;
   clearer messages when a launcher update fails or the bots are missing from a repack. Green/red module switches.
 
