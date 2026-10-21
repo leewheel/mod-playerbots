@@ -31,9 +31,9 @@ INSERT INTO `playerbots_coa_wcr_enchants` (`class`,`spec`,`ord`,`spell`,`stacks`
 (1, 0, 8, 58356, 1, 10), -- RAR Glyph of Resonating Power
 (1, 0, 9, 58386, 1, 12), -- RAR Glyph of Overpower
 (1, 0, 10, 58385, 1, 15), -- RAR Glyph of Rending
-(1, 0, 11, 58384, 1, 30), -- RAR Glyph of Sweeping Strikes
-(1, 0, 12, 58368, 1, 40), -- RAR Glyph of Mortal Strike
-(1, 0, 13, 1329599, 1, 45), -- RAR Shield Mastery
+(1, 0, 11, 58355, 1, 25), -- RAR Glyph of Rapid Charge
+(1, 0, 12, 58384, 1, 30), -- RAR Glyph of Sweeping Strikes
+(1, 0, 13, 58368, 1, 40), -- RAR Glyph of Mortal Strike
 (1, 0, 14, 1312879, 1, 45), -- RAR Improved Demoralizing Shout
 (1, 0, 15, 1320496, 1, 45), -- RAR Improved Cleave
 (1, 0, 16, 63324, 1, 60), -- RAR Glyph of Bladestorm
@@ -70,16 +70,11 @@ INSERT INTO `playerbots_coa_wcr_enchants` (`class`,`spec`,`ord`,`spell`,`stacks`
 (2, 0, 4, 1590048, 1, 30), -- EPI Swift Favor
 (2, 0, 5, 1180430, 1, 35), -- EPI A New Dawn
 (2, 0, 6, 1567749, 1, 50), -- EPI Divine Order
-(2, 0, 7, 54928, 1, 10), -- RAR Glyph of Consecration
-(2, 0, 8, 63223, 1, 16), -- RAR Glyph of Divine Plea
-(2, 0, 9, 54934, 1, 20), -- RAR Glyph of Exorcism
-(2, 0, 10, 54936, 1, 20), -- RAR Glyph of Flash of Light
-(2, 0, 11, 54940, 1, 38), -- RAR Glyph of Seal of Wisdom
-(2, 0, 12, 63224, 1, 40), -- RAR Glyph of Holy Shock
-(2, 0, 13, 63225, 1, 40), -- RAR Glyph of Salvation
-(2, 0, 14, 1325988, 1, 45), -- RAR Eye for an Eye
-(2, 0, 15, 56420, 1, 50), -- RAR Glyph of Holy Wrath
-(2, 0, 16, 63218, 1, 60), -- RAR Glyph of Beacon of Light
+(2, 0, 7, 54940, 1, 38), -- RAR Glyph of Seal of Wisdom
+(2, 0, 8, 63224, 1, 40), -- RAR Glyph of Holy Shock
+(2, 0, 9, 1325988, 1, 45), -- RAR Eye for an Eye
+(2, 0, 10, 56420, 1, 50), -- RAR Glyph of Holy Wrath
+(2, 0, 11, 63218, 1, 60), -- RAR Glyph of Beacon of Light
 (2, 1, 1, 1134989, 1, 30), -- LEG Protection Mastery
 (2, 1, 2, 1581647, 1, 15), -- EPI Pious Strikes
 (2, 1, 3, 1585146, 1, 40), -- EPI Baleful Hammer
@@ -188,14 +183,13 @@ INSERT INTO `playerbots_coa_wcr_enchants` (`class`,`spec`,`ord`,`spell`,`stacks`
 (5, 0, 4, 1567650, 1, 50), -- EPI Words of Time
 (5, 0, 5, 1571260, 1, 60), -- EPI Divine Symmetry
 (5, 0, 6, 1571422, 1, 60), -- EPI Renewed Through Absolution
-(5, 0, 7, 55686, 1, 12), -- RAR Glyph of Inner Fire
-(5, 0, 8, 1327816, 1, 45), -- RAR Blessed Recovery
-(5, 0, 9, 1315017, 1, 45), -- RAR Searing Light
+(5, 0, 7, 1327816, 1, 45), -- RAR Blessed Recovery
+(5, 0, 8, 1315017, 1, 45), -- RAR Searing Light
+(5, 0, 9, 1315448, 1, 45), -- RAR Improved Psychic Scream
 (5, 0, 10, 1571655, 1, 45), -- RAR Blessed Vengeance
-(5, 0, 11, 1315448, 1, 45), -- RAR Improved Psychic Scream
-(5, 0, 12, 1582800, 1, 45), -- RAR Holy Power Well
-(5, 0, 13, 63248, 1, 50), -- RAR Glyph of Pain Suppression
-(5, 0, 14, 63235, 1, 60), -- RAR Glyph of Penance
+(5, 0, 11, 1582800, 1, 45), -- RAR Holy Power Well
+(5, 0, 12, 63248, 1, 50), -- RAR Glyph of Pain Suppression
+(5, 0, 13, 63235, 1, 60), -- RAR Glyph of Penance
 (5, 1, 1, 1134968, 1, 30), -- LEG Holy Mastery
 (5, 1, 2, 1180610, 1, 15), -- EPI Overflowing Light
 (5, 1, 3, 1181090, 1, 15), -- EPI Promise of Renewal
@@ -379,19 +373,15 @@ INSERT INTO `playerbots_coa_wcr_enchants` (`class`,`spec`,`ord`,`spell`,`stacks`
 (11, 0, 16, 1582842, 1, 45), -- RAR Earthen Power Well
 (11, 1, 1, 1134977, 1, 30), -- LEG Guardian Mastery
 (11, 1, 2, 1589853, 1, 15), -- EPI Ursoc's Rage
-(11, 1, 3, 1584951, 1, 20), -- EPI Primal Frenzy
-(11, 1, 4, 1181110, 1, 24), -- EPI Tiger's Instinct
+(11, 1, 3, 1581667, 1, 30), -- EPI Relentless Laceration
+(11, 1, 4, 1181320, 1, 32), -- EPI Starcaller's Momentum
 (11, 1, 5, 1589878, 1, 50), -- EPI Bash and Thrash
 (11, 1, 6, 1100800, 1, 50), -- EPI Viscera
 (11, 1, 7, 54811, 1, 10), -- RAR Glyph of Maul
 (11, 1, 8, 65243, 1, 15), -- RAR Glyph of Survival Instincts
-(11, 1, 9, 54818, 1, 20), -- RAR Glyph of Rip
-(11, 1, 10, 67598, 1, 20), -- RAR Glyph of Claw
-(11, 1, 11, 54821, 1, 24), -- RAR Glyph of Rake
-(11, 1, 12, 54813, 1, 40), -- RAR Glyph of Mangle
-(11, 1, 13, 1582842, 1, 45), -- RAR Earthen Power Well
-(11, 1, 14, 63055, 1, 54), -- RAR Glyph of Savage Roar
-(11, 1, 15, 62969, 1, 60), -- RAR Glyph of Berserk
+(11, 1, 9, 54813, 1, 40), -- RAR Glyph of Mangle
+(11, 1, 10, 1582842, 1, 45), -- RAR Earthen Power Well
+(11, 1, 11, 62969, 1, 60), -- RAR Glyph of Berserk
 (11, 2, 1, 1134978, 1, 30), -- LEG Restoration Mastery
 (11, 2, 2, 1180800, 1, 15), -- EPI Nature's Abundance
 (11, 2, 3, 1418500, 1, 15), -- EPI Nature's Synthesis
