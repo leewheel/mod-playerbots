@@ -13,6 +13,7 @@
 #include "CoaWildcard.h"
 #include "AscensionWildcard.h"
 #include "CombatStrategy.h"
+#include "DBCStores.h"
 #include "DatabaseEnv.h"
 #include "Engine.h"
 #include "Group.h"
@@ -200,9 +201,17 @@ bool IsControlAura(SpellEffectInfo const& effect)
 bool PossessesTarget(SpellInfo const* info)
 {
     for (SpellEffectInfo const& effect : info->Effects)
+    {
         if (IsAuraEffect(effect) && effect.ApplyAuraName == SPELL_AURA_MOD_POSSESS &&
             effect.TargetA.GetTarget() != TARGET_UNIT_CASTER)
             return true;
+        // A puppet summon is steered the same way: a Tinker healer's Build: Destructo-Bot left it standing 45 s,
+        // twice, while both channeler tanks died at Magtheridon (ladiabale, 20/10).
+        if (effect.Effect == SPELL_EFFECT_SUMMON)
+            if (SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(effect.MiscValueB))
+                if (properties->Category == SUMMON_CATEGORY_PUPPET)
+                    return true;
+    }
     return false;
 }
 
@@ -271,6 +280,10 @@ bool TeleportsCasterHome(SpellInfo const* info)
 // (Boulder Dash, Advance, Shooting Star).
 bool ForcesCasterForward(SpellInfo const* info)
 {
+    // A leap made by a script, which the spell's effects do not show: Vault (Witch Hunter), about 16 yd forward
+    // every 12 s, took a main tank out of its healers' reach and into two more packs (ladiabale, Gruul 2.5).
+    if (info->Id == 500085)
+        return true;
     for (SpellEffectInfo const& effect : info->Effects)
         if (IsAuraEffect(effect) && effect.ApplyAuraName == SPELL_AURA_FORCE_MOVE_FORWARD &&
             effect.TargetA.GetTarget() == TARGET_UNIT_CASTER)
@@ -4497,7 +4510,8 @@ protected:
  * dead, in a fight, eating or drinking, everyone at 70% health or more, the healers at 70% mana or
  * more. It pulls the nearest hostile creature it can see within 30 yards, never one more than 40
  * yards from the player or on another floor, says what it pulls, and leaves the route to the
- * player: it does not know the dungeon, it takes what is in front of the group. In dungeons only.
+ * player: it does not know the dungeon, it takes what is in front of the group. In dungeons only, not raids,
+ * by the main tank only, never a boss or a patrol.
  */
 constexpr float AutoPullRange = 30.0f;
 constexpr float AutoPullLeash = 40.0f;
@@ -4539,6 +4553,11 @@ Unit* NextPull(PlayerbotAI* botAI, Player* bot, Player* master)
         // (jealous-sound/azerothcore-wotlk-coa#5552, #5395).
         if (!creature->IsHostileTo(master) || creature->HasNpcFlag(NPCFlags(UNIT_NPC_FLAG_GOSSIP | UNIT_NPC_FLAG_QUESTGIVER)))
             continue;
+        // Never a boss, the player opens those: a tank pulled Prince Malchezaar on its own (ladiabale, Karazhan
+        // 20/10). Nor a patrol, which walks into the next packs: the Library Spell Shade brought two Horror packs.
+        if (creature->IsDungeonBoss() || creature->isWorldBoss() ||
+            creature->GetDefaultMovementType() == WAYPOINT_MOTION_TYPE)
+            continue;
 
         // From the tank or the player, whichever is nearer: a tank that stays put while the player stands (#6505)
         // was often behind the player, and the next pack lay out of its own 30 yards.
@@ -4564,6 +4583,13 @@ public:
         // Dungeons only: in the open world the player is questing or travelling, not asking for pulls.
         if (!sPlayerbotAIConfig.coaSmartTank || !PlayerbotAI::IsTank(bot) || bot->IsInCombat() || !bot->IsAlive() ||
             !bot->GetMap()->IsDungeon())
+            return false;
+        // Not in a raid, whose packs and encounters a player leads: both Karazhan tanks pulled a pack each 2 s apart,
+        // the Banquet wipe (ladiabale, 20/10), and a tank started Magtheridon with ten players.
+        if (bot->GetMap()->IsRaid())
+            return false;
+        // One puller: with two tanks in the group, the main tank only.
+        if (bot->GetGroup() && !botAI->IsMainTank(bot))
             return false;
         // A Manastorm floor is one room with its boss: the tank pulled the boss across it on its own (17/10).
         if (bot->GetScriptedPrivateMapId() != MAPID_INVALID)

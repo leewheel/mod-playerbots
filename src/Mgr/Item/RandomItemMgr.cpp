@@ -1418,6 +1418,12 @@ bool RandomItemMgr::IsValidItem(ItemTemplate const* proto)
     if (proto->Duration)
         return false;
 
+    // A neck, ring or trinket carries no armor. CoA's Bronze to Rune Amulets (586-592) do, 635 of it on a level 10 rare
+    // that any level 1 can wear, and their level-scaled copies too: a level 30 tank bot wore one (Yeh, 21/10).
+    if (proto->Armor && (proto->InventoryType == INVTYPE_NECK || proto->InventoryType == INVTYPE_FINGER ||
+                         proto->InventoryType == INVTYPE_TRINKET))
+        return false;
+
     // check area-, or map-restricted items
     if (proto->Area || proto->Map)
         return false;

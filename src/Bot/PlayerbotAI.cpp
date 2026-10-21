@@ -2876,8 +2876,14 @@ ObjectGuid PlayerbotAI::GetMainTankGuid(Group* group)
     Group::MemberSlotList const& slots = group->GetMemberSlots();
     for (Group::member_citerator itr = slots.begin(); itr != slots.end(); ++itr)
     {
+        // A main tank set by the raid frame but dead stayed main tank: nobody took Maulgar after she died and he
+        // roamed 2:50, his Arcing Smash on the damage dealers (ladiabale, Gruul 2.5). The next living tank takes over.
         if (itr->flags & MEMBER_FLAG_MAINTANK)
-            return itr->guid;
+        {
+            Player* flagged = ObjectAccessor::FindPlayer(itr->guid);
+            if (flagged && flagged->IsAlive())
+                return itr->guid;
+        }
     }
 
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())

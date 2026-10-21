@@ -1218,6 +1218,21 @@ bool RecruitCoaRaid(Player* master, uint32 size, uint32 tanks, uint32 heals, std
                                                                               : lfg::PLAYER_ROLE_DAMAGE);
             }
 
+    // Without a main tank set, the first living tank in member order (newest first) was main tank, another one
+    // from one fight to the next: the off-tank's ogre went to Maulgar (ladiabale, Gruul 2.4). One tank is set
+    // once; a dead main tank hands over to the next living tank (PlayerbotAI::GetMainTankGuid).
+    bool mainTankSet = false;
+    for (Group::MemberSlot const& slot : group->GetMemberSlots())
+        if (slot.flags & MEMBER_FLAG_MAINTANK)
+            mainTankSet = true;
+    if (!mainTankSet)
+        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+            if (Player* member = ref->GetSource(); member && RoleOfMember(member) == CoaRole::Tank)
+            {
+                group->SetGroupMemberFlag(member->GetGUID(), true, MEMBER_FLAG_MAINTANK);
+                break;
+            }
+
     LOG_INFO("playerbots", "coa: {} built a raid of {}: {} tanks, {} healers, {} damage dealers recruited",
              master->GetName(), size, got[uint8(CoaRole::Tank)], got[uint8(CoaRole::Heal)], got[uint8(CoaRole::Dps)]);
 

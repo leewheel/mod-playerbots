@@ -477,6 +477,7 @@ public:
     }
     std::string const getName() override { return "can cast::" + qualifier; }
     bool IsActive() override;
+    Unit* GetTarget() override;
 
 private:
     bool CanCastNow();
