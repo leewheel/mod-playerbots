@@ -535,6 +535,21 @@ void TrainRanks(Player* bot)
         std::vector<uint32> const* ranks = slot.EntryId && !slot.Talent ? RankSpellsOf(slot.EntryId) : nullptr;
         if (!ranks || slot.Rank < 1 || slot.Rank > ranks->size())
             continue;
+        // A Hero trains the higher ranks of the client's SpellRank ladder at its trainer: they are not spell chains
+        // of the server, so the bot learns them here, up to its level.
+        auto const& ladders = AscensionWildcard::LoadedTables().RankLadders;
+        if (auto const ladder = ladders.find(ranks->front()); ladder != ladders.end())
+        {
+            for (uint32 rankSpellId : ladder->second)
+            {
+                SpellInfo const* info = rankSpellId ? sSpellMgr->GetSpellInfo(rankSpellId) : nullptr;
+                if (!info || info->SpellLevel > bot->GetLevel())
+                    continue;
+                if (!bot->HasSpell(rankSpellId))
+                    bot->learnSpell(rankSpellId);
+            }
+            continue;
+        }
         for (uint32 next = sSpellMgr->GetNextSpellInChain((*ranks)[slot.Rank - 1]); next;
              next = sSpellMgr->GetNextSpellInChain(next))
         {
