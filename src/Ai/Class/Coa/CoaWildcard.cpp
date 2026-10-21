@@ -259,12 +259,12 @@ SpellInfo const* FirstRankOf(uint32 entryId)
     return ranks && !ranks->empty() ? sSpellMgr->GetSpellInfo(ranks->front()) : nullptr;
 }
 
-// What an archetype makes of an entry: its weight in the picks table, plus or minus for the way the entry attacks (a
-// caster has no use for a weapon strike, a ranged Hero for a melee one). Below -1 it is a roll to spend a Scroll of
-// Fortune on.
-int32 ArchetypeScore(uint32 entryId, WildcardArchetype archetype)
+// What an archetype makes of an entry: its weight in the picks table (with the build the Hero drafts toward), plus or
+// minus for the way the entry attacks (a caster has no use for a weapon strike, a ranged Hero for a melee one). Below
+// -1 it is a roll to spend a Scroll of Fortune on.
+int32 ArchetypeScore(uint32 entryId, WildcardArchetype archetype, uint8 build = NO_WILDCARD_BUILD)
 {
-    int32 score = WildcardPickWeight(entryId, archetype);
+    int32 score = WildcardPickWeight(entryId, archetype, build);
     SpellInfo const* info = FirstRankOf(entryId);
     if (!info || info->IsPassive())
         return score;
@@ -299,7 +299,8 @@ int32 ArchetypeScore(uint32 entryId, WildcardArchetype archetype)
 // of a group and a support ability); more of the role's own abilities; then their synergy with each other.
 using StarterFit = std::tuple<bool, bool, int32, uint32, uint32, uint32>;
 
-StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardArchetype archetype)
+StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardArchetype archetype,
+                 uint8 build = NO_WILDCARD_BUILD)
 {
     std::vector<SpellInfo const*> spells;
     std::vector<uint32> entries;
@@ -361,7 +362,7 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardA
     uint32 synergy = 0;
     for (std::size_t index = 0; index < entries.size(); ++index)
     {
-        picks += ArchetypeScore(entries[index], archetype);
+        picks += ArchetypeScore(entries[index], archetype, build);
         std::vector<uint32> others = entries;
         others.erase(others.begin() + index);
         synergy += AscensionWildcard::SynergyScore(AscensionWildcard::LoadedTables(), entries[index], others);
@@ -369,12 +370,13 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardA
     return { FormsFit(spells), essential, picks, needs, depth, synergy };
 }
 
-std::size_t PickStarters(std::vector<std::vector<AscensionWildcard::Slot>> const& candidates, WildcardArchetype archetype)
+std::size_t PickStarters(std::vector<std::vector<AscensionWildcard::Slot>> const& candidates, WildcardArchetype archetype,
+                         uint8 build)
 {
     std::size_t best = 0;
     StarterFit bestFit{};
     for (std::size_t index = 0; index < candidates.size(); ++index)
-        if (StarterFit const fit = FitOf(candidates[index], archetype); index == 0 || fit > bestFit)
+        if (StarterFit const fit = FitOf(candidates[index], archetype, build); index == 0 || fit > bestFit)
         {
             best = index;
             bestFit = fit;
@@ -415,6 +417,17 @@ bool BuildAboveLevel(Player const* bot)
     return false;
 }
 
+// The starting abilities a bot keeps, for good from level 10.
+std::vector<uint32> StarterEntriesOf(Player const* bot)
+{
+    std::vector<uint32> entries;
+    std::vector<AscensionWildcard::Slot> const slots = AscensionWildcard::Slots(bot);
+    for (std::size_t index = 0; index < slots.size() && index < AscensionWildcard::STARTING_ABILITY_COUNT; ++index)
+        if (slots[index].EntryId)
+            entries.push_back(slots[index].EntryId);
+    return entries;
+}
+
 // The archetype a bot drafts for: its role's, and for a damage dealer the style its GUID gives it, unless its starting
 // abilities, kept for good from level 10, were drafted for another style (a build made before the styles): it then
 // keeps to the style they play best rather than reroll everything else away from them.
@@ -448,7 +461,7 @@ WildcardArchetype DraftArchetypeOf(Player const* bot, CoaRole role)
 // use for, worst first (a weapon strike for a caster, a shot for a melee Hero, a talent left with nothing to improve).
 // A pick of its archetype stays (Auto Shot, which the fighting logic does not cast itself), and so do the starting
 // abilities, picked with care.
-std::vector<uint32> MisfitsOf(Player const* bot, WildcardArchetype archetype)
+std::vector<uint32> MisfitsOf(Player const* bot, WildcardArchetype archetype, uint8 build)
 {
     std::vector<AscensionWildcard::Slot> const slots = AscensionWildcard::Slots(bot);
     std::vector<SpellInfo const*> spells(slots.size(), nullptr);
@@ -479,7 +492,7 @@ std::vector<uint32> MisfitsOf(Player const* bot, WildcardArchetype archetype)
 
         if (slots[index].Talent)
         {
-            int32 score = WildcardPickWeight(entry, archetype);
+            int32 score = WildcardPickWeight(entry, archetype, build);
             std::vector<uint32> others;
             for (uint32 other : entries)
                 if (other != entry)
@@ -495,9 +508,10 @@ std::vector<uint32> MisfitsOf(Player const* bot, WildcardArchetype archetype)
         if (!CastableIn(info, 0) &&
             std::none_of(forms.begin(), forms.end(), [info](uint32 form) { return CastableIn(info, form); }))
             formless.push_back(entry);
+        // The archetype's own weight, not the build's: a build does not keep an ability the fighting logic never casts.
         else if (!CoaBotCasts(info) && WildcardPickWeight(entry, archetype) <= 0)
             unused.push_back(entry);
-        else if (int32 const score = ArchetypeScore(entry, archetype); score <= -2)
+        else if (int32 const score = ArchetypeScore(entry, archetype, build); score <= -2)
             offArchetype.emplace_back(score, entry);
     }
 
@@ -530,19 +544,19 @@ void TrainRanks(Player* bot)
     }
 }
 
-void RerollMisfits(Player* bot, WildcardArchetype archetype)
+void RerollMisfits(Player* bot, WildcardArchetype archetype, uint8 build)
 {
     AscensionWildcard::ClaimLevelingScrolls(bot);
     for (uint32 reroll = 0; reroll < MISFIT_REROLLS_PER_DRAFT; ++reroll)
     {
         // A roll the server will not take back (its essence is spent on what came after it) leaves the next one to try.
-        std::vector<uint32> const misfits = MisfitsOf(bot, archetype);
+        std::vector<uint32> const misfits = MisfitsOf(bot, archetype, build);
         auto const rerolled = std::find_if(misfits.begin(), misfits.end(),
             [bot](uint32 misfit) { return AscensionWildcard::UnlearnForReroll(bot, misfit); });
         if (rerolled == misfits.end())
             return;
-        LOG_INFO("playerbots.coa", "{} rerolls Wildcard entry {} with a Scroll of Fortune ({} build)", bot->GetName(),
-                 *rerolled, WildcardArchetypeName(archetype));
+        LOG_INFO("playerbots.coa", "{} rerolls Wildcard entry {} with a Scroll of Fortune ({} {} build)",
+                 bot->GetName(), *rerolled, WildcardBuildName(build), WildcardArchetypeName(archetype));
         AscensionWildcard::DraftBuild(bot);
     }
 }
@@ -747,12 +761,14 @@ bool DraftWildcardBuild(Player* bot)
 
     CoaRole const target = TargetRoleOf(bot);
     WildcardArchetype const starterArchetype = DraftArchetypeOf(bot, target);
+    uint8 const starterBuild = WildcardBuildFor(bot->GetGUID().GetCounter(), starterArchetype, StarterEntriesOf(bot));
     AscensionWildcard::DraftBuild(bot,
-        [starterArchetype](std::vector<std::vector<AscensionWildcard::Slot>> const& candidates)
-        { return PickStarters(candidates, starterArchetype); },
+        [starterArchetype, starterBuild](std::vector<std::vector<AscensionWildcard::Slot>> const& candidates)
+        { return PickStarters(candidates, starterArchetype, starterBuild); },
         STARTER_DRAWS);
     WildcardArchetype const archetype = DraftArchetypeOf(bot, target);
-    RerollMisfits(bot, archetype);
+    uint8 const build = WildcardBuildFor(bot->GetGUID().GetCounter(), archetype, StarterEntriesOf(bot));
+    RerollMisfits(bot, archetype, build);
     TrainRanks(bot);
 
     uint32 const path = PathFor(target, ShapeOf(bot), archetype);
@@ -915,8 +931,11 @@ std::vector<std::string> DescribeWildcard(Player const* bot)
 
     std::vector<std::string> lines;
     std::ostringstream head;
+    WildcardArchetype const archetype = DraftArchetypeOf(bot, role);
     head << "WILDCARD " << WildcardRoleName(role) << ": " << path << " path (" << position << "), "
-         << abilities.size() << " abilities, " << talents.size() << " talents";
+         << abilities.size() << " abilities, " << talents.size() << " talents, "
+         << WildcardBuildName(WildcardBuildFor(bot->GetGUID().GetCounter(), archetype, StarterEntriesOf(bot))) << " "
+         << WildcardArchetypeName(archetype) << " build";
     lines.push_back(head.str());
 
     // Whispers stay under the 255 characters of a chat line.

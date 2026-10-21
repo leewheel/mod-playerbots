@@ -1,7 +1,10 @@
 #include "CoaWildcardPicks.h"
 
+#include <algorithm>
 #include <array>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace
 {
@@ -566,6 +569,496 @@ constexpr Pick PICKS[] = {
     { 40268, 0, ANY, -3 },       // Flight Form
 };
 
+// The builds of each archetype: the Hero Archetypes the Season 10 client ships for its character creation
+// (CharacterCreationArchetypes.dbc, the four or five abilities each one shows), and the Wildcard builds players
+// published (Plague Caster, Dark Ranger, Arcane Gunslinger, Fel Infused Blade). A build adds its weight to the
+// archetype's: 4 for an ability or talent it is made of, 2 or 3 for one that feeds it. Builds that need a pet the bot
+// does not tame (Bestial Ranger) or a demon (the Demoniac's Enslave Demon and Soul Link) are left out of them.
+struct Build
+{
+    char const* name;
+    WildcardArchetype archetype;
+};
+
+struct BuildPick
+{
+    uint8 build;
+    uint32 entry;
+    int8 weight;
+};
+
+enum BuildId : uint8
+{
+    BUILD_BLADE_WARDEN,
+    BUILD_BULWARK,
+    BUILD_SWASHBUCKLER,
+    BUILD_RELENTLESS,
+    BUILD_VANGUARD_SENTINEL,
+    BUILD_CARNAGE_INCARNATE,
+    BUILD_TEMPLAR_OF_FLAME,
+    BUILD_DEMONIAC,
+    BUILD_MYSTIC_KNIGHT,
+    BUILD_CRIMSON_CHAMPION,
+    BUILD_STORMGUARD,
+    BUILD_ICEBOUND,
+    BUILD_PLAGUE_BEARER,
+    BUILD_BEAST_OF_NIGHTMARE,
+    BUILD_THUNDERPAW,
+    BUILD_NATURALIST,
+    BUILD_DAWNKEEPER,
+    BUILD_ETERNAL_CARETAKER,
+    BUILD_SACRED_SENTINEL,
+    BUILD_TIDE_MENDER,
+    BUILD_GROVE_KEEPER,
+    BUILD_HIEROPHANT,
+    BUILD_STEWARD_OF_ETERNITY,
+    BUILD_CRYOTHERAPIST,
+    BUILD_TREE_OF_WRATH,
+    BUILD_GROVE_RANGER,
+    BUILD_FIRE_SAGE,
+    BUILD_VAMPIRE_LORD,
+    BUILD_HOPLITE,
+    BUILD_WARDEN,
+    BUILD_HEAVYWEIGHT,
+    BUILD_DRAGON_WARRIOR,
+    BUILD_SON_OF_GRUUL,
+    BUILD_DEFIAS_GUNSLINGER,
+    BUILD_GUTRIPPER,
+    BUILD_WIND_RAGER,
+    BUILD_MASTER_OF_SHADOWS,
+    BUILD_DRUID_OF_THE_FANG,
+    BUILD_CRUSADER,
+    BUILD_DIVINE_SENTINEL,
+    BUILD_HELLCAT,
+    BUILD_STORM_GIANT,
+    BUILD_FIRELORD,
+    BUILD_FEL_BLADE,
+    BUILD_MARKSMAN,
+    BUILD_PARATROOPER,
+    BUILD_LOCUST_RANGER,
+    BUILD_DARK_RANGER,
+    BUILD_ARCANE_GUNSLINGER,
+    BUILD_EVOKER,
+    BUILD_DRUID_OF_THE_ECLIPSE,
+    BUILD_SHADOWSEER,
+    BUILD_CRYOMANCER,
+    BUILD_ASCENDANT,
+    BUILD_STORMCALLER,
+    BUILD_FEL_APOSTATE,
+    BUILD_WHITE_WALKER,
+    BUILD_PLAGUE_CASTER,
+    BUILD_COUNT
+};
+
+constexpr Build BUILDS[BUILD_COUNT] = {
+    { "Blade Warden", WildcardArchetype::Tank },
+    { "Bulwark", WildcardArchetype::Tank },
+    { "Swashbuckler", WildcardArchetype::Tank },
+    { "Relentless", WildcardArchetype::Tank },
+    { "Vanguard Sentinel", WildcardArchetype::Tank },
+    { "Carnage Incarnate", WildcardArchetype::Tank },
+    { "Templar of Flame", WildcardArchetype::Tank },
+    { "Demoniac", WildcardArchetype::Tank },
+    { "Mystic Knight", WildcardArchetype::Tank },
+    { "Crimson Champion", WildcardArchetype::Tank },
+    { "Stormguard", WildcardArchetype::Tank },
+    { "Icebound", WildcardArchetype::Tank },
+    { "Plague Bearer", WildcardArchetype::Tank },
+    { "Beast of Nightmare", WildcardArchetype::Tank },
+    { "Thunderpaw", WildcardArchetype::Tank },
+    { "Naturalist", WildcardArchetype::Heal },
+    { "Dawnkeeper", WildcardArchetype::Heal },
+    { "Eternal Caretaker", WildcardArchetype::Heal },
+    { "Sacred Sentinel", WildcardArchetype::Heal },
+    { "Tide Mender", WildcardArchetype::Heal },
+    { "Grove Keeper", WildcardArchetype::Heal },
+    { "Hierophant", WildcardArchetype::Heal },
+    { "Steward of Eternity", WildcardArchetype::Heal },
+    { "Cryotherapist", WildcardArchetype::Heal },
+    { "Tree of Wrath", WildcardArchetype::Heal },
+    { "Grove Ranger", WildcardArchetype::Heal },
+    { "Fire Sage", WildcardArchetype::Heal },
+    { "Vampire Lord", WildcardArchetype::Heal },
+    { "Hoplite", WildcardArchetype::Melee },
+    { "Warden", WildcardArchetype::Melee },
+    { "Heavyweight", WildcardArchetype::Melee },
+    { "Dragon Warrior", WildcardArchetype::Melee },
+    { "Son of Gruul", WildcardArchetype::Melee },
+    { "Defias Gunslinger", WildcardArchetype::Melee },
+    { "Gutripper", WildcardArchetype::Melee },
+    { "Wind Rager", WildcardArchetype::Melee },
+    { "Master of Shadows", WildcardArchetype::Melee },
+    { "Druid of the Fang", WildcardArchetype::Melee },
+    { "Crusader", WildcardArchetype::Melee },
+    { "Divine Sentinel", WildcardArchetype::Melee },
+    { "Hellcat", WildcardArchetype::Melee },
+    { "Storm Giant", WildcardArchetype::Melee },
+    { "Firelord", WildcardArchetype::Melee },
+    { "Fel Infused Blade", WildcardArchetype::Melee },
+    { "Marksman", WildcardArchetype::Ranged },
+    { "Paratrooper", WildcardArchetype::Ranged },
+    { "Locust Ranger", WildcardArchetype::Ranged },
+    { "Dark Ranger", WildcardArchetype::Ranged },
+    { "Arcane Gunslinger", WildcardArchetype::Ranged },
+    { "Evoker", WildcardArchetype::Caster },
+    { "Druid of the Eclipse", WildcardArchetype::Caster },
+    { "Shadowseer", WildcardArchetype::Caster },
+    { "Cryomancer", WildcardArchetype::Caster },
+    { "Ascendant", WildcardArchetype::Caster },
+    { "Stormcaller", WildcardArchetype::Caster },
+    { "Fel Apostate", WildcardArchetype::Caster },
+    { "White Walker", WildcardArchetype::Caster },
+    { "Plague Caster", WildcardArchetype::Caster },
+};
+
+constexpr BuildPick BUILD_PICKS[] = {
+    // Blade Warden (S10 Hero Archetype)
+    { BUILD_BLADE_WARDEN, 40715, 4 },               // Devastate
+    { BUILD_BLADE_WARDEN, 40989, 4 },               // Divine Storm
+    { BUILD_BLADE_WARDEN, 40426, 4 },               // Ghostly Strike
+    { BUILD_BLADE_WARDEN, 40425, 4 },               // Riposte
+    // Bulwark (S10 Hero Archetype)
+    { BUILD_BULWARK, 36772, 4 },                    // Bulwark
+    { BUILD_BULWARK, 40187, 4 },                    // Thunder Clap
+    { BUILD_BULWARK, 40245, 4 },                    // Shield Slam
+    { BUILD_BULWARK, 40881, 4 },                    // Shockwave
+    // Swashbuckler (S10 Hero Archetype)
+    { BUILD_SWASHBUCKLER, 36931, 4 },               // Panache
+    { BUILD_SWASHBUCKLER, 40187, 4 },               // Thunder Clap
+    { BUILD_SWASHBUCKLER, 36929, 4 },               // Hammer the Gap
+    { BUILD_SWASHBUCKLER, 37152, 3 },               // Swashbuckler: Matched Blows
+    { BUILD_SWASHBUCKLER, 37153, 3 },               // Swashbuckler: Flurry of Blows
+    { BUILD_SWASHBUCKLER, 37200, 3 },               // Swashbuckler: Shocktrooper
+    { BUILD_SWASHBUCKLER, 37573, 3 },               // Swashbuckler: Bloodsail
+    // Relentless (S10 Hero Archetype)
+    { BUILD_RELENTLESS, 40132, 4 },                 // Eviscerate
+    { BUILD_RELENTLESS, 42095, 4 },                 // Expose Armor
+    { BUILD_RELENTLESS, 40503, 4 },                 // Hemorrhage
+    { BUILD_RELENTLESS, 40245, 4 },                 // Shield Slam
+    // Vanguard Sentinel (S10 Hero Archetype)
+    { BUILD_VANGUARD_SENTINEL, 36429, 4 },          // Battle Charge
+    { BUILD_VANGUARD_SENTINEL, 40187, 4 },          // Thunder Clap
+    { BUILD_VANGUARD_SENTINEL, 40270, 4 },          // Victory Rush
+    { BUILD_VANGUARD_SENTINEL, 40426, 4 },          // Ghostly Strike
+    // Carnage Incarnate (S10 Hero Archetype)
+    { BUILD_CARNAGE_INCARNATE, 36853, 4 },          // Carnage Incarnate
+    { BUILD_CARNAGE_INCARNATE, 40196, 4 },          // Maul
+    { BUILD_CARNAGE_INCARNATE, 40265, 4 },          // Lacerate
+    { BUILD_CARNAGE_INCARNATE, 42083, 3 },          // Bear Form
+    // Templar of Flame (S10 Hero Archetype)
+    { BUILD_TEMPLAR_OF_FLAME, 41990, 4 },           // Mana-forged Barrier
+    { BUILD_TEMPLAR_OF_FLAME, 36528, 4 },           // Seal of Fervor
+    { BUILD_TEMPLAR_OF_FLAME, 41991, 4 },           // Invocation
+    { BUILD_TEMPLAR_OF_FLAME, 40133, 4 },           // Flamestrike
+    { BUILD_TEMPLAR_OF_FLAME, 36532, 4 },           // Templar of Flame
+    { BUILD_TEMPLAR_OF_FLAME, 42067, 3 },           // Judgement of Wisdom
+    // Demoniac (S10 Hero Archetype)
+    { BUILD_DEMONIAC, 38634, 4 },                   // Dark Apotheosis
+    { BUILD_DEMONIAC, 40251, 4 },                   // Incinerate
+    // Mystic Knight (S10 Hero Archetype)
+    { BUILD_MYSTIC_KNIGHT, 41990, 4 },              // Mana-forged Barrier
+    { BUILD_MYSTIC_KNIGHT, 36384, 4 },              // Eldritch Wrath
+    { BUILD_MYSTIC_KNIGHT, 37343, 4 },              // Deconstruct
+    { BUILD_MYSTIC_KNIGHT, 36383, 2 },              // Eldritch Weapon
+    // Crimson Champion (S10 Hero Archetype)
+    { BUILD_CRIMSON_CHAMPION, 40288, 4 },           // Shield of Righteousness
+    { BUILD_CRIMSON_CHAMPION, 42024, 4 },           // Light's Hammer
+    { BUILD_CRIMSON_CHAMPION, 40002, 4 },           // Power Word: Shield
+    { BUILD_CRIMSON_CHAMPION, 40999, 4 },           // Hammer of the Righteous
+    // Stormguard (S10 Hero Archetype)
+    { BUILD_STORMGUARD, 40187, 4 },                 // Thunder Clap
+    { BUILD_STORMGUARD, 40025, 4 },                 // Lightning Bolt
+    { BUILD_STORMGUARD, 36667, 4 },                 // Stormhammer
+    { BUILD_STORMGUARD, 40027, 4 },                 // Chain Lightning
+    // Icebound (S10 Hero Archetype)
+    { BUILD_ICEBOUND, 41990, 4 },                   // Mana-forged Barrier
+    { BUILD_ICEBOUND, 41991, 4 },                   // Invocation
+    { BUILD_ICEBOUND, 40336, 4 },                   // Ice Barrier
+    // Plague Bearer (S10 Hero Archetype)
+    { BUILD_PLAGUE_BEARER, 40822, 4 },              // Mangle
+    { BUILD_PLAGUE_BEARER, 40243, 4 },              // Frenzied Regeneration
+    { BUILD_PLAGUE_BEARER, 41291, 4 },              // Ironfur
+    { BUILD_PLAGUE_BEARER, 36403, 4 },              // Plague Bearer
+    { BUILD_PLAGUE_BEARER, 42083, 3 },              // Bear Form
+    // Beast of Nightmare (S10 Hero Archetype)
+    { BUILD_BEAST_OF_NIGHTMARE, 36472, 4 },         // Corrupted Bear Form
+    { BUILD_BEAST_OF_NIGHTMARE, 40019, 4 },         // Corruption
+    { BUILD_BEAST_OF_NIGHTMARE, 40050, 4 },         // Shadow Bolt
+    { BUILD_BEAST_OF_NIGHTMARE, 40822, 4 },         // Mangle
+    { BUILD_BEAST_OF_NIGHTMARE, 42083, 3 },         // Bear Form
+    // Thunderpaw (S10 Hero Archetype)
+    { BUILD_THUNDERPAW, 36935, 4 },                 // Thunder Hide
+    { BUILD_THUNDERPAW, 36934, 4 },                 // Storm Smash
+    { BUILD_THUNDERPAW, 36936, 4 },                 // Voltaic Bite
+    { BUILD_THUNDERPAW, 40027, 4 },                 // Chain Lightning
+    // Naturalist (S10 Hero Archetype)
+    { BUILD_NATURALIST, 40064, 4 },                 // Rejuvenation
+    { BUILD_NATURALIST, 40212, 4 },                 // Regrowth
+    { BUILD_NATURALIST, 40200, 4 },                 // Lesser Healing Wave
+    { BUILD_NATURALIST, 40919, 4 },                 // Wild Growth
+    // Dawnkeeper (S10 Hero Archetype)
+    { BUILD_DAWNKEEPER, 40047, 4 },                 // Holy Light
+    { BUILD_DAWNKEEPER, 40995, 4 },                 // Beacon of Light
+    { BUILD_DAWNKEEPER, 40043, 4 },                 // Prayer of Healing
+    // Eternal Caretaker (S10 Hero Archetype)
+    { BUILD_ETERNAL_CARETAKER, 40127, 4 },          // Greater Heal
+    { BUILD_ETERNAL_CARETAKER, 40128, 4 },          // Flash Heal
+    { BUILD_ETERNAL_CARETAKER, 40840, 4 },          // Circle of Healing
+    { BUILD_ETERNAL_CARETAKER, 42019, 3 },          // Halo
+    // Sacred Sentinel (S10 Hero Archetype)
+    { BUILD_SACRED_SENTINEL, 40047, 4 },            // Holy Light
+    { BUILD_SACRED_SENTINEL, 36857, 4 },            // Prayer of Preservation
+    { BUILD_SACRED_SENTINEL, 36858, 4 },            // Preservation
+    { BUILD_SACRED_SENTINEL, 40669, 4 },            // Holy Shock
+    // Tide Mender (S10 Hero Archetype)
+    { BUILD_TIDE_MENDER, 40021, 4 },                // Healing Wave
+    { BUILD_TIDE_MENDER, 40950, 4 },                // Riptide
+    { BUILD_TIDE_MENDER, 40080, 4 },                // Chain Heal
+    { BUILD_TIDE_MENDER, 40738, 4 },                // Earth Shield
+    // Grove Keeper (S10 Hero Archetype)
+    { BUILD_GROVE_KEEPER, 40166, 4 },               // Healing Touch
+    { BUILD_GROVE_KEEPER, 40059, 4 },               // Tranquility
+    { BUILD_GROVE_KEEPER, 40080, 4 },               // Chain Heal
+    { BUILD_GROVE_KEEPER, 40738, 4 },               // Earth Shield
+    // Hierophant (S10 Hero Archetype)
+    { BUILD_HIEROPHANT, 40127, 4 },                 // Greater Heal
+    { BUILD_HIEROPHANT, 40018, 4 },                 // Renew
+    { BUILD_HIEROPHANT, 40128, 4 },                 // Flash Heal
+    { BUILD_HIEROPHANT, 40901, 4 },                 // Penance
+    // Steward of Eternity (S10 Hero Archetype)
+    { BUILD_STEWARD_OF_ETERNITY, 36865, 4 },        // Align
+    { BUILD_STEWARD_OF_ETERNITY, 36866, 4 },        // Time-bind
+    { BUILD_STEWARD_OF_ETERNITY, 36867, 4 },        // Synchronize
+    { BUILD_STEWARD_OF_ETERNITY, 36868, 4 },        // Temporal Distortion
+    // Cryotherapist (S10 Hero Archetype)
+    { BUILD_CRYOTHERAPIST, 40008, 4 },              // Frostbolt
+    { BUILD_CRYOTHERAPIST, 40127, 4 },              // Greater Heal
+    { BUILD_CRYOTHERAPIST, 36468, 4 },              // Icy Penance
+    { BUILD_CRYOTHERAPIST, 40043, 4 },              // Prayer of Healing
+    { BUILD_CRYOTHERAPIST, 36463, 4 },              // Cryotherapist
+    { BUILD_CRYOTHERAPIST, 40256, 2 },              // Ice Lance
+    { BUILD_CRYOTHERAPIST, 40276, 2 },              // Frostfire Bolt
+    // Tree of Wrath (S10 Hero Archetype)
+    { BUILD_TREE_OF_WRATH, 40025, 4 },              // Lightning Bolt
+    { BUILD_TREE_OF_WRATH, 40021, 4 },              // Healing Wave
+    { BUILD_TREE_OF_WRATH, 36454, 4 },              // Tree of Wrath
+    { BUILD_TREE_OF_WRATH, 36455, 4 },              // Living Lightning
+    // Grove Ranger (S10 Hero Archetype)
+    { BUILD_GROVE_RANGER, 36919, 4 },               // Blooming Shot
+    { BUILD_GROVE_RANGER, 40166, 4 },               // Healing Touch
+    { BUILD_GROVE_RANGER, 36920, 4 },               // Medicinal Sting
+    { BUILD_GROVE_RANGER, 40919, 4 },               // Wild Growth
+    { BUILD_GROVE_RANGER, 36922, 4 },               // Grove Ranger
+    { BUILD_GROVE_RANGER, 36923, 3 },               // Grove Ranger's Agility
+    // Fire Sage (S10 Hero Archetype)
+    { BUILD_FIRE_SAGE, 36459, 4 },                  // Cauterizing Fire
+    { BUILD_FIRE_SAGE, 40133, 4 },                  // Flamestrike
+    { BUILD_FIRE_SAGE, 40222, 4 },                  // Holy Fire
+    { BUILD_FIRE_SAGE, 40840, 4 },                  // Circle of Healing
+    // Vampire Lord (S10 Hero Archetype)
+    { BUILD_VAMPIRE_LORD, 36926, 4 },               // Beacon of Shadow
+    { BUILD_VAMPIRE_LORD, 37506, 4 },               // Shadow Waste Bolt
+    { BUILD_VAMPIRE_LORD, 36928, 4 },               // Vampire Lord
+    { BUILD_VAMPIRE_LORD, 220, 3 },                 // Shadow Mend
+    { BUILD_VAMPIRE_LORD, 40462, 2 },               // Mind Flay
+    { BUILD_VAMPIRE_LORD, 40042, 2 },               // Shadow Word: Pain
+    // Hoplite (S10 Hero Archetype)
+    { BUILD_HOPLITE, 36695, 4 },                    // Thrust
+    { BUILD_HOPLITE, 36696, 4 },                    // Javelin
+    { BUILD_HOPLITE, 41948, 4 },                    // Colossus Smash
+    { BUILD_HOPLITE, 36692, 4 },                    // Shield Strike
+    // Warden (S10 Hero Archetype)
+    { BUILD_WARDEN, 40098, 4 },                     // Mongoose Bite
+    { BUILD_WARDEN, 40153, 4 },                     // Raptor Strike
+    { BUILD_WARDEN, 42035, 4 },                     // Glaive Toss
+    { BUILD_WARDEN, 36557, 4 },                     // Savage Blade
+    // Heavyweight (S10 Hero Archetype)
+    { BUILD_HEAVYWEIGHT, 40063, 4 },                // Rend
+    { BUILD_HEAVYWEIGHT, 40006, 4 },                // Heroic Strike
+    { BUILD_HEAVYWEIGHT, 40199, 4 },                // Overpower
+    { BUILD_HEAVYWEIGHT, 40362, 4 },                // Mortal Strike
+    { BUILD_HEAVYWEIGHT, 36624, 4 },                // Heavyweight
+    { BUILD_HEAVYWEIGHT, 40096, 2 },                // Slam
+    { BUILD_HEAVYWEIGHT, 40175, 2 },                // Execute
+    // Dragon Warrior (S10 Hero Archetype)
+    { BUILD_DRAGON_WARRIOR, 40096, 4 },             // Slam
+    { BUILD_DRAGON_WARRIOR, 36511, 4 },             // Dragon Roar
+    { BUILD_DRAGON_WARRIOR, 36512, 4 },             // Dragon Charge
+    { BUILD_DRAGON_WARRIOR, 40362, 4 },             // Mortal Strike
+    { BUILD_DRAGON_WARRIOR, 36513, 4 },             // Dragon Warrior
+    // Son of Gruul (S10 Hero Archetype)
+    { BUILD_SON_OF_GRUUL, 40096, 4 },               // Slam
+    { BUILD_SON_OF_GRUUL, 36850, 4 },               // Upheaval
+    { BUILD_SON_OF_GRUUL, 36849, 4 },               // Ground Slam
+    // Defias Gunslinger (S10 Hero Archetype)
+    { BUILD_DEFIAS_GUNSLINGER, 36899, 4 },          // Pistol Shot
+    { BUILD_DEFIAS_GUNSLINGER, 40153, 4 },          // Raptor Strike
+    { BUILD_DEFIAS_GUNSLINGER, 40098, 4 },          // Mongoose Bite
+    { BUILD_DEFIAS_GUNSLINGER, 36904, 4 },          // Defias Gunslinger
+    { BUILD_DEFIAS_GUNSLINGER, 40109, 3 },          // Sinister Strike
+    // Gutripper (S10 Hero Archetype)
+    { BUILD_GUTRIPPER, 36660, 4 },                  // Disembowel
+    { BUILD_GUTRIPPER, 40754, 4 },                  // Mutilate
+    { BUILD_GUTRIPPER, 40175, 4 },                  // Execute
+    // Wind Rager (S10 Hero Archetype)
+    { BUILD_WIND_RAGER, 40103, 4 },                 // Whirlwind
+    { BUILD_WIND_RAGER, 42050, 4 },                 // Windfury Weapon
+    { BUILD_WIND_RAGER, 36739, 4 },                 // Wind Rager
+    { BUILD_WIND_RAGER, 40549, 4 },                 // Stormstrike
+    // Master of Shadows (S10 Hero Archetype)
+    { BUILD_MASTER_OF_SHADOWS, 36796, 4 },          // Master of Shadows
+    { BUILD_MASTER_OF_SHADOWS, 40109, 4 },          // Sinister Strike
+    { BUILD_MASTER_OF_SHADOWS, 40132, 4 },          // Eviscerate
+    { BUILD_MASTER_OF_SHADOWS, 41292, 4 },          // Gloomblade
+    { BUILD_MASTER_OF_SHADOWS, 40210, 2 },          // Ambush
+    // Druid of the Fang (S10 Hero Archetype)
+    { BUILD_DRUID_OF_THE_FANG, 36805, 4 },          // Serpent Form
+    { BUILD_DRUID_OF_THE_FANG, 36804, 4 },          // Serpent Strike
+    { BUILD_DRUID_OF_THE_FANG, 42435, 4 },          // Poison Mastery
+    { BUILD_DRUID_OF_THE_FANG, 36806, 4 },          // Serpent Venom
+    // Crusader (S10 Hero Archetype)
+    { BUILD_CRUSADER, 42067, 4 },                   // Judgement of Wisdom
+    { BUILD_CRUSADER, 40848, 4 },                   // Crusader Strike
+    { BUILD_CRUSADER, 40989, 4 },                   // Divine Storm
+    { BUILD_CRUSADER, 42110, 4 },                   // Seal of Command
+    { BUILD_CRUSADER, 42025, 4 },                   // Execution Sentence
+    // Divine Sentinel (S10 Hero Archetype)
+    { BUILD_DIVINE_SENTINEL, 36786, 4 },            // One With The Light
+    { BUILD_DIVINE_SENTINEL, 40848, 4 },            // Crusader Strike
+    { BUILD_DIVINE_SENTINEL, 40989, 4 },            // Divine Storm
+    { BUILD_DIVINE_SENTINEL, 40222, 4 },            // Holy Fire
+    // Hellcat (S10 Hero Archetype)
+    { BUILD_HELLCAT, 42073, 4 },                    // Cat Form
+    { BUILD_HELLCAT, 36702, 4 },                    // Devil's Ignition
+    { BUILD_HELLCAT, 40179, 4 },                    // Searing Pain
+    // Storm Giant (S10 Hero Archetype)
+    { BUILD_STORM_GIANT, 40187, 4 },                // Thunder Clap
+    { BUILD_STORM_GIANT, 40025, 4 },                // Lightning Bolt
+    { BUILD_STORM_GIANT, 36761, 4 },                // Lightning Blade
+    { BUILD_STORM_GIANT, 36762, 4 },                // Thunder Slam
+    { BUILD_STORM_GIANT, 40027, 4 },                // Chain Lightning
+    // Firelord (S10 Hero Archetype)
+    { BUILD_FIRELORD, 36483, 4 },                   // Lava Sweep
+    { BUILD_FIRELORD, 40134, 4 },                   // Fire Blast
+    { BUILD_FIRELORD, 42048, 4 },                   // Flametongue Weapon
+    { BUILD_FIRELORD, 41295, 4 },                   // Sundering
+    { BUILD_FIRELORD, 40316, 4 },                   // Pyroblast
+    // Fel Infused Blade (community build)
+    { BUILD_FEL_BLADE, 36845, 4 },                  // Fel Infused Weapon
+    { BUILD_FEL_BLADE, 36798, 4 },                  // Dark Intent
+    { BUILD_FEL_BLADE, 40109, 3 },                  // Sinister Strike
+    { BUILD_FEL_BLADE, 40132, 3 },                  // Eviscerate
+    // Marksman (S10 Hero Archetype)
+    { BUILD_MARKSMAN, 36782, 4 },                   // Compound Power
+    { BUILD_MARKSMAN, 40293, 4 },                   // Steady Shot
+    { BUILD_MARKSMAN, 42081, 4 },                   // Slice and Dice
+    { BUILD_MARKSMAN, 40158, 4 },                   // Arcane Shot
+    { BUILD_MARKSMAN, 36784, 4 },                   // Compound Shot
+    // Paratrooper (S10 Hero Archetype)
+    { BUILD_PARATROOPER, 40158, 4 },                // Arcane Shot
+    { BUILD_PARATROOPER, 37450, 4 },                // Focused Burst
+    { BUILD_PARATROOPER, 40619, 4 },                // Aimed Shot
+    // Locust Ranger (S10 Hero Archetype)
+    { BUILD_LOCUST_RANGER, 43009, 4 },              // Locust Shot
+    { BUILD_LOCUST_RANGER, 40124, 4 },              // Serpent Sting
+    { BUILD_LOCUST_RANGER, 40165, 4 },              // Wrath
+    { BUILD_LOCUST_RANGER, 40975, 4 },              // Chimera Shot
+    { BUILD_LOCUST_RANGER, 36501, 4 },              // Locust Ranger
+    { BUILD_LOCUST_RANGER, 40293, 3 },              // Steady Shot
+    { BUILD_LOCUST_RANGER, 40972, 3 },              // Wild Quiver
+    // Dark Ranger (S10 Hero Archetype and community build)
+    { BUILD_DARK_RANGER, 36916, 4 },                // Blood Arrow
+    { BUILD_DARK_RANGER, 40050, 4 },                // Shadow Bolt
+    { BUILD_DARK_RANGER, 36918, 4 },                // Shadow Artillery
+    { BUILD_DARK_RANGER, 36917, 4 },                // Shadow Shot
+    { BUILD_DARK_RANGER, 36915, 4 },                // Dark Arrows
+    { BUILD_DARK_RANGER, 40613, 3 },                // Black Arrow
+    { BUILD_DARK_RANGER, 41932, 3 },                // Blood Presence
+    { BUILD_DARK_RANGER, 40019, 3 },                // Corruption
+    { BUILD_DARK_RANGER, 40093, 3 },                // Life Tap
+    { BUILD_DARK_RANGER, 37317, 3 },                // Wave of Despair
+    { BUILD_DARK_RANGER, 37428, 3 },                // Growing Corruption
+    { BUILD_DARK_RANGER, 41053, 3 },                // Improved Blood Presence
+    { BUILD_DARK_RANGER, 41919, 2 },                // Death and Decay
+    { BUILD_DARK_RANGER, 41847, 2 },                // Answered Prayers
+    { BUILD_DARK_RANGER, 41017, 2 },                // Unending Fury
+    { BUILD_DARK_RANGER, 40696, 2 },                // Enhanced Weapon Mastery
+    { BUILD_DARK_RANGER, 40463, 2 },                // Shadowform
+    { BUILD_DARK_RANGER, 36834, 2 },                // Biting Drain
+    { BUILD_DARK_RANGER, 37684, 2 },                // Shadow Infusion
+    { BUILD_DARK_RANGER, 40566, 2 },                // Nightfall
+    { BUILD_DARK_RANGER, 36831, 2 },                // Necromancer's Touch
+    { BUILD_DARK_RANGER, 40934, 2 },                // Haunt
+    // Arcane Gunslinger (community build)
+    { BUILD_ARCANE_GUNSLINGER, 36722, 4 },          // Arcane Gunslinger
+    { BUILD_ARCANE_GUNSLINGER, 40158, 4 },          // Arcane Shot
+    // Evoker (S10 Hero Archetype)
+    { BUILD_EVOKER, 40008, 4 },                     // Frostbolt
+    { BUILD_EVOKER, 40016, 4 },                     // Fireball
+    { BUILD_EVOKER, 40164, 4 },                     // Arcane Missiles
+    { BUILD_EVOKER, 40864, 4 },                     // Brain Freeze
+    { BUILD_EVOKER, 41006, 4 },                     // Missile Barrage
+    { BUILD_EVOKER, 36495, 4 },                     // Evoker
+    { BUILD_EVOKER, 36497, 3 },                     // Spellstorm
+    { BUILD_EVOKER, 40276, 2 },                     // Frostfire Bolt
+    // Druid of the Eclipse (S10 Hero Archetype)
+    { BUILD_DRUID_OF_THE_ECLIPSE, 40165, 4 },       // Wrath
+    { BUILD_DRUID_OF_THE_ECLIPSE, 37416, 4 },       // Sunfire
+    { BUILD_DRUID_OF_THE_ECLIPSE, 40150, 4 },       // Starfire
+    { BUILD_DRUID_OF_THE_ECLIPSE, 40926, 4 },       // Eclipse
+    { BUILD_DRUID_OF_THE_ECLIPSE, 42031, 4 },       // Starsurge
+    // Shadowseer (S10 Hero Archetype)
+    { BUILD_SHADOWSEER, 40050, 4 },                 // Shadow Bolt
+    { BUILD_SHADOWSEER, 40019, 4 },                 // Corruption
+    { BUILD_SHADOWSEER, 40554, 4 },                 // Shadowburn
+    { BUILD_SHADOWSEER, 36632, 4 },                 // Shadow Crash
+    // Cryomancer (S10 Hero Archetype)
+    { BUILD_CRYOMANCER, 40008, 4 },                 // Frostbolt
+    { BUILD_CRYOMANCER, 36516, 4 },                 // Frost Bomb
+    { BUILD_CRYOMANCER, 40256, 4 },                 // Ice Lance
+    { BUILD_CRYOMANCER, 40774, 4 },                 // Summon Water Elemental
+    { BUILD_CRYOMANCER, 40867, 4 },                 // Deep Freeze
+    // Ascendant (S10 Hero Archetype)
+    { BUILD_ASCENDANT, 40038, 4 },                  // Smite
+    { BUILD_ASCENDANT, 40222, 4 },                  // Holy Fire
+    { BUILD_ASCENDANT, 36613, 4 },                  // Holy Ascension
+    { BUILD_ASCENDANT, 40071, 4 },                  // Exorcism
+    { BUILD_ASCENDANT, 40669, 4 },                  // Holy Shock
+    // Stormcaller (S10 Hero Archetype)
+    { BUILD_STORMCALLER, 40025, 4 },                // Lightning Bolt
+    { BUILD_STORMCALLER, 40201, 4 },                // Earth Shock
+    { BUILD_STORMCALLER, 36572, 4 },                // Booming Thunder
+    { BUILD_STORMCALLER, 40027, 4 },                // Chain Lightning
+    { BUILD_STORMCALLER, 40472, 4 },                // Elemental Mastery
+    // Fel Apostate (S10 Hero Archetype)
+    { BUILD_FEL_APOSTATE, 40181, 4 },               // Rain of Fire
+    { BUILD_FEL_APOSTATE, 40251, 4 },               // Incinerate
+    { BUILD_FEL_APOSTATE, 37029, 4 },               // Beam of Hatred
+    { BUILD_FEL_APOSTATE, 40189, 4 },               // Soul Fire
+    { BUILD_FEL_APOSTATE, 40896, 4 },               // Chaos Bolt
+    // White Walker (S10 Hero Archetype and community build)
+    { BUILD_WHITE_WALKER, 40109, 4 },               // Sinister Strike
+    { BUILD_WHITE_WALKER, 36679, 4 },               // Slice and Ice
+    { BUILD_WHITE_WALKER, 36680, 4 },               // Winds of Winter
+    { BUILD_WHITE_WALKER, 40867, 4 },               // Deep Freeze
+    // Plague Caster (community build)
+    { BUILD_PLAGUE_CASTER, 37576, 4 },              // Devour Mind
+    { BUILD_PLAGUE_CASTER, 36877, 4 },              // Plague Swarm
+    { BUILD_PLAGUE_CASTER, 40934, 4 },              // Haunt
+    { BUILD_PLAGUE_CASTER, 40165, 4 },              // Wrath
+    { BUILD_PLAGUE_CASTER, 37531, 4 },              // Wrath of the Plague
+    { BUILD_PLAGUE_CASTER, 36876, 4 },              // Harbinger of Plague
+    { BUILD_PLAGUE_CASTER, 40463, 3 },              // Shadowform
+    { BUILD_PLAGUE_CASTER, 138260, 3 },             // Voice of Bwonsamdi
+    { BUILD_PLAGUE_CASTER, 41102, 3 },              // Ebon Plaguebringer
+    { BUILD_PLAGUE_CASTER, 37048, 3 },              // Natural Selection
+    { BUILD_PLAGUE_CASTER, 40259, 2 },              // Avenging Wrath
+    { BUILD_PLAGUE_CASTER, 41053, 2 },              // Improved Blood Presence
+    { BUILD_PLAGUE_CASTER, 40456, 2 },              // Spirit Tap
+    { BUILD_PLAGUE_CASTER, 40933, 2 },              // Improved Spirit Tap
+    { BUILD_PLAGUE_CASTER, 41838, 2 },              // Runic Focus
+};
+
 using Weights = std::array<int8, 5>;
 
 std::unordered_map<uint32, Weights> const& PickTable()
@@ -582,6 +1075,33 @@ std::unordered_map<uint32, Weights> const& PickTable()
     }();
     return table;
 }
+
+// A build's weight for each entry it holds.
+std::unordered_map<uint32, std::vector<std::pair<uint8, int8>>> const& BuildTable()
+{
+    static std::unordered_map<uint32, std::vector<std::pair<uint8, int8>>> const table = []
+    {
+        std::unordered_map<uint32, std::vector<std::pair<uint8, int8>>> weights;
+        for (BuildPick const& pick : BUILD_PICKS)
+            weights[pick.entry].emplace_back(pick.build, pick.weight);
+        return weights;
+    }();
+    return table;
+}
+
+int32 BuildWeight(uint32 entryId, uint8 build)
+{
+    if (build >= BUILD_COUNT)
+        return 0;
+    auto const& table = BuildTable();
+    auto const found = table.find(entryId);
+    if (found == table.end())
+        return 0;
+    for (auto const& [holder, weight] : found->second)
+        if (holder == build)
+            return weight;
+    return 0;
+}
 }  // namespace
 
 int32 WildcardPickWeight(uint32 entryId, WildcardArchetype archetype)
@@ -589,6 +1109,43 @@ int32 WildcardPickWeight(uint32 entryId, WildcardArchetype archetype)
     auto const& table = PickTable();
     auto const found = table.find(entryId);
     return found == table.end() ? 0 : found->second[uint8(archetype)];
+}
+
+int32 WildcardPickWeight(uint32 entryId, WildcardArchetype archetype, uint8 build)
+{
+    return WildcardPickWeight(entryId, archetype) + BuildWeight(entryId, build);
+}
+
+uint8 WildcardBuildFor(uint32 guidCounter, WildcardArchetype archetype, std::vector<uint32> const& kept)
+{
+    std::vector<uint8> builds;
+    for (uint8 build = 0; build < BUILD_COUNT; ++build)
+        if (BUILDS[build].archetype == archetype)
+            builds.push_back(build);
+    if (builds.empty())
+        return NO_WILDCARD_BUILD;
+
+    // Another hash than the one of the fighting style, so that each style spreads over all of its builds.
+    std::size_t const start = std::size_t((uint64(guidCounter) * 40503u) >> 9) % builds.size();
+    uint8 best = builds[start];
+    uint32 bestHeld = 0;
+    for (std::size_t step = 0; step < builds.size(); ++step)
+    {
+        uint8 const build = builds[(start + step) % builds.size()];
+        uint32 const held = uint32(std::count_if(kept.begin(), kept.end(),
+            [build](uint32 entry) { return BuildWeight(entry, build) >= 4; }));
+        if (held > bestHeld)
+        {
+            best = build;
+            bestHeld = held;
+        }
+    }
+    return best;
+}
+
+char const* WildcardBuildName(uint8 build)
+{
+    return build < BUILD_COUNT ? BUILDS[build].name : "no";
 }
 
 char const* WildcardArchetypeName(WildcardArchetype archetype)
