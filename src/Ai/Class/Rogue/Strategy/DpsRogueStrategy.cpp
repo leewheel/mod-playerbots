@@ -191,14 +191,8 @@ void DpsRogueStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         )
     );
 
-    triggers.push_back(
-        new TriggerNode(
-            "expose armor",
-            {
-                NextAction("expose armor", ACTION_HIGH + 3)
-            }
-        )
-    );
+    // No Expose Armor: cast at one or two combo points it took every finisher (Eviscerate never came), and it
+    // does not stack with a warrior's Sunder Armor.
 
     triggers.push_back(
         new TriggerNode(
