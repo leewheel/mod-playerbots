@@ -314,6 +314,7 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardA
     uint32 heals = 0;
     uint32 damage = 0;
     uint32 threat = 0;
+    uint32 taunts = 0;
     uint32 support = 0;
     uint32 strikes = 0;
     uint32 shots = 0;
@@ -327,6 +328,7 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardA
         heals += heal ? 1 : 0;
         damage += hurts ? 1 : 0;
         threat += Threatens(info) ? 1 : 0;
+        taunts += Taunts(info) ? 1 : 0;
         support += Supports(info) ? 1 : 0;
         if (hurts && !heal)
         {
@@ -349,7 +351,8 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardA
             depth = heals;
             break;
         case WildcardArchetype::Tank:
-            essential = threat && damage;
+            // A tank without a taunt never takes the enemy back from a damage dealer.
+            essential = taunts && damage;
             needs = (threat ? 1 : 0) + (damage ? 1 : 0);
             depth = threat;
             break;
