@@ -4813,8 +4813,8 @@ public:
 };
 
 /*
- * A bot of a real player's group that lost them: more than 35 yards away for 6 seconds, out of a
- * fight, on the same map instance, while the player is not fighting either. It joins them, the way
+ * A bot of a real player's group that lost them: more than 35 yards away for 6 seconds (12 while the player
+ * fights), out of a fight itself, on the same map instance. It joins them, the way
  * a player would be summoned. mod-playerbots' own "move stuck" never runs for bots of a real player,
  * so one caught on a ramp or behind brambles stayed there until told to follow or teleported.
  */
@@ -4831,10 +4831,17 @@ public:
         time_t& farSince = static_cast<CoaAiObjectContext*>(botAI->GetAiObjectContext())->farFromPlayerSince;
         Player* master = botAI->GetMaster();
         // In a battleground the bot plays its objective; teleporting it to the player broke flag runs.
-        bool const lost = master && !GET_PLAYERBOT_AI(master) && !bot->InBattleground() && bot->IsAlive() &&
-                         master->IsAlive() && !bot->IsInCombat() && !master->IsInCombat() && !master->IsInFlight() &&
+        // While the player fights too, but later: a bot left out of a fight it cannot reach is stuck. A Runemaster
+        // stood out of reach of Attumen the whole fight, follow failing 217 times (ladiabale, Karazhan 20/10).
+        bool lost = master && !GET_PLAYERBOT_AI(master) && !bot->InBattleground() && bot->IsAlive() &&
+                         master->IsAlive() && !bot->IsInCombat() && !master->IsInFlight() &&
                          !master->IsBeingTeleported() && OnSameInstance(bot, master) &&
                          bot->GetGroup() && bot->GetDistance(master) > CatchUpDistance;
+        // In the player's fight a bot within healing reach of a tank is where the fight needs it, not lost.
+        if (lost && master->IsInCombat())
+            if (Player* tank = GroupTank(bot); tank && bot->GetDistance(tank) <= sPlayerbotAIConfig.healDistance &&
+                                                bot->IsWithinLOSInMap(tank))
+                lost = false;
         if (!lost)
         {
             farSince = 0;
@@ -4842,7 +4849,7 @@ public:
         }
         if (!farSince)
             farSince = time(nullptr);
-        return time(nullptr) - farSince >= CatchUpAfter;
+        return time(nullptr) - farSince >= (master->IsInCombat() ? CatchUpAfter * 2 : CatchUpAfter);
     }
 };
 

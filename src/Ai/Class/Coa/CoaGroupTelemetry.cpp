@@ -486,7 +486,7 @@ public:
             return;
 
         Group* group = player->GetGroup();
-        if (!group || group->isRaidGroup())
+        if (!group || (group->isRaidGroup() && !sPlayerbotAIConfig.coaGroupTelemetryRaids))
             return;
 
         // A group of bots only is sampled by its leader, when a test tool asked for it.

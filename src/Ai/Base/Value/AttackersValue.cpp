@@ -5,6 +5,8 @@
  */
 
 #include "AttackersValue.h"
+
+#include <cmath>
 #include "CellImpl.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
@@ -169,6 +171,12 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
         return false;
 
     if (attacker->isDead() || attacker->HasSpiritOfRedemptionAura())
+        return false;
+
+    // CoA: in an instance, not an enemy on another floor out of sight: a Runemaster spent 7 minutes and 13,454 failed
+    // casts on a Mana Feeder 85 yd below the group (ladiabale, Karazhan 20/10).
+    if (bot->GetMap()->IsDungeon() && std::fabs(attacker->GetPositionZ() - bot->GetPositionZ()) > 15.0f &&
+        !bot->IsWithinLOSInMap(attacker))
         return false;
 
     // Flag checks
