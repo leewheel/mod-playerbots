@@ -16,6 +16,12 @@
 ### Fixes
 - A spell that triggers itself no longer sends the gear rating into an endless loop (server crash).
 - Bots of one class no longer all take the same tree on a Warcraft Reborn realm.
+- Warcraft Reborn: shamans set their totems again (Call of the Elements no longer loops on an empty bar), hunters
+  keep their Auto Shot going, Frost and Unholy death knights spend their spare runes, a Blood tank stays in Frost
+  Presence and holds threat, rogues spend their combo points on Eviscerate instead of Expose Armor.
+- Wildcard: damage dealers are spread over melee, ranged and caster builds (they were nearly all melee Agility),
+  draft toward the Season 10 archetypes, always start with an ability they can use without a cooldown, and a tank
+  with a taunt; Heroes learn and cast the higher ranks of their abilities and ranged Heroes shoot with Auto Shot.
 
 ### Loot and gear
 - **Best gear** (`autogear`, "Best gear for the group" in SquidBots Lite) keeps an equipped **heirloom**: it no
