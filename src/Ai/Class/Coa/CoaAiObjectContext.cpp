@@ -4352,6 +4352,9 @@ public:
 
     std::vector<NextAction> getDefaultActions() override
     {
+        // A ranged Wildcard Hero keeps its bow or gun shooting between its drafted abilities.
+        if (ranged && IsWildcardHeroBot(botAI->GetBot()) && GetCoaStyle(botAI->GetBot()) == CoaStyle::Ranged)
+            return { NextAction("shoot", ACTION_NORMAL + 1), NextAction("coa attack", ACTION_NORMAL) };
         return { NextAction("coa attack", ACTION_NORMAL) };
     }
 

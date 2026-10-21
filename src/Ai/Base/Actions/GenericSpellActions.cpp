@@ -14,6 +14,7 @@
 #include "Opcodes.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
+#include "Spell.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
 #include "WorldPacket.h"
@@ -425,11 +426,19 @@ CastShootAction::CastShootAction(
                 shootSpellId = 2764;
                 break;
         }
+        // A Wildcard Hero that drafted Auto Shot shoots with it, not with the weaker Shoot.
+        if (shootSpellId == 3018 && bot->HasSpell(75))
+            shootSpellId = 75;
     }
 }
 
 bool CastShootAction::isPossible()
 {
+    // An auto-repeat shot already running at the target goes on by itself: casting it again restarts it.
+    if (Spell* const shooting = bot->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
+        if (GetTarget() && shooting->m_targets.GetUnitTargetGUID() == GetTarget()->GetGUID())
+            return false;
+
     if (shootSpellId)
         return botAI->CanCastSpell(shootSpellId, GetTarget(), false);
 
