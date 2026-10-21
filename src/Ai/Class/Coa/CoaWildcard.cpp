@@ -318,6 +318,8 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardA
     uint32 strikes = 0;
     uint32 shots = 0;
     uint32 magic = 0;
+    // A damaging ability without a cooldown: without one, a damage dealer stands idle once its others recharge.
+    uint32 fillers = 0;
     for (SpellInfo const* info : spells)
     {
         bool const heal = Heals(info);
@@ -331,6 +333,7 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardA
             strikes += Strike(info) ? 1 : 0;
             shots += Shot(info) ? 1 : 0;
             magic += MagicAttack(info) ? 1 : 0;
+            fillers += !info->RecoveryTime && !info->CategoryRecoveryTime ? 1 : 0;
         }
     }
     bool const autoShot = std::find(entries.begin(), entries.end(), ENTRY_AUTO_SHOT) != entries.end();
@@ -351,8 +354,8 @@ StarterFit FitOf(std::vector<AscensionWildcard::Slot> const& starters, WildcardA
             depth = threat;
             break;
         default:
-            essential = archetype == WildcardArchetype::Melee ? strikes >= 2 :
-                        archetype == WildcardArchetype::Ranged ? autoShot && shots >= 1 : magic >= 2;
+            essential = archetype == WildcardArchetype::Melee ? strikes >= 2 && fillers >= 1 :
+                        archetype == WildcardArchetype::Ranged ? autoShot && shots >= 1 : magic >= 2 && fillers >= 1;
             needs = Grouping(spells) + (support ? 1 : 0);
             depth = damage;
             break;
