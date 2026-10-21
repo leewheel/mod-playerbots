@@ -11,6 +11,7 @@
 #include "CoaDungeonPriorities.h"
 #include "CoaSpecialization.h"
 #include "CoaWildcard.h"
+#include "AscensionWildcard.h"
 #include "CombatStrategy.h"
 #include "DatabaseEnv.h"
 #include "Engine.h"
@@ -1019,6 +1020,18 @@ std::vector<Usable> KnownAbilities(Player* bot, Filter wanted)
         SpellInfo const* info = sSpellMgr->GetSpellInfo(ability.spellId);
         if (!info || info->IsPassive())
             continue;
+
+        // A Wildcard Hero's higher ranks are a SpellRank ladder of the client, not a server chain: cast the
+        // highest rank of the ladder it knows and has reached.
+        if (IsWildcardHeroBot(bot))
+        {
+            auto const& ladders = AscensionWildcard::LoadedTables().RankLadders;
+            if (auto const ladder = ladders.find(ability.spellId); ladder != ladders.end())
+                for (uint32 rankSpellId : ladder->second)
+                    if (SpellInfo const* rank = rankSpellId ? sSpellMgr->GetSpellInfo(rankSpellId) : nullptr;
+                        rank && rank->SpellLevel <= bot->GetLevel() && bot->HasSpell(rankSpellId))
+                        info = rank;
+        }
 
         auto const [itr, inserted] = rankIndex.try_emplace(ability.firstSpellId, usable.size());
         if (inserted)
