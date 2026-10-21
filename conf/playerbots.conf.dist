@@ -1415,6 +1415,12 @@ AiPlayerbot.AutoLearnTradeskillSpells = 1
 # Default: 1 (enabled)
 AiPlayerbot.CoaClassesOnly = 1
 
+# Warcraft Reborn realms only: bots set Mystic Enchants like players at an altar, from the list of their talent tree
+# in playerbots_coa_wcr_enchants (taught to them, then placed by the core within level and quality limits). Turning it
+# off keeps the enchants already set; delete the bots' rows of coa_mystic_enchant_slot to remove them.
+# Default: 1 (enabled)
+AiPlayerbot.CoaWcrMysticEnchants = 1
+
 # Gathering bots (herbalism, mining, skinning) only gather what still raises their skill: green, yellow or orange
 # for their client, never grey (100 points or more below their skill). One bot can gather everything again with the
 # chat command "nc +gather all" ("nc -gather all" to go back).

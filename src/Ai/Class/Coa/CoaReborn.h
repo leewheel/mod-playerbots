@@ -79,7 +79,8 @@ bool IsWcrRanged(Player const* bot);
 bool WcrClassCanPlay(uint8 classId, CoaRole role);
 
 // Gives the bot the Character Advancement build of its tree at its level (AscensionFreepick::ApplyGuide), the
-// unlearn costs paid for it. Returns false when it has no build or the core refused it (logged once).
+// unlearn costs paid for it, then the Mystic Enchants of its tree (playerbots_coa_wcr_enchants, AiPlayerbot.CoaWcrMysticEnchants).
+// Returns false when it has no build or the core refused it (logged once).
 bool ApplyWcrBuild(Player* bot);
 
 // ApplyWcrBuild once a session for a random Reborn bot, out of combat, for bots built before their table was filled.
