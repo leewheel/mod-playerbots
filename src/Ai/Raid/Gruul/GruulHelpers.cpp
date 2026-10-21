@@ -59,7 +59,40 @@ Player* GetKroshMageTank(Player* bot)
         }
     }
 
-    return highestHpMage;
+    if (highestHpMage)
+        return highestHpMage;
+
+    // (3) No Mage (a CoA raid has none): a third tank, else the ranged damage dealer with the most health. Krosh and
+    // his Greater Fireballs (8.7k) went on the main tank until she died (ladiabale, Gruul 2.5).
+    return GetCoaOgreHolder(group, nullptr, true);
+}
+
+// A bot that holds a caster ogre in a raid without vanilla classes: a tank that is neither main tank nor one of the
+// two assist tanks (if tanks are allowed), else the living ranged non-healer bot with the most health, not the
+// holder of the other ogre.
+Player* GetCoaOgreHolder(Group* group, Player* exclude, bool tanks)
+{
+    if (tanks)
+        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+        {
+            Player* member = ref->GetSource();
+            if (member && member->IsAlive() && member != exclude && GET_PLAYERBOT_AI(member) &&
+                PlayerbotAI::IsTank(member) && !PlayerbotAI::IsMainTank(member) &&
+                !PlayerbotAI::IsAssistTankOfIndex(member, 0, false) && !PlayerbotAI::IsAssistTankOfIndex(member, 1, false))
+                return member;
+        }
+
+    Player* best = nullptr;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive() || member == exclude || !GET_PLAYERBOT_AI(member) ||
+            !PlayerbotAI::IsRanged(member) || PlayerbotAI::IsHeal(member) || PlayerbotAI::IsTank(member))
+            continue;
+        if (!best || member->GetMaxHealth() > best->GetMaxHealth())
+            best = member;
+    }
+    return best;
 }
 
 Player* GetKigglerMoonkinTank(Player* bot)
@@ -68,8 +101,6 @@ Player* GetKigglerMoonkinTank(Player* bot)
     if (!group)
         return nullptr;
 
-    uint8 tab = AiFactory::GetPlayerSpecTab(bot);
-
     // (1) First loop: Return the first assistant Moonkin (real player or bot)
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
@@ -77,7 +108,7 @@ Player* GetKigglerMoonkinTank(Player* bot)
         if (!member || !member->IsAlive() || member->getClass() != CLASS_DRUID)
             continue;
 
-        if (group->IsAssistant(member->GetGUID()) && tab == DRUID_TAB_BALANCE)
+        if (group->IsAssistant(member->GetGUID()) && AiFactory::GetPlayerSpecTab(member) == DRUID_TAB_BALANCE)
             return member;
     }
 
@@ -88,7 +119,7 @@ Player* GetKigglerMoonkinTank(Player* bot)
     {
         Player* member = ref->GetSource();
         if (!member || !member->IsAlive() || member->getClass() != CLASS_DRUID ||
-            !GET_PLAYERBOT_AI(member) || tab != DRUID_TAB_BALANCE)
+            !GET_PLAYERBOT_AI(member) || AiFactory::GetPlayerSpecTab(member) != DRUID_TAB_BALANCE)
         {
             continue;
         }
@@ -101,7 +132,11 @@ Player* GetKigglerMoonkinTank(Player* bot)
         }
     }
 
-    return highestHpMoonkin;
+    if (highestHpMoonkin)
+        return highestHpMoonkin;
+
+    // No Moonkin: a ranged damage dealer at 28 yd, not the one on Krosh.
+    return GetCoaOgreHolder(group, GetKroshMageTank(bot), false);
 }
 
 }

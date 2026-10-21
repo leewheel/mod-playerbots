@@ -22,6 +22,7 @@ enum class MagtheridonSpells : uint32
     // Magtheridon
     SPELL_SHADOW_CAGE   = 30205,
     SPELL_SHADOW_GRASP  = 30410,
+    SPELL_MIND_EXHAUSTION = 44032,
     SPELL_BLAST_NOVA    = 30616,
     SPELL_DEBRIS_SPAWN  = 30630,
     SPELL_QUAKE         = 30657,

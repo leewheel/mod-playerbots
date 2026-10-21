@@ -66,6 +66,11 @@ float HighKingMaulgarAvoidWhirlwindMultiplier::GetValue(Action* action)
     if (botAI->IsMainTank(bot))
         return 1.0f;
 
+    // Only near him: at any distance every move was held, attack included, for whoever targeted him. Damage dealers
+    // stood stuck on Maulgar and healers could not walk back (ladiabale, Gruul 18/10).
+    if (botAI->IsHeal(bot) || bot->GetDistance2d(maulgar) > 15.0f)
+        return 1.0f;
+
     if (dynamic_cast<CastReachTargetSpellAction*>(action) ||
         (dynamic_cast<MovementAction*>(action) &&
          !dynamic_cast<HighKingMaulgarRunAwayFromWhirlwindAction*>(action)))

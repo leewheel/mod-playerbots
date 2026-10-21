@@ -89,6 +89,12 @@ Danger ClassifyDepth(SpellInfo const* info, uint8 depth)
         if (!effect.IsEffect())
             continue;
 
+        // A knockback or a pull reaches further than the blow: Shadow Nova's 30 yd knockback made it a 30 yd danger,
+        // over the 15 yd cap, and it was never dodged (ladiabale, Prince 20/10). The damage decides the size.
+        if (effect.Effect == SPELL_EFFECT_KNOCK_BACK || effect.Effect == SPELL_EFFECT_KNOCK_BACK_DEST ||
+            effect.Effect == SPELL_EFFECT_PULL_TOWARDS || effect.Effect == SPELL_EFFECT_PULL_TOWARDS_DEST)
+            continue;
+
         float const radius = effect.HasRadius() ? effect.CalcRadius() : 0.0f;
 
         if (effect.Effect == SPELL_EFFECT_PERSISTENT_AREA_AURA && !info->IsPositive())

@@ -178,8 +178,12 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
     if (attacker->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) || attacker->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         return false;
 
-    // Skip targets that are immune to all damage (e.g., Ice Block, Divine Shield)
-    if (attacker->IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL) &&
+    // Skip targets that are immune to all damage (e.g., Ice Block, Divine Shield). Not a boss: its immunity is a phase
+    // of the fight. Keli'dan's 5 s before Fire Nova dropped him from the list, the bots went to their out-of-combat
+    // engine, a healer looted and nobody healed the group through the nova (ladiabale, Blood Furnace 18/10).
+    Creature* const creature = attacker->ToCreature();
+    bool const boss = creature && (creature->IsDungeonBoss() || creature->isWorldBoss());
+    if (!boss && attacker->IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL) &&
         attacker->IsImmunedToDamage(SPELL_SCHOOL_MASK_MAGIC))
         return false;
 

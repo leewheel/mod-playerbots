@@ -37,6 +37,7 @@ constexpr uint32 GRUULS_LAIR_MAP_ID = 565;
 
 Player* GetKroshMageTank(Player* bot);
 Player* GetKigglerMoonkinTank(Player* bot);
+Player* GetCoaOgreHolder(Group* group, Player* exclude, bool tanks);
 
 extern const Position MAULGAR_TANK_POSITION;
 extern const Position OLM_TANK_POSITION;

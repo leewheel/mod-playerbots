@@ -4012,6 +4012,16 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
         return false;
     }
 
+    // CoA: no cast bar while standing in an enemy ground effect the bot can step out of: "avoid aoe" goes first.
+    // Healers stood in raid ground effects to cast slow heals (Yeh, 21/10).
+    if (CastingTime && sPlayerbotAIConfig.autoAvoidAoe && bot->GetGroup())
+        if (Aura* ground = GetAiObjectContext()->GetValue<Aura*>("area debuff")->Get())
+            if (ground->GetType() == DYNOBJ_AURA_TYPE && !ground->IsRemoved())
+                if (DynamicObject* area = ground->GetDynobjOwner(); area && area->IsInWorld() && area->GetRadius() > 0.0f &&
+                    area->GetRadius() <= sPlayerbotAIConfig.maxAoeAvoidRadius &&
+                    !sPlayerbotAIConfig.aoeAvoidSpellWhitelist.count(ground->GetId()))
+                    return false;
+
     if (!itemTarget)
     {
         // Exception for Deep Freeze (44572) - allow cast for damage on immune targets (e.g., bosses)

@@ -263,6 +263,8 @@ bool HighWarlordNajentusThrowImpalingSpineAction::Execute(Event /*event*/)
                     botAI->ImbueItem(targetSpine, targetNajentus);
             },
             delay);
+        // One throw in flight, not one more queued every tick.
+        botAI->SetNextCheckDelay(delay + 100);
 
         return true;
     }

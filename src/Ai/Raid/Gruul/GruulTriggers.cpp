@@ -32,15 +32,13 @@ bool HighKingMaulgarBlindeyeEngagedBySecondAssistTankTrigger::IsActive()
 
 bool HighKingMaulgarKroshEngagedByMageTankTrigger::IsActive()
 {
-    return bot->getClass() == CLASS_MAGE &&
-           AI_VALUE2(Unit*, "find target", "krosh firehand") &&
+    return AI_VALUE2(Unit*, "find target", "krosh firehand") &&
            GetKroshMageTank(bot) == bot;
 }
 
 bool HighKingMaulgarKigglerEngagedByMoonkinTankTrigger::IsActive()
 {
-    return bot->getClass() == CLASS_DRUID &&
-           AI_VALUE2(Unit*, "find target", "kiggler the crazed") &&
+    return AI_VALUE2(Unit*, "find target", "kiggler the crazed") &&
            GetKigglerMoonkinTank(bot) == bot;
 }
 
@@ -59,10 +57,10 @@ bool HighKingMaulgarDeterminingKillOrderTrigger::IsActive()
     if (botAI->IsAssistTankOfIndex(bot, 1, false))
         return !AI_VALUE2(Unit*, "find target", "blindeye the seer");
 
-    if (bot->getClass() == CLASS_MAGE && GetKroshMageTank(bot) == bot)
+    if (GetKroshMageTank(bot) == bot)
         return !AI_VALUE2(Unit*, "find target", "krosh firehand");
 
-    if (bot->getClass() == CLASS_DRUID && GetKigglerMoonkinTank(bot) == bot)
+    if (GetKigglerMoonkinTank(bot) == bot)
         return !AI_VALUE2(Unit*, "find target", "kiggler the crazed");
 
     return true;

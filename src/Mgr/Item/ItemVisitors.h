@@ -63,7 +63,7 @@ public:
 
     bool Visit(Item* item) override;
 
-private:
+protected:
     Player* bot;
 };
 

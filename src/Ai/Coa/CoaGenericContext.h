@@ -210,6 +210,8 @@ public:
     }
     std::string const getName() override { return "cast buff party::" + qualifier; }
     bool isUseful() override;
+    // A buff on a group member draws no threat: the threat hold kept party buffs back (ladiabale, 18/10).
+    ActionThreatType getThreatType() override { return ActionThreatType::None; }
 };
 
 /* Removing a harmful effect from a group member.

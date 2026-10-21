@@ -1363,20 +1363,53 @@ Player* GroupPlayer(PlayerbotAI* botAI, Player* bot)
 }
 
 
-// The living tank of the bot's group on its own map instance, other than the bot itself.
+// The living tank of the bot's group on its own map instance, other than the bot itself: the one being hit (the
+// lowest in health when several are), else the main tank, else the first. The first in member order only: healers
+// sat on a main tank at full health while the Olm tank starved at Maulgar, and walked 124 times between the Maiden
+// pillars and the other tank (ladiabale, Gruul 18/10, Karazhan 20/10).
 Player* GroupTank(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return nullptr;
 
+    Player* first = nullptr;
+    Player* main = nullptr;
+    Player* hit = nullptr;
+    ObjectGuid const mainGuid = PlayerbotAI::GetMainTankGuid(group);
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         if (Player* member = ref->GetSource())
             if (member != bot && member->IsAlive() && OnSameInstance(bot, member) &&
                 PlayerbotAI::IsTank(member))
-                return member;
+            {
+                if (!first)
+                    first = member;
+                if (member->GetGUID() == mainGuid)
+                    main = member;
+                if (member->IsInCombat() && !member->getAttackers().empty() &&
+                    (!hit || member->GetHealthPct() < hit->GetHealthPct()))
+                    hit = member;
+            }
 
-    return nullptr;
+    return hit ? hit : main ? main : first;
+}
+
+// A healer does not spend its casts on damage while a tank in the fight is below 60%: at Maulgar the healers wanded
+// while the main tank went from 85% to dead in a second, and at Magtheridon they hit the boss before the tank had him
+// and took him (ladiabale, 18 and 20/10). A healer whose damage is its healing is left alone.
+bool HealerHoldsDamage(Player* bot)
+{
+    if (!SmartHeal() || GetCoaRole(bot) != CoaRole::Heal || !bot->GetGroup())
+        return false;
+    if (uint32 const specialization = GetAscensionActiveSpecialization(bot))
+        if (sPlayerbotAIConfig.coaOffensiveHealerSpecs.count(specialization))
+            return false;
+    for (GroupReference* ref = bot->GetGroup()->GetFirstMember(); ref; ref = ref->next())
+        if (Player* member = ref->GetSource())
+            if (member != bot && member->IsAlive() && member->IsInCombat() && OnSameInstance(bot, member) &&
+                PlayerbotAI::IsTank(member) && member->GetHealthPct() < 60.0f)
+                return true;
+    return false;
 }
 
 /*
@@ -2764,7 +2797,7 @@ public:
     bool isUseful() override
     {
         Unit* target = AI_VALUE(Unit*, "current target");
-        return target && target->IsAlive();
+        return target && target->IsAlive() && !HealerHoldsDamage(bot);
     }
 
 private:
@@ -2878,7 +2911,7 @@ public:
     bool isUseful() override
     {
         Unit* target = AI_VALUE(Unit*, "current target");
-        return target && target->IsAlive() && ClassHas(bot, KIND_AOE) &&
+        return target && target->IsAlive() && !HealerHoldsDamage(bot) && ClassHas(bot, KIND_AOE) &&
                HasReadyAbility(botAI, bot,[](uint16 kind) { return (kind & KIND_AOE) && (kind & (KIND_DAMAGE | KIND_HOSTILE)); });
     }
 };
@@ -3119,7 +3152,10 @@ public:
         if (!SmartHeal() || bot->InBattleground() || !(bot->IsInCombat() || GroupFighting(bot)))
             return false;
         Player* tank = GroupTank(bot);
-        return tank && (bot->GetDistance2d(tank) > StayNearTank + 4.0f || !bot->IsWithinLOSInMap(tank));
+        // In a raid the boss strategies place the healers (Gruul's ring, the Maiden pillars): there only out of healing
+        // reach, or the healer walked between its spot and the tank all fight (59 to 86 times at Gruul, ladiabale).
+        float const far = bot->GetMap()->IsRaid() ? sPlayerbotAIConfig.healDistance - 2.0f : StayNearTank + 4.0f;
+        return tank && (bot->GetDistance2d(tank) > far || !bot->IsWithinLOSInMap(tank));
     }
 };
 

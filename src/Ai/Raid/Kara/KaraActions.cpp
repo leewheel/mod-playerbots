@@ -9,6 +9,8 @@
 #include "KaraHelpers.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -139,6 +141,23 @@ bool ManaWarpStunCreatureBeforeWarpBreachAction::Execute(Event /*event*/)
             return true;
     }
 
+    // Any stun the bot knows: the names above are vanilla ones, and none of the CoA classes has them. 1,269 tries,
+    // 0 stuns, while all nine bots knew one (ladiabale, Karazhan 20/10).
+    for (auto const& [spellId, spell] : bot->GetSpellMap())
+    {
+        if (spell->State == PLAYERSPELL_REMOVED || !spell->Active || bot->HasSpellCooldown(spellId))
+            continue;
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+        if (!info || info->IsPassive() || info->CalcCastTime() > 0)
+            continue;
+        bool stun = false;
+        for (SpellEffectInfo const& effect : info->Effects)
+            if (effect.IsAura(SPELL_AURA_MOD_STUN) && effect.TargetA.GetTarget() == TARGET_UNIT_TARGET_ENEMY)
+                stun = true;
+        if (stun && botAI->CanCastSpell(spellId, target) && botAI->CastSpell(spellId, target))
+            return true;
+    }
+
     return false;
 }
 
@@ -230,7 +249,8 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::CurrentTankPositionAttumen(Unit* at
 // Mounted Attumen's CombatReach is 0 [sic] yards
 bool AttumenTheHuntsmanHandlePhaseTwoAction::StackBehindAttumen(Unit* attumen)
 {
-    float const distanceBehind = bot->getClass() == CLASS_HUNTER? 8.0f : 2.0f;
+    // A CoA Ranger shoots too: 765 "too close" at 2 yd in phase 2 (ladiabale, 20/10).
+    float const distanceBehind = botAI->IsRanged(bot) ? 8.0f : 2.0f;
     float const orientation = attumen->GetOrientation() + M_PI;
     float const rearX = attumen->GetPositionX() + std::cos(orientation) * distanceBehind;
     float const rearY = attumen->GetPositionY() + std::sin(orientation) * distanceBehind;
@@ -297,6 +317,15 @@ bool MaidenOfVirtueTankPositionBossAction::Execute(Event /*event*/)
         Player* member = ref->GetSource();
         if (!member || !member->IsAlive() || !PlayerbotAI::IsHeal(member) ||
             !member->HasAura(Id(KaraSpells::SPELL_REPENTANCE)))
+        {
+            continue;
+        }
+
+        // Only a healer on Maiden's floor, near her spot and in her sight: the tank dragged her after a healer who had
+        // left the pillar ring, out of sight of half the raid, and she sank into the floor (ladiabale, 20/10).
+        Position const& spot = MAIDEN_OF_VIRTUE_TANK_POSITION;
+        if (member->GetExactDist2d(spot) > 15.0f || std::fabs(member->GetPositionZ() - spot.GetPositionZ()) > 2.0f ||
+            !maiden->IsWithinLOSInMap(member))
         {
             continue;
         }
@@ -561,8 +590,17 @@ bool TheCuratorSpreadRangedAction::Execute(Event /*event*/)
 
 bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
 {
+    // Demon Chains engage nobody, so "find target" (the bot's own threat list) only saw them once the bot had hit
+    // them: never skulled, the damage dealers stayed on Illhoof during every Sacrifice (ladiabale, 20/10).
+    constexpr uint32 demonChainsEntry = 17248;
+    std::list<Creature*> chains;
+    bot->GetCreatureListWithEntryInGrid(chains, demonChainsEntry, 60.0f);
+    for (Creature* chain : chains)
+        if (chain && chain->IsAlive())
+            return MarkTargetWithSkull(bot, chain);
+
     static constexpr std::array illhoofTargets = {
-        "demon chains", "kil'rek", "terestian illhoof", };
+        "kil'rek", "terestian illhoof", };
 
     for (char const* name : illhoofTargets)
     {
@@ -1272,6 +1310,11 @@ bool NightbaneGroundPhaseCoordinateRangedMovementAction::Execute(Event /*event*/
             break;
         }
 
+        // A bot leads unless a player is made assistant: the lowest guid was the human player, whom the stack
+        // followed step by step, cut casts included, and who never ran the safe-spot logic (ladiabale, 20/10).
+        if (!GET_PLAYERBOT_AI(member))
+            continue;
+
         if (!rangedLeader || member->GetGUID() < rangedLeader->GetGUID())
             rangedLeader = member;
     }
@@ -1402,7 +1445,8 @@ bool NightbaneGroundPhaseCoordinateRangedMovementAction::MoveRangedLeaderToSafeS
 
 bool NightbaneGroundPhaseCoordinateRangedMovementAction::StackOnRangedLeader(Player* rangedLeader)
 {
-    if (bot->GetExactDist2d(rangedLeader) < 0.5f)
+    // A few yards are a stack: at 0.5 yd every step of the leader cut the heals.
+    if (bot->GetExactDist2d(rangedLeader) < 4.0f)
         return false;
 
     bot->CastStop();
