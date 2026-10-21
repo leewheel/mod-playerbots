@@ -586,6 +586,11 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
 {
     uint8 tab = GetPlayerSpecTab(player);
 
+    // CoA: out of a fight too: two bots died eating and resurrecting in Nightbane's Charred Earth after the kill
+    // (ladiabale, Karazhan 20/10), others ate in lava (Yeh, 21/10).
+    if (sPlayerbotAIConfig.autoAvoidAoe && (facade->HasGameClientMaster() || player->GetGroup()))
+        nonCombatEngine->addStrategy("avoid aoe", false);
+
     switch (player->getClass())
     {
         case CLASS_PRIEST:

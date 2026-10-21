@@ -603,6 +603,9 @@ namespace
             Unit* target = Hidden();
             if (!target)
                 return false;
+            // A melee bot goes where the target is, around the pillar.
+            if (!Squishy(bot))
+                return Go(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
             Position spot;
             if (!CoaPvp::FindSightSpot(bot, target, Healer(bot) ? 36.0f : 28.0f, spot))
                 return false;
@@ -629,10 +632,26 @@ namespace
                 if (worst || bot->GetHealthPct() < 85.0f)
                     return nullptr;
             }
+            // The current target too, not only the melee victim: a caster has none. And with every enemy behind a
+            // pillar, the nearest of them: in 3v3 the last two stopped fighting until the player gave a follow
+            // (Yeh, 21/10). A player knows where the enemy went; the bot goes looking.
             Unit* victim = bot->GetVictim();
+            if (!victim)
+                victim = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
             if (victim && victim->IsAlive() && !bot->IsWithinLOSInMap(victim))
                 return victim;
-            return nullptr;
+            if (victim && victim->IsAlive())
+                return nullptr;
+            Player* nearest = nullptr;
+            bool seen = false;
+            Fighters(bg, bot, true, [&](Player* enemy)
+            {
+                if (bot->IsWithinLOSInMap(enemy))
+                    seen = true;
+                else if (!nearest || bot->GetExactDist2d(enemy) < bot->GetExactDist2d(nearest))
+                    nearest = enemy;
+            });
+            return seen ? nullptr : nearest;
         }
     };
 
@@ -1329,7 +1348,7 @@ namespace
 
     bool SightGate(Player* bot)
     {
-        return bot->InArena() && IsCoaBot(bot) && Squishy(bot) && On("AiPlayerbot.CoaArenaLineOfSight");
+        return bot->InArena() && IsCoaBot(bot) && On("AiPlayerbot.CoaArenaLineOfSight");
     }
 
     // A bot about to win stays on its kill: no stepping back from a target nearly dead, or lower than itself.

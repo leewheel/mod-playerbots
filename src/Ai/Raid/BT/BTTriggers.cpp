@@ -11,6 +11,9 @@
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
 #include "SharedDefines.h"
+#include <mutex>
+#include <set>
+#include <unordered_map>
 
 using namespace BlackTempleHelpers;
 using namespace EncounterHelpers;
@@ -100,17 +103,74 @@ bool HighWarlordNajentusPlayerIsImpaledTrigger::IsActive()
     return closestBot == bot;
 }
 
+// One thrower per Tidal Shield: every spine holder threw at once, 2-3 spines went on one shield, and at the next one
+// only a far healer had a spine left, which took it 31 s (ladiabale, Black Temple 21/10). The nearest holder that is
+// not a healer throws; if the shield still stands 6 s later the next one does, up to three.
+namespace
+{
+struct SpineThrow
+{
+    ObjectGuid thrower;
+    time_t since = 0;
+    std::set<ObjectGuid> tried;
+};
+std::mutex spineThrowLock;
+std::unordered_map<uint32, SpineThrow> spineThrows;
+}
+
 bool HighWarlordNajentusBossHasTidalShieldTrigger::IsActive()
 {
+    uint32 const spineEntry = static_cast<uint32>(BlackTempleItems::ITEM_NAJENTUS_SPINE);
     Unit* najentus = AI_VALUE2(Unit*, "find target", "high warlord naj'entus");
+    uint32 const instanceId = bot->GetMap()->GetInstanceId();
     if (!najentus || !najentus->HasAura(
             static_cast<uint32>(BlackTempleSpells::SPELL_TIDAL_SHIELD)))
     {
+        std::lock_guard<std::mutex> guard(spineThrowLock);
+        spineThrows.erase(instanceId);
         return false;
     }
 
-    return botAI->HasItemInInventory(
-        static_cast<uint32>(BlackTempleItems::ITEM_NAJENTUS_SPINE));
+    if (!botAI->HasItemInInventory(spineEntry))
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return true;
+
+    std::lock_guard<std::mutex> guard(spineThrowLock);
+    SpineThrow& state = spineThrows[instanceId];
+    time_t const now = time(nullptr);
+    Player* current = state.thrower.IsEmpty() ? nullptr : ObjectAccessor::FindPlayer(state.thrower);
+    bool const stale = current && now - state.since >= 6;
+    if (!current || !current->IsAlive() || !current->HasItemCount(spineEntry) || stale)
+    {
+        if (current)
+            state.tried.insert(state.thrower);
+        state.thrower = ObjectGuid::Empty;
+        if (state.tried.size() >= 3)
+            return false;
+
+        Player* best = nullptr;
+        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+        {
+            Player* member = ref->GetSource();
+            if (!member || !member->IsAlive() || !GET_PLAYERBOT_AI(member) || !member->HasItemCount(spineEntry) ||
+                member->GetMapId() != bot->GetMapId() || state.tried.count(member->GetGUID()))
+                continue;
+            bool const heal = PlayerbotAI::IsHeal(member);
+            bool const bestHeal = best && PlayerbotAI::IsHeal(best);
+            if (!best || (bestHeal && !heal) ||
+                (heal == bestHeal && member->GetExactDist2d(najentus) < best->GetExactDist2d(najentus)))
+                best = member;
+        }
+        if (!best)
+            return false;
+        state.thrower = best->GetGUID();
+        state.since = now;
+    }
+
+    return state.thrower == bot->GetGUID();
 }
 
 // Supremus

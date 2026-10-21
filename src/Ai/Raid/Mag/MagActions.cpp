@@ -386,7 +386,7 @@ bool MagtheridonSpreadRangedAction::Execute(Event /*event*/)
 }
 
 // For bots that are assigned to click cubes
-// Magtheridon casts Blast Nova every 54.35 to 55.40s, with a 2s cast time
+// Magtheridon casts Blast Nova every 54.35 to 55.40s, with a 3s cast time (CoA Spell.dbc)
 bool MagtheridonUseManticronCubeAction::Execute(Event /*event*/)
 {
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
@@ -459,17 +459,23 @@ bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(CubeInfo const& cubeI
         return false;
     }
 
-    constexpr float safeWaitDistance = 8.0f;
+    // Next to the cube, so the click comes at once (GameObject::Use has no range check). The test used to measure
+    // with GetDistance2d, which takes off the bot's combat reach: on its 8 yd ring point a clicker read 6.5 yd, failed,
+    // and its rotation started 2-3 s casts right before the nova (ladiabale, Magtheridon 20/10). While waiting the
+    // clicker does nothing else.
+    constexpr float safeWaitDistance = 3.0f;
 
-    if (fabs(bot->GetDistance2d(cubeInfo.x, cubeInfo.y) - safeWaitDistance) <= 1.0f)
+    if (bot->GetExactDist2d(cubeInfo.x, cubeInfo.y) <= safeWaitDistance + 1.0f)
         return true;
 
     if (Position safePos; FindSafePositionNearCube(cubeInfo, safeWaitDistance, safePos))
     {
-        bot->CastStop();
-        return MoveTo(MAGTHERIDON_MAP_ID, safePos.GetPositionX(), safePos.GetPositionY(),
-                      bot->GetPositionZ(), false, false, false, false,
-                      MovementPriority::MOVEMENT_FORCED, true, false);
+        if (!bot->isMoving())
+            bot->CastStop();
+        MoveTo(MAGTHERIDON_MAP_ID, safePos.GetPositionX(), safePos.GetPositionY(),
+               bot->GetPositionZ(), false, false, false, false,
+               MovementPriority::MOVEMENT_FORCED, true, false);
+        return true;
     }
 
     return false;
@@ -509,25 +515,29 @@ bool MagtheridonUseManticronCubeAction::FindSafePositionNearCube(
 bool MagtheridonUseManticronCubeAction::HandleCubeInteraction(
     CubeInfo const& cubeInfo, GameObject* cube)
 {
-    constexpr float interactDistance = 1.0f;
-    const float cubeDist = bot->GetDistance2d(cubeInfo.x, cubeInfo.y);
+    // Holding the cube: nothing else, no new click, no stop, no move.
+    if (bot->HasAura(static_cast<uint32>(MagtheridonSpells::SPELL_SHADOW_GRASP)))
+        return true;
 
-    if (cubeDist < interactDistance + 1.0f)
+    // A clicker that lost its grasp gets Mind Exhaustion and the cube refuses it without a word: it hands over (see
+    // NeedsCubeReassignment). Two Stormbringers kept clicking for nothing while the nova ran (ladiabale, 20/10).
+    if (bot->HasAura(static_cast<uint32>(MagtheridonSpells::SPELL_MIND_EXHAUSTION)))
+        return false;
+
+    // At once, on the first tick that sees the cast: the five channels have to overlap before the first holder dies
+    // (10% health a second plus the nova), and the random 0.2-1.5 s delay spread them over 2 s.
+    constexpr float interactDistance = 1.0f;
+    if (bot->GetExactDist2d(cubeInfo.x, cubeInfo.y) <= 4.0f)
     {
-        uint32 delay = urand(200, 1500);
-        botAI->AddTimedEvent(
-            [this, cube]
-            {
-                bot->StopMoving();
-                cube->Use(bot);
-            },
-            delay);
-        botAI->SetNextCheckDelay(delay + 50);
+        bot->StopMoving();
+        bot->CastStop();
+        cube->Use(bot);
         return true;
     }
 
     bot->CastStop();
-    return MoveTo(cube, interactDistance, MovementPriority::MOVEMENT_FORCED);
+    MoveTo(cube, interactDistance, MovementPriority::MOVEMENT_FORCED);
+    return true;
 }
 
 bool MagtheridonMoveOutOfDebrisAction::Execute(Event /*event*/)
@@ -657,7 +667,8 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers()
     for (auto it = assignment.begin(); it != assignment.end(); )
     {
         Player* player = ObjectAccessor::FindPlayer(it->first);
-        if (!player || !player->IsAlive() || player->GetMapId() != MAGTHERIDON_MAP_ID)
+        if (!player || !player->IsAlive() || player->GetMapId() != MAGTHERIDON_MAP_ID ||
+            player->HasAura(static_cast<uint32>(MagtheridonSpells::SPELL_MIND_EXHAUSTION)))
             it = assignment.erase(it);
         else
             ++it;
@@ -686,7 +697,8 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers()
         {
             Player* member = ref->GetSource();
             if (!member || !member->IsAlive() || !botAI->IsRangedDps(member) ||
-                !GET_PLAYERBOT_AI(member) || member->getClass() == CLASS_WARLOCK)
+                !GET_PLAYERBOT_AI(member) || member->getClass() == CLASS_WARLOCK ||
+                member->HasAura(static_cast<uint32>(MagtheridonSpells::SPELL_MIND_EXHAUSTION)))
                 continue;
 
             if (assignment.find(member->GetGUID()) != assignment.end())
@@ -703,7 +715,8 @@ bool MagtheridonManageTimersAndAssignmentsAction::AssignCubeClickers()
             {
                 Player* member = ref->GetSource();
                 if (!member || !member->IsAlive() || botAI->IsTank(member) ||
-                    !GET_PLAYERBOT_AI(member))
+                    !GET_PLAYERBOT_AI(member) ||
+                    member->HasAura(static_cast<uint32>(MagtheridonSpells::SPELL_MIND_EXHAUSTION)))
                     continue;
 
                 if (assignment.find(member->GetGUID()) != assignment.end())
@@ -729,7 +742,8 @@ bool MagtheridonManageTimersAndAssignmentsAction::NeedsCubeReassignment(const ui
     for (auto const& pair : mapIt->second)
     {
         Player* assigned = ObjectAccessor::FindPlayer(pair.first);
-        if (!assigned || !assigned->IsAlive())
+        if (!assigned || !assigned->IsAlive() ||
+            assigned->HasAura(static_cast<uint32>(MagtheridonSpells::SPELL_MIND_EXHAUSTION)))
             return true;
     }
 

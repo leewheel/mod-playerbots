@@ -5,6 +5,8 @@
  */
 
 #include "AttackersValue.h"
+
+#include <cmath>
 #include "CellImpl.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
@@ -171,6 +173,12 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
     if (attacker->isDead() || attacker->HasSpiritOfRedemptionAura())
         return false;
 
+    // CoA: in an instance, not an enemy on another floor out of sight: a Runemaster spent 7 minutes and 13,454 failed
+    // casts on a Mana Feeder 85 yd below the group (ladiabale, Karazhan 20/10).
+    if (bot->GetMap()->IsDungeon() && std::fabs(attacker->GetPositionZ() - bot->GetPositionZ()) > 15.0f &&
+        !bot->IsWithinLOSInMap(attacker))
+        return false;
+
     // Flag checks
     if (attacker->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NON_ATTACKABLE_2))
         return false;
@@ -178,8 +186,12 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
     if (attacker->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) || attacker->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         return false;
 
-    // Skip targets that are immune to all damage (e.g., Ice Block, Divine Shield)
-    if (attacker->IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL) &&
+    // Skip targets that are immune to all damage (e.g., Ice Block, Divine Shield). Not a boss: its immunity is a phase
+    // of the fight. Keli'dan's 5 s before Fire Nova dropped him from the list, the bots went to their out-of-combat
+    // engine, a healer looted and nobody healed the group through the nova (ladiabale, Blood Furnace 18/10).
+    Creature* const creature = attacker->ToCreature();
+    bool const boss = creature && (creature->IsDungeonBoss() || creature->isWorldBoss());
+    if (!boss && attacker->IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL) &&
         attacker->IsImmunedToDamage(SPELL_SCHOOL_MASK_MAGIC))
         return false;
 

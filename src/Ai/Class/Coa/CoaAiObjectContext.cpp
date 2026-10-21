@@ -13,6 +13,7 @@
 #include "CoaWildcard.h"
 #include "AscensionWildcard.h"
 #include "CombatStrategy.h"
+#include "DBCStores.h"
 #include "DatabaseEnv.h"
 #include "Engine.h"
 #include "Group.h"
@@ -200,9 +201,17 @@ bool IsControlAura(SpellEffectInfo const& effect)
 bool PossessesTarget(SpellInfo const* info)
 {
     for (SpellEffectInfo const& effect : info->Effects)
+    {
         if (IsAuraEffect(effect) && effect.ApplyAuraName == SPELL_AURA_MOD_POSSESS &&
             effect.TargetA.GetTarget() != TARGET_UNIT_CASTER)
             return true;
+        // A puppet summon is steered the same way: a Tinker healer's Build: Destructo-Bot left it standing 45 s,
+        // twice, while both channeler tanks died at Magtheridon (ladiabale, 20/10).
+        if (effect.Effect == SPELL_EFFECT_SUMMON)
+            if (SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(effect.MiscValueB))
+                if (properties->Category == SUMMON_CATEGORY_PUPPET)
+                    return true;
+    }
     return false;
 }
 
@@ -271,6 +280,10 @@ bool TeleportsCasterHome(SpellInfo const* info)
 // (Boulder Dash, Advance, Shooting Star).
 bool ForcesCasterForward(SpellInfo const* info)
 {
+    // A leap made by a script, which the spell's effects do not show: Vault (Witch Hunter), about 16 yd forward
+    // every 12 s, took a main tank out of its healers' reach and into two more packs (ladiabale, Gruul 2.5).
+    if (info->Id == 500085)
+        return true;
     for (SpellEffectInfo const& effect : info->Effects)
         if (IsAuraEffect(effect) && effect.ApplyAuraName == SPELL_AURA_FORCE_MOVE_FORWARD &&
             effect.TargetA.GetTarget() == TARGET_UNIT_CASTER)
@@ -1350,20 +1363,53 @@ Player* GroupPlayer(PlayerbotAI* botAI, Player* bot)
 }
 
 
-// The living tank of the bot's group on its own map instance, other than the bot itself.
+// The living tank of the bot's group on its own map instance, other than the bot itself: the one being hit (the
+// lowest in health when several are), else the main tank, else the first. The first in member order only: healers
+// sat on a main tank at full health while the Olm tank starved at Maulgar, and walked 124 times between the Maiden
+// pillars and the other tank (ladiabale, Gruul 18/10, Karazhan 20/10).
 Player* GroupTank(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return nullptr;
 
+    Player* first = nullptr;
+    Player* main = nullptr;
+    Player* hit = nullptr;
+    ObjectGuid const mainGuid = PlayerbotAI::GetMainTankGuid(group);
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         if (Player* member = ref->GetSource())
             if (member != bot && member->IsAlive() && OnSameInstance(bot, member) &&
                 PlayerbotAI::IsTank(member))
-                return member;
+            {
+                if (!first)
+                    first = member;
+                if (member->GetGUID() == mainGuid)
+                    main = member;
+                if (member->IsInCombat() && !member->getAttackers().empty() &&
+                    (!hit || member->GetHealthPct() < hit->GetHealthPct()))
+                    hit = member;
+            }
 
-    return nullptr;
+    return hit ? hit : main ? main : first;
+}
+
+// A healer does not spend its casts on damage while a tank in the fight is below 60%: at Maulgar the healers wanded
+// while the main tank went from 85% to dead in a second, and at Magtheridon they hit the boss before the tank had him
+// and took him (ladiabale, 18 and 20/10). A healer whose damage is its healing is left alone.
+bool HealerHoldsDamage(Player* bot)
+{
+    if (!SmartHeal() || GetCoaRole(bot) != CoaRole::Heal || !bot->GetGroup())
+        return false;
+    if (uint32 const specialization = GetAscensionActiveSpecialization(bot))
+        if (sPlayerbotAIConfig.coaOffensiveHealerSpecs.count(specialization))
+            return false;
+    for (GroupReference* ref = bot->GetGroup()->GetFirstMember(); ref; ref = ref->next())
+        if (Player* member = ref->GetSource())
+            if (member != bot && member->IsAlive() && member->IsInCombat() && OnSameInstance(bot, member) &&
+                PlayerbotAI::IsTank(member) && member->GetHealthPct() < 60.0f)
+                return true;
+    return false;
 }
 
 /*
@@ -2751,7 +2797,7 @@ public:
     bool isUseful() override
     {
         Unit* target = AI_VALUE(Unit*, "current target");
-        return target && target->IsAlive();
+        return target && target->IsAlive() && !HealerHoldsDamage(bot);
     }
 
 private:
@@ -2865,7 +2911,7 @@ public:
     bool isUseful() override
     {
         Unit* target = AI_VALUE(Unit*, "current target");
-        return target && target->IsAlive() && ClassHas(bot, KIND_AOE) &&
+        return target && target->IsAlive() && !HealerHoldsDamage(bot) && ClassHas(bot, KIND_AOE) &&
                HasReadyAbility(botAI, bot,[](uint16 kind) { return (kind & KIND_AOE) && (kind & (KIND_DAMAGE | KIND_HOSTILE)); });
     }
 };
@@ -3106,7 +3152,10 @@ public:
         if (!SmartHeal() || bot->InBattleground() || !(bot->IsInCombat() || GroupFighting(bot)))
             return false;
         Player* tank = GroupTank(bot);
-        return tank && (bot->GetDistance2d(tank) > StayNearTank + 4.0f || !bot->IsWithinLOSInMap(tank));
+        // In a raid the boss strategies place the healers (Gruul's ring, the Maiden pillars): there only out of healing
+        // reach, or the healer walked between its spot and the tank all fight (59 to 86 times at Gruul, ladiabale).
+        float const far = bot->GetMap()->IsRaid() ? sPlayerbotAIConfig.healDistance - 2.0f : StayNearTank + 4.0f;
+        return tank && (bot->GetDistance2d(tank) > far || !bot->IsWithinLOSInMap(tank));
     }
 };
 
@@ -4497,7 +4546,8 @@ protected:
  * dead, in a fight, eating or drinking, everyone at 70% health or more, the healers at 70% mana or
  * more. It pulls the nearest hostile creature it can see within 30 yards, never one more than 40
  * yards from the player or on another floor, says what it pulls, and leaves the route to the
- * player: it does not know the dungeon, it takes what is in front of the group. In dungeons only.
+ * player: it does not know the dungeon, it takes what is in front of the group. In dungeons only, not raids,
+ * by the main tank only, never a boss or a patrol.
  */
 constexpr float AutoPullRange = 30.0f;
 constexpr float AutoPullLeash = 40.0f;
@@ -4539,6 +4589,11 @@ Unit* NextPull(PlayerbotAI* botAI, Player* bot, Player* master)
         // (jealous-sound/azerothcore-wotlk-coa#5552, #5395).
         if (!creature->IsHostileTo(master) || creature->HasNpcFlag(NPCFlags(UNIT_NPC_FLAG_GOSSIP | UNIT_NPC_FLAG_QUESTGIVER)))
             continue;
+        // Never a boss, the player opens those: a tank pulled Prince Malchezaar on its own (ladiabale, Karazhan
+        // 20/10). Nor a patrol, which walks into the next packs: the Library Spell Shade brought two Horror packs.
+        if (creature->IsDungeonBoss() || creature->isWorldBoss() ||
+            creature->GetDefaultMovementType() == WAYPOINT_MOTION_TYPE)
+            continue;
 
         // From the tank or the player, whichever is nearer: a tank that stays put while the player stands (#6505)
         // was often behind the player, and the next pack lay out of its own 30 yards.
@@ -4564,6 +4619,13 @@ public:
         // Dungeons only: in the open world the player is questing or travelling, not asking for pulls.
         if (!sPlayerbotAIConfig.coaSmartTank || !PlayerbotAI::IsTank(bot) || bot->IsInCombat() || !bot->IsAlive() ||
             !bot->GetMap()->IsDungeon())
+            return false;
+        // Not in a raid, whose packs and encounters a player leads: both Karazhan tanks pulled a pack each 2 s apart,
+        // the Banquet wipe (ladiabale, 20/10), and a tank started Magtheridon with ten players.
+        if (bot->GetMap()->IsRaid())
+            return false;
+        // One puller: with two tanks in the group, the main tank only.
+        if (bot->GetGroup() && !botAI->IsMainTank(bot))
             return false;
         // A Manastorm floor is one room with its boss: the tank pulled the boss across it on its own (17/10).
         if (bot->GetScriptedPrivateMapId() != MAPID_INVALID)
@@ -4751,8 +4813,8 @@ public:
 };
 
 /*
- * A bot of a real player's group that lost them: more than 35 yards away for 6 seconds, out of a
- * fight, on the same map instance, while the player is not fighting either. It joins them, the way
+ * A bot of a real player's group that lost them: more than 35 yards away for 6 seconds (12 while the player
+ * fights), out of a fight itself, on the same map instance. It joins them, the way
  * a player would be summoned. mod-playerbots' own "move stuck" never runs for bots of a real player,
  * so one caught on a ramp or behind brambles stayed there until told to follow or teleported.
  */
@@ -4769,10 +4831,17 @@ public:
         time_t& farSince = static_cast<CoaAiObjectContext*>(botAI->GetAiObjectContext())->farFromPlayerSince;
         Player* master = botAI->GetMaster();
         // In a battleground the bot plays its objective; teleporting it to the player broke flag runs.
-        bool const lost = master && !GET_PLAYERBOT_AI(master) && !bot->InBattleground() && bot->IsAlive() &&
-                         master->IsAlive() && !bot->IsInCombat() && !master->IsInCombat() && !master->IsInFlight() &&
+        // While the player fights too, but later: a bot left out of a fight it cannot reach is stuck. A Runemaster
+        // stood out of reach of Attumen the whole fight, follow failing 217 times (ladiabale, Karazhan 20/10).
+        bool lost = master && !GET_PLAYERBOT_AI(master) && !bot->InBattleground() && bot->IsAlive() &&
+                         master->IsAlive() && !bot->IsInCombat() && !master->IsInFlight() &&
                          !master->IsBeingTeleported() && OnSameInstance(bot, master) &&
                          bot->GetGroup() && bot->GetDistance(master) > CatchUpDistance;
+        // In the player's fight a bot within healing reach of a tank is where the fight needs it, not lost.
+        if (lost && master->IsInCombat())
+            if (Player* tank = GroupTank(bot); tank && bot->GetDistance(tank) <= sPlayerbotAIConfig.healDistance &&
+                                                bot->IsWithinLOSInMap(tank))
+                lost = false;
         if (!lost)
         {
             farSince = 0;
@@ -4780,7 +4849,7 @@ public:
         }
         if (!farSince)
             farSince = time(nullptr);
-        return time(nullptr) - farSince >= CatchUpAfter;
+        return time(nullptr) - farSince >= (master->IsInCombat() ? CatchUpAfter * 2 : CatchUpAfter);
     }
 };
 

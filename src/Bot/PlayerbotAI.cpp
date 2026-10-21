@@ -2876,8 +2876,14 @@ ObjectGuid PlayerbotAI::GetMainTankGuid(Group* group)
     Group::MemberSlotList const& slots = group->GetMemberSlots();
     for (Group::member_citerator itr = slots.begin(); itr != slots.end(); ++itr)
     {
+        // A main tank set by the raid frame but dead stayed main tank: nobody took Maulgar after she died and he
+        // roamed 2:50, his Arcing Smash on the damage dealers (ladiabale, Gruul 2.5). The next living tank takes over.
         if (itr->flags & MEMBER_FLAG_MAINTANK)
-            return itr->guid;
+        {
+            Player* flagged = ObjectAccessor::FindPlayer(itr->guid);
+            if (flagged && flagged->IsAlive())
+                return itr->guid;
+        }
     }
 
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
@@ -4005,6 +4011,16 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
 
         return false;
     }
+
+    // CoA: no cast bar while standing in an enemy ground effect the bot can step out of: "avoid aoe" goes first.
+    // Healers stood in raid ground effects to cast slow heals (Yeh, 21/10).
+    if (CastingTime && sPlayerbotAIConfig.autoAvoidAoe && bot->GetGroup())
+        if (Aura* ground = GetAiObjectContext()->GetValue<Aura*>("area debuff")->Get())
+            if (ground->GetType() == DYNOBJ_AURA_TYPE && !ground->IsRemoved())
+                if (DynamicObject* area = ground->GetDynobjOwner(); area && area->IsInWorld() && area->GetRadius() > 0.0f &&
+                    area->GetRadius() <= sPlayerbotAIConfig.maxAoeAvoidRadius &&
+                    !sPlayerbotAIConfig.aoeAvoidSpellWhitelist.count(ground->GetId()))
+                    return false;
 
     if (!itemTarget)
     {

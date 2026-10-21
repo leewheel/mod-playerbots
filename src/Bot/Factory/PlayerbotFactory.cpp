@@ -2725,7 +2725,9 @@ bool PlayerbotFactory::IsCoaPvpItem(ItemTemplate const* proto)
 
 void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance, int32 onlySlot)
 {
-    if (level < 5)
+    // A Wildcard Hero has no class starting outfit (the core's Wildcard kit goes to players at their first login):
+    // it takes its gear from the regular search below at any level, else it stayed naked under level 5.
+    if (level < 5 && !IsWildcardHeroBot(bot))
     {
         if (IsAscensionCustomClassId(bot->getClass()))
         {

@@ -1481,6 +1481,11 @@ AiPlayerbot.CoaCasterManaReserve = 15
 # Default: 0 (disabled)
 AiPlayerbot.CoaGroupTelemetry = 0
 
+# Raids too, with AiPlayerbot.CoaGroupTelemetry = 1: one block per raid fight, one line per member.
+# The data a raid report needs to tell whether bots are too strong or too weak (ladiabale, 20/10).
+# Default: 0 (5-player groups only)
+AiPlayerbot.CoaGroupTelemetryRaids = 0
+
 # ".playerbots coa raid [size] [tanks] [healers]" fills the raid of the one who types it with bots.
 # Game masters have no limit. A player may build one raid every CoaRaidPlayerCooldown minutes, and
 # only while the realm has fewer than CoaRaidPlayerMax raids of bots built by players.

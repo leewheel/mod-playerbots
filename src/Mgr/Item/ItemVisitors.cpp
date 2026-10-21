@@ -26,6 +26,11 @@ bool FindPotionVisitor::Accept(ItemTemplate const* proto)
             if (!spellInfo)
                 return false;
 
+            // Not a potion that only works somewhere else: 41618 (Tempest Keep only) was tried every tick and failed
+            // 1,740 times for one bot in Gruul's Lair (ladiabale, 18/10).
+            if (bot && spellInfo->CheckLocation(bot->GetMapId(), bot->GetZoneId(), bot->GetAreaId(), bot) != SPELL_CAST_OK)
+                return false;
+
             for (uint8 i = 0; i < 3; i++)
             {
                 // A mana potion gives mana: a Rage Potion energizes too, and Cultist healers drank

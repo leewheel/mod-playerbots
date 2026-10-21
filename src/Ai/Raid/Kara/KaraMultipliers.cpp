@@ -394,7 +394,9 @@ float PrinceMalchezaarEnfeebleMultiplier::GetValue(Action* action)
         dynamic_cast<CastVampiricBloodAction*>(action) ||
         dynamic_cast<CastDeathStrikeAction*>(action) ||
         dynamic_cast<CastDeathPactAction*>(action) ||
-        dynamic_cast<UseItemAction*>(action))
+        dynamic_cast<UseItemAction*>(action) ||
+        // The CoA defensive is a plain action: Enfeebled bots still fired it, 17 times for one (ladiabale, 20/10).
+        action->getName() == "coa defensive")
     {
         return 0.0f;
     }
@@ -474,7 +476,8 @@ float NightbaneWaitForDpsMultiplier::GetValue(Action* action)
     if (!nightbane || nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
         return 1.0f;
 
-    if (PlayerbotAI::IsMainTank(bot))
+    // Every tank, as for Netherspite: the off-tank that held him was kept from its tank actions 8 s (ladiabale, 20/10).
+    if (PlayerbotAI::IsTank(bot))
         return 1.0f;
 
     time_t const now = std::time(nullptr);

@@ -80,6 +80,12 @@ static bool CoaPullsAheadOfTank(Player* bot, Unit* target)
 // Essence of Malygos and Void Shield were aimed at the enemy and never cast (ladiabale, 16/10).
 static bool CoaSpellForSelfOrFriend(SpellInfo const* info)
 {
+    // Auto Attack and Auto Shot have no target in their effects, yet strike the enemy: taken for the bot itself,
+    // "cast melee::Auto Attack" passed its range check on the bot and ended the tick before "reach melee", two
+    // melee bots stood 50 yd from Maulgar the whole council (ladiabale, Gruul 2.5).
+    if (info->HasEffect(SPELL_EFFECT_ATTACK) || info->IsAutoRepeatRangedSpell())
+        return false;
+
     bool friendlyOnly = true;
     bool any = false;
     for (SpellEffectInfo const& effect : info->Effects)
@@ -138,6 +144,15 @@ Unit* CoaCastAction::GetTarget()
     if (Unit* self = CoaSelfTargetFor(botAI, bot, spell))
         return self;
     return CastSpellAction::GetTarget();
+}
+
+Unit* CoaCanCastTrigger::GetTarget()
+{
+    // The line's action casts a spell for the bot itself or a friend on the bot: test it there, not on the enemy,
+    // or the line never fires (Essence of Malygos: 5,134 BAD_TARGETS for a Flameweaving Pyromancer, 18/10).
+    if (Unit* self = CoaSelfTargetFor(botAI, bot, spell))
+        return self;
+    return SpellCanBeCastTrigger::GetTarget();
 }
 
 Unit* CoaCastMeleeAction::GetTarget()
