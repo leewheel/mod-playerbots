@@ -57,6 +57,7 @@ public:
     DeathKnightTriggerFactoryInternal()
     {
         creators["bone shield"] = &DeathKnightTriggerFactoryInternal::bone_shield;
+        creators["frost presence"] = &DeathKnightTriggerFactoryInternal::frost_presence;
         creators["pestilence glyph"] = &DeathKnightTriggerFactoryInternal::pestilence_glyph;
         creators["blood strike"] = &DeathKnightTriggerFactoryInternal::blood_strike;
         creators["plague strike"] = &DeathKnightTriggerFactoryInternal::plague_strike;
@@ -92,6 +93,7 @@ public:
     }
 
 private:
+    static Trigger* frost_presence(PlayerbotAI* botAI) { return new FrostPresenceTrigger(botAI); }
     static Trigger* bone_shield(PlayerbotAI* botAI) { return new BoneShieldTrigger(botAI); }
     static Trigger* pestilence_glyph(PlayerbotAI* botAI) { return new PestilenceGlyphTrigger(botAI); }
     static Trigger* blood_strike(PlayerbotAI* botAI) { return new BloodStrikeTrigger(botAI); }

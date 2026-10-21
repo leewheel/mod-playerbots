@@ -105,6 +105,9 @@ void BloodDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     GenericDKStrategy::InitTriggers(triggers);
 
+    // The tank fights in Frost Presence, whatever action comes next.
+    triggers.push_back(new TriggerNode("frost presence", { NextAction("frost presence", ACTION_HIGH + 9) }));
+
     triggers.push_back(
         new TriggerNode(
             "hysteria no cd",

@@ -66,6 +66,13 @@ public:
     bool IsActive() override;
 };
 
+// A tank in Frost Presence: its threat bonus (Warcraft Reborn's Blood Presence lowers threat instead).
+class FrostPresenceTrigger : public BuffTrigger
+{
+public:
+    FrostPresenceTrigger(PlayerbotAI* botAI) : BuffTrigger(botAI, "frost presence") {}
+};
+
 class BloodTapTrigger : public BuffTrigger
 {
 public:
