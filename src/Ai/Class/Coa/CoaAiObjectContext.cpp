@@ -3154,8 +3154,8 @@ public:
         Player* tank = GroupTank(bot);
         // In a raid the boss strategies place the healers (Gruul's ring, the Maiden pillars): there only out of healing
         // reach, or the healer walked between its spot and the tank all fight (59 to 86 times at Gruul, ladiabale).
-        float const far = bot->GetMap()->IsRaid() ? sPlayerbotAIConfig.healDistance - 2.0f : StayNearTank + 4.0f;
-        return tank && (bot->GetDistance2d(tank) > far || !bot->IsWithinLOSInMap(tank));
+        float const reach = bot->GetMap()->IsRaid() ? sPlayerbotAIConfig.healDistance - 2.0f : StayNearTank + 4.0f;
+        return tank && (bot->GetDistance2d(tank) > reach || !bot->IsWithinLOSInMap(tank));
     }
 };
 
