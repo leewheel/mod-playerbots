@@ -1,6 +1,6 @@
 # CoA Bots — changelog
 
-## v2.6 — draft (not released)
+## v2.6 — Three realms: Conquest of Azeroth, Wildcard and Warcraft Reborn (October 2026)
 
 ### New realm modes
 - **Warcraft Reborn realms** (`CoA.ClassModel = "wcr"`): random bots are the original classes (Warrior to Druid,
