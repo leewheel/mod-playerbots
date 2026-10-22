@@ -24,7 +24,7 @@ bool UseItemAction::Execute(Event event)
 {
     std::string name = event.getParam();
     if (name.empty())
-        name = getName();
+        name = itemName;
 
     std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", name);
     // By leewheel 2026-09-04 防悬空崩溃: "inventory items" 缓存1000ms, 窗口内物品可能
@@ -566,7 +566,7 @@ bool UseItemAction::SocketItem(Item* item, Item* gem, bool replace)
     return fits;
 }
 
-bool UseItemAction::isPossible() { return getName() == "use" || AI_VALUE2(uint32, "item count", getName()) > 0; }
+bool UseItemAction::isPossible() { return getName() == "use" || AI_VALUE2(uint32, "item count", itemName) > 0; }
 
 bool UseSpellItemAction::isUseful() { return AI_VALUE2(bool, "spell cast useful", getName()); }
 

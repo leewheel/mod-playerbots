@@ -1174,9 +1174,13 @@ float IllidanStormrageNearNewShadowfiendMultiplier::GetValueInEncounter(Action* 
     if (!castSpellAction && !isAttackAction)
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "22917"))
-        return 1.0f;
-
+    // By leewheel 2026-10-23 合并brighton-chi the-lab：上游把「伊利丹是否在场」这条守卫由函数前
+    //   移到了本处（先筛掉与 Shadowfiend 无关的动作，再判伊利丹在场）。位置变更对结果无影响
+    //   ——只要伊利丹不在场，两个位置都同样 return 1.0f——故采纳上游位置，避免后续反复冲突。
+    //   但 qualifier 仍用 entry 22917 而非上游的 "illidan stormrage"：
+    //   本核实库生物名为中文，"find target" 的英文名子串匹配恒 nullptr ⇒ 会恒 return 1.0f，
+    //   整个 NearNewShadowfiend 机制静默失效。这是本核 entry 铁律，不可回退。
+    // End By leewheel
     // An attack action that picks its target in Execute has the bot itself as its target.
     Unit* target = castSpellAction ? AI_VALUE(Unit*, "current target") : action->GetTarget();
     bool const isOnShadowfiend =
@@ -1186,6 +1190,11 @@ float IllidanStormrageNearNewShadowfiendMultiplier::GetValueInEncounter(Action* 
 
     if (!isOnShadowfiend && !isAoeSpell && !dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
+
+    // By leewheel 2026-10-23 同上：qualifier 用 entry 22917（伊利丹·怒风），不用英文名。
+    if (!AI_VALUE2(Unit*, "find target", "22917"))
+        return 1.0f;
+    // End By leewheel
 
     return IsNearNewParasiticShadowfiend(botAI) ? 0.0f : 1.0f;
 }

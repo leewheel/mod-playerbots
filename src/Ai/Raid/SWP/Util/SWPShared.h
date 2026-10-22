@@ -12,6 +12,7 @@
 #include "Position.h"
 #include <type_traits>
 
+class Creature;
 class Player;
 class PlayerbotAI;
 class Unit;
@@ -74,27 +75,47 @@ enum class SwpSpells : uint32
     SPELL_DARKNESS_OF_A_THOUSAND_SOULS = 46605,
     SPELL_SHADOW_SPIKE                 = 46680,
 
+    // By leewheel 2026-10-23 合并brighton-chi the-lab（SWP 打断/控制技改用 spell id）：
+    //   上游在 Death Knight / Hunter / Mage 三段新增了 SPELL_STRANGULATE=47476、SPELL_MIND_FREEZE=47528、
+    //   SPELL_SILENCING_SHOT=34490、SPELL_COUNTERSPELL=2139、SPELL_DEEP_FREEZE=44572，
+    //   与本核文末「By leewheel 2026-08-29」段内同名成员在 enum class 内重复 ⇒ 会触发
+    //   C2371「重定义」编译错误。这里做去重取舍，原则：机器人只会学会 80 级链顶 rank，
+    //   低 rank id 会让 CanCastSpell / castInterrupt / castSpell 恒失败 ⇒ 一律保留本核链顶值：
+    //     · SPELL_STRANGULATE  47476 → 本核 49916（48680→49913→49914→49915→49916 链顶）
+    //     · SPELL_MIND_FREEZE  47528 → 本核 49910（47528→49910 链顶）
+    //     · SPELL_DEEP_FREEZE  44572 两边同值（唯一 rank），纯重复，留本核那份
+    //     · SPELL_SILENCING_SHOT 34490 / SPELL_COUNTERSPELL 2139 两边同值，纯重复，留本核那份
+    //   上游独有的 SPELL_MISDIRECTION / SPELL_MISDIRECTION_AURA / SPELL_SPELLSTEAL 原样保留。
+    // Death Knight
+    //   （SPELL_STRANGULATE / SPELL_MIND_FREEZE 见文末 By leewheel 段，取链顶 rank）
+
     // Hunter
     SPELL_MISDIRECTION                 = 34477,
     SPELL_MISDIRECTION_AURA            = 35079, // the aura on the hunter
+    //   （SPELL_SILENCING_SHOT 见文末 By leewheel 段，两边同为 34490）
 
     // Mage
+    //   （SPELL_COUNTERSPELL 见文末 By leewheel 段，两边同为 2139）
     SPELL_SPELLSTEAL                   = 30449,
     SPELL_ICE_BLOCK                    = 45438,  // 法师冰箱，消减危险首领机制用 --By leewheel 2026-09-06 补充
 
     // Paladin
     SPELL_DIVINE_SHIELD                = 642,    // 圣骑士圣盾术 --By leewheel 2026-09-06 补充
+    // End By leewheel
 
     // Priest
     SPELL_DISPEL_MAGIC_RANK_1          = 527,
     SPELL_SHADOWFORM                   = 15473,
+    //   （SPELL_SILENCE 见文末 By leewheel 段，两边同为 15487）
     SPELL_MASS_DISPEL                  = 32375,
 
     // Rogue
+    //   （SPELL_KICK 见文末 By leewheel 段：上游 1766 为 r1，本核 1767 为链顶 rank，取链顶）
     SPELL_CLOAK_OF_SHADOWS             = 31224,  // 盗贼暗影斗篷 --By leewheel 2026-09-06 补充
 
     // Shaman
     SPELL_PURGE_RANK_1                 = 370,
+    //   （SPELL_WIND_SHEAR 见文末 By leewheel 段，两边同为 57994）
 
     // Warlock
     SPELL_METAMORPHOSIS                = 47241,
@@ -130,6 +151,25 @@ enum class SwpSpells : uint32
     SPELL_CONSECRATION                 = 48819,  // 圣骑士（80级最高rank）
     SPELL_CHARGE                       = 57817,  // 战士（100→6178→11578→57817链顶）
     SPELL_CHALLENGING_SHOUT            = 1161,   // 战士（唯一rank）
+    // End By leewheel
+
+    // By leewheel 2026-10-23 合并brighton-chi the-lab：上游在 enum 末尾新增 Warlock(Felhunter) /
+    //   Warrior / Tauren 三段，其中 SPELL_SHIELD_BASH=72、SPELL_PUMMEL=6552、
+    //   SPELL_CONCUSSION_BLOW=12809、SPELL_WAR_STOMP=20549 与上方本核段同名（C2371 重复定义）。
+    //   取舍同上：SPELL_SHIELD_BASH 72→1671、SPELL_PUMMEL 6552→6554 取本核链顶 rank
+    //   （80 级战士只可能学会链顶 rank，用 r1/r2 会让 CanCastSpell 恒失败，穆鲁打断就废了）；
+    //   SPELL_CONCUSSION_BLOW(12809) / SPELL_WAR_STOMP(20549) 两边同值，纯重复，留本核那份。
+    //   上游独有的 SPELL_SPELL_LOCK_1/_2（术士法术封锁两个 rank）与 SPELL_BERSERKER_STANCE
+    //   名字不与本核冲突，原样保留（本核另有 SPELL_SPELL_LOCK = 19647 = 上游的 _2）。
+    // Warlock (Felhunter)
+    SPELL_SPELL_LOCK_1                 = 19244,
+    SPELL_SPELL_LOCK_2                 = 19647,
+
+    // Warrior
+    SPELL_BERSERKER_STANCE             = 2458,
+
+    // Tauren
+    //   （SPELL_WAR_STOMP 见上方 By leewheel 段，两边同为 20549）
     // End By leewheel
 };
 
@@ -234,6 +274,9 @@ uint32 GetManualCastCooldown(uint32 spellId);
 uint32 GetManualCastGlobalCooldown(uint32 spellId);
 // Misdirection on the tank, then Steady Shot on the target while it is up, to spend it.
 bool MisdirectTargetToTank(PlayerbotAI* botAI, Unit* target, Player* tank);
+// The Spell Lock rank a living Felhunter can cast at the target now. This is needed because
+// PlayerbotAI::CanCastSpell passes any spell the pet knows without checking range or cooldown.
+uint32 GetReadySpellLock(Creature* pet, Unit* target);
 // One step along the bot's path to a point, stopping short of it by stopDistance. The step
 // follows the path corner-by-corner, rather than aiming at the far end of it, so a bot can move
 // around an obstacle between it and the point.

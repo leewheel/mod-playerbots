@@ -1004,6 +1004,13 @@ std::string ChatHelper::ResolveChatCommandAlias(std::string const& command)
         {"雕文装备", "glyph equip"},
         {"移除雕文", "remove glyph"},
         {"喝水", "drink"},
+        //By leewheel 2026-10-23 合并brighton-chi the-lab：上游把进食动作名由 "food" 改为 "eat"
+        //   （creators/ActionNode/聊天命令同步改名；"food" 仅保留为背包物品类别名与 UseFoodStrategy 策略名）。
+        //   与上方 "喝水"→"drink" 对称，补 "eat" 的中文别名，保证中英双语命令都可用。
+        {"吃饭", "eat"},
+        {"进食", "eat"},
+        {"吃", "eat"},
+        //End By leewheel
         {"驯服", "tame"},
 
         // ==================== 任务 ====================

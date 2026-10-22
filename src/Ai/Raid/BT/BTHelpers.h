@@ -104,6 +104,13 @@ enum class BtSpells : uint32
     SPELL_PARALYZE                  = 41083, // cast by a Shadow Demon on the unit it walks to
     SPELL_SHADOW_PRISON             = 40647, // on every player in Maiev's arrival, 30 s
 
+    // Death Knight
+    // By leewheel 2026-10-23 合并brighton-chi the-lab：上游把打断技能由英文名字符串改为 spell id，
+    //   但取的是基础 rank（47528）。PlayerbotAI::CanCastSpell 走 bot->HasSpell(spellid)，
+    //   而 80 级机器人法术书里只有链顶 rank ⇒ HasSpell(47528) 恒 false ⇒ 打断静默失效。
+    //   以下 4 个改为 80 级可学的链顶 rank（与 SWP 段取值一致，已用 chs_dbc.db_spell_12340_eng 查证）。
+    SPELL_MIND_FREEZE               = 49910, // 47528 → 49910 链顶
+
     // Druid
     SPELL_TREE_OF_LIFE              = 33891,
 
@@ -124,6 +131,9 @@ enum class BtSpells : uint32
     // Priest
     SPELL_DISPERSION                = 47585,
 
+    // Rogue
+    SPELL_KICK                      =  1767, // 1766 → 1767 链顶（同上，原 r1 会让 HasSpell 失败）
+
     // Shaman
     SPELL_WIND_SHEAR                = 57994,
 
@@ -132,6 +142,9 @@ enum class BtSpells : uint32
     SPELL_SPELL_LOCK_2              = 19647,
 
     // Warrior
+    SPELL_SHIELD_BASH               =  1671, // 72 → 1671 链顶（同上，原 r1 会让 HasSpell 失败）
+    SPELL_BERSERKER_STANCE          =  2458,
+    SPELL_PUMMEL                    =  6554, // 6552 → 6554 链顶（同上，原 r2 会让 HasSpell 失败）
     SPELL_SPELL_REFLECTION          = 23920,
     SPELL_VIGILANCE                 = 50720,
 };
