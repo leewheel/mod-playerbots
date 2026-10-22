@@ -23,6 +23,19 @@ struct Position;
 #define ANGLE_90_DEG M_PI_2
 #define ANGLE_120_DEG (2.f * static_cast<float>(M_PI) / 3.f)
 
+// CoA: enemy ground effects (pools, clouds: DynamicObjects with periodic damage) around a bot in an instance. "avoid aoe"
+// only steps out of one the bot already stands in; these let moves keep out of them (ladiabale's ZG captures, 22/10).
+struct CoaGround
+{
+    float x, y, radius;
+};
+// Hakkar's Blood Siphon is running (Heart of Hakkar 9780022 near): his poison pools are its counter then.
+bool CoaHakkarSiphon(Player* bot);
+std::vector<CoaGround> CoaHostileGround(Player* bot);
+// The aura reaches about radius + 1.5 yd (the player's combat reach); margin comes on top of that.
+bool CoaInGround(std::vector<CoaGround> const& zones, float x, float y, float margin = 0.5f);
+bool CoaSegmentCrossesGround(std::vector<CoaGround> const& zones, float x0, float y0, float x1, float y1, float margin = 0.5f);
+
 class MovementAction : public Action
 {
 public:
@@ -65,7 +78,8 @@ protected:
     void CreateWp(Player* wpOwner, float x, float y, float z, float o, uint32 entry, bool important = false);
     Position BestPositionForMeleeToFlee(Position pos, float radius);
     Position BestPositionForRangedToFlee(Position pos, float radius);
-    bool FleePosition(Position pos, float radius, uint32 minInterval = 1000);
+    bool FleePosition(Position pos, float radius, uint32 minInterval = 1000,
+                      MovementPriority priority = MovementPriority::MOVEMENT_COMBAT);
     bool CheckLastFlee(float curAngle, std::list<FleeInfo>& infoList);
 
 protected:

@@ -5,6 +5,7 @@
  */
 
 #include "AoeValues.h"
+#include "MovementActions.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
 #include "SpellAuraEffects.h"
@@ -138,6 +139,10 @@ Aura* AreaDebuffValue::Calculate()
             bool isPositive = aura->GetSpellInfo()->IsPositive();
             if (type == DYNOBJ_AURA_TYPE && !isPositive)
             {
+                // Hakkar's poison pools counter his Blood Siphon: a bot stays in them while it runs (ladiabale, ZG).
+                uint32 const id = aura->GetId();
+                if ((id == 2118675 || id == 24320) && CoaHakkarSiphon(bot))
+                    continue;
                 DynamicObject* dynOwner = aura->GetDynobjOwner();
                 if (!dynOwner)
                 {
