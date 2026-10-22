@@ -92,9 +92,6 @@ std::vector<NextAction> BloodDKStrategy::getDefaultActions()
 {
     return {
         NextAction("rune strike", ACTION_DEFAULT + 0.6f),
-        // Its threat on a single boss too: Warcraft Reborn teaches Dark Command at 65 and Rune Strike at 67, and its
-        // level 60 Blood tanks held the boss 6 % of the bench fights, Death and Decay cast only twice (22/10).
-        NextAction("death and decay", ACTION_DEFAULT + 0.55f),
         NextAction("icy touch", ACTION_DEFAULT + 0.5f),
         NextAction("heart strike", ACTION_DEFAULT + 0.4f),
         NextAction("dancing rune weapon", ACTION_DEFAULT + 0.3f),
@@ -110,6 +107,10 @@ void BloodDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     // The tank fights in Frost Presence, whatever action comes next.
     triggers.push_back(new TriggerNode("frost presence", { NextAction("frost presence", ACTION_HIGH + 9) }));
+    // Death and Decay whenever it is ready, a single boss too: Warcraft Reborn teaches Dark Command at 65 and Rune
+    // Strike at 67, and its level 60 Blood tanks held the boss 2 to 7 % of the bench fights. As a default action it was
+    // still cast once a fight, every rune trigger outranking it (22/10).
+    triggers.push_back(new TriggerNode("death and decay ready", { NextAction("death and decay", ACTION_HIGH + 3) }));
 
     triggers.push_back(
         new TriggerNode(

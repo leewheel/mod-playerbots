@@ -88,12 +88,14 @@ public:
         creators["no desolation"] = &DeathKnightTriggerFactoryInternal::no_desolation;
         creators["dd cd and no desolation"] = &DeathKnightTriggerFactoryInternal::dd_cd_and_no_desolation;
         creators["death and decay cooldown"] = &DeathKnightTriggerFactoryInternal::death_and_decay_cooldown;
+        creators["death and decay ready"] = &DeathKnightTriggerFactoryInternal::death_and_decay_ready;
         creators["army of the dead"] = &DeathKnightTriggerFactoryInternal::army_of_the_dead;
         creators["hysteria no cd"] = &DeathKnightTriggerFactoryInternal::hysteria_no_cd;
     }
 
 private:
     static Trigger* frost_presence(PlayerbotAI* botAI) { return new FrostPresenceTrigger(botAI); }
+    static Trigger* death_and_decay_ready(PlayerbotAI* botAI) { return new DeathAndDecayReadyTrigger(botAI); }
     static Trigger* bone_shield(PlayerbotAI* botAI) { return new BoneShieldTrigger(botAI); }
     static Trigger* pestilence_glyph(PlayerbotAI* botAI) { return new PestilenceGlyphTrigger(botAI); }
     static Trigger* blood_strike(PlayerbotAI* botAI) { return new BloodStrikeTrigger(botAI); }

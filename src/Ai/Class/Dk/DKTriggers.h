@@ -91,6 +91,12 @@ public:
     RuneStrikeTrigger(PlayerbotAI* botAI) : SpellCanBeCastTrigger(botAI, "rune strike") {}
 };
 
+class DeathAndDecayReadyTrigger : public SpellCanBeCastTrigger
+{
+public:
+    DeathAndDecayReadyTrigger(PlayerbotAI* botAI) : SpellCanBeCastTrigger(botAI, "death and decay") {}
+};
+
 class DeathCoilTrigger : public SpellCanBeCastTrigger
 {
 public:
