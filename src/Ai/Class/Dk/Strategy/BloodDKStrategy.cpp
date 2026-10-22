@@ -92,6 +92,9 @@ std::vector<NextAction> BloodDKStrategy::getDefaultActions()
 {
     return {
         NextAction("rune strike", ACTION_DEFAULT + 0.6f),
+        // Its threat on a single boss too: Warcraft Reborn teaches Dark Command at 65 and Rune Strike at 67, and its
+        // level 60 Blood tanks held the boss 6 % of the bench fights, Death and Decay cast only twice (22/10).
+        NextAction("death and decay", ACTION_DEFAULT + 0.55f),
         NextAction("icy touch", ACTION_DEFAULT + 0.5f),
         NextAction("heart strike", ACTION_DEFAULT + 0.4f),
         NextAction("dancing rune weapon", ACTION_DEFAULT + 0.3f),

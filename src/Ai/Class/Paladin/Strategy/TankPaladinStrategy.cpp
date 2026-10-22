@@ -120,9 +120,11 @@ void TankPaladinStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             }
         )
     );
+    // Holy Shield kept up whenever it is missing, not only under medium health: with a healer behind them the Reborn
+    // tank bench Paladins sat near full health and cast it 0.3 times a fight (22/10).
     triggers.push_back(
         new TriggerNode(
-            "medium health",
+            "holy shield",
             {
                 NextAction("holy shield", ACTION_HIGH + 4)
             }
