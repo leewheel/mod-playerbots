@@ -30,8 +30,7 @@ Many of these fixes come from the raid and dungeon reports of ladiabale and Yeh:
 - Mystic enchants: each specialization gets its own set (1 legendary, 5 epic, 10 rare), applied as the bot levels up
   and when it changes specialization (+20 % damage on our bench).
 - Reborn tanks now tank: they take their threat stance (Defensive Stance, Righteous Fury) and taunt; warriors use
-  Shield Block, Revenge and Shield Wall, Protection paladins keep Holy Shield up, Blood death knights use Death and
-  Decay on a single target before they learn their taunt at 65.
+  Shield Block, Revenge and Shield Wall, Protection paladins keep Holy Shield up.
 
 ## v2.6 — Three realms (October 2026)
 
