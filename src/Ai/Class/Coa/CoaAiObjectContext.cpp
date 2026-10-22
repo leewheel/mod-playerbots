@@ -4006,10 +4006,17 @@ float MarkRadius(SpellInfo const* aura)
             (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE || IsControlAura(effect)))
             radius = std::max(radius, effect.CalcRadius());
 
-        // What the aura casts from the carrier, now (periodic) or when it ends (trigger rider).
-        if (!effect.TriggerSpell)
+        // What the aura casts from the carrier, now (periodic) or when it ends (trigger rider). A dummy aura can name
+        // it in its base points instead: Solarian's Wrath of the Astromancer (42783) does, and 'coa marked ally' never
+        // saw it, so a carrier blew up among the group (ladiabale, TK 22/10).
+        uint32 triggerId = effect.TriggerSpell;
+        if (!triggerId && (effect.Effect == SPELL_EFFECT_DUMMY ||
+                           (effect.Effect == SPELL_EFFECT_APPLY_AURA && effect.ApplyAuraName == SPELL_AURA_DUMMY)))
+            if (int32 const named = effect.CalcValue(); named > 0)
+                triggerId = uint32(named);
+        if (!triggerId)
             continue;
-        SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell);
+        SpellInfo const* triggered = sSpellMgr->GetSpellInfo(triggerId);
         if (!triggered || triggered->HasAttribute(SPELL_ATTR0_CU_SHARE_DAMAGE))
             continue;
         for (SpellEffectInfo const& hit : triggered->Effects)

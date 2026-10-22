@@ -177,6 +177,16 @@ bool AlarRangedAndEmberTankMoveUnderPlatformsAction::Execute(Event /*event*/)
     if (!alar)
         return false;
 
+    // Healers have no Ember rule of their own: they stood in the blast with the ranged (ladiabale, Al'ar 22/10).
+    if (botAI->IsHeal(bot))
+    {
+        auto [firstEmber, secondEmber] = GetFirstTwoEmbersOfAlar(botAI);
+        constexpr float emberSafeDistance = 20.0f;
+        for (Unit* ember : { firstEmber, secondEmber })
+            if (ember && bot->GetDistance2d(ember) < emberSafeDistance)
+                return MoveAway(ember, emberSafeDistance - bot->GetDistance2d(ember));
+    }
+
     int8 locationIndex = GetAlarCurrentLocationIndex(alar);
     if (locationIndex == LOCATION_NONE)
     {
@@ -307,7 +317,8 @@ bool AlarAssistTanksPickUpEmbersAction::HandlePhase2Embers()
         else if (bot->IsWithinMeleeRange(firstEmber))
         {
             constexpr float safeDistance = 16.0f;
-            if (GetNearestNonTankPlayerInRadius(botAI, bot, safeDistance))
+            // From the other tanks too: each Ember death hit both tanks for 7-10k and killed one (ladiabale, Al'ar 22/10).
+            if (GetNearestPlayerInRadius(bot, safeDistance))
                 return MoveFromGroup(safeDistance);
         }
     }
@@ -328,7 +339,8 @@ bool AlarAssistTanksPickUpEmbersAction::HandlePhase2Embers()
         else if (bot->IsWithinMeleeRange(secondEmber))
         {
             constexpr float safeDistance = 16.0f;
-            if (GetNearestNonTankPlayerInRadius(botAI, bot, safeDistance))
+            // From the other tanks too: each Ember death hit both tanks for 7-10k and killed one (ladiabale, Al'ar 22/10).
+            if (GetNearestPlayerInRadius(bot, safeDistance))
                 return MoveFromGroup(safeDistance);
         }
     }
@@ -340,34 +352,44 @@ bool AlarRangedDpsPrioritizeEmbersAction::Execute(Event /*event*/)
 {
     auto [firstEmber, secondEmber] = GetFirstTwoEmbersOfAlar(botAI);
 
-    constexpr float safeDistance = 16.0f;
-    if (firstEmber)
+    // Ember Blast reaches 15 y: 16 left a yard of margin, and an Ember killed one second after it spawned among the
+    // ranged took two healers and the damage dealer with it (ladiabale, Al'ar 22/10). An Ember is only shot once the
+    // tank has dragged it clear of everyone but tanks.
+    constexpr float safeDistance = 20.0f;
+    auto clearOfGroup = [this](Unit* ember)
     {
-        if (bot->GetDistance2d(firstEmber) < safeDistance)
+        Group* group = bot->GetGroup();
+        if (!group)
+            return true;
+        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+            if (Player* member = ref->GetSource())
+                if (member->IsAlive() && !botAI->IsTank(member) && member->GetExactDist2d(ember) < safeDistance)
+                    return false;
+        return true;
+    };
+
+    for (auto [ember, icon] : { std::pair<Unit*, char const*>{ firstEmber, "square" }, { secondEmber, "circle" } })
+    {
+        if (!ember)
+            continue;
+
+        if (bot->GetDistance2d(ember) < safeDistance)
         {
             bot->AttackStop();
             bot->CastStop();
-            return MoveAway(firstEmber, safeDistance - bot->GetDistance2d(firstEmber));
+            return MoveAway(ember, safeDistance - bot->GetDistance2d(ember));
         }
 
-        SetRtiTarget(botAI, "square");
-        if (AI_VALUE(Unit*, "current target") != firstEmber)
-            return Attack(firstEmber);
-    }
-    else if (secondEmber)
-    {
-        if (bot->GetDistance2d(secondEmber) < safeDistance)
-        {
-            bot->AttackStop();
-            bot->CastStop();
-            return MoveAway(secondEmber, safeDistance - bot->GetDistance2d(secondEmber));
-        }
+        if (!clearOfGroup(ember))
+            continue;
 
-        SetRtiTarget(botAI, "circle");
-        if (AI_VALUE(Unit*, "current target") != secondEmber)
-            return Attack(secondEmber);
+        SetRtiTarget(botAI, icon);
+        if (AI_VALUE(Unit*, "current target") != ember)
+            return Attack(ember);
+        return false;
     }
-    else if (Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar"))
+
+    if (Unit* alar = AI_VALUE2(Unit*, "find target", "al'ar"))
     {
         SetRtiTarget(botAI, "star");
         if (AI_VALUE(Unit*, "current target") != alar)
@@ -540,8 +562,10 @@ bool AlarAvoidFlamePatchesAndDiveBombsAction::HandleDiveBomb(Unit* alar)
         alar->FindCurrentSpellBySpellId(SPELL_REBIRTH_DIVE)) ||
         !alar->IsVisible())
     {
-        float currentDistance = bot->GetDistance2d(alar);
-        constexpr float safeDistance = 20.0f;
+        // From her centre: GetDistance2d removes her large reach, so 20 y put everyone 36 y out and nobody was in
+        // melee when she came back, which she answers with Flame Buffet (ladiabale, Al'ar 22/10).
+        float currentDistance = bot->GetExactDist2d(alar);
+        constexpr float safeDistance = 22.0f;
         if (currentDistance < safeDistance)
         {
             bot->AttackStop();
@@ -636,7 +660,6 @@ bool VoidReaverTanksPositionBossAction::Execute(Event /*event*/)
 
 bool VoidReaverUseAggroDumpAbilityAction::Execute(Event /*event*/)
 {
-    botAI->Reset();
     static const std::array<char const*, 6> spells =
     {
         "divine protection",
@@ -648,12 +671,17 @@ bool VoidReaverUseAggroDumpAbilityAction::Execute(Event /*event*/)
     };
     for (char const* spell : spells)
     {
-        if (botAI->CanCastSpell(spell, bot) &&
-            botAI->CastSpell(spell, bot))
-            return true;
+        if (botAI->CanCastSpell(spell, bot))
+        {
+            botAI->Reset();
+            if (botAI->CastSpell(spell, bot))
+                return true;
+        }
     }
 
-    return false;
+    // A class with none of these (every CoA class) no longer resets itself on every tick for nothing: 25 failed
+    // tries at priority 96 in the room-pull wipe (ladiabale, Void Reaver 22/10). It survives the hit instead.
+    return botAI->DoSpecificAction("coa defensive", Event(), true);
 }
 
 bool VoidReaverSpreadRangedAction::Execute(Event /*event*/)
@@ -752,10 +780,6 @@ int VoidReaverSpreadRangedAction::GetRangedDpsIndex(Group* group, int& rangedDps
 
 bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
 {
-    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "void reaver");
-    if (!voidReaver)
-        return false;
-
     auto it = voidReaverArcaneOrbs.find(bot->GetMap()->GetInstanceId());
     if (it == voidReaverArcaneOrbs.end() || it->second.empty())
         return false;
@@ -787,10 +811,24 @@ bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
 
     if (shouldFlee)
     {
-        constexpr uint32 minInterval = 0;
         bot->AttackStop();
         bot->CastStop();
-        return FleePosition(fleeDest, safeDistance, minInterval);
+        // Straight out of the blast in one move: 5 y flee steps took 4-5 moves in a 5-6 s flight and most of them were
+        // refused while the last one ran (ladiabale, Void Reaver 22/10).
+        float const dx = bot->GetPositionX() - fleeDest.GetPositionX();
+        float const dy = bot->GetPositionY() - fleeDest.GetPositionY();
+        float const dist = std::sqrt(dx * dx + dy * dy);
+        if (dist > 0.5f)
+        {
+            float const reach = safeDistance + 3.0f;
+            float const x = fleeDest.GetPositionX() + dx / dist * reach;
+            float const y = fleeDest.GetPositionY() + dy / dist * reach;
+            if (MoveTo(bot->GetMapId(), x, y, bot->GetPositionZ(), false, false, false, false,
+                       MovementPriority::MOVEMENT_FORCED, true, false))
+                return true;
+        }
+        constexpr uint32 minInterval = 0;
+        return FleePosition(fleeDest, safeDistance, minInterval) || bot->isMoving();
     }
 
     return false;
@@ -804,8 +842,20 @@ bool VoidReaverEraseTrackersAction::Execute(Event /*event*/)
 
     bool erased = false;
 
-    if (voidReaverArcaneOrbs.erase(bot->GetMap()->GetInstanceId()))
-        erased = true;
+    // Orbs still in flight are kept until they land.
+    auto orbs = voidReaverArcaneOrbs.find(bot->GetMap()->GetInstanceId());
+    if (orbs != voidReaverArcaneOrbs.end())
+    {
+        uint32 const now = getMSTime();
+        bool inFlight = false;
+        for (auto const& orb : orbs->second)
+            inFlight = inFlight || getMSTimeDiff(orb.castTime, now) <= 7000;
+        if (!inFlight)
+        {
+            voidReaverArcaneOrbs.erase(orbs);
+            erased = true;
+        }
+    }
 
     if (hasReachedVoidReaverPosition.erase(bot->GetGUID()))
         erased = true;
@@ -821,6 +871,11 @@ bool HighAstromancerSolarianRangedLeaveSpaceForMeleeAction::Execute(Event /*even
     if (!astromancer)
         return false;
 
+    // A healer finishes its heal first: heals failed on "bot is moving" while Arcane Missiles killed their target
+    // (ladiabale, Solarian 22/10).
+    if (botAI->IsHeal(bot) && bot->IsNonMeleeSpellCast(false, true, true))
+        return false;
+
     float currentDistance = bot->GetExactDist2d(astromancer);
     constexpr float minDistance = 20.0f;
     if (currentDistance < minDistance)
@@ -832,9 +887,13 @@ bool HighAstromancerSolarianRangedLeaveSpaceForMeleeAction::Execute(Event /*even
 bool HighAstromancerSolarianMoveAwayFromGroupAction::Execute(Event /*event*/)
 {
     constexpr float safeDistance = 15.0f;
+    // Only the cast and the attack are dropped: Reset() on every step also cleared the target and the strategy state
+    // (ladiabale, Solarian 22/10).
     if (GetNearestPlayerInRadius(bot, safeDistance))
     {
-        botAI->Reset();
+        if (bot->IsNonMeleeSpellCast(false))
+            bot->InterruptNonMeleeSpells(false);
+        bot->AttackStop();
         return MoveFromGroup(safeDistance);
     }
 
@@ -990,8 +1049,10 @@ bool KaelthasSunstriderKiteThaladredAction::Execute(Event /*event*/)
 
     float currentDistance = bot->GetExactDist2d(thaladred);
     constexpr float safeDistance = 25.0f;
+    // When the step away is refused, the generic flee finds another way out: the fixated bot logged only failed kites
+    // for 5 seconds and died (ladiabale, Kael 22/10).
     if (currentDistance < safeDistance)
-        return MoveAway(thaladred, safeDistance - currentDistance);
+        return MoveAway(thaladred, safeDistance - currentDistance) || botAI->DoSpecificAction("flee", Event(), true);
 
     return false;
 }
@@ -1070,6 +1131,11 @@ bool KaelthasSunstriderMainTankPositionSanguinarAction::Execute(Event /*event*/)
 
     if (AI_VALUE(Unit*, "current target") != sanguinar)
         return Attack(sanguinar);
+
+    // Taken by taunt when another tank holds it: Sanguinar and two advisors meleed the off-tank for 50 s while the
+    // main tank only attacked (ladiabale, Kael 22/10).
+    if (sanguinar->GetVictim() != bot && botAI->DoSpecificAction("taunt spell", Event(), true))
+        return true;
 
     if (sanguinar->GetVictim() == bot && bot->IsWithinMeleeRange(sanguinar))
     {
@@ -1646,7 +1712,11 @@ bool KaelthasSunstriderLootLegendaryWeaponsAction::ShouldBotLootWeapon(uint32 we
                    (bot->getClass() == CLASS_PALADIN && tab == PALADIN_TAB_RETRIBUTION) ||
                    (botAI->IsDps(bot) && bot->getClass() == CLASS_DEATH_KNIGHT);
 
+        // CoA classes (past the stock ones) match none of the class tests: the blade that breaks mind controls and the
+        // shield went to nobody (ladiabale, Kael 22/10). They take them when they can wield them.
         case NPC_INFINITY_BLADES:
+            if (bot->getClass() > CLASS_DRUID)
+                return botAI->IsDps(bot) && botAI->IsMelee(bot) && bot->HasSkill(SKILL_DAGGERS);
             return bot->getClass() == CLASS_ROGUE ||
                    bot->getClass() == CLASS_HUNTER ||
                    (bot->getClass() == CLASS_SHAMAN && tab == SHAMAN_TAB_ENHANCEMENT) ||
@@ -1663,6 +1733,8 @@ bool KaelthasSunstriderLootLegendaryWeaponsAction::ShouldBotLootWeapon(uint32 we
                    (bot->getClass() == CLASS_DRUID && tab == DRUID_TAB_FERAL);
 
         case NPC_PHASESHIFT_BULWARK:
+            if (bot->getClass() > CLASS_DRUID)
+                return botAI->IsTank(bot) && bot->HasSkill(SKILL_SHIELD);
             return botAI->IsTank(bot) &&
                    (bot->getClass() == CLASS_PALADIN ||
                     bot->getClass() == CLASS_WARRIOR ||
@@ -1815,6 +1887,9 @@ bool KaelthasSunstriderMainTankPositionBossAction::Execute(Event /*event*/)
 
     if (AI_VALUE(Unit*, "current target") != kaelthas)
         return Attack(kaelthas);
+
+    if (kaelthas->GetVictim() != bot && botAI->DoSpecificAction("taunt spell", Event(), true))
+        return true;
 
     if (kaelthas->GetVictim() == bot && bot->IsWithinMeleeRange(kaelthas))
     {
@@ -2019,6 +2094,11 @@ bool KaelthasSunstriderBreakMindControlAction::Execute(Event /*event*/)
         }
     }
 
+    // Any hit of the Infinity Blade breaks it: a CoA carrier knows none of the spells above, and two mind controls took
+    // three bots each with none broken (ladiabale, Kael 22/10).
+    if (AI_VALUE(Unit*, "current target") != mcTarget)
+        return Attack(mcTarget);
+
     return false;
 }
 
@@ -2047,6 +2127,9 @@ bool KaelthasSunstriderBreakThroughShockBarrierAction::Execute(Event /*event*/)
             if (botAI->CanCastSpell(spell, kaelthas))
                 return botAI->CastSpell(spell, kaelthas);
         }
+        // CoA classes have none of these names.
+        if (kaelthas->FindCurrentSpellBySpellId(SPELL_KAEL_PYROBLAST) && AI_VALUE(Unit*, "current target") == kaelthas)
+            return botAI->DoSpecificAction("coa interrupt", Event(), true);
     }
     else if (AI_VALUE(Unit*, "current target") != kaelthas)
     {

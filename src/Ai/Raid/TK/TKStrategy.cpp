@@ -65,7 +65,9 @@ void RaidTempestKeepStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         NextAction("high astromancer solarian ranged leave space for melee", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("high astromancer solarian bot has wrath of the astromancer", {
-        NextAction("high astromancer solarian move away from group", ACTION_EMERGENCY + 6) }));
+        NextAction("high astromancer solarian move away from group", ACTION_EMERGENCY + 6),
+        // A CoA carrier uses a defensive or heals itself on the way out: one died to her own explosion (6.3k).
+        NextAction("coa defensive", ACTION_EMERGENCY + 5) }));
 
     triggers.push_back(new TriggerNode("high astromancer solarian boss has vanished", {
         NextAction("high astromancer solarian stack for aoe", ACTION_RAID + 1) }));

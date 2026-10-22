@@ -41,6 +41,7 @@ namespace TempestKeepHelpers
         SPELL_ARCANE_BARRIER            = 36481, // Phaseshift Bulwark
         SPELL_KAELTHAS_MIND_CONTROL     = 36797,
         SPELL_SHOCK_BARRIER             = 36815,
+        SPELL_KAEL_PYROBLAST            = 36819,
         SPELL_STAFF_FROSTBOLT           = 36990,
 
         // Hunter

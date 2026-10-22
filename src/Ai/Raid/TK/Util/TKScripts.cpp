@@ -41,8 +41,10 @@ public:
         orbs.push_back(orbData);
 
         orbs.erase(std::remove_if(orbs.begin(), orbs.end(),
+            // Kept as long as the trigger looks back (7 s): at 5 s an orb was dropped 650 ms before it hit
+            // (ladiabale, Void Reaver 22/10).
             [currentTime](ArcaneOrbData const& orb) {
-                return getMSTimeDiff(orb.castTime, currentTime) > 5000;
+                return getMSTimeDiff(orb.castTime, currentTime) > 8000;
             }), orbs.end());
     }
 };
