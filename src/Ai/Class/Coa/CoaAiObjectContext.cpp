@@ -3193,7 +3193,12 @@ public:
         return tank && MoveNear(tank, keep);
     }
 
-    bool isUseful() override { return !bot->IsNonMeleeSpellCast(false, true, true); }
+    // Not while standing in an enemy ground effect: the tether outranked "avoid aoe" (95 against 90) and walked a healer
+    // back into the same Acid Pool 8 times in 13 s (ladiabale, ZG 22/10).
+    bool isUseful() override
+    {
+        return !bot->IsNonMeleeSpellCast(false, true, true) && !AI_VALUE(Aura*, "area debuff");
+    }
 
 private:
     float keep = StayNearTank - 4.0f;
@@ -5294,6 +5299,17 @@ bool CoaCarriesBotAway(Player* bot, SpellInfo const* info)
 {
     if (!bot || !info)
         return false;
+    // In an instance, no leap, charge or dash across an enemy ground effect: Vault and Flame Step, cast as buffs, carried
+    // bots back into the pools they had just left, 48 times for one tank at Hakkar (ladiabale, ZG 22/10).
+    if (bot->IsInCombat() && bot->GetMap()->IsDungeon() &&
+        (MovesCaster(info) || ForcesCasterForward(info) || SendsCasterAhead(info)))
+        if (Unit* victim = bot->GetVictim())
+        {
+            std::vector<CoaGround> const zones = CoaHostileGround(bot);
+            if (!zones.empty() && CoaSegmentCrossesGround(zones, bot->GetPositionX(), bot->GetPositionY(),
+                                                          victim->GetPositionX(), victim->GetPositionY()))
+                return true;
+        }
     // A healer never jumps, leaps, charges or blinks, in a fight or out of it: a Flameweaving healer cast Dragon
     // Leap on cooldown from "coa attack" and "coa aoe" and landed in packs nobody had pulled (headless dungeon
     // runs, 11/10). No CoA healer path moves the bot on purpose with a spell; its feet do it.

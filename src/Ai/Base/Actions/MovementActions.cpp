@@ -5,6 +5,12 @@
  */
 
 #include "MovementActions.h"
+#include <algorithm>
+#include "SpellMgr.h"
+#include "GridNotifiersImpl.h"
+#include "GridNotifiers.h"
+#include "DynamicObject.h"
+#include "CellImpl.h"
 #include "Corpse.h"
 #include "Event.h"
 #include "FleeManager.h"
@@ -166,6 +172,79 @@ bool MovementAction::MoveToLOS(WorldObject* target, bool ranged)
     return false;
 }
 
+bool CoaHakkarSiphon(Player* bot)
+{
+    return bot->GetMap()->IsRaid() && bot->FindNearestCreature(9780022, 200.0f) != nullptr;
+}
+
+std::vector<CoaGround> CoaHostileGround(Player* bot)
+{
+    std::vector<CoaGround> zones;
+    if (!sPlayerbotAIConfig.autoAvoidAoe || !bot->GetMap()->IsDungeon())
+        return zones;
+
+    constexpr float searchRadius = 50.0f;
+    std::list<WorldObject*> objs;
+    Acore::AllWorldObjectsInRange check(bot, searchRadius);
+    Acore::WorldObjectListSearcher<Acore::AllWorldObjectsInRange> searcher(bot, objs, check, GRID_MAP_TYPE_MASK_DYNAMICOBJECT);
+    Cell::VisitObjects(bot, searcher, searchRadius);
+
+    int siphon = -1;
+    for (WorldObject* obj : objs)
+    {
+        DynamicObject* area = obj->ToDynObject();
+        if (!area || !area->IsInWorld())
+            continue;
+        uint32 const id = area->GetSpellId();
+        if (id == 2118675 || id == 24320)
+        {
+            if (siphon < 0)
+                siphon = CoaHakkarSiphon(bot) ? 1 : 0;
+            if (siphon)
+                continue;
+        }
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(id);
+        float const radius = area->GetRadius();
+        if (!info || info->IsPositive() || !radius || radius > sPlayerbotAIConfig.maxAoeAvoidRadius ||
+            sPlayerbotAIConfig.aoeAvoidSpellWhitelist.count(id))
+            continue;
+        Unit* caster = area->GetCaster();
+        if (caster && !caster->IsHostileTo(bot))
+            continue;
+        bool hurts = false;
+        for (SpellEffectInfo const& effect : info->Effects)
+            if (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE || effect.ApplyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL ||
+                effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE_PERCENT || effect.ApplyAuraName == SPELL_AURA_PERIODIC_LEECH ||
+                effect.ApplyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE)
+                hurts = true;
+        if (hurts)
+            zones.push_back({area->GetPositionX(), area->GetPositionY(), radius});
+    }
+    return zones;
+}
+
+bool CoaInGround(std::vector<CoaGround> const& zones, float x, float y, float margin)
+{
+    for (CoaGround const& zone : zones)
+        if (std::hypot(zone.x - x, zone.y - y) <= zone.radius + 1.5f + margin)
+            return true;
+    return false;
+}
+
+bool CoaSegmentCrossesGround(std::vector<CoaGround> const& zones, float x0, float y0, float x1, float y1, float margin)
+{
+    float const dx = x1 - x0, dy = y1 - y0;
+    float const len2 = dx * dx + dy * dy;
+    for (CoaGround const& zone : zones)
+    {
+        float t = len2 > 0.0f ? ((zone.x - x0) * dx + (zone.y - y0) * dy) / len2 : 0.0f;
+        t = std::clamp(t, 0.0f, 1.0f);
+        if (std::hypot(x0 + t * dx - zone.x, y0 + t * dy - zone.y) <= zone.radius + 1.5f + margin)
+            return true;
+    }
+    return false;
+}
+
 bool MovementAction::IsBodyPullRisk(float x, float y, float z)
 {
     if (!sPlayerbotAIConfig.coaBodyPullGuard || bot->IsInCombat() || !bot->GetMap()->IsDungeon())
@@ -220,6 +299,16 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool /*idle
     if (priority <= MovementPriority::MOVEMENT_NORMAL && IsBodyPullRisk(x, y, z))
     {
         return false;
+    }
+    // CoA: no walk into or through an enemy ground effect from outside it: at Venoxis, bots stepped out of a Toxic Cloud
+    // or an Acid Pool and walked back in 66 times in 157 s, on their way to the boss, the tank's attacker or the tank
+    // (ladiabale, ZG 22/10). Fleeing (forced) and moves of a bot already standing in one are left alone.
+    if (priority != MovementPriority::MOVEMENT_FORCED && bot->GetMap()->IsDungeon() && bot->GetMapId() == mapId)
+    {
+        std::vector<CoaGround> const zones = CoaHostileGround(bot);
+        if (!zones.empty() && !CoaInGround(zones, bot->GetPositionX(), bot->GetPositionY(), 0.0f) &&
+            CoaSegmentCrossesGround(zones, bot->GetPositionX(), bot->GetPositionY(), x, y))
+            return false;
     }
 
     bool generatePath = !bot->IsFlying() && !bot->isSwimming();
@@ -1951,7 +2040,8 @@ bool AvoidAoeAction::AvoidAuraWithDynamicObj()
     }
     std::ostringstream name;
     name << spellInfo->SpellName[LOCALE_enUS];  // << "] (aura)";
-    if (FleePosition(dynOwner->GetPosition(), radius))
+    // Forced: a running combat move (a 30 yd reach melee) held the flee back for its estimated time (ladiabale, ZG).
+    if (FleePosition(dynOwner->GetPosition(), radius, 1000, MovementPriority::MOVEMENT_FORCED))
     {
         if (sPlayerbotAIConfig.tellWhenAvoidAoe && lastTellTimer < time(NULL) - 10)
         {
@@ -2133,6 +2223,7 @@ Position MovementAction::BestPositionForMeleeToFlee(Position pos, float radius)
         float angleTo = bot->GetAngle(&pos) - (float)M_PI;
         possibleAngles.push_back({angleTo, false});
     }
+    std::vector<CoaGround> const zones = CoaHostileGround(bot);
     float farestDis = 0.0f;
     Position bestPos;
     for (CheckAngle& checkAngle : possibleAngles)
@@ -2144,7 +2235,8 @@ Position MovementAction::BestPositionForMeleeToFlee(Position pos, float radius)
             continue;
         }
         bool strict = checkAngle.strict;
-        float fleeDis = std::min(radius + 1.0f, sPlayerbotAIConfig.fleeDistance);
+        // Out in one step: the aura reaches about radius + 1.5 yd; the 5 yd step left a bot on the rim of an 8 yd cloud.
+        float fleeDis = std::max(std::min(radius + 1.0f, sPlayerbotAIConfig.fleeDistance), std::min(radius + 2.5f, 17.5f));
         float dx = bot->GetPositionX() + cos(angle) * fleeDis;
         float dy = bot->GetPositionY() + sin(angle) * fleeDis;
         float dz = bot->GetPositionZ();
@@ -2154,6 +2246,10 @@ Position MovementAction::BestPositionForMeleeToFlee(Position pos, float radius)
             continue;
         }
         Position fleePos{dx, dy, dz};
+        // Not into another ground effect: 91 pool entries at Hakkar came from fleeing one pool into the next (ladiabale).
+        if (!zones.empty() && CoaInGround(zones, dx, dy) &&
+            std::hypot(dx - pos.GetPositionX(), dy - pos.GetPositionY()) > radius + 1.5f)
+            continue;
         if (strict && currentTarget &&
             fleePos.GetExactDist(currentTarget) - currentTarget->GetCombatReach() >
                 sPlayerbotAIConfig.tooCloseDistance &&
@@ -2196,6 +2292,7 @@ Position MovementAction::BestPositionForRangedToFlee(Position pos, float radius)
     {
         possibleAngles.push_back({angleFleeFromCenter, false});
     }
+    std::vector<CoaGround> const zones = CoaHostileGround(bot);
     float farestDis = 0.0f;
     Position bestPos;
     for (CheckAngle& checkAngle : possibleAngles)
@@ -2207,7 +2304,8 @@ Position MovementAction::BestPositionForRangedToFlee(Position pos, float radius)
             continue;
         }
         bool strict = checkAngle.strict;
-        float fleeDis = std::min(radius + 1.0f, sPlayerbotAIConfig.fleeDistance);
+        // Out in one step: the aura reaches about radius + 1.5 yd; the 5 yd step left a bot on the rim of an 8 yd cloud.
+        float fleeDis = std::max(std::min(radius + 1.0f, sPlayerbotAIConfig.fleeDistance), std::min(radius + 2.5f, 17.5f));
         float dx = bot->GetPositionX() + cos(angle) * fleeDis;
         float dy = bot->GetPositionY() + sin(angle) * fleeDis;
         float dz = bot->GetPositionZ();
@@ -2217,6 +2315,10 @@ Position MovementAction::BestPositionForRangedToFlee(Position pos, float radius)
             continue;
         }
         Position fleePos{dx, dy, dz};
+        // Not into another ground effect: 91 pool entries at Hakkar came from fleeing one pool into the next (ladiabale).
+        if (!zones.empty() && CoaInGround(zones, dx, dy) &&
+            std::hypot(dx - pos.GetPositionX(), dy - pos.GetPositionY()) > radius + 1.5f)
+            continue;
         if (strict && currentTarget &&
             fleePos.GetExactDist(currentTarget) - currentTarget->GetCombatReach() > sPlayerbotAIConfig.spellDistance)
         {
@@ -2242,7 +2344,7 @@ Position MovementAction::BestPositionForRangedToFlee(Position pos, float radius)
     return Position();
 }
 
-bool MovementAction::FleePosition(Position pos, float radius, uint32 minInterval)
+bool MovementAction::FleePosition(Position pos, float radius, uint32 minInterval, MovementPriority priority)
 {
     std::list<FleeInfo>& infoList = AI_VALUE(std::list<FleeInfo>&, "recently flee info");
 
@@ -2261,7 +2363,7 @@ bool MovementAction::FleePosition(Position pos, float radius, uint32 minInterval
     if (bestPos != Position())
     {
         if (MoveTo(bot->GetMapId(), bestPos.GetPositionX(), bestPos.GetPositionY(), bestPos.GetPositionZ(), false,
-                   false, true, false, MovementPriority::MOVEMENT_COMBAT))
+                   false, true, false, priority))
         {
             uint32 curTS = getMSTime();
             while (!infoList.empty())
