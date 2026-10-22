@@ -15,6 +15,10 @@ public:
     KarazhanBotIsNotInCombatTrigger(PlayerbotAI* botAI)
         : Trigger(botAI, "karazhan bot is not in combat") {}
     bool IsActive() override;
+
+private:
+    // Out of combat since the last reset: the reset runs once per fight, not on every tick.
+    bool resetDone = false;
 };
 
 class KarazhanEnemiesCastFearTrigger : public Trigger
