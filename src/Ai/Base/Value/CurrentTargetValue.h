@@ -27,4 +27,7 @@ private:
     ObjectGuid selection;
 };
 
+// CoA: whether AiPlayerbot.CoaLogTargets asks for target and engine lines for this bot.
+bool CoaLogsTargets(Player* bot);
+
 #endif

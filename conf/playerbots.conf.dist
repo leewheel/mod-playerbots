@@ -1480,6 +1480,12 @@ AiPlayerbot.CoaGroupTelemetry = 0
 # Default: 0 (5-player groups only)
 AiPlayerbot.CoaGroupTelemetryRaids = 0
 
+# One line in the log each time a bot changes its target or switches between its combat and out-of-combat engines,
+# with the reason when it is known (target dead, out of sight, no attackers left). Made to follow bots that lose
+# their enemy behind an arena pillar (ladiabale, 22/10). 0: off. 1: in arenas and battlegrounds. 2: every grouped bot.
+# Default: 0 (off)
+AiPlayerbot.CoaLogTargets = 0
+
 # ".playerbots coa raid [size] [tanks] [healers]" fills the raid of the one who types it with bots.
 # Game masters have no limit. A player may build one raid every CoaRaidPlayerCooldown minutes, and
 # only while the realm has fewer than CoaRaidPlayerMax raids of bots built by players.

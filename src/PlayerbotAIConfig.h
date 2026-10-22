@@ -410,6 +410,7 @@ public:
     uint32 coaCasterManaReserve;
     bool coaGroupTelemetry;
     bool coaGroupTelemetryRaids;
+    uint32 coaLogTargets;
     bool coaSmartHeal;
     bool coaSmartTank;
     bool coaLfgMissingRoles;
