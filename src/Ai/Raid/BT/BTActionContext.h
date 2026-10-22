@@ -177,8 +177,8 @@ public:
             &RaidBlackTempleActionContext::illidari_council_manage_dps_timer;
 
         // Illidan Stormrage <The Betrayer>
-        creators["illidan stormrage position for pull"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_position_for_pull;
+        creators["illidan stormrage position on grate during speech"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_position_on_grate_during_speech;
 
         creators["illidan stormrage misdirect to tanks"] =
             &RaidBlackTempleActionContext::illidan_stormrage_misdirect_to_tanks;
@@ -236,9 +236,6 @@ public:
 
         creators["illidan stormrage assign target priority"] =
             &RaidBlackTempleActionContext::illidan_stormrage_assign_target_priority;
-
-        creators["illidan stormrage use cage trap"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_use_cage_trap;
 
         creators["illidan stormrage manage dps timers"] =
             &RaidBlackTempleActionContext::illidan_stormrage_manage_dps_timers;
@@ -493,9 +490,9 @@ private:
     }
 
     // Illidan Stormrage <The Betrayer>
-    static Action* illidan_stormrage_position_for_pull(PlayerbotAI* botAI)
+    static Action* illidan_stormrage_position_on_grate_during_speech(PlayerbotAI* botAI)
     {
-        return new IllidanStormragePositionForPullAction(botAI);
+        return new IllidanStormragePositionOnGrateDuringSpeechAction(botAI);
     }
     static Action* illidan_stormrage_misdirect_to_tanks(PlayerbotAI* botAI)
     {
@@ -572,10 +569,6 @@ private:
     static Action* illidan_stormrage_assign_target_priority(PlayerbotAI* botAI)
     {
         return new IllidanStormrageAssignTargetPriorityAction(botAI);
-    }
-    static Action* illidan_stormrage_use_cage_trap(PlayerbotAI* botAI)
-    {
-        return new IllidanStormrageUseCageTrapAction(botAI);
     }
     static Action* illidan_stormrage_manage_dps_timers(PlayerbotAI* botAI)
     {

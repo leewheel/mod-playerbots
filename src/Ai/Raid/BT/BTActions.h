@@ -13,6 +13,7 @@
 #include "MovementActions.h"
 #include "Unit.h"
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // Shared
@@ -331,11 +332,11 @@ public:
 
 // Reliquary of Souls
 
-class ReliquaryOfSoulsMisdirectToMainTankAction : public AttackAction
+class ReliquaryOfSoulsMisdirectToMainTankAction : public Action
 {
 public:
     ReliquaryOfSoulsMisdirectToMainTankAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "reliquary of souls misdirect to main tank") {}
+        : Action(botAI, "reliquary of souls misdirect to main tank") {}
     bool Execute(Event event) override;
 };
 
@@ -513,11 +514,11 @@ public:
 
 // Illidan Stormrage <The Betrayer>
 
-class IllidanStormragePositionForPullAction : public MovementAction
+class IllidanStormragePositionOnGrateDuringSpeechAction : public MovementAction
 {
 public:
-    IllidanStormragePositionForPullAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "illidan stormrage position for pull") {}
+    IllidanStormragePositionOnGrateDuringSpeechAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "illidan stormrage position on grate during speech") {}
     bool Execute(Event event) override;
 };
 
@@ -740,15 +741,7 @@ public:
 private:
     std::vector<Unit*> GetTargetsInPriorityOrder(Unit* illidan, BtHelpers::IllidanPhase phase);
     Unit* FindShadowfiendForMelee();
-    Unit* FindShadowfiendForRanged();
-};
-
-class IllidanStormrageUseCageTrapAction : public MovementAction
-{
-public:
-    IllidanStormrageUseCageTrapAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "illidan stormrage use cage trap") {}
-    bool Execute(Event event) override;
+    Unit* FindShadowfiendForRanged(BtHelpers::IllidanPhase phase);
 };
 
 class IllidanStormrageManageDpsTimersAction : public Action

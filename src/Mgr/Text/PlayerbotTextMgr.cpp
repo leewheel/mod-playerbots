@@ -7,8 +7,10 @@
 #include "PlayerbotTextMgr.h"
 #include "PlayerbotsDatabase.h"
 #include "DatabaseEnv.h"
+#include "LocaleColumns.h"
 #include "QueryResult.h"    // Required due to a poor implementation by AC
 #include "Random.h"
+#include "StringFormat.h"
 #include "WorldSessionMgr.h"
 
 namespace
@@ -37,9 +39,18 @@ void PlayerbotTextMgr::LoadBotTexts()
 {
     LOG_INFO("playerbots", "正在加载玩家机器人文本...");
 
+    // `text` holds enUS; fields[4 + k] holds localeColumns[k]
+    std::vector<LocaleColumn> const localeColumns = GetLocaleColumns(
+        PlayerbotsDatabase, "ai_playerbot_texts",
+        [](LocaleConstant locale) { return Acore::StringFormat("text_loc{}", static_cast<uint32>(locale)); });
+
+    std::string sql = "SELECT `name`, `text`, `say_type`, `reply_type`";
+    for (LocaleColumn const& localeColumn : localeColumns)
+        sql += Acore::StringFormat(", `{}`", localeColumn.Column);
+    sql += " FROM `ai_playerbot_texts`";
+
     uint32 count = 0;
-    if (PreparedQueryResult result =
-            PlayerbotsDatabase.Query(PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_TEXT)))
+    if (QueryResult result = PlayerbotsDatabase.Query(sql))
     {
         do
         {
@@ -49,23 +60,24 @@ void PlayerbotTextMgr::LoadBotTexts()
             text[0] = fields[1].Get<std::string>();
             uint8 sayType = fields[2].Get<uint8>();
             uint8 replyType = fields[3].Get<uint8>();
-            // By leewheel 2026-10-16 修复 acore 上游 #28081（allow modules to support a new locale）
-            // 把 TOTAL_LOCALES 从 9 扩到 16（slot 9..15 留给模块注册）导致的越界段错误：
-            // 表 ai_playerbot_texts 的 locale 列固定为 text_loc1..text_loc8（对应 LocaleConstant
-            // 1..8 即 LOCALE_koKR..LOCALE_ruRU），SELECT 恒为 12 列。循环上界必须绑定表 schema，
-            // 不能跟 TOTAL_LOCALES 挂钩——原写法 i 跑到 15 会越界读 fields[12..18] 的垃圾字段，
-            // Field::GetDataString 用坏指针构造 std::string 时 ACCESS_VIOLATION（启动即崩，
-            // 转储指 LoadBotTexts+328）。上游 core 侧同批适配模式为绑定已注册列数（见
-            // ObjectMgr::LoadAcoreStrings），此处按表固定 8 列遍历到 LOCALE_ruRU。
-            // By leewheel 2026-10-21 与上游 brighton 合并冲突处置：上游 2ec63794「temp crash fix
-            // re text columns」改的是同一处崩溃，写法为 constexpr uint8 textColumns = 8，
-            // 与此处 LOCALE_ruRU(=8) 语义等价（二者均为表固定 8 列）。按「只叠加不删改」保留
-            // 本核语义化写法（绑定 LocaleConstant 而非裸魔数），并在此注明上游已同步修法，
-            // 后续若表结构再扩列，两边须同改。
-            for (uint8 i = 1; i <= LOCALE_ruRU; ++i)
-            {
-                text[i] = fields[i + 3].Get<std::string>();
-            }
+            // By leewheel 2026-10-16 本处崩溃的历史根因（保留备查，勿删）：
+            //   acore 上游 #28081（allow modules to support a new locale）把 TOTAL_LOCALES 从 9 扩到 16
+            //   （slot 9..15 留给模块注册），而旧写法按 TOTAL_LOCALES 循环，i 跑到 15 会越界读
+            //   fields[12..18] 的垃圾字段；Field::GetDataString 用坏指针构造 std::string 时
+            //   ACCESS_VIOLATION（启动即崩，转储指 LoadBotTexts+328）。
+            //   （表 ai_playerbot_texts 的 locale 列是 text_loc1..text_loc8，对应
+            //    LocaleConstant 1..8 即 LOCALE_koKR..LOCALE_ruRU，SELECT 恒为 12 列。）
+            // By leewheel 2026-10-21：上游 2ec63794「temp crash fix re text columns」改的是同一处崩溃，
+            //   写法为 constexpr textColumns = 8，与本核当时的 i <= LOCALE_ruRU(=8) 语义等价。
+            // By leewheel 2026-10-22：本轮上游 d829386c(#2961) 用 GetLocaleColumns 动态取证表上
+            //   真实存在的 locale 列并据以拼 SQL（见上方 localeColumns / sql 的构造），循环上界
+            //   绑定到「实际列数」而非任何常量。这比前两版绑死 8 列更彻底：
+            //     · 表结构增减 locale 列都不会越界；
+            //     · 模块注册的新 locale（#28081 的初衷）能被正确解析到 localeColumns[k].Locale，
+            //       而绑死 1..8 的旧写法会漏掉 slot 9..15 的列。
+            //   故采纳上游实现，上两段仅作为根因沿革保留。
+            for (std::size_t k = 0; k < localeColumns.size(); ++k)
+                text[localeColumns[k].Locale] = fields[4 + k].Get<std::string>();
 
             botTexts[name].push_back(BotTextEntry(name, text, sayType, replyType));
             ++count;

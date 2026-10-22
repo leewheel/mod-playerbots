@@ -151,6 +151,7 @@ enum class BtNpcs : uint32
     NPC_SUPREMUS_VOLCANO            = 23085,
 
     // Shade of Akama
+    NPC_SHADE_OF_AKAMA              = 22841,
     NPC_ASHTONGUE_CHANNELER         = 23421,
     NPC_ASHTONGUE_SORCERER          = 23215,
 
@@ -174,6 +175,7 @@ enum class BtNpcs : uint32
     NPC_GATHIOS_THE_SHATTERER       = 22949,
     NPC_HIGH_NETHERMANCER_ZEREVOR   = 22950,
     NPC_LADY_MALANDE                = 22951,
+    NPC_VERAS_DARKSHADOW            = 22952,
 
     // Illidan Stormrage <The Betrayer>
     NPC_ILLIDAN_STORMRAGE           = 22917,
@@ -198,7 +200,7 @@ enum class BtObjects : uint32
     GO_NAJENTUS_SPINE               = 185584,
 
     // Illidan Stormrage <The Betrayer>
-    GO_CAGE_TRAP                    = 185916,
+    GO_FROST_TRAP                   = 164639, // laid by 13809, despawns once sprung
 };
 
 inline constexpr uint32 BT_MAP_ID = 564;
@@ -465,15 +467,18 @@ inline constexpr float SHAHRAZ_TANK_POSITION_TOLERANCE = 0.5f;
 // Wide enough for an off-tank on her victim to take over without melee backing off.
 inline constexpr float SHAHRAZ_POSITIONED_DISTANCE = 3.0f;
 inline constexpr float SHAHRAZ_OFF_TANK_DISTANCE = 2.0f;
+inline constexpr float SHAHRAZ_RANGED_POSITION_TOLERANCE = 1.0f;
+inline constexpr float SHAHRAZ_MELEE_ENGAGE_HEALTH_PCT = 90.0f;
 inline constexpr float SHAHRAZ_FATAL_ATTRACTION_STEP_DISTANCE = 5.0f;
 
 inline Position const SHAHRAZ_TANK_POSITION       = { 960.438f, 178.989f, 192.826f };
 inline Position const SHAHRAZ_TRANSITION_POSITION = { 951.327f, 179.550f, 192.550f };
 inline Position const SHAHRAZ_RANGED_POSITION     = { 935.267f, 175.459f, 192.821f };
 
-// Illidari Council
+// Melee dps wait at the ranged position while this is true.
+bool IsShahrazBeingPositioned(Unit* shahraz);
 
-inline constexpr float COUNCIL_FLOOR_Z_THRESHOLD = 270.000f;
+// Illidari Council
 
 inline std::array const GATHIOS_TANK_POSITIONS = {
     Position{ 662.977f, 296.246f, 271.688f },
@@ -495,15 +500,17 @@ inline constexpr float COUNCIL_RANGED_SPREAD_DISTANCE = 4.0f;
 inline constexpr float COUNCIL_MEMBER_SEARCH_RADIUS = 100.0f;
 // Bots heal out to HealDistance, 38.5 yd by default.
 inline constexpr float MAGE_TANK_HEALER_MAX_DISTANCE = 38.0f;
-// A patch on the mage tank reaches 11.9 yd from where it stood.
+// A patch on the mage tank reaches 11.5 yd from where it stood.
 inline constexpr float MAGE_TANK_HEALER_MIN_DISTANCE = 12.5f;
 // Zerevor casts Arcane Explosion when anyone is within 10 yd plus both combat reaches (14.65 yd).
 inline constexpr float ZEREVOR_ARCANE_EXPLOSION_SAFE_DISTANCE = 15.0f;
-// A patch reaches a player whose centre is within its radius plus both object sizes (1.9 yd).
+// A patch reaches a player whose centre is within its radius plus the player's reach (1.5 yd).
 inline constexpr float COUNCIL_PATCH_MARGIN = 2.5f;
 inline constexpr int32 CIRCLE_OF_HEALING_REACTION_MS = 200;
 // A ranged bot whose own cast would end with less than this left on Circle of Healing drops it.
 inline constexpr int32 CIRCLE_OF_HEALING_CASTER_MARGIN_MS = 500;
+inline constexpr float COUNTERSPELL_RANGE = 30.0f;
+inline constexpr float WIND_SHEAR_RANGE = 25.0f;
 
 ObjectGuid FindZerevorMageTankGuid(Player* bot);
 Player* GetZerevorMageTank(PlayerbotAI* botAI);
@@ -514,6 +521,9 @@ bool CanInterruptCircleOfHealing(Unit* malande);
 bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin = 0.0f);
 bool IsInCouncilPatch(Position const& point, Unit* gathios, Unit* zerevor, float margin = 0.0f);
 bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor);
+// Ranged interrupt only while her melee can't: under Blessing of Protection, or in a council
+// patch. Their interrupts are all magic, so never under Blessing of Spell Warding.
+bool ShouldRangedInterruptCircleOfHealing(Unit* malande, Unit* gathios, Unit* zerevor);
 bool IsZerevorOnMageTank(PlayerbotAI* botAI, Unit* zerevor);
 bool IsMageTankHealerPositionSafe(Position const& point, Player* mageTank, Unit* zerevor);
 bool FindMageTankHealerPosition(
@@ -526,8 +536,9 @@ uint32 GetReadySpellLock(Creature* pet, Unit* target);
 
 // Illidan Stormrage <The Betrayer>
 
-// Fight phases 1 to 5 are Initial, Flying, Grounded, Demon and Maiev; Landing runs from the last
-// Flame's death until he is back on the ground. Dying is during the 1 HP death scene.
+// Fight phases 1 to 5 are Initial, Flying, Grounded, Demon and Maiev; Landing runs from when he
+// heads for the landing point until the threat reset makes him selectable. Dying is during the
+// 1 HP death scene.
 enum class IllidanPhase : uint8
 {
     None, // also Maiev's arrival
@@ -549,7 +560,8 @@ enum class IllidanDpsHold : uint8
     DemonFormStart,  // everyone but the warlock tank
     DemonFormMiddle, // from the start hold to the end hold; the Main Tank only
     DemonFormEnd,    // the last 3 s before the reset; everyone
-    DemonFormNoPush, // 33% or below in the form, so he leaves it above 30%; everyone
+    DemonFormNoPush, // 30 to 33% in the form, so he leaves it above 30%; everyone but the
+                     // warlock tank
 };
 
 // The Main Tank's lead in Phases 1, 3 and 5.
@@ -590,13 +602,12 @@ struct ShadowDemon
     ObjectGuid target = ObjectGuid::Empty;
 };
 
-// One Shadowfiend infection, recorded by the mechanic tracker. The infection position is fixed for
-// the phase it was recorded in (transform counts as the phase before it), and kept while he flies.
-// Once the trap is assigned, hunter is empty if a Frost Trap patch already covered the position.
+// One Shadowfiend infection, recorded by the mechanic tracker. The infection position is fixed
+// until the debuff is gone, whatever the phase. Once the trap is assigned, hunter is empty if a
+// Frost Trap already covered the position.
 struct IllidanInfection
 {
     Position infectionPosition;
-    IllidanPhase phase = IllidanPhase::None;
     ObjectGuid hunter = ObjectGuid::Empty;
     bool isTrapAssigned = false;
 };
@@ -619,11 +630,10 @@ inline constexpr float ILLIDAN_SHADOWFIEND_BIRTHER_DISTANCE = 8.0f;
 inline constexpr float ILLIDAN_SHADOWFIEND_FINISH_HEALTH_PCT = 50.0f;
 // At or below this he is burnt down: no hold and no stop.
 inline constexpr float ILLIDAN_BURN_HEALTH_PCT = 5.0f;
-// At or below this in Demon Form nobody damages him, so he changes back above 30%.
+// At or below this, and above 30%, only the warlock tank damages him in Demon Form, so he changes
+// back above 30%.
 inline constexpr float ILLIDAN_DEMON_FORM_NO_PUSH_HEALTH_PCT = 33.0f;
 inline constexpr uint32 ILLIDAN_RESET_DPS_WAIT_MS = 3 * IN_MILLISECONDS;
-// He turns aggressive in Demon Form this long after the transform starts.
-inline constexpr uint32 ILLIDAN_DEMON_TRANSFORM_MS = 12230;
 // The warlock tank has him to itself for the 12.23 s transform and about 2 s more.
 inline constexpr uint32 ILLIDAN_DEMON_FORM_DPS_WAIT_MS = 14 * IN_MILLISECONDS;
 // Demon Form ends, with a threat reset, this long after the transform starts.
@@ -649,6 +659,9 @@ inline constexpr uint32 ILLIDAN_PHASE_START_MISDIRECT_MS = 3 * IN_MILLISECONDS;
 // A Frost Trap patch already on the infection position does for a new infection if it outlasts the
 // debuff by this much, the time ranged get on the slowed Shadowfiends.
 inline constexpr int32 ILLIDAN_FROST_TRAP_SLOW_MS = 5 * IN_MILLISECONDS;
+// A Frost Trap not yet sprung this close to the infection position does too: Shadowfiends spawning
+// there spring it from 3.9 yd.
+inline constexpr float ILLIDAN_FROST_TRAP_DISTANCE = 3.0f;
 
 // Tank ring: he is held 25 yd from the grate centre with the Main Tank 6 yd outward of him, so he
 // faces out and the raid stands inside.
@@ -679,13 +692,12 @@ inline constexpr float ILLIDAN_GRATE_OUTER_RADIUS = 12.0f;
 inline constexpr size_t ILLIDAN_HEALER_SLOT_COUNT = 8;
 inline constexpr size_t ILLIDAN_MELEE_SLOT_COUNT = 15;
 
-// Shadowfiend infection positions. Phases 1, 3 and 5: from the grate centre, counterclockwise of
-// his bearing. Phase 4: from him, behind the ranged DPS, beside the healers and in front of melee.
-inline constexpr float ILLIDAN_INFECTION_POSITION_DISTANCE = 27.0f;
-inline constexpr float ILLIDAN_INFECTION_POSITION_ANGLE = 90.0f * static_cast<float>(M_PI) / 180.0f;
-inline constexpr float ILLIDAN_DEMON_INFECTION_POSITION_DISTANCE = 39.6f;
-inline constexpr float ILLIDAN_DEMON_INFECTION_POSITION_ANGLE =
-    -16.0f * static_cast<float>(M_PI) / 180.0f;
+// Shadowfiend infection position, from him as Phase 4 places are, in every phase: across the grate
+// clockwise of him, out of Draw Soul's cone in a ring step, about 20 yd from the grate centre and
+// inward of the Flame Crash zones on the Main Tank's ring; in Phase 4 between ranged DPS and melee.
+inline constexpr float ILLIDAN_INFECTION_POSITION_DISTANCE = 40.0f;
+inline constexpr float ILLIDAN_INFECTION_POSITION_ANGLE =
+    -25.0f * static_cast<float>(M_PI) / 180.0f;
 
 // Phase 4, from him and off his inward line, positive toward the warlock tank's side. His reach is
 // 1.5 in Demon Form, so a 30 yd spell reaches 33 yd on him: the warlock tank stands 2 yd inside.
@@ -724,37 +736,41 @@ inline std::array const GRATE_POSITIONS = {
     ILLIDAN_W_GRATE_POSITION,
 };
 
+// The Flame tanks' Blaze steps, one per Flame Blast, in order. The Flame follows its tank in, so
+// each step is walked into on a line that turns the Flame Blast cone away from the grate stacks.
 inline Position const ILLIDAN_E_GLAIVE_WAITING_POSITION = { 677.656f, 294.066f, 353.192f };
 inline std::array const E_GLAIVE_TANK_POSITIONS = {
-    Position{ 683.000f, 295.000f, 354.000f },
-    Position{ 696.969f, 300.982f, 354.302f },
-    Position{ 691.112f, 287.461f, 354.363f },
-    Position{ 676.674f, 280.797f, 354.268f },
-    Position{ 664.414f, 284.834f, 354.271f },
-    Position{ 656.826f, 295.113f, 354.165f },
-    Position{ 665.000f, 304.000f, 354.000f },
+    Position{ 657.100f, 291.200f, 354.000f },
+    Position{ 658.600f, 280.700f, 354.000f },
+    Position{ 672.100f, 277.700f, 354.000f },
+    Position{ 682.600f, 279.200f, 354.000f },
+    Position{ 685.600f, 289.700f, 354.000f },
+    Position{ 669.100f, 288.200f, 354.000f },
 };
 
 inline Position const ILLIDAN_W_GLAIVE_WAITING_POSITION = { 676.102f, 316.305f, 353.192f };
 inline std::array const W_GLAIVE_TANK_POSITIONS = {
-    Position{ 697.208f, 313.475f, 354.234f },
-    Position{ 681.000f, 318.000f, 354.000f },
-    Position{ 664.000f, 307.000f, 354.000f },
-    Position{ 656.161f, 314.132f, 354.092f },
-    Position{ 665.080f, 326.905f, 354.128f },
-    Position{ 678.809f, 329.968f, 354.387f },
-    Position{ 690.889f, 324.277f, 354.204f },
+    Position{ 674.700f, 332.700f, 354.000f },
+    Position{ 685.200f, 331.200f, 354.000f },
+    Position{ 695.700f, 325.200f, 354.000f },
+    Position{ 695.700f, 311.700f, 354.000f },
+    Position{ 685.200f, 320.700f, 354.000f },
+    Position{ 668.700f, 323.700f, 354.000f },
 };
 
 IllidanPhase GetIllidanPhase(Unit* illidan);
 // He is up and talking after Akama's gossip, still immune to players and out of combat.
 bool IsIllidanSpeechInProgress(Player* bot);
-// The phase started less than durationMs ago; until the mechanic tracker stamps it, it has just
-// started.
-bool IsIllidanPhaseStartWithin(Unit const& illidan, uint32 durationMs);
+// Records a change of phase, the one before it and the start of a grounded phase; true if the
+// phase changed. Written by the mechanic tracker, and at the Demon Form transform by its listener.
+bool RecordIllidanPhase(uint32 instanceId, IllidanPhase phase);
+// The phase started less than durationMs ago; a change the mechanic tracker hasn't recorded yet
+// has just started.
+bool IsIllidanPhaseStartWithin(Unit const& illidan, IllidanPhase phase, uint32 durationMs);
 // The phase before the current one; until the tracker records a change, the last one it recorded.
 IllidanPhase GetIllidanPhaseBefore(Unit const& illidan, IllidanPhase phase);
-// Demon Form ends, with a threat reset, less than durationMs from now.
+// Demon Form ends, with a threat reset, less than durationMs from now; never before the tracker
+// has recorded the form.
 bool IsIllidanDemonFormEnding(Unit const& illidan, uint32 durationMs);
 // The hold window that is running, before who it spares is decided.
 IllidanDpsHold GetIllidanHoldWindow(Unit* illidan);
@@ -767,17 +783,11 @@ Position GetRingPoint(float angle, float radius);
 Position GetIllidanSettlePosition(Unit const& illidan);
 Position GetGrateSlot(size_t index);
 DemonFormLayout GetDemonFormLayout(Unit const& illidan);
-// Where an infection position is recorded: from the grate centre in Phases 1, 3 and 5, from him
-// in Demon Form.
-Position GetIllidanInfectionPosition(Unit const& illidan, IllidanPhase phase);
-// The phase whose infection position applies: the Demon Form transform counts as the phase before
-// it, so an infection from Phase 3 or 5 keeps its position and its Shadowfiends don't come out on
-// a walk across the raid. The death scene counts as the phase before it too.
-IllidanPhase GetIllidanInfectionPositionPhase(Unit const& illidan, IllidanPhase phase);
+// Where an infection position is recorded, from where he stands now.
+Position GetIllidanInfectionPosition(Unit const& illidan);
 // The infection position recorded for the bot's own infection, else for the infection it traps for,
-// else where one would be recorded now.
-Position GetIllidanRecordedInfectionPosition(
-    PlayerbotAI* botAI, Unit const& illidan, IllidanPhase phase);
+// else the one a new infection would share, else where one would be recorded now.
+Position GetIllidanRecordedInfectionPosition(PlayerbotAI* botAI, Unit const& illidan);
 std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot);
 bool IsWestFlameOfAzzinothTank(Player* bot);
 bool IsEastFlameOfAzzinothTank(Player* bot);
@@ -802,12 +812,13 @@ bool IsIllidanTrapHunterOnDuty(PlayerbotAI* botAI);
 // Shadowfiends are out, tanks included (the raid can't move away from them in Phase 2), and its
 // trap hunter still lays the trap.
 bool IsIllidanInfectionPositionKeptInFlight(PlayerbotAI* botAI);
-// A Frost Trap patch round infectionPosition lasting at least minDurationMs more.
-bool IsFrostTrapPatchAt(Player* bot, Position const& infectionPosition, int32 minDurationMs);
+// A Frost Trap not yet sprung at infectionPosition, or a patch round it lasting at least
+// minDurationMs more.
+bool IsFrostTrapAt(Player* bot, Position const& infectionPosition, int32 minDurationMs);
 // Slot lists are bots on the map, the dead kept, each part by GUID: ranged are healers, then
-// ranged DPS; melee are melee DPS, then tanks. The Main Tank is left out, and in Demon Form the
-// warlock tank and the healers too, who have their own list. The index wraps round slotCount; -1
-// if the bot isn't in the list.
+// ranged DPS; melee are melee DPS, then tanks, the Main Tank left out. In Demon Form the warlock
+// tank and the healers leave the ranged list; healers have their own. The index wraps round
+// slotCount; -1 if the bot isn't in the list.
 int32 GetIllidanRangedIndex(PlayerbotAI* botAI, size_t slotCount, bool inDemonForm);
 int32 GetIllidanHealerIndex(PlayerbotAI* botAI, size_t slotCount);
 int32 GetIllidanMeleeIndex(PlayerbotAI* botAI, size_t slotCount);
@@ -821,8 +832,8 @@ bool HasParasiticShadowfiend(Player* player);
 GuidVector FindParasiticShadowfiendGuids(PlayerbotAI* botAI);
 // Shadowfiends have a combat reach of 1.0y.
 Unit* GetNearestParasiticShadowfiend(PlayerbotAI* botAI, Unit const& unit);
-// No Shadowfiend debuff and a living Shadowfiend close by, as where a debuff just ended, while
-// that Shadowfiend isn't yet nearly dead.
+// No Shadowfiend debuff and a living Shadowfiend close by that isn't yet nearly dead, as where a
+// debuff just ended; any of them, since the pair spawn together and ranged focus one.
 bool IsNearNewParasiticShadowfiend(PlayerbotAI* botAI);
 // Living group members with either Shadowfiend debuff, humans included, so trap hunters trap for
 // them too.
@@ -839,9 +850,11 @@ Unit* GetShadowDemonWalkingToWarlockTank(PlayerbotAI* botAI);
 Unit* GetShadowDemonForMeleeToAttack(PlayerbotAI* botAI, Unit const& from);
 // Imps and water elementals take Demons as ranged do, other pets as melee do.
 Unit* GetShadowDemonForPetToAttack(PlayerbotAI* botAI, Pet const& pet);
+// The bot's current target is a Shadow Demon: in Demon Form, the one reason melee leave their
+// slots.
+bool IsTargetingShadowDemon(PlayerbotAI* botAI);
 EyeBlastDangerArea GetEyeBlastDangerArea(Player* bot);
 bool IsPositionInEyeBlastDangerArea(Position const& pos, EyeBlastDangerArea const& area);
-GameObject* FindNearestCageTrap(PlayerbotAI* botAI);
 
 // Shared encounter state
 
@@ -858,7 +871,7 @@ struct BtInstanceState
     std::optional<uint32> illidanFlamePhaseStartTime;
     std::optional<ObjectGuid> eastFlameGuid;
     std::optional<ObjectGuid> westFlameGuid;
-    // Each infected player's infection, kept until the debuff is gone or the phase changes.
+    // Each infected player's infection, kept until the debuff is gone.
     std::optional<std::unordered_map<ObjectGuid, IllidanInfection>> illidanInfections;
 };
 

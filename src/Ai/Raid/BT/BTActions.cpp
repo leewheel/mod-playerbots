@@ -17,7 +17,6 @@
 #include <limits>
 #include <list>
 #include <utility>
-#include <vector>
 
 using namespace BtHelpers;
 using namespace EncounterHelpers;
@@ -1224,7 +1223,7 @@ bool ReliquaryOfSoulsMisdirectToMainTankAction::Execute(Event /*event*/)
         return false;
 
     Player* mainTank = GetGroupMainTank(bot);
-    if (!mainTank)
+    if (!mainTank || !mainTank->IsAlive())
         return false;
 
     Unit* target = desire ? desire : anger;
@@ -1301,10 +1300,10 @@ bool ReliquaryOfSoulsHealersDpsSufferingAction::Execute(Event /*event*/)
         }
         case CLASS_PALADIN:
         {
-            for (char const* spell : { "avenging wrath", "consecration" })
+            if (botAI->CanCastSpell("avenging wrath", bot) &&
+                botAI->CastSpell("avenging wrath", bot))
             {
-                if (botAI->CanCastSpell(spell, bot) && botAI->CastSpell(spell, bot))
-                    return true;
+                return true;
             }
 
             for (char const* spell :
@@ -1400,6 +1399,9 @@ bool MotherShahrazTanksPositionBossUnderPillarAction::Execute(Event /*event*/)
 bool MotherShahrazMeleeDpsWaitAtSafePositionAction::Execute(Event /*event*/)
 {
     Position const& position = SHAHRAZ_RANGED_POSITION;
+    if (bot->GetExactDist2d(position) <= SHAHRAZ_RANGED_POSITION_TOLERANCE)
+        return false;
+
     return MoveTo(
         BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), bot->GetPositionZ(),
         false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
@@ -1410,7 +1412,7 @@ bool MotherShahrazMeleeDpsWaitAtSafePositionAction::Execute(Event /*event*/)
 bool MotherShahrazPositionRangedUnderPillarAction::Execute(Event /*event*/)
 {
     Position const& position = SHAHRAZ_RANGED_POSITION;
-    if (bot->GetExactDist2d(position) <= 1.0f)
+    if (bot->GetExactDist2d(position) <= SHAHRAZ_RANGED_POSITION_TOLERANCE)
         return false;
 
     return MoveTo(
@@ -1424,32 +1426,19 @@ bool MotherShahrazBreakFatalAttractionAction::Execute(Event /*event*/)
     if (attractedPlayers.size() < 2)
         return false;
 
-    float centerX = 0.0f, centerY = 0.0f;
-    for (Player* member : attractedPlayers)
-    {
-        centerX += member->GetPositionX();
-        centerY += member->GetPositionY();
-    }
-    centerX /= attractedPlayers.size();
-    centerY /= attractedPlayers.size();
-
     auto const botIt = std::find(attractedPlayers.begin(), attractedPlayers.end(), bot);
     if (botIt == attractedPlayers.end())
         return false;
 
-    // They all land on one position, so each takes its own heading by index, then keeps away
-    // from the others as they part.
-    float spreadAngle;
-    constexpr float minCenterDistance = 1.0f;
-    if (bot->GetExactDist2d(centerX, centerY) > minCenterDistance)
-    {
-        spreadAngle = bot->GetAngle(centerX, centerY) + static_cast<float>(M_PI);
-    }
-    else
-    {
-        spreadAngle = 2.0f * static_cast<float>(M_PI) *
-            std::distance(attractedPlayers.begin(), botIt) / attractedPlayers.size();
-    }
+    // Holders run away from the ranged position, in GUID order: with two, one to each side; with
+    // three, the first straight away and the other two to each side.
+    auto const index = std::distance(attractedPlayers.begin(), botIt);
+    constexpr float quarterTurn = static_cast<float>(M_PI) / 2.0f;
+    float spreadAngle = SHAHRAZ_RANGED_POSITION.GetAngle(bot);
+    if (attractedPlayers.size() == 2)
+        spreadAngle += index ? -quarterTurn : quarterTurn;
+    else if (index)
+        spreadAngle += index == 1 ? quarterTurn : -quarterTurn;
 
     // Straight on first, then alternately left and right out to 90 degrees, so a bot against a
     // wall slides along it.
@@ -1598,21 +1587,25 @@ bool IllidariCouncilInterruptCircleOfHealingAction::Execute(Event /*event*/)
     if (!malande)
         return false;
 
-    auto const castInterrupt = [&](char const* spell)
+    // CanCastSpell passes a target out of range, and the failed cast still turns the bot to her.
+    auto const castInterrupt = [&](char const* spell, bool inRange)
     {
-        return botAI->CanCastSpell(spell, malande) && botAI->CastSpell(spell, malande);
+        return inRange && botAI->CanCastSpell(spell, malande) && botAI->CastSpell(spell, malande);
     };
 
+    bool const inMeleeRange = bot->IsWithinMeleeRange(malande);
     switch (bot->getClass())
     {
         case CLASS_DEATH_KNIGHT:
-            return castInterrupt("mind freeze");
+            return castInterrupt("mind freeze", inMeleeRange);
         case CLASS_MAGE:
-            return castInterrupt("counterspell");
+            return castInterrupt(
+                "counterspell", bot->IsWithinCombatRange(malande, COUNTERSPELL_RANGE));
         case CLASS_ROGUE:
-            return castInterrupt("kick");
+            return castInterrupt("kick", inMeleeRange);
         case CLASS_SHAMAN:
-            return castInterrupt("wind shear");
+            return castInterrupt(
+                "wind shear", bot->IsWithinCombatRange(malande, WIND_SHEAR_RANGE));
         case CLASS_WARLOCK:
         {
             Pet* pet = bot->GetPet();
@@ -1620,7 +1613,8 @@ bool IllidariCouncilInterruptCircleOfHealingAction::Execute(Event /*event*/)
             return spellLock && pet->CastSpell(malande, spellLock, false) == SPELL_CAST_OK;
         }
         case CLASS_WARRIOR:
-            return castInterrupt("pummel") || castInterrupt("shield bash");
+            return castInterrupt("pummel", inMeleeRange) ||
+                castInterrupt("shield bash", inMeleeRange);
         default:
             return false;
     }
@@ -1875,26 +1869,30 @@ bool IllidariCouncilManageDpsTimerAction::Execute(Event /*event*/)
 
 // The Main Tank waits 15.5 yd north of the grate centre, facing him, so he stops on the ring when
 // he runs in. Everyone else waits on the grate.
-bool IllidanStormragePositionForPullAction::Execute(Event /*event*/)
+bool IllidanStormragePositionOnGrateDuringSpeechAction::Execute(Event /*event*/)
 {
-    bool const isMainTank = PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot);
-    Position position = ILLIDAN_GRATE_CENTRE;
-    if (isMainTank)
-        position = ILLIDAN_PULL_TANK_POSITION;
+    if (!PlayerbotAI::IsTank(bot) || !PlayerbotAI::IsMainTank(bot))
+    {
+        return MoveInside(
+            BT_MAP_ID, ILLIDAN_GRATE_CENTRE.GetPositionX(), ILLIDAN_GRATE_CENTRE.GetPositionY(),
+            ILLIDAN_GRATE_CENTRE.GetPositionZ(), ILLIDAN_POSITION_TOLERANCE,
+            MovementPriority::MOVEMENT_COMBAT);
+    }
 
+    Position const& position = ILLIDAN_PULL_TANK_POSITION;
     if (bot->GetExactDist2d(position) <= ILLIDAN_POSITION_TOLERANCE)
     {
-        Creature* illidan = isMainTank ? bot->FindNearestCreature(
-            Id(BtNpcs::NPC_ILLIDAN_STORMRAGE), ILLIDAN_SPEECH_SEARCH_RADIUS) : nullptr;
+        Creature* illidan = bot->FindNearestCreature(
+            Id(BtNpcs::NPC_ILLIDAN_STORMRAGE), ILLIDAN_SPEECH_SEARCH_RADIUS);
         if (illidan && !bot->HasInArc(static_cast<float>(M_PI) / 2.0f, illidan))
             bot->SetFacingTo(bot->GetAngle(illidan));
 
         return false;
     }
 
-    return MoveInside(
+    return MoveTo(
         BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        ILLIDAN_POSITION_TOLERANCE, MovementPriority::MOVEMENT_COMBAT);
+        false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
 bool IllidanStormrageMisdirectToTanksAction::Execute(Event /*event*/)
@@ -1948,25 +1946,15 @@ bool IllidanStormrageMisdirectToTanksAction::TryMisdirectToFlameTanks(Group* gro
     if (hunterIndex == -1)
         return false;
 
+    // The first hunter takes the East Flame to its tank, the others the West Flame, each as soon
+    // as its own Flame is up, since the West one comes about 0.7 s first.
+    bool const isEast = hunterIndex == 0;
     auto const [eastFlame, westFlame] = GetFlamesOfAzzinoth(bot);
-    if (!eastFlame || !westFlame || eastFlame == westFlame ||
-        eastFlame->GetHealthPct() <= BOSS_ENGAGED_HEALTH_PCT)
-    {
-        return false;
-    }
-
-    Player* secondAssistTank = GetGroupAssistTank(bot, 1);
-    if (!secondAssistTank)
+    Unit* flame = isEast ? eastFlame : westFlame;
+    if (!flame || flame->GetHealthPct() <= BOSS_ENGAGED_HEALTH_PCT)
         return false;
 
-    if (hunterIndex == 0)
-        return MisdirectTargetToTank(botAI, eastFlame, secondAssistTank);
-
-    Player* firstAssistTank = GetGroupAssistTank(bot, 0);
-    if (!firstAssistTank)
-        return false;
-
-    return MisdirectTargetToTank(botAI, westFlame, firstAssistTank);
+    return MisdirectTargetToTank(botAI, flame, GetGroupAssistTank(bot, isEast ? 1 : 0));
 }
 
 // Its Steady Shot would be damage on him while nobody may damage him.
@@ -2158,15 +2146,15 @@ void IllidanStormrageMainTankRepositionBossAction::StartRingLead(
     }
 }
 
-// A trap hunter on duty drops Frost Trap on arrival. An infected hunter is never on duty.
+// A trap hunter on duty drops Frost Trap on arrival, holding the position through a global
+// cooldown. An infected hunter is never on duty.
 bool IllidanStormrageIsolateBotWithParasiteAction::Execute(Event /*event*/)
 {
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
 
-    Position const position =
-        GetIllidanRecordedInfectionPosition(botAI, *illidan, GetIllidanPhase(illidan));
+    Position const position = GetIllidanRecordedInfectionPosition(botAI, *illidan);
     if (bot->GetExactDist2d(position) > ILLIDAN_POSITION_TOLERANCE)
     {
         return MoveTo(
@@ -2178,12 +2166,15 @@ bool IllidanStormrageIsolateBotWithParasiteAction::Execute(Event /*event*/)
         return false;
 
     uint32 const frostTrap = Id(BtSpells::SPELL_FROST_TRAP);
-    return botAI->CanCastSpell(frostTrap, bot) && botAI->CastSpell(frostTrap, bot);
+    if (botAI->CanCastSpell(frostTrap, bot))
+        botAI->CastSpell(frostTrap, bot);
+
+    return true;
 }
 
-// The run position is fixed when an infection is recorded, so it doesn't move as he does, and the
-// trap hunter once picked, so a Frost Trap coming off cooldown mid-run can't pass the job on. A
-// change of run-position phase records both again.
+// The infection position is fixed when an infection is recorded, so it doesn't move as he does,
+// and the trap hunter once picked, so a Frost Trap coming off cooldown mid-run can't pass the job
+// on. Both last until the debuff is gone, through any change of phase.
 bool IllidanStormrageTrackInfectionsAction::Execute(Event /*event*/)
 {
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
@@ -2193,7 +2184,6 @@ bool IllidanStormrageTrackInfectionsAction::Execute(Event /*event*/)
     auto const& infected = context->GetValue<GuidVector>(
         "illidan stormrage players with parasitic shadowfiend")->RefGet();
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    IllidanPhase const infectionPhase = GetIllidanInfectionPositionPhase(*illidan, phase);
     bool const hasInfectionPosition = phase != IllidanPhase::None && phase != IllidanPhase::Flying;
     std::optional<std::unordered_map<ObjectGuid, IllidanInfection>>& infectionsField =
         BtState(bot->GetInstanceId()).illidanInfections;
@@ -2201,10 +2191,9 @@ bool IllidanStormrageTrackInfectionsAction::Execute(Event /*event*/)
     auto& infections = infectionsField ? *infectionsField : infectionsField.emplace();
     std::erase_if(
         infections,
-        [&infected, infectionPhase, hasInfectionPosition](auto const& entry)
+        [&infected](auto const& entry)
         {
-            return std::find(infected.begin(), infected.end(), entry.first) == infected.end() ||
-                (hasInfectionPosition && entry.second.phase != infectionPhase);
+            return std::find(infected.begin(), infected.end(), entry.first) == infected.end();
         });
 
     if (hasInfectionPosition)
@@ -2216,9 +2205,8 @@ bool IllidanStormrageTrackInfectionsAction::Execute(Event /*event*/)
 
             // A new infection shares the position already in use, so one trap does for both.
             IllidanInfection infection;
-            infection.phase = infectionPhase;
             infection.infectionPosition = infections.empty() ?
-                GetIllidanInfectionPosition(*illidan, infectionPhase) :
+                GetIllidanInfectionPosition(*illidan) :
                 infections.begin()->second.infectionPosition;
             infections.emplace(guid, infection);
         }
@@ -2277,14 +2265,15 @@ bool IllidanStormrageTrackInfectionsAction::FindTrapHunter(
     if (candidate.IsEmpty())
         return false;
 
-    // Ice already round the infection position that outlasts the debuff needs no new trap.
+    // A trap already laid at the infection position, or ice round it that outlasts the debuff,
+    // needs no new trap.
     Aura const* parasite = infected.GetAura(Id(BtSpells::SPELL_PARASITIC_SHADOWFIEND_1));
     if (!parasite)
         parasite = infected.GetAura(Id(BtSpells::SPELL_PARASITIC_SHADOWFIEND_2));
 
     int32 const parasiteMs = parasite ? parasite->GetDuration() : 0;
     bool const isCovered =
-        IsFrostTrapPatchAt(bot, infectionPosition, parasiteMs + ILLIDAN_FROST_TRAP_SLOW_MS);
+        IsFrostTrapAt(bot, infectionPosition, parasiteMs + ILLIDAN_FROST_TRAP_SLOW_MS);
     hunter = isCovered ? ObjectGuid::Empty : candidate;
     return true;
 }
@@ -2582,11 +2571,26 @@ bool IllidanStormrageMeleeStopAttackingAction::Execute(Event /*event*/)
     return true;
 }
 
-// The target is kept: the hold keeps the shot from starting again.
+// The target is kept: the hold keeps the shot or channel from starting again.
 bool IllidanStormrageStopShootingAction::Execute(Event /*event*/)
 {
-    bot->InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
-    return true;
+    //By leewheel 2026-10-22 entry 铁律：英文名回退 entry 22917（伊利丹·怒风）
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    if (!illidan)
+        return false;
+
+    bool isStopped = false;
+    for (CurrentSpellTypes const type : { CURRENT_AUTOREPEAT_SPELL, CURRENT_CHANNELED_SPELL })
+    {
+        Spell* spell = bot->GetCurrentSpell(type);
+        if (spell && spell->m_targets.GetUnitTargetGUID() == illidan->GetGUID())
+        {
+            bot->InterruptSpell(type);
+            isStopped = true;
+        }
+    }
+
+    return isStopped;
 }
 
 bool IllidanStormrageSpreadRangedAction::Execute(Event /*event*/)
@@ -2773,20 +2777,28 @@ bool IllidanStormrageSeedShadowDemonsAction::Execute(Event /*event*/)
         botAI->CastSpell("seed of corruption", target);
 }
 
-// The bot's usual Demon, else any Demon, each only without the bot's own Seed on it.
+// The bot's usual Demon, else any Demon, each only in reach and without the bot's own Seed on it.
+// Out of reach the cast would fail and turn the bot.
 Unit* IllidanStormrageSeedShadowDemonsAction::FindSeedTarget()
 {
     auto const& shadowDemons =
         context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet();
     uint32 const seed = AI_VALUE2(uint32, "spell id", "seed of corruption");
+    float const range = botAI->GetRange("spell");
+    auto const canSeed = [this, seed, range](Unit* demon)
+    {
+        return demon && demon->IsAlive() && bot->IsWithinCombatRange(demon, range) &&
+            !demon->HasAura(seed, bot->GetGUID());
+    };
+
     Unit* usualDemon = GetShadowDemonForRangedToAttack(botAI, *bot);
-    if (usualDemon && !usualDemon->HasAura(seed, bot->GetGUID()))
+    if (canSeed(usualDemon))
         return usualDemon;
 
     for (ShadowDemon const& shadowDemon : shadowDemons)
     {
         Unit* demon = botAI->GetUnit(shadowDemon.demon);
-        if (demon && demon->IsAlive() && !demon->HasAura(seed, bot->GetGUID()))
+        if (canSeed(demon))
             return demon;
     }
 
@@ -2853,9 +2865,9 @@ bool IllidanStormrageAssignTargetPriorityAction::Execute(Event /*event*/)
     return Attack(target);
 }
 
-// Demon Form: Shadow Demons first for everyone, healers included, but a nearly dead Shadowfiend in
-// a melee bot's reach before them; ranged also Shadowfiends; then him, except for melee and tanks,
-// who never take him in the form.
+// Demon Form: Shadow Demons first for everyone, healers included; then for melee a nearly dead
+// Shadowfiend in their reach, for ranged any Shadowfiend in their band; then him, except for melee
+// and tanks, who never take him in the form.
 std::vector<Unit*> IllidanStormrageAssignTargetPriorityAction::GetTargetsInPriorityOrder(
     Unit* illidan, IllidanPhase phase)
 {
@@ -2879,7 +2891,8 @@ std::vector<Unit*> IllidanStormrageAssignTargetPriorityAction::GetTargetsInPrior
         else
         {
             return {
-                GetShadowDemonForRangedToAttack(botAI, *bot), FindShadowfiendForRanged(), illidan,
+                GetShadowDemonForRangedToAttack(botAI, *bot), FindShadowfiendForRanged(phase),
+                illidan,
             };
         }
     }
@@ -2887,12 +2900,12 @@ std::vector<Unit*> IllidanStormrageAssignTargetPriorityAction::GetTargetsInPrior
     {
         if (isGrounded)
         {
-            return { FindShadowfiendForRanged(), illidan };
+            return { FindShadowfiendForRanged(phase), illidan };
         }
         else if (phase == IllidanPhase::Flying)
         {
             auto const [eastFlame, westFlame] = GetFlamesOfAzzinoth(bot);
-            return { FindShadowfiendForRanged(), eastFlame, westFlame };
+            return { FindShadowfiendForRanged(phase), eastFlame, westFlame };
         }
     }
     // Melee, assist tanks included, are on him, but first finish a nearly dead Shadowfiend in
@@ -2916,39 +2929,26 @@ Unit* IllidanStormrageAssignTargetPriorityAction::FindShadowfiendForMelee()
     return bot->IsWithinMeleeRange(shadowfiend) ? shadowfiend : nullptr;
 }
 
-Unit* IllidanStormrageAssignTargetPriorityAction::FindShadowfiendForRanged()
+Unit* IllidanStormrageAssignTargetPriorityAction::FindShadowfiendForRanged(IllidanPhase phase)
 {
     Unit* shadowfiend = GetNearestParasiticShadowfiend(botAI, *bot);
     if (!shadowfiend)
         return nullptr;
 
-    constexpr float minDistance = 10.0f;
+    // While he flies, a bot infected then stays in its grate stack, and the other stacks are 8.9
+    // to 11.5 yd from its Shadowfiends.
+    float const minDistance = phase == IllidanPhase::Flying ? 5.0f : 10.0f;
     constexpr float maxDistance = 28.5f;
     float const distance = bot->GetDistance(shadowfiend);
     return distance > minDistance && distance <= maxDistance ? shadowfiend : nullptr;
 }
 
-bool IllidanStormrageUseCageTrapAction::Execute(Event /*event*/)
-{
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan)
-        return false;
-
-    GameObject* trap = FindNearestCageTrap(botAI);
-    if (!trap || illidan->GetExactDist2d(trap) >= 4.0f)
-        return false;
-
-    if (bot->GetExactDist2d(trap) < 3.0f)
-    {
-        trap->Use(bot);
-        return true;
-    }
-
-    return MoveTo(
-        BT_MAP_ID, trap->GetPositionX(), trap->GetPositionY(), trap->GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
-}
-
+// By leewheel 2026-10-22 与上游 brighton 合并：IllidanStormrageUseCageTrapAction 由上游
+// illidan pass 2 整类删除（类声明 BTActions.h、ActionContext 注册、辅助函数
+// BtHelpers::FindNearestCageTrap、配套的 IllidanStormrageMaievPlacedCageTrapTrigger 一并移除）。
+// 自动合并已删掉声明/注册/辅助函数，此处为实现残留，若保留会因「无声明的定义」与
+// 未解析的 FindNearestCageTrap 而编译失败，故按上游重构一并移除。本核对该段原本唯一的
+// 改动只是把 illidan 英文名回退为 entry 22917，无本核独有逻辑，删除不损失本核功能。
 bool IllidanStormrageManageDpsTimersAction::Execute(Event /*event*/)
 {
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
@@ -2958,32 +2958,9 @@ bool IllidanStormrageManageDpsTimersAction::Execute(Event /*event*/)
     uint32 const now = getMSTime();
     uint32 const instanceId = illidan->GetMap()->GetInstanceId();
 
-    bool updated = false;
     IllidanPhase const phase = GetIllidanPhase(illidan);
+    bool updated = RecordIllidanPhase(instanceId, phase);
     BtInstanceState& state = BtState(instanceId);
-    bool const isFirstPhase = !state.illidanLastPhase;
-    IllidanPhase const lastPhase = state.illidanLastPhase.value_or(IllidanPhase::None);
-    bool const phaseChanged = isFirstPhase || lastPhase != phase;
-    state.illidanLastPhase = phase;
-
-    if (phaseChanged)
-    {
-        state.illidanPreviousPhase = lastPhase;
-        if (phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded ||
-            phase == IllidanPhase::Demon || phase == IllidanPhase::Maiev)
-        {
-            state.illidanPhaseStartTime = now;
-            updated = true;
-        }
-        else if (phase == IllidanPhase::Flying)
-        {
-            if (ResetIfSet(state.illidanPhaseStartTime))
-                updated = true;
-        }
-
-        if (phase != IllidanPhase::Flying && ResetIfSet(state.illidanFlamePhaseStartTime))
-            updated = true;
-    }
 
     if (phase == IllidanPhase::Flying)
     {

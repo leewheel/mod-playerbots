@@ -79,6 +79,21 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+// Tidal Shield causes bots to drop combat and flip on their non-combat engines. This multiplier
+// stops them from breaking their spread as a result (due to FollowAction) while also keeping them
+// from restarting their attack + dropping target repeatedly.
+class HighWarlordNajentusTidalShieldHoldPositionMultiplier
+    : public BlackTempleEncounterMultiplier
+{
+public:
+    HighWarlordNajentusTidalShieldHoldPositionMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+            botAI, "high warlord naj'entus tidal shield hold position") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 // Supremus
 
 class SupremusFocusOnAvoidanceInKitePhaseMultiplier : public BlackTempleEncounterMultiplier
@@ -122,6 +137,16 @@ class ShadeOfAkamaDontDropOutOfSightTargetMultiplier : public BlackTempleEncount
 public:
     ShadeOfAkamaDontDropOutOfSightTargetMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(botAI, "shade of akama don't drop out of sight target") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class ShadeOfAkamaCannotTankBossMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    ShadeOfAkamaCannotTankBossMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "shade of akama cannot tank boss") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -241,6 +266,20 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+// Stock Spell Reflection fires on any cast at the tank, so it would go on Spirit Shock, which
+// can't be reflected; the raid's own reflect still answers Deaden.
+class ReliquaryOfSoulsSaveSpellReflectionForDeadenMultiplier
+    : public BlackTempleEncounterMultiplier
+{
+public:
+    ReliquaryOfSoulsSaveSpellReflectionForDeadenMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+            botAI, "reliquary of souls save spell reflection for deaden") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 // Mother Shahraz
 
 class MotherShahrazControlMovementMultiplier : public BlackTempleEncounterMultiplier
@@ -291,17 +330,19 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class IllidariCouncilControlHunterActionsMultiplier : public BlackTempleEncounterMultiplier
+// Dampen Magic is the only buff on the council that can be dispelled, and the mage tank steals it.
+class IllidariCouncilHoldMisdirectionAndDispelsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    IllidariCouncilControlHunterActionsMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidari council control hunter actions") {}
+    IllidariCouncilHoldMisdirectionAndDispelsMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+              botAI, "illidari council hold misdirection and dispels") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Ranged interrupts are invaluable for Circle of Healing.
+// Ranged interrupts are invaluable for Circle of Healing. Melee ones wait until she is in reach.
 class IllidariCouncilSaveInterruptsForCircleOfHealingMultiplier
     : public BlackTempleEncounterMultiplier
 {

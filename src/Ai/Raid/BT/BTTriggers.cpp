@@ -11,6 +11,8 @@
 #include "SharedDefines.h"
 #include "Spell.h"
 #include <algorithm>
+#include <limits>
+#include <vector>
 
 using namespace BtHelpers;
 using namespace EncounterHelpers;
@@ -197,7 +199,11 @@ bool SupremusReachBlockedByFireTrigger::IsActiveInEncounter()
 
 bool ShadeOfAkamaShouldPrioritizeChannelersTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsDps(bot) || !PlayerbotAI::IsMelee(bot))
+    if (!PlayerbotAI::IsDps(bot))
+        return false;
+
+    // Shadow Priests (by proxy via dps check) and melee dps focus on Channelers (and Sorcerers).
+    if (bot->getClass() != CLASS_PRIEST && !PlayerbotAI::IsMelee(bot))
         return false;
 
     return GetShadeOfAkamaKillTarget(botAI);
@@ -398,13 +404,11 @@ bool MotherShahrazTanksArePositioningBossTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsMelee(bot) || !PlayerbotAI::IsDps(bot))
         return false;
 
-    constexpr float meleeEngageHealthPct = 90.0f;
-    Unit* shahraz = AI_VALUE2(Unit*, "find target", "22947");
-    if (!shahraz || shahraz->GetHealthPct() < meleeEngageHealthPct)
-        return false;
-
-    Unit* victim = shahraz->GetVictim();
-    return !victim || victim->GetExactDist2d(SHAHRAZ_TANK_POSITION) > SHAHRAZ_POSITIONED_DISTANCE;
+    // By leewheel 2026-10-22 合并：本核原写法（血线 90% + victim 距离判定）已被上游提取成
+    // BtHelpers::IsShahrazBeingPositioned（判空 + SHAHRAZ_MELEE_ENGAGE_HEALTH_PCT + 同款距离判定），
+    // 逻辑等价且可复用，故采纳上游调用；仅将英文名回退为 entry 22947（本核生物名为中文，
+    // 英文 qualifier 恒匹配失败）。
+    return IsShahrazBeingPositioned(AI_VALUE2(Unit*, "find target", "22947"));
 }
 
 bool MotherShahrazRangedShouldPositionUnderPillarTrigger::IsActiveInEncounter()
@@ -485,8 +489,7 @@ bool IllidariCouncilMalandeCastsCircleOfHealingTrigger::IsActiveInEncounter()
         return false;
 
     if (PlayerbotAI::IsRanged(bot) &&
-        !malande->HasAura(Id(BtSpells::SPELL_BLESSING_OF_PROTECTION)) &&
-        !IsMalandeInCouncilPatch(malande, gathios, zerevor))
+        !ShouldRangedInterruptCircleOfHealing(malande, gathios, zerevor))
     {
         return false;
     }
@@ -496,17 +499,25 @@ bool IllidariCouncilMalandeCastsCircleOfHealingTrigger::IsActiveInEncounter()
 
 bool IllidariCouncilMalandeShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, false) &&
-        AI_VALUE2(Unit*, "find target", "22951");
+    // By leewheel 2026-10-22 合并：采纳上游写法（多一层 PlayerbotAI::IsTank 前置，非坦直接短路），
+    // 仅把英文名回退为 entry 22951（女公爵玛兰德）。
+    return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "22951") &&
+        PlayerbotAI::IsAssistTankOfIndex(bot, 0, false);
 }
 
 bool IllidariCouncilVerasShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsAssistTankOfIndex(bot, 1, false))
+    if (!PlayerbotAI::IsTank(bot))
         return false;
 
+    // By leewheel 2026-10-22 合并：采纳上游写法——本核原版只判了 veras 存在且未消失，
+    // 上游补上「须为二助坦」的归属判定（IsAssistTankOfIndex(bot, 1, false)），是逻辑补全，
+    // 予以采纳；仅把英文名回退为 entry 22952（薇拉·暗影）。
     Unit* veras = AI_VALUE2(Unit*, "find target", "22952");
-    return veras && !IsVerasVanished(veras);
+    if (!veras || IsVerasVanished(veras))
+        return false;
+
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 1, false);
 }
 
 bool IllidariCouncilZerevorShouldBeTankedByMageTrigger::IsActiveInEncounter()
@@ -516,6 +527,11 @@ bool IllidariCouncilZerevorShouldBeTankedByMageTrigger::IsActiveInEncounter()
 
 bool IllidariCouncilMageTankHealerShouldRepositionTrigger::IsActiveInEncounter()
 {
+    // By leewheel 2026-10-22 合并：采纳上游写法（多一层 PlayerbotAI::IsHeal 前置，非治疗直接短路），
+    // 仅把英文名回退为 entry 22950（高阶灵术师塞勒沃尔）。
+    if (!PlayerbotAI::IsHeal(bot))
+        return false;
+
     Unit* zerevor = AI_VALUE2(Unit*, "find target", "22950");
     if (!zerevor)
         return false;
@@ -584,6 +600,7 @@ bool IllidariCouncilShouldManageDpsTimerTrigger::IsActiveInEncounter()
 
 bool IllidanStormrageShouldPositionForPullTrigger::IsActive()
 {
+    // You are not prepared!
     return AI_VALUE(bool, "illidan stormrage speech in progress");
 }
 
@@ -602,7 +619,7 @@ bool IllidanStormrageHunterShouldMisdirectTrigger::IsActiveInEncounter()
     if (phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded ||
         phase == IllidanPhase::Maiev)
     {
-        return IsIllidanPhaseStartWithin(*illidan, ILLIDAN_PHASE_START_MISDIRECT_MS);
+        return IsIllidanPhaseStartWithin(*illidan, phase, ILLIDAN_PHASE_START_MISDIRECT_MS);
     }
 
     return phase == IllidanPhase::Flying || phase == IllidanPhase::Demon;
@@ -652,9 +669,8 @@ bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncount
     return !PlayerbotAI::IsTank(bot) || !PlayerbotAI::IsMainTank(bot);
 }
 
-// The mechanic tracker records each new infection while there is a shadowfiend birthing position,
-// keeps looking for a trap hunter while none is ready, and drops an entry once its debuff is gone
-// or the shadowfiend phase changes.
+// The mechanic tracker records each new infection while there is an infection position, keeps
+// looking for a trap hunter while none is ready, and drops an entry once its debuff is gone.
 bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
 {
     if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
@@ -667,7 +683,6 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
     auto const& infected = context->GetValue<GuidVector>(
         "illidan stormrage players with parasitic shadowfiend")->RefGet();
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    IllidanPhase const infectionPhase = GetIllidanInfectionPositionPhase(*illidan, phase);
     bool const hasInfectionPosition = phase != IllidanPhase::None && phase != IllidanPhase::Flying;
     BtInstanceState const* state = FindBtState(bot->GetInstanceId());
     auto const* infections =
@@ -680,11 +695,8 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
             if (std::find(infected.begin(), infected.end(), player) == infected.end())
                 return true;
 
-            if (hasInfectionPosition &&
-                (infection.phase != infectionPhase || !infection.isTrapAssigned))
-            {
+            if (hasInfectionPosition && !infection.isTrapAssigned)
                 return true;
-            }
         }
     }
 
@@ -808,7 +820,8 @@ bool IllidanStormrageGrateIsSafeFromFlamesTrigger::IsActiveInEncounter()
     return !IsFlameOfAzzinothTank(bot);
 }
 
-// Ice Block, Divine Shield and Cloak of Shadows each clear both debuffs on use.
+// Ice Block, Divine Shield and Cloak of Shadows each clear both debuffs on use. Not for the Main
+// Tank or a Flame tank: an immunity loses it whatever it holds.
 bool IllidanStormrageImmunityCanClearDebuffTrigger::IsActiveInEncounter()
 {
     bool const isPaladin = bot->getClass() == CLASS_PALADIN;
@@ -822,7 +835,7 @@ bool IllidanStormrageImmunityCanClearDebuffTrigger::IsActiveInEncounter()
     }
 
     if (isPaladin)
-        return !PlayerbotAI::IsMainTank(bot);
+        return !PlayerbotAI::IsMainTank(bot) && !IsFlameOfAzzinothTank(bot);
 
     return true;
 }
@@ -850,11 +863,14 @@ bool IllidanStormrageImmunityNoLongerNeededTrigger::IsActiveInEncounter()
 // An infected bot runs to the infection position instead.
 bool IllidanStormrageShouldPositionForLandingTrigger::IsActiveInEncounter()
 {
-    if ((PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)))
+    // By leewheel 2026-10-22 entry 铁律：英文名回退为 entry 22917（伊利丹·怒风）
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Landing)
         return false;
 
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (GetIllidanPhase(illidan) != IllidanPhase::Landing)
+    // By leewheel 2026-10-22 合并：采纳上游条件「主坦不参与落地站位」。本核冲突侧在此重复声明了
+    // 一次 illidan（与上一行同作用域重定义，本身即编译错），实为上一轮 entry 化时的残留，丢弃。
+    if (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot))
         return false;
 
     return !HasParasiticShadowfiend(bot);
@@ -875,17 +891,28 @@ bool IllidanStormrageMeleeShouldStopAttackingTrigger::IsActiveInEncounter()
     return window == IllidanDpsHold::DemonFormStart || window == IllidanDpsHold::DemonFormNoPush;
 }
 
-// Auto Shot and wands keep shooting him through a hold, since a multiplier can't end a running
-// auto-repeat.
+// Auto Shot, wands and channels (Drain Soul, Mind Flay) keep hitting him through a hold, since a
+// multiplier can't end a running auto-repeat or channel.
 bool IllidanStormrageShouldStopShootingTrigger::IsActiveInEncounter()
 {
     Spell* shot = bot->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL);
-    if (!shot)
+    Spell* channel = bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
+    if (!shot && !channel)
         return false;
 
+    // By leewheel 2026-10-22 合并：采纳上游写法，并把英文名回退为 entry 22917。
+    // ★ 上游写法顺带修掉了本核版的一个空指针：函数开头只判 `if (!shot && !channel) return false;`
+    //   ⇒ 允许「shot 为空而 channel 非空」。本核版直接 `shot->m_targets...` 解引用，
+    //   此时（如正在引导 Drain Soul / Mind Flay 而非自动射击）会空指针崩溃。
+    //   上游改为 `(shot && ...) || (channel && ...)`，两者皆可为空，安全。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    return illidan && shot->m_targets.GetUnitTargetGUID() == illidan->GetGUID() &&
-        GetIllidanDpsHold(botAI, illidan) != IllidanDpsHold::None;
+    if (!illidan)
+        return false;
+
+    ObjectGuid const guid = illidan->GetGUID();
+    bool const isOnIllidan = (shot && shot->m_targets.GetUnitTargetGUID() == guid) ||
+        (channel && channel->m_targets.GetUnitTargetGUID() == guid);
+    return isOnIllidan && GetIllidanDpsHold(botAI, illidan) != IllidanDpsHold::None;
 }
 
 bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
@@ -899,29 +926,36 @@ bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
 
-    if (phase == IllidanPhase::Demon && IsIllidanWarlockTank(botAI))
-        return false;
-
-    // While a Demon walks to the warlock tank, ranged DPS may leave their slots to reach it.
-    if (phase == IllidanPhase::Demon && !PlayerbotAI::IsHeal(bot) &&
-        GetShadowDemonWalkingToWarlockTank(botAI))
+    if (phase == IllidanPhase::Demon)
     {
-        return false;
+        if (IsIllidanWarlockTank(botAI))
+            return false;
+
+        // While a Demon walks to the warlock tank, ranged DPS may leave their slots to reach it.
+        if (!PlayerbotAI::IsHeal(bot) && GetShadowDemonWalkingToWarlockTank(botAI))
+            return false;
+
+        return true;
     }
 
     return phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded ||
-        phase == IllidanPhase::Demon || phase == IllidanPhase::Maiev;
+        phase == IllidanPhase::Maiev;
 }
 
 // Ranged DPS walk into spell reach of a Shadow Demon walking to the warlock tank, whose death
 // wipes the raid. Healers stay to heal.
 bool IllidanStormrageRangedShouldReachShadowDemonTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsHeal(bot) || HasParasiticShadowfiend(bot))
+    if (!PlayerbotAI::IsRangedDps(bot))
         return false;
 
+    // By leewheel 2026-10-22 合并：采纳上游写法（把「已寄生腐蚀」与「是术士坦」合并为第二段判定，
+    // 语义与本核版一致且更清晰），并把英文名回退为 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon || IsIllidanWarlockTank(botAI))
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
+        return false;
+
+    if (HasParasiticShadowfiend(bot) || IsIllidanWarlockTank(botAI))
         return false;
 
     Unit* demon = GetShadowDemonWalkingToWarlockTank(botAI);
@@ -931,18 +965,20 @@ bool IllidanStormrageRangedShouldReachShadowDemonTrigger::IsActiveInEncounter()
 // Melee and tanks take their Demon Form slots; the Main Tank has its own positions.
 bool IllidanStormrageMeleeShouldStayAwayFromDemonFormTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsMelee(bot) || (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)))
+    if (!PlayerbotAI::IsMelee(bot))
         return false;
 
+    // By leewheel 2026-10-22 合并：采纳上游写法——上游多出 HasParasiticShadowfiend(bot) 条件，
+    // 即「身上带寄生腐蚀的近战先去跑位、不参与恶魔形态散位」，与本函数注释意图一致，是逻辑补全；
+    // 同时把英文名回退为 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon || HasParasiticShadowfiend(bot))
         return false;
 
-    if (HasParasiticShadowfiend(bot))
+    if (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot))
         return false;
 
-    Unit* target = AI_VALUE(Unit*, "current target");
-    return !target || target->GetEntry() != Id(BtNpcs::NPC_SHADOW_DEMON);
+    return !IsTargetingShadowDemon(botAI);
 }
 
 bool IllidanStormrageWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
@@ -959,20 +995,27 @@ bool IllidanStormrageWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
 
 // Every warlock, the warlock tank included, casts Seed of Corruption on the Shadow Demons while
 // two or more are alive. They all walk toward the raid, so a Seed going off on one usually
-// catches others.
+// catches others. Not while infected, so the run comes first, nor next to fresh Shadowfiends,
+// which the explosion would turn onto the warlock.
 bool IllidanStormrageWarlockShouldSeedShadowDemonsTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_WARLOCK)
         return false;
 
+    // By leewheel 2026-10-22 合并：采纳上游写法——上游多出 HasParasiticShadowfiend(bot) 条件，
+    // 与本函数注释「Not while infected, so the run comes first」一致，是逻辑补全；
+    // 同时把英文名回退为 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
+    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon || HasParasiticShadowfiend(bot))
         return false;
 
-    if (IsIllidanPhaseStartWithin(*illidan, ILLIDAN_SHADOW_DEMON_SPAWN_MS))
+    if (IsIllidanPhaseStartWithin(*illidan, IllidanPhase::Demon, ILLIDAN_SHADOW_DEMON_SPAWN_MS))
         return false;
 
-    return context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet().size() >= 2;
+    if (context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet().size() < 2)
+        return false;
+
+    return !IsNearNewParasiticShadowfiend(botAI);
 }
 
 // Tanks other than the Main Tank join the melee in Phases 1, 3, 4 and 5; while he flies the
@@ -1004,44 +1047,12 @@ bool IllidanStormrageShouldAssignTargetPriorityTrigger::IsActiveInEncounter()
         !IsIllidanDemonFormEnding(*illidan, ILLIDAN_MAIN_TANK_WALK_IN_MS);
 }
 
-bool IllidanStormrageMaievPlacedCageTrapTrigger::IsActiveInEncounter()
-{
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Maiev)
-        return false;
-
-    GameObject* trap = FindNearestCageTrap(botAI);
-    if (!trap)
-        return false;
-
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-
-    Player* closestBot = nullptr;
-    float closestDist = std::numeric_limits<float>::max();
-
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (!member || !member->IsAlive() || illidan->GetVictim() == member ||
-            !GET_PLAYERBOT_AI(member) ||
-            (PlayerbotAI::IsTank(member) && PlayerbotAI::IsMainTank(member)))
-        {
-            continue;
-        }
-
-        float const dist = member->GetDistance(trap);
-        if (dist < closestDist)
-        {
-            closestDist = dist;
-            closestBot = member;
-        }
-    }
-
-    return closestBot == bot;
-}
-
+// By leewheel 2026-10-22 与上游 brighton 合并：IllidanStormrageMaievPlacedCageTrapTrigger 由上游
+// illidan pass 2 整类删除（类声明 BTTriggers.h、TriggerContext 注册、依赖的
+// BtHelpers::FindNearestCageTrap 与配对的 IllidanStormrageUseCageTrapAction 一并移除）。
+// 自动合并已删掉声明/注册/辅助函数，此处为实现残留，保留会因「无声明的定义」与未解析的
+// FindNearestCageTrap 而编译失败，故按上游重构一并移除。本核对该段原本唯一的改动只是把
+// illidan 英文名回退为 entry 22917，无本核独有逻辑，删除不损失本核功能。
 bool IllidanStormrageShouldManageDpsTimersTrigger::IsActiveInEncounter()
 {
     return IsMechanicTrackerBot(bot, BT_MAP_ID) &&

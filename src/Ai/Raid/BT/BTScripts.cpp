@@ -121,8 +121,7 @@ public:
             return;
         }
 
-        if (!caster->HasAura(Id(BtSpells::SPELL_BLESSING_OF_PROTECTION)) &&
-            !IsMalandeInCouncilPatch(
+        if (!ShouldRangedInterruptCircleOfHealing(
                 caster,
                 caster->FindNearestCreature(
                     Id(BtNpcs::NPC_GATHIOS_THE_SHATTERER), COUNCIL_MEMBER_SEARCH_RADIUS),
@@ -169,13 +168,13 @@ private:
             case CLASS_MAGE:
             {
                 interrupt = Id(BtSpells::SPELL_COUNTERSPELL);
-                range = 30.0f;
+                range = COUNTERSPELL_RANGE;
                 break;
             }
             case CLASS_SHAMAN:
             {
                 interrupt = Id(BtSpells::SPELL_WIND_SHEAR);
-                range = 25.0f;
+                range = WIND_SHEAR_RANGE;
                 break;
             }
             case CLASS_WARLOCK:
@@ -189,9 +188,33 @@ private:
     }
 };
 
+// The mechanic tracker records phase changes on its own ticks, which wait out its cast bar, so
+// Demon Form is recorded at the transform itself and its windows count from there.
+class IllidanStormrageDemonTransformSpellListenerScript : public AllSpellScript
+{
+public:
+    IllidanStormrageDemonTransformSpellListenerScript()
+        : AllSpellScript("IllidanStormrageDemonTransformSpellListenerScript") {}
+
+    void OnSpellCast(
+        Spell* /*spell*/, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
+    {
+        if (!caster || spellInfo->Id != Id(BtSpells::SPELL_DEMON_TRANSFORM_1) ||
+            caster->GetEntry() != Id(BtNpcs::NPC_ILLIDAN_STORMRAGE))
+        {
+            return;
+        }
+
+        // Only where the tracker already keeps state, so a raid without bots leaves none.
+        if (FindBtState(caster->GetInstanceId()))
+            RecordIllidanPhase(caster->GetInstanceId(), IllidanPhase::Demon);
+    }
+};
+
 void AddSC_BlackTempleBotScripts()
 {
     new SupremusVolcanicEruptionSpellListenerScript();
     new ReliquaryOfSoulsRuneShieldSpellListenerScript();
     new IllidariCouncilCircleOfHealingSpellListenerScript();
+    new IllidanStormrageDemonTransformSpellListenerScript();
 }
