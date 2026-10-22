@@ -273,6 +273,13 @@ bool KaelthasSunstriderSanguinarEngagedByMainTankTrigger::IsActive()
     if (!botAI->IsMainTank(bot))
         return false;
 
+    // Once Kael'thas is in the fight he is the main tank's: when he joined on the timer with Sanguinar still up, the
+    // main tank swapped the star and its target between the two 112 times and Kael was never tanked (ladiabale, 22/10).
+    if (Unit* kaelthas = AI_VALUE2(Unit*, "find target", "kael'thas sunstrider"))
+        if (boss_kaelthas* kaelAI = dynamic_cast<boss_kaelthas*>(kaelthas->GetAI()))
+            if (kaelAI->GetPhase() == PHASE_FINAL)
+                return false;
+
     Unit* sanguinar = AI_VALUE2(Unit*, "find target", "lord sanguinar");
     return sanguinar && !sanguinar->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
            !sanguinar->HasAura(SPELL_PERMANENT_FEIGN_DEATH);
@@ -305,9 +312,6 @@ bool KaelthasSunstriderSanguinarCastsBellowingRoarTrigger::IsActive()
 
 bool KaelthasSunstriderCapernianShouldBeTankedByAWarlockTrigger::IsActive()
 {
-    if (bot->getClass() != CLASS_WARLOCK)
-        return false;
-
     Unit* capernian = AI_VALUE2(Unit*, "find target", "grand astromancer capernian");
     if (!capernian || capernian->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) ||
         capernian->HasAura(SPELL_PERMANENT_FEIGN_DEATH))
@@ -352,7 +356,7 @@ bool KaelthasSunstriderBotsHaveSpecificRolesInPhase3Trigger::IsActive()
 
     return botAI->IsAssistHealOfIndex(bot, 0, true) ||
            botAI->IsMainTank(bot) || botAI->IsAssistTankOfIndex(bot, 0, true) ||
-           (bot->getClass() == CLASS_WARLOCK && GetCapernianTank(bot) == bot);
+           GetCapernianTank(bot) == bot;
 }
 
 bool KaelthasSunstriderDeterminingAdvisorKillOrderTrigger::IsActive()

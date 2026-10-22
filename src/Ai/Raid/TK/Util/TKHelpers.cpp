@@ -335,12 +335,22 @@ Player* GetCapernianTank(Player* bot)
         return nullptr;
 
     Player* fallbackWarlock = nullptr;
+    // Without a Warlock, a ranged damage bot holds her at range: no CoA class is one, and with nobody on her a tank took
+    // her Fireballs while the healers kept their distance (ladiabale, Kael 22/10).
+    Player* fallbackRanged = nullptr;
 
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || !member->IsAlive() || member->getClass() != CLASS_WARLOCK)
+        if (!member || !member->IsAlive())
             continue;
+
+        if (member->getClass() != CLASS_WARLOCK)
+        {
+            if (!fallbackRanged && GET_PLAYERBOT_AI(member) && PlayerbotAI::IsRangedDps(member))
+                fallbackRanged = member;
+            continue;
+        }
 
         if (group->IsAssistant(member->GetGUID()))
             return member;
@@ -349,7 +359,7 @@ Player* GetCapernianTank(Player* bot)
             fallbackWarlock = member;
     }
 
-    return fallbackWarlock;
+    return fallbackWarlock ? fallbackWarlock : fallbackRanged;
 }
 
 // One Hunter will start on Sanguinar in Phase 3 with Melee to apply Armor Disruption

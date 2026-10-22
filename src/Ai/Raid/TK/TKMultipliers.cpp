@@ -34,6 +34,10 @@ float AlarMoveBetweenPlatformsMultiplier::GetValue(Action* action)
     if (isAlarInPhase2[alar->GetMap()->GetInstanceId()])
         return 1.0f;
 
+    // The CoA healer tether pulls toward a tank and undoes the positions this fight gives (ladiabale, TK 22/10).
+    if (action->getName() == "coa stay near tank")
+        return 0.0f;
+
     if (dynamic_cast<ReachTargetAction*>(action) ||
         dynamic_cast<TankFaceAction*>(action) ||
         dynamic_cast<CastKillingSpreeAction*>(action) ||
@@ -112,7 +116,8 @@ float AlarPhase2NoTankingIfArmorMeltedMultiplier::GetValue(Action* action)
     if (dynamic_cast<CastTauntAction*>(action) ||
         dynamic_cast<CastGrowlAction*>(action) ||
         dynamic_cast<CastHandOfReckoningAction*>(action) ||
-        dynamic_cast<CastDarkCommandAction*>(action))
+        dynamic_cast<CastDarkCommandAction*>(action) ||
+        action->getName() == "coa taunt" || action->getName() == "taunt spell")
         return 0.0f;
 
     return 1.0f;
@@ -124,6 +129,10 @@ float VoidReaverMaintainPositionsMultiplier::GetValue(Action* action)
 {
     if (!AI_VALUE2(Unit*, "find target", "void reaver"))
         return 1.0f;
+
+    // The CoA healer tether pulls toward a tank and undoes the positions this fight gives (ladiabale, TK 22/10).
+    if (action->getName() == "coa stay near tank")
+        return 0.0f;
 
     if (dynamic_cast<CombatFormationMoveAction*>(action) &&
         !dynamic_cast<SetBehindTargetAction*>(action))
@@ -139,6 +148,10 @@ float HighAstromancerSolarianMaintainPositionMultiplier::GetValue(Action* action
     Unit* astromancer = AI_VALUE2(Unit*, "find target", "high astromancer solarian");
     if (!astromancer || astromancer->HasAura(SPELL_SOLARIAN_TRANSFORM))
         return 1.0f;
+
+    // The CoA healer tether pulls toward a tank and undoes the positions this fight gives (ladiabale, TK 22/10).
+    if (action->getName() == "coa stay near tank")
+        return 0.0f;
 
     if (botAI->IsRanged(bot) &&
         (dynamic_cast<CombatFormationMoveAction*>(action) ||

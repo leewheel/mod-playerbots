@@ -3325,6 +3325,35 @@ public:
     }
 };
 
+// "taunt spell" for a CoA tank: the raid strategies (Tempest Keep, Zul'Aman, Molten Core) set the target first and then
+// ask for it by that name, which only the vanilla tanks had. Al'ar's phase 2 swap never happened and a tank held her
+// for 70 s under Melt Armor (ladiabale, TK 22/10). The strategy chose the mob, so another tank holding it is no reason
+// to wait.
+class CoaTauntSpellAction : public Action
+{
+public:
+    CoaTauntSpellAction(PlayerbotAI* botAI) : Action(botAI, "taunt spell") {}
+
+    bool Execute(Event /*event*/) override
+    {
+        Unit* target = AI_VALUE(Unit*, "current target");
+        if (!target || !target->IsAlive() || target->GetVictim() == bot)
+            return false;
+
+        SpellInfo const* taunt = CastFirst(botAI, bot,
+            KnownAbilities(bot, [](uint16 kind) { return (kind & KIND_TAUNT) != 0; }), target, USAGE_TAUNT);
+        if (taunt)
+            CoaTelemetryNoteTaunt(bot);
+        return RecordUsage(USAGE_TAUNT, taunt);
+    }
+
+    bool isUseful() override
+    {
+        return ClassHas(bot, KIND_TAUNT) &&
+               HasReadyAbility(botAI, bot, [](uint16 kind) { return (kind & KIND_TAUNT) != 0; });
+    }
+};
+
 // For a tank: an enemy is hitting another player of its group.
 class CoaLooseEnemyTrigger : public Trigger
 {
@@ -4727,6 +4756,17 @@ bool ClaimedByOther(Player* bot, Player* dead)
            !Passed(getMSTime(), found->second.second);
 }
 
+// A bot walking to a corpse it claimed: it keeps it past sight range and nothing else takes it away (ladiabale, TK 22/10).
+bool HoldsCorpseClaim(Player* bot, Player* dead = nullptr)
+{
+    std::lock_guard<std::mutex> guard(ResurrectClaimsLock);
+    uint32 const now = getMSTime();
+    for (auto const& [deadGuid, claim] : ResurrectClaims)
+        if (claim.first == bot->GetGUID() && !Passed(now, claim.second) && (!dead || deadGuid == dead->GetGUID()))
+            return true;
+    return false;
+}
+
 void ClaimCorpse(Player* bot, Player* dead)
 {
     std::lock_guard<std::mutex> guard(ResurrectClaimsLock);
@@ -4751,7 +4791,7 @@ Player* DeadGroupMember(Player* bot)
             !OnSameInstance(bot, dead) || ClaimedByOther(bot, dead))
             return;
         float const distance = dead->GetDistance(bot);
-        if (distance > sPlayerbotAIConfig.sightDistance)
+        if (distance > sPlayerbotAIConfig.sightDistance && !HoldsCorpseClaim(bot, dead))
             return;
         if (!best || rank < bestRank || (rank == bestRank && distance < bestDistance))
         {
@@ -4802,8 +4842,10 @@ public:
             return false;
         ClaimCorpse(bot, dead);
 
+        // A step refused while the last one runs is still the walk: returning false let loot, follow and three catch-up
+        // teleports undo it until the corpse was out of sight, and a healer stayed dead 12 minutes (ladiabale, TK 22/10).
         if (bot->GetDistance(dead) > ResurrectReach || !bot->IsWithinLOSInMap(dead))
-            return MoveNear(dead, ResurrectReach - 5.0f);
+            return MoveNear(dead, ResurrectReach - 5.0f) || bot->isMoving();
 
         if (!bot->IsStandState())
             bot->SetStandState(UNIT_STAND_STATE_STAND);
@@ -4842,7 +4884,7 @@ public:
         bool lost = master && !GET_PLAYERBOT_AI(master) && !bot->InBattleground() && bot->IsAlive() &&
                          master->IsAlive() && !bot->IsInCombat() && !master->IsInFlight() &&
                          !master->IsBeingTeleported() && OnSameInstance(bot, master) &&
-                         bot->GetGroup() && bot->GetDistance(master) > CatchUpDistance;
+                         bot->GetGroup() && bot->GetDistance(master) > CatchUpDistance && !HoldsCorpseClaim(bot);
         // In the player's fight a bot within healing reach of a tank is where the fight needs it, not lost.
         if (lost && master->IsInCombat())
             if (Player* tank = GroupTank(bot); tank && bot->GetDistance(tank) <= sPlayerbotAIConfig.healDistance &&
@@ -4964,6 +5006,7 @@ public:
         creators["coa group heal"] = &CoaActionFactoryInternal::coa_group_heal;
         creators["coa hot"] = &CoaActionFactoryInternal::coa_hot;
         creators["coa taunt"] = &CoaActionFactoryInternal::coa_taunt;
+        creators["taunt spell"] = &CoaActionFactoryInternal::taunt_spell;
         creators["coa defensive"] = &CoaActionFactoryInternal::coa_defensive;
         creators["coa dispel"] = &CoaActionFactoryInternal::coa_dispel;
         creators["coa avoid marked ally"] = &CoaActionFactoryInternal::coa_avoid_marked_ally;
@@ -4994,6 +5037,7 @@ private:
     }
     static Action* coa_hot(PlayerbotAI* botAI) { return new CoaHealAction(botAI, "coa hot", CoaHealAction::Mode::OverTime); }
     static Action* coa_taunt(PlayerbotAI* botAI) { return new CoaTauntAction(botAI); }
+    static Action* taunt_spell(PlayerbotAI* botAI) { return new CoaTauntSpellAction(botAI); }
     static Action* coa_defensive(PlayerbotAI* botAI) { return new CoaDefensiveAction(botAI); }
     static Action* coa_dispel(PlayerbotAI* botAI) { return new CoaDispelAction(botAI); }
     static Action* coa_avoid_marked_ally(PlayerbotAI* botAI) { return new CoaAvoidMarkedAllyAction(botAI); }

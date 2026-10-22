@@ -1113,10 +1113,14 @@ bool KaelthasSunstriderWarlockTankPositionCapernianAction::Execute(Event /*event
 
     SetRtiTarget(botAI, "circle");
 
-    if (AI_VALUE(Unit*, "current target") != capernian &&
-        botAI->CanCastSpell("searing pain", capernian) &&
-        botAI->CastSpell("searing pain", capernian))
-        return true;
+    if (AI_VALUE(Unit*, "current target") != capernian)
+    {
+        if (botAI->CanCastSpell("searing pain", capernian) && botAI->CastSpell("searing pain", capernian))
+            return true;
+        // The ranged bot standing in for a Warlock takes her with its own rotation.
+        if (bot->getClass() != CLASS_WARLOCK)
+            return Attack(capernian);
+    }
 
     if (capernian->GetVictim() == bot)
     {
@@ -1780,7 +1784,9 @@ bool KaelthasSunstriderUseLegendaryWeaponsAction::UseEquippedItemWithPacket(Item
         }
     }
 
-    if (!spellId)
+    // The CoA versions of these weapons cast their own spells with 30 to 180 s cooldowns that the stock stop conditions
+    // never see: a healer and a DPS used them 4 times a second for 5 minutes and did nothing else (ladiabale, Kael 22/10).
+    if (!spellId || bot->HasSpellCooldown(spellId))
         return false;
 
     WorldPacket packet(CMSG_USE_ITEM);
@@ -1790,7 +1796,7 @@ bool KaelthasSunstriderUseLegendaryWeaponsAction::UseEquippedItemWithPacket(Item
     packet << targetFlag << bot->GetPackGUID();
 
     bot->GetSession()->HandleUseItemOpcode(packet);
-    return true;
+    return bot->HasSpellCooldown(spellId) || bot->IsNonMeleeSpellCast(true);
 }
 
 bool KaelthasSunstriderMainTankPositionBossAction::Execute(Event /*event*/)
