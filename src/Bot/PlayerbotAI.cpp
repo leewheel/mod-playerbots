@@ -5,6 +5,7 @@
  */
 
 #include "PlayerbotAI.h"
+#include "CurrentTargetValue.h"
 
 #include <functional>
 #include "RaceMgr.h"
@@ -1746,6 +1747,15 @@ void PlayerbotAI::ChangeEngine(BotState type)
 
     if (currentEngine != engine)
     {
+        if (CoaLogsTargets(bot))
+        {
+            Unit* target = aiObjectContext->GetValue<Unit*>("current target")->Get();
+            LOG_INFO("playerbots", "coa engine: {} {} -> {} (in combat {}, attackers {}, target {})", bot->GetName(),
+                     currentState == BOT_STATE_COMBAT ? "combat" : currentState == BOT_STATE_DEAD ? "dead" : "non-combat",
+                     type == BOT_STATE_COMBAT ? "combat" : type == BOT_STATE_DEAD ? "dead" : "non-combat",
+                     bot->IsInCombat() ? 1 : 0, aiObjectContext->GetValue<GuidVector>("attackers")->Get().size(),
+                     target ? target->GetName() : "none");
+        }
         currentEngine = engine;
         currentState = type;
         ReInitCurrentEngine();

@@ -15,9 +15,19 @@ using namespace EncounterHelpers;
 
 // General
 
+// Once on leaving combat (and once on arrival): the reset ran on every out-of-combat tick and failed 245,307 times
+// in one Karazhan evening, with nothing to reset (ladiabale, 20/10).
 bool KarazhanBotIsNotInCombatTrigger::IsActive()
 {
-    return bot->GetMapId() == KARA_MAP_ID && !AI_VALUE2(bool, "combat", "self target");
+    if (bot->GetMapId() != KARA_MAP_ID || AI_VALUE2(bool, "combat", "self target"))
+    {
+        resetDone = false;
+        return false;
+    }
+    if (resetDone)
+        return false;
+    resetDone = true;
+    return true;
 }
 
 bool KarazhanEnemiesCastFearTrigger::IsActive()

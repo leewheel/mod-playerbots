@@ -776,6 +776,8 @@ bool PlayerbotAIConfig::Initialize()
     coaCasterManaReserve = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaCasterManaReserve", 15);
     coaGroupTelemetry = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGroupTelemetry", false);
     coaGroupTelemetryRaids = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaGroupTelemetryRaids", false);
+    coaLogTargets = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaLogTargets", 0);
+    coaReleaseDelay = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaReleaseDelay", 120);
     coaSmartHeal = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSmartHeal", true);
     coaSmartTank = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSmartTank", true);
     coaLfgMissingRoles = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaLfgMissingRoles", true, false);

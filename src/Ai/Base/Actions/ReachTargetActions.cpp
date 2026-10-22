@@ -12,12 +12,112 @@
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
+#include <cmath>
+#include "SpellMgr.h"
+#include "SpellInfo.h"
+#include "GridNotifiersImpl.h"
+#include "GridNotifiers.h"
+#include "DynamicObject.h"
+#include "CellImpl.h"
 
 static constexpr float GROUP_SIGHT_SPOT_DISTANCE = 3.0f;
+
+namespace
+{
+// CoA: enemy ground effects (pools, clouds) near the bot. "avoid aoe" only steps out of one the bot already stands in, and
+// the way back to the boss walked straight into it again: Venoxis's Toxic Cloud and the Acid Pools left at the cobra
+// corpses, around his tank spot (Yeh, ZG 21/10; spell ids from ladiabale's ZG notes, 22/10).
+struct Ground
+{
+    float x, y, radius;
+};
+
+std::vector<Ground> HostileGround(Player* bot)
+{
+    std::vector<Ground> zones;
+    if (!sPlayerbotAIConfig.autoAvoidAoe)
+        return zones;
+
+    constexpr float searchRadius = 45.0f;
+    std::list<WorldObject*> objs;
+    Acore::AllWorldObjectsInRange check(bot, searchRadius);
+    Acore::WorldObjectListSearcher<Acore::AllWorldObjectsInRange> searcher(bot, objs, check, GRID_MAP_TYPE_MASK_DYNAMICOBJECT);
+    Cell::VisitObjects(bot, searcher, searchRadius);
+
+    bool siphon = false;  // Hakkar's Blood Siphon: his poison pools are its counter, never kept out of then
+    for (WorldObject* obj : objs)
+    {
+        DynamicObject* area = obj->ToDynObject();
+        if (!area || !area->IsInWorld())
+            continue;
+        uint32 const id = area->GetSpellId();
+        if ((id == 2118675 || id == 24320) && !siphon)
+            siphon = bot->FindNearestCreature(9780022, 200.0f) != nullptr;
+        if ((id == 2118675 || id == 24320) && siphon)
+            continue;
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(id);
+        float const radius = area->GetRadius();
+        if (!info || info->IsPositive() || !radius || radius > sPlayerbotAIConfig.maxAoeAvoidRadius ||
+            sPlayerbotAIConfig.aoeAvoidSpellWhitelist.count(id))
+            continue;
+        Unit* caster = area->GetCaster();
+        if (caster && !caster->IsHostileTo(bot))
+            continue;
+        bool hurts = false;
+        for (SpellEffectInfo const& effect : info->Effects)
+            if (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE || effect.ApplyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL ||
+                effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE_PERCENT || effect.ApplyAuraName == SPELL_AURA_PERIODIC_LEECH)
+                hurts = true;
+        if (hurts)
+            zones.push_back({area->GetPositionX(), area->GetPositionY(), radius});
+    }
+    return zones;
+}
+
+bool InGround(std::vector<Ground> const& zones, float x, float y)
+{
+    for (Ground const& zone : zones)
+        if (std::hypot(zone.x - x, zone.y - y) <= zone.radius + 1.0f)
+            return true;
+    return false;
+}
+}  // namespace
 
 bool ReachTargetAction::Execute(Event /*event*/)
 {
     Unit* target = AI_VALUE(Unit*, GetTargetName());
+
+    // A point next to the enemy that is not in a ground effect: the one nearest the straight way in, else, with the enemy
+    // standing in it, a damage dealer waits at its edge (the tank still goes in).
+    if (target && bot->IsValidAttackTarget(target) && bot->GetGroup() && !botAI->IsTank(bot))
+    {
+        std::vector<Ground> const zones = HostileGround(bot);
+        if (!zones.empty() && !InGround(zones, bot->GetPositionX(), bot->GetPositionY()))
+        {
+            float const reach = std::max(distance - 1.0f, 1.0f);
+            float const base = target->GetAngle(bot);
+            float const straightX = target->GetPositionX() + reach * std::cos(base);
+            float const straightY = target->GetPositionY() + reach * std::sin(base);
+            if (InGround(zones, straightX, straightY))
+            {
+                for (float step : { 0.4f, -0.4f, 0.8f, -0.8f, 1.2f, -1.2f, 1.6f, -1.6f, 2.0f, -2.0f, 2.4f, -2.4f, float(M_PI) })
+                {
+                    float x = target->GetPositionX() + reach * std::cos(base + step);
+                    float y = target->GetPositionY() + reach * std::sin(base + step);
+                    float z = target->GetPositionZ();
+                    if (InGround(zones, x, y))
+                        continue;
+                    bot->UpdateAllowedPositionZ(x, y, z);
+                    if (!target->IsWithinLOS(x, y, z + 2.0f))
+                        continue;
+                    if (bot->GetExactDist2d(x, y) <= 1.5f)
+                        return false;
+                    return MoveTo(bot->GetMapId(), x, y, z, false, false, false, true, MovementPriority::MOVEMENT_COMBAT, true);
+                }
+                return false;
+            }
+        }
+    }
     // Heal and resurrect reaches use this class too. Only hostile targets get the stack.
     if (target && bot->IsValidAttackTarget(target) && bot->GetGroup() && !botAI->IsTank(bot))
     {
