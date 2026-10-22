@@ -9,6 +9,7 @@
 #include "Action.h"
 #include "AttackAction.h"
 #include "CoaDungeonPriorities.h"
+#include "CoaReborn.h"
 #include "CoaSpecialization.h"
 #include "CoaWildcard.h"
 #include "AscensionWildcard.h"
@@ -5170,6 +5171,14 @@ static bool Taunts(SpellInfo const* info, uint8 depth)
     return false;
 }
 
+// A tank of a CoA class by its specialization, or of a Warcraft Reborn class by its talent tree: GetCoaRole calls every
+// original class a damage dealer, and Reborn Protection Warriors were kept out of Defensive Stance, hence out of Shield
+// Block, Revenge and Shield Wall, and every Reborn tank from its taunts (Reborn tank bench, 22/10).
+bool IsCoaOrRebornTank(Player const* bot)
+{
+    return GetCoaRole(bot) == CoaRole::Tank || (IsRebornBot(bot) && GetWcrRole(bot) == CoaRole::Tank);
+}
+
 bool CoaTankOnlySpell(Player* bot, SpellInfo const* info, Unit* target)
 {
     // Every taunt of the spell store, read from its effects: the class kits knew 28 of them, and a taunt cast
@@ -5196,7 +5205,7 @@ bool CoaTankOnlySpell(Player* bot, SpellInfo const* info, Unit* target)
     bool const taunt = taunts.count(info->Id) || taunts.count(first);
     // A tank does not taunt an enemy already hitting it with a taunt that deals no damage, whatever asks for it (its
     // spec rotation listed Betray among its attacks): the taunt stays ready for the add that runs to a healer.
-    if (GetCoaRole(bot) == CoaRole::Tank)
+    if (IsCoaOrRebornTank(bot))
         return taunt && target && target != bot && target->GetVictim() == bot && !DealsDamage(info);
     // A spell of the bot's own raising its threat (a tank stance, Righteous Fury), kit or not.
     bool const threat = !taunt && (!target || target == bot) && RaisesThreat(info);
@@ -5218,7 +5227,7 @@ void CoaTankThreatBonus(Player* bot)
     // again when the option changes; a bot that is no tank any more loses it.
     static uint32 constexpr increasedThreat = 35773;
     uint32 const bonus = sPlayerbotAIConfig.coaTankThreatBonus;
-    bool const wanted = bonus && GetCoaRole(bot) == CoaRole::Tank;
+    bool const wanted = bonus && IsCoaOrRebornTank(bot);
     Aura* aura = bot->GetAura(increasedThreat, bot->GetGUID());
     if (!wanted)
     {
@@ -5234,7 +5243,7 @@ void CoaTankThreatBonus(Player* bot)
 
 void CoaTankThreatBuffs(PlayerbotAI* botAI, Player* bot)
 {
-    if (!botAI || !bot || GetCoaRole(bot) != CoaRole::Tank || bot->IsInCombat() || bot->IsMounted())
+    if (!botAI || !bot || !IsCoaOrRebornTank(bot) || bot->IsInCombat() || bot->IsMounted())
         return;
 
     // The tank's own threat buffs that its class kit does not list (learned from a talent, an upgrade, swapped in):
