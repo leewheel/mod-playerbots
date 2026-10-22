@@ -1418,10 +1418,11 @@ bool RandomItemMgr::IsValidItem(ItemTemplate const* proto)
     if (proto->Duration)
         return false;
 
-    // A neck, ring or trinket carries no armor. CoA's Bronze to Rune Amulets (586-592) do, 635 of it on a level 10 rare
-    // that any level 1 can wear, and their level-scaled copies too: a level 30 tank bot wore one (Yeh, 21/10).
-    if (proto->Armor && (proto->InventoryType == INVTYPE_NECK || proto->InventoryType == INVTYPE_FINGER ||
-                         proto->InventoryType == INVTYPE_TRINKET))
+    // CoA's Bronze to Rune Amulets (586-592) carry 635 armor on a level 10 rare that any level 1 can wear, and their
+    // level-scaled copies too: a level 30 tank bot wore one (Yeh, 21/10). Tank jewelry with armor is real (Naglering,
+    // Smoking Heart of the Mountain, Void Star Talisman: at most 9 armor per item level); 20 and more is a data error.
+    if ((proto->InventoryType == INVTYPE_NECK || proto->InventoryType == INVTYPE_FINGER ||
+         proto->InventoryType == INVTYPE_TRINKET) && proto->Armor > 20 * std::max<uint32>(proto->ItemLevel, 1))
         return false;
 
     // check area-, or map-restricted items
