@@ -171,7 +171,7 @@ bool AutoReleaseSpiritAction::HandleBattlegroundSpiritHealer()
 }
 
 // In a dungeon a bot waits for a resurrection, but not for ever (#37): once the fight is over, it releases when no
-// living healer of its group is on the map, or after two minutes dead if nobody raised it.
+// living healer of its group is on the map, or after AiPlayerbot.CoaReleaseDelay seconds dead (120) if nobody raised it.
 bool AutoReleaseSpiritAction::CanStillBeRaised() const
 {
     time_t const now = time(nullptr);
@@ -192,7 +192,7 @@ bool AutoReleaseSpiritAction::CanStillBeRaised() const
             healer = true;
     }
 
-    if (!healer || now - m_deadSince > 120)
+    if (!healer || now - m_deadSince > time_t(sPlayerbotAIConfig.coaReleaseDelay))
     {
         m_deadSince = 0;
         return false;

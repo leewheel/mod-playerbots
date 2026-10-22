@@ -137,4 +137,25 @@ DELETE FROM `playerbots_custom_strategy` WHERE `owner` = 0 AND (`name`, `action_
   ('sun-cleric-blessings', 'party member critical health>cast heal party::Blessing of Light!94')
 );
 
+-- 7. Rows that fire but never win the turn (same logs). Ranged spells on `cast melee::` (Tyrant's Gaze 10 yd, Cripple 30 yd,
+--    Murder 15 yd, Knight's Seal) go to `cast::`. Dropped: Broad Sweep (swapped at run time for Ballad of the Dragonslayer,
+--    which has its own row), Warbringer (needs Demonfire, "coa attack" casts it), the Soul Infusion spells (Soulslam,
+--    Soulrend, Withering Touch), Stormbreaker (a purge, "coa purge" handles them). Priority changes wait for a bench run
+--    after the Auto Attack fix, which already moved these specs (Reaper Harvest +30 %).
+CALL coa27_set('felsworn-tyrant', 'can cast::Tyrant''s Gaze>cast melee::Tyrant''s Gaze!23', 'can cast::Tyrant''s Gaze>cast::Tyrant''s Gaze!23');
+CALL coa27_set('felsworn-tyrant', 'can cast::Cripple>cast melee::Cripple!6', 'can cast::Cripple>cast::Cripple!6');
+CALL coa27_set('reaper-domination', 'can cast::Murder>cast melee::Murder!5', 'can cast::Murder>cast::Murder!5');
+CALL coa27_set('reaper-soul', 'can cast::Murder>cast melee::Murder!77', 'can cast::Murder>cast::Murder!77');
+CALL coa27_set('witch-hunter-black-knight', 'can cast::Knight''s Seal>cast melee::Knight''s Seal!25', 'can cast::Knight''s Seal>cast::Knight''s Seal!25');
+DELETE FROM `playerbots_custom_strategy` WHERE `owner` = 0 AND (`name`, `action_line`) IN (
+  ('guardian-inspiration', 'medium aoe>cast melee::Broad Sweep!85'),
+  ('guardian-inspiration', 'can cast::Broad Sweep>cast melee::Broad Sweep!76'),
+  ('knight-of-xoroth-war', 'can cast::Warbringer>cast melee::Warbringer!79'),
+  ('reaper-domination', 'can cast::Soulslam>cast melee::Soulslam!14'),
+  ('reaper-domination', 'can cast::Soulrend>cast melee::Soulrend!4'),
+  ('reaper-soul', 'can cast::Soulrend>cast melee::Soulrend!74'),
+  ('reaper-soul', 'can cast::Withering Touch>cast melee::Withering Touch!28'),
+  ('stormbringer-wind', 'can cast::Stormbreaker>cast::Stormbreaker!3')
+);
+
 DROP PROCEDURE IF EXISTS coa27_set;

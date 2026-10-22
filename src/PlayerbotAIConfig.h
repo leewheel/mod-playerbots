@@ -411,6 +411,7 @@ public:
     bool coaGroupTelemetry;
     bool coaGroupTelemetryRaids;
     uint32 coaLogTargets;
+    uint32 coaReleaseDelay;
     bool coaSmartHeal;
     bool coaSmartTank;
     bool coaLfgMissingRoles;
