@@ -49,21 +49,17 @@ INSERT INTO `playerbots_coa_wcr_enchants` (`class`,`spec`,`ord`,`spell`,`stacks`
 (1, 1, 10, 58370, 1, 30), -- RAR Glyph of Whirlwind
 (1, 1, 11, 58369, 1, 40), -- RAR Glyph of Bloodthirst
 (1, 2, 1, 1134996, 1, 30), -- LEG Protection Mastery
-(1, 2, 2, 1556002, 1, 16), -- EPI Shield Master's Resolve
-(1, 2, 3, 1567776, 1, 16), -- EPI Spell Block
-(1, 2, 4, 1574692, 1, 20), -- EPI Victorious Stand
+(1, 2, 2, 1181340, 1, 15), -- EPI Iron Guard
+(1, 2, 3, 1556000, 1, 15), -- EPI Roar of Dread
+(1, 2, 4, 1571793, 1, 50), -- EPI Devastating Blademaster
 (1, 2, 5, 1590179, 1, 28), -- EPI Shield Finesse
-(1, 2, 6, 1586918, 1, 50), -- EPI Jab Cross
+(1, 2, 6, 1567776, 1, 16), -- EPI Spell Block
 (1, 2, 7, 58387, 1, 10), -- RAR Glyph of Sunder Armor
-(1, 2, 8, 58382, 1, 10), -- RAR Glyph of Victory Rush
-(1, 2, 9, 58376, 1, 20), -- RAR Glyph of Last Stand
-(1, 2, 10, 58375, 1, 25), -- RAR Glyph of Blocking
-(1, 2, 11, 63329, 1, 28), -- RAR Glyph of Shield Wall
-(1, 2, 12, 63326, 1, 40), -- RAR Glyph of Vigilance
-(1, 2, 13, 58377, 1, 40), -- RAR Glyph of Intervene
-(1, 2, 14, 58388, 1, 50), -- RAR Glyph of Devastate
-(1, 2, 15, 63328, 1, 50), -- RAR Glyph of Spell Reflection
-(1, 2, 16, 63325, 1, 60), -- RAR Glyph of Shockwave
+(1, 2, 8, 58375, 1, 25), -- RAR Glyph of Blocking
+(1, 2, 9, 63326, 1, 40), -- RAR Glyph of Vigilance
+(1, 2, 10, 58388, 1, 50), -- RAR Glyph of Devastate
+(1, 2, 11, 58376, 1, 20), -- RAR Glyph of Last Stand
+(1, 2, 12, 63328, 1, 50), -- RAR Glyph of Spell Reflection
 (2, 0, 1, 1134990, 1, 30), -- LEG Holy Mastery
 (2, 0, 2, 1586786, 1, 15), -- EPI Spark of Hope
 (2, 0, 3, 1180910, 1, 16), -- EPI Divine Reprieve
@@ -75,14 +71,14 @@ INSERT INTO `playerbots_coa_wcr_enchants` (`class`,`spec`,`ord`,`spell`,`stacks`
 (2, 0, 9, 1325988, 1, 45), -- RAR Eye for an Eye
 (2, 0, 10, 56420, 1, 50), -- RAR Glyph of Holy Wrath
 (2, 0, 11, 63218, 1, 60), -- RAR Glyph of Beacon of Light
-(2, 1, 1, 1134989, 1, 30), -- LEG Protection Mastery
-(2, 1, 2, 1581647, 1, 15), -- EPI Pious Strikes
-(2, 1, 3, 1585146, 1, 40), -- EPI Baleful Hammer
-(2, 1, 4, 1180960, 1, 40), -- EPI Righteous Light
-(2, 1, 5, 1581319, 1, 50), -- EPI Shield of Wrath
-(2, 1, 6, 1585123, 1, 60), -- EPI Blessed Hammer
-(2, 1, 7, 63222, 1, 40), -- RAR Glyph of Shield of Righteousness
-(2, 1, 8, 1320245, 1, 45), -- RAR Improved Blessing of Wisdom
+(2, 1, 1, 1572131, 1, 40), -- LEG Crimson Defense
+(2, 1, 2, 1134989, 1, 30), -- LEG Protection Mastery
+(2, 1, 3, 1581647, 1, 15), -- EPI Pious Strikes
+(2, 1, 4, 1581319, 1, 50), -- EPI Shield of Wrath
+(2, 1, 5, 1585146, 1, 40), -- EPI Baleful Hammer
+(2, 1, 6, 1180960, 1, 40), -- EPI Righteous Light
+(2, 1, 7, 1585123, 1, 60), -- EPI Blessed Hammer
+(2, 1, 8, 63222, 1, 40), -- RAR Glyph of Shield of Righteousness
 (2, 1, 9, 63219, 1, 60), -- RAR Glyph of Hammer of the Righteous
 (2, 2, 1, 1134991, 1, 30), -- LEG Retribution Mastery
 (2, 2, 2, 1180700, 1, 15), -- EPI Crusader's Judgement
@@ -374,14 +370,13 @@ INSERT INTO `playerbots_coa_wcr_enchants` (`class`,`spec`,`ord`,`spell`,`stacks`
 (11, 1, 1, 1134977, 1, 30), -- LEG Guardian Mastery
 (11, 1, 2, 1589853, 1, 15), -- EPI Ursoc's Rage
 (11, 1, 3, 1581667, 1, 30), -- EPI Relentless Laceration
-(11, 1, 4, 1181320, 1, 32), -- EPI Starcaller's Momentum
+(11, 1, 4, 1122816, 1, 44), -- EPI Shifting Bark
 (11, 1, 5, 1589878, 1, 50), -- EPI Bash and Thrash
 (11, 1, 6, 1100800, 1, 50), -- EPI Viscera
 (11, 1, 7, 54811, 1, 10), -- RAR Glyph of Maul
 (11, 1, 8, 65243, 1, 15), -- RAR Glyph of Survival Instincts
 (11, 1, 9, 54813, 1, 40), -- RAR Glyph of Mangle
-(11, 1, 10, 1582842, 1, 45), -- RAR Earthen Power Well
-(11, 1, 11, 62969, 1, 60), -- RAR Glyph of Berserk
+(11, 1, 10, 62969, 1, 60), -- RAR Glyph of Berserk
 (11, 2, 1, 1134978, 1, 30), -- LEG Restoration Mastery
 (11, 2, 2, 1180800, 1, 15), -- EPI Nature's Abundance
 (11, 2, 3, 1418500, 1, 15), -- EPI Nature's Synthesis
