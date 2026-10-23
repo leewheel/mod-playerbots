@@ -14,6 +14,16 @@ Many of these fixes come from the raid and dungeon reports of ladiabale and Yeh:
   outside them.
 - Raids: Magtheridon's cubes, Karazhan (Maiden, Illhoof, Nightbane, Enfeeble, one encounter reset when leaving
   combat), Gruul (Shatter, Cave In), Naj'entus (a single bot throws the spine).
+- Tempest Keep: CoA tanks taunt in raids (also in Zul'Aman and Molten Core), even when another tank holds the enemy.
+  Al'ar: Embers are dealt with once pulled out of the group, everyone steps back 20 m, Rebirth is avoided. Void Reaver:
+  orbs dodged in a straight line. Solarian: healers finish their casts, the Wrath carrier uses a defensive. Kael'thas:
+  his weapons are only used when they can be, Pyroblast can be interrupted, mind control is broken with the blade,
+  assigned tanks taunt Sanguinar and Kael'thas, Capernian is taken by a ranged damage dealer when there is no
+  warlock. Healers no longer run back to the tank during Al'ar, Void Reaver and Solarian.
+- Sunwell Plateau, Kalecgos: bots rotate through the spectral realm by Arcane Buffet stacks (never the Kalecgos tank
+  or a bot under Spectral Exhaustion), attack Sathrovarr there, and stay on Kalecgos' flanks away from Tail Lash and
+  Frost Breath.
+- Resurrection: a bot keeps its claim on a body out of sight and no longer teleports while walking to it.
 - A bot far from you also comes back during your fight; an enemy on another floor and out of sight is no longer a
   target; in arenas a bot goes after a target hidden behind a pillar.
 - An immune boss no longer makes a bot leave combat; zone-only potions are no longer tried everywhere; low-level bots
@@ -30,7 +40,8 @@ Many of these fixes come from the raid and dungeon reports of ladiabale and Yeh:
 - Mystic enchants: each specialization gets its own set (1 legendary, 5 epic, 10 rare), applied as the bot levels up
   and when it changes specialization (+20 % damage on our bench).
 - Reborn tanks now tank: they take their threat stance (Defensive Stance, Righteous Fury) and taunt; warriors use
-  Shield Block, Revenge and Shield Wall, Protection paladins keep Holy Shield up.
+  Shield Block, Revenge and Shield Wall, Protection paladins keep Holy Shield up, Blood death knights cast Death and
+  Decay whenever it is ready.
 
 ## v2.6 — Three realms (October 2026)
 
