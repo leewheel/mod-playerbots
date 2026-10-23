@@ -24,7 +24,6 @@ bool IsFullMana(Player* bot)
 }
 
 // The cheat aura restores both health and mana, so allow bots to eat/drink until both are restored.
-// The seat time follows the larger of the two gaps.
 uint32 FoodCheatRecoveryDurationMs(Player* bot)
 {
     //By leewheel 2026-10-23 合并brighton-chi the-lab（eat/drink 系统重写）：
@@ -76,7 +75,7 @@ bool IsDisallowedShapeshiftForm(Player* bot)
 
     return bot->getClass() == CLASS_PRIEST && bot->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION;
 }
-} // namespace
+} // end anonymous namespace
 
 bool DrinkAction::Execute(Event event)
 {

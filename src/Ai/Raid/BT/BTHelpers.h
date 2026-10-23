@@ -14,10 +14,10 @@
 #include <optional>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
+class Aura;
 class Creature;
 class GameObject;
 class Pet;
@@ -217,6 +217,7 @@ enum class BtObjects : uint32
 };
 
 inline constexpr uint32 BT_MAP_ID = 564;
+inline constexpr float PATH_STEP_DISTANCE = 3.5f;
 
 // Misdirects onto the tank, then spends it with Steady Shot on the target.
 bool MisdirectTargetToTank(PlayerbotAI* botAI, Unit* target, Player* tank);
@@ -228,6 +229,17 @@ bool IsInRectangle(
 // bot's Z. Falls back to centre when the way from centre to the point is blocked.
 Position GetBotPointInRectangle(
     Player* bot, Position const& centre, Position const& facing, float halfWidth, float halfDepth);
+bool GetPathStepTowardUnit(
+    Player* bot, Unit* target, float stopDistance, float& stepX, float& stepY);
+bool GetPathStepTowardPoint(
+    Player* bot, Position const& destination, float stopDistance, float stepDistance,
+    float& stepX, float& stepY);
+// Sends the pet onto the target as a player's attack command does.
+bool CommandPetAttack(Creature* pet, Unit* target);
+// Living attackers with this entry.
+GuidVector FindAttackerGuidsWithEntry(PlayerbotAI* botAI, uint32 entry);
+// How long the aura has been up; for an aura with a fixed duration.
+uint32 GetAuraElapsedMs(Aura const* aura);
 
 // Trash
 
@@ -257,7 +269,6 @@ Unit* FindLinkedSisterOfPleasure(PlayerbotAI* botAI);
 // The Sister of Pain linked to the skulled Sister of Pleasure. The skull is read by GUID, so a
 // Pleasure out of sight still counts.
 Unit* GetSkulledSisterOfPain(Player* bot);
-GuidVector FindShadowmoonReaverGuids(PlayerbotAI* botAI);
 // True for a Shadowmoon Reaver while magic would build Chaotic Charge on her: from the start of
 // Spell Absorption until it ends, from the margin before her earliest recast, and before her
 // first one.
@@ -372,9 +383,9 @@ float GetLineLengthInSupremusHazards(
     SupremusHazardZone zone);
 // With Divine Shield or Dispersion a bot may walk through fire, but not stop in it.
 bool CanWalkThroughSupremusFire(Player* bot);
-// The target and range stock reach would use; true when its straight walk into range passes
-// through a hazard's safe zone.
-bool GetSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit*& target, float& range);
+// The target stock reach would walk to, when its straight walk into range passes through a
+// hazard's safe zone; else null.
+Unit* GetSupremusFireBlockedReachTarget(PlayerbotAI* botAI);
 
 // Shade of Akama
 
@@ -386,16 +397,10 @@ inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MAX_Y = 473.5f;
 // Reaches every channeler from anywhere in his room, so every bot gets the same kill order.
 inline constexpr float SHADE_OF_AKAMA_ADD_SEARCH_RADIUS = 150.0f;
 inline constexpr uint32 SHADE_OF_AKAMA_ADD_CACHE_INTERVAL_MS = 1000;
-inline constexpr float PATH_STEP_DISTANCE = 3.5f;
 
 // Living, attackable channelers by GUID, then sorcerers by GUID: the kill order.
 GuidVector FindShadeOfAkamaAddGuids(PlayerbotAI* botAI);
 Unit* GetShadeOfAkamaKillTarget(PlayerbotAI* botAI);
-bool GetPathStepTowardUnit(
-    Player* bot, Unit* target, float stopDistance, float& stepX, float& stepY);
-bool GetPathStepTowardPoint(
-    Player* bot, Position const& destination, float stopDistance, float stepDistance,
-    float& stepX, float& stepY);
 
 // Teron Gorefiend
 
@@ -413,7 +418,6 @@ inline constexpr float GOREFIEND_CONSTRUCT_SEARCH_RADIUS = 100.0f;
 inline Position const GOREFIEND_TANK_POSITION = { 597.653f, 402.284f, 187.090f };
 inline Position const GOREFIEND_DIE_POSITION  = { 525.709f, 377.177f, 193.203f };
 
-GuidVector FindShadowyConstructGuids(PlayerbotAI* botAI);
 // A triggered cast records neither its cooldown nor the global cooldown, so both come from the
 // spell data. False if the cast fails.
 bool CastVengefulSpiritSpell(Unit* spirit, Unit* target, uint32 spellId);
@@ -428,7 +432,7 @@ inline constexpr float GURTOGG_POSITION_TOLERANCE = 2.0f;
 inline constexpr float GURTOGG_RANGED_HALF_WIDTH = 5.0f;
 inline constexpr float GURTOGG_RANGED_HALF_DEPTH = 2.0f;
 // Groups swap this long after a Bloodboil lands, not as it lands.
-inline constexpr int32 GURTOGG_ROTATION_DELAY_MS = 2 * IN_MILLISECONDS;
+inline constexpr uint32 GURTOGG_ROTATION_DELAY_MS = 2 * IN_MILLISECONDS;
 // Arcing Smash during Fel Rage reaches 11.5 yd from him, and he stays within about 14 yd of the
 // Fel Rage target, so the cleave can't reach past about 14 yd from that player. Everyone else in
 // front of him steps off his line to that player to keep this far away.
@@ -440,7 +444,7 @@ inline constexpr float GURTOGG_FEL_RAGE_MELEE_DISTANCE = 5.0f;
 inline constexpr float GURTOGG_FEL_RAGE_MELEE_TOLERANCE = 2.0f;
 inline constexpr float GURTOGG_FEL_RAGE_MELEE_SIDE_ANGLE = 2.0f * static_cast<float>(M_PI) / 3.0f;
 // For this long into Fel Rage, bots behind him keep away too.
-inline constexpr int32 GURTOGG_FEL_RAGE_EARLY_AVOID_MS = 5 * IN_MILLISECONDS;
+inline constexpr uint32 GURTOGG_FEL_RAGE_EARLY_AVOID_MS = 5 * IN_MILLISECONDS;
 // Bewildering Strike hands him to the second tank, so everyone else stays below it.
 inline constexpr float GURTOGG_THREAT_HOLD_RATIO = 0.8f;
 inline constexpr uint32 GURTOGG_TANK_THREAT_CACHE_INTERVAL_MS = 1000;
@@ -470,6 +474,7 @@ inline constexpr float SUFFERING_MELEE_MIN_DISTANCE = 9.0f;
 inline constexpr float SUFFERING_RANGED_DISTANCE = 15.0f;
 // Other dispellers wait this long into each Rune Shield, so a mage steals it when one can.
 inline constexpr uint32 RUNE_SHIELD_MAGE_PRIORITY_MS = 2 * IN_MILLISECONDS;
+inline constexpr float SPELLSTEAL_RANGE = 30.0f;
 
 bool IsSufferingFixateTank(Player* bot);
 bool IsOutOfSufferingPosition(Player* bot, Unit* suffering);
@@ -502,8 +507,6 @@ inline std::array const GATHIOS_TANK_POSITIONS = {
 inline std::array const ZEREVOR_TANK_POSITIONS = {
     Position{ 654.854f, 352.502f, 271.689f },
     Position{ 644.597f, 338.875f, 271.688f },
-    // Position{ 660.325f, 357.568f, 271.688f },
-    // Position{ 679.657f, 356.482f, 271.699f },
 };
 
 inline constexpr uint32 ZEREVOR_MAGE_TANK_CACHE_INTERVAL_MS = 1000;
@@ -511,6 +514,7 @@ inline constexpr uint32 COUNCIL_DPS_WAIT_MS = 5 * IN_MILLISECONDS;
 inline constexpr float COUNCIL_AOE_THREAT_CLEARANCE = 15.0f;
 inline constexpr float COUNCIL_RANGED_SPREAD_DISTANCE = 4.0f;
 inline constexpr float COUNCIL_MEMBER_SEARCH_RADIUS = 100.0f;
+inline constexpr float COUNCIL_TANK_ARRIVAL_DISTANCE = 2.0f;
 // Bots heal out to HealDistance, 38.5 yd by default.
 inline constexpr float MAGE_TANK_HEALER_MAX_DISTANCE = 38.0f;
 // A patch on the mage tank reaches 11.5 yd from where it stood.
@@ -524,6 +528,7 @@ inline constexpr int32 CIRCLE_OF_HEALING_REACTION_MS = 200;
 inline constexpr int32 CIRCLE_OF_HEALING_CASTER_MARGIN_MS = 500;
 inline constexpr float COUNTERSPELL_RANGE = 30.0f;
 inline constexpr float WIND_SHEAR_RANGE = 25.0f;
+inline constexpr float SPELL_LOCK_RANGE = 30.0f;
 
 ObjectGuid FindZerevorMageTankGuid(Player* bot);
 Player* GetZerevorMageTank(PlayerbotAI* botAI);
@@ -568,8 +573,7 @@ enum class IllidanPhase : uint8
 enum class IllidanDpsHold : uint8
 {
     None,
-    AfterReset,      // Phase 1 and Phase 3 starts, and Phase 5 straight from Demon Form;
-                     // everyone but the Main Tank
+    AfterReset,      // Phase 1, 3 and 5 starts; everyone but the Main Tank
     DemonFormStart,  // everyone but the warlock tank
     DemonFormMiddle, // from the start hold to the end hold; the Main Tank only
     DemonFormEnd,    // the last 3 s before the reset; everyone
@@ -582,6 +586,7 @@ enum class IllidanTankLead : uint8
 {
     None,
     Pickup,    // straight out from near the grate centre
+    Opening,   // once at the pull, clockwise
     Step,      // on a Flame Crash
     StepAgain, // once, when he stopped short of the step
 };
@@ -647,6 +652,8 @@ inline constexpr float ILLIDAN_BURN_HEALTH_PCT = 5.0f;
 // back above 30%.
 inline constexpr float ILLIDAN_DEMON_FORM_NO_PUSH_HEALTH_PCT = 33.0f;
 inline constexpr uint32 ILLIDAN_RESET_DPS_WAIT_MS = 3 * IN_MILLISECONDS;
+// Damage on the Flames of Azzinoth waits this long from the first Flame's record, for their tanks.
+inline constexpr uint32 ILLIDAN_FLAME_DPS_WAIT_MS = 6 * IN_MILLISECONDS;
 // The warlock tank has him to itself for the 12.23 s transform and about 2 s more.
 inline constexpr uint32 ILLIDAN_DEMON_FORM_DPS_WAIT_MS = 14 * IN_MILLISECONDS;
 // Demon Form ends, with a threat reset, this long after the transform starts.
@@ -681,20 +688,33 @@ inline constexpr float ILLIDAN_FROST_TRAP_DISTANCE = 3.0f;
 inline constexpr float ILLIDAN_RING_RADIUS = 25.0f;
 inline constexpr float ILLIDAN_TANK_OFFSET = 6.0f;
 // Once free of Shadow Prison, for the 2.83 s before he wakes, the Main Tank stands this far
-// inward of him: between him and the raid, and nearer him than the melee.
-inline constexpr float ILLIDAN_MAIEV_SCENE_TANK_OFFSET = 3.0f;
-// On each Flame Crash the Main Tank walks to the ring point this far counterclockwise of him. He
-// runs up close behind a walking tank and stops about 30 deg on, back on the ring.
+// inward of him: between him and the raid, and clear of his backing off.
+inline constexpr float ILLIDAN_MAIEV_SCENE_TANK_OFFSET = 6.0f;
+// He walks back from a victim this close to his centre (both collision radii), checked every 2 to
+// 6 s. A Main Tank whose straight walk would pass this close goes round him instead, stepping
+// toward the settle-circle point 60 deg on, about 5 yd from his centre (at least 4.6).
+inline constexpr float ILLIDAN_BACK_OFF_DISTANCE = 4.5f;
+inline constexpr float ILLIDAN_ROUND_STEP_ANGLE = 60.0f * static_cast<float>(M_PI) / 180.0f;
+// On each Flame Crash the Main Tank walks to the ring point this far counterclockwise of him,
+// backward once he is behind it. He starts once it is 9.5 yd away, catches it and stops about 25
+// deg on, back on the ring.
 inline constexpr float ILLIDAN_RING_LEAD_ANGLE = 35.0f * static_cast<float>(M_PI) / 180.0f;
 // A cast (Draw Soul) can hold him until the tank stands at its lead position; against a standing
 // tank he stops 9.5 yd short of it, about 13 deg on. A step under this is led once more.
-inline constexpr float ILLIDAN_RING_SHORT_STEP_ANGLE = 25.0f * static_cast<float>(M_PI) / 180.0f;
+inline constexpr float ILLIDAN_RING_SHORT_STEP_ANGLE = 20.0f * static_cast<float>(M_PI) / 180.0f;
 // While he is this close to the grate centre, as after landing, the Main Tank leads him straight
 // out along its own bearing (due north after landing) to the lead radius; he stops 22 to 28 yd
 // out.
 inline constexpr float ILLIDAN_PICKUP_DISTANCE = 15.0f;
 inline constexpr float ILLIDAN_PICKUP_LEAD_RADIUS = 28.0f;
 inline constexpr float ILLIDAN_LANDING_LEAD_ANGLE = 0.0f;
+// Once at the pull, before the first Flame Crash, the Main Tank leads him from due north to the
+// point 62 deg clockwise of north, 27 yd out; he stops about 302 deg. Phase 1's Flame Crashes then
+// land clear of the Flame tanks' steps, which they last into Phase 2.
+inline constexpr float ILLIDAN_OPENING_LEAD_ANGLE = -62.0f * static_cast<float>(M_PI) / 180.0f;
+inline constexpr float ILLIDAN_OPENING_LEAD_RADIUS = 27.0f;
+// The lead starts only this soon after the pull; the first Flame Crash comes at 25 to 30 s.
+inline constexpr uint32 ILLIDAN_OPENING_LEAD_MS = 15 * IN_MILLISECONDS;
 // A Flame Crash this close to the Main Tank was cast on it.
 inline constexpr float ILLIDAN_FLAME_CRASH_ON_TANK_DISTANCE = 9.0f;
 
@@ -705,12 +725,12 @@ inline constexpr float ILLIDAN_GRATE_OUTER_RADIUS = 12.0f;
 inline constexpr size_t ILLIDAN_HEALER_SLOT_COUNT = 8;
 inline constexpr size_t ILLIDAN_MELEE_SLOT_COUNT = 15;
 
-// Shadowfiend infection position, from him as Phase 4 places are, in every phase: across the grate
-// clockwise of him, out of Draw Soul's cone in a ring step, about 20 yd from the grate centre and
-// inward of the Flame Crash zones on the Main Tank's ring; in Phase 4 between ranged DPS and melee.
-inline constexpr float ILLIDAN_INFECTION_POSITION_DISTANCE = 40.0f;
+// Shadowfiend infection position, every phase: on the Main Tank's circle, counterclockwise of him,
+// ahead of his steps, so no Flame Crash zone lies there and Draw Soul's cone in a step stops short
+// (110 deg); far enough round to stay out of Shadow Blast at the transform after a late step.
+inline constexpr float ILLIDAN_INFECTION_POSITION_DISTANCE = 31.0f;
 inline constexpr float ILLIDAN_INFECTION_POSITION_ANGLE =
-    -25.0f * static_cast<float>(M_PI) / 180.0f;
+    135.0f * static_cast<float>(M_PI) / 180.0f;
 
 // Phase 4, from him and off his inward line, positive toward the warlock tank's side. His reach is
 // 1.5 in Demon Form, so a 30 yd spell reaches 33 yd on him: the warlock tank stands 2 yd inside.
@@ -751,6 +771,8 @@ inline std::array const GRATE_POSITIONS = {
 
 // The Flame tanks' Blaze steps, one per Flame Blast, in order. The Flame follows its tank in, so
 // each step is walked into on a line that turns the Flame Blast cone away from the grate stacks.
+// The West tank starts on its inner steps, where Phase 1's Flame Crashes can't reach, and in melee
+// reach of the grate.
 inline Position const ILLIDAN_E_GLAIVE_WAITING_POSITION = { 677.656f, 294.066f, 353.192f };
 inline std::array const E_GLAIVE_TANK_POSITIONS = {
     Position{ 657.100f, 291.200f, 354.000f },
@@ -763,12 +785,12 @@ inline std::array const E_GLAIVE_TANK_POSITIONS = {
 
 inline Position const ILLIDAN_W_GLAIVE_WAITING_POSITION = { 676.102f, 316.305f, 353.192f };
 inline std::array const W_GLAIVE_TANK_POSITIONS = {
-    Position{ 674.700f, 332.700f, 354.000f },
-    Position{ 685.200f, 331.200f, 354.000f },
-    Position{ 695.700f, 325.200f, 354.000f },
     Position{ 695.700f, 311.700f, 354.000f },
     Position{ 685.200f, 320.700f, 354.000f },
     Position{ 668.700f, 323.700f, 354.000f },
+    Position{ 674.700f, 332.700f, 354.000f },
+    Position{ 685.200f, 331.200f, 354.000f },
+    Position{ 695.700f, 325.200f, 354.000f },
 };
 
 IllidanPhase GetIllidanPhase(Unit* illidan);
@@ -789,6 +811,12 @@ bool IsIllidanDemonFormEnding(Unit const& illidan, uint32 durationMs);
 IllidanDpsHold GetIllidanHoldWindow(Unit* illidan);
 // The hold this bot is in, for the hold multiplier and any stop block.
 IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan);
+// Damage on the Flames of Azzinoth waits for their tanks, since a Flame is in combat with nobody
+// for its first 2 s; false before the tracker records the first Flame.
+bool IsFlameOfAzzinothDpsHeld(Unit const& illidan);
+// The bot's entry on his threat list is online, not suppressed: after Shadow Prison only threat
+// the bot causes brings it back.
+bool IsOnlineOnIllidanThreatList(Unit const& illidan, Player* bot);
 // The game angle of a point seen from the grate centre: 0 north, rising counterclockwise.
 float GetGrateAngle(Position const& position);
 Position GetRingPoint(float angle, float radius);
@@ -868,6 +896,9 @@ Unit* GetShadowDemonForPetToAttack(PlayerbotAI* botAI, Pet const& pet);
 bool IsTargetingShadowDemon(PlayerbotAI* botAI);
 EyeBlastDangerArea GetEyeBlastDangerArea(Player* bot);
 bool IsPositionInEyeBlastDangerArea(Position const& pos, EyeBlastDangerArea const& area);
+// A straight walk from one point to the other passes through the area.
+bool IsPathInEyeBlastDangerArea(
+    Position const& from, Position const& to, EyeBlastDangerArea const& area);
 
 // Shared encounter state
 
@@ -878,7 +909,8 @@ struct BtInstanceState
     std::optional<uint32> najentusSpineThrowTime;
     std::optional<uint32> councilDpsWaitTimer;
     std::optional<IllidanPhase> illidanLastPhase;
-    // The phase before the current one, so Phase 5 straight from Demon Form shows as a reset.
+    // The phase before the current one, so the Main Tank's pickup can tell a Phase 3 start after
+    // the landing.
     std::optional<IllidanPhase> illidanPreviousPhase;
     std::optional<uint32> illidanPhaseStartTime;
     std::optional<uint32> illidanFlamePhaseStartTime;

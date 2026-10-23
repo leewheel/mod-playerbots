@@ -219,8 +219,14 @@ public:
         //By leewheel 2026-09-01 复核修正: TeamFlagCarrierNear 类早已实现且被 WarsongStrategy
         //  引用（"team flagcarrier near"→"bg protect fc"），但从未注册 → 引擎静默跳过，
         //  战歌队友运旗保护链一直是死代码。补注册。
+        //By leewheel 2026-10-24: 上游 #2893 已删除 TeamFlagCarrierNear，但本核按用户实测保留
+        //  （见 PvpTriggers.cpp / BattlegroundStrategy.cpp 同名注释）⇒ 这条注册必须继续留着。
         creators["team flagcarrier near"] = &TriggerContext::team_flagcarrier_near;
         //End By leewheel
+        //By leewheel 2026-10-24 合并 brighton the-lab(#2893)：上游新增的战歌触发器注册，采纳
+        creators["wsg flag state changed"] = &TriggerContext::wsg_flag_state_changed;
+        creators["wsg support threat"] = &TriggerContext::wsg_support_threat;
+        creators["wsg escort separated"] = &TriggerContext::wsg_escort_separated;
         creators["in Battleground"] = &TriggerContext::player_is_in_BATTLEGROUND;
         creators["in Battleground without flag"] = &TriggerContext::player_is_in_BATTLEGROUND_no_flag;
         creators["wants in bg"] = &TriggerContext::player_wants_in_bg;
@@ -396,6 +402,10 @@ private:
     static Trigger* pvp_cycle_disengage(PlayerbotAI* botAI) { return new PvpCycleDisengageTrigger(botAI); }
     static Trigger* pvp_cycle_recover(PlayerbotAI* botAI) { return new PvpCycleRecoverTrigger(botAI); }
     // End By leewheel
+    //By leewheel 2026-10-24 合并 brighton the-lab(#2893)：上游新增工厂，采纳
+    static Trigger* wsg_support_threat(PlayerbotAI* botAI) { return new WsgSupportThreat(botAI); }
+    static Trigger* wsg_escort_separated(PlayerbotAI* botAI) { return new WsgEscortSeparated(botAI); }
+    //End By leewheel
     static Trigger* Random(PlayerbotAI* botAI) { return new RandomTrigger(botAI, "random", 20); }
     static Trigger* seldom(PlayerbotAI* botAI) { return new RandomTrigger(botAI, "seldom", 300); }
     static Trigger* often(PlayerbotAI* botAI) { return new RandomTrigger(botAI, "often", 5); }
@@ -471,7 +481,11 @@ private:
     static Trigger* enemy_team_has_flag(PlayerbotAI* botAI) { return new EnemyTeamHasFlag(botAI); }
     static Trigger* enemy_flagcarrier_near(PlayerbotAI* botAI) { return new EnemyFlagCarrierNear(botAI); }
     //By leewheel 2026-09-01 复核修正: 配套 team_flagcarrier_near 工厂（见上方注册表注释）
+    //By leewheel 2026-10-24: 本核保留 TeamFlagCarrierNear ⇒ 工厂一并保留，不跟着上游删
     static Trigger* team_flagcarrier_near(PlayerbotAI* botAI) { return new TeamFlagCarrierNear(botAI); }
+    //End By leewheel
+    //By leewheel 2026-10-24 合并 brighton the-lab(#2893)：上游新增工厂，采纳
+    static Trigger* wsg_flag_state_changed(PlayerbotAI* botAI) { return new WsgFlagStateChanged(botAI); }
     //End By leewheel
     static Trigger* player_is_in_BATTLEGROUND(PlayerbotAI* botAI) { return new PlayerIsInBattleground(botAI); }
     static Trigger* player_is_in_BATTLEGROUND_no_flag(PlayerbotAI* botAI) { return new PlayerIsInBattlegroundWithoutFlag(botAI); }

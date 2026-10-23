@@ -309,8 +309,8 @@ bool BGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battlegroun
     uint32 bgAlliancePlayerCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgAlliancePlayerCount;
     uint32 bgHordeBotCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgHordeBotCount;
     uint32 bgHordePlayerCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgHordePlayerCount;
-    uint32 activeBgQueue = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].activeBgQueue;
-    uint32 bgInstanceCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgInstanceCount;
+    uint32 demandedSlots =
+        sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].DemandedBgSlotsPerTeam(TeamSize, teamId);
 
     // By leewheel 2026-07-07
     // 超时强制加入机制：当真实玩家排队超过配置的最大等待时间（默认180秒=3分钟）的2/3时，
@@ -333,18 +333,28 @@ bool BGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battlegroun
 
     if (teamId == TEAM_ALLIANCE)
     {
-        // By leewheel 2026-07-07
-        // 超时时将目标人数翻倍（填满双方队伍），确保战场能快速开启
-        uint32 targetCount = forceJoin ? TeamSize * 2 : TeamSize;
-        if ((bgAllianceBotCount + bgAlliancePlayerCount) < targetCount * (activeBgQueue + bgInstanceCount))
+        //By leewheel 2026-10-24 合并 brighton the-lab(7ed83ad3 #2853)：需求基数改用上游的
+        //  DemandedBgSlotsPerTeam（限制 bot-only 实例不再自我维持排队需求，见同文件 horde 分支
+        //  同名注释）；本核 2026-07-07 的 forceJoin 翻倍作为真人等待兜底叠加保留。
+        uint32 targetSlots = demandedSlots;
+        if (forceJoin)
+            targetSlots *= 2;
+        if ((bgAllianceBotCount + bgAlliancePlayerCount) < targetSlots)
             return true;
         // End By leewheel
     }
     else
     {
-        // By leewheel 2026-07-07
-        uint32 targetCount = forceJoin ? TeamSize * 2 : TeamSize;
-        if ((bgHordeBotCount + bgHordePlayerCount) < targetCount * (activeBgQueue + bgInstanceCount))
+        //By leewheel 2026-10-24 合并 brighton the-lab(7ed83ad3 #2853 "Stop bot-only BG instances
+        //  from sustaining bot queue demand")：需求基数改用上游的 DemandedBgSlotsPerTeam——
+        //  它把"纯 bot 的战场实例"限制在 bgAutoJoinTarget 个以内（超出的实例只计它已有的
+        //  bot 数），否则会出现 bot 排队 → bot 把实例填满 → 又产生新排队需求的自我维持循环。
+        //  本核 2026-07-07 的 forceJoin（真人排队超过阈值 2/3 时把需求翻倍，确保 3 分钟内开场）
+        //  是对**真人等待**的兜底，与上游要抑制的 bot 自我维持不是一回事 ⇒ 两者叠加保留。
+        uint32 targetSlots = demandedSlots;
+        if (forceJoin)
+            targetSlots *= 2;
+        if ((bgHordeBotCount + bgHordePlayerCount) < targetSlots)
             return true;
         // End By leewheel
     }
@@ -692,8 +702,8 @@ bool FreeBGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battleg
     uint32 bgAlliancePlayerCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgAlliancePlayerCount;
     uint32 bgHordeBotCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgHordeBotCount;
     uint32 bgHordePlayerCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgHordePlayerCount;
-    uint32 activeBgQueue = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].activeBgQueue;
-    uint32 bgInstanceCount = sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].bgInstanceCount;
+    uint32 demandedSlots =
+        sRandomPlayerbotMgr.BattlegroundData[queueTypeId][bracketId].DemandedBgSlotsPerTeam(TeamSize, teamId);
 
     // By leewheel 2026-07-07
     // 超时强制加入机制：与BGJoinAction::shouldJoinBg相同的逻辑
@@ -714,17 +724,28 @@ bool FreeBGJoinAction::shouldJoinBg(BattlegroundQueueTypeId queueTypeId, Battleg
 
     if (teamId == TEAM_ALLIANCE)
     {
-        // By leewheel 2026-07-07
-        uint32 targetCount = forceJoin ? TeamSize * 2 : TeamSize;
-        if ((bgAllianceBotCount + bgAlliancePlayerCount) < targetCount * (activeBgQueue + bgInstanceCount))
+        //By leewheel 2026-10-24 合并 brighton the-lab(7ed83ad3 #2853)：需求基数改用上游的
+        //  DemandedBgSlotsPerTeam（限制 bot-only 实例不再自我维持排队需求，见同文件 horde 分支
+        //  同名注释）；本核 2026-07-07 的 forceJoin 翻倍作为真人等待兜底叠加保留。
+        uint32 targetSlots = demandedSlots;
+        if (forceJoin)
+            targetSlots *= 2;
+        if ((bgAllianceBotCount + bgAlliancePlayerCount) < targetSlots)
             return true;
         // End By leewheel
     }
     else
     {
-        // By leewheel 2026-07-07
-        uint32 targetCount = forceJoin ? TeamSize * 2 : TeamSize;
-        if ((bgHordeBotCount + bgHordePlayerCount) < targetCount * (activeBgQueue + bgInstanceCount))
+        //By leewheel 2026-10-24 合并 brighton the-lab(7ed83ad3 #2853 "Stop bot-only BG instances
+        //  from sustaining bot queue demand")：需求基数改用上游的 DemandedBgSlotsPerTeam——
+        //  它把"纯 bot 的战场实例"限制在 bgAutoJoinTarget 个以内（超出的实例只计它已有的
+        //  bot 数），否则会出现 bot 排队 → bot 把实例填满 → 又产生新排队需求的自我维持循环。
+        //  本核 2026-07-07 的 forceJoin（真人排队超过阈值 2/3 时把需求翻倍，确保 3 分钟内开场）
+        //  是对**真人等待**的兜底，与上游要抑制的 bot 自我维持不是一回事 ⇒ 两者叠加保留。
+        uint32 targetSlots = demandedSlots;
+        if (forceJoin)
+            targetSlots *= 2;
+        if ((bgHordeBotCount + bgHordePlayerCount) < targetSlots)
             return true;
         // End By leewheel
     }

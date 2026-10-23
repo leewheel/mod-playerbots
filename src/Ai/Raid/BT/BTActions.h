@@ -83,10 +83,11 @@ public:
 
 // Trash
 
-class FocusSisterOfPleasureAction : public Action
+class SisterOfPleasureFocusDpsAction : public Action
 {
 public:
-    FocusSisterOfPleasureAction(PlayerbotAI* botAI) : Action(botAI, "focus sister of pleasure") {}
+    SisterOfPleasureFocusDpsAction(PlayerbotAI* botAI)
+        : Action(botAI, "sister of pleasure focus dps") {}
     bool Execute(Event event) override;
 };
 
@@ -107,7 +108,6 @@ public:
 
 private:
     bool RestoreReactState(Guardian* pet);
-    bool CommandPetAttack(Guardian* pet, Unit* target);
 
     ReactStates _previousReactState = REACT_DEFENSIVE;
     // Each summon is a new pet with a new GUID, so a stance saved for an earlier pet is dropped.
@@ -257,11 +257,11 @@ private:
 
 // Shade of Akama
 
-class ShadeOfAkamaMeleeDpsPrioritizeChannelersAction : public AttackAction
+class ShadeOfAkamaAttackChannelersAndSorcerersAction : public AttackAction
 {
 public:
-    ShadeOfAkamaMeleeDpsPrioritizeChannelersAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "shade of akama melee dps prioritize channelers") {}
+    ShadeOfAkamaAttackChannelersAndSorcerersAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "shade of akama attack channelers and sorcerers") {}
     bool Execute(Event event) override;
 };
 
@@ -488,6 +488,14 @@ public:
     bool Execute(Event event) override;
 };
 
+class IllidariCouncilCommandPetTargetAction : public AttackAction
+{
+public:
+    IllidariCouncilCommandPetTargetAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "illidari council command pet target") {}
+    bool Execute(Event event) override;
+};
+
 class IllidariCouncilAssignDpsTargetsAction : public AttackAction
 {
 public:
@@ -497,14 +505,6 @@ public:
 
 private:
     bool ShouldAttackMalande(Unit* malande, Unit* gathios, Unit* zerevor) const;
-};
-
-class IllidariCouncilCommandPetTargetAction : public AttackAction
-{
-public:
-    IllidariCouncilCommandPetTargetAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "illidari council command pet target") {}
-    bool Execute(Event event) override;
 };
 
 class IllidariCouncilManageDpsTimerAction : public Action
@@ -546,7 +546,7 @@ public:
     bool ResetEncounterState()
     {
         if (!_phaseStartTime && _lastFlameCrash.IsEmpty() && _leadPosition == Position() &&
-            _lead == BtHelpers::IllidanTankLead::None)
+            _lead == BtHelpers::IllidanTankLead::None && !_isOpeningLeadDone)
         {
             return false;
         }
@@ -555,6 +555,7 @@ public:
         _lastFlameCrash.Clear();
         _leadPosition = Position();
         _lead = BtHelpers::IllidanTankLead::None;
+        _isOpeningLeadDone = false;
         return true;
     }
 
@@ -562,11 +563,13 @@ private:
     bool FindDemonFormPosition(Unit const& illidan, Position& position);
     bool FindRingPosition(Unit const& illidan, BtHelpers::IllidanPhase phase, Position& position);
     void StartRingLead(Unit const& illidan, BtHelpers::IllidanPhase phase);
+    bool RouteRoundIllidan(Unit const& illidan, Position& position);
 
     uint32 _phaseStartTime = 0;
     ObjectGuid _lastFlameCrash;
     Position _leadPosition;
     BtHelpers::IllidanTankLead _lead = BtHelpers::IllidanTankLead::None;
+    bool _isOpeningLeadDone = false;
 };
 
 class IllidanStormrageIsolateBotWithParasiteAction : public MovementAction

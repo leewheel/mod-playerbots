@@ -112,7 +112,7 @@ class HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger : public BlackTempleEn
 public:
     HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-              botAI, "high warlord naj'entus impaled player needs remover") {}
+            botAI, "high warlord naj'entus impaled player needs remover") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -123,7 +123,7 @@ class HighWarlordNajentusImpalingSpineOnGroupMemberTrigger : public BlackTempleE
 public:
     HighWarlordNajentusImpalingSpineOnGroupMemberTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-              botAI, "high warlord naj'entus impaling spine on group member") {}
+            botAI, "high warlord naj'entus impaling spine on group member") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -193,11 +193,12 @@ protected:
 
 // Shade of Akama
 
-class ShadeOfAkamaShouldPrioritizeChannelersTrigger : public BlackTempleEncounterTrigger
+class ShadeOfAkamaShouldAttackChannelersAndSorcerersTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    ShadeOfAkamaShouldPrioritizeChannelersTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "shade of akama should prioritize channelers") {}
+    ShadeOfAkamaShouldAttackChannelersAndSorcerersTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "shade of akama should attack channelers and sorcerers") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -240,7 +241,7 @@ class TeronGorefiendShouldPositionForVengefulSpiritTrigger : public BlackTempleE
 public:
     TeronGorefiendShouldPositionForVengefulSpiritTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-              botAI, "teron gorefiend should position for vengeful spirit") {}
+            botAI, "teron gorefiend should position for vengeful spirit") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -376,11 +377,11 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class MotherShahrazTanksArePositioningBossTrigger : public BlackTempleEncounterTrigger
+class MotherShahrazBeingPositionedTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    MotherShahrazTanksArePositioningBossTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "mother shahraz tanks are positioning boss") {}
+    MotherShahrazBeingPositionedTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "mother shahraz being positioned") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -502,21 +503,21 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidariCouncilShouldManageDpsTimerTrigger : public BlackTempleEncounterTrigger
-{
-public:
-    IllidariCouncilShouldManageDpsTimerTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council should manage dps timer") {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
-
 class IllidariCouncilShouldAssignDpsPriorityTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidariCouncilShouldAssignDpsPriorityTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(botAI, "illidari council should assign dps priority") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class IllidariCouncilShouldManageDpsTimerTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidariCouncilShouldManageDpsTimerTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidari council should manage dps timer") {}
 
 protected:
     bool IsActiveInEncounter() override;

@@ -5,7 +5,59 @@
  */
 
 #include "BattlegroundStrategy.h"
+
+#include "BattleGroundTactics.h"
+#include "Battleground.h"
+#include "ChooseTargetActions.h"
+#include "GenericSpellActions.h"
+#include "Multiplier.h"
 #include "Playerbots.h"
+#include "PvpValues.h"
+#include "ReachTargetActions.h"
+
+namespace
+{
+class WarsongTacticsMultiplier : public Multiplier
+{
+public:
+    WarsongTacticsMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "warsong tactics") {}
+
+    float GetValue(Action* action) override
+    {
+        Battleground* bg = bot->GetBattleground();
+        if (!bg || bg->GetBgTypeID(true) != BATTLEGROUND_WS)
+            return 1.0f;
+        if (auto* attack = dynamic_cast<AttackAction*>(action))
+        {
+            if (BGTactics::ShouldYieldWsgTactics(botAI) || !IsWsgEscortTargetAllowed(botAI, attack->GetTarget()))
+                return 0.0f;
+            if (dynamic_cast<AttackEnemyPlayerAction*>(action))
+            {
+                ObjectGuid guid = context->GetValue<ObjectGuid>("wsg support target")->Get();
+                Unit* support = guid.IsEmpty() ? nullptr : botAI->GetUnit(guid);
+                if (IsWsgSupportTarget(botAI, support))
+                    return 0.0f;
+            }
+        }
+        // Class-specific reach actions can outrank regroup; don't chase a target that left the carrier behind.
+        if (auto* reach = dynamic_cast<ReachTargetAction*>(action))
+        {
+            if (reach->GetTargetName() == "current target" && ShouldRegroupWsgEscort(botAI))
+                return 0.0f;
+        }
+        if (action->GetTargetName() == "current target" && !IsWsgEscortTargetAllowed(botAI, action->GetTarget()) &&
+            dynamic_cast<CastSpellAction*>(action) && !dynamic_cast<CastHealingSpellAction*>(action) &&
+            ShouldRegroupWsgEscort(botAI))
+            return 0.0f;
+        return 1.0f;
+    }
+};
+}  // namespace
+
+void WarsongStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
+{
+    multipliers.push_back(new WarsongTacticsMultiplier(botAI));
+}
 
 void BGStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
@@ -64,22 +116,41 @@ void PvpCycleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void WarsongStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    triggers.push_back(new TriggerNode("bg active", { NextAction("bg check flag", ACTION_EMERGENCY )}));
-    // By leewheel 2026-09-01 修复：原 BattlegroundStrategy 只在脱战引擎执行（NONCOMBAT），
+    //By leewheel 2026-10-24 合并 brighton the-lab(#2893 "WSG Tactics")：两边都是**新增**，取并集。
+    //  上游新增（战歌专用路线/支援/重聚机制）：
+    triggers.push_back(
+        new TriggerNode("wsg flag state changed", {NextAction("bg refresh wsg objective", ACTION_BG + 3.0f)}));
+    triggers.push_back(new TriggerNode("wsg support threat", {NextAction("attack wsg support", ACTION_HIGH + 1.0f)}));
+    triggers.push_back(new TriggerNode("wsg escort separated", {NextAction("wsg regroup", ACTION_HIGH + 2.0f)}));
+    triggers.push_back(new TriggerNode(
+        "bg active", {NextAction("bg wsg route", ACTION_BG + 1.4f), NextAction("bg wsg approach", ACTION_BG + 1.3f),
+                      NextAction("bg wsg corridor", ACTION_BG + 1.2f), NextAction("bg wsg direct", ACTION_BG + 1.1f)}));
+    triggers.push_back(new TriggerNode("bg active", {NextAction("bg check flag", ACTION_EMERGENCY + 1.0f)}));
+    triggers.push_back(
+        new TriggerNode("enemy flagcarrier near", {NextAction("attack enemy flag carrier", ACTION_RAID + 1.0f)}));
+    triggers.push_back(new TriggerNode("bg active", {NextAction("bg protect fc", ACTION_BG + 2.0f)}));
+    //  本核特有（上游 #2893 用的是 bg active → bg protect fc，但本核 2026-09-01 保留的是
+    //  team flagcarrier near 触发器 —— 其实现 TeamFlagCarrierNear 本核未跟着上游删，
+    //  见 PvpTriggers.cpp 同名注释 ⇒ 这条挂载必须保留，否则该触发器无人消费）：
+    triggers.push_back(new TriggerNode("team flagcarrier near", { NextAction("bg protect fc", ACTION_RAID)}));
+    //  本核 2026-09-01 修复：原 BattlegroundStrategy 只在脱战引擎执行（NONCOMBAT），
     //   战场中 bot 几乎总在战斗，导致岗位移动（bg move to objective）几乎不触发。
     //   WarsongStrategy 为 GENERIC 类型，战斗/非战斗双引擎挂载，这里补充 bg move to objective
     //   与 bg check objective，让 bot 在战斗中也能走向岗位（实际执行时战斗动作优先级更高，
-    //   只在无攻击目标时走位，不干扰战斗）。
-    // End By leewheel
+    //   只在无攻击目标时走位，不干扰战斗）。上游 #2893 无这两条 ⇒ 保留本核。
     triggers.push_back(new TriggerNode("bg active", { NextAction("bg move to objective", ACTION_BG)}));
     triggers.push_back(new TriggerNode("often", { NextAction("bg check objective", ACTION_BG + 1)}));
-    triggers.push_back(new TriggerNode("enemy flagcarrier near", { NextAction("attack enemy flag carrier", ACTION_RAID + 1.0f)}));
-    triggers.push_back(new TriggerNode("team flagcarrier near", { NextAction("bg protect fc", ACTION_RAID)}));
-    triggers.push_back(new TriggerNode("often", { NextAction("bg use buff", ACTION_BG)}));
-    triggers.push_back(new TriggerNode("low health", { NextAction("bg use buff", ACTION_MOVE)}));
-    triggers.push_back(new TriggerNode("low mana", { NextAction("bg use buff", ACTION_MOVE)}));
     triggers.push_back(new TriggerNode("player has flag", { NextAction("bg move to objective", ACTION_EMERGENCY)}));
     triggers.push_back(new TriggerNode("timer bg", { NextAction("bg reset objective force", ACTION_EMERGENCY)}));
+    //  公共：
+    triggers.push_back(new TriggerNode("often", {NextAction("bg use buff", ACTION_BG)}));
+    triggers.push_back(new TriggerNode("low health", {NextAction("bg use buff", ACTION_MOVE)}));
+    triggers.push_back(new TriggerNode("low mana", {NextAction("bg use buff", ACTION_MOVE)}));
+    triggers.push_back(new TriggerNode("player has flag", {NextAction("bg wsg route", ACTION_EMERGENCY + 0.4f),
+                                                           NextAction("bg wsg approach", ACTION_EMERGENCY + 0.3f),
+                                                           NextAction("bg wsg corridor", ACTION_EMERGENCY + 0.2f),
+                                                           NextAction("bg wsg direct", ACTION_EMERGENCY + 0.1f)}));
+    //End By leewheel
 }
 
 void AlteracStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)

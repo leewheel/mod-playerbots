@@ -236,6 +236,11 @@ float HighWarlordNajentusTidalShieldHoldPositionMultiplier::GetValueInEncounter(
     }
 
     //By leewheel 2026-10-22 entry 铁律：英文名回退 entry 22887（高阶督军纳因图斯）
+    //By leewheel 2026-10-24 合并 brighton the-lab(91c5f466 "black temple non-illidan cleanups")：
+    //  上游这一行仍是 AI_VALUE2(Unit*, "find target", "high warlord naj'entus") 英文名。
+    //  本核实库生物名为中文 ⇒ 英文 qualifier 子串匹配恒 nullptr ⇒ najentus 恒空 ⇒
+    //  「纳因图斯带潮汐护盾时不要去打」这条乘数**永远返回 1.0f**（静默失效，不崩不报错）。
+    //  ⇒ 保留本核 entry 22887 写法。
     Unit* najentus = AI_VALUE2(Unit*, "find target", "22887");
     return najentus && najentus->HasAura(Id(BtSpells::SPELL_TIDAL_SHIELD))? 0.0f : 1.0f;
 }
@@ -273,9 +278,7 @@ float SupremusDoNotReachThroughFireMultiplier::GetValueInEncounter(Action* actio
     if (!AI_VALUE2(Unit*, "find target", "22898"))
         return 1.0f;
 
-    Unit* target;
-    float range;
-    return GetSupremusReachBlockedByFire(botAI, target, range) ? 0.0f : 1.0f;
+    return GetSupremusFireBlockedReachTarget(botAI) ? 0.0f : 1.0f;
 }
 
 float SupremusDisableAvoidAoeInKitePhaseMultiplier::GetValueInEncounter(Action* action)
@@ -288,7 +291,7 @@ float SupremusDisableAvoidAoeInKitePhaseMultiplier::GetValueInEncounter(Action* 
 
 // Shade of Akama
 
-float ShadeOfAkamaDontDropOutOfSightTargetMultiplier::GetValueInEncounter(Action* action)
+float ShadeOfAkamaDoNotDropOutOfSightTargetMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<DropTargetAction*>(action))
         return 1.0f;
@@ -429,12 +432,6 @@ float GurtoggBloodboilFelRageTargetHoldsAggroMultiplier::GetValueInEncounter(Act
         dynamic_cast<CastIceBlockAction*>(action) ||
         dynamic_cast<CastDivineShieldAction*>(action) ||
         dynamic_cast<CastFeintAction*>(action);
-        // dynamic_cast<CastFeignDeathAction*>(action) ||
-        // dynamic_cast<CastFadeAction*>(action) ||
-        // dynamic_cast<CastInvisibilityAction*>(action) ||
-        // dynamic_cast<CastVanishAction*>(action) ||
-        // dynamic_cast<CastCowerAction*>(action) ||
-        // dynamic_cast<CastSoulshatterAction*>(action);
 
     return dropsThreat ? 0.0f : 1.0f;
 }
@@ -469,7 +466,7 @@ float GurtoggBloodboilHoldThreatMultiplier::GetValueInEncounter(Action* action)
 
 // Reliquary of Souls
 
-float ReliquaryOfSoulsDontWasteHealingMultiplier::GetValueInEncounter(Action* action)
+float ReliquaryOfSoulsDoNotWasteHealingMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<CastTreeFormAction*>(action) &&
         !dynamic_cast<CastHealingSpellAction*>(action))
@@ -526,9 +523,7 @@ float ReliquaryOfSoulsLetMagesStealRuneShieldMultiplier::GetValueInEncounter(Act
     if (!runeShield)
         return 1.0f;
 
-    uint32 const elapsed =
-        static_cast<uint32>(runeShield->GetMaxDuration() - runeShield->GetDuration());
-    return elapsed < RUNE_SHIELD_MAGE_PRIORITY_MS ? 0.0f : 1.0f;
+    return GetAuraElapsedMs(runeShield) < RUNE_SHIELD_MAGE_PRIORITY_MS ? 0.0f : 1.0f;
 }
 
 float ReliquaryOfSoulsSaveSpellReflectionForDeadenMultiplier::GetValueInEncounter(Action* action)
@@ -827,7 +822,7 @@ float IllidariCouncilWaitForDpsMultiplier::GetValueInEncounter(Action* action)
 
     BtInstanceState const* state = FindBtState(bot->GetInstanceId());
     if (!state || !state->councilDpsWaitTimer ||
-        getMSTimeDiff(*state->councilDpsWaitTimer, getMSTime()) >= COUNCIL_DPS_WAIT_MS)
+        GetMSTimeDiffToNow(*state->councilDpsWaitTimer) >= COUNCIL_DPS_WAIT_MS)
     {
         return 1.0f;
     }
@@ -968,8 +963,19 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter
     }
 
     IllidanPhase phase = GetIllidanPhase(illidan);
+    // In Maiev's arrival the Main Tank keeps him as its target, so its swing brings it back onto
+    // his threat list, out of Shadow Prison's suppression, before he wakes; only its ring action
+    // moves it, so nothing chasing its target pulls it off its place.
     if (phase == IllidanPhase::None)
-        return 1.0f;
+    {
+        bool const isDrop = dynamic_cast<DropTargetAction*>(action);
+        bool const isMove = dynamic_cast<MovementAction*>(action) &&
+            !dynamic_cast<IllidanStormrageMainTankRepositionBossAction*>(action);
+        if (!isDrop && !isMove)
+            return 1.0f;
+
+        return PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
+    }
 
     // In the death scene only an infected bot is held, so nothing pulls it off its infection
     // position.
@@ -1001,8 +1007,8 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter
 }
 
 // Tanks take their targets from their own actions or assign target priority, except the assist
-// tanks while he lands. Ranged DPS, melee in Phases 1, 3 and 5, and everyone in Demon Form take
-// theirs from assign target priority.
+// tanks while he lands. Ranged DPS, melee in Phases 1, 2, 3 and 5, and everyone in Demon Form
+// take theirs from assign target priority.
 float IllidanStormrageControlMovementAndTargetingMultiplier::GetTargetingValue(
     IllidanPhase phase, Action* action, bool isTankAssist, bool isDpsAssist)
 {
@@ -1014,8 +1020,9 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTargetingValue(
         if (phase == IllidanPhase::Demon || PlayerbotAI::IsRangedDps(bot))
             return 0.0f;
 
-        return (phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded ||
-            phase == IllidanPhase::Maiev) && PlayerbotAI::IsMelee(bot) ? 0.0f : 1.0f;
+        return (phase == IllidanPhase::Initial || phase == IllidanPhase::Flying ||
+            phase == IllidanPhase::Grounded || phase == IllidanPhase::Maiev) &&
+            PlayerbotAI::IsMelee(bot) ? 0.0f : 1.0f;
     }
 
     // Secondary DoTs (CastDebuffSpellOnAttackerAction)
@@ -1237,16 +1244,10 @@ float IllidanStormrageWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     if (isHeal)
         return IsHeldIllidanHeal(botAI, illidan, action) ? 0.0f : 1.0f;
 
-    // The Flame tanks get 6s head start on the Flames of Azzinoth, counted from when the tracker
-    // records the first, since a Flame is in combat with nobody for its first 2 s.
+    // Damage on the Flames of Azzinoth waits for their tanks.
     if (GetIllidanPhase(illidan) == IllidanPhase::Flying)
     {
-        constexpr uint32 flamePhaseDpsWaitMs = 6 * IN_MILLISECONDS;
-        BtInstanceState const* state = FindBtState(illidan->GetInstanceId());
-        bool const inWindow = state && state->illidanFlamePhaseStartTime &&
-            getMSTimeDiff(*state->illidanFlamePhaseStartTime, getMSTime()) < flamePhaseDpsWaitMs;
-
-        if (!inWindow || IsFlameOfAzzinothTank(bot))
+        if (!IsFlameOfAzzinothDpsHeld(*illidan) || IsFlameOfAzzinothTank(bot))
             return 1.0f;
 
         // Only damage on the Flames is held, never damage on Shadowfiends. Attacks and dots on an

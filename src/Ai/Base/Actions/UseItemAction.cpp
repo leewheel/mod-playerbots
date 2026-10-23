@@ -5,7 +5,7 @@
  */
 
 #include "UseItemAction.h"
-
+#include "AcceptQuestAction.h"
 #include "ChatHelper.h"
 #include "Event.h"
 #include "ItemCountValue.h"
@@ -91,7 +91,7 @@ bool UseItemAction::UseGameObject(ObjectGuid guid)
             return fail("gameobject_cannot_loot_error",
                         "Cannot loot this object: check quest, skill, tools, key, and object state");
 
-        bool inRange = bot->GetDistance(go) <= INTERACTION_DISTANCE - 2.0f;
+        bool inRange = go->IsAtInteractDistance(bot);
         if (botAI->HasStrategy("stay", BOT_STATE_NON_COMBAT) && bot->GetDistance(go) > CONTACT_DISTANCE)
             return fail("gameobject_stay_out_of_range_error", "Game object is out of reach while staying");
 
@@ -322,18 +322,22 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
         targetSelected = true;
     }
 
-    if (uint32 questid = item->GetTemplate()->StartQuest)
+    if (uint32 questId = item->GetTemplate()->StartQuest)
     {
-        if (Quest const* qInfo = sObjectMgr->GetQuestTemplate(questid))
+        if (Quest const* qInfo = sObjectMgr->GetQuestTemplate(questId))
         {
-            WorldPacket packet(CMSG_QUESTGIVER_ACCEPT_QUEST, 8 + 4 + 4);
-            packet << item_guid;
-            packet << questid;
-            packet << uint32(0);
-            bot->GetSession()->HandleQuestgiverAcceptQuestOpcode(packet);
-
-            botAI->TellMasterNoFacing("获得任务 " + chat->FormatQuest(qInfo));
-            return true;
+            //By leewheel 2026-10-24 合并 brighton the-lab(94b03d98 #2782)：改用
+            //  QuestAction::AcceptQuest（经 AcceptQuestAction）而不是本核原先那样裸发
+            //  CMSG_QUESTGIVER_ACCEPT_QUEST —— 后者**不做任何前置校验**（任务已完成/已接取、
+            //  任务日志已满、背包已满都会照样发），也拿不到失败原因。
+            //  QuestAction::AcceptQuest 内部已逐项校验并给出中文提示（"已接受 xxx"/
+            //  "已接取"/"任务日志已满"/"背包已满"…），本核原先那句
+            //  TellMasterNoFacing("获得任务 …") 会与之重复 ⇒ 随旧实现一并去掉，提示不丢。
+            //End By leewheel
+            // The master-driven "use <item>" path accepts what the player could; the automatic
+            // path filters with QuestAction::CanAcceptQuest before calling UseItem.
+            AcceptQuestAction acceptQuestAction(botAI);
+            return acceptQuestAction.AcceptQuest(qInfo, item_guid);
         }
     }
 
@@ -628,50 +632,48 @@ bool UseRandomRecipe::isUseful()
 
 bool UseRandomRecipe::isPossible() { return AI_VALUE2(uint32, "item count", "recipe") > 0; }
 
-bool UseRandomQuestItem::Execute(Event /*event*/)
+bool UseStartQuestItem::Execute(Event /*event*/)
 {
-    Unit* unitTarget = nullptr;
-    ObjectGuid goTarget;
-
-    std::vector<Item*> questItems = AI_VALUE2(std::vector<Item*>, "inventory items", "quest");
+    //By leewheel 2026-10-24 合并 brighton the-lab(94b03d98 #2782 "use quest-starting items to
+    //  start quests")：采纳上游的 "start quest" 物品类别 —— 覆盖**所有**能开出任务的可用物品，
+    //  不再限定 item class（原 "quest" 类别会漏掉非任务类但能开任务的物品），这是本次功能的核心。
+    //  ★ 但必须保留本核 2026-09-04 的 FilterLive 过滤：AI_VALUE2 返回的是**缓存的**物品指针列表，
+    //    从求值到真正解引用之间物品可能已被销毁或移出背包 ⇒ 不过滤就是悬空指针崩溃。
+    std::vector<Item*> questStartItems = AI_VALUE2(std::vector<Item*>, "inventory items", "start quest");
     // By leewheel 2026-09-04 防悬空崩溃: 过滤缓存列表中已失效的物品指针
     // End By leewheel
-    questItems = InventoryItemValueBase::FilterLive(bot, questItems);
-    if (questItems.empty())
+    questStartItems = InventoryItemValueBase::FilterLive(bot, questStartItems);
+    if (questStartItems.empty())
         return false;
 
-    Item* item = nullptr;
-    for (uint8 i = 0; i < 5; i++)
+    for (Item* questItem : questStartItems)
     {
-        auto itr = questItems.begin();
-        std::advance(itr, urand(0, questItems.size() - 1));
-        Item* questItem = *itr;
+        Quest const* qInfo = sObjectMgr->GetQuestTemplate(questItem->GetTemplate()->StartQuest);
+        if (!QuestAction::CanAcceptQuest(bot, qInfo))
+            continue;
 
-        ItemTemplate const* proto = questItem->GetTemplate();
-        if (proto->StartQuest)
+        // UseItem can fail before the start-quest accept (e.g. a transient cast state), so keep
+        // looking at the other eligible items instead of stopping at the first one.
+        if (UseItem(questItem, ObjectGuid::Empty, nullptr, nullptr))
         {
-            Quest const* qInfo = sObjectMgr->GetQuestTemplate(proto->StartQuest);
-            if (bot->CanTakeQuest(qInfo, false))
-            {
-                item = questItem;
-                break;
-            }
+            botAI->SetNextCheckDelay(sPlayerbotAIConfig.GlobalCoolDown);
+            return true;
         }
     }
 
-    if (!item)
-        return false;
-
-    bool used = UseItem(item, goTarget, nullptr, unitTarget);
-    if (used)
-        botAI->SetNextCheckDelay(sPlayerbotAIConfig.GlobalCoolDown);
-
-    return used;
+    return false;
 }
 
-bool UseRandomQuestItem::isUseful()
+bool UseStartQuestItem::isUseful()
 {
     return !IsRealPlayer(botAI->GetMaster()) && !bot->InBattleground() && !bot->HasUnitState(UNIT_STATE_IN_FLIGHT);
 }
 
-bool UseRandomQuestItem::isPossible() { return AI_VALUE2(uint32, "item count", "quest") > 0; }
+bool UseStartQuestItem::isPossible()
+{
+    for (Item* questItem : AI_VALUE2(std::vector<Item*>, "inventory items", "start quest"))
+        if (QuestAction::CanAcceptQuest(bot, sObjectMgr->GetQuestTemplate(questItem->GetTemplate()->StartQuest)))
+            return true;
+
+    return false;
+}

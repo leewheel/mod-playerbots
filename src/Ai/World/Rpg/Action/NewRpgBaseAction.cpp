@@ -357,7 +357,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
                     "已接受任务 %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             BroadcastHelper::BroadcastQuestAccepted(botAI, bot, quest);
-            botAI->rpgStatistic.questAccepted++;
+            botAI->RecordQuestAccepted(quest->GetQuestId());
             LOG_DEBUG("playerbots", "[New RPG] {} accept quest {}", bot->GetName(), quest->GetQuestId());
         }
         if (status == QUEST_STATUS_COMPLETE && bot->CanRewardQuest(quest, 0, false))
@@ -369,7 +369,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
                     "已交付任务 %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
             BroadcastHelper::BroadcastQuestTurnedIn(botAI, bot, quest);
-            botAI->rpgStatistic.questRewarded++;
+            botAI->RecordQuestRewarded(quest->GetQuestId());
             LOG_DEBUG("playerbots", "[New RPG] {} turned in quest {}", bot->GetName(), quest->GetQuestId());
         }
     }
@@ -639,9 +639,14 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             continue;
 
         Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
-        if (!IsQuestWorthDoing(quest) || !IsQuestCapableDoing(quest) ||
-            bot->GetQuestStatus(questId) == QUEST_STATUS_FAILED)
+        bool const worthDoing = IsQuestWorthDoing(quest);
+        bool const capableDoing = IsQuestCapableDoing(quest);
+        bool const failed = bot->GetQuestStatus(questId) == QUEST_STATUS_FAILED;
+        if (!worthDoing || !capableDoing || failed)
         {
+            QuestDropReason const reason = !worthDoing    ? QuestDropReason::NotWorth
+                                           : !capableDoing ? QuestDropReason::NotCapable
+                                                           : QuestDropReason::Failed;
             LOG_DEBUG("playerbots", "[New RPG] {} drop quest {}", bot->GetName(), questId);
             WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
             packet << (uint8)i;
@@ -653,7 +658,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
                     "new_rpg_quest_dropped",
                     "已放弃任务 %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
-            botAI->rpgStatistic.questDropped++;
+            botAI->RecordQuestDropped(questId, reason);
             dropped++;
         }
     }
@@ -672,8 +677,11 @@ bool NewRpgBaseAction::OrganizeQuestLog()
         Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
         const int64_t botZoneId = this->bot->GetZoneId();
 
-        if (quest->GetZoneOrSort() < 0 || (quest->GetZoneOrSort() > 0 && quest->GetZoneOrSort() != botZoneId))
+        int32 const zoneOrSort = quest->GetZoneOrSort();
+        if (zoneOrSort < 0 || (zoneOrSort > 0 && zoneOrSort != botZoneId))
         {
+            QuestDropReason const reason = zoneOrSort < 0 ? QuestDropReason::ClassOrHoliday
+                                                          : QuestDropReason::OtherZone;
             LOG_DEBUG("playerbots", "[New RPG] {} drop quest {}", bot->GetName(), questId);
             WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
             packet << (uint8)i;
@@ -685,7 +693,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
                     "new_rpg_quest_dropped",
                     "已放弃任务 %quest",
                     {{"%quest", ChatHelper::FormatQuest(quest)}}));
-            botAI->rpgStatistic.questDropped++;
+            botAI->RecordQuestDropped(questId, reason);
             dropped++;
         }
     }
@@ -712,7 +720,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
                 "new_rpg_quest_dropped",
                 "已放弃任务 %quest",
                 {{"%quest", ChatHelper::FormatQuest(quest)}}));
-        botAI->rpgStatistic.questDropped++;
+        botAI->RecordQuestDropped(questId, QuestDropReason::LogFull);
     }
 
     return true;

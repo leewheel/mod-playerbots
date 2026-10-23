@@ -5,6 +5,8 @@
  */
 
 #include "ChooseTargetActions.h"
+
+#include "Battleground.h"
 #include "ChooseRpgTargetAction.h"
 #include "Event.h"
 #include "LootObjectStack.h"
@@ -12,6 +14,7 @@
 #include "Playerbots.h"
 #include "PossibleRpgTargetsValue.h"
 #include "PvpTriggers.h"
+#include "PvpValues.h"
 #include "RtiTargetValue.h"
 #include "ServerFacade.h"
 
@@ -26,13 +29,33 @@ bool AttackEnemyPlayerAction::isUseful()
 bool AttackEnemyFlagCarrierAction::isUseful()
 {
     Unit* target = context->GetValue<Unit*>("enemy flag carrier")->Get();
+    if (!target)
+        return false;
+
+    //By leewheel 2026-10-24 合并 brighton the-lab(#2893 "WSG Tactics")：采纳上游新增的 WSG 分支
+    //  ——战歌峡谷改由 CanRespondToWsgCarrier 统一判定（含"当前目标已经是旗手就不再重复排动作"、
+    //   以及"动作可能比选出旗手的触发器活得更久"的守卫）。这段是本核没有的，直接采纳。
+    Battleground* bg = bot->GetBattleground();
+    if (bg && bg->GetBgTypeID(true) == BATTLEGROUND_WS)
+    {
+        if (botAI->GetState() == BOT_STATE_COMBAT && AI_VALUE(Unit*, "current target") == target)
+            return false;
+        // A queued action can outlive the trigger that selected the carrier.
+        return CanRespondToWsgCarrier(botAI, target);
+    }
+    //End By leewheel
+
     // By leewheel 2026-09-01 修复：原条件 `!PlayerHasFlag::IsCapturingFlag(bot)` 写反了——
     //   IsCapturingFlag(bot) 返回 true 表示 bot 自己持旗。原逻辑要求"bot 自己持旗才攻击
     //   敌方旗手"，导致所有不持旗的 bot 全部被排除在拦截之外（用户实测"夺旗后无人拦截"）。
     //   正确逻辑：自己持旗时应去交旗/护送（不追敌方旗手）；自己不持旗时才应拦截敌方旗手。
     //   改为：自己持旗 → 返回 false（不拦截）；自己不持旗且敌方旗手在追距内 → 拦截。
     // End By leewheel
-    if (!target || PlayerHasFlag::IsCapturingFlag(bot))
+    //By leewheel 2026-10-24: 上游 #2893 的非 WSG 分支末尾仍是
+    //  `return PlayerHasFlag::IsCapturingFlag(bot);` —— 那正是本核 2026-09-01 判定为写反、
+    //  并已按用户实测修掉的那一行（等价于"只有自己持旗才去拦截敌方旗手"，与语义相反）。
+    //  ⇒ 非 WSG 分支保留本核修复，不回退。
+    if (PlayerHasFlag::IsCapturingFlag(bot))
         return false;
 
     float dist = ServerFacade::instance().GetDistance2d(bot, target);

@@ -6,6 +6,7 @@
 
 #include "BTHelpers.h"
 #include "CellImpl.h"
+#include "CreatureAI.h"
 #include "DynamicObject.h"
 #include "EncounterHelpers.h"
 #include "GameObject.h"
@@ -104,6 +105,115 @@ Position GetBotPointInRectangle(
     }
 
     return Position(x, y, bot->GetPositionZ());
+}
+
+bool GetPathStepTowardUnit(
+    Player* bot, Unit* target, float stopDistance, float& stepX, float& stepY)
+{
+    if (!target)
+        return false;
+
+    return GetPathStepTowardPoint(
+        bot, target->GetPosition(), stopDistance, PATH_STEP_DISTANCE, stepX, stepY);
+}
+
+bool GetPathStepTowardPoint(
+    Player* bot, Position const& destination, float stopDistance, float stepDistance,
+    float& stepX, float& stepY)
+{
+    if (bot->GetExactDist(destination) < stopDistance)
+        return false;
+
+    PathGenerator path(bot);
+    path.CalculatePath(
+        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
+    if (!(path.GetPathType() & (PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORTCUT)))
+        return false;
+
+    Movement::PointsArray const& points = path.GetPath();
+    if (points.size() < 2)
+        return false;
+
+    G3D::Vector3 const targetPos(
+        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
+
+    float remaining = stepDistance;
+    for (std::size_t i = 1; i < points.size(); ++i)
+    {
+        G3D::Vector3 const& from = points[i - 1];
+        G3D::Vector3 const& to = points[i];
+
+        float const segment = (to - from).length();
+        if (segment <= 0.0f)
+            continue;
+
+        float const toDist = (to - targetPos).length();
+        float ratio = 1.0f;
+
+        if (toDist < stopDistance)
+        {
+            float const fromDist = (from - targetPos).length();
+            if (fromDist <= stopDistance)
+                break;
+
+            ratio = (fromDist - stopDistance) / (fromDist - toDist);
+        }
+
+        if (segment * ratio >= remaining)
+            ratio = remaining / segment;
+
+        remaining -= segment * ratio;
+
+        G3D::Vector3 const step = from + (to - from) * ratio;
+        stepX = step.x;
+        stepY = step.y;
+
+        if (remaining <= 0.0f || ratio < 1.0f)
+            return true;
+    }
+
+    return remaining < stepDistance;
+}
+
+bool CommandPetAttack(Creature* pet, Unit* target)
+{
+    if (!pet || !target)
+        return false;
+
+    pet->ClearUnitState(UNIT_STATE_FOLLOW);
+    pet->AttackStop();
+    pet->SetTarget(target->GetGUID());
+    if (CharmInfo* charmInfo = pet->GetCharmInfo())
+    {
+        charmInfo->SetIsCommandAttack(true);
+        charmInfo->SetIsAtStay(false);
+        charmInfo->SetIsFollowing(false);
+        charmInfo->SetIsCommandFollow(false);
+        charmInfo->SetIsReturning(false);
+    }
+
+    pet->AI()->AttackStart(target);
+    return true;
+}
+
+GuidVector FindAttackerGuidsWithEntry(PlayerbotAI* botAI, uint32 entry)
+{
+    GuidVector guids;
+    auto const& attackers =
+        botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->RefGet();
+    for (ObjectGuid const& guid : attackers)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->IsAlive() && unit->GetEntry() == entry)
+            guids.push_back(guid);
+    }
+
+    return guids;
+}
+
+uint32 GetAuraElapsedMs(Aura const* aura)
+{
+    return aura ? static_cast<uint32>(aura->GetMaxDuration() - aura->GetDuration()) : 0;
 }
 
 // Trash
@@ -243,21 +353,6 @@ Unit* GetSkulledSisterOfPain(Player* bot)
         ObjectAccessor::GetUnit(*bot, group->GetTargetIcon(RtiTargetValue::skullIndex)));
 }
 
-GuidVector FindShadowmoonReaverGuids(PlayerbotAI* botAI)
-{
-    GuidVector reavers;
-    auto const& attackers =
-        botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->RefGet();
-    for (ObjectGuid const& guid : attackers)
-    {
-        Unit* unit = botAI->GetUnit(guid);
-        if (unit && unit->IsAlive() && unit->GetEntry() == Id(BtNpcs::NPC_SHADOWMOON_REAVER))
-            reavers.push_back(guid);
-    }
-
-    return reavers;
-}
-
 bool IsShadowmoonReaverUnsafeForMagic(Unit* unit)
 {
     if (!unit || unit->GetEntry() != Id(BtNpcs::NPC_SHADOWMOON_REAVER) || !unit->IsAlive())
@@ -269,9 +364,7 @@ bool IsShadowmoonReaverUnsafeForMagic(Unit* unit)
     if (Aura* absorption = unit->GetAura(Id(BtSpells::SPELL_SPELL_ABSORPTION)))
     {
         // Reconstructed from the aura, so every caller stamps the same start.
-        uint32 const elapsed =
-            static_cast<uint32>(absorption->GetMaxDuration() - absorption->GetDuration());
-        reaverAbsorptionStarts[instanceId][guid] = getMSTime() - elapsed;
+        reaverAbsorptionStarts[instanceId][guid] = getMSTime() - GetAuraElapsedMs(absorption);
         return true;
     }
 
@@ -702,22 +795,21 @@ bool CanWalkThroughSupremusFire(Player* bot)
     }
 }
 
-bool GetSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit*& target, float& range)
+Unit* GetSupremusFireBlockedReachTarget(PlayerbotAI* botAI)
 {
     Player* bot = botAI->GetBot();
-    target = nullptr;
-    range = 0.0f;
-
     if (CanWalkThroughSupremusFire(bot))
-        return false;
+        return nullptr;
 
     // Stock reach doesn't break a channel either.
     if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
-        return false;
+        return nullptr;
 
     bool const isHealer = PlayerbotAI::IsHeal(bot);
     AiObjectContext* context = botAI->GetAiObjectContext();
-    target = context->GetValue<Unit*>(isHealer ? "party member to heal" : "current target")->Get();
+    Unit* target =
+        context->GetValue<Unit*>(isHealer ? "party member to heal" : "current target")->Get();
+    float range;
     if (isHealer)
         range = botAI->GetRange("heal");
     else if (PlayerbotAI::IsRanged(bot))
@@ -726,7 +818,7 @@ bool GetSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit*& target, float& ran
         range = sPlayerbotAIConfig.MeleeDistance;
 
     if (!target || !target->IsAlive() || bot->IsWithinCombatRange(target, range))
-        return false;
+        return nullptr;
 
     // Where the walk in would stop: a yard inside range, on the straight line to the target.
     constexpr float rangeInset = 1.0f;
@@ -734,7 +826,7 @@ bool GetSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit*& target, float& ran
         range + bot->GetCombatReach() + target->GetCombatReach() - rangeInset;
     float const distance = bot->GetExactDist2d(target);
     if (distance <= stopDistance)
-        return false;
+        return nullptr;
 
     float const ratio = stopDistance / distance;
     Position const stop(
@@ -742,8 +834,9 @@ bool GetSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit*& target, float& ran
         target->GetPositionY() + (bot->GetPositionY() - target->GetPositionY()) * ratio,
         bot->GetPositionZ());
 
-    return GetLineLengthInSupremusHazards(
-        GetSupremusHazards(botAI), bot->GetPosition(), stop, SupremusHazardZone::Safe) > 0.0f;
+    float const underFire = GetLineLengthInSupremusHazards(
+        GetSupremusHazards(botAI), bot->GetPosition(), stop, SupremusHazardZone::Safe);
+    return underFire > 0.0f ? target : nullptr;
 }
 
 // Shade of Akama
@@ -797,90 +890,7 @@ Unit* GetShadeOfAkamaKillTarget(PlayerbotAI* botAI)
     return nullptr;
 }
 
-bool GetPathStepTowardUnit(
-    Player* bot, Unit* target, float stopDistance, float& stepX, float& stepY)
-{
-    if (!target)
-        return false;
-
-    return GetPathStepTowardPoint(
-        bot, target->GetPosition(), stopDistance, PATH_STEP_DISTANCE, stepX, stepY);
-}
-
-bool GetPathStepTowardPoint(
-    Player* bot, Position const& destination, float stopDistance, float stepDistance,
-    float& stepX, float& stepY)
-{
-    if (bot->GetExactDist(destination) < stopDistance)
-        return false;
-
-    PathGenerator path(bot);
-    path.CalculatePath(
-        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
-    if (!(path.GetPathType() & (PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORTCUT)))
-        return false;
-
-    Movement::PointsArray const& points = path.GetPath();
-    if (points.size() < 2)
-        return false;
-
-    G3D::Vector3 const targetPos(
-        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
-
-    float remaining = stepDistance;
-    for (std::size_t i = 1; i < points.size(); ++i)
-    {
-        G3D::Vector3 const& from = points[i - 1];
-        G3D::Vector3 const& to = points[i];
-
-        float const segment = (to - from).length();
-        if (segment <= 0.0f)
-            continue;
-
-        float const toDist = (to - targetPos).length();
-        float ratio = 1.0f;
-
-        if (toDist < stopDistance)
-        {
-            float const fromDist = (from - targetPos).length();
-            if (fromDist <= stopDistance)
-                break;
-
-            ratio = (fromDist - stopDistance) / (fromDist - toDist);
-        }
-
-        if (segment * ratio >= remaining)
-            ratio = remaining / segment;
-
-        remaining -= segment * ratio;
-
-        G3D::Vector3 const step = from + (to - from) * ratio;
-        stepX = step.x;
-        stepY = step.y;
-
-        if (remaining <= 0.0f || ratio < 1.0f)
-            return true;
-    }
-
-    return remaining < stepDistance;
-}
-
 // Teron Gorefiend
-
-GuidVector FindShadowyConstructGuids(PlayerbotAI* botAI)
-{
-    GuidVector constructs;
-    auto const& attackers =
-        botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->RefGet();
-    for (ObjectGuid const& guid : attackers)
-    {
-        Unit* unit = botAI->GetUnit(guid);
-        if (unit && unit->IsAlive() && unit->GetEntry() == Id(BtNpcs::NPC_SHADOWY_CONSTRUCT))
-            constructs.push_back(guid);
-    }
-
-    return constructs;
-}
 
 bool CastVengefulSpiritSpell(Unit* spirit, Unit* target, uint32 spellId)
 {
@@ -966,8 +976,7 @@ GuidVector FindGurtoggBloodboilSoakerGuids(Player* bot)
             if (!bloodboil)
                 continue;
 
-            int32 const elapsed = bloodboil->GetMaxDuration() - bloodboil->GetDuration();
-            if (elapsed >= GURTOGG_ROTATION_DELAY_MS)
+            if (GetAuraElapsedMs(bloodboil) >= GURTOGG_ROTATION_DELAY_MS)
                 totalRemaining += bloodboil->GetDuration();
         }
 
@@ -1014,8 +1023,8 @@ Position GetGurtoggFelRageMeleePosition(
 {
     float const axisAngle = gurtogg.GetAngle(&felRageTarget);
     float relativeAngle = Position::NormalizeOrientation(gurtogg.GetAngle(bot) - axisAngle);
-    if (relativeAngle > M_PI)
-        relativeAngle -= 2.0f * M_PI;
+    if (relativeAngle > static_cast<float>(M_PI))
+        relativeAngle -= 2.0f * static_cast<float>(M_PI);
 
     float angle = axisAngle + static_cast<float>(M_PI);
     if (std::fabs(relativeAngle) < static_cast<float>(M_PI_2))
@@ -1410,8 +1419,7 @@ uint32 GetReadySpellLock(Creature* pet, Unit* target)
     if (!pet || !target || !pet->IsAlive() || pet->GetEntry() != NPC_FELHUNTER)
         return 0;
 
-    constexpr float spellLockRange = 30.0f;
-    if (!pet->IsWithinCombatRange(target, spellLockRange) || !pet->IsWithinLOSInMap(target))
+    if (!pet->IsWithinCombatRange(target, SPELL_LOCK_RANGE) || !pet->IsWithinLOSInMap(target))
         return 0;
 
     static constexpr std::array spellLockRanks = {
@@ -1539,7 +1547,14 @@ IllidanPhase GetIllidanPhase(Unit* illidan)
     }
 
     if (healthPct > 65.0f)
-        return IllidanPhase::Initial;
+    {
+        // A Draw Soul cast through his liftoff heals him back over 65%, so he can land above it.
+        BtInstanceState const* state = FindBtState(illidan->GetInstanceId());
+        bool const isPastInitial = state && state->illidanLastPhase &&
+            *state->illidanLastPhase != IllidanPhase::Initial;
+        if (!isPastInitial)
+            return IllidanPhase::Initial;
+    }
 
     if (illidan->HasAura(Id(BtSpells::SPELL_DEMON_FORM)) ||
         illidan->HasAura(Id(BtSpells::SPELL_DEMON_TRANSFORM_1)) ||
@@ -1639,9 +1654,10 @@ IllidanDpsHold GetIllidanHoldWindow(Unit* illidan)
             IllidanDpsHold::DemonFormStart : IllidanDpsHold::DemonFormMiddle;
     }
 
-    bool isAfterReset = phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded;
-    if (phase == IllidanPhase::Maiev)
-        isAfterReset = GetIllidanPhaseBefore(*illidan, phase) == IllidanPhase::Demon;
+    // Phase 5 has no threat reset at Maiev's arrival, but Shadow Prison's immunity leaves everyone
+    // suppressed on his threat list, so the first to cause threat after it takes him.
+    bool const isAfterReset = phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded ||
+        phase == IllidanPhase::Maiev;
 
     return isAfterReset && IsIllidanPhaseStartWithin(*illidan, phase, ILLIDAN_RESET_DPS_WAIT_MS) ?
         IllidanDpsHold::AfterReset : IllidanDpsHold::None;
@@ -1670,6 +1686,25 @@ IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan)
     }
 
     return window;
+}
+
+bool IsFlameOfAzzinothDpsHeld(Unit const& illidan)
+{
+    BtInstanceState const* state = FindBtState(illidan.GetInstanceId());
+    return state && state->illidanFlamePhaseStartTime &&
+        getMSTimeDiff(*state->illidanFlamePhaseStartTime, getMSTime()) <
+            ILLIDAN_FLAME_DPS_WAIT_MS;
+}
+
+bool IsOnlineOnIllidanThreatList(Unit const& illidan, Player* bot)
+{
+    for (ThreatReference const* ref : illidan.GetThreatMgr().GetUnsortedThreatList())
+    {
+        if (ref->GetVictim() == bot)
+            return ref->GetOnlineState() == ThreatReference::ONLINE_STATE_ONLINE;
+    }
+
+    return false;
 }
 
 float GetGrateAngle(Position const& position)
@@ -1808,9 +1843,9 @@ DemonFormLayout GetDemonFormLayout(Unit const& illidan)
 
 Position GetIllidanInfectionPosition(Unit const& illidan)
 {
-    return GetDemonFormPoint(
-        illidan, illidan.GetAngle(&ILLIDAN_GRATE_CENTRE), ILLIDAN_INFECTION_POSITION_DISTANCE,
-        ILLIDAN_INFECTION_POSITION_ANGLE);
+    return GetRingPoint(
+        GetGrateAngle(illidan) + ILLIDAN_INFECTION_POSITION_ANGLE,
+        ILLIDAN_INFECTION_POSITION_DISTANCE);
 }
 
 Position GetIllidanRecordedInfectionPosition(PlayerbotAI* botAI, Unit const& illidan)
@@ -2493,6 +2528,26 @@ bool IsPositionInEyeBlastDangerArea(Position const& pos, EyeBlastDangerArea cons
     float const distToLine = pos.GetExactDist2d(closestX, closestY);
 
     return distToLine < area.width;
+}
+
+bool IsPathInEyeBlastDangerArea(
+    Position const& from, Position const& to, EyeBlastDangerArea const& area)
+{
+    constexpr float sampleSpacing = 1.0f;
+    float const length = from.GetExactDist2d(to);
+    int32 const samples = static_cast<int32>(length / sampleSpacing) + 1;
+    for (int32 i = 0; i <= samples; ++i)
+    {
+        float const fraction = static_cast<float>(i) / samples;
+        Position const point(
+            from.GetPositionX() + (to.GetPositionX() - from.GetPositionX()) * fraction,
+            from.GetPositionY() + (to.GetPositionY() - from.GetPositionY()) * fraction,
+            from.GetPositionZ());
+        if (IsPositionInEyeBlastDangerArea(point, area))
+            return true;
+    }
+
+    return false;
 }
 
 // Shared encounter state

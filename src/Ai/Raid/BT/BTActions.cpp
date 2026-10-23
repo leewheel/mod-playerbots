@@ -190,7 +190,7 @@ bool BlackTempleCastSpellReflectionAction::Execute(Event /*event*/)
 
 // Damage on the Sister of Pleasure is split evenly with her Sister of Pain, and they have equal
 // health, so killing Pleasure kills both without anyone hitting Pain through Shell of Pain.
-bool FocusSisterOfPleasureAction::Execute(Event /*event*/)
+bool SisterOfPleasureFocusDpsAction::Execute(Event /*event*/)
 {
     if (IsMechanicTrackerBot(bot, BT_MAP_ID))
     {
@@ -256,6 +256,13 @@ bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
         return true;
     }
 
+    // A cast the pet already started on a Reaver would still build its charges.
+    auto const sendPet = [pet](Unit* unit)
+    {
+        pet->InterruptNonMeleeSpells(false);
+        return CommandPetAttack(pet, unit);
+    };
+
     bool const restored = RestoreReactState(pet);
     Unit* victim = pet->GetVictim();
     if ((!victim || !victim->IsAlive()) && !pet->HasReactState(REACT_PASSIVE))
@@ -263,7 +270,7 @@ bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
         // Idle, as after waiting passive: sent to the other target, else to a Reaver now that
         // all are safe, the owner's target first.
         if (target)
-            return CommandPetAttack(pet, target);
+            return sendPet(target);
 
         auto const canAttackReaver = [pet](Unit* unit)
         {
@@ -274,13 +281,13 @@ bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
 
         Unit* ownerTarget = AI_VALUE(Unit*, "current target");
         if (canAttackReaver(ownerTarget))
-            return CommandPetAttack(pet, ownerTarget);
+            return sendPet(ownerTarget);
 
         for (ObjectGuid const& guid : reavers)
         {
             Unit* reaver = botAI->GetUnit(guid);
             if (canAttackReaver(reaver))
-                return CommandPetAttack(pet, reaver);
+                return sendPet(reaver);
         }
 
         return restored;
@@ -296,7 +303,7 @@ bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
         //End By leewheel
         return restored;
 
-    return CommandPetAttack(pet, target);
+    return sendPet(target);
 }
 
 bool ShadowmoonReaverControlCasterPetAction::RestoreReactState(Guardian* pet)
@@ -310,25 +317,6 @@ bool ShadowmoonReaverControlCasterPetAction::RestoreReactState(Guardian* pet)
         return false;
 
     pet->SetReactState(_previousReactState);
-    return true;
-}
-
-bool ShadowmoonReaverControlCasterPetAction::CommandPetAttack(Guardian* pet, Unit* target)
-{
-    pet->AttackStop();
-    pet->InterruptNonMeleeSpells(false);
-    pet->ClearUnitState(UNIT_STATE_FOLLOW);
-    pet->SetTarget(target->GetGUID());
-    if (CharmInfo* charmInfo = pet->GetCharmInfo())
-    {
-        charmInfo->SetIsCommandAttack(true);
-        charmInfo->SetIsAtStay(false);
-        charmInfo->SetIsFollowing(false);
-        charmInfo->SetIsCommandFollow(false);
-        charmInfo->SetIsReturning(false);
-    }
-
-    pet->AI()->AttackStart(target);
     return true;
 }
 
@@ -373,15 +361,18 @@ bool HighWarlordNajentusRemoveImpalingSpineAction::Execute(Event /*event*/)
     if (!spineGo)
         return false;
 
-    bool const atSpine = bot->GetExactDist2d(spineGo) <= 3.0f;
+    constexpr float useDistance = 3.0f;
+    bool const atSpine = bot->GetExactDist2d(spineGo) <= useDistance;
 
     // One reaction delay of 1 to 2 s per spine, before clicking or walking to it.
+    constexpr uint32 minReactionMs = 1000;
+    constexpr uint32 maxReactionMs = 2000;
     if (spineGo->GetGUID() != _spineGuid)
     {
         _spineGuid = spineGo->GetGUID();
         _usedSpine = false;
         _reactionStartTime = getMSTime();
-        _reactionDelay = urand(1000, 2000);
+        _reactionDelay = urand(minReactionMs, maxReactionMs);
     }
 
     if (_usedSpine || GetMSTimeDiffToNow(_reactionStartTime) < _reactionDelay)
@@ -441,10 +432,12 @@ bool HighWarlordNajentusThrowImpalingSpineAction::Execute(Event /*event*/)
         return false;
 
     // Reaction delay of 0.5 to 1.5 s, counted from the shield going up.
+    constexpr uint32 minReactionMs = 500;
+    constexpr uint32 maxReactionMs = 1500;
     if (!_throwDelay)
-        _throwDelay = urand(500, 1500);
+        _throwDelay = urand(minReactionMs, maxReactionMs);
 
-    if (static_cast<uint32>(shield->GetMaxDuration() - shield->GetDuration()) < _throwDelay)
+    if (GetAuraElapsedMs(shield) < _throwDelay)
         return false;
 
     bot->CastStop();
@@ -463,7 +456,7 @@ constexpr float NEVER_CAUGHT = std::numeric_limits<float>::max();
 
 float GetKiteHeadingAngle(uint8 index)
 {
-    return index * 2.0f * M_PI / SUPREMUS_KITE_HEADINGS;
+    return index * 2.0f * static_cast<float>(M_PI) / SUPREMUS_KITE_HEADINGS;
 }
 
 // How far along a heading from (x, y) stays inside the open area.
@@ -541,7 +534,7 @@ bool SupremusKiteBossAction::Execute(Event /*event*/)
 
     // Keep the way the last step went, or else start straight away from him.
     constexpr uint32 headingMemoryMs = 2000;
-    float const preferredAngle = getMSTimeDiff(_lastStepTime, getMSTime()) < headingMemoryMs ?
+    float const preferredAngle = GetMSTimeDiffToNow(_lastStepTime) < headingMemoryMs ?
         _lastAngle : supremus->GetAngle(bot);
 
     std::array<float, SUPREMUS_KITE_HEADINGS> openDistances;
@@ -582,7 +575,8 @@ bool SupremusKiteBossAction::Execute(Event /*event*/)
             if (runDistance < exitDistance)
                 continue;
 
-            float const turn = std::abs(std::remainder(angle - preferredAngle, 2.0f * M_PI));
+            float const turn =
+                std::abs(std::remainder(angle - preferredAngle, 2.0f * static_cast<float>(M_PI)));
             float const timeUntilCaught =
                 SimulateChase(supremus, timeRemaining, catchDistance, angle, runDistance);
             plans.push_back({ angle, runDistance, exitDistance, turn, timeUntilCaught });
@@ -697,7 +691,7 @@ bool SupremusMoveAwayFromFireAction::Execute(Event /*event*/)
     // A bot walled in holds, and the fire around it changes slowly; the search runs up to 16
     // raycasts, so don't repeat it every tick unless the bot starts burning.
     constexpr uint32 retryDelayMs = 500;
-    if (getMSTimeDiff(_lastFailedSearchTime, getMSTime()) < retryDelayMs &&
+    if (GetMSTimeDiffToNow(_lastFailedSearchTime) < retryDelayMs &&
         !IsInSupremusHazard(
             hazards, bot->GetPositionX(), bot->GetPositionY(), SupremusHazardZone::Damage))
     {
@@ -728,7 +722,7 @@ bool SupremusMoveAwayFromFireAction::FindSafestNearbyPosition(
     // Two yards keeps the search to 320 position against a trail of 20 or more patches.
     constexpr float distanceStep = 2.0f;
     constexpr uint8 numAngles = 16;
-    constexpr float angleStep = 2.0f * M_PI / numAngles;
+    constexpr float angleStep = 2.0f * static_cast<float>(M_PI) / numAngles;
     constexpr float clearance = 1.0f;
     constexpr uint32 numDistances = static_cast<uint32>(maxRadius / distanceStep);
     // Positions along one heading cross the same fire, and their yards differ only by rounding,
@@ -827,9 +821,8 @@ bool SupremusReachAroundFireAction::Execute(Event /*event*/)
     if (IsWaitingForLastMove(priority))
         return false;
 
-    Unit* target;
-    float range;
-    if (!GetSupremusReachBlockedByFire(botAI, target, range))
+    Unit* target = GetSupremusFireBlockedReachTarget(botAI);
+    if (!target)
         return false;
 
     std::vector<SupremusHazard> const& hazards = GetSupremusHazards(botAI);
@@ -869,7 +862,7 @@ bool SupremusReachAroundFireAction::Execute(Event /*event*/)
     // Once sliding one way it keeps to that side, turning back if it must, which follows a
     // volcano's edge out of the notch where two meet; trying the other side first makes it dither.
     constexpr uint32 sideMemoryMs = 2000;
-    if (getMSTimeDiff(_lastStepTime, getMSTime()) < sideMemoryMs)
+    if (GetMSTimeDiffToNow(_lastStepTime) < sideMemoryMs)
     {
         int8 const side = _lastSide;
         for (uint8 i = 0; i <= turnsToBehind; ++i)
@@ -903,7 +896,7 @@ bool SupremusReachAroundFireAction::Execute(Event /*event*/)
 
 // Channelers stand on a platform out of sight from below, and Attack refuses a target out of
 // sight, so a bot walks the path toward its target until it can see it.
-bool ShadeOfAkamaMeleeDpsPrioritizeChannelersAction::Execute(Event /*event*/)
+bool ShadeOfAkamaAttackChannelersAndSorcerersAction::Execute(Event /*event*/)
 {
     Unit* target = GetShadeOfAkamaKillTarget(botAI);
     if (!target)
@@ -962,8 +955,8 @@ bool TeronGorefiendPositionRangedOnBalconyAction::Execute(Event /*event*/)
     size_t const botIndex = (findIt != rangedMembers.end()) ?
         std::distance(rangedMembers.begin(), findIt) : 0;
 
-    constexpr float arcSpan = 2.0f * M_PI / 5.0f;
-    constexpr float arcCenter = 6.279f;
+    constexpr float arcSpan = 2.0f * static_cast<float>(M_PI) / 5.0f;
+    constexpr float arcCenter = 0.0f; // due north
     constexpr float arcStart = arcCenter - arcSpan / 2.0f;
 
     constexpr float radius = 12.0f;
@@ -1045,7 +1038,8 @@ bool TeronGorefiendControlAndDestroyShadowyConstructsAction::Execute(Event /*eve
     float const distanceToLead = spirit->GetExactDist2d(leadConstruct);
     if (distanceToLead > GOREFIEND_SPIRIT_AOE_DISTANCE)
     {
-        float const moveDistance = distanceToLead - GOREFIEND_SPIRIT_AOE_DISTANCE + 2.0f;
+        constexpr float aoeMargin = 2.0f;
+        float const moveDistance = distanceToLead - GOREFIEND_SPIRIT_AOE_DISTANCE + aoeMargin;
         float const dX = leadConstruct->GetPositionX() - spirit->GetPositionX();
         float const dY = leadConstruct->GetPositionY() - spirit->GetPositionY();
 
@@ -1163,7 +1157,7 @@ bool GurtoggBloodboilRotateRangedGroupsAction::Execute(Event /*event*/)
     bot->CastStop();
     return MoveTo(
         BT_MAP_ID, point.GetPositionX(), point.GetPositionY(), point.GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_FORCED);
+        false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 bool GurtoggBloodboilMeleeMoveBehindAction::Execute(Event /*event*/)
@@ -1179,7 +1173,7 @@ bool GurtoggBloodboilMeleeMoveBehindAction::Execute(Event /*event*/)
     Position const position = GetGurtoggFelRageMeleePosition(bot, *gurtogg, *felRageTarget);
     return MoveTo(
         BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_FORCED);
+        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 // Steps sideways off his line to the Fel Rage target, the axis of Arcing Smash, so a bot ahead
@@ -1210,7 +1204,7 @@ bool GurtoggBloodboilRangedMoveOutOfFrontalConeAction::Execute(Event /*event*/)
     return MoveTo(
         BT_MAP_ID, bot->GetPositionX() - step * std::sin(axisAngle),
         bot->GetPositionY() + step * std::cos(axisAngle), bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_FORCED);
+        false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
 // Reliquary of Souls
@@ -1403,7 +1397,7 @@ bool MotherShahrazMeleeDpsWaitAtSafePositionAction::Execute(Event /*event*/)
         return false;
 
     return MoveTo(
-        BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), bot->GetPositionZ(),
+        BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
         false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
@@ -1560,8 +1554,7 @@ bool IllidariCouncilMainTankPositionGathiosAction::Execute(Event /*event*/)
     if (gathios->GetVictim() != bot || !bot->IsWithinMeleeRange(gathios))
         return false;
 
-    constexpr float arrivalDist = 2.0f;
-    if (bot->GetExactDist2d(GATHIOS_TANK_POSITIONS[_tankStep]) <= arrivalDist &&
+    if (bot->GetExactDist2d(GATHIOS_TANK_POSITIONS[_tankStep]) <= COUNCIL_TANK_ARRIVAL_DISTANCE &&
         HasDangerousCouncilAura(bot))
     {
         _tankStep = (_tankStep + 1) % GATHIOS_TANK_POSITIONS.size();
@@ -1571,7 +1564,8 @@ bool IllidariCouncilMainTankPositionGathiosAction::Execute(Event /*event*/)
     float moveY;
     bool backwards;
     if (!GetStepToPosition(
-            bot, GATHIOS_TANK_POSITIONS[_tankStep], arrivalDist, gathios, moveX, moveY, backwards))
+            bot, GATHIOS_TANK_POSITIONS[_tankStep], COUNCIL_TANK_ARRIVAL_DISTANCE, gathios, moveX,
+            moveY, backwards))
     {
         return false;
     }
@@ -1703,12 +1697,12 @@ bool IllidariCouncilSecondAssistTankPositionVerasAction::Execute(Event /*event*/
     if (!mainTank)
         return false;
 
-    constexpr float arrivalDist = 2.0f;
     float moveX;
     float moveY;
     bool backwards;
     if (!GetStepToPosition(
-            bot, mainTank->GetPosition(), arrivalDist, veras, moveX, moveY, backwards))
+            bot, mainTank->GetPosition(), COUNCIL_TANK_ARRIVAL_DISTANCE, veras, moveX, moveY,
+            backwards))
     {
         return false;
     }
@@ -1731,9 +1725,9 @@ bool IllidariCouncilMageTankPositionZerevorAction::Execute(Event /*event*/)
     }
 
     if (zerevor->HasAura(Id(BtSpells::SPELL_DAMPEN_MAGIC)) &&
-        botAI->CanCastSpell("spellsteal", zerevor))
+        botAI->CanCastSpell(Id(BtSpells::SPELL_SPELLSTEAL), zerevor))
     {
-        return botAI->CastSpell("spellsteal", zerevor);
+        return botAI->CastSpell(Id(BtSpells::SPELL_SPELLSTEAL), zerevor);
     }
 
     if (AI_VALUE(Unit*, "current target") != zerevor)
@@ -1742,8 +1736,7 @@ bool IllidariCouncilMageTankPositionZerevorAction::Execute(Event /*event*/)
     if (zerevor->GetVictim() != bot)
         return false;
 
-    constexpr float arrivalDist = 2.0f;
-    if (bot->GetExactDist2d(ZEREVOR_TANK_POSITIONS[_tankStep]) <= arrivalDist &&
+    if (bot->GetExactDist2d(ZEREVOR_TANK_POSITIONS[_tankStep]) <= COUNCIL_TANK_ARRIVAL_DISTANCE &&
         HasDangerousCouncilAura(bot))
     {
         _tankStep = (_tankStep + 1) % ZEREVOR_TANK_POSITIONS.size();
@@ -1751,16 +1744,17 @@ bool IllidariCouncilMageTankPositionZerevorAction::Execute(Event /*event*/)
 
     float moveX;
     float moveY;
-    bool backwards;
+    bool backwards; // not used: the mage tank never walks backwards
     if (!GetStepToPosition(
-            bot, ZEREVOR_TANK_POSITIONS[_tankStep], arrivalDist, zerevor, moveX, moveY, backwards))
+            bot, ZEREVOR_TANK_POSITIONS[_tankStep], COUNCIL_TANK_ARRIVAL_DISTANCE, zerevor, moveX,
+            moveY, backwards))
     {
         return false;
     }
 
     return MoveTo(
         BT_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED, true, false);
+        MovementPriority::MOVEMENT_COMBAT, true, false);
 }
 
 bool IllidariCouncilPositionMageTankHealerAction::Execute(Event /*event*/)
@@ -1799,20 +1793,7 @@ bool IllidariCouncilCommandPetTargetAction::Execute(Event /*event*/)
     if (!target || !pet->IsValidAttackTarget(target))
         return false;
 
-    pet->ClearUnitState(UNIT_STATE_FOLLOW);
-    pet->AttackStop();
-    pet->SetTarget(target->GetGUID());
-    if (CharmInfo* charmInfo = pet->GetCharmInfo())
-    {
-        charmInfo->SetIsCommandAttack(true);
-        charmInfo->SetIsAtStay(false);
-        charmInfo->SetIsFollowing(false);
-        charmInfo->SetIsCommandFollow(false);
-        charmInfo->SetIsReturning(false);
-    }
-
-    pet->AI()->AttackStart(target);
-    return true;
+    return CommandPetAttack(pet, target);
 }
 
 // Rogues and warriors take Malande for interrupts, leaving her under Blessing of Protection; death
@@ -1868,8 +1849,9 @@ bool IllidariCouncilAssignDpsTargetsAction::Execute(Event /*event*/)
 bool IllidariCouncilAssignDpsTargetsAction::ShouldAttackMalande(
     Unit* malande, Unit* gathios, Unit* zerevor) const
 {
-    constexpr float zerevorClearance = 15.0f;
-    if (!malande || (zerevor && zerevor->GetExactDist2d(malande) < zerevorClearance) ||
+    if (!malande ||
+        (zerevor &&
+         zerevor->GetExactDist2d(malande) < ZEREVOR_ARCANE_EXPLOSION_SAFE_DISTANCE) ||
         IsMalandeInCouncilPatch(malande, gathios, zerevor))
     {
         return false;
@@ -2004,14 +1986,18 @@ bool IllidanStormrageMisdirectToTanksAction::TryMisdirectToWarlockTank(Unit* ill
 }
 
 // The Main Tank holds him about 25 yd from the grate centre, 6 yd outward of him so he faces out.
-// On each Flame Crash on the tank it leads him to the ring point 35 deg counterclockwise of him,
-// once more if he stops under 25 deg on; he stops about 30 deg on, and the tank settles outward of
-// wherever he stopped. Near the centre, as after landing, it leads him straight out instead.
+// At the pull it first leads him once from due north to about 302 deg, so Phase 1's Flame Crashes
+// land clear of the Phase 2 Flame tank steps. On each Flame Crash on the tank it leads him to the
+// ring point 35 deg counterclockwise of him, once more if he stops under 20 deg on; he stops about
+// 25 deg on, and the tank settles outward of wherever he stopped. Near the centre, as after
+// landing, it leads him straight out instead. In these phases every walk but that lead is stepped,
+// backward once he is behind the tank, the walk round him included.
 // While he lands the tank waits between the landing point and the raid's stack, then leads him
 // north, so Phase 3 starts due north. In Demon Form it waits beside the melee, then 10 s before
 // the end walks to the pickup position in front of the raid to take him at the reset. In Maiev's
-// arrival it stands just inward of him once out of Shadow Prison; he wakes with no threat reset,
-// and the settle then takes it round him to outward.
+// arrival, once out of Shadow Prison, it waits for its swing to put it back on his threat list,
+// then stands 6 yd inward of him; he wakes with no threat reset, and the settle then takes it
+// round him to outward.
 bool IllidanStormrageMainTankRepositionBossAction::Execute(Event /*event*/)
 {
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
@@ -2040,6 +2026,17 @@ bool IllidanStormrageMainTankRepositionBossAction::Execute(Event /*event*/)
     }
     else if (phase == IllidanPhase::None)
     {
+        // He takes whoever is back on his threat list first, so with its swing on him it stays,
+        // facing him, until a swing brings it back.
+        if (bot->GetVictim() == illidan && bot->IsWithinMeleeRange(illidan) &&
+            !IsOnlineOnIllidanThreatList(*illidan, bot))
+        {
+            if (!bot->HasInArc(static_cast<float>(M_PI) / 2.0f, illidan))
+                bot->SetFacingTo(bot->GetAngle(illidan));
+
+            return false;
+        }
+
         float const radius = std::max(
             0.0f,
             illidan->GetExactDist2d(ILLIDAN_GRATE_CENTRE) - ILLIDAN_MAIEV_SCENE_TANK_OFFSET);
@@ -2056,6 +2053,16 @@ bool IllidanStormrageMainTankRepositionBossAction::Execute(Event /*event*/)
         return false;
     }
 
+    // He backs off only with a victim and free to move: not while he flies or lands, in Maiev's
+    // arrival, or rooted in Demon Form.
+    bool isStepped = false;
+    if (phase == IllidanPhase::Initial || phase == IllidanPhase::Grounded ||
+        phase == IllidanPhase::Maiev)
+    {
+        bool const isRouted = RouteRoundIllidan(*illidan, position);
+        isStepped = isRouted || _lead != IllidanTankLead::Pickup;
+    }
+
     if (bot->GetExactDist2d(position) <= ILLIDAN_POSITION_TOLERANCE)
     {
         if (!bot->HasInArc(static_cast<float>(M_PI) / 2.0f, illidan))
@@ -2064,9 +2071,25 @@ bool IllidanStormrageMainTankRepositionBossAction::Execute(Event /*event*/)
         return false;
     }
 
+    if (!isStepped)
+    {
+        return MoveTo(
+            BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
+            false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+    }
+
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(
+            bot, position, ILLIDAN_POSITION_TOLERANCE, illidan, moveX, moveY, backwards))
+    {
+        return false;
+    }
+
     return MoveTo(
-        BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        BT_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_FORCED, true, backwards);
 }
 
 // It joins the melee on the adds until the walk-in, then drops its target, so its rotation keeps
@@ -2106,9 +2129,18 @@ bool IllidanStormrageMainTankRepositionBossAction::FindRingPosition(
 {
     StartRingLead(illidan, phase);
 
-    // Where he stops depends on when the tank stops, so it isn't redirected while he moves.
+    // Where he stops depends on when the tank stops, so it isn't redirected while he moves; a
+    // stepped lead keeps stepping to its lead position.
     if (illidan.isMoving())
-        return false;
+    {
+        bool const isSteppedLead = _lead == IllidanTankLead::Opening ||
+            _lead == IllidanTankLead::Step || _lead == IllidanTankLead::StepAgain;
+        if (!isSteppedLead || bot->GetExactDist2d(_leadPosition) <= ILLIDAN_POSITION_TOLERANCE)
+            return false;
+
+        position = _leadPosition;
+        return true;
+    }
 
     bool const isLeading = _lead != IllidanTankLead::None;
     // How far round the ring he stopped short of the lead position; an overshoot reads ~360.
@@ -2177,6 +2209,52 @@ void IllidanStormrageMainTankRepositionBossAction::StartRingLead(
         _leadPosition = GetRingPoint(leadAngle, ILLIDAN_PICKUP_LEAD_RADIUS);
         _lead = IllidanTankLead::Pickup;
     }
+    // Only once the phase is stamped, since a new stamp cancels the lead in progress, and only at
+    // the pull, so a tank taking over later doesn't lead him there.
+    else if (_lead == IllidanTankLead::None && phase == IllidanPhase::Initial &&
+        _phaseStartTime && !_isOpeningLeadDone && _lastFlameCrash.IsEmpty() &&
+        IsIllidanPhaseStartWithin(illidan, phase, ILLIDAN_OPENING_LEAD_MS))
+    {
+        _isOpeningLeadDone = true;
+        _leadPosition = GetRingPoint(ILLIDAN_OPENING_LEAD_ANGLE, ILLIDAN_OPENING_LEAD_RADIUS);
+        _lead = IllidanTankLead::Opening;
+    }
+}
+
+// While a straight walk to the position would pass too close to his centre, the next leg goes
+// round him on the settle circle, on the side the position is nearer. True if it did.
+bool IllidanStormrageMainTankRepositionBossAction::RouteRoundIllidan(
+    Unit const& illidan, Position& position)
+{
+    if (illidan.GetExactDist2d(bot) < ILLIDAN_BACK_OFF_DISTANCE ||
+        illidan.GetExactDist2d(position) < ILLIDAN_BACK_OFF_DISTANCE)
+    {
+        return false;
+    }
+
+    float const dx = position.GetPositionX() - bot->GetPositionX();
+    float const dy = position.GetPositionY() - bot->GetPositionY();
+    float const lengthSq = dx * dx + dy * dy;
+    if (lengthSq < 0.01f)
+        return false;
+
+    float const toIllidanX = illidan.GetPositionX() - bot->GetPositionX();
+    float const toIllidanY = illidan.GetPositionY() - bot->GetPositionY();
+    float const along = std::clamp((toIllidanX * dx + toIllidanY * dy) / lengthSq, 0.0f, 1.0f);
+    float const closest = illidan.GetExactDist2d(
+        bot->GetPositionX() + along * dx, bot->GetPositionY() + along * dy);
+    if (closest >= ILLIDAN_BACK_OFF_DISTANCE)
+        return false;
+
+    float const botAngle = illidan.GetAngle(bot);
+    float const turn = Position::NormalizeOrientation(illidan.GetAngle(&position) - botAngle);
+    float const step = turn <= static_cast<float>(M_PI) ?
+        ILLIDAN_ROUND_STEP_ANGLE : -ILLIDAN_ROUND_STEP_ANGLE;
+    float const angle = botAngle + step;
+    position.Relocate(
+        illidan.GetPositionX() + ILLIDAN_TANK_OFFSET * std::cos(angle),
+        illidan.GetPositionY() + ILLIDAN_TANK_OFFSET * std::sin(angle), bot->GetPositionZ());
+    return true;
 }
 
 // A trap hunter on duty drops Frost Trap on arrival, holding the position through a global
@@ -2315,6 +2393,9 @@ bool IllidanStormrageTrackInfectionsAction::FindTrapHunter(
 // other Flame's tank is dead too, when it takes that Flame.
 bool IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction::Execute(Event /*event*/)
 {
+    // Only consider the eye blast if its trigger NPC is within 30 yards of the tank
+    constexpr float eyeBlastTriggerRadius = 30.0f;
+
     Unit* flame = GetAssignedFlameOfAzzinoth(bot);
     if (!flame)
     {
@@ -2336,6 +2417,22 @@ bool IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction::Execute(Event /*ev
         if (bot->GetExactDist2d(position) <= 0.5f)
             return false;
 
+        // With its Flame dead, it still steps out of the Eye Blast, and doesn't walk across the
+        // beam's path ahead of it.
+        if (isRecorded)
+        {
+            EyeBlastDangerArea const dangerArea = GetEyeBlastDangerArea(bot);
+            if (dangerArea.width > 0.0f &&
+                bot->GetExactDist2d(dangerArea.start) <= eyeBlastTriggerRadius)
+            {
+                if (IsPositionInEyeBlastDangerArea(bot->GetPosition(), dangerArea))
+                    return RepositionToAvoidEyeBlast(dangerArea);
+
+                if (IsPathInEyeBlastDangerArea(bot->GetPosition(), position, dangerArea))
+                    return false;
+            }
+        }
+
         return MoveTo(
             BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
             false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
@@ -2349,9 +2446,6 @@ bool IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction::Execute(Event /*ev
         return false;
 
     EyeBlastDangerArea const dangerArea = GetEyeBlastDangerArea(bot);
-
-    // Only consider the eye blast if its trigger NPC is within 30 yards of the tank
-    constexpr float eyeBlastTriggerRadius = 30.0f;
     if (dangerArea.width > 0.0f && bot->GetExactDist2d(dangerArea.start) <= eyeBlastTriggerRadius)
         return RepositionToAvoidEyeBlast(dangerArea);
 
@@ -2509,20 +2603,7 @@ bool IllidanStormrageCommandPetAttackAddAction::Execute(Event /*event*/)
     if (!target || !pet->IsValidAttackTarget(target))
         return false;
 
-    pet->ClearUnitState(UNIT_STATE_FOLLOW);
-    pet->AttackStop();
-    pet->SetTarget(target->GetGUID());
-    if (CharmInfo* charmInfo = pet->GetCharmInfo())
-    {
-        charmInfo->SetIsCommandAttack(true);
-        charmInfo->SetIsAtStay(false);
-        charmInfo->SetIsFollowing(false);
-        charmInfo->SetIsCommandFollow(false);
-        charmInfo->SetIsReturning(false);
-    }
-
-    pet->AI()->AttackStart(target);
-    return true;
+    return CommandPetAttack(pet, target);
 }
 
 bool IllidanStormragePositionAboveGrateAction::Execute(Event /*event*/)
@@ -2636,7 +2717,8 @@ bool IllidanStormrageSpreadRangedAction::Execute(Event /*event*/)
         return false;
 
     // Phase 1: stacked on the grate centre. Phases 3 and 5: in the grate slots by roster, healers
-    // first, the warlock tank in the one nearest its Demon Form position.
+    // first, the warlock tank in the one nearest its Demon Form position, and ranged DPS no
+    // farther than their spell reach of him.
     IllidanPhase const phase = GetIllidanPhase(illidan);
     Position position;
     if (phase == IllidanPhase::Demon)
@@ -2655,6 +2737,24 @@ bool IllidanStormrageSpreadRangedAction::Execute(Event /*event*/)
             return false;
 
         position = GetGrateSlot(static_cast<size_t>(slot));
+
+        // Past the point stock reach spell walks to, it and this action would take turns moving
+        // the bot.
+        if (!PlayerbotAI::IsHeal(bot))
+        {
+            float const reach =
+                botAI->GetRange("spell") + bot->GetCombatReach() + illidan->GetCombatReach();
+            float const distance = illidan->GetExactDist2d(position);
+            if (distance > reach)
+            {
+                float const scale = reach / distance;
+                float const x = illidan->GetPositionX() +
+                    (position.GetPositionX() - illidan->GetPositionX()) * scale;
+                float const y = illidan->GetPositionY() +
+                    (position.GetPositionY() - illidan->GetPositionY()) * scale;
+                position.Relocate(x, y, position.GetPositionZ());
+            }
+        }
     }
 
     if (bot->GetExactDist2d(position) <= ILLIDAN_POSITION_TOLERANCE)
@@ -2884,13 +2984,15 @@ bool IllidanStormrageAssignTargetPriorityAction::Execute(Event /*event*/)
     if (target == currentTarget)
         return false;
 
-    // Attack() starts the swing, which a hold can't stop, so in a hold melee only take him as
-    // target and walk in; the melee action starts the swing once the hold ends.
-    if (target == illidan && !PlayerbotAI::IsRanged(bot) &&
-        GetIllidanDpsHold(botAI, illidan) != IllidanDpsHold::None)
+    // Attack() starts the swing, which a hold can't stop, so while damage on him or on the Flames
+    // is held, melee only take the target; the melee action starts the swing once the hold ends.
+    bool const isHeld = target == illidan ?
+        GetIllidanDpsHold(botAI, illidan) != IllidanDpsHold::None :
+        phase == IllidanPhase::Flying && IsFlameOfAzzinothDpsHeld(*illidan);
+    if (isHeld && !PlayerbotAI::IsRanged(bot))
     {
-        context->GetValue<Unit*>("current target")->Set(illidan);
-        bot->SetSelection(illidan->GetGUID());
+        context->GetValue<Unit*>("current target")->Set(target);
+        bot->SetSelection(target->GetGUID());
         botAI->ChangeEngine(BOT_STATE_COMBAT);
         return true;
     }
@@ -2946,6 +3048,16 @@ std::vector<Unit*> IllidanStormrageAssignTargetPriorityAction::GetTargetsInPrior
     else if (isGrounded)
     {
         return { FindShadowfiendForMelee(), illidan };
+    }
+    // While he flies melee can't move, so they take the East Flame only in their reach, else the
+    // West one in their reach.
+    else if (phase == IllidanPhase::Flying)
+    {
+        auto const [eastFlame, westFlame] = GetFlamesOfAzzinoth(bot);
+        return {
+            eastFlame && bot->IsWithinMeleeRange(eastFlame) ? eastFlame : nullptr,
+            westFlame && bot->IsWithinMeleeRange(westFlame) ? westFlame : nullptr,
+        };
     }
 
     return {};

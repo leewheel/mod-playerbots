@@ -11,7 +11,6 @@
 #include "SharedDefines.h"
 #include "Spell.h"
 #include <algorithm>
-#include <limits>
 #include <vector>
 
 using namespace BtHelpers;
@@ -129,7 +128,7 @@ bool HighWarlordNajentusHasTidalShieldTrigger::IsActiveInEncounter()
     if (!najentus || !najentus->HasAura(Id(BtSpells::SPELL_TIDAL_SHIELD)))
         return false;
 
-    return botAI->HasItemInInventory(Id(BtItems::ITEM_NAJENTUS_SPINE));
+    return bot->HasItemCount(Id(BtItems::ITEM_NAJENTUS_SPINE));
 }
 
 // Supremus
@@ -190,14 +189,12 @@ bool SupremusReachBlockedByFireTrigger::IsActiveInEncounter()
     if (!AI_VALUE2(Unit*, "find target", "22898"))
         return false;
 
-    Unit* target;
-    float range;
-    return GetSupremusReachBlockedByFire(botAI, target, range);
+    return GetSupremusFireBlockedReachTarget(botAI);
 }
 
 // Shade of Akama
 
-bool ShadeOfAkamaShouldPrioritizeChannelersTrigger::IsActiveInEncounter()
+bool ShadeOfAkamaShouldAttackChannelersAndSorcerersTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsDps(bot))
         return false;
@@ -310,11 +307,8 @@ bool GurtoggBloodboilRangedShouldAvoidFrontalConeTrigger::IsActiveInEncounter()
     // Arcing Smash only hits in front of him, but he turns faster than bots can react, so at the
     // start of Fel Rage everyone near the target moves regardless of side.
     Aura* felRage = gurtogg->GetAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE));
-    if (felRage &&
-        felRage->GetMaxDuration() - felRage->GetDuration() < GURTOGG_FEL_RAGE_EARLY_AVOID_MS)
-    {
+    if (felRage && GetAuraElapsedMs(felRage) < GURTOGG_FEL_RAGE_EARLY_AVOID_MS)
         return true;
-    }
 
     return gurtogg->HasInArc(static_cast<float>(M_PI), bot);
 }
@@ -374,16 +368,18 @@ bool ReliquaryOfSoulsEssenceOfDesireCastsDeadenTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_WARRIOR || !PlayerbotAI::IsTank(bot))
         return false;
 
+    //By leewheel 2026-10-24 合并 brighton the-lab(91c5f466 / 5297c170 "Make timing, cast checks and
+    //  spine checks consistent")：qualifier 保留本核 entry 23419（欲望精华）——上游仍是英文名
+    //  "essence of desire"，本核实库生物名为中文 ⇒ 英文子串匹配恒 nullptr ⇒ 该触发器永不激活。
+    //  同时保留本核的 UNIT_STATE_CASTING 前置判据（没在施法就直接排除，省掉后面的法术查表）；
+    //  后续的 FindCurrentSpellBySpellId + SPELL_STATE_PREPARING + 目标判据为两边共有，不动。
     Unit* desire = AI_VALUE2(Unit*, "find target", "23419");
     if (!desire || !desire->HasUnitState(UNIT_STATE_CASTING))
         return false;
 
-    Spell* spell = desire->GetCurrentSpell(CURRENT_GENERIC_SPELL);
-    if (!spell || spell->m_spellInfo->Id != Id(BtSpells::SPELL_DEADEN))
-        return false;
-
-    Unit* target = spell->m_targets.GetUnitTarget();
-    return target && target->GetGUID() == bot->GetGUID();
+    Spell* deaden = desire->FindCurrentSpellBySpellId(Id(BtSpells::SPELL_DEADEN));
+    return deaden && deaden->getState() == SPELL_STATE_PREPARING &&
+        deaden->m_targets.GetUnitTarget() == bot;
 }
 
 // Mother Shahraz
@@ -399,7 +395,7 @@ bool MotherShahrazShouldBeTankedTrigger::IsActiveInEncounter()
     return !bot->HasAura(Id(BtSpells::SPELL_FATAL_ATTRACTION));
 }
 
-bool MotherShahrazTanksArePositioningBossTrigger::IsActiveInEncounter()
+bool MotherShahrazBeingPositionedTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsMelee(bot) || !PlayerbotAI::IsDps(bot))
         return false;
@@ -445,19 +441,20 @@ bool IllidariCouncilGathiosCastsJudgementOfCommandTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_WARRIOR || !PlayerbotAI::IsTank(bot))
         return false;
 
+    //By leewheel 2026-10-24 合并 brighton the-lab(91c5f466 / 5297c170)：qualifier 保留本核
+    //  entry 22949（加西奥斯）——上游仍是英文名 "gathios the shatterer"，中文库下恒 nullptr。
+    //  判定改为采纳上游的 FindCurrentSpellBySpellId(SPELL_JUDGEMENT) + SPELL_STATE_PREPARING
+    //  + 目标确实是本 bot + IsMainTank：本核原用 GetCurrentSpell(CURRENT_GENERIC_SPELL) 只比对
+    //  id，既不判施法阶段也不判目标 ⇒ 加西奥斯对**别人**施放审判时本触发器也会误激活。
+    //  保留本核的 UNIT_STATE_CASTING 前置判据（快速排除）。
     Unit* gathios = AI_VALUE2(Unit*, "find target", "22949");
     if (!gathios || !gathios->HasUnitState(UNIT_STATE_CASTING) ||
         !gathios->HasAura(Id(BtSpells::SPELL_SEAL_OF_COMMAND)))
-    {
-        return false;
-    }
-
-    Spell* spell = gathios->GetCurrentSpell(CURRENT_GENERIC_SPELL);
-    if (!spell || spell->m_spellInfo->Id != Id(BtSpells::SPELL_JUDGEMENT))
         return false;
 
-    Unit* target = spell->m_targets.GetUnitTarget();
-    return target && target->GetGUID() == bot->GetGUID() && PlayerbotAI::IsMainTank(bot);
+    Spell* judgement = gathios->FindCurrentSpellBySpellId(Id(BtSpells::SPELL_JUDGEMENT));
+    return judgement && judgement->getState() == SPELL_STATE_PREPARING &&
+        judgement->m_targets.GetUnitTarget() == bot && PlayerbotAI::IsMainTank(bot);
 }
 
 // Ranged DPS interrupt only while her melee can't: under Blessing of Protection, or while she
