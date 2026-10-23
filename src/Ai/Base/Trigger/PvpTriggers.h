@@ -54,6 +54,18 @@ public:
     bool IsActive() override;
 };
 
+//By leewheel 2026-10-24 合并 brighton the-lab(#2893)：上游删除了本类（改由 WsgEscortSeparated /
+//  WsgFlagStateChanged 承担），但本核按 2026-09-01 用户实测保留（双旗排除会让夺旗进度归零，
+//  依据详见 PvpTriggers.cpp 定义处注释）⇒ 类声明一并保留，不跟着删。
+//End By leewheel
+class TeamFlagCarrierNear : public Trigger
+{
+public:
+    TeamFlagCarrierNear(PlayerbotAI* botAI) : Trigger(botAI, "team flagcarrier near") {}
+
+    bool IsActive() override;
+};
+
 class WsgEscortSeparated : public Trigger
 {
 public:

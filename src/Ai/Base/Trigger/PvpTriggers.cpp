@@ -6,6 +6,10 @@
 
 #include "PvpTriggers.h"
 
+//By leewheel 2026-10-24: 合并时上游侧没有这个 include（BGTactics::GetBotStrategyForTeam /
+//  AV_STRATEGY_BALANCED / BattlegroundAV 完整类型都由它提供，本核 AllianceNoSnowfallGY 依赖）
+//  ⇒ 补回，否则 C2065/C2680。
+#include "BattleGroundTactics.h"
 #include "BattlegroundEY.h"
 #include "BattlegroundMgr.h"
 #include "BattlegroundWS.h"
