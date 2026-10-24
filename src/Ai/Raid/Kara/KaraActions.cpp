@@ -323,8 +323,10 @@ bool MaidenOfVirtueTankPositionBossAction::Execute(Event /*event*/)
 
         // Only a healer on Maiden's floor, near her spot and in her sight: the tank dragged her after a healer who had
         // left the pillar ring, out of sight of half the raid, and she sank into the floor (ladiabale, 20/10).
+        // The ring spots are 19.5-21 yd from her spot: at 15 yd no healer was ever taken, and the tank died
+        // 6-8 s after a Repentance in all four tries of a Kara 10 run (24/10).
         Position const& spot = MAIDEN_OF_VIRTUE_TANK_POSITION;
-        if (member->GetExactDist2d(spot) > 15.0f || std::fabs(member->GetPositionZ() - spot.GetPositionZ()) > 2.0f ||
+        if (member->GetExactDist2d(spot) > 23.0f || std::fabs(member->GetPositionZ() - spot.GetPositionZ()) > 2.0f ||
             !maiden->IsWithinLOSInMap(member))
         {
             continue;
