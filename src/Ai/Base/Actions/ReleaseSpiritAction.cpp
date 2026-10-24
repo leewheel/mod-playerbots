@@ -28,6 +28,7 @@ bool ReleaseSpiritAction::Execute(Event event)
             // -follow in bg is overwriten each tick with +follow
             // +stay in bg causes stuttering effect as bot is cycled between +stay and +follow each tick
             botAI->ChangeStrategy("-follow,+stay", BOT_STATE_NON_COMBAT);
+            botAI->WaitForMasterRevive();
         }
 
         return false;

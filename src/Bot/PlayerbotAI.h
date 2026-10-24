@@ -398,6 +398,8 @@ public:
     void ClearStaleFall();
     void TakeSharedQuest(WorldPacket const& packet);
     void RejoinLfgDungeon();
+    void WaitForMasterRevive() { waitingForMasterRevive = true; }
+    void ResumeFollowAfterMasterRevive();
     void UpdateAIInternal(uint32 elapsed, bool minimal = false) override;
 
     std::string const HandleRemoteCommand(std::string const command);
@@ -640,6 +642,7 @@ public:
 
 private:
     time_t lfgRejoinAt = 0;
+    bool waitingForMasterRevive = false;
     static void _fillGearScoreData(Player* player, Item* item, std::vector<uint32>* gearScore, uint32& twoHandScore,
                                    bool mixed = false);
     bool IsTellAllowed(PlayerbotSecurityLevel securityLevel = PLAYERBOT_SECURITY_ALLOW_ALL);

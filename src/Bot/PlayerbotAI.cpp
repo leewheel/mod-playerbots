@@ -686,6 +686,24 @@ void PlayerbotAI::RejoinLfgDungeon()
     }
     sLFGMgr->TeleportPlayer(bot, false);
 }
+// A bot alive when its master released was told to wait there, and only reclaiming the corpse near it
+// brought it back to follow: bots dead by then, or a master raised by a spirit healer, a resurrection or a
+// GM, kept "stay" for good (ladiabale, Road to De Other Side, 24/10). The wait ends once the master lives.
+void PlayerbotAI::ResumeFollowAfterMasterRevive()
+{
+    if (!waitingForMasterRevive)
+        return;
+    if (!HasStrategy("stay", BOT_STATE_NON_COMBAT))
+    {
+        waitingForMasterRevive = false;
+        return;
+    }
+    if (!master || !master->IsInWorld() || !master->IsAlive())
+        return;
+
+    waitingForMasterRevive = false;
+    ChangeStrategy("+follow,-stay", BOT_STATE_NON_COMBAT);
+}
 
 void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal)
 {
@@ -701,6 +719,7 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
 
     ClearStaleFall();
     RejoinLfgDungeon();
+    ResumeFollowAfterMasterRevive();
 
     // kinda expensive call to make on every single updateAI, do we really need this information?
     std::string const mapString = WorldPosition(bot).isOverworld() ? std::to_string(bot->GetMapId()) : "I";
