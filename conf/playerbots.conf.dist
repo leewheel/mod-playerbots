@@ -1255,7 +1255,7 @@ AiPlayerbot.LimitGearExpansion = 1
 
 # Chance randombot will have less-than-optimized generated gear
 # Set between 0 (0%) and 1 (100%)
-AiPlayerbot.RandomGearLoweringChance = 0.3
+AiPlayerbot.RandomGearLoweringChance = 0.1
 
 # Unobtainable or unusable items (comma-separated list of item IDs)
 # Defaults: Chilton Wand (12468), Frenzyheart Insignia of Fury test/on-use row (44869),

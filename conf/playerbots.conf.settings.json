@@ -166,7 +166,7 @@
    "title": "Chance of lower gear",
    "description": "Chance (0 to 1) that an item of a random bot is one quality lower, so not every bot wears the best gear.",
    "type": "float",
-   "default": 0.3,
+   "default": 0.1,
    "min": 0.0,
    "max": 1.0,
    "default_if_missing": 0.0,
