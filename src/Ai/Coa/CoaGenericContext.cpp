@@ -618,7 +618,7 @@ bool CoaCanCastTrigger::IsActive()
     bool const active = CanCastNow();
     uint32 const id = AI_VALUE2(uint32, "spell id", spell);
     SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
-    if (!info || !info->HasEffect(SPELL_EFFECT_SUMMON))
+    if (!info || (!info->HasEffect(SPELL_EFFECT_SUMMON) && !info->HasEffect(SPELL_EFFECT_SUMMON_PET)))
         return active;
     return summonBackoff.Allow(active);
 }
@@ -698,7 +698,9 @@ bool CoaCanCastTrigger::CanCastNow()
             if (SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell))
                 if (travelUtility(triggered))
                     return false;
-        if (effect.Effect == SPELL_EFFECT_SUMMON)
+        // Build: Mechano-Bear summons a pet: rebuilt while it stood, it was only healed and moved, ~93 of
+        // 98 builds and ~23% of the fight time of a Tinker Invention healer (ladiabale, 24/10).
+        if (effect.Effect == SPELL_EFFECT_SUMMON || effect.Effect == SPELL_EFFECT_SUMMON_PET)
         {
             summons = true;
             if (effect.MiscValue > 0)
