@@ -58,6 +58,15 @@ float MagtheridonUseManticronCubeMultiplier::GetValue(Action* action)
 // Wait for 6 seconds after Magtheridon becomes attackable before engaging
 float MagtheridonWaitToAttackMultiplier::GetValue(Action* action)
 {
+    // The kill order S>W>E>NW>NE is held: once on its channeler the priority action does nothing, and
+    // "dps assist" took 8-9 DPS to another one; the raid split and each death healed and doubled the
+    // others (Soul Transfer), two wipes in a Mag 25 run (24/10).
+    if (!botAI->IsTank(bot) && action->getName() == "dps assist" &&
+        (GetChanneler(bot, SOUTH_CHANNELER) || GetChanneler(bot, WEST_CHANNELER) ||
+         GetChanneler(bot, EAST_CHANNELER) || GetChanneler(bot, NORTHWEST_CHANNELER) ||
+         GetChanneler(bot, NORTHEAST_CHANNELER)))
+        return 0.0f;
+
     Unit* magtheridon = AI_VALUE2(Unit*, "find target", "magtheridon");
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return 1.0f;
