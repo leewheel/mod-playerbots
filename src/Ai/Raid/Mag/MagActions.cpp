@@ -631,20 +631,14 @@ bool MagtheridonManageTimersAndAssignmentsAction::Execute(Event /*event*/)
     }
     else
     {
-        if (blastNovaTimer.erase(instanceId) > 0)
-            updated = true;
-
-        if (dpsWaitTimer.erase(instanceId) > 0)
-            updated = true;
-
-        if (botToCubeAssignments.erase(instanceId) > 0)
-            updated = true;
-
-        if (ceilingCollapseApplied.erase(instanceId) > 0)
-            updated = true;
-
-        if (lastBlastNovaState.erase(instanceId) > 0)
-            updated = true;
+        // Clearing is no action: lastBlastNovaState is written above on every tick, so its erase "updated"
+        // every tick and the tracker bot did nothing else while Mag was caged (2601 ticks in a Mag 25 run,
+        // 24/10; upstream mod-playerbots#2791 returns false while Mag is caged).
+        blastNovaTimer.erase(instanceId);
+        dpsWaitTimer.erase(instanceId);
+        botToCubeAssignments.erase(instanceId);
+        ceilingCollapseApplied.erase(instanceId);
+        lastBlastNovaState.erase(instanceId);
     }
 
     return updated;
