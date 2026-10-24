@@ -1143,7 +1143,7 @@ void RandomPlayerbotMgr::CheckBgQueue()
                 }
 
                 if (bgQueue.IsPlayerInvitedToRatedArena(player->GetGUID()) ||
-                    (player->InArena() && player->GetBattleground()->isRated()))
+                    (player->InArena() && bg && bg->isRated()))
                     isRated = true;
 
                 if (isRated)
@@ -1166,10 +1166,10 @@ void RandomPlayerbotMgr::CheckBgQueue()
                 }
 
                 // If a player has joined the BG, update the instance count in BattlegroundData (for consistency)
-                if (player->InBattleground())
+                if (player->InBattleground() && bg)
                 {
                     std::vector<uint32>* instanceIds = nullptr;
-                    uint32 instanceId = player->GetBattleground()->GetInstanceID();
+                    uint32 instanceId = bg->GetInstanceID();
 
                     instanceIds = &BattlegroundData[queueTypeId][bracketId].bgInstances;
                     if (instanceIds &&
@@ -1277,7 +1277,7 @@ void RandomPlayerbotMgr::CheckBgQueue()
                     isRated = ginfo.IsRated;
                 }
 
-                if (bgQueue.IsPlayerInvitedToRatedArena(guid) || (bot->InArena() && bot->GetBattleground()->isRated()))
+                if (bgQueue.IsPlayerInvitedToRatedArena(guid) || (bot->InArena() && bg && bg->isRated()))
                     isRated = true;
 
                 if (isRated)
@@ -1301,10 +1301,10 @@ void RandomPlayerbotMgr::CheckBgQueue()
                 }
             }
 
-            if (bot->InBattleground())
+            if (bot->InBattleground() && bg)
             {
                 std::vector<uint32>* instanceIds = nullptr;
-                uint32 instanceId = bot->GetBattleground()->GetInstanceID();
+                uint32 instanceId = bg->GetInstanceID();
                 bool isArena = false;
                 bool isRated = false;
 
@@ -1312,7 +1312,7 @@ void RandomPlayerbotMgr::CheckBgQueue()
                 if (bot->InArena())
                 {
                     isArena = true;
-                    if (bot->GetBattleground()->isRated())
+                    if (bg->isRated())
                     {
                         isRated = true;
                         instanceIds = &BattlegroundData[queueTypeId][bracketId].ratedArenaInstances;
