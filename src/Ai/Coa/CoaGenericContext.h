@@ -162,6 +162,7 @@ public:
         spell = qual;
     }
     std::string const getName() override { return "cast heal party::" + qualifier; }
+    bool isUseful() override;
 };
 
 /* A heal placed on the ground, cast on the tank so that it lands where the fight is.

@@ -169,7 +169,9 @@ bool CoaCastAction::isUseful()
     if (CoaPullsAheadOfTank(bot, GetTarget()))
         return false;
     uint32 const id = AI_VALUE2(uint32, "spell id", spell);
-    SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
+    if (!id)
+        return false;
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(id);
     if (!info)
         return true;
     if (!CoaHasPowerFor(bot, info))
@@ -187,12 +189,19 @@ bool CoaBuffPartyAction::isUseful()
     return AI_VALUE2(uint32, "spell id", spell) && BuffOnPartyAction::isUseful();
 }
 
+bool CoaHealPartyAction::isUseful()
+{
+    return AI_VALUE2(uint32, "spell id", spell) && HealPartyMemberAction::isUseful();
+}
+
 bool CoaCastMeleeAction::isUseful()
 {
     if (!CastMeleeSpellAction::isUseful() || CoaPullsAheadOfTank(bot, GetTarget()))
         return false;
     uint32 const id = AI_VALUE2(uint32, "spell id", spell);
-    SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
+    if (!id)
+        return false;
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(id);
     return !info || CoaHasPowerFor(bot, info);
 }
 
@@ -625,11 +634,13 @@ bool CoaCanCastTrigger::IsActive()
 
 bool CoaCanCastTrigger::CanCastNow()
 {
-    if (!SpellCanBeCastTrigger::IsActive())
+    // A spell the bot has not learnt yet: CanCastSpell logged "No spellid" for it on every tick, ~10% of the
+    // playerbots log of a level 17 group (ladiabale, 24/10).
+    uint32 const id = AI_VALUE2(uint32, "spell id", spell);
+    if (!id || !SpellCanBeCastTrigger::IsActive())
         return false;
 
-    uint32 const id = AI_VALUE2(uint32, "spell id", spell);
-    SpellInfo const* info = id ? sSpellMgr->GetSpellInfo(id) : nullptr;
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(id);
     if (!info)
         return true;
 
