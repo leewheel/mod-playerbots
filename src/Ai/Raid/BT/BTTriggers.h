@@ -326,8 +326,7 @@ class ReliquaryOfSoulsShouldPositionForSufferingTrigger : public BlackTempleEnco
 {
 public:
     ReliquaryOfSoulsShouldPositionForSufferingTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(
-            botAI, "reliquary of souls should position for suffering") {}
+        : BlackTempleEncounterTrigger(botAI, "reliquary of souls should position for suffering") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -387,12 +386,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class MotherShahrazRangedShouldPositionUnderPillarTrigger : public BlackTempleEncounterTrigger
+class MotherShahrazRangedShouldPositionUnderStatueTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    MotherShahrazRangedShouldPositionUnderPillarTrigger(PlayerbotAI* botAI)
+    MotherShahrazRangedShouldPositionUnderStatueTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "mother shahraz ranged should position under pillar") {}
+            botAI, "mother shahraz ranged should position under statue") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -586,11 +585,11 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidanStormragePetsDieToFireTrigger : public BlackTempleEncounterTrigger
+class IllidanStormragePetsDieToHazardsTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidanStormragePetsDieToFireTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage pets die to fire") {}
+    IllidanStormragePetsDieToHazardsTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage pets die to hazards") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -616,11 +615,11 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidanStormrageGrateIsSafeFromFlamesTrigger : public BlackTempleEncounterTrigger
+class IllidanStormrageShouldPositionAboveGrateTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidanStormrageGrateIsSafeFromFlamesTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage grate is safe from flames") {}
+    IllidanStormrageShouldPositionAboveGrateTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should position above grate") {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -641,6 +640,18 @@ class IllidanStormrageImmunityNoLongerNeededTrigger : public BlackTempleEncounte
 public:
     IllidanStormrageImmunityNoLongerNeededTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(botAI, "illidan stormrage immunity no longer needed") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class IllidanStormrageShamanHasTotemsBeforeTanksHaveAggroTrigger
+    : public BlackTempleEncounterTrigger
+{
+public:
+    IllidanStormrageShamanHasTotemsBeforeTanksHaveAggroTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage shaman has totems before tanks have aggro") {}
 
 protected:
     bool IsActiveInEncounter() override;

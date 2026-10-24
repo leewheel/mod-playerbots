@@ -28,6 +28,8 @@
 #include "WarlockActions.h"
 #include "WarriorActions.h"
 #include "WipeAction.h"
+#include <algorithm>
+#include <limits>
 #include <vector>
 
 using namespace BtHelpers;
@@ -133,7 +135,7 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action
 
     if (illidan)
     {
-        if (illidan->GetHealthPct() <= 62.0f)
+        if (illidan->GetHealthPct() <= ILLIDAN_DPS_COOLDOWN_RELEASE_HEALTH_PCT)
             return 1.0f;
 
         if (bot->getClass() == CLASS_SHAMAN &&
@@ -380,7 +382,7 @@ float TeronGorefiendSpiritsAttackShadowyConstructsMultiplier::GetValueInEncounte
     if (!bot->HasAura(Id(BtSpells::SPELL_SPIRITUAL_VENGEANCE)))
         return 1.0f;
 
-    if (dynamic_cast<TeronGorefiendControlAndDestroyShadowyConstructsAction*>(action))
+    if (dynamic_cast<TeronGorefiendDestroyShadowyConstructsAction*>(action))
         return 1.0f;
 
     return dynamic_cast<WipeAction*>(action) ? 1.0f : 0.0f;
@@ -849,7 +851,7 @@ bool IsHeldAtIllidanLandingStack(Action* action)
 {
     return dynamic_cast<MovementAction*>(action) && !dynamic_cast<AttackAction*>(action) &&
         !dynamic_cast<IllidanStormragePositionForLandingAction*>(action) &&
-        !dynamic_cast<IllidanStormrageIsolateBotWithParasiteAction*>(action);
+        !dynamic_cast<IllidanStormrageIsolateBotWithInfectionAction*>(action);
 }
 
 // A bot waiting out a Shadowfiend debuff at the infection position chases nothing, since its run
@@ -901,6 +903,14 @@ bool IsHeldIllidanHeal(PlayerbotAI* botAI, Unit* illidan, Action* action)
     Player* tank = phase == IllidanPhase::Demon ?
         GetIllidanWarlockTank(botAI) : GetGroupMainTank(botAI->GetBot());
     return !tank || illidan->GetThreatMgr().GetLastVictim() != tank;
+}
+
+// A tank's AoE threat, or any spell whose threat type is AoE (heals report it too).
+bool IsIllidanAoeAction(Player* bot, Action* action)
+{
+    auto castSpellAction = dynamic_cast<CastSpellAction*>(action);
+    return IsAoeThreatAction(bot, action) ||
+        (castSpellAction && castSpellAction->getThreatType() == Action::ActionThreatType::Aoe);
 }
 
 // Summons that fight on their own, unlike pets, which the strategy can set passive.
@@ -962,7 +972,7 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter
         return warlockTank && action->GetTarget() == warlockTank ? 0.0f : 1.0f;
     }
 
-    IllidanPhase phase = GetIllidanPhase(illidan);
+    IllidanPhase const phase = GetIllidanPhase(illidan);
     // In Maiev's arrival the Main Tank keeps him as its target, so its swing brings it back onto
     // his threat list, out of Shadow Prison's suppression, before he wakes; only its ring action
     // moves it, so nothing chasing its target pulls it off its place.
@@ -1112,8 +1122,8 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTankMovementValu
         if (!isMove)
             return 1.0f;
 
-        if (dynamic_cast<IllidanStormrageAssistTanksHandleFlamesOfAzzinothAction*>(action) ||
-            dynamic_cast<IllidanStormrageIsolateBotWithParasiteAction*>(action))
+        if (dynamic_cast<IllidanStormrageAssistTanksHandleFlamesAction*>(action) ||
+            dynamic_cast<IllidanStormrageIsolateBotWithInfectionAction*>(action))
         {
             return 1.0f;
         }
@@ -1130,7 +1140,7 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetTankMovementValu
     if (isMove)
     {
         return dynamic_cast<IllidanStormragePositionAboveGrateAction*>(action) ||
-            dynamic_cast<IllidanStormrageIsolateBotWithParasiteAction*>(action) ? 1.0f : 0.0f;
+            dynamic_cast<IllidanStormrageIsolateBotWithInfectionAction*>(action) ? 1.0f : 0.0f;
     }
 
     return isSpell ? 0.0f : 1.0f;
@@ -1174,7 +1184,7 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetNonTankMovementV
 // spell or heal is cast. This is a proxy for having just birthed a Shadowfiend, which can
 // immediately infect the birther if any threat is generated. Switching targets stays free, so a
 // bot on a Shadowfiend can still turn to him.
-float IllidanStormrageNearNewShadowfiendMultiplier::GetValueInEncounter(Action* action)
+float IllidanStormrageHoldNearNewShadowfiendMultiplier::GetValueInEncounter(Action* action)
 {
     auto castSpellAction = dynamic_cast<CastSpellAction*>(action);
     bool const isAttackAction = dynamic_cast<AttackAction*>(action);
@@ -1192,8 +1202,7 @@ float IllidanStormrageNearNewShadowfiendMultiplier::GetValueInEncounter(Action* 
     Unit* target = castSpellAction ? AI_VALUE(Unit*, "current target") : action->GetTarget();
     bool const isOnShadowfiend =
         target && target->GetEntry() == Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND);
-    bool const isAoeSpell = IsAoeThreatAction(bot, action) ||
-        (castSpellAction && castSpellAction->getThreatType() == Action::ActionThreatType::Aoe);
+    bool const isAoeSpell = IsIllidanAoeAction(bot, action);
 
     if (!isOnShadowfiend && !isAoeSpell && !dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
@@ -1225,6 +1234,58 @@ float IllidanStormrageHoldGuardianSummonsMultiplier::GetValueInEncounter(Action*
     return GetIllidanDpsHold(botAI, illidan) == IllidanDpsHold::None ? 1.0f : 0.0f;
 }
 
+// From each phase change until the tanks have aggro, so the totems the shaman recalled aren't set
+// again at once. Otherwise: the infection position is about 52 yd from him, past the 30 yd at
+// which a shaman's totems are recast, so a shaman there, or walking back from it, would set totems
+// it is about to leave. They are held while it is nearer the position than its nearest totem;
+// walking back, the old totems are in range by then. Not in Demon Form, whose places may lie
+// nearer the position.
+float IllidanStormrageHoldTotemsMultiplier::GetValueInEncounter(Action* action)
+{
+    if (bot->getClass() != CLASS_SHAMAN ||
+        (!dynamic_cast<CastTotemAction*>(action) &&
+         !dynamic_cast<CastCallOfTheElementsAction*>(action)))
+    {
+        return 1.0f;
+    }
+
+    //By leewheel 2026-10-25 entry 铁律：上游新写的这一处用英文名 "illidan stormrage"，实库生物名
+    //  为中文 ⇒ 子串匹配恒 nullptr，压手判定静默失效（不崩不报错）。回退为本核核定的 entry 22917。
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    //End By leewheel
+    if (!illidan)
+        return 1.0f;
+
+    IllidanPhase const phase = GetIllidanPhase(illidan);
+    if (IsIllidanTankAggroPending(*illidan, phase))
+        return 0.0f;
+
+    if (phase != IllidanPhase::Initial && phase != IllidanPhase::Grounded &&
+        phase != IllidanPhase::Maiev)
+    {
+        return 1.0f;
+    }
+
+    float nearestTotem = std::numeric_limits<float>::max();
+    bool hasTotem = false;
+    for (uint8 slot = SUMMON_SLOT_TOTEM_FIRE; slot < MAX_TOTEM_SLOT; ++slot)
+    {
+        Creature* totem = bot->GetMap()->GetCreature(bot->m_SummonSlot[slot]);
+        if (totem && totem->IsAlive())
+        {
+            nearestTotem = std::min(nearestTotem, bot->GetExactDist2d(totem));
+            hasTotem = true;
+        }
+    }
+
+    // With none up, only its run to the position and its wait there are held.
+    if (!hasTotem)
+        return HasParasiticShadowfiend(bot) ? 0.0f : 1.0f;
+
+    Position const infectionPosition = GetIllidanRecordedInfectionPosition(botAI, *illidan);
+    return bot->GetExactDist2d(infectionPosition) < nearestTotem ? 0.0f : 1.0f;
+}
+
 // The targeting action only picks targets and keeps melee off him during a hold itself, so it can
 // still switch a bot from him to an add.
 float IllidanStormrageWaitForDpsMultiplier::GetValueInEncounter(Action* action)
@@ -1237,6 +1298,20 @@ float IllidanStormrageWaitForDpsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
     }
 
+    //By leewheel 2026-10-25 合并 brighton-chi the-lab（661aa1ca "illidan phase change recall totems"）：
+    //  上游给萨满的插图腾/召唤元素加了「阶段转换后等坦克建立仇恨前先压手」的分支，本核此前没有这条
+    //  ⇒ 按「只叠加」采纳。
+    // Totems have their own hold, only until the tanks have aggro after each phase change.
+    if (bot->getClass() == CLASS_SHAMAN &&
+        (dynamic_cast<CastTotemAction*>(action) ||
+         dynamic_cast<CastCallOfTheElementsAction*>(action)))
+    {
+        return 1.0f;
+    }
+    //End By leewheel
+
+    //By leewheel entry 铁律：上游此处写英文名 "illidan stormrage"，而实库生物名为中文 ⇒
+    //  子串匹配恒 nullptr、打断/施法静默失效（不崩不报错）。保留本核核定的伊利丹 entry 22917。
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return 1.0f;
@@ -1296,16 +1371,14 @@ float IllidanStormrageDisableAoeOnShadowDemonsMultiplier::GetValueInEncounter(Ac
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    auto castSpellAction = dynamic_cast<CastSpellAction*>(action);
-    bool const isAoe = IsAoeThreatAction(bot, action) ||
-        (castSpellAction && castSpellAction->getThreatType() == Action::ActionThreatType::Aoe);
-    if (!isAoe)
+    if (!IsIllidanAoeAction(bot, action))
         return 1.0f;
 
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return 1.0f;
 
-    return context->GetValue<std::vector<ShadowDemon>>("shadow demons")->RefGet().empty() ?
-        1.0f : 0.0f;
+    auto const& shadowDemons =
+        context->GetValue<std::vector<ShadowDemon>>("illidan stormrage shadow demons")->RefGet();
+    return shadowDemons.empty() ? 1.0f : 0.0f;
 }

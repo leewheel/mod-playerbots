@@ -7,6 +7,7 @@
 #include "FoodActions.h"
 #include "Event.h"
 #include "Playerbots.h"
+#include <algorithm>
 
 namespace
 {
@@ -14,38 +15,45 @@ constexpr uint32 BG_WS_SPELL_WARSONG_FLAG = 23333;
 constexpr uint32 BG_WS_SPELL_SILVERWING_FLAG = 23335;
 constexpr uint32 BG_EY_NETHERSTORM_FLAG_SPELL = 34976;
 
-// Graccu's Mince Meat Fruitcake lasts 20s and restores 5% health and mana every 2s.
+// Graccu's Mince Meat Fruitcake: 5% health and mana per second for 20s. Mana regen is continuous,
+// but health regen is applied in 2s lumps of 10%, timed by the server's update loop, not the aura.
 constexpr uint32 SPELL_GRACCUS_MINCE_MEAT_FRUITCAKE = 25990;
 constexpr uint32 RECOVERY_MAX_MS = 20 * IN_MILLISECONDS;
+constexpr uint32 REGEN_TICK_MS = 2 * IN_MILLISECONDS;
 
 bool IsFullMana(Player* bot)
 {
     return bot->GetPower(POWER_MANA) >= bot->GetMaxPower(POWER_MANA);
 }
 
-// The cheat aura restores both health and mana, so allow bots to eat/drink until both are restored.
+// Rounded up since partial ticks provide no regen value.
+uint32 RecoveryTicks(uint32 current, uint32 max)
+{
+    if (!max || current >= max)
+        return 0;
+
+    uint32 const missing = max - current;
+    uint32 const ticksPerPool = RECOVERY_MAX_MS / REGEN_TICK_MS;
+    return (missing * ticksPerPool + max - 1) / max;
+}
+
+// Larger gap of the two pools, plus a tick because the next health regen tick can be up to 2s away.
+// Capped at the aura's max duration, so the bot never sits longer than a player could.
 uint32 FoodCheatRecoveryDurationMs(Player* bot)
 {
-    //By leewheel 2026-10-23 合并brighton-chi the-lab（eat/drink 系统重写）：
-    //   上游对法力做了除零保护（下方 if (uint32 const maxMana = ...)），却漏了生命值这一路。
-    //   GetMaxHealth() 为 0 时 integer/float 除法得 inf，missingShare 变 -inf，
-    //   末尾 static_cast<uint32>(RECOVERY_MAX_MS * -inf) 是未定义行为（NaN→整型转换 UB）。
-    //   这里按与 mana 同样的口径补判零守卫：上限血量为 0 说明血量数据无效，返回 0 时长不吃不喝。
-    uint32 const maxHealth = bot->GetMaxHealth();
-    if (!maxHealth)
-        return 0;
+    //By leewheel 2026-10-25 合并 brighton-chi the-lab（4e5fe67b 一带）：上游把本函数改成
+    //  RecoveryTicks() 助手 + "+1 tick" 封顶写法。我方上一轮在这里补的「maxHealth == 0 守卫」
+    //  （GetMaxHealth() 为 0 时 missingShare 变 -inf，末尾 static_cast<uint32>(RECOVERY_MAX_MS * -inf)
+    //  是 NaN→整型转换的 UB）**已被上游同一个防护覆盖** —— 看上方 RecoveryTicks() 开头：
+    //      if (!max || current >= max) return 0;
+    //  生命与法力两路都走它 ⇒ 判零口径一致且不重复。故取上游写法，我方不再另立一套。
     //End By leewheel
-
-    float missingShare = 1.0f - static_cast<float>(bot->GetHealth()) / maxHealth;
+    uint32 ticks = RecoveryTicks(bot->GetHealth(), bot->GetMaxHealth());
 
     if (uint32 const maxMana = bot->GetMaxPower(POWER_MANA))
-    {
-        float const manaMissing = 1.0f - static_cast<float>(bot->GetPower(POWER_MANA)) / maxMana;
-        if (manaMissing > missingShare)
-            missingShare = manaMissing;
-    }
+        ticks = std::max(ticks, RecoveryTicks(bot->GetPower(POWER_MANA), maxMana));
 
-    return static_cast<uint32>(RECOVERY_MAX_MS * missingShare);
+    return std::min((ticks + 1) * REGEN_TICK_MS, RECOVERY_MAX_MS);
 }
 
 uint32 StartFoodCheatRecovery(Player* bot)

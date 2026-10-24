@@ -134,8 +134,8 @@ public:
         creators["mother shahraz being positioned"] =
             &RaidBlackTempleTriggerContext::mother_shahraz_being_positioned;
 
-        creators["mother shahraz ranged should position under pillar"] =
-            &RaidBlackTempleTriggerContext::mother_shahraz_ranged_should_position_under_pillar;
+        creators["mother shahraz ranged should position under statue"] =
+            &RaidBlackTempleTriggerContext::mother_shahraz_ranged_should_position_under_statue;
 
         creators["mother shahraz fatal attraction"] =
             &RaidBlackTempleTriggerContext::mother_shahraz_fatal_attraction;
@@ -196,8 +196,8 @@ public:
         creators["illidan stormrage flames of azzinoth should be tanked"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_flames_of_azzinoth_should_be_tanked;
 
-        creators["illidan stormrage pets die to fire"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_pets_die_to_fire;
+        creators["illidan stormrage pets die to hazards"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_pets_die_to_hazards;
 
         creators["illidan stormrage pet should attack shadowfiend"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_pet_should_attack_shadowfiend;
@@ -205,14 +205,18 @@ public:
         creators["illidan stormrage pet should attack shadow demon"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_pet_should_attack_shadow_demon;
 
-        creators["illidan stormrage grate is safe from flames"] =
-            &RaidBlackTempleTriggerContext::illidan_stormrage_grate_is_safe_from_flames;
+        creators["illidan stormrage should position above grate"] =
+            &RaidBlackTempleTriggerContext::illidan_stormrage_should_position_above_grate;
 
         creators["illidan stormrage immunity can clear debuff"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_immunity_can_clear_debuff;
 
         creators["illidan stormrage immunity no longer needed"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_immunity_no_longer_needed;
+
+        creators["illidan stormrage shaman has totems before tanks have aggro"] =
+            &RaidBlackTempleTriggerContext::
+                illidan_stormrage_shaman_has_totems_before_tanks_have_aggro;
 
         creators["illidan stormrage should position for landing"] =
             &RaidBlackTempleTriggerContext::illidan_stormrage_should_position_for_landing;
@@ -420,9 +424,9 @@ private:
     {
         return new MotherShahrazBeingPositionedTrigger(botAI);
     }
-    static Trigger* mother_shahraz_ranged_should_position_under_pillar(PlayerbotAI* botAI)
+    static Trigger* mother_shahraz_ranged_should_position_under_statue(PlayerbotAI* botAI)
     {
-        return new MotherShahrazRangedShouldPositionUnderPillarTrigger(botAI);
+        return new MotherShahrazRangedShouldPositionUnderStatueTrigger(botAI);
     }
     static Trigger* mother_shahraz_fatal_attraction(PlayerbotAI* botAI)
     {
@@ -505,9 +509,9 @@ private:
     {
         return new IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger(botAI);
     }
-    static Trigger* illidan_stormrage_pets_die_to_fire(PlayerbotAI* botAI)
+    static Trigger* illidan_stormrage_pets_die_to_hazards(PlayerbotAI* botAI)
     {
-        return new IllidanStormragePetsDieToFireTrigger(botAI);
+        return new IllidanStormragePetsDieToHazardsTrigger(botAI);
     }
     static Trigger* illidan_stormrage_pet_should_attack_shadowfiend(PlayerbotAI* botAI)
     {
@@ -517,9 +521,9 @@ private:
     {
         return new IllidanStormragePetShouldAttackShadowDemonTrigger(botAI);
     }
-    static Trigger* illidan_stormrage_grate_is_safe_from_flames(PlayerbotAI* botAI)
+    static Trigger* illidan_stormrage_should_position_above_grate(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageGrateIsSafeFromFlamesTrigger(botAI);
+        return new IllidanStormrageShouldPositionAboveGrateTrigger(botAI);
     }
     static Trigger* illidan_stormrage_immunity_can_clear_debuff(PlayerbotAI* botAI)
     {
@@ -528,6 +532,10 @@ private:
     static Trigger* illidan_stormrage_immunity_no_longer_needed(PlayerbotAI* botAI)
     {
         return new IllidanStormrageImmunityNoLongerNeededTrigger(botAI);
+    }
+    static Trigger* illidan_stormrage_shaman_has_totems_before_tanks_have_aggro(PlayerbotAI* botAI)
+    {
+        return new IllidanStormrageShamanHasTotemsBeforeTanksHaveAggroTrigger(botAI);
     }
     static Trigger* illidan_stormrage_should_position_for_landing(PlayerbotAI* botAI)
     {

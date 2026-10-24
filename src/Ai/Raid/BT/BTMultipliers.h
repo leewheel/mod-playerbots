@@ -395,11 +395,11 @@ private:
     float GetNonTankMovementValue(BtHelpers::IllidanPhase phase, Action* action);
 };
 
-class IllidanStormrageNearNewShadowfiendMultiplier : public BlackTempleEncounterMultiplier
+class IllidanStormrageHoldNearNewShadowfiendMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    IllidanStormrageNearNewShadowfiendMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage near new shadowfiend") {}
+    IllidanStormrageHoldNearNewShadowfiendMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage hold near new shadowfiend") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -410,6 +410,16 @@ class IllidanStormrageHoldGuardianSummonsMultiplier : public BlackTempleEncounte
 public:
     IllidanStormrageHoldGuardianSummonsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(botAI, "illidan stormrage hold guardian summons") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class IllidanStormrageHoldTotemsMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    IllidanStormrageHoldTotemsMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage hold totems") {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

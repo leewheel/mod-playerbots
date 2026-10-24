@@ -89,8 +89,7 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("teron gorefiend move to corner to die", ACTION_EMERGENCY + 10) }));
 
     triggers.push_back(new TriggerNode("teron gorefiend transformed into vengeful spirit",
-        { NextAction(
-            "teron gorefiend control and destroy shadowy constructs", ACTION_EMERGENCY + 10) }));
+        { NextAction("teron gorefiend destroy shadowy constructs", ACTION_EMERGENCY + 10) }));
 
     // Gurtogg Bloodboil
     triggers.push_back(new TriggerNode("gurtogg bloodboil hunter should misdirect",
@@ -138,12 +137,11 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("mother shahraz being positioned",
         { NextAction("mother shahraz melee dps wait at safe position", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("mother shahraz ranged should position under pillar",
-        { NextAction("mother shahraz position ranged under pillar", ACTION_RAID + 1) }));
+    triggers.push_back(new TriggerNode("mother shahraz ranged should position under statue",
+        { NextAction("mother shahraz position ranged under statue", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("mother shahraz fatal attraction",
-        { NextAction(
-            "mother shahraz break fatal attraction", ACTION_EMERGENCY + 10) }));
+        { NextAction("mother shahraz break fatal attraction", ACTION_EMERGENCY + 10) }));
 
     // Illidari Council
     triggers.push_back(new TriggerNode("illidari council hunter should misdirect",
@@ -157,15 +155,13 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             "illidari council main tank reflect judgement of command", ACTION_EMERGENCY + 1) }));
 
     triggers.push_back(new TriggerNode("illidari council malande casts circle of healing",
-        { NextAction(
-            "illidari council interrupt circle of healing", ACTION_EMERGENCY + 8) }));
+        { NextAction("illidari council interrupt circle of healing", ACTION_EMERGENCY + 8) }));
 
     triggers.push_back(new TriggerNode("illidari council malande should be tanked",
         { NextAction("illidari council first assist tank focus malande", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("illidari council veras should be tanked",
-        { NextAction(
-            "illidari council second assist tank position veras", ACTION_RAID + 1) }));
+        { NextAction("illidari council second assist tank position veras", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("illidari council zerevor should be tanked by mage",
         { NextAction("illidari council mage tank position zerevor", ACTION_EMERGENCY + 6) }));
@@ -196,16 +192,15 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("illidan stormrage main tank reposition boss", ACTION_EMERGENCY + 1) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage parasitic shadowfiend on group member",
-        { NextAction("illidan stormrage isolate bot with parasite", ACTION_RAID + 4) }));
+        { NextAction("illidan stormrage isolate bot with infection", ACTION_RAID + 4) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage should track infections",
         { NextAction("illidan stormrage track infections", ACTION_EMERGENCY + 11) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage flames of azzinoth should be tanked",
-        { NextAction(
-            "illidan stormrage assist tanks handle flames of azzinoth", ACTION_EMERGENCY + 1) }));
+        { NextAction("illidan stormrage assist tanks handle flames", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage pets die to fire",
+    triggers.push_back(new TriggerNode("illidan stormrage pets die to hazards",
         { NextAction("illidan stormrage control pet aggression", ACTION_RAID + 4) }));
 
     // A pet still passive after a wipe gets its stance back.
@@ -218,7 +213,7 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage pet should attack shadow demon",
         { NextAction("illidan stormrage command pet attack add", ACTION_RAID + 3) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage grate is safe from flames",
+    triggers.push_back(new TriggerNode("illidan stormrage should position above grate",
         { NextAction("illidan stormrage position above grate", ACTION_EMERGENCY + 2) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage immunity can clear debuff",
@@ -226,6 +221,10 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode("illidan stormrage immunity no longer needed",
         { NextAction("illidan stormrage cancel immunity", ACTION_EMERGENCY + 6) }));
+
+    triggers.push_back(new TriggerNode(
+        "illidan stormrage shaman has totems before tanks have aggro",
+        { NextAction("illidan stormrage recall totems", ACTION_RAID + 5) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage should position for landing",
         { NextAction("illidan stormrage position for landing", ACTION_RAID + 2) }));
@@ -314,8 +313,9 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     // Illidan Stormrage <The Betrayer>
     multipliers.push_back(new IllidanStormrageHoldPullPositionsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageControlMovementAndTargetingMultiplier(botAI));
-    multipliers.push_back(new IllidanStormrageNearNewShadowfiendMultiplier(botAI));
+    multipliers.push_back(new IllidanStormrageHoldNearNewShadowfiendMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageHoldGuardianSummonsMultiplier(botAI));
+    multipliers.push_back(new IllidanStormrageHoldTotemsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageWaitForDpsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageDisableTankSoulshatterMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageDisableAoeOnShadowDemonsMultiplier(botAI));
@@ -397,7 +397,8 @@ void AppendIllidanMeleeExclusions(PlayerbotAI* botAI, Player* bot, GuidSet& excl
     if (!illidan)
         return;
 
-    auto const& shadowfiends = context->GetValue<GuidVector>("parasitic shadowfiends")->RefGet();
+    auto const& shadowfiends =
+        context->GetValue<GuidVector>("illidan stormrage parasitic shadowfiends")->RefGet();
     exclusions.insert(shadowfiends.begin(), shadowfiends.end());
 
     if (GetIllidanPhase(illidan) == IllidanPhase::Demon)
