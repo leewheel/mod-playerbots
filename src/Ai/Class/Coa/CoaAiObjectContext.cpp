@@ -1292,6 +1292,9 @@ Player* GroupTank(Player* bot);
 // with what costs nothing, where alone it only kept AiPlayerbot.CoaHealerManaReserve. At 85 it was
 // saving nearly all fight long and chose its cheapest heals while members died (28/09).
 constexpr uint32 GroupHealerManaReserve = 60;
+// In a raid a healer whose damage is its healing still keeps a dispel and a heal: a Heretic hit 0% mana in all six
+// boss fights of a Kara 10 run and died to a Holy Fire her own dispel could not pay for (24/10).
+constexpr uint32 OffensiveHealerRaidManaFloor = 25;
 
 bool SavingManaForHeals(Player* bot)
 {
@@ -1302,7 +1305,8 @@ bool SavingManaForHeals(Player* bot)
     // from damage would keep it from healing. AiPlayerbot.CoaOffensiveHealerSpecs.
     if (uint32 const specialization = GetAscensionActiveSpecialization(bot))
         if (sPlayerbotAIConfig.coaOffensiveHealerSpecs.count(specialization))
-            return false;
+            return bot->GetMap() && bot->GetMap()->IsRaid() && bot->IsInCombat() &&
+                   bot->GetPowerPct(POWER_MANA) < float(OffensiveHealerRaidManaFloor);
 
     uint32 reserve = GetCoaRole(bot) == CoaRole::Heal ? sPlayerbotAIConfig.coaHealerManaReserve
                                                       : sPlayerbotAIConfig.coaCasterManaReserve;
