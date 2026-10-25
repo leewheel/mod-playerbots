@@ -1,5 +1,64 @@
 # CoA Bots — changelog
 
+## v2.8 — A smoother server with many bots, Dungeon Clear, realm cards (October 2026)
+
+### Highlights
+- **Much smoother server with many bots.** A hidden database wait in the Recruit-a-Friend reward check froze every map thread
+  for 2-7 s every minute (and up to 35 s under load). It is now asynchronous and skipped for bots. On our test machine, with
+  the same load (9 heavy dungeon runs + benches): spikes over 2 s went from 24 per hour to 1 per hour, worst p99 tick from
+  32.7 s to 0.14 s. The same machine now handles **75 simultaneous bot dungeon runs** without a single spike over 1 s
+  (it collapsed at 9 before).
+- **New optional module: Dungeon Clear.** Your bot group can clear a dungeon on its own, boss after boss, in Normal, Heroic
+  and Mythic 0. Start it from the SquidBots Lite addon (Dungeon button) or with `.dc on` inside a dungeon. It only acts on
+  groups that started it. On by default on the CoA realm; switch it off in the launcher (Modules). Not available on Wildcard and Reborn yet.
+- **Realm cards like Ascension**: each realm shows its own background, title and description in the realm list
+  (Vol'jin for CoA, Darkmoon for Wildcard, Bronzebeard - Warcraft Reborn).
+
+### Performance (no gameplay change)
+- Recruit-a-Friend reward check no longer blocks the map threads (see above).
+- Destiny Weaver no longer rebuilds strings or re-reads its config on every creature update; config is read once and on
+  `.reload config`.
+- Tinker scripts no longer allocate their state on every player update.
+- The server no longer builds party stats and aura updates for bots that have no game client.
+- Bots no longer store achievement progress. The launcher removes the old bot rows once after updating (backup first; on our
+  test server: 11.7 million rows, 757 MB). You can run it again from Settings > Backups.
+
+### Stability
+- Fixed a world server crash when a bot was flagged "in battleground" while its battleground was already gone.
+- Includes the latest core fixes from upstream, among them three world server crashes found in production dumps.
+- Random Heroic / Mythic dungeon queues no longer turn grey after changing map (the server sends the released difficulties
+  again on every map change, not only at login).
+
+### Bots
+- Random level-60 bots get fewer downgraded items: `AiPlayerbot.RandomGearLoweringChance` default 0.3 → 0.1 (existing
+  configs keep their value).
+- Bots set to "stay" when their master released his spirit follow again as soon as the master is alive.
+- Tinker Invention no longer loops on Mana Module; Mechano-Bear is no longer rebuilt while it is alive.
+- Less noise in the playerbots log ("No spellid").
+- Magtheridon: channeler kill order kept; timers no longer re-run every tick while caged.
+- Maiden of Virtue: tanks reach a stunned healer up to 23 yd away.
+- Offensive healers stop mana-costing attacks below 25 % mana in raids.
+- Tanks no longer taunt enemies immune to taunt.
+- Thanks to ladiabale for the detailed raid reports.
+
+### Auction house
+- The buyer bot can settle a bid at once: the sale ends and the gold arrives by mail right away instead of 12-48 h later
+  (`AuctionHouseBot.Buyer.InstantBids`, on in the CoA Bots config).
+- Launcher: buyer and auction house size settings (buyer on/off, pace, price paid, CoA prices, per-seller cap, instant
+  payment, size), applied live when the server runs.
+
+### Launcher 0.3.45
+- Dungeon Clear card in Modules and per realm; realm cards; achievement clean-up; auction house settings.
+- Stop button for a single service, "Like Rexxar" card, and a "What's new" window.
+
+### SquidBots Lite 2.8
+- The Dungeon button opens the Dungeon Clear panel (also `/sbl dc`): run state, On / Off / Pause / Skip, pull mode, and the boss list with a Go button.
+
+### Known limits
+- Dungeon Clear: Blackfathom Deeps (two bosses) and Sunken Temple (Shade of Eranikus) are not yet cleared reliably in
+  Normal. Heroic and Mythic mostly depend on bot gear.
+- If bots stay behind during a clear, the Regroup button teleports them back.
+
 ## v2.7 — Smarter bots in raids, Reborn bots with mystic enchants (October 2026)
 
 Many of these fixes come from the raid and dungeon reports of ladiabale and Yeh: thank you both.
