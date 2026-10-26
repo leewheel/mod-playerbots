@@ -22,9 +22,11 @@
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "ShamanActions.h"
+#include "Spell.h"
 #include "SpellMgr.h"
 #include "ThreatManager.h"
 #include "Timer.h"
+#include "UseItemAction.h"
 #include "WarlockActions.h"
 #include "WarriorActions.h"
 #include "WipeAction.h"
@@ -96,8 +98,6 @@ float GetDpsHoldValue(Player* bot, Action* action)
 
 } // end anonymous namespace (Shared)
 
-// Held for each boss's first 5%, and also through Supremus's kite phase, between Reliquary
-// essences, and on Illidan from 95% to 62% (Bloodlust all the way until 62%).
 float BlackTempleDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -106,8 +106,6 @@ float BlackTempleDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action
     if (!IsDpsCooldownAction(bot, action))
         return 1.0f;
 
-    // One pass by entry over what this bot is on the threat list of, where a find target per boss
-    // name walks the list once per name.
     Unit* illidan = nullptr;
     Unit* supremus = nullptr;
     Unit* essence = nullptr;
@@ -487,8 +485,6 @@ float ReliquaryOfSoulsDoNotWasteHealingMultiplier::GetValueInEncounter(Action* a
     return AI_VALUE2(Unit*, "find target", "23418") ? 0.0f : 1.0f;
 }
 
-// Tank face, set behind and disperse move tanks and melee around Suffering, which can carry
-// them nearer to her than the tanks.
 float ReliquaryOfSoulsControlMeleeMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
@@ -881,8 +877,8 @@ bool IsHeldIllidanChase(PlayerbotAI* botAI, Action* action, IllidanPhase phase)
     return !IsTargetingShadowDemon(botAI);
 }
 
-// Healing threat reaches him from any healer, so in a hold heals wait until he is on the tank
-// that should have him. While stunned (the transform but its last 0.48 s) he takes none, and in
+// Healing threat reaches him from any healer, so in a hold heals wait until the tank that should
+// have him has aggro. While stunned (the transform but its last 0.48 s) he takes none, and in
 // Maiev's arrival nobody takes damage under Shadow Prison, while a heal in the gap before he
 // wakes reaches him.
 bool IsHeldIllidanHeal(PlayerbotAI* botAI, Unit* illidan, Action* action)
@@ -900,9 +896,7 @@ bool IsHeldIllidanHeal(PlayerbotAI* botAI, Unit* illidan, Action* action)
     if (illidan->HasUnitState(UNIT_STATE_CONTROLLED))
         return false;
 
-    Player* tank = phase == IllidanPhase::Demon ?
-        GetIllidanWarlockTank(botAI) : GetGroupMainTank(botAI->GetBot());
-    return !tank || illidan->GetThreatMgr().GetLastVictim() != tank;
+    return !DoIllidanTanksHaveAggro(botAI, *illidan, phase);
 }
 
 // A tank's AoE threat, or any spell whose threat type is AoE (heals report it too).
@@ -940,6 +934,18 @@ bool IsGuardianSummon(Player* bot, Action* action)
     }
 }
 
+// His Shadow Blast is being cast at the bot. It lands round wherever the bot stands as the cast
+// ends, and Demon Form's end doesn't stop the last one.
+bool IsIllidanShadowBlastOnBot(Unit* illidan, Player* bot)
+{
+    if (!illidan)
+        return false;
+
+    Spell const* spell = illidan->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+    return spell && spell->m_spellInfo->Id == Id(BtSpells::SPELL_SHADOW_BLAST) &&
+        spell->m_targets.GetUnitTargetGUID() == bot->GetGUID();
+}
+
 } // end anonymous namespace (Illidan Stormrage)
 
 // While he talks, bots move only to their pull places.
@@ -973,18 +979,19 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter
     }
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
-    // In Maiev's arrival the Main Tank keeps him as its target, so its swing brings it back onto
-    // his threat list, out of Shadow Prison's suppression, before he wakes; only its ring action
-    // moves it, so nothing chasing its target pulls it off its place.
+    // In Maiev's arrival nobody moves but the Main Tank, by its ring action alone. It keeps him as
+    // its target, so its swing brings it back onto his threat list, out of Shadow Prison's
+    // suppression, before he wakes.
     if (phase == IllidanPhase::None)
     {
-        bool const isDrop = dynamic_cast<DropTargetAction*>(action);
-        bool const isMove = dynamic_cast<MovementAction*>(action) &&
-            !dynamic_cast<IllidanStormrageMainTankRepositionBossAction*>(action);
-        if (!isDrop && !isMove)
-            return 1.0f;
+        if (dynamic_cast<MovementAction*>(action) &&
+            !dynamic_cast<IllidanStormrageMainTankRepositionBossAction*>(action))
+        {
+            return 0.0f;
+        }
 
-        return PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
+        return dynamic_cast<DropTargetAction*>(action) && PlayerbotAI::IsTank(bot) &&
+            PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
     }
 
     // In the death scene only an infected bot is held, so nothing pulls it off its infection
@@ -995,6 +1002,15 @@ float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter
             dynamic_cast<CombatFormationMoveAction*>(action) ||
             IsHeldIllidanChase(botAI, action, phase);
         return isHeldMove && HasParasiticShadowfiend(bot) ? 0.0f : 1.0f;
+    }
+
+    // He finishes the Shadow Blast he was casting when Demon Form ended, and it lands round its
+    // target as the cast ends, so that bot stands still until then rather than take it into the
+    // raid.
+    if (phase != IllidanPhase::Demon && dynamic_cast<MovementAction*>(action) &&
+        IsIllidanShadowBlastOnBot(illidan, bot))
+    {
+        return 0.0f;
     }
 
     // Unselectable while he flies and lands, he is an invalid target, and dropping him would take
@@ -1291,12 +1307,40 @@ float IllidanStormrageHoldTotemsMultiplier::GetValueInEncounter(Action* action)
 float IllidanStormrageWaitForDpsMultiplier::GetValueInEncounter(Action* action)
 {
     bool const isHeal = dynamic_cast<CastHealingSpellAction*>(action);
-    if (!isHeal &&
+    // Mana potions and gems, held only in the pickup.
+    bool const isItem = dynamic_cast<UseItemAction*>(action);
+    if (!isHeal && !isItem &&
         (!IsDpsHoldCandidate(bot, action) ||
          dynamic_cast<IllidanStormrageAssignTargetPriorityAction*>(action)))
     {
         return 1.0f;
     }
+
+    //By leewheel entry 铁律：上游此处写英文名 "illidan stormrage"，而实库生物名为中文 ⇒
+    //  子串匹配恒 nullptr、压手判定静默失效（不崩不报错）。保留本核核定的伊利丹 entry 22917。
+    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    if (!illidan)
+        return 1.0f;
+
+    // In the pickup nothing but the Main Tank causes him threat: heals, mana restores (energize
+    // threat), totems and damage alike; damage on an add aside.
+    if (IsIllidanPickupPending(botAI, illidan))
+    {
+        if (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot))
+            return 1.0f;
+
+        if (isHeal || isItem)
+            return 0.0f;
+
+        bool const hasOwnTarget = dynamic_cast<AttackAction*>(action) ||
+            dynamic_cast<CastDebuffSpellOnAttackerAction*>(action);
+        Unit* target = hasOwnTarget ? action->GetTarget() : AI_VALUE(Unit*, "current target");
+        bool const isAoe = action->getThreatType() == Action::ActionThreatType::Aoe;
+        return IsIllidanPickupExemptTarget(target, isAoe) ? 1.0f : 0.0f;
+    }
+
+    if (isItem)
+        return 1.0f;
 
     //By leewheel 2026-10-25 合并 brighton-chi the-lab（661aa1ca "illidan phase change recall totems"）：
     //  上游给萨满的插图腾/召唤元素加了「阶段转换后等坦克建立仇恨前先压手」的分支，本核此前没有这条
@@ -1309,12 +1353,6 @@ float IllidanStormrageWaitForDpsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
     }
     //End By leewheel
-
-    //By leewheel entry 铁律：上游此处写英文名 "illidan stormrage"，而实库生物名为中文 ⇒
-    //  子串匹配恒 nullptr、打断/施法静默失效（不崩不报错）。保留本核核定的伊利丹 entry 22917。
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
-    if (!illidan)
-        return 1.0f;
 
     if (isHeal)
         return IsHeldIllidanHeal(botAI, illidan, action) ? 0.0f : 1.0f;

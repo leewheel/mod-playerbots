@@ -34,8 +34,6 @@ bool BlackTempleHunterShouldMisdirectTrigger::IsActiveInEncounter()
 
 // Trash
 
-// The mechanic tracker marks a linked Sister of Pleasure. Other non-tanks on her Sister of Pain
-// drop Pain while the two are linked.
 bool SisterOfPleasureShouldBeFocusedTrigger::IsActive()
 {
     if (IsMechanicTrackerBot(bot, BT_MAP_ID))
@@ -142,8 +140,8 @@ bool SupremusRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (!supremus || IsSupremusKitePhase(supremus))
         return false;
 
-    // FleePosition's step goes any way and doesn't see fire, so hold while one could carry the bot
-    // into a volcano's safe zone. Outside the kite phase the hazards are volcanoes alone.
+    // The spread step can go any way and doesn't see fire, so it waits while one step could carry
+    // the bot into a volcano's safe zone.
     float const fleeStep =
         std::min(SUPREMUS_RANGED_SPREAD_DISTANCE + 1.0f, sPlayerbotAIConfig.FleeDistance);
     if (IsInSupremusHazard(
@@ -218,8 +216,6 @@ bool TeronGorefiendRangedShouldPositionOnBalconyTrigger::IsActiveInEncounter()
     return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "22871");
 }
 
-// Feign Death and Vanish cancel his cast. Ice Block and Divine Shield don't help: Shadow of Death
-// pierces invulnerability in AC.
 bool TeronGorefiendCastsShadowOfDeathTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER && bot->getClass() != CLASS_ROGUE)
@@ -457,9 +453,6 @@ bool IllidariCouncilGathiosCastsJudgementOfCommandTrigger::IsActiveInEncounter()
         judgement->m_targets.GetUnitTarget() == bot && PlayerbotAI::IsMainTank(bot);
 }
 
-// Ranged DPS interrupt only while her melee can't: under Blessing of Protection, or while she
-// stands in a Zerevor patch or Gathios's Consecration. Paladins, priests and hunters have nothing
-// she isn't immune to.
 bool IllidariCouncilMalandeCastsCircleOfHealingTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() == CLASS_DRUID || bot->getClass() == CLASS_HUNTER ||
@@ -566,8 +559,6 @@ bool IllidariCouncilPetShouldSwitchTargetTrigger::IsActiveInEncounter()
     return target && pet->GetVictim() != target;
 }
 
-// Every bot but the main tank, the Malande tank and the mage tank, and the Veras tank only while
-// Veras is vanished.
 bool IllidariCouncilShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 {
     if (!AI_VALUE2(Unit*, "find target", "22949"))
@@ -657,8 +648,8 @@ bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncount
     if (phase == IllidanPhase::None)
         return false;
 
-    if (phase == IllidanPhase::Flying)
-        return IsIllidanInfectionPositionKeptInFlight(botAI);
+    if (phase == IllidanPhase::Flying && !IsIllidanInfectionPositionKeptInFlight(botAI))
+        return false;
 
     return !IsExemptFromIllidanInfectionRun(botAI, illidan, bot);
 }
@@ -686,8 +677,21 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
             if (std::find(infected.begin(), infected.end(), player) == infected.end())
                 return true;
 
-            if (hasInfectionPosition && !infection.isTrapAssigned)
+            if (!hasInfectionPosition)
+                continue;
+
+            if (!infection.isTrapAssigned)
                 return true;
+
+            if (infection.hunter.IsEmpty())
+                continue;
+
+            // Its bot has stopped running, so the hunter is freed.
+            if (IsExemptFromIllidanInfectionRun(
+                    botAI, illidan, ObjectAccessor::FindPlayer(player)))
+            {
+                return true;
+            }
         }
     }
 
@@ -725,9 +729,7 @@ bool IllidanStormragePetsDieToHazardsTrigger::IsActiveInEncounter()
     if (!illidan)
         return false;
 
-    IllidanPhase const phase = GetIllidanPhase(illidan);
-    bool const shouldBePassive = phase == IllidanPhase::Flying || phase == IllidanPhase::Demon;
-    return shouldBePassive != pet->HasReactState(REACT_PASSIVE);
+    return ShouldIllidanPetsBePassive(botAI, illidan) != pet->HasReactState(REACT_PASSIVE);
 }
 
 // Hunter and warlock pets take the Shadowfiends, which never attack pets.
@@ -910,7 +912,8 @@ bool IllidanStormrageMeleeShouldStopAttackingTrigger::IsActiveInEncounter()
 }
 
 // Auto Shot, wands and channels (Drain Soul, Mind Flay) keep hitting him through a hold, since a
-// multiplier can't end a running auto-repeat or channel.
+// multiplier can't end a running auto-repeat or channel; in the pickup, so do any
+// channel's heals or mana.
 bool IllidanStormrageShouldStopShootingTrigger::IsActiveInEncounter()
 {
     Spell* shot = bot->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL);
@@ -926,6 +929,9 @@ bool IllidanStormrageShouldStopShootingTrigger::IsActiveInEncounter()
     Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
     if (!illidan)
         return false;
+
+    if (channel && IsIllidanPickupChannelHeld(botAI, illidan, *channel))
+        return true;
 
     ObjectGuid const guid = illidan->GetGUID();
     bool const isOnIllidan = (shot && shot->m_targets.GetUnitTargetGUID() == guid) ||

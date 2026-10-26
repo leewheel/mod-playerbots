@@ -478,7 +478,6 @@ Unit* FindPetTargetOtherThanReaver(PlayerbotAI* botAI)
 namespace // High Warlord Naj'entus
 {
 
-// A remover counts while it is alive, on the map and free to move.
 bool IsValidSpineRemover(Player* bot, ObjectGuid remover)
 {
     Player* player = ObjectAccessor::GetPlayer(*bot, remover);
@@ -718,7 +717,6 @@ std::vector<SupremusHazard> FindSupremusHazards(PlayerbotAI* botAI)
         }
     }
 
-    // In the tank phase stock avoid aoe handles Molten Flame; it sidesteps, keeping bots near.
     Unit* supremus =
         // By leewheel 2026-10-17 合并：find target 按铁律换回 entry 22898（supremus）。
         botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "22898")->Get();
@@ -768,7 +766,6 @@ float GetLineLengthInSupremusHazards(
     float total = 0.0f;
     for (SupremusHazard const& hazard : hazards)
     {
-        // The line crosses the circle where t^2 + 2 * along * t + outside = 0.
         float const radius = GetSupremusHazardRadius(hazard, zone);
         float const offsetX = from.GetPositionX() - hazard.position.GetPositionX();
         float const offsetY = from.GetPositionY() - hazard.position.GetPositionY();
@@ -963,8 +960,6 @@ std::vector<std::vector<Player*>> GetGurtoggRangedRotationGroups(Player* bot)
 }
 
 // The group hit longest ago soaks next: the lowest mean Bloodboil time left, ties to the first.
-// Just after a cast, that group's debuffs run out before the next one. Debuffs younger than the
-// rotation delay count as none, so the group just hit stays the soakers until then.
 GuidVector FindGurtoggBloodboilSoakerGuids(Player* bot)
 {
     std::vector<std::vector<Player*>> const groups = GetGurtoggRangedRotationGroups(bot);
@@ -1014,7 +1009,6 @@ Position const& GetGurtoggBloodboilPosition(Player* bot)
     return isSoaker ? GURTOGG_SOAKER_POSITION : GURTOGG_RANGED_POSITION;
 }
 
-// The Fel Rage target taunts him onto itself, so it is his victim.
 Unit* GetGurtoggFelRageTarget(Unit* gurtogg)
 {
     if (!gurtogg || !gurtogg->HasAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE)))
@@ -1114,15 +1108,14 @@ bool IsShahrazBeingPositioned(Unit* shahraz)
 
 // Illidari Council
 
-// (1) First priority is an assistant Mage (real player or bot)
-// (2) If no assistant Mage, then look for any Mage bot
 ObjectGuid FindZerevorMageTankGuid(Player* bot)
 {
     Group* group = bot->GetGroup();
     if (!group)
         return ObjectGuid::Empty;
 
-    Player* fallbackMage = nullptr;
+    Player* highestHpBotMage = nullptr;
+    uint32 highestHp = 0;
 
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
@@ -1136,11 +1129,18 @@ ObjectGuid FindZerevorMageTankGuid(Player* bot)
         if (group->IsAssistant(member->GetGUID()))
             return member->GetGUID();
 
-        if (!fallbackMage && GET_PLAYERBOT_AI(member))
-            fallbackMage = member;
+        if (!GET_PLAYERBOT_AI(member))
+            continue;
+
+        uint32 const hp = member->GetMaxHealth();
+        if (!highestHpBotMage || hp > highestHp)
+        {
+            highestHpBotMage = member;
+            highestHp = hp;
+        }
     }
 
-    return fallbackMage ? fallbackMage->GetGUID() : ObjectGuid::Empty;
+    return highestHpBotMage ? highestHpBotMage->GetGUID() : ObjectGuid::Empty;
 }
 
 Player* GetZerevorMageTank(PlayerbotAI* botAI)
@@ -1186,7 +1186,6 @@ bool CanInterruptCircleOfHealing(Unit* malande)
         circle->GetCastTime() - circle->GetCastTimeRemaining() >= CIRCLE_OF_HEALING_REACTION_MS;
 }
 
-// Zerevor has at most one Blizzard and one Flamestrike down at a time.
 bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin)
 {
     if (!zerevor)
@@ -1219,7 +1218,6 @@ bool IsInCouncilPatch(Position const& point, Unit* gathios, Unit* zerevor, float
     return IsInZerevorPatch(zerevor, point, margin);
 }
 
-// Gathios's Consecration reaches Malande only at the pull, while he is beside her on the dais.
 bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor)
 {
     return malande && gathios && zerevor && IsInCouncilPatch(*malande, gathios, zerevor);
@@ -1243,8 +1241,6 @@ bool IsZerevorOnMageTank(PlayerbotAI* botAI, Unit* zerevor)
     return mageTank && zerevor->GetVictim() == mageTank;
 }
 
-// Within heal range of the mage tank, clear of a patch on it, of Arcane Explosion, and of any
-// patch down.
 bool IsMageTankHealerPositionSafe(Position const& point, Player* mageTank, Unit* zerevor)
 {
     if (!mageTank || !zerevor)
@@ -1275,8 +1271,6 @@ bool CanWalkStraightTo(Player* bot, Position const& point)
 
 } // end anonymous namespace (Illidari Council)
 
-// The nearest safe point on two rings round the mage tank that the bot can walk to in a straight
-// line and that has line of sight to the mage tank.
 bool FindMageTankHealerPosition(
     Player* bot, Player* mageTank, Unit* zerevor, Position& destination)
 {
@@ -1323,8 +1317,6 @@ bool FindMageTankHealerPosition(
     return false;
 }
 
-// The nearest point within melee range of Malande, clear of every council patch, that the bot can
-// walk to in a straight line.
 bool FindMalandeTankPosition(
     Player* bot, Unit* malande, Unit* gathios, Unit* zerevor, Position& destination)
 {
@@ -1369,8 +1361,6 @@ bool FindMalandeTankPosition(
     return false;
 }
 
-// Any council member but the bot's own target. One pass by entry over what this bot is on the
-// threat list of, where a find target per member walks the list once per name.
 bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range)
 {
     Player* bot = botAI->GetBot();
@@ -1397,8 +1387,6 @@ bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range)
     return false;
 }
 
-// Felhunters stay on Malande for Spell Lock; other pets follow their master's target, or go to
-// Gathios while the master has none.
 Unit* GetCouncilPetTarget(PlayerbotAI* botAI, Creature* pet)
 {
     if (!pet)
@@ -1419,7 +1407,6 @@ Unit* GetCouncilPetTarget(PlayerbotAI* botAI, Creature* pet)
     return target && target->IsAlive() ? target : gathios;
 }
 
-// PlayerbotAI::CanCastSpell passes any spell the pet knows without checking range or cooldown.
 uint32 GetReadySpellLock(Creature* pet, Unit* target)
 {
     if (!pet || !target || !pet->IsAlive() || pet->GetEntry() != NPC_FELHUNTER)
@@ -1649,7 +1636,7 @@ bool IsIllidanDemonFormEnding(Unit const& illidan, uint32 durationMs)
 
 IllidanDpsHold GetIllidanHoldWindow(Unit* illidan)
 {
-    if (!illidan || illidan->GetHealthPct() <= ILLIDAN_BURN_HEALTH_PCT)
+    if (!illidan)
         return IllidanDpsHold::None;
 
     IllidanPhase const phase = GetIllidanPhase(illidan);
@@ -1737,6 +1724,112 @@ bool IsIllidanTankAggroPending(Unit const& illidan, IllidanPhase phase)
 
     BtInstanceState const* state = FindBtState(illidan.GetInstanceId());
     return !state || state->illidanTankAggroPhase != phase;
+}
+
+// A threat reset keeps the old victim at 0, so the victim alone doesn't show aggro.
+bool DoIllidanTanksHaveAggro(PlayerbotAI* botAI, Unit const& illidan, IllidanPhase phase)
+{
+    auto const hasAggro = [](Unit const& creature, Player* tank)
+    {
+        ThreatManager const& threatManager = creature.GetThreatMgr();
+        return threatManager.GetLastVictim() == tank &&
+            threatManager.GetThreat(tank) >= ILLIDAN_TANK_AGGRO_THREAT;
+    };
+
+    Player* bot = botAI->GetBot();
+    switch (phase)
+    {
+        case IllidanPhase::Flying:
+        {
+            BtInstanceState const* state = FindBtState(illidan.GetInstanceId());
+            if (!state || !state->eastFlameGuid || !state->westFlameGuid)
+                return false;
+
+            for (bool const isEast : { true, false })
+            {
+                Creature* flame = illidan.GetMap()->GetCreature(
+                    isEast ? *state->eastFlameGuid : *state->westFlameGuid);
+                if (!flame || !flame->IsAlive())
+                    continue;
+
+                Player* tank = FindFlameOfAzzinothTank(bot, isEast);
+                if (!tank || !tank->IsAlive())
+                    tank = FindFlameOfAzzinothTank(bot, !isEast);
+
+                if (tank && tank->IsAlive() && !hasAggro(*flame, tank))
+                    return false;
+            }
+
+            return true;
+        }
+        case IllidanPhase::Initial:
+        case IllidanPhase::Grounded:
+        case IllidanPhase::Maiev:
+        {
+            Player* mainTank = GetGroupMainTank(bot);
+            return !mainTank || hasAggro(illidan, mainTank);
+        }
+        case IllidanPhase::Demon:
+        {
+            Player* warlockTank = GetIllidanWarlockTank(botAI);
+            return !warlockTank || hasAggro(illidan, warlockTank);
+        }
+        default:
+            return false;
+    }
+}
+
+bool IsIllidanPickupPending(PlayerbotAI* botAI, Unit* illidan)
+{
+    if (!illidan)
+        return false;
+
+    // He touches down 3.665 s after reaching the landing point, 2.43 s before the reset; threat
+    // caused before then is wiped, but a cast begun after it can land after the reset.
+    IllidanPhase const phase = GetIllidanPhase(illidan);
+    if (phase == IllidanPhase::Landing)
+        return !illidan->IsLevitating();
+
+    if (phase != IllidanPhase::Grounded && phase != IllidanPhase::Maiev)
+        return false;
+
+    IllidanPhase const before = GetIllidanPhaseBefore(*illidan, phase);
+    if ((before != IllidanPhase::Landing && before != IllidanPhase::Demon) ||
+        !IsIllidanPhaseStartWithin(*illidan, phase, ILLIDAN_PICKUP_MAX_MS))
+    {
+        return false;
+    }
+
+    return !DoIllidanTanksHaveAggro(botAI, *illidan, phase);
+}
+
+bool IsIllidanPickupExemptTarget(Unit const* target, bool isAoe)
+{
+    if (!target || isAoe)
+        return false;
+
+    uint32 const entry = target->GetEntry();
+    return entry == Id(BtNpcs::NPC_PARASITIC_SHADOWFIEND) || entry == Id(BtNpcs::NPC_SHADOW_DEMON);
+}
+
+bool ShouldIllidanPetsBePassive(PlayerbotAI* botAI, Unit* illidan)
+{
+    IllidanPhase const phase = GetIllidanPhase(illidan);
+    return phase == IllidanPhase::Flying || phase == IllidanPhase::Demon ||
+        IsIllidanPickupPending(botAI, illidan);
+}
+
+bool IsIllidanPickupChannelHeld(PlayerbotAI* botAI, Unit* illidan, Spell const& channel)
+{
+    if (!IsIllidanPickupPending(botAI, illidan))
+        return false;
+
+    Player* bot = botAI->GetBot();
+    if (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot))
+        return false;
+
+    return !IsIllidanPickupExemptTarget(
+        channel.m_targets.GetUnitTarget(), channel.GetSpellInfo()->IsAffectingArea());
 }
 
 float GetGrateAngle(Position const& position)
@@ -2572,8 +2665,7 @@ EyeBlastDangerArea GetEyeBlastDangerArea(Player* bot)
     if (startPos.GetExactDist2d(endPos) < ILLIDAN_MIN_SEGMENT_LENGTH)
         return {};
 
-    constexpr float eyeBlastWidth = 9.0f;
-    return { startPos, endPos, eyeBlastWidth };
+    return { startPos, endPos, ILLIDAN_EYE_BLAST_CLEARANCE };
 }
 
 bool IsPositionInEyeBlastDangerArea(Position const& pos, EyeBlastDangerArea const& area)
