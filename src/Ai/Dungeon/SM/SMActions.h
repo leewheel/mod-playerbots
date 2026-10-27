@@ -7,6 +7,7 @@
 #ifndef PLAYERBOTS_SMACTIONS_H
 #define PLAYERBOTS_SMACTIONS_H
 
+#include "AttackAction.h"
 #include "MovementActions.h"
 
 class ArcanistDoanMoveOutOfDetonationAction : public MovementAction
@@ -14,6 +15,27 @@ class ArcanistDoanMoveOutOfDetonationAction : public MovementAction
 public:
     ArcanistDoanMoveOutOfDetonationAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "arcanist doan move out of detonation") {}
+    bool Execute(Event event) override;
+};
+
+class ArcanistDoanRangedKeepAwayAction : public MovementAction
+{
+public:
+    ArcanistDoanRangedKeepAwayAction(PlayerbotAI* botAI) : MovementAction(botAI, "arcanist doan ranged keep away") {}
+    bool Execute(Event event) override;
+};
+
+class HerodMoveFromWhirlwindAction : public MovementAction
+{
+public:
+    HerodMoveFromWhirlwindAction(PlayerbotAI* botAI) : MovementAction(botAI, "herod move from whirlwind") {}
+    bool Execute(Event event) override;
+};
+
+class AttackWhitemaneAction : public AttackAction
+{
+public:
+    AttackWhitemaneAction(PlayerbotAI* botAI) : AttackAction(botAI, "attack whitemane") {}
     bool Execute(Event event) override;
 };
 

@@ -7,8 +7,10 @@
 #ifndef PLAYERBOTS_VANILLADUNGEONACTIONCONTEXT_H
 #define PLAYERBOTS_VANILLADUNGEONACTIONCONTEXT_H
 
+#include "BFDActionContext.h"
 #include "RFCActionContext.h"
 #include "SFKActionContext.h"
 #include "SMActionContext.h"
+#include "UldaActionContext.h"
 
 #endif

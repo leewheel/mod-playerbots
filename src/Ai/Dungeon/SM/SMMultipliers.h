@@ -17,4 +17,18 @@ public:
     float GetValue(Action* action) override;
 };
 
+class HerodWhirlwindMultiplier : public Multiplier
+{
+public:
+    HerodWhirlwindMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "herod whirlwind") {}
+    float GetValue(Action* action) override;
+};
+
+class WhitemaneFocusMultiplier : public Multiplier
+{
+public:
+    WhitemaneFocusMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "whitemane focus") {}
+    float GetValue(Action* action) override;
+};
+
 #endif

@@ -9,6 +9,9 @@
 
 #include "Trigger.h"
 
+class AiObjectContext;
+class Unit;
+
 class ArcanistDoanBossCastingDetonationTrigger : public Trigger
 {
 public:
@@ -16,5 +19,31 @@ public:
         : Trigger(botAI, "arcanist doan boss casting detonation") {}
     bool IsActive() override;
 };
+
+class ArcanistDoanRangedTrigger : public Trigger
+{
+public:
+    ArcanistDoanRangedTrigger(PlayerbotAI* botAI) : Trigger(botAI, "arcanist doan ranged") {}
+    bool IsActive() override;
+};
+
+class HerodWhirlwindTrigger : public Trigger
+{
+public:
+    HerodWhirlwindTrigger(PlayerbotAI* botAI) : Trigger(botAI, "herod whirlwind") {}
+    bool IsActive() override;
+};
+
+class WhitemaneFocusTrigger : public Trigger
+{
+public:
+    WhitemaneFocusTrigger(PlayerbotAI* botAI) : Trigger(botAI, "whitemane focus") {}
+    bool IsActive() override;
+};
+
+// Herod while his Whirlwind spins.
+bool IsWhirlwinding(Unit const* herod);
+// Whitemane once she has raised Mograine: she is the one to kill first.
+Unit* WhitemaneToFocus(PlayerbotAI* botAI, AiObjectContext* context);
 
 #endif

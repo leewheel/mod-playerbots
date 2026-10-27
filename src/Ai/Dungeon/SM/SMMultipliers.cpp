@@ -5,12 +5,15 @@
  */
 
 #include "SMMultipliers.h"
+#include "AttackAction.h"
+#include "ChooseTargetActions.h"
 #include "GenericSpellActions.h"
 #include "MovementActions.h"
 #include "Playerbots.h"
 #include "ReachTargetActions.h"
 #include "SMActions.h"
 #include "SMShared.h"
+#include "SMTriggers.h"
 
 using namespace SMShared;
 
@@ -35,4 +38,26 @@ float ArcanistDoanDetonationMultiplier::GetValue(Action* action)
 
     // Inside the blast radius, standing still to cast is how bots die; outside it they may keep casting.
     return bot->GetExactDist2d(doan) < DETONATION_SAFE_DISTANCE ? 0.0f : 1.0f;
+}
+
+float HerodWhirlwindMultiplier::GetValue(Action* action)
+{
+    if (botAI->IsTank(bot) || dynamic_cast<HerodMoveFromWhirlwindAction*>(action))
+        return 1.0f;
+
+    bool const approaches = dynamic_cast<AttackAction*>(action) || dynamic_cast<CastReachTargetSpellAction*>(action) ||
+        dynamic_cast<MovementAction*>(action);
+    if (!approaches)
+        return 1.0f;
+
+    return IsWhirlwinding(AI_VALUE2(Unit*, "find target", "herod")) ? 0.0f : 1.0f;
+}
+
+float WhitemaneFocusMultiplier::GetValue(Action* action)
+{
+    // The ordinary "attack what the tank attacks" would pull everyone back onto Mograine.
+    if (!dynamic_cast<DpsAssistAction*>(action) || botAI->IsTank(bot) || botAI->IsHeal(bot))
+        return 1.0f;
+
+    return WhitemaneToFocus(botAI, context) ? 0.0f : 1.0f;
 }
