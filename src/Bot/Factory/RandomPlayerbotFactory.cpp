@@ -9,6 +9,7 @@
 #include "ArenaTeamMgr.h"
 #include "CharacterCache.h"
 #include "CoaBotNames.h"
+#include "CoaBotRacePolicy.h"
 #include "CoaReborn.h"
 #include "CoaWildcard.h"
 #include "ObjectAccessor.h"
@@ -84,11 +85,8 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
         // 97) are left out unless that module lets bots have them, and any race can be excluded by id. The mask
         // above cannot reach most of them: shifting by 32 or more is undefined and on x86 wrapped onto a base
         // race's bit.
-        bool const baseRace = race <= RACE_DRAENEI && race != 9;
-        if (!baseRace && !sPlayerbotAIConfig.customRacesForBots)
-            continue;
-        if (std::find(sPlayerbotAIConfig.excludedBotRaces.begin(), sPlayerbotAIConfig.excludedBotRaces.end(), race) !=
-            sPlayerbotAIConfig.excludedBotRaces.end())
+        if (!IsCoaBotRaceAllowed(race, sPlayerbotAIConfig.customRacesForBots,
+                                sPlayerbotAIConfig.excludedBotRaces))
             continue;
 
         // Try to get 50/50 faction distribution for random bot population balance.

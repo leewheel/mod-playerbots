@@ -105,7 +105,7 @@
    "key": "AiPlayerbot.ExcludedBotRaces",
    "group": "population",
    "title": "Races bots never use",
-   "description": "Comma-separated race ids of the custom races module, added to the always-excluded crashing races below. Only matters when CoACustomRaces.BotsEnable = 1; bots already created keep their race.",
+   "description": "Comma-separated race ids added to the always-excluded crashing races below. Existing random bots of excluded races stay offline; their characters are preserved. Restart after changing this setting.",
    "type": "string",
    "default": "",
    "coa": true
