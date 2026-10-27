@@ -48,6 +48,11 @@ bool GruulsLairResetEncounterStatesAction::Execute(Event /*event*/)
     //End By leewheel
 }
 
+bool GruulsLairAssignClassRolesAction::Execute(Event /*event*/)
+{
+    return UpdateGruulClassRoles(botAI);
+}
+
 // High King Maulgar <Lord of the Ogres>
 
 bool HighKingMaulgarMeleeTanksPositionBossesAction::Execute(Event /*event*/)
@@ -365,6 +370,11 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
 
     return botAI->CanCastSpell("steady shot", ogreTarget) && botAI->CastSpell("steady shot", ogreTarget);
     // End By leewheel
+}
+
+bool HighKingMaulgarAnnounceClassRolesAction::Execute(Event /*event*/)
+{
+    return IsMechanicTrackerBot(bot, GRUUL_MAP_ID) && UpdateMaulgarClassRoleAnnouncement(botAI);
 }
 
 // Gruul the Dragonkiller
