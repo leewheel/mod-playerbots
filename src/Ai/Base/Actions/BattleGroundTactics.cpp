@@ -1577,6 +1577,10 @@ bool BGTactics::Execute(Event /*event*/)
         return false;
     }
 
+    // Still porting in, or a battleground that is not the bot's map: its objects cannot be read.
+    if (bot->GetMapId() != bg->GetMapId() || bot->GetInstanceId() != bg->GetInstanceID())
+        return false;
+
     if (getName() == "unstuck")
         return Unstuck(bg);
 
@@ -3669,7 +3673,7 @@ bool BGTactics::atFlag(std::vector<BattleBotPath*> const& vPaths, std::vector<ui
 {
     // Basic sanity checks
     Battleground* bg = bot->GetBattleground();
-    if (!bg)
+    if (!bg || bot->GetMapId() != bg->GetMapId() || bot->GetInstanceId() != bg->GetInstanceID())
         return false;
 
     // Get the actual BG type (in case of random BG)
