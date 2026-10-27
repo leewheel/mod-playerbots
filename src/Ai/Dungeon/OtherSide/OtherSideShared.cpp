@@ -46,6 +46,8 @@ constexpr float LINE_LENGTH = 60.0f;
 constexpr float DEG = float(M_PI) / 180.0f;
 
 constexpr uint32 CACHE_MS = 100;
+// How far a bot steps away from a hazard when no safe spot is in reach.
+constexpr float AWAY_STEP = 8.0f;
 
 float Signed(float angle)
 {
@@ -377,14 +379,20 @@ struct Cached
     bool inHazard = false;
     bool eggPhase = false;
     ObjectGuid egg;
+    ObjectGuid spider;
 };
 
 // Bots of different maps update on different threads.
 Cached& Refresh(Player* bot)
 {
     thread_local std::unordered_map<ObjectGuid, Cached> cache;
-    Cached& entry = cache[bot->GetGUID()];
     uint32 const now = getMSTime();
+    // Bots that left the map keep no entry for ever.
+    if (cache.size() > 64)
+        for (auto itr = cache.begin(); itr != cache.end();)
+            itr = getMSTimeDiff(itr->second.readAt, now) > 10 * IN_MILLISECONDS ? cache.erase(itr) : std::next(itr);
+
+    Cached& entry = cache[bot->GetGUID()];
     if (entry.readAt && getMSTimeDiff(entry.readAt, now) < CACHE_MS)
         return entry;
 
@@ -392,6 +400,7 @@ Cached& Refresh(Player* bot)
     entry.inHazard = false;
     entry.eggPhase = false;
     entry.egg.Clear();
+    entry.spider.Clear();
     if (bot->GetMapId() != OTHER_SIDE_MAP_ID || !bot->IsAlive() || !bot->IsInCombat())
         return entry;
 
@@ -401,6 +410,8 @@ Cached& Refresh(Player* bot)
     if (entry.eggPhase)
         if (Creature* egg = EggToKick(bot))
             entry.egg = egg->GetGUID();
+    if (Unit* spider = NearestSpider(bot))
+        entry.spider = spider->GetGUID();
     return entry;
 }
 }
@@ -419,5 +430,49 @@ Creature* CachedEggToKick(Player* bot)
 bool InEggPhase(Player* bot)
 {
     return Refresh(bot).eggPhase;
+}
+
+Unit* CachedNearestSpider(Player* bot)
+{
+    Cached const& entry = Refresh(bot);
+    return entry.spider ? ObjectAccessor::GetCreature(*bot, entry.spider) : nullptr;
+}
+
+bool AwayFromHazard(Player* bot, Hazards const& hazards, Position& spot)
+{
+    float const x = bot->GetPositionX();
+    float const y = bot->GetPositionY();
+    float fromX = 0.0f;
+    float fromY = 0.0f;
+    float nearest = -1.0f;
+    auto consider = [&](float cx, float cy)
+    {
+        float const distance = std::hypot(x - cx, y - cy);
+        if (nearest < 0.0f || distance < nearest)
+        {
+            nearest = distance;
+            fromX = cx;
+            fromY = cy;
+        }
+    };
+    for (Circle const& circle : hazards.circles)
+        if (std::hypot(x - circle.x, y - circle.y) <= circle.radius)
+            consider(circle.x, circle.y);
+    for (Strip const& strip : hazards.strips)
+        consider(strip.x, strip.y);
+    for (Sweep const& sweep : hazards.sweeps)
+        consider(sweep.x, sweep.y);
+    if (nearest < 0.0f)
+        return false;
+
+    float const angle = nearest > 0.1f ? std::atan2(y - fromY, x - fromX) : bot->GetOrientation() + float(M_PI);
+    float toX = x + std::cos(angle) * AWAY_STEP;
+    float toY = y + std::sin(angle) * AWAY_STEP;
+    float toZ = bot->GetPositionZ();
+    if (!bot->GetMap()->CheckCollisionAndGetValidCoords(bot, x, y, bot->GetPositionZ(), toX, toY, toZ))
+        return false;
+
+    spot.Relocate(toX, toY, toZ);
+    return true;
 }
 }

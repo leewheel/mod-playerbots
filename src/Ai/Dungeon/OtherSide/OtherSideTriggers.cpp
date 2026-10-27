@@ -35,7 +35,7 @@ bool OtherSideSpiderTrigger::IsActive()
     Unit* current = AI_VALUE(Unit*, "current target");
     if (current && current->GetEntry() == NPC_EMBRYO_SPIDER)
         return false;
-    return NearestSpider(bot) != nullptr;
+    return CachedNearestSpider(bot) != nullptr;
 }
 
 bool OtherSideEggToKickTrigger::IsActive()

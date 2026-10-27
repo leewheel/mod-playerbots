@@ -27,9 +27,11 @@ float OtherSideHazardMultiplier::GetValue(Action* action)
     if (InHazard(bot))
         return 0.0f;
 
-    // In the egg phase only the run and the eggs on its way move a bot.
+    // In the egg phase only the run and the eggs on its way move a bot. The tank still places itself, and a healer
+    // still gets in range of the one it heals.
     if (InEggPhase(bot))
-        return dynamic_cast<OtherSideKickEggAction*>(action) || dynamic_cast<OtherSideRunAroundAction*>(action)
+        return dynamic_cast<OtherSideKickEggAction*>(action) || dynamic_cast<OtherSideRunAroundAction*>(action) ||
+            botAI->IsTank(bot) || (botAI->IsHeal(bot) && dynamic_cast<CastReachTargetSpellAction*>(action))
             ? 1.0f : 0.0f;
 
     return 1.0f;

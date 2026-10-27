@@ -108,10 +108,14 @@ Creature* EggToKick(Player* bot);
 // The nearest hatched spider that has come for the group, or nullptr.
 Unit* NearestSpider(Player* bot);
 
-// Both of the above, read once per bot every 200 ms: triggers and the multiplier ask for them on
-// every evaluation.
+// When no safe spot is in reach: a few yards straight away from the middle of the nearest hazard the bot
+// stands in. False when that way is blocked too.
+bool AwayFromHazard(Player* bot, Hazards const& hazards, Position& spot);
+
+// The above, read once per bot every 100 ms: triggers and the multiplier ask for them on every evaluation.
 bool InHazard(Player* bot);
 Creature* CachedEggToKick(Player* bot);
+Unit* CachedNearestSpider(Player* bot);
 bool InEggPhase(Player* bot);
 }
 

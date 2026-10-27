@@ -22,7 +22,7 @@ bool OtherSideLeaveHazardAction::Execute(Event /*event*/)
     bool const eggPhase = EggPhaseCenter(bot, center);
     if (eggPhase)
         ahead = NextRunSpot(bot, center);
-    if (!FindSafeSpot(bot, hazards, spot, eggPhase ? &ahead : nullptr))
+    if (!FindSafeSpot(bot, hazards, spot, eggPhase ? &ahead : nullptr) && !AwayFromHazard(bot, hazards, spot))
         return false;
 
     bot->CastStop();
@@ -33,7 +33,7 @@ bool OtherSideLeaveHazardAction::Execute(Event /*event*/)
 // An egg the group steps on is kicked away and never hatches.
 bool OtherSideKickEggAction::Execute(Event /*event*/)
 {
-    Creature* egg = EggToKick(bot);
+    Creature* egg = CachedEggToKick(bot);
     if (!egg)
         return false;
 
@@ -53,7 +53,7 @@ bool OtherSideCloseInOnMuzahAction::Execute(Event /*event*/)
 // The spiders the eggs hatch go for the tank; damage dealers take them down first.
 bool OtherSideAttackSpiderAction::Execute(Event /*event*/)
 {
-    Unit* spider = NearestSpider(bot);
+    Unit* spider = CachedNearestSpider(bot);
     if (!spider || AI_VALUE(Unit*, "current target") == spider)
         return false;
     return Attack(spider);
