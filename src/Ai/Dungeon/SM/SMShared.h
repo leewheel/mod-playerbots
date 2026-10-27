@@ -38,6 +38,11 @@ inline bool IsDetonationImminent(Unit* doan)
         doan->FindCurrentSpellBySpellId(Id(SMSpells::SPELL_DETONATION));
 }
 
+// Doan's area Silence (8988) reaches 20 yards and his Arcanist's Explosion (2100692) 15: casters and healers keep out.
+inline constexpr float DOAN_RANGED_DISTANCE = 22.0f;
+// Herod's Whirlwind (8989, 10 s) hits within 5 yards of him (15578).
+inline constexpr float WHIRLWIND_SAFE_DISTANCE = 9.0f;
+
 }
 
 #endif
