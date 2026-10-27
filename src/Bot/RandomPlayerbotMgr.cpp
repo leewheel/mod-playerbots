@@ -14,6 +14,8 @@
 #include "Cell.h"
 #include "CellImpl.h"
 #include "ChannelMgr.h"
+#include "CharacterCache.h"
+#include "CoaBotRacePolicy.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
 #include "DatabaseEnv.h"
@@ -806,6 +808,10 @@ uint32 RandomPlayerbotMgr::AddRandomBots()
 
         for (auto const& charInfo : allCharacters)
         {
+            if (!IsCoaBotRaceAllowed(charInfo.rRace, sPlayerbotAIConfig.customRacesForBots,
+                                    sPlayerbotAIConfig.excludedBotRaces))
+                continue;
+
             if (IsAlliance(charInfo.rRace))
                 allianceChars.push_back(charInfo);
 
@@ -1791,6 +1797,18 @@ bool RandomPlayerbotMgr::ProcessBot(uint32 bot)
     ObjectGuid botGUID = ObjectGuid::Create<HighGuid::Player>(bot);
     Player* player = GetPlayerBot(botGUID);
     PlayerbotAI* botAI = player ? GET_PLAYERBOT_AI(player) : nullptr;
+
+    CharacterCacheEntry const* character = sCharacterCache->GetCharacterCacheByGuid(botGUID);
+    uint32 const race = player ? player->getRace() : character ? character->Race : 0;
+    if (!race || !IsCoaBotRaceAllowed(race, sPlayerbotAIConfig.customRacesForBots,
+                                    sPlayerbotAIConfig.excludedBotRaces))
+    {
+        SetEventValue(bot, "add", 0, 0);
+        currentBots.erase(bot);
+        if (player)
+            LogoutPlayerBot(botGUID);
+        return false;
+    }
 
     uint32 isValid = GetEventValue(bot, "add");
     if (!isValid)

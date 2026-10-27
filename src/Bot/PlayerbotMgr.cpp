@@ -6,6 +6,7 @@
 
 #include "PlayerbotMgr.h"
 #include "CoaSpecialization.h"
+#include "CoaBotRacePolicy.h"
 #include "BroadcastHelper.h"
 #include "ChannelMgr.h"
 #include "CharacterCache.h"
@@ -132,6 +133,14 @@ void PlayerbotHolder::AddPlayerBot(ObjectGuid playerGuid, uint32 masterAccountId
     if (!accountId)
         return;
 
+    if (!masterAccountId)
+    {
+        CharacterCacheEntry const* character = sCharacterCache->GetCharacterCacheByGuid(playerGuid);
+        if (!character || !IsCoaBotRaceAllowed(character->Race, sPlayerbotAIConfig.customRacesForBots,
+                                             sPlayerbotAIConfig.excludedBotRaces))
+            return;
+    }
+
     WorldSession* masterSession = masterAccountId ? sWorldSessionMgr->FindSession(masterAccountId) : nullptr;
     Player* masterPlayer = masterSession ? masterSession->GetPlayer() : nullptr;
 
@@ -234,6 +243,17 @@ bool PlayerbotHolder::IsAccountLinked(uint32 accountId, uint32 linkedAccountId)
 
 void PlayerbotHolder::HandlePlayerBotLoginCallback(PlayerbotLoginQueryHolder const& holder)
 {
+    if (!holder.GetMasterAccountId())
+    {
+        CharacterCacheEntry const* character = sCharacterCache->GetCharacterCacheByGuid(holder.GetGuid());
+        if (!character || !IsCoaBotRaceAllowed(character->Race, sPlayerbotAIConfig.customRacesForBots,
+                                             sPlayerbotAIConfig.excludedBotRaces))
+        {
+            PlayerbotHolder::botLoading.erase(holder.GetGuid());
+            return;
+        }
+    }
+
     uint32 botAccountId = holder.GetAccountId();
     // At login DBC locale should be what the server is set to use by default (as spells etc are hardcoded to ENUS this
     // allows channels to work as intended)
