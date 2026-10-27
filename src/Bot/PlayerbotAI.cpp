@@ -2040,7 +2040,8 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     {
         "aq20", "blacktemple", "bwl", "gruulslair", "hyjal", "icc", "karazhan", "magtheridon", "moltencore", "naxx",
         "onyxia", "rs", "ssc", "sunwell", "tbc-ac", "tbc-mech", "tbc-mgt", "tbc-seth", "tbc-ub", "tempestkeep", "ulduar",
-        "vanilla-rfc", "vanilla-sfk", "vanilla-sm", "voa", "wotlk-an", "wotlk-cos", "wotlk-dtk", "wotlk-eoe",
+        "vanilla-bfd", "vanilla-rfc", "vanilla-sfk", "vanilla-sm", "vanilla-ulda", "voa", "wotlk-an", "wotlk-cos",
+        "wotlk-dtk", "wotlk-eoe",
         "wotlk-fos", "wotlk-gd", "wotlk-hol", "wotlk-hos", "wotlk-nex", "wotlk-occ", "wotlk-ok", "wotlk-os",
         "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up", "wotlk-vh", "zulaman"
     };
@@ -2056,6 +2057,12 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     {
         case 33:
             strategyName = "vanilla-sfk";  // Shadowfang Keep
+            break;
+        case 48:
+            strategyName = "vanilla-bfd";  // Blackfathom Deeps
+            break;
+        case 70:
+            strategyName = "vanilla-ulda";  // Uldaman
             break;
         case 189:
             strategyName = "vanilla-sm";  // Scarlet Monastery
