@@ -50,8 +50,10 @@
 - On a new install, the navigation maps can be downloaded instead of generated.
 
 ### Known limits
-- Dungeon Clear: Blackfathom Deeps (two bosses) and Sunken Temple (Shade of Eranikus) are not yet cleared reliably in
-  Normal. Heroic and Mythic mostly depend on bot gear.
+- Dungeon Clear: Blackfathom Deeps (two bosses) and the Scarlet Cathedral (Whitemane does not resurrect Mograine) can
+  still get stuck. Heroic and Mythic mostly depend on bot gear.
+- Dungeon Clear: a Heroic or Mythic clear still running at the daily instance reset (04:00 server time) gets stuck. Type
+  `.dc off`, then start a new clear.
 - If bots stay behind during a clear, the Regroup button teleports them back.
 
 ## v2.8 — A smoother server with many bots, Dungeon Clear, realm cards (October 2026)
