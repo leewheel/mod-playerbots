@@ -82,8 +82,6 @@ protected:
     bool KeepAway(Unit* unit, float radius);
     // Straight out to the nearer side of the strip of InPath, keeping the bot's place along it.
     bool MoveOutOfPath(Unit* source, float angle, float halfWidth, float step);
-
-private:
     bool MoveToSpot(float x, float y);
 };
 
