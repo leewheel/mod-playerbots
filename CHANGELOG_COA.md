@@ -4,7 +4,7 @@
 
 ### Highlights
 - **Latest CoA core**: 246 new commits from the public CoA core since 2.8 (full list in the GitHub release notes).
-- **Boss mechanics for the classic dungeons**: bots now handle the bosses of Wailing Caverns, Ragefire Chasm, Razorfen
+- **Boss mechanics for the classic dungeons**: bots now handle the bosses of Wailing Caverns, Razorfen Kraul, Razorfen
   Downs, Blackfathom Deeps, Scarlet Monastery, Uldaman, Blackrock Depths, Blackrock Spire, Stratholme, Scholomance and
   Maraudon. Thanks to Brytenwally (#45).
 - **Molten Core is back on Heroic, Mythic and Ascended** for servers whose database was created before 11 October.
@@ -31,7 +31,7 @@
 ### Bots
 - **Bloodmage Eternal** tanks enter their form, keep Hypovolemic Shock up on packs and no longer cast Sanguine Rupture
   (#38, #51).
-- **Classic dungeons**: boss mechanics for Wailing Caverns, Ragefire Chasm, Razorfen Downs, Blackfathom Deeps, Scarlet
+- **Classic dungeons**: boss mechanics for Wailing Caverns, Razorfen Kraul, Razorfen Downs, Blackfathom Deeps, Scarlet
   Monastery, Uldaman, Blackrock Depths, Blackrock Spire, Stratholme, Scholomance and Maraudon. Thanks to Brytenwally (#45).
 - **Road to De Other Side**: boss strategy for the bots. Thanks to steviecraycray (#49).
 - Custom race exclusions now also apply to existing random bots, not only to new ones. Thanks to Corfirean (#54).
@@ -247,7 +247,7 @@ Many of these fixes come from the raid and dungeon reports of ladiabale and Yeh:
 - **Area spells no longer pull the next pack** (`AiPlayerbot.CoaAoeNoIdlePull`, on by default): in a dungeon or a
   raid, a bot no longer casts an area spell that would also hit a creature not yet fighting (a tank's Thunder Clap
   pulled the Ring of Law spectators in Blackrock Depths).
-- Ragefire Chasm, Taragaman (Heroic/Mythic): the bots hide behind the earth pillar before Massive Fire Nova, the tank
+- Razorfen Kraul, Taragaman (Heroic/Mythic): the bots hide behind the earth pillar before Massive Fire Nova, the tank
   once the cast starts.
 - Scarlet Monastery, Arcanist Doan: the bots run out of Detonation (36 yd) as soon as the Arcane Bubble is up.
 - Random bots join a random dungeon only within 5 levels of the real players waiting for it.
@@ -753,7 +753,7 @@ the `worldserver.conf` it builds at each start, and the full repack ships 60. Do
   being hit
 - **#6704** KoX Defiance, and every shield spec: no more two-handed weapons
 - **#6505 / #6493** Tank: leads the group only while the player moves on, and stays put when the player stops (no
-  more back and forth in Ragefire Chasm)
+  more back and forth in Razorfen Kraul)
 - **#6802** A bot standing still indoors (an inn) gets off its mount
 
 ## v1.9 — PvP (7 October 2026) — release main-20261007-ba8ce643
@@ -1011,7 +1011,7 @@ becomes the default only when it wins overall and in each group of bots. Gain = 
 - A bot tank no longer taunts what another tank holds; only the group's main tank takes a target back
 - Healers no longer recast a heal over time already on the target (922 failed tries in 1,715 before), and no
   longer skip a tank without one
-- A bot that went through Ragefire Chasm or Shadowfang Keep no longer keeps that dungeon's strategy everywhere
+- A bot that went through Razorfen Kraul or Shadowfang Keep no longer keeps that dungeon's strategy everywhere
 - `co -rtsc` and `nc -tell target` work (strategy names fixed)
 - A bot looking at a scaled item no longer stops the server (Zyth45/mod-playerbots#16)
 
@@ -1179,7 +1179,7 @@ for their tips.
 - **No more bot stuck at a dungeon door**: the finder offers dungeons by the DBC level range, the entrance checks
   another one. Bots now skip dungeons their level cannot enter, and one sent there anyway leaves the group
   instead of being revived and sent back every 5 seconds (#5725, #5159, #4818)
-- **Ragefire Chasm and Shadowfang Keep strategies** (from HatredPsycho's fork)
+- **Razorfen Kraul and Shadowfang Keep strategies** (from HatredPsycho's fork)
 
 ### Dungeons and raids
 - **Bots follow you into your raid, not into an old one**: a random bot that had killed a Molten Core boss
