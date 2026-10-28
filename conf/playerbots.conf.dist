@@ -617,6 +617,20 @@ AiPlayerbot.AutoGearCommand = 1
 # Default: 1 (enabled)
 AiPlayerbot.AutoGearCommandAltBots = 1
 
+# Self-found mode, up to CoaSelfFoundMaxLevel: no bot (random or alt) of that level range is given gear, gems or
+# enchantments by the server. Bots wear only what they loot, earn from quests or are traded, and random bots gain
+# levels only by playing (no random level, no level brackets, no level reset). Autogear, bis and init commands are
+# refused; addon recruiting only picks bots already near your level. Consumables, ammo, reagents, food and bags are
+# still provided. Above CoaSelfFoundMaxLevel bots are geared as usual for the endgame.
+# With 1, new bots start at a low level and the bot world grows up slowly. Switching an existing world to 1
+# keeps every bot's current level and gear.
+# Default: 0 (disabled)
+AiPlayerbot.CoaSelfFound = 0
+
+# Highest level self-found applies to; at higher levels bots are geared and recruited as usual.
+# Default: 59 (at 60 bots are geared as usual for the endgame)
+AiPlayerbot.CoaSelfFoundMaxLevel = 59
+
 # If 1 (enabled) chat command: autogear bis, gives bots BiS gear from the playerbots_bis_gear table
 # whose item-level floor matches AutoGearScoreLimit (e.g. 290 = ICC, 245 = ToC,
 # 125 = Kara, 78 = MC). See the AutoGearScoreLimit comment below for the full list.

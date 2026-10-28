@@ -8,6 +8,9 @@
   Downs, Blackfathom Deeps, Scarlet Monastery, Uldaman, Blackrock Depths, Blackrock Spire, Stratholme, Scholomance and
   Maraudon. Thanks to Brytenwally (#45).
 - **Molten Core is back on Heroic, Mythic and Ascended** for servers whose database was created before 11 October.
+- **Self-found bots (optional, off by default)**: with `AiPlayerbot.CoaSelfFound = 1`, bots wear only what they loot,
+  earn from quests or are traded, and random bots level only by playing, up to level 59 by default
+  (`CoaSelfFoundMaxLevel`); at 60 bots are geared as usual for endgame. Existing levels and gear are kept.
 
 ### Latest CoA core
 2.8.1 includes 284 new commits of the public CoA core since 2.8, among them:

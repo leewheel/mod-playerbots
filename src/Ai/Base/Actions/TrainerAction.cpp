@@ -321,6 +321,12 @@ bool BisGearAction::RunAutogearFallback(uint16 effectiveIlvl)
 
 bool BisGearAction::Execute(Event event)
 {
+    if (PlayerbotFactory::SelfFoundAt(bot->GetLevel()))
+    {
+        botAI->TellError("Self-found realm: I only wear what I find, loot or am given.");
+        return false;
+    }
+
     if (!sPlayerbotAIConfig.autoGearBisCommand)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
@@ -578,6 +584,12 @@ static uint32 GetWornItemLevelAverage(Player* player)
 
 bool AutoGearAction::Execute(Event event)
 {
+    if (PlayerbotFactory::SelfFoundAt(bot->GetLevel()))
+    {
+        botAI->TellError("Self-found realm: I only wear what I find, loot or am given.");
+        return false;
+    }
+
     if (!sPlayerbotAIConfig.autoGearCommand)
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(

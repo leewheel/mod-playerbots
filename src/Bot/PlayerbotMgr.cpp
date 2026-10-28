@@ -648,7 +648,9 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
 
     bot->SaveToDB(false, false);
     bool addClassBot = sRandomPlayerbotMgr.IsAccountType(accountId, 2);
-    if (addClassBot && master && abs((int)master->GetLevel() - (int)bot->GetLevel()) > 3)
+    // Self-found: an addclass bot keeps its own level and gear.
+    if (addClassBot && master && abs((int)master->GetLevel() - (int)bot->GetLevel()) > 3 &&
+        !PlayerbotFactory::SelfFoundAt(master->GetLevel()))
     {
         // PlayerbotFactory factory(bot, master->GetLevel());
         // factory.Randomize(false);
@@ -864,6 +866,10 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
                 return "The command is not allowed, use init=auto instead.";
             }
 
+            // Self-found: no init makes gear or levels for a bot.
+            if (cmd.starts_with("init=") && PlayerbotFactory::SelfFoundAt(master->GetLevel()))
+                return "Self-found realm: init is disabled, bots only wear what they find.";
+
             //  Use boot guard
             BotInitGuard guard(bot->GetGUID());
             if (guard.IsLocked())
@@ -1035,6 +1041,12 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
     if (!cmd)
     {
         messages.push_back("usage: list/reload/tweak/self or add/init/remove PLAYERNAME or addclass CLASSNAME [male|female]");
+        return messages;
+    }
+
+    if (!strncmp(cmd, "initself", 8) && PlayerbotFactory::SelfFoundAt(master->GetLevel()))
+    {
+        messages.push_back("Self-found realm: initself is disabled.");
         return messages;
     }
 

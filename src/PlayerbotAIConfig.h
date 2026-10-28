@@ -532,6 +532,10 @@ public:
             altMaintenanceGemsEnchants;
     int32 autoGearCommand, autoGearCommandAltBots, autoGearQualityLimit, autoGearScoreLimit;
     int32 autoGearBisCommand;
+    // Self-found: no bot is ever given gear it did not loot, earn or receive, and no level it did not earn.
+    bool coaSelfFound;
+    // Self-found applies up to this level; above it bots are geared and levelled as usual.
+    uint32 coaSelfFoundMaxLevel;
 
     uint32 useGroundMountAtMinLevel;
     uint32 useFastGroundMountAtMinLevel;

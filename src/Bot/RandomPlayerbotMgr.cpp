@@ -2583,6 +2583,10 @@ void RandomPlayerbotMgr::RandomizeFirst(Player* bot)
                                                       : sPlayerbotAIConfig.randombotStartingLevel;
     }
 
+    // Self-found: a new bot stays at the level it was made at, an older one at the level it earned.
+    if (PlayerbotFactory::SelfFoundAt(level))
+        level = bot->GetLevel();
+
     SetValue(bot, "level", level);
     PlayerbotFactory factory(bot, level);
     factory.Randomize(false);
@@ -3407,6 +3411,9 @@ void RandomPlayerbotMgr::CoaUpdateGear(Player* bot)
     if (!bot || !bot->IsInWorld() || !bot->IsAlive() || bot->IsInCombat() || bot->IsInFlight() || bot->GetLevel() < 10 ||
         !sPlayerbotAIConfig.IsInRandomAccountList(bot->GetSession()->GetAccountId()))
         return;
+    // Self-found: a bot keeps the gear it found, PvP or not.
+    if (PlayerbotFactory::SelfFoundAt(bot->GetLevel()))
+        return;
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     if (!botAI)
         return;
@@ -3553,11 +3560,12 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
 
     // A bot made before MaxPlayerLevel or RandomBotMaxLevel was lowered kept its level, since Randomize only
     // rebuilds a bot at the level it has: bring it down to the cap, gear, talents and spells redone.
+    // Self-found: a bot keeps the level it earned, above the cap as well.
     if (IsRandomBot(bot) && !bot->InBattleground() && !bot->InArena() && GET_PLAYERBOT_AI(bot))
     {
         uint32 const levelCap = std::min<uint32>(sPlayerbotAIConfig.randomBotMaxLevel,
                                                  sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
-        if (levelCap && bot->GetLevel() > levelCap)
+        if (levelCap && bot->GetLevel() > levelCap && !PlayerbotFactory::SelfFoundAt(levelCap))
         {
             uint32 const oldLevel = bot->GetLevel();
             if (bot->IsMounted())
@@ -3607,7 +3615,7 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
         for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END && !overLevel; ++slot)
             if (Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
                 overLevel = item->GetTemplate()->RequiredLevel > bot->GetLevel();
-        if (overLevel)
+        if (overLevel && !PlayerbotFactory::SelfFoundAt(bot->GetLevel()))
         {
             PlayerbotFactory::DestroyEquippedGear(bot);
             PlayerbotFactory factory(bot, bot->GetLevel());

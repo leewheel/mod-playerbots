@@ -175,7 +175,9 @@ bool RecruitCoaRaid(Player* master, uint32 size, uint32 tanks, uint32 heals, std
 // The free random bot best placed to play `role` for `master` (same faction, on its map, already of
 // the role, nearest level), of that class when classId is not 0, none of those in `skip`. chosenFits
 // tells whether it already holds a specialization of the role.
-Player* FindCoaRecruit(Player* master, CoaRole role, uint8 classId, std::set<ObjectGuid> const& skip, bool& chosenFits);
+// With AiPlayerbot.CoaSelfFound, only a bot within levelTolerance of the master's level is taken.
+Player* FindCoaRecruit(Player* master, CoaRole role, uint8 classId, std::set<ObjectGuid> const& skip, bool& chosenFits,
+                       uint32 levelTolerance = 0);
 
 // Makes the chosen bot ready to play `role` beside `master`: rebuilt at the master's level when more
 // than levelTolerance levels away, given a specialization of the role and its gear, talents spent.

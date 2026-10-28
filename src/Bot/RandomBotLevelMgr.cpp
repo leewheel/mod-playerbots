@@ -1028,6 +1028,10 @@ void RandomBotLevelMgr::RunResetPlayedTimeCheck()
 
 void RandomBotLevelMgr::Update(uint32 diff)
 {
+    // Self-found: no level bracket nor level reset moves a bot, it levels by playing only.
+    if (sPlayerbotAIConfig.coaSelfFound)
+        return;
+
     if (sPlayerbotAIConfig.levelBracketsEnabled)
     {
         _bracketsTimer += diff;
@@ -1060,6 +1064,9 @@ void RandomBotLevelMgr::Update(uint32 diff)
 
 void RandomBotLevelMgr::OnBotLogin(Player* player)
 {
+    if (sPlayerbotAIConfig.coaSelfFound)
+        return;
+
     if (!sRandomPlayerbotMgr.IsRandomBot(player))
         return;
 
@@ -1113,6 +1120,9 @@ void RandomBotLevelMgr::OnBotLogin(Player* player)
 
 void RandomBotLevelMgr::OnBotLevelChanged(Player* player, uint8 oldLevel)
 {
+    if (sPlayerbotAIConfig.coaSelfFound)
+        return;
+
     if (!sRandomPlayerbotMgr.IsRandomBot(player))
         return;
 

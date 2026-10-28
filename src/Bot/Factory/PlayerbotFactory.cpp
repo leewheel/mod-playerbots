@@ -835,6 +835,12 @@ void PlayerbotFactory::Randomize(bool incremental)
     // if (sPlayerbotAIConfig.disableRandomLevels)
     //     return;
 
+    // Self-found: a bot is never moved to a level of the self-found range, it keeps the one it earned and everything
+    // it carries. A rebuild above the range (a recruit raised to the cap) goes on as usual.
+    if (SelfFoundAt(level))
+        level = bot->GetLevel();
+    bool const selfFound = SelfFoundAt(level);
+
     LOG_DEBUG("playerbots", "{} randomizing {} (level {} class = {})...", (incremental ? "Incremental" : "Full"),
              bot->GetName().c_str(), level, bot->getClass());
     // LOG_DEBUG("playerbots", "Preparing to {} randomize...", (incremental ? "incremental" : "full"));
@@ -856,13 +862,14 @@ void PlayerbotFactory::Randomize(bool incremental)
         ClearSpells();
         ResetQuests();
 
-        if (!sPlayerbotAIConfig.equipAndSpecPersistence ||
-            level < uint32(sPlayerbotAIConfig.equipAndSpecPersistenceLevel) || level < oldLevel)
+        if (!selfFound && (!sPlayerbotAIConfig.equipAndSpecPersistence ||
+            level < uint32(sPlayerbotAIConfig.equipAndSpecPersistenceLevel) || level < oldLevel))
         {
             ClearAllItems();
         }
     }
-    ClearInventory();
+    if (!selfFound)
+        ClearInventory();
     bot->RemoveAllSpellCooldown();
     UnbindInstance();
 
@@ -1106,7 +1113,8 @@ void PlayerbotFactory::Refresh()
     //     InitEquipment(true);
     // }
     InitAttunementQuests();
-    ClearInventory();
+    if (!SelfFoundAt(level))
+        ClearInventory();
     InitAmmo();
     InitFood();
     InitReagents();
@@ -2774,6 +2782,10 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance, int32
         return;
     }
 
+    // Self-found: past its starting outfit above, a bot wears only what it loots, earns or is given.
+    if (SelfFoundAt(level))
+        return;
+
     std::unordered_map<uint8, std::vector<std::pair<uint32, int32>>> items;
     // int tab = AiFactory::GetPlayerSpecTab(bot);
 
@@ -4357,7 +4369,9 @@ void PlayerbotFactory::InitInstanceQuests()
     // quest rewards boost bot level, so reduce back
     bot->GiveLevel(level);
 
-    ClearInventory();
+    // Self-found: InitQuests already took the reward items back, the bags hold what the bot found.
+    if (!SelfFoundAt(level))
+        ClearInventory();
     bot->SetUInt32Value(PLAYER_XP, currentXP);
 }
 
@@ -4434,9 +4448,17 @@ void PlayerbotFactory::InitAmmo()
     bot->SetAmmo(entry);
 }
 
+bool PlayerbotFactory::SelfFoundAt(uint32 level)
+{
+    return sPlayerbotAIConfig.coaSelfFound && level <= sPlayerbotAIConfig.coaSelfFoundMaxLevel;
+}
+
 // A player's bot with AutoGearCommandAltBots off is geared by what it loots or is given only ("loot only" realm).
 bool PlayerbotFactory::MayGearItself(Player* bot)
 {
+    // Self-found: no bot of the self-found range gears itself, random bots included.
+    if (SelfFoundAt(bot->GetLevel()))
+        return false;
     if (sPlayerbotAIConfig.autoGearCommandAltBots)
         return true;
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
@@ -5691,6 +5713,9 @@ void PlayerbotFactory::ApplyEnchantTemplate(uint8 spec)
 
 void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
 {
+    // Self-found: no gem or enchantment is made for a bot of the self-found range.
+    if (SelfFoundAt(level))
+        return;
     //int32 bestGemEnchantId[4] = {-1, -1, -1, -1};  // 1, 2, 4, 8 color //not used, line marked for removal.
     //float bestGemScore[4] = {0, 0, 0, 0}; //not used, line marked for removal.
     std::vector<uint32> curCount = GetCurrentGemsCount();

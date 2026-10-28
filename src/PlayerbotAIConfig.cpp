@@ -693,6 +693,8 @@ bool PlayerbotAIConfig::Initialize()
 
     autoGearCommand = sConfigMgr->GetOption<int32>("AiPlayerbot.AutoGearCommand", 1);
     autoGearCommandAltBots = sConfigMgr->GetOption<int32>("AiPlayerbot.AutoGearCommandAltBots", 1);
+    coaSelfFound = sConfigMgr->GetOption<bool>("AiPlayerbot.CoaSelfFound", false);
+    coaSelfFoundMaxLevel = sConfigMgr->GetOption<uint32>("AiPlayerbot.CoaSelfFoundMaxLevel", 59);
     autoGearBisCommand = sConfigMgr->GetOption<int32>("AiPlayerbot.AutoGearBisCommand", 0);
     autoGearQualityLimit = sConfigMgr->GetOption<int32>("AiPlayerbot.AutoGearQualityLimit", 3);
     autoGearScoreLimit = sConfigMgr->GetOption<int32>("AiPlayerbot.AutoGearScoreLimit", 0);
@@ -727,6 +729,13 @@ bool PlayerbotAIConfig::Initialize()
         LOG_WARN("server.loading", "AiPlayerbot.RandombotStartingLevel {} is above the random bot max level {}: using {}.",
                  randombotStartingLevel, randomBotMaxLevel, randomBotMaxLevel);
         randombotStartingLevel = randomBotMaxLevel;
+    }
+    // Self-found: a bot's level comes from the experience it earns, never from a roll.
+    if (coaSelfFound)
+    {
+        disableRandomLevels = true;
+        LOG_INFO("server.loading", "AiPlayerbot.CoaSelfFound = 1: up to level {}, bots wear only what they find and level by playing.",
+                 coaSelfFoundMaxLevel);
     }
     enablePeriodicOnlineOffline = sConfigMgr->GetOption<bool>("AiPlayerbot.EnablePeriodicOnlineOffline", false);
     enableRandomBotTrading = sConfigMgr->GetOption<int32>("AiPlayerbot.EnableRandomBotTrading", 1);

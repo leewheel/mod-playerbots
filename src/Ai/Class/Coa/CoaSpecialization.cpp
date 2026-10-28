@@ -778,7 +778,17 @@ bool SwitchStockSpec(Player* bot, CoaRole role)
 }
 }  // namespace
 
-Player* FindCoaRecruit(Player* master, CoaRole role, uint8 classId, std::set<ObjectGuid> const& skip, bool& chosenFits)
+// A recruit this far from the master's level is rebuilt at it by PrepareCoaRecruit.
+static bool CoaRecruitNeedsRebuild(Player* master, Player* bot, uint32 levelTolerance)
+{
+    bool const blocksFinder = (master->GetLevel() >= 15 && bot->GetLevel() < 15) ||
+                              (master->GetLevel() >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) &&
+                               bot->GetLevel() < master->GetLevel());
+    return blocksFinder || std::abs(int32(bot->GetLevel()) - int32(master->GetLevel())) > int32(levelTolerance);
+}
+
+Player* FindCoaRecruit(Player* master, CoaRole role, uint8 classId, std::set<ObjectGuid> const& skip, bool& chosenFits,
+                       uint32 levelTolerance)
 {
     // A free random bot whose class can fill the role, preferably on the master's map (a
     // dungeon instance has none, so any map will do), then one that already holds a
@@ -816,6 +826,10 @@ Player* FindCoaRecruit(Player* master, CoaRole role, uint8 classId, std::set<Obj
             continue;
 
         if (classId && bot->getClass() != classId)
+            continue;
+
+        // Self-found: no bot is rebuilt at the master's level, only one already near it is taken.
+        if (PlayerbotFactory::SelfFoundAt(master->GetLevel()) && CoaRecruitNeedsRebuild(master, bot, levelTolerance))
             continue;
 
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
@@ -920,11 +934,13 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
     }
     bool rebuilt = false;
 
-    bool const blocksFinder = (master->GetLevel() >= 15 && chosen->GetLevel() < 15) ||
-                              (master->GetLevel() >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) &&
-                               chosen->GetLevel() < master->GetLevel());
-    if (blocksFinder || std::abs(int32(chosen->GetLevel()) - int32(master->GetLevel())) > int32(levelTolerance))
+    if (CoaRecruitNeedsRebuild(master, chosen, levelTolerance))
     {
+        if (PlayerbotFactory::SelfFoundAt(master->GetLevel()))
+        {
+            message = "No bot of your level is available in self-found mode.";
+            return false;
+        }
         uint32 const level = master->GetLevel();
         sRandomPlayerbotMgr.SetValue(chosen, "level", level);
         PlayerbotFactory factory(chosen, level);
@@ -1064,6 +1080,11 @@ bool RecruitCoaBot(Player* master, CoaRole role, std::string& message, uint8 cla
     Player* chosen = FindCoaRecruit(master, role, classId, {}, chosenFits);
     if (!chosen)
     {
+        if (PlayerbotFactory::SelfFoundAt(master->GetLevel()))
+        {
+            message = "No free bot of your level is available in self-found mode.";
+            return false;
+        }
         message = classId ? "No free " + ClassName(classId) + " bot of your faction to play " + RoleName(role) + "."
                           : std::string("No free bot able to play ") + RoleName(role) + ".";
         return false;
@@ -1511,7 +1532,7 @@ void CoaLfgHeard(Player* player, std::string const& message, Channel* channel)
         for (uint32 attempt = 0; offered < count && attempt < count * 4; ++attempt)
         {
             bool fits = false;
-            Player* bot = FindCoaRecruit(player, role, 0, skip, fits);
+            Player* bot = FindCoaRecruit(player, role, 0, skip, fits, settings.levelRange);
             if (!bot)
                 break;
             skip.insert(bot->GetGUID());
@@ -1535,7 +1556,9 @@ void CoaLfgHeard(Player* player, std::string const& message, Channel* channel)
                      player->GetName(), RoleName(role), bot->getClass(), bot->GetLevel());
         }
 
-        if (!offered)
+        if (!offered && PlayerbotFactory::SelfFoundAt(player->GetLevel()))
+            chat.PSendSysMessage("No free bot of your level can play {} in self-found mode.", RoleName(role));
+        else if (!offered)
             chat.PSendSysMessage("No free bot can play {} right now.", RoleName(role));
     }
 }

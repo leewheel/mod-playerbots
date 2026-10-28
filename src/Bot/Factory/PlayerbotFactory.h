@@ -105,6 +105,8 @@ public:
     void InitAmmo();
     static uint32 CalcMixedGearScore(uint32 gs, uint32 quality);
     static bool MayGearItself(Player* bot);
+    // AiPlayerbot.CoaSelfFound applies at this level (no gear made, no level given).
+    static bool SelfFoundAt(uint32 level);
     // An item of the honor quartermasters or with resilience.
     static bool IsCoaPvpItem(ItemTemplate const* proto);
     static void DestroyEquippedGear(Player* bot);
