@@ -104,6 +104,7 @@ public:
     void InitPet();
     void InitAmmo();
     static uint32 CalcMixedGearScore(uint32 gs, uint32 quality);
+    static bool MayGearItself(Player* bot);
     // An item of the honor quartermasters or with resilience.
     static bool IsCoaPvpItem(ItemTemplate const* proto);
     static void DestroyEquippedGear(Player* bot);

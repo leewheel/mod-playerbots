@@ -56,7 +56,7 @@ bool CoaWcrAction::Execute(Event event)
                 return true;
         }
         // Only a random bot's gear is the bot's to change: an alt keeps what its owner gave it.
-        if (GetWcrRole(bot) != before && sRandomPlayerbotMgr.IsRandomBot(bot))
+        if (GetWcrRole(bot) != before && sRandomPlayerbotMgr.IsRandomBot(bot) && PlayerbotFactory::MayGearItself(bot))
             PlayerbotFactory(bot, bot->GetLevel()).InitEquipment(true);
         botAI->ResetStrategies();
     }

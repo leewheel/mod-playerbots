@@ -980,9 +980,10 @@ bool PrepareCoaRecruit(Player* master, Player* chosen, CoaRole role, bool chosen
 
         // Its gear was chosen for the specialization it had: a Venomancer made a healer kept the
         // strength and stamina of a tank, not a point of intellect (healer trial of 21/09).
-        PlayerbotFactory(chosen, chosen->GetLevel()).InitEquipment(false);
+        if (PlayerbotFactory::MayGearItself(chosen))
+            PlayerbotFactory(chosen, chosen->GetLevel()).InitEquipment(false);
     }
-    else if (CoaSpecNeedsShootingWeapon(chosen))
+    else if (CoaSpecNeedsShootingWeapon(chosen) && PlayerbotFactory::MayGearItself(chosen))
     {
         // A bot geared before the rule still holds a wand or an idol and cannot fire its shots.
         Item const* ranged = chosen->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED);

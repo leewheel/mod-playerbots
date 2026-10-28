@@ -23,8 +23,9 @@
 - many quest and database fixes.
 
 ### Fixes
-- **Bots in your group leveling up** (for example with `.levelup`) now follow the launcher's gear settings: "Your own
-  bots can gear themselves" off keeps their gear, and "Best gear quality of the bots" caps what they put on.
+- **"Loot only" bots**: with "Your own bots can gear themselves" off in the launcher, the bots in your group no longer
+  gear themselves at all (level up, `.levelup`, specialization changes, `autogear`): they wear what they loot, earn from
+  quests or get from you. With it on, "Best gear quality of the bots" now also caps the gear they put on at level up.
 - **Molten Core** was empty on Heroic, Mythic and Ascended on databases created before 11 October: its spawn masks are
   restored.
 - **Battlegrounds**: safety nets against world server crashes (battleground objects and creatures looked up within

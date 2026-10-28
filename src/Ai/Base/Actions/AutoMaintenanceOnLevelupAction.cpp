@@ -219,6 +219,6 @@ void AutoMaintenanceOnLevelupAction::AutoUpgradeEquip()
     factory.InitConsumables();
     factory.InitPotions();
 
-    if (sPlayerbotAIConfig.autoUpgradeEquip && (!playersBot || sPlayerbotAIConfig.autoGearCommandAltBots))
+    if (sPlayerbotAIConfig.autoUpgradeEquip && PlayerbotFactory::MayGearItself(bot))
         factory.InitEquipment(true);
 }

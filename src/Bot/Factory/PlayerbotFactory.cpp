@@ -4434,6 +4434,15 @@ void PlayerbotFactory::InitAmmo()
     bot->SetAmmo(entry);
 }
 
+// A player's bot with AutoGearCommandAltBots off is geared by what it loots or is given only ("loot only" realm).
+bool PlayerbotFactory::MayGearItself(Player* bot)
+{
+    if (sPlayerbotAIConfig.autoGearCommandAltBots)
+        return true;
+    PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
+    return !botAI || !botAI->HasGameClientMaster();
+}
+
 uint32 PlayerbotFactory::CalcMixedGearScore(uint32 gs, uint32 quality)
 {
     return gs * PlayerbotAI::GetItemScoreMultiplier(ItemQualities(quality));
