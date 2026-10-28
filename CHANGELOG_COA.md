@@ -1,5 +1,59 @@
 # CoA Bots — changelog
 
+## v2.8.1 — Latest CoA core, classic dungeon bosses, battleground fixes (October 2026)
+
+### Highlights
+- **Latest CoA core**: 246 new commits from the public CoA core since 2.8 (full list in the GitHub release notes).
+- **Boss mechanics for the classic dungeons**: bots now handle the bosses of Wailing Caverns, Ragefire Chasm, Razorfen
+  Downs, Blackfathom Deeps, Scarlet Monastery, Uldaman, Blackrock Depths, Blackrock Spire, Stratholme, Scholomance and
+  Maraudon. Thanks to Brytenwally (#45).
+- **Molten Core is back on Heroic, Mythic and Ascended** for servers whose database was created before 11 October.
+
+### Latest CoA core
+2.8.1 includes 246 new commits of the public CoA core since 2.8, among them:
+- creature magic resistance and the new open-world creature damage, on by default;
+- PvE Power and PvP Power, on by default;
+- cross-faction battleground queues (mod-cfbg), on by default;
+- Road to De Other Side (map 937) restored;
+- name filter for profanity;
+- account-wide friends, opt-in;
+- Wisdomball dungeon quest fixes;
+- many quest and database fixes.
+
+### Fixes
+- **Molten Core** was empty on Heroic, Mythic and Ascended on databases created before 11 October: its spawn masks are
+  restored.
+- **Battlegrounds**: safety nets against world server crashes (battleground objects and creatures looked up within
+  bounds, end of battleground scores guarded), and the bots' battleground tactics only run on the battleground's own
+  map. Thanks to nightlund (#52).
+- Manastorm: the Horde teleport pad fixed in 2.8 stays in place.
+
+### Bots
+- **Bloodmage Eternal** tanks enter their form, keep Hypovolemic Shock up on packs and no longer cast Sanguine Rupture
+  (#38, #51).
+- **Classic dungeons**: boss mechanics for Wailing Caverns, Ragefire Chasm, Razorfen Downs, Blackfathom Deeps, Scarlet
+  Monastery, Uldaman, Blackrock Depths, Blackrock Spire, Stratholme, Scholomance and Maraudon. Thanks to Brytenwally (#45).
+- **Road to De Other Side**: boss strategy for the bots. Thanks to steviecraycray (#49).
+- Custom race exclusions now also apply to existing random bots, not only to new ones. Thanks to Corfirean (#54).
+- Wildcard Hero bot files carry the GPL header. Thanks to shiro2448 (#48).
+
+### Dungeon Clear 2.8.1
+- Blackrock Depths, Lyceum: after a fight pulls the tank away, it returns to the brazier so the torch can be lit.
+- Stratholme: the Slaughterhouse event no longer ends early when Ramstein opens the gate; the group waits for the
+  portcullis during the Barthilas fight instead of stopping.
+- Shadowfang Keep: if the courtyard door closes behind the group while Rethilgore is still alive, it is opened again.
+- Bots that fall behind between pulls are brought back to the tank after 25 s instead of 60 s, so Heroic and Mythic runs
+  are about 10 minutes faster (bots only, never players).
+- New setting: `DungeonClear.StrandedRecoveryWaitSecs = 25` (capped by `DungeonClear.StrandedRecoveryNoProgressSecs`).
+
+### Launcher 0.3.48
+- On a new install, the navigation maps can be downloaded instead of generated.
+
+### Known limits
+- Dungeon Clear: Blackfathom Deeps (two bosses) and Sunken Temple (Shade of Eranikus) are not yet cleared reliably in
+  Normal. Heroic and Mythic mostly depend on bot gear.
+- If bots stay behind during a clear, the Regroup button teleports them back.
+
 ## v2.8 — A smoother server with many bots, Dungeon Clear, realm cards (October 2026)
 
 ### Highlights
