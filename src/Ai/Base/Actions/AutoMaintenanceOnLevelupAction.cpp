@@ -201,7 +201,15 @@ void AutoMaintenanceOnLevelupAction::AutoUpgradeEquip()
     if (!sRandomPlayerbotMgr.IsRandomBot(bot))
         return;
 
-    PlayerbotFactory factory(bot, bot->GetLevel());
+    // A bot in a player's group is one of the player's bots: on level up it follows the autogear settings (can it gear
+    // itself, best quality) like the autogear command, not the gear of the random bots.
+    bool const playersBot = botAI->HasGameClientMaster();
+    uint32 const quality = playersBot ? static_cast<uint32>(sPlayerbotAIConfig.autoGearQualityLimit) : 0;
+    uint32 const gearScore = playersBot && sPlayerbotAIConfig.autoGearScoreLimit
+                                 ? PlayerbotFactory::CalcMixedGearScore(sPlayerbotAIConfig.autoGearScoreLimit,
+                                                                        sPlayerbotAIConfig.autoGearQualityLimit)
+                                 : 0;
+    PlayerbotFactory factory(bot, bot->GetLevel(), quality, gearScore);
 
     factory.CleanupConsumables();
 
@@ -211,6 +219,6 @@ void AutoMaintenanceOnLevelupAction::AutoUpgradeEquip()
     factory.InitConsumables();
     factory.InitPotions();
 
-    if (sPlayerbotAIConfig.autoUpgradeEquip)
+    if (sPlayerbotAIConfig.autoUpgradeEquip && (!playersBot || sPlayerbotAIConfig.autoGearCommandAltBots))
         factory.InitEquipment(true);
 }

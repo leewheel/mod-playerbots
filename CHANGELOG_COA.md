@@ -23,6 +23,8 @@
 - many quest and database fixes.
 
 ### Fixes
+- **Bots in your group leveling up** (for example with `.levelup`) now follow the launcher's gear settings: "Your own
+  bots can gear themselves" off keeps their gear, and "Best gear quality of the bots" caps what they put on.
 - **Molten Core** was empty on Heroic, Mythic and Ascended on databases created before 11 October: its spawn masks are
   restored.
 - **Battlegrounds**: safety nets against world server crashes (battleground objects and creatures looked up within
