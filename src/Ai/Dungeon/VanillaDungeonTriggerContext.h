@@ -8,10 +8,18 @@
 #define PLAYERBOTS_VANILLADUNGEONTRIGGERCONTEXT_H
 
 #include "BFDTriggerContext.h"
+#include "BRDTriggerContext.h"
+#include "BRSTriggerContext.h"
+#include "MaraTriggerContext.h"
 #include "OtherSideTriggerContext.h"
 #include "RFCTriggerContext.h"
+#include "RFDTriggerContext.h"
+#include "RFKTriggerContext.h"
+#include "ScholoTriggerContext.h"
 #include "SFKTriggerContext.h"
 #include "SMTriggerContext.h"
+#include "StratTriggerContext.h"
 #include "UldaTriggerContext.h"
+#include "WCTriggerContext.h"
 
 #endif

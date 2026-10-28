@@ -8,10 +8,18 @@
 #define PLAYERBOTS_VANILLADUNGEONACTIONCONTEXT_H
 
 #include "BFDActionContext.h"
+#include "BRDActionContext.h"
+#include "BRSActionContext.h"
+#include "MaraActionContext.h"
 #include "OtherSideActionContext.h"
 #include "RFCActionContext.h"
+#include "RFDActionContext.h"
+#include "RFKActionContext.h"
+#include "ScholoActionContext.h"
 #include "SFKActionContext.h"
 #include "SMActionContext.h"
+#include "StratActionContext.h"
 #include "UldaActionContext.h"
+#include "WCActionContext.h"
 
 #endif
