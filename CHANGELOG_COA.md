@@ -3,14 +3,14 @@
 ## v2.8.1 — Latest CoA core, classic dungeon bosses, battleground fixes (October 2026)
 
 ### Highlights
-- **Latest CoA core**: 246 new commits from the public CoA core since 2.8 (full list in the GitHub release notes).
+- **Latest CoA core**: 284 new commits from the public CoA core since 2.8 (full list in the GitHub release notes).
 - **Boss mechanics for the classic dungeons**: bots now handle the bosses of Wailing Caverns, Razorfen Kraul, Razorfen
   Downs, Blackfathom Deeps, Scarlet Monastery, Uldaman, Blackrock Depths, Blackrock Spire, Stratholme, Scholomance and
   Maraudon. Thanks to Brytenwally (#45).
 - **Molten Core is back on Heroic, Mythic and Ascended** for servers whose database was created before 11 October.
 
 ### Latest CoA core
-2.8.1 includes 246 new commits of the public CoA core since 2.8, among them:
+2.8.1 includes 284 new commits of the public CoA core since 2.8, among them:
 - creature magic resistance and the new open-world creature damage, on by default;
 - PvE Power and PvP Power, on by default;
 - cross-faction battleground queues (mod-cfbg), on by default;
@@ -18,6 +18,8 @@
 - name filter for profanity;
 - account-wide friends, opt-in;
 - Wisdomball dungeon quest fixes;
+- gathering nodes moved to their Ascension positions;
+- large batches of dungeon, item, quest and class fixes;
 - many quest and database fixes.
 
 ### Fixes
