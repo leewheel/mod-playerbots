@@ -16,14 +16,13 @@
 
 namespace
 {
-// Conquest of Azeroth names take two words, a first name and a surname (client revision 8): the
-// surname tells a bot from a player at a glance, on its nameplate, in chat and in /who.
-constexpr char const* Surname = " Bot";
+// 全中文名要求：bot 名以中文前缀「机器人 」开头，让玩家一眼分辨 bot 与真人 //By leewheel 2026年10月28日
+constexpr char const* Prefix = "机器人 ";
 
-bool HasSurname(std::string const& name)
+bool HasPrefix(std::string const& name)
 {
-    std::string const suffix(Surname);
-    return name.size() > suffix.size() && name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0;
+    std::string const prefix(Prefix);
+    return name.size() > prefix.size() && name.compare(0, prefix.size(), prefix) == 0;
 }
 }  // namespace
 
@@ -31,7 +30,7 @@ std::string CoaBotName(std::string const& firstName)
 {
     if (!sPlayerbotAIConfig.coaBotSurname || firstName.find(' ') != std::string::npos)
         return firstName;
-    return firstName + Surname;
+    return std::string(Prefix) + firstName;
 }
 
 void ApplyCoaBotSurnames()
@@ -72,11 +71,11 @@ void ApplyCoaBotSurnames()
         if (!accounts.count(row.account))
             continue;
 
-        bool const has = HasSurname(row.name);
+        bool const has = HasPrefix(row.name);
         if (has == wanted || (wanted && row.name.find(' ') != std::string::npos))
             continue;
 
-        std::string renamedTo = wanted ? row.name + Surname : row.name.substr(0, row.name.size() - std::string(Surname).size());
+        std::string renamedTo = wanted ? std::string(Prefix) + row.name : row.name.substr(std::string(Prefix).size());
         // A player may hold the name already: that bot keeps its own.
         if (names.count(renamedTo))
         {
@@ -94,6 +93,6 @@ void ApplyCoaBotSurnames()
     CharacterDatabase.CommitTransaction(trans);
 
     if (renamed || skipped)
-        LOG_INFO("server.loading", ">> {} the surname \"Bot\" for {} random bots ({} names already taken)",
-                 wanted ? "Gave" : "Took back", renamed, skipped);
+        LOG_INFO("server.loading", ">> {} 中文前缀 \"机器人\" 于 {} 个随机 bot（{} 个名字已被占用）",
+                 wanted ? "加上" : "移除", renamed, skipped);
 }

@@ -244,6 +244,149 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
     return player;
 }
 
+// ---------------- bot 中文名生成器（取名池耗尽时的回退，保证重造 bot 也是中文名）---------------- //By leewheel 2026年10月28日
+namespace
+{
+char const* const zhSurnames[] = {
+    "王", "李", "张", "刘", "陈", "杨", "黄", "赵",
+    "吴", "周", "徐", "孙", "马", "朱", "胡", "郭",
+    "何", "高", "林", "罗", "郑", "梁", "谢", "宋",
+    "唐", "许", "韩", "冯", "邓", "曹", "彭", "曾",
+    "肖", "田", "董", "袁", "潘", "于", "蒋", "蔡",
+    "余", "杜", "叶", "程", "苏", "魏", "吕", "丁",
+    "任", "沈", "姚", "卢", "姜", "崔", "钟", "谭",
+    "陆", "汪", "范", "金", "石", "廖", "贾", "夏",
+    "韦", "傅", "方", "白", "邹", "孟", "熊", "秦",
+    "邱", "江", "尹", "薛", "段", "雷", "侯", "龙",
+    "史", "陶", "黎", "贺", "顾", "毛", "郝", "龚",
+    "邵", "万", "钱", "严", "覃", "武", "戴", "莫",
+    "孔", "向", "汤", "常", "温", "文", "洪", "殷",
+    "施", "樊", "柯", "霍", "缪", "宗", "包", "左",
+    "吉", "钮", "宣", "贲", "郁", "单", "杭", "伍",
+    "齐", "季", "米", "贝", "闫", "詹", "招", "甘",
+    "厉", "戎", "祖", "符", "景", "束", "幸", "司",
+    "韶", "郜", "蓟", "薄", "印", "宿", "怀", "蒲",
+    "邰", "从", "鄂", "索", "咸", "籍", "赖", "卓",
+    "蔺", "屠", "蒙", "池", "乔", "阴", "胥", "能",
+    "苍", "双", "闻", "莘", "党", "翟", "贡", "劳",
+    "逄", "姬", "申", "扶", "堵", "冉", "宰", "郦",
+    "雍", "璩", "桑", "桂", "濮", "牛", "寿", "通",
+    "边", "扈", "燕", "冀", "郏", "浦", "尚", "农",
+    "别", "庄", "晏", "柴", "瞿", "阎", "充", "慕",
+    "连", "茹", "习", "宦", "艾", "鱼", "容", "古",
+    "易", "慎", "戈", "庾", "终", "暨", "居", "衡",
+    "步", "都", "耿", "满", "弘", "匡", "寇", "广",
+    "禄", "阙", "东", "欧", "殳", "沃", "利", "蔚",
+    "越", "夔", "隆", "师", "巩", "聂", "晁", "勾",
+    "敖", "融", "訾", "辛", "阚", "那", "简", "饶",
+    "空", "毋", "沙", "养", "鞠", "须", "丰", "巢",
+    "关", "蒯", "相", "查", "后", "荆", "红", "游",
+    "竺", "权", "逯", "盖", "益", "桓",
+};
+
+char const* const zhCompoundSurnames[] = {
+    "欧阳", "司马", "上官", "诸葛", "夏侯", "东方", "皇甫", "尉迟",
+    "公孙", "慕容", "长孙", "宇文", "司徒", "司空", "令狐", "申屠",
+    "独孤", "南宫", "西门", "轩辕",
+};
+
+char const* const zhMaleChars[] = {
+    "伟", "强", "磊", "峰", "勇", "刚", "毅", "鹏",
+    "涛", "浩", "宇", "轩", "晨", "阳", "锋", "军",
+    "杰", "豪", "壮", "威", "武", "雄", "天", "啸",
+    "乾", "坤", "震", "霆", "钧", "铠", "锐", "铮",
+    "岩", "桦", "松", "柏", "楠", "桐", "煜", "烨",
+    "熠", "辉", "弘", "恒", "逸", "朗", "翔", "鸿",
+    "昊", "然", "璟", "瑜", "瑞", "霖", "泽", "润",
+    "溪", "川", "岳", "岚", "崇", "屹", "峥", "翊",
+    "策", "帆", "航", "远", "遒", "劲", "骁", "悍",
+    "彪", "炬", "炯", "煊", "昱", "曜", "晏", "曦",
+    "智", "睿", "慧", "聪", "颖", "臻", "良", "善",
+    "义", "忠", "孝", "礼", "信", "谦", "和", "畅",
+    "达", "邦", "国", "疆", "城", "垣", "均", "坚",
+    "坦", "培", "基", "堃", "魁", "梧", "健", "昂",
+    "霄", "壑", "凌", "志", "明", "永", "昌", "康",
+    "宁", "年", "茂", "材", "勋", "英", "哲", "俊",
+    "风", "思", "齐", "识", "诚", "景", "行", "焕",
+    "元", "凯", "歌", "捷", "致", "知", "修", "能",
+    "文", "匠", "心", "敏", "斌", "翰", "山", "蔚",
+    "彬", "炳", "穆", "清", "平", "鹤", "高", "嘉",
+    "言", "祥", "安", "栋", "梁", "立", "渊", "瑾",
+    "晖", "旭", "初", "正", "谊",
+};
+
+char const* const zhFemaleChars[] = {
+    "芬", "芳", "娜", "丽", "秀", "英", "兰", "凤",
+    "燕", "霞", "梅", "雪", "琴", "月", "婷", "雅",
+    "静", "嫣", "柔", "婉", "玲", "莹", "璐", "琼",
+    "瑶", "雯", "岚", "萱", "妍", "倩", "娇", "娥",
+    "妮", "琳", "蕾", "蕊", "薇", "黛", "宓", "娆",
+    "姝", "纨", "洁", "琦", "璇", "玥", "蓉", "茜",
+    "菁", "菀", "苒", "荔", "荷", "莲", "莺", "绮",
+    "曼", "彤", "彩", "彬", "惠", "怜", "心", "念",
+    "思", "沁", "汐", "沂", "沛", "淑", "清", "湘",
+    "滢", "澜", "汀", "溪", "潞", "浠", "渝", "澍",
+    "熹", "然", "煊", "煜", "熠", "美", "佳", "靓",
+    "婕", "妤", "嫔", "娉", "娩", "娟", "馨", "香",
+    "馥", "菲", "芸", "芷", "蕙", "芝", "芙", "茉",
+    "莉", "菱", "荇", "瑜", "珥", "珰", "琬", "琰",
+    "玢", "琇", "珊", "珑", "韵", "徽", "音", "怡",
+    "慧", "贞", "熙", "灵", "云", "霓", "霈", "霖",
+    "露", "霁", "蔚", "蓝", "苹", "荟", "茗", "萃",
+    "艺", "鹭", "鸾", "凰", "羽", "翚", "珍", "珠",
+    "琅", "悦", "珺", "婳", "嫙", "媱", "姮", "娴",
+    "婌", "姿", "好", "舒", "窈", "忧", "采", "苓",
+    "卷", "耳", "桃", "夭", "蘅", "芜", "荪", "荃",
+    "茝", "菡", "萏", "蕖", "薜", "芰", "莞", "萋",
+    "蕴", "蔓", "蔻", "芊", "芃", "彣",
+};
+
+size_t const zhSurnamesCount = sizeof(zhSurnames) / sizeof(zhSurnames[0]);
+size_t const zhCompoundSurnamesCount = sizeof(zhCompoundSurnames) / sizeof(zhCompoundSurnames[0]);
+size_t const zhMaleCharsCount = sizeof(zhMaleChars) / sizeof(zhMaleChars[0]);
+size_t const zhFemaleCharsCount = sizeof(zhFemaleChars) / sizeof(zhFemaleChars[0]);
+
+// 生成 2-4 字中文名：gender 偶数类=男用字，奇数类=女用字（NameRaceAndGender 低比特即性别）
+// 85% 单姓 + 15% 复姓，名 1-2 字，组合空间近千万级 //By leewheel 2026年10月28日
+std::string GenerateChineseBotName(uint8 gender)
+{
+    bool male = (gender % 2) == 0;
+    char const* const* chars = male ? zhMaleChars : zhFemaleChars;
+    size_t charCount = male ? zhMaleCharsCount : zhFemaleCharsCount;
+
+    for (uint8 attempt = 0; attempt < 30; ++attempt)
+    {
+        // 姓：85% 单姓，15% 复姓（复姓占两个汉字位）
+        std::string name;
+        if (rand() % 100 < 15)
+            name = zhCompoundSurnames[rand() % zhCompoundSurnamesCount];
+        else
+            name = zhSurnames[rand() % zhSurnamesCount];
+
+        name += chars[rand() % charCount];
+        // 约 60% 概率追加第二个名字用字（复姓则成 4 字名，仍满足名字长度上限 12 字符）
+        if (rand() % 10 < 6)
+            name += chars[rand() % charCount];
+
+        // 拒绝三连同字（UTF-8 每个汉字 3 字节，按 3 字节步进检查）
+        bool triple = false;
+        for (size_t i = 0; i + 6 < name.size(); i += 3)
+        {
+            if (name[i] == name[i + 3] && name[i + 3] == name[i + 6])
+            {
+                triple = true;
+                break;
+            }
+        }
+        if (triple)
+            continue;
+
+        return name;
+    }
+    return "";
+}
+}  // namespace
+
 std::string const RandomPlayerbotFactory::CreateRandomBotName(NameRaceAndGender raceAndGender)
 {
     std::string botName = "";
@@ -276,86 +419,15 @@ std::string const RandomPlayerbotFactory::CreateRandomBotName(NameRaceAndGender 
         }
     }
 
-    // CONLANG NAME GENERATION
-    LOG_ERROR("playerbots", "No more names left for random bots. Attempting conlang name generation.");
-    const std::string groupCategory = "SCVKRU";
-    const std::string groupFormStart[2][4] = {{"SV", "SV", "VK", "RV"}, {"V", "SU", "VS", "RV"}};
-    const std::string groupFormMid[2][6] = {{"CV", "CVC", "CVC", "CVK", "VC", "VK"},
-                                            {"CV", "CVC", "CVK", "KVC", "VC", "KV"}};
-    const std::string groupFormEnd[2][4] = {{"CV", "VC", "VK", "CV"}, {"RU", "UR", "VR", "V"}};
-    const std::string groupLetter[2][6] = {
-        // S           C                            V               K           R         U
-        {"dtspkThfS", "bcCdfghjkmnNqqrrlsStTvwxyz", "aaeeiouA", "ppttkkbdg", "lmmnrr", "AEO"},
-        {"dtskThfS", "bcCdfghjkmmnNqrrlssStTvwyz", "aaaeeiiuAAEIO", "ppttkbbdg", "lmmnrrr", "AEOy"}};
-    const std::string replaceRule[2][17] = {
-        {"ST", "ka", "ko", "ku", "kr", "S", "T", "C", "N", "jj", "AA", "AI", "A", "E", "O", "I", "aa"},
-        {"sth", "ca", "co", "cu", "cr", "sh", "th", "ch", "ng", "dg", "A", "ayu", "ai", "ei", "ou", "iu", "ae"}};
-
-    const auto gender = static_cast<uint8>(raceAndGender) % 2;
-
+    // 池耗尽回退：中文名生成（bot 全中文名要求）//By leewheel 2026年10月28日
+    LOG_INFO("playerbots", "No more names left in random bot name pool (gender {}). Chinese name generation.", static_cast<uint8>(raceAndGender));
     tries = 10;
     while (--tries)
     {
-        botName.clear();
-        // Build name from groupForms
-        // Pick random start group
-        botName = groupFormStart[gender][rand() % 4];
-        // Pick up to 2 and then up to 1 additional middle group
-        for (int i = 0; i < rand() % 3 + rand() % 2; i++)
-        {
-            botName += groupFormMid[gender][rand() % 6];
-        }
-        // Pick up to 1 end group
-        botName += rand() % 2 ? groupFormEnd[gender][rand() % 4] : "";
-        // If name is single letter add random end group
-        botName += (botName.size() < 2) ? groupFormEnd[gender][rand() % 4] : "";
+        botName = GenerateChineseBotName(static_cast<uint8>(raceAndGender));
+        if (botName.empty())
+            break;
 
-        // Replace Catagory value with random Letter from that Catagory's Letter string for a given bot gender
-        for (size_t i = 0; i < botName.size(); i++)
-        {
-            botName[i] = groupLetter[gender][groupCategory.find(botName[i])]
-                                    [rand() % groupLetter[gender][groupCategory.find(botName[i])].size()];
-        }
-
-        // Itterate over replace rules
-        for (int i = 0; i < 17; i++)
-        {
-            int j = botName.find(replaceRule[0][i]);
-            while (j > -1)
-            {
-                botName.replace(j, replaceRule[0][i].size(), replaceRule[1][i]);
-                j = botName.find(replaceRule[0][i]);
-            }
-        }
-
-        // Capitalize first letter
-        botName[0] -= 32;
-
-        if (ObjectMgr::CheckPlayerName(botName) != CHAR_NAME_SUCCESS) // Checks for reservation & profanity, too
-        {
-            botName.clear();
-            continue;
-        }
-        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHECK_NAME);
-        stmt->SetData(0, botName);
-
-        if (PreparedQueryResult result = CharacterDatabase.Query(stmt))
-        {
-            botName.clear();
-            continue;
-        }
-        return botName;
-    }
-
-    // TRUE RANDOM NAME GENERATION
-    LOG_ERROR("playerbots", "Con​lang name generation failed. True random name fallback.");
-    tries = 10;
-    while (--tries)
-    {
-        for (uint8 i = 0; i < 10; i++)
-        {
-            botName += (i == 0 ? 'A' : 'a') + rand() % 26;
-        }
         if (ObjectMgr::CheckPlayerName(botName) != CHAR_NAME_SUCCESS)  // Checks for reservation & profanity, too
         {
             botName.clear();
