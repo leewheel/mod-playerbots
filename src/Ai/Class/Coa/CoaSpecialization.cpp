@@ -784,6 +784,9 @@ static bool CoaRecruitNeedsRebuild(Player* master, Player* bot, uint32 levelTole
     bool const blocksFinder = (master->GetLevel() >= 15 && bot->GetLevel() < 15) ||
                               (master->GetLevel() >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) &&
                                bot->GetLevel() < master->GetLevel());
+    // Self-found: a bot is never raised to the master's level, so one up to 2 levels away is taken as it is.
+    if (PlayerbotFactory::SelfFoundAt(master->GetLevel()))
+        levelTolerance = std::max<uint32>(levelTolerance, 2);
     return blocksFinder || std::abs(int32(bot->GetLevel()) - int32(master->GetLevel())) > int32(levelTolerance);
 }
 
