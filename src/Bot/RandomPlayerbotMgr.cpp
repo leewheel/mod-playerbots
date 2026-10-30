@@ -7,6 +7,7 @@
 #include "RandomPlayerbotMgr.h"
 #include "BattlegroundUtils.h"
 #include "AiFactory.h"
+#include "BotLogStats.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
 #include "Battleground.h"
@@ -2026,6 +2027,7 @@ bool RandomPlayerbotMgr::ProcessBot(Player* bot)
             Randomize(bot);
             LOG_DEBUG("playerbots", "Bot #{} {}:{} <{}>: randomized", botId,
                       bot->GetTeamId() == TEAM_ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName());
+            AddBotLogStat(BOT_LOG_RANDOMIZED);  // 周期统计计数 //By leewheel 2026年10月31日
             uint32 randomTime =
                 urand(sPlayerbotAIConfig.minRandomBotRandomizeTime, sPlayerbotAIConfig.maxRandomBotRandomizeTime);
             ScheduleRandomize(botId, randomTime);
@@ -2179,6 +2181,7 @@ void RandomPlayerbotMgr::RandomTeleport(Player* bot, std::vector<WorldLocation>&
                   bot->GetName().c_str(), bot->GetLevel(), map->GetId(), map->GetMapName(), zone->ID,
                   zone->area_name[locale], area->ID, area->area_name[locale], zone->area_level, area->area_level, x, y,
                   z, i + 1, tlocs.size());
+        AddBotLogStat(BOT_LOG_RANDOM_TELEPORT);  // 各包装入口都走这里，一次传送计一次 //By leewheel 2026年10月31日
 
         if (hearth)
         {
@@ -2717,6 +2720,7 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
         return;
 
     LOG_DEBUG("playerbots", "Refreshing bot {} <{}>", bot->GetGUID().ToString().c_str(), bot->GetName().c_str());
+    AddBotLogStat(BOT_LOG_REFRESH);  // 周期统计计数 //By leewheel 2026年10月31日
 
     PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "Refresh");
 
@@ -3519,8 +3523,10 @@ void RandomPlayerbotMgr::CoaUpdateGear(Player* bot)
     if (bot->GetLevel() >= sPlayerbotAIConfig.minEnchantingBotLevel)
         factory.ApplyEnchantAndGemsNew();
     bot->DurabilityRepairAll(false, 1.0f, false);
-    LOG_INFO("playerbots", "coa gear: {} {} gear, item level limit {}{}, {} ms", bot->GetName(), pvp ? "PvP" : "PvE",
-             itemLevel, master ? " (grouped)" : "", GetMSTimeDiffToNow(startedAt));
+    // 原本是 LOG_INFO，每个机器人刷一行；改记次数进周期统计，明细留 DEBUG //By leewheel 2026年10月31日
+    AddBotLogStat(BOT_LOG_COA_GEAR);
+    LOG_DEBUG("playerbots", "coa gear: {} {} gear, item level limit {}{}, {} ms", bot->GetName(), pvp ? "PvP" : "PvE",
+              itemLevel, master ? " (grouped)" : "", GetMSTimeDiffToNow(startedAt));
 }
 
 void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)

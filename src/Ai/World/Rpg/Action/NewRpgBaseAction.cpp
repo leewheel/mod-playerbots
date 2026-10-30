@@ -6,6 +6,7 @@
 
 #include "CoaQuestMenu.h"
 #include "NewRpgBaseAction.h"
+#include "BotLogStats.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
 #include "Creature.h"
@@ -344,6 +345,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
             BroadcastHelper::BroadcastQuestAccepted(botAI, bot, quest);
             botAI->rpgStatistic.questAccepted++;
             LOG_DEBUG("playerbots", "[New RPG] {} accept quest {}", bot->GetName(), quest->GetQuestId());
+            AddBotLogStat(BOT_LOG_QUEST_ACCEPT);  // 周期统计计数 //By leewheel 2026年10月31日
         }
         if (status == QUEST_STATUS_COMPLETE && bot->CanRewardQuest(quest, 0, false))
         {
@@ -356,6 +358,7 @@ bool NewRpgBaseAction::InteractWithNpcOrGameObjectForQuest(ObjectGuid guid)
             BroadcastHelper::BroadcastQuestTurnedIn(botAI, bot, quest);
             botAI->rpgStatistic.questRewarded++;
             LOG_DEBUG("playerbots", "[New RPG] {} turned in quest {}", bot->GetName(), quest->GetQuestId());
+            AddBotLogStat(BOT_LOG_QUEST_TURN_IN);  // 周期统计计数 //By leewheel 2026年10月31日
         }
     }
     return true;
@@ -639,6 +642,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
             bot->GetQuestStatus(questId) == QUEST_STATUS_FAILED)
         {
             LOG_DEBUG("playerbots", "[New RPG] {} drop quest {}", bot->GetName(), questId);
+            AddBotLogStat(BOT_LOG_QUEST_DROP);  // 周期统计计数 //By leewheel 2026年10月31日
             WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
             packet << (uint8)i;
             WorldPackets::Quest::QuestLogRemoveQuest removeQuest(std::move(packet));
@@ -672,6 +676,7 @@ bool NewRpgBaseAction::OrganizeQuestLog()
         if (quest->GetZoneOrSort() < 0 || (quest->GetZoneOrSort() > 0 && quest->GetZoneOrSort() != botZoneId))
         {
             LOG_DEBUG("playerbots", "[New RPG] {} drop quest {}", bot->GetName(), questId);
+            AddBotLogStat(BOT_LOG_QUEST_DROP);  // 周期统计计数 //By leewheel 2026年10月31日
             WorldPacket packet(CMSG_QUESTLOG_REMOVE_QUEST);
             packet << (uint8)i;
             WorldPackets::Quest::QuestLogRemoveQuest removeQuest(std::move(packet));

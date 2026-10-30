@@ -609,6 +609,7 @@ void AddSC_randombot_level_mgr();
 
 void AddSC_coa_group_telemetry();
 void AddSC_coa_status_file();
+void AddSC_bot_log_stats();  // 机器人日志周期统计汇总 //By leewheel 2026年10月31日
 void AddSC_coa_arena_ready();
 
 void AddPlayerbotsScripts()
@@ -635,4 +636,5 @@ void AddPlayerbotsScripts()
     AddSC_coa_status_file();
     AddSC_coa_arena_ready();
     AddSC_coa_lfg();
+    AddSC_bot_log_stats();
 }

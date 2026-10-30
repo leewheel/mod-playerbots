@@ -5,6 +5,7 @@
  */
 
 #include "ReleaseSpiritAction.h"
+#include "BotLogStats.h"
 #include "Corpse.h"
 #include "Event.h"
 #include "GameGraveyard.h"
@@ -50,6 +51,7 @@ bool ReleaseSpiritAction::Execute(Event event)
     IncrementDeathCount();
     bot->DurabilityRepairAll(false, 1.0f, false);
     LogRelease("released");
+    AddBotLogStat(BOT_LOG_DEATH_RELEASE);  // 只计数，明细日志交给周期汇总 //By leewheel 2026年10月31日
 
     WorldPacket releasePacket(CMSG_REPOP_REQUEST);
     releasePacket << uint8(0);
@@ -91,6 +93,7 @@ bool AutoReleaseSpiritAction::Execute(Event /*event*/)
     IncrementDeathCount();
     bot->DurabilityRepairAll(false, 1.0f, false);
     LogRelease("auto released");
+    AddBotLogStat(BOT_LOG_DEATH_RELEASE);  // 同一次释放只计一次 //By leewheel 2026年10月31日
 
     WorldPacket packet(CMSG_REPOP_REQUEST);
     packet << uint8(0);
