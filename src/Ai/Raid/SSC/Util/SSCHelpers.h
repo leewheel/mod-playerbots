@@ -163,11 +163,6 @@ bool CastTankTaunt(PlayerbotAI* botAI, Unit* target);
 bool FindHazardEscapeStep(
     Player* bot, Position const& hazard, float moveDist, float& stepX, float& stepY, float& stepZ);
 bool IsDryGround(Player* bot, float x, float y);
-bool GetPathStepTowardPoint(
-    Player* bot, Position const& destination, float stopDistance, float stepDistance,
-    float& stepX, float& stepY);
-bool GetPathStepTowardUnit(
-    Player* bot, Unit* target, float stopDistance, float& stepX, float& stepY);
 bool GetRangedArcAngle(Player* bot, float arcCenter, float arcSpan, float& angle);
 std::vector<Unit*> GetOtherLivingGroupMembers(Player* bot);
 
@@ -604,7 +599,7 @@ struct VashjTargetFacts
     Unit* vashj = nullptr;
     Unit* tainted = nullptr;
     int8 phase = -1;
-    // Measured from the bot, and in phase 2 also from the platform centre, so bots don't chase
+    // Measured from the bot, and in phase 2 also from the platform center, so bots don't chase
     // adds down the stairs.
     float maxPursueRange = 0.0f;
     float maxSearchRange = 0.0f;

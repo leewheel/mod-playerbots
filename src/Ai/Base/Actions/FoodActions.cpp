@@ -72,13 +72,16 @@ uint32 StartFoodCheatRecovery(Player* bot)
     return durationMs;
 }
 
-bool IsDisallowedShapeshiftForm(Player* bot)
+bool IsDisallowedFoodState(Player* bot)
 {
+    if (bot->HasUnitState(UNIT_STATE_LOST_CONTROL))
+        return true;
+
     if (bot->getClass() == CLASS_DRUID)
     {
         ShapeshiftForm form = bot->GetShapeshiftForm();
-        return form == FORM_TRAVEL || form == FORM_AQUA || form == FORM_CAT || form == FORM_BEAR ||
-            form == FORM_DIREBEAR || form == FORM_FLIGHT || form == FORM_FLIGHT_EPIC;
+        return form == FORM_TRAVEL || form == FORM_AQUA || form == FORM_FLIGHT || form == FORM_FLIGHT_EPIC ||
+               form == FORM_BEAR || form == FORM_DIREBEAR || form == FORM_CAT;
     }
 
     return bot->getClass() == CLASS_PRIEST && bot->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION;
@@ -87,6 +90,9 @@ bool IsDisallowedShapeshiftForm(Player* bot)
 
 bool DrinkAction::Execute(Event event)
 {
+    if (IsDisallowedFoodState(bot))
+        return false;
+
     if (botAI->HasCheat(BotCheatMask::food))
     {
         SetDuration(StartFoodCheatRecovery(bot));
@@ -106,7 +112,7 @@ bool DrinkAction::isUseful()
 
 bool DrinkAction::isPossible()
 {
-    if (bot->IsInCombat() || bot->IsMounted() || IsDisallowedShapeshiftForm(bot))
+    if (bot->IsInCombat() || bot->IsMounted() || IsDisallowedFoodState(bot))
         return false;
 
     if (bot->HasAura(BG_WS_SPELL_WARSONG_FLAG) || bot->HasAura(BG_WS_SPELL_SILVERWING_FLAG) ||
@@ -120,6 +126,9 @@ bool DrinkAction::isPossible()
 
 bool EatAction::Execute(Event event)
 {
+    if (IsDisallowedFoodState(bot))
+        return false;
+
     if (botAI->HasCheat(BotCheatMask::food))
     {
         SetDuration(StartFoodCheatRecovery(bot));
@@ -136,7 +145,7 @@ bool EatAction::isUseful()
 
 bool EatAction::isPossible()
 {
-    if (bot->IsInCombat() || bot->IsMounted() || IsDisallowedShapeshiftForm(bot))
+    if (bot->IsInCombat() || bot->IsMounted() || IsDisallowedFoodState(bot))
         return false;
 
     if (bot->HasAura(BG_WS_SPELL_WARSONG_FLAG) || bot->HasAura(BG_WS_SPELL_SILVERWING_FLAG) ||

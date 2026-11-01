@@ -10,6 +10,7 @@
 #include "BTHelpers.h"
 #include "EncounterHelpers.h"
 #include "Trigger.h"
+#include <optional>
 #include <string>
 
 // Shared
@@ -17,17 +18,24 @@
 class BlackTempleEncounterTrigger : public Trigger
 {
 public:
-    BlackTempleEncounterTrigger(PlayerbotAI* botAI, std::string const name, int32 checkInterval = 1)
-        : Trigger(botAI, name, checkInterval) {}
+    BlackTempleEncounterTrigger(
+        PlayerbotAI* botAI, std::string const name, BtHelpers::BtBosses boss,
+        int32 checkInterval = 1)
+        : Trigger(botAI, name, checkInterval), _boss(boss) {}
 
     bool IsActive() final
     {
-        return EncounterHelpers::IsEncounterInProgress(bot, BtHelpers::BT_MAP_ID) &&
-            IsActiveInEncounter();
+        return EncounterHelpers::IsBossInProgress(
+            bot, BtHelpers::BT_MAP_ID, BtHelpers::Id(_boss)) && IsActiveInEncounter();
     }
 
 protected:
     virtual bool IsActiveInEncounter() = 0;
+
+    Creature* GetEncounterBoss() { return BtHelpers::GetBtBoss(bot, _boss); }
+
+private:
+    BtHelpers::BtBosses const _boss;
 };
 
 class BlackTempleNoEncounterInProgressTrigger : public Trigger
@@ -38,7 +46,6 @@ public:
     bool IsActive() override;
 };
 
-// In and out of encounters: the roles are re-ranked out of one and passed on in one.
 class BlackTempleClassRolesShouldBeAssignedTrigger : public Trigger
 {
 public:
@@ -47,36 +54,31 @@ public:
     bool IsActive() override;
 };
 
-// A Hunter while the named boss is untouched, so Misdirection goes out on the pull. Used for
-// High Warlord Naj'entus, Supremus, Teron Gorefiend, Gurtogg Bloodboil, Mother Shahraz and the
-// Illidari Council (on Gathios).
 class BlackTempleHunterShouldMisdirectTrigger : public BlackTempleEncounterTrigger
 {
 public:
     BlackTempleHunterShouldMisdirectTrigger(
-        PlayerbotAI* botAI, std::string const& name, std::string const& bossName)
-        : BlackTempleEncounterTrigger(botAI, name), _bossName(bossName) {}
+        PlayerbotAI* botAI, std::string const& name, BtHelpers::BtBosses boss,
+        std::optional<BtHelpers::BtCreatureData> target = std::nullopt)
+        : BlackTempleEncounterTrigger(botAI, name, boss), _target(target) {}
 
 protected:
     bool IsActiveInEncounter() override;
 
 private:
-    std::string const _bossName;
+    std::optional<BtHelpers::BtCreatureData> const _target;
 };
 
 // Trash
 
-// Not gated on an encounter, so checked once a second. The first Shell of Pain comes 20 to 30 s
-// into the pull.
 class SisterOfPleasureShouldBeFocusedTrigger : public Trigger
 {
 public:
     SisterOfPleasureShouldBeFocusedTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "sister of pleasure should be focused", 1000) {}
+        : Trigger(botAI, "sister of pleasure should be focused") {}
     bool IsActive() override;
 };
 
-// A wand keeps shooting once started, so a multiplier can't stop it.
 class ShadowmoonReaverWandBuildsChargesTrigger : public Trigger
 {
 public:
@@ -85,7 +87,6 @@ public:
     bool IsActive() override;
 };
 
-// A pet keeps its victim when its owner switches (PetAI::OwnerAttacked), so it needs commanding.
 class ShadowmoonReaverShouldControlCasterPetTrigger : public Trigger
 {
 public:
@@ -100,7 +101,9 @@ class HighWarlordNajentusShouldBeTankedTrigger : public BlackTempleEncounterTrig
 {
 public:
     HighWarlordNajentusShouldBeTankedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "high warlord naj'entus should be tanked") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "high warlord naj'entus should be tanked",
+            BtHelpers::BtBosses::DATA_HIGH_WARLORD_NAJENTUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -110,7 +113,9 @@ class HighWarlordNajentusRangedShouldSpreadTrigger : public BlackTempleEncounter
 {
 public:
     HighWarlordNajentusRangedShouldSpreadTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "high warlord naj'entus ranged should spread") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "high warlord naj'entus ranged should spread",
+            BtHelpers::BtBosses::DATA_HIGH_WARLORD_NAJENTUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -121,7 +126,8 @@ class HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger : public BlackTempleEn
 public:
     HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "high warlord naj'entus impaled player needs remover") {}
+            botAI, "high warlord naj'entus impaled player needs remover",
+            BtHelpers::BtBosses::DATA_HIGH_WARLORD_NAJENTUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -132,7 +138,8 @@ class HighWarlordNajentusImpalingSpineOnGroupMemberTrigger : public BlackTempleE
 public:
     HighWarlordNajentusImpalingSpineOnGroupMemberTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "high warlord naj'entus impaling spine on group member") {}
+            botAI, "high warlord naj'entus impaling spine on group member",
+            BtHelpers::BtBosses::DATA_HIGH_WARLORD_NAJENTUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -142,7 +149,9 @@ class HighWarlordNajentusNeedsSpineThrowerTrigger : public BlackTempleEncounterT
 {
 public:
     HighWarlordNajentusNeedsSpineThrowerTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "high warlord naj'entus needs spine thrower", 1000) {}
+        : BlackTempleEncounterTrigger(
+            botAI, "high warlord naj'entus needs spine thrower",
+            BtHelpers::BtBosses::DATA_HIGH_WARLORD_NAJENTUS, 1000) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -152,7 +161,9 @@ class HighWarlordNajentusHasTidalShieldTrigger : public BlackTempleEncounterTrig
 {
 public:
     HighWarlordNajentusHasTidalShieldTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "high warlord naj'entus has tidal shield") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "high warlord naj'entus has tidal shield",
+            BtHelpers::BtBosses::DATA_HIGH_WARLORD_NAJENTUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -160,11 +171,23 @@ protected:
 
 // Supremus
 
+class SupremusShouldBePulledBackByTankTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    SupremusShouldBePulledBackByTankTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "supremus should be pulled back by tank", BtHelpers::BtBosses::DATA_SUPREMUS) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 class SupremusRangedShouldSpreadTrigger : public BlackTempleEncounterTrigger
 {
 public:
     SupremusRangedShouldSpreadTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "supremus ranged should spread") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "supremus ranged should spread", BtHelpers::BtBosses::DATA_SUPREMUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -174,7 +197,8 @@ class SupremusFixatedOnBotTrigger : public BlackTempleEncounterTrigger
 {
 public:
     SupremusFixatedOnBotTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "supremus fixated on bot") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "supremus fixated on bot", BtHelpers::BtBosses::DATA_SUPREMUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -184,7 +208,8 @@ class SupremusNearFireTrigger : public BlackTempleEncounterTrigger
 {
 public:
     SupremusNearFireTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "supremus near fire") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "supremus near fire", BtHelpers::BtBosses::DATA_SUPREMUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -194,7 +219,8 @@ class SupremusReachBlockedByFireTrigger : public BlackTempleEncounterTrigger
 {
 public:
     SupremusReachBlockedByFireTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "supremus reach blocked by fire") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "supremus reach blocked by fire", BtHelpers::BtBosses::DATA_SUPREMUS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -207,7 +233,8 @@ class ShadeOfAkamaShouldAttackChannelersAndSorcerersTrigger : public BlackTemple
 public:
     ShadeOfAkamaShouldAttackChannelersAndSorcerersTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "shade of akama should attack channelers and sorcerers") {}
+            botAI, "shade of akama should attack channelers and sorcerers",
+            BtHelpers::BtBosses::DATA_SHADE_OF_AKAMA) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -219,7 +246,8 @@ class TeronGorefiendShouldBeTankedTrigger : public BlackTempleEncounterTrigger
 {
 public:
     TeronGorefiendShouldBeTankedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "teron gorefiend should be tanked") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "teron gorefiend should be tanked", BtHelpers::BtBosses::DATA_TERON_GOREFIEND) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -229,19 +257,21 @@ class TeronGorefiendRangedShouldPositionOnBalconyTrigger : public BlackTempleEnc
 {
 public:
     TeronGorefiendRangedShouldPositionOnBalconyTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "teron gorefiend ranged should position on balcony") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "teron gorefiend ranged should position on balcony",
+            BtHelpers::BtBosses::DATA_TERON_GOREFIEND) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Feign Death and Vanish cancel his cast. Ice Block and Divine Shield don't help: Shadow of Death
-// pierces invulnerability in AC.
 class TeronGorefiendCastsShadowOfDeathTrigger : public BlackTempleEncounterTrigger
 {
 public:
     TeronGorefiendCastsShadowOfDeathTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "teron gorefiend casts shadow of death") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "teron gorefiend casts shadow of death",
+            BtHelpers::BtBosses::DATA_TERON_GOREFIEND) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -252,7 +282,8 @@ class TeronGorefiendShouldPositionForVengefulSpiritTrigger : public BlackTempleE
 public:
     TeronGorefiendShouldPositionForVengefulSpiritTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "teron gorefiend should position for vengeful spirit") {}
+            botAI, "teron gorefiend should position for vengeful spirit",
+            BtHelpers::BtBosses::DATA_TERON_GOREFIEND) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -262,7 +293,9 @@ class TeronGorefiendTransformedIntoVengefulSpiritTrigger : public BlackTempleEnc
 {
 public:
     TeronGorefiendTransformedIntoVengefulSpiritTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "teron gorefiend transformed into vengeful spirit") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "teron gorefiend transformed into vengeful spirit",
+            BtHelpers::BtBosses::DATA_TERON_GOREFIEND) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -274,7 +307,9 @@ class GurtoggBloodboilShouldBeTankedTrigger : public BlackTempleEncounterTrigger
 {
 public:
     GurtoggBloodboilShouldBeTankedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil should be tanked") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "gurtogg bloodboil should be tanked",
+            BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -284,7 +319,9 @@ class GurtoggBloodboilShouldPositionForBloodboilTrigger : public BlackTempleEnco
 {
 public:
     GurtoggBloodboilShouldPositionForBloodboilTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil should position for bloodboil") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "gurtogg bloodboil should position for bloodboil",
+            BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -294,7 +331,9 @@ class GurtoggBloodboilMeleeShouldStayBehindTrigger : public BlackTempleEncounter
 {
 public:
     GurtoggBloodboilMeleeShouldStayBehindTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil melee should stay behind") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "gurtogg bloodboil melee should stay behind",
+            BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -305,7 +344,8 @@ class GurtoggBloodboilRangedShouldAvoidFrontalConeTrigger : public BlackTempleEn
 public:
     GurtoggBloodboilRangedShouldAvoidFrontalConeTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "gurtogg bloodboil ranged should avoid frontal cone") {}
+            botAI, "gurtogg bloodboil ranged should avoid frontal cone",
+            BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -315,7 +355,9 @@ class GurtoggBloodboilFelRageOnBotTrigger : public BlackTempleEncounterTrigger
 {
 public:
     GurtoggBloodboilFelRageOnBotTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "gurtogg bloodboil fel rage on bot") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "gurtogg bloodboil fel rage on bot",
+            BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -327,7 +369,9 @@ class ReliquaryOfSoulsHunterShouldMisdirectTrigger : public BlackTempleEncounter
 {
 public:
     ReliquaryOfSoulsHunterShouldMisdirectTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "reliquary of souls hunter should misdirect") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "reliquary of souls hunter should misdirect",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -337,7 +381,9 @@ class ReliquaryOfSoulsShouldPositionForSufferingTrigger : public BlackTempleEnco
 {
 public:
     ReliquaryOfSoulsShouldPositionForSufferingTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "reliquary of souls should position for suffering") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "reliquary of souls should position for suffering",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -348,7 +394,8 @@ class ReliquaryOfSoulsHealersShouldAttackSufferingTrigger : public BlackTempleEn
 public:
     ReliquaryOfSoulsHealersShouldAttackSufferingTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "reliquary of souls healers should attack suffering") {}
+            botAI, "reliquary of souls healers should attack suffering",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -359,17 +406,20 @@ class ReliquaryOfSoulsEssenceOfDesireHasRuneShieldTrigger : public BlackTempleEn
 public:
     ReliquaryOfSoulsEssenceOfDesireHasRuneShieldTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "reliquary of souls essence of desire has rune shield") {}
+            botAI, "reliquary of souls essence of desire has rune shield",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class ReliquaryOfSoulsEssenceOfDesireCastsDeadenTrigger : public BlackTempleEncounterTrigger
+class ReliquaryOfSoulsEssenceOfDesireCastingDeadenTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    ReliquaryOfSoulsEssenceOfDesireCastsDeadenTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "reliquary of souls essence of desire casts deaden") {}
+    ReliquaryOfSoulsEssenceOfDesireCastingDeadenTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "reliquary of souls essence of desire casting deaden",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -381,7 +431,8 @@ class MotherShahrazShouldBeTankedTrigger : public BlackTempleEncounterTrigger
 {
 public:
     MotherShahrazShouldBeTankedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "mother shahraz should be tanked") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "mother shahraz should be tanked", BtHelpers::BtBosses::DATA_MOTHER_SHAHRAZ) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -391,7 +442,8 @@ class MotherShahrazBeingPositionedTrigger : public BlackTempleEncounterTrigger
 {
 public:
     MotherShahrazBeingPositionedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "mother shahraz being positioned") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "mother shahraz being positioned", BtHelpers::BtBosses::DATA_MOTHER_SHAHRAZ) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -402,7 +454,8 @@ class MotherShahrazRangedShouldPositionUnderStatueTrigger : public BlackTempleEn
 public:
     MotherShahrazRangedShouldPositionUnderStatueTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "mother shahraz ranged should position under statue") {}
+            botAI, "mother shahraz ranged should position under statue",
+            BtHelpers::BtBosses::DATA_MOTHER_SHAHRAZ) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -412,7 +465,8 @@ class MotherShahrazFatalAttractionTrigger : public BlackTempleEncounterTrigger
 {
 public:
     MotherShahrazFatalAttractionTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "mother shahraz fatal attraction") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "mother shahraz fatal attraction", BtHelpers::BtBosses::DATA_MOTHER_SHAHRAZ) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -424,32 +478,33 @@ class IllidariCouncilGathiosShouldBeTankedTrigger : public BlackTempleEncounterT
 {
 public:
     IllidariCouncilGathiosShouldBeTankedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council gathios should be tanked") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council gathios should be tanked",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidariCouncilGathiosCastsJudgementOfCommandTrigger : public BlackTempleEncounterTrigger
+class IllidariCouncilGathiosCastingJudgementOfCommandTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidariCouncilGathiosCastsJudgementOfCommandTrigger(PlayerbotAI* botAI)
+    IllidariCouncilGathiosCastingJudgementOfCommandTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidari council gathios casts judgement of command") {}
+            botAI, "illidari council gathios casting judgement of command",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Ranged DPS interrupt only while her melee can't: under Blessing of Protection, or while she
-// stands in a Zerevor patch or Gathios's Consecration. Paladins, priests and hunters have nothing
-// she isn't immune to.
-class IllidariCouncilMalandeCastsCircleOfHealingTrigger : public BlackTempleEncounterTrigger
+class IllidariCouncilMalandeCastingCircleOfHealingTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidariCouncilMalandeCastsCircleOfHealingTrigger(PlayerbotAI* botAI)
+    IllidariCouncilMalandeCastingCircleOfHealingTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidari council malande casts circle of healing") {}
+            botAI, "illidari council malande casting circle of healing",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -459,7 +514,9 @@ class IllidariCouncilMalandeShouldBeTankedTrigger : public BlackTempleEncounterT
 {
 public:
     IllidariCouncilMalandeShouldBeTankedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council malande should be tanked") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council malande should be tanked",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -469,7 +526,9 @@ class IllidariCouncilVerasShouldBeTankedTrigger : public BlackTempleEncounterTri
 {
 public:
     IllidariCouncilVerasShouldBeTankedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council veras should be tanked") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council veras should be tanked",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -479,7 +538,9 @@ class IllidariCouncilZerevorShouldBeTankedByMageTrigger : public BlackTempleEnco
 {
 public:
     IllidariCouncilZerevorShouldBeTankedByMageTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council zerevor should be tanked by mage") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council zerevor should be tanked by mage",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -490,7 +551,8 @@ class IllidariCouncilMageTankHealerShouldRepositionTrigger : public BlackTempleE
 public:
     IllidariCouncilMageTankHealerShouldRepositionTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidari council mage tank healer should reposition") {}
+            botAI, "illidari council mage tank healer should reposition",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -500,7 +562,9 @@ class IllidariCouncilRangedShouldSpreadTrigger : public BlackTempleEncounterTrig
 {
 public:
     IllidariCouncilRangedShouldSpreadTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council ranged should spread") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council ranged should spread",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -510,19 +574,21 @@ class IllidariCouncilPetShouldSwitchTargetTrigger : public BlackTempleEncounterT
 {
 public:
     IllidariCouncilPetShouldSwitchTargetTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council pet should switch target") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council pet should switch target",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Every bot but the main tank, the Malande tank and the mage tank, and the Veras tank only while
-// Veras is vanished.
 class IllidariCouncilShouldAssignDpsPriorityTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidariCouncilShouldAssignDpsPriorityTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council should assign dps priority") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council should assign dps priority",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -532,7 +598,9 @@ class IllidariCouncilShouldManageDpsTimerTrigger : public BlackTempleEncounterTr
 {
 public:
     IllidariCouncilShouldManageDpsTimerTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidari council should manage dps timer") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council should manage dps timer",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -540,7 +608,6 @@ protected:
 
 // Illidan Stormrage <The Betrayer>
 
-// Not gated on the encounter, which starts as the speech ends, so throttled to once per second.
 class IllidanStormrageShouldPositionForPullTrigger : public Trigger
 {
 public:
@@ -553,7 +620,9 @@ class IllidanStormrageHunterShouldMisdirectTrigger : public BlackTempleEncounter
 {
 public:
     IllidanStormrageHunterShouldMisdirectTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage hunter should misdirect") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage hunter should misdirect",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -563,32 +632,33 @@ class IllidanStormrageShouldBeTankedTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageShouldBeTankedTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should be tanked") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage should be tanked",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// An infected bot runs to the infection position, and so does a trap hunter on duty, to lay its
-// Frost Trap. The Main Tank and his victim never run, nor the warlock tank in Demon Form.
 class IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage parasitic shadowfiend on group member") {}
+            botAI, "illidan stormrage parasitic shadowfiend on group member",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// The mechanic tracker records each new infection while there is an infection position, keeps
-// looking for a trap hunter while none is ready, and drops an entry once its debuff is gone.
 class IllidanStormrageShouldTrackInfectionsTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageShouldTrackInfectionsTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should track infections") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage should track infections",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -599,7 +669,8 @@ class IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger : public BlackTemple
 public:
     IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage flames of azzinoth should be tanked") {}
+            botAI, "illidan stormrage flames of azzinoth should be tanked",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -609,31 +680,33 @@ class IllidanStormragePetsDieToHazardsTrigger : public BlackTempleEncounterTrigg
 {
 public:
     IllidanStormragePetsDieToHazardsTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage pets die to hazards") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage pets die to hazards",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Hunter and warlock pets take the Shadowfiends, which never attack pets, in Phases 1, 2, 3 and 5
-// and the death scene. In Demon Form every pet does, passive then, once no Shadow Demon is left
-// for it.
 class IllidanStormragePetShouldAttackShadowfiendTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormragePetShouldAttackShadowfiendTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage pet should attack shadowfiend") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage pet should attack shadowfiend",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Every pet, passive in Demon Form, is sent onto a Shadow Demon and kept on it until it dies.
 class IllidanStormragePetShouldAttackShadowDemonTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormragePetShouldAttackShadowDemonTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage pet should attack shadow demon") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage pet should attack shadow demon",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -643,19 +716,21 @@ class IllidanStormrageShouldPositionAboveGrateTrigger : public BlackTempleEncoun
 {
 public:
     IllidanStormrageShouldPositionAboveGrateTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should position above grate") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage should position above grate",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Ice Block, Divine Shield and Cloak of Shadows each clear both debuffs on use, Dark Barrage
-// after a moment. Not for the Main Tank or a Flame tank: an immunity loses it whatever it holds.
 class IllidanStormrageImmunityCanClearDebuffTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageImmunityCanClearDebuffTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage immunity can clear debuff") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage immunity can clear debuff",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -665,58 +740,58 @@ class IllidanStormrageImmunityNoLongerNeededTrigger : public BlackTempleEncounte
 {
 public:
     IllidanStormrageImmunityNoLongerNeededTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage immunity no longer needed") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage immunity no longer needed",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Totems set for the last phase would take a Flame in its first 2 s, or be back on his threat
-// list before the tank, so they come up at each phase change.
 class IllidanStormrageShamanHasTotemsBeforeTanksHaveAggroTrigger
     : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageShamanHasTotemsBeforeTanksHaveAggroTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage shaman has totems before tanks have aggro") {}
+            botAI, "illidan stormrage shaman has totems before tanks have aggro",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// An infected bot runs to the infection position instead.
 class IllidanStormrageShouldPositionForLandingTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageShouldPositionForLandingTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage should position for landing") {}
+            botAI, "illidan stormrage should position for landing",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// At the transform, and at 33% or below in Demon Form, melee and tanks still on him end their
-// auto-attack: in his melee range they would only need 110% of the warlock tank's threat.
 class IllidanStormrageMeleeShouldStopAttackingTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageMeleeShouldStopAttackingTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage melee should stop attacking") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage melee should stop attacking",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Auto Shot, wands and channels (Drain Soul, Mind Flay) keep hitting him through a hold, since a
-// multiplier can't end a running auto-repeat or channel; in the pickup, so do any channel's heals
-// or mana.
 class IllidanStormrageShouldStopShootingTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageShouldStopShootingTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should stop shooting") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage should stop shooting",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -726,20 +801,21 @@ class IllidanStormrageRangedShouldSpreadTrigger : public BlackTempleEncounterTri
 {
 public:
     IllidanStormrageRangedShouldSpreadTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage ranged should spread") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage ranged should spread",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Ranged DPS walk into spell reach of a Shadow Demon walking to the warlock tank, whose death
-// wipes the raid. Healers stay to heal.
 class IllidanStormrageRangedShouldReachShadowDemonTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageRangedShouldReachShadowDemonTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage ranged should reach shadow demon") {}
+            botAI, "illidan stormrage ranged should reach shadow demon",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -750,7 +826,8 @@ class IllidanStormrageMeleeShouldStayAwayFromDemonFormTrigger : public BlackTemp
 public:
     IllidanStormrageMeleeShouldStayAwayFromDemonFormTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage melee should stay away from demon form") {}
+            botAI, "illidan stormrage melee should stay away from demon form",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -760,36 +837,33 @@ class IllidanStormrageWarlockShouldTankDemonFormTrigger : public BlackTempleEnco
 {
 public:
     IllidanStormrageWarlockShouldTankDemonFormTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage warlock should tank demon form") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage warlock should tank demon form",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Every warlock, the warlock tank included, casts Seed of Corruption on the Shadow Demons while
-// two or more are alive. They all walk toward the raid, so a Seed going off on one usually
-// catches others. Not while infected, so the run comes first, nor next to fresh Shadowfiends,
-// which the explosion would turn onto the warlock.
 class IllidanStormrageWarlockShouldSeedShadowDemonsTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageWarlockShouldSeedShadowDemonsTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage warlock should seed shadow demons")
-    {
-    }
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage warlock should seed shadow demons",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Tanks other than the Main Tank join the melee in Phases 1, 3, 4 and 5; while he flies the
-// assist tanks have the Flames. The Main Tank joins them on Shadow Demons in Demon Form until its
-// walk-in. Healers take Shadow Demons as targets in Demon Form.
 class IllidanStormrageShouldAssignTargetPriorityTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageShouldAssignTargetPriorityTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should assign target priority") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage should assign target priority",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -799,20 +873,21 @@ class IllidanStormrageShouldManageDpsTimersTrigger : public BlackTempleEncounter
 {
 public:
     IllidanStormrageShouldManageDpsTimersTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(botAI, "illidan stormrage should manage dps timers") {}
+        : BlackTempleEncounterTrigger(
+            botAI, "illidan stormrage should manage dps timers",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-// Destroying hazards after phase 2 is not gated behind CheatMask. The strategy simply cannot work
-// without doing this.
 class IllidanStormrageShouldClearHazardsBeforeLandingTrigger : public BlackTempleEncounterTrigger
 {
 public:
     IllidanStormrageShouldClearHazardsBeforeLandingTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage should clear hazards before landing") {}
+            botAI, "illidan stormrage should clear hazards before landing",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     bool IsActiveInEncounter() override;

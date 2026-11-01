@@ -10,6 +10,7 @@
 #include "BTHelpers.h"
 #include "EncounterHelpers.h"
 #include "Multiplier.h"
+#include <optional>
 #include <string>
 
 // Shared
@@ -19,19 +20,31 @@ class BlackTempleEncounterMultiplier : public Multiplier
 public:
     BlackTempleEncounterMultiplier(PlayerbotAI* botAI, std::string const name)
         : Multiplier(botAI, name) {}
+    BlackTempleEncounterMultiplier(
+        PlayerbotAI* botAI, std::string const name, BtHelpers::BtBosses boss)
+        : Multiplier(botAI, name), _boss(boss) {}
 
     float GetValue(Action* action) final
     {
-        return EncounterHelpers::IsEncounterInProgress(bot, BtHelpers::BT_MAP_ID) ?
-            GetValueInEncounter(action) : 1.0f;
+        bool const inProgress = _boss ?
+            EncounterHelpers::IsBossInProgress(
+                bot, BtHelpers::BT_MAP_ID, BtHelpers::Id(*_boss)) :
+            EncounterHelpers::IsEncounterInProgress(bot, BtHelpers::BT_MAP_ID);
+        return inProgress ? GetValueInEncounter(action) : 1.0f;
     }
 
 protected:
     virtual float GetValueInEncounter(Action* action) = 0;
+
+    Creature* GetEncounterBoss()
+    {
+        return _boss ? BtHelpers::GetBtBoss(bot, *_boss) : nullptr;
+    }
+
+private:
+    std::optional<BtHelpers::BtBosses> const _boss;
 };
 
-// Held for each boss's first 5%, and also through Supremus's kite phase, between Reliquary
-// essences, and on Illidan from 95% to 62% (Bloodlust all the way until 62%).
 class BlackTempleDelayDpsCooldownsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
@@ -42,9 +55,6 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Supremus's bounding radius is 80 yd, far beyond his combat reach, and Killing Spree places the
-// rogue by bounding radius, so it takes the rogue well out of the fight.
-// Essence of Suffering targets the closest player, and Killing Spree makes the Rogue the closest.
 class BlackTempleDisableKillingSpreeMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
@@ -55,9 +65,18 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+class BlackTempleNoThreatRedirectsMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    BlackTempleNoThreatRedirectsMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(botAI, "black temple no threat redirects") {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 // Trash
 
-// Not gated on an encounter: Reavers are trash.
 class ShadowmoonReaverHoldChargeBuildingSpellsMultiplier : public Multiplier
 {
 public:
@@ -75,22 +94,20 @@ class HighWarlordNajentusDisableCombatFormationMoveMultiplier
 public:
     HighWarlordNajentusDisableCombatFormationMoveMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "high warlord naj'entus disable combat formation move") {}
+            botAI, "high warlord naj'entus disable combat formation move",
+            BtHelpers::BtBosses::DATA_HIGH_WARLORD_NAJENTUS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Tidal Shield causes bots to drop combat and flip on their non-combat engines. This multiplier
-// stops them from breaking their spread as a result (due to FollowAction) while also keeping them
-// from restarting their attack + dropping target repeatedly.
-class HighWarlordNajentusTidalShieldHoldPositionMultiplier
-    : public BlackTempleEncounterMultiplier
+class HighWarlordNajentusTidalShieldHoldPositionMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     HighWarlordNajentusTidalShieldHoldPositionMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "high warlord naj'entus tidal shield hold position") {}
+            botAI, "high warlord naj'entus tidal shield hold position",
+            BtHelpers::BtBosses::DATA_HIGH_WARLORD_NAJENTUS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -98,34 +115,34 @@ protected:
 
 // Supremus
 
-class SupremusFocusOnAvoidanceInKitePhaseMultiplier : public BlackTempleEncounterMultiplier
+class SupremusRunAwayWhenFixatedMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    SupremusFocusOnAvoidanceInKitePhaseMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "supremus focus on avoidance in kite phase") {}
+    SupremusRunAwayWhenFixatedMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+            botAI, "supremus run away when fixated", BtHelpers::BtBosses::DATA_SUPREMUS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Stock reach walks a straight line, so it gives way while that line passes through fire.
 class SupremusDoNotReachThroughFireMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     SupremusDoNotReachThroughFireMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "supremus do not reach through fire") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "supremus do not reach through fire", BtHelpers::BtBosses::DATA_SUPREMUS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Stock avoid aoe flees one hazard at a time, and a volcano only once within 15 yd of it; in the
-// kite phase the fire avoidance sees them all. In the tank phase it handles Molten Flame again.
-class SupremusDisableAvoidAoeInKitePhaseMultiplier : public BlackTempleEncounterMultiplier
+class SupremusControlMovementMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    SupremusDisableAvoidAoeInKitePhaseMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "supremus disable avoid aoe in kite phase") {}
+    SupremusControlMovementMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+            botAI, "supremus control movement", BtHelpers::BtBosses::DATA_SUPREMUS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -133,23 +150,13 @@ protected:
 
 // Shade of Akama
 
-// Walking up to the platform can lose sight of the target, which would otherwise drop it.
 class ShadeOfAkamaDoNotDropOutOfSightTargetMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     ShadeOfAkamaDoNotDropOutOfSightTargetMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "shade of akama do not drop out of sight target") {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
-};
-
-class ShadeOfAkamaCannotTankBossMultiplier : public BlackTempleEncounterMultiplier
-{
-public:
-    ShadeOfAkamaCannotTankBossMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "shade of akama cannot tank boss") {}
+            botAI, "shade of akama do not drop out of sight target",
+            BtHelpers::BtBosses::DATA_SHADE_OF_AKAMA) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -161,7 +168,8 @@ class TeronGorefiendControlMovementMultiplier : public BlackTempleEncounterMulti
 {
 public:
     TeronGorefiendControlMovementMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "teron gorefiend control movement") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "teron gorefiend control movement", BtHelpers::BtBosses::DATA_TERON_GOREFIEND) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -171,7 +179,9 @@ class TeronGorefiendMarkedBotOnlyMoveToDieMultiplier : public BlackTempleEncount
 {
 public:
     TeronGorefiendMarkedBotOnlyMoveToDieMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "teron gorefiend marked bot only move to die") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "teron gorefiend marked bot only move to die",
+            BtHelpers::BtBosses::DATA_TERON_GOREFIEND) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -182,7 +192,8 @@ class TeronGorefiendSpiritsAttackShadowyConstructsMultiplier : public BlackTempl
 public:
     TeronGorefiendSpiritsAttackShadowyConstructsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "teron gorefiend spirits attack shadowy constructs") {}
+            botAI, "teron gorefiend spirits attack shadowy constructs",
+            BtHelpers::BtBosses::DATA_TERON_GOREFIEND) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -194,43 +205,32 @@ class GurtoggBloodboilControlMovementMultiplier : public BlackTempleEncounterMul
 {
 public:
     GurtoggBloodboilControlMovementMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "gurtogg bloodboil control movement") {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
-};
-
-// Fel Rage fixes him on its target, so tanks don't taunt and hunters don't misdirect until it ends.
-class GurtoggBloodboilNoThreatRedirectsDuringFelRageMultiplier
-    : public BlackTempleEncounterMultiplier
-{
-public:
-    GurtoggBloodboilNoThreatRedirectsDuringFelRageMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "gurtogg bloodboil no threat redirects during fel rage") {}
+            botAI, "gurtogg bloodboil control movement",
+            BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// The Fel Rage target keeps him for all of Fel Rage, so it uses nothing that drops its threat.
 class GurtoggBloodboilFelRageTargetHoldsAggroMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     GurtoggBloodboilFelRageTargetHoldsAggroMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "gurtogg bloodboil fel rage target holds aggro") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "gurtogg bloodboil fel rage target holds aggro",
+            BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Non-tanks other than healers hold below the second tank's threat. No hold under Insignificance,
-// when no one gains threat.
 class GurtoggBloodboilHoldThreatMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     GurtoggBloodboilHoldThreatMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "gurtogg bloodboil hold threat") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "gurtogg bloodboil hold threat", BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -242,44 +242,45 @@ class ReliquaryOfSoulsDoNotWasteHealingMultiplier : public BlackTempleEncounterM
 {
 public:
     ReliquaryOfSoulsDoNotWasteHealingMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "reliquary of souls do not waste healing") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "reliquary of souls do not waste healing",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Tank face, set behind and disperse move tanks and melee around Suffering, which can carry
-// them nearer to her than the tanks.
 class ReliquaryOfSoulsControlMeleeMovementMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     ReliquaryOfSoulsControlMeleeMovementMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "reliquary of souls control melee movement") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "reliquary of souls control melee movement",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Lets a mage steal Rune Shield before a Purge or Tranquilizing Shot removes it.
 class ReliquaryOfSoulsLetMagesStealRuneShieldMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     ReliquaryOfSoulsLetMagesStealRuneShieldMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "reliquary of souls let mages steal rune shield") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "reliquary of souls let mages steal rune shield",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Stock Spell Reflection fires on any cast at the tank, so it would go on Spirit Shock, which
-// can't be reflected; the raid's own reflect still answers Deaden.
-class ReliquaryOfSoulsSaveSpellReflectionForDeadenMultiplier
-    : public BlackTempleEncounterMultiplier
+class ReliquaryOfSoulsSaveSpellReflectionForDeadenMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     ReliquaryOfSoulsSaveSpellReflectionForDeadenMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "reliquary of souls save spell reflection for deaden") {}
+            botAI, "reliquary of souls save spell reflection for deaden",
+            BtHelpers::BtBosses::DATA_RELIQUARY_OF_SOULS) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -291,7 +292,8 @@ class MotherShahrazControlMovementMultiplier : public BlackTempleEncounterMultip
 {
 public:
     MotherShahrazControlMovementMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "mother shahraz control movement") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "mother shahraz control movement", BtHelpers::BtBosses::DATA_MOTHER_SHAHRAZ) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -302,7 +304,8 @@ class MotherShahrazFatalAttractionRunAwayMultiplier : public BlackTempleEncounte
 public:
     MotherShahrazFatalAttractionRunAwayMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "mother shahraz fatal attraction run away") {}
+            botAI, "mother shahraz fatal attraction run away",
+            BtHelpers::BtBosses::DATA_MOTHER_SHAHRAZ) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -315,7 +318,8 @@ class IllidariCouncilControlMovementAndTargetingMultiplier : public BlackTempleE
 public:
     IllidariCouncilControlMovementAndTargetingMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "illidari council control movement and targeting") {}
+            botAI, "illidari council control movement and targeting",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -323,38 +327,40 @@ protected:
 private:
     float GetTankValue(Action* action);
     float GetNonTankValue(Action* action);
+    float GetHealerValue(Action* action);
 };
 
 class IllidariCouncilDisableMageTankActionsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     IllidariCouncilDisableMageTankActionsMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidari council disable mage tank actions") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidari council disable mage tank actions",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Dampen Magic is the only buff on the council that can be dispelled, and the mage tank steals it.
 class IllidariCouncilHoldMisdirectionAndDispelsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     IllidariCouncilHoldMisdirectionAndDispelsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "illidari council hold misdirection and dispels") {}
+            botAI, "illidari council hold misdirection and dispels",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Ranged interrupts are invaluable for Circle of Healing. Melee ones wait until she is in reach.
-class IllidariCouncilSaveInterruptsForCircleOfHealingMultiplier
-    : public BlackTempleEncounterMultiplier
+class IllidariCouncilManageInterruptsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    IllidariCouncilSaveInterruptsForCircleOfHealingMultiplier(PlayerbotAI* botAI)
+    IllidariCouncilManageInterruptsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "illidari council save interrupts for circle of healing") {}
+            botAI, "illidari council manage interrupts",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -364,7 +370,8 @@ class IllidariCouncilWaitForDpsMultiplier : public BlackTempleEncounterMultiplie
 {
 public:
     IllidariCouncilWaitForDpsMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidari council wait for dps") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidari council wait for dps", BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -372,8 +379,6 @@ protected:
 
 // Illidan Stormrage <The Betrayer>
 
-// While he talks, bots move only to their pull places. Not gated on the encounter, which starts as
-// the speech ends.
 class IllidanStormrageHoldPullPositionsMultiplier : public Multiplier
 {
 public:
@@ -388,7 +393,8 @@ class IllidanStormrageControlMovementAndTargetingMultiplier : public BlackTemple
 public:
     IllidanStormrageControlMovementAndTargetingMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "illidan stormrage control movement and targeting") {}
+            botAI, "illidan stormrage control movement and targeting",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -400,42 +406,36 @@ private:
     float GetNonTankMovementValue(BtHelpers::IllidanPhase phase, Action* action);
 };
 
-// If near a Shadowfiend that is not low on health, nothing goes onto a Shadowfiend and no AoE
-// spell or heal is cast. This is a proxy for having just birthed a Shadowfiend, which can
-// immediately infect the birther if any threat is generated. Switching targets stays free, so a
-// bot on a Shadowfiend can still turn to him.
 class IllidanStormrageHoldNearNewShadowfiendMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     IllidanStormrageHoldNearNewShadowfiendMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage hold near new shadowfiend") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidan stormrage hold near new shadowfiend",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Guardians can't be set passive like pets, so they are summoned only in Phases 3 and 5 (to keep
-// them from dying in Phase 4 and to save the cooldown through Phases 1 and 2), and not in the
-// bot's own hold, which lets Mirror Image and Army of the Dead through as buffs.
 class IllidanStormrageHoldGuardianSummonsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     IllidanStormrageHoldGuardianSummonsMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage hold guardian summons") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidan stormrage hold guardian summons",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// Shamans set no totems from each phase change until the tanks have aggro, so the ones they
-// recalled aren't set again at once. In Phases 1, 3 and 5 they also set none while nearer the
-// infection position than their nearest totem: it lies about 52 yd from him, past the 30 yd at
-// which totems are recast.
 class IllidanStormrageHoldTotemsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     IllidanStormrageHoldTotemsMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage hold totems") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidan stormrage hold totems", BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -445,7 +445,8 @@ class IllidanStormrageWaitForDpsMultiplier : public BlackTempleEncounterMultipli
 {
 public:
     IllidanStormrageWaitForDpsMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage wait for dps") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidan stormrage wait for dps", BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -455,20 +456,21 @@ class IllidanStormrageDisableTankSoulshatterMultiplier : public BlackTempleEncou
 {
 public:
     IllidanStormrageDisableTankSoulshatterMultiplier(PlayerbotAI* botAI)
-        : BlackTempleEncounterMultiplier(botAI, "illidan stormrage disable tank soulshatter") {}
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidan stormrage disable tank soulshatter",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-// While Shadow Demons are up, the only area damage is the warlocks' Seed of Corruption on them,
-// which has its own action.
 class IllidanStormrageDisableAoeOnShadowDemonsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
     IllidanStormrageDisableAoeOnShadowDemonsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "illidan stormrage disable aoe on shadow demons") {}
+            botAI, "illidan stormrage disable aoe on shadow demons",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

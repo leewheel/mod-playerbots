@@ -13,6 +13,7 @@
 // End By leewheel 2026-09-06
 #include "BattlegroundMgr.h"
 #include "Event.h"
+#include "GameTime.h"
 #include "GroupMgr.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotOperations.h"
@@ -20,6 +21,11 @@
 #include "Playerbots.h"
 #include "PositionValue.h"
 #include "RandomPlayerbotFactory.h"
+
+namespace
+{
+    constexpr uint32 BG_JOIN_LOGIN_DELAY_MS = 120 * IN_MILLISECONDS;
+}
 
 bool BGJoinAction::Execute(Event /*event*/)
 {
@@ -379,6 +385,8 @@ bool BGJoinAction::isUseful()
     // By leewheel 2026-07-07
     // 缩短机器人登录后加入战场的等待时间：120秒 → 配置值（默认30秒）
     // 让机器人更快响应战场排队
+    // （上游 the-lab 新改为固定 BG_JOIN_LOGIN_DELAY_MS + GameTime 毫秒计时；本核保留
+    //  可配置 randomBotBgJoinLoginDelay，功能上覆盖上游的固定值场景，故不采纳）
     if ((time(nullptr) - bot->GetInGameTime()) < sPlayerbotAIConfig.randomBotBgJoinLoginDelay)
         return false;
     // End By leewheel

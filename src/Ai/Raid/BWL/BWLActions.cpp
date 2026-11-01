@@ -298,9 +298,14 @@ bool BwlUseHourglassSandAction::Execute(Event /*event*/)
     return botAI->CastSpell(static_cast<uint32>(BlackwingLairSpells::SPELL_HOURGLASS_SAND), bot);
 }
 
-// By leewheel 2026-09-27 合并brighton the-lab：上游已整体移除 BwlNefarianFearWardAction
-    //   （Actions.h/Triggers.h/context 同步删除），本分支对应实现随之移除，保持声明与定义一致。
-    // End By leewheel
+// Nefarian
+
+bool BwlNefarianKillCorruptedTotemAction::Execute(Event /*event*/)
+{
+    Unit* totem = FindCorruptedTotem(botAI);
+    return totem && Attack(totem);
+}
+
 // Trash
 
 static constexpr float WYRMGUARD_SAFE_DISTANCE = 16.0f;

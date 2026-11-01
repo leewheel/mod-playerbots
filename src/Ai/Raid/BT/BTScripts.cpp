@@ -6,6 +6,7 @@
 
 #include "AllSpellScript.h"
 #include "BTHelpers.h"
+#include "InstanceScript.h"
 #include "Pet.h"
 #include "Playerbots.h"
 #include "Spell.h"
@@ -13,7 +14,7 @@
 using namespace BtHelpers;
 
 // A volcano erupts the moment it appears, on Supremus's target. A bot mid-cast where it will burn
-// drops the cast so it can run, since no action runs until a cast bar ends.
+// stops the cast so it can flee.
 class SupremusVolcanicEruptionSpellListenerScript : public AllSpellScript
 {
 public:
@@ -56,8 +57,7 @@ public:
     }
 };
 
-// A mage mid-cast when Essence of Desire raises Rune Shield drops the cast so it can steal the
-// shield. Interrupting a preparing cast also cancels its global cooldown.
+// A mage mid-cast when Essence of Desire gains Rune Shield stops the cast to steal the shield.
 class ReliquaryOfSoulsRuneShieldSpellListenerScript : public AllSpellScript
 {
 public:
@@ -103,9 +103,8 @@ public:
     }
 };
 
-// While her melee can't interrupt (Blessing of Protection, or a council patch on her), a ranged
-// bot that could interrupt Lady Malande's Circle of Healing but would still be casting when it
-// closes drops its own cast.
+// During a period when melee cannot interrupt Malande (Blessing of Protection, or a hazard patch on
+// her), ranged that can interrupt Lady Malande's Circle of Healing stop their own casts to do it.
 class IllidariCouncilCircleOfHealingSpellListenerScript : public AllSpellScript
 {
 public:
@@ -120,12 +119,16 @@ public:
             return;
         }
 
+        InstanceScript* instance = caster->GetInstanceScript();
+        if (!instance)
+            return;
+
+        Creature* gathios = instance->GetCreature(Id(BtCreatureData::DATA_GATHIOS_THE_SHATTERER));
+        Creature* zerevor =
+            instance->GetCreature(Id(BtCreatureData::DATA_HIGH_NETHERMANCER_ZEREVOR));
         if (!ShouldRangedInterruptCircleOfHealing(
-                caster,
-                caster->FindNearestCreature(
-                    Id(BtNpcs::NPC_GATHIOS_THE_SHATTERER), COUNCIL_MEMBER_SEARCH_RADIUS),
-                caster->FindNearestCreature(
-                    Id(BtNpcs::NPC_HIGH_NETHERMANCER_ZEREVOR), COUNCIL_MEMBER_SEARCH_RADIUS)))
+                caster, gathios && gathios->IsAlive() ? gathios : nullptr,
+                zerevor && zerevor->IsAlive() ? zerevor : nullptr))
         {
             return;
         }
@@ -187,8 +190,9 @@ private:
     }
 };
 
-// The mechanic tracker records phase changes on its own ticks, which wait out its cast bar, so
-// Demon Form is recorded at the transform itself and its windows count from there.
+// The mechanic tracker records phase changes on its own ticks, which, like all other actions, are
+// rejected while the bot is casting. Therefore, record Demon Form at the transformation and count
+// the phase from there.
 class IllidanStormrageDemonTransformSpellListenerScript : public AllSpellScript
 {
 public:

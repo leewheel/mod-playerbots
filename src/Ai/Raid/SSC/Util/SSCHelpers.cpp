@@ -139,74 +139,6 @@ bool IsDryGround(Player* bot, float x, float y)
     return liquid.Level <= INVALID_HEIGHT || ground > liquid.Level - clearance;
 }
 
-bool GetPathStepTowardUnit(
-    Player* bot, Unit* target, float stopDistance, float& stepX, float& stepY)
-{
-    if (!target)
-        return false;
-
-    return GetPathStepTowardPoint(
-        bot, target->GetPosition(), stopDistance, PATH_STEP_DISTANCE, stepX, stepY);
-}
-
-bool GetPathStepTowardPoint(
-    Player* bot, Position const& destination, float stopDistance, float stepDistance,
-    float& stepX, float& stepY)
-{
-    if (bot->GetExactDist(destination) < stopDistance)
-        return false;
-
-    PathGenerator path(bot);
-    path.CalculatePath(
-        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
-    if (!(path.GetPathType() & (PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORTCUT)))
-        return false;
-
-    Movement::PointsArray const& points = path.GetPath();
-    if (points.size() < 2)
-        return false;
-
-    G3D::Vector3 const targetPos(
-        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
-
-    float remaining = stepDistance;
-    for (std::size_t i = 1; i < points.size(); ++i)
-    {
-        G3D::Vector3 const& from = points[i - 1];
-        G3D::Vector3 const& to = points[i];
-
-        float const segment = (to - from).length();
-        if (segment <= 0.0f)
-            continue;
-
-        float const toDist = (to - targetPos).length();
-        float ratio = 1.0f;
-
-        if (toDist < stopDistance)
-        {
-            float const fromDist = (from - targetPos).length();
-            if (fromDist <= stopDistance)
-                break;
-
-            ratio = (fromDist - stopDistance) / (fromDist - toDist);
-        }
-
-        if (segment * ratio >= remaining)
-            ratio = remaining / segment;
-
-        remaining -= segment * ratio;
-
-        G3D::Vector3 const step = from + (to - from) * ratio;
-        stepX = step.x;
-        stepY = step.y;
-
-        if (remaining <= 0.0f || ratio < 1.0f)
-            return true;
-    }
-
-    return remaining < stepDistance;
-}
-
 bool GetRangedArcAngle(Player* bot, float arcCenter, float arcSpan, float& angle)
 {
     Group* group = bot->GetGroup();
@@ -1234,7 +1166,7 @@ std::vector<GameObject*> GetUsableVashjGenerators(Map* map)
 
 float GetVashjGroundZ(Map* map, uint32 phaseMask, float x, float y)
 {
-    constexpr float centreZ = 43.0f;
+    constexpr float centerZ = 43.0f;
     constexpr float rimZ = 41.1f;
     constexpr float stairRun = 33.15f;
     constexpr float stairDrop = 18.9f;
@@ -1244,7 +1176,7 @@ float GetVashjGroundZ(Map* map, uint32 phaseMask, float x, float y)
         return INVALID_HEIGHT;
 
     float const slopeZ = distance <= VASHJ_DAIS_APOTHEM ?
-        centreZ - (centreZ - rimZ) * distance / VASHJ_DAIS_APOTHEM :
+        centerZ - (centerZ - rimZ) * distance / VASHJ_DAIS_APOTHEM :
         rimZ - (distance - VASHJ_DAIS_APOTHEM) / stairRun * stairDrop;
 
     constexpr float searchAbove = 2.0f;
@@ -2779,7 +2711,9 @@ bool SscResetInstance(uint32 instanceId)
         state.vashjCorePassingChain;
 
     // Not erased: the class roles outlive encounters, see ClassRoleAssignment.
-    state = { .leotherasWarlockTank = state.leotherasWarlockTank };
+    SscInstanceState kept;
+    kept.leotherasWarlockTank = state.leotherasWarlockTank;
+    state = std::move(kept);
     return wasSet;
 }
 

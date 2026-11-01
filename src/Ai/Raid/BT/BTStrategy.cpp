@@ -16,7 +16,7 @@ using namespace EncounterHelpers;
 
 void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    // General
+    // Shared
     triggers.push_back(new TriggerNode("black temple no encounter in progress",
         { NextAction("black temple reset encounter states", ACTION_EMERGENCY + 10),
           NextAction("illidari council announce class roles", ACTION_EMERGENCY + 8),
@@ -60,6 +60,9 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     // Supremus
     triggers.push_back(new TriggerNode("supremus hunter should misdirect",
         { NextAction("supremus misdirect to main tank", ACTION_RAID + 2) }));
+
+    triggers.push_back(new TriggerNode("supremus should be pulled back by tank",
+        { NextAction("supremus tanks position boss", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("supremus ranged should spread",
         { NextAction("supremus spread ranged", ACTION_RAID + 1) }));
@@ -122,14 +125,14 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("reliquary of souls should position for suffering",
         { NextAction("reliquary of souls adjust distance from suffering", ACTION_RAID + 2) }));
 
-    // Below the stock party dispels, so Soul Drain is dispelled first.
+    // Priority is below standard party dispels to ensure that Soul Drain is dispelled.
     triggers.push_back(new TriggerNode("reliquary of souls healers should attack suffering",
         { NextAction("reliquary of souls healers dps suffering", ACTION_INTERRUPT - 1) }));
 
     triggers.push_back(new TriggerNode("reliquary of souls essence of desire has rune shield",
         { NextAction("reliquary of souls spellsteal rune shield", ACTION_EMERGENCY + 6) }));
 
-    triggers.push_back(new TriggerNode("reliquary of souls essence of desire casts deaden",
+    triggers.push_back(new TriggerNode("reliquary of souls essence of desire casting deaden",
         { NextAction("reliquary of souls spell reflect deaden", ACTION_EMERGENCY + 6) }));
 
     // Mother Shahraz
@@ -155,11 +158,11 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidari council gathios should be tanked",
         { NextAction("illidari council main tank position gathios", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("illidari council gathios casts judgement of command",
+    triggers.push_back(new TriggerNode("illidari council gathios casting judgement of command",
         { NextAction(
             "illidari council main tank reflect judgement of command", ACTION_EMERGENCY + 1) }));
 
-    triggers.push_back(new TriggerNode("illidari council malande casts circle of healing",
+    triggers.push_back(new TriggerNode("illidari council malande casting circle of healing",
         { NextAction("illidari council interrupt circle of healing", ACTION_EMERGENCY + 8) }));
 
     triggers.push_back(new TriggerNode("illidari council malande should be tanked",
@@ -270,6 +273,7 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     // Shared
     multipliers.push_back(new BlackTempleDelayDpsCooldownsMultiplier(botAI));
     multipliers.push_back(new BlackTempleDisableKillingSpreeMultiplier(botAI));
+    multipliers.push_back(new BlackTempleNoThreatRedirectsMultiplier(botAI));
 
     // Trash
     multipliers.push_back(new ShadowmoonReaverHoldChargeBuildingSpellsMultiplier(botAI));
@@ -279,13 +283,12 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new HighWarlordNajentusTidalShieldHoldPositionMultiplier(botAI));
 
     // Supremus
-    multipliers.push_back(new SupremusFocusOnAvoidanceInKitePhaseMultiplier(botAI));
+    multipliers.push_back(new SupremusRunAwayWhenFixatedMultiplier(botAI));
     multipliers.push_back(new SupremusDoNotReachThroughFireMultiplier(botAI));
-    multipliers.push_back(new SupremusDisableAvoidAoeInKitePhaseMultiplier(botAI));
+    multipliers.push_back(new SupremusControlMovementMultiplier(botAI));
 
     // Shade of Akama
     multipliers.push_back(new ShadeOfAkamaDoNotDropOutOfSightTargetMultiplier(botAI));
-    multipliers.push_back(new ShadeOfAkamaCannotTankBossMultiplier(botAI));
 
     // Teron Gorefiend
     multipliers.push_back(new TeronGorefiendControlMovementMultiplier(botAI));
@@ -294,7 +297,6 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
 
     // Gurtogg Bloodboil
     multipliers.push_back(new GurtoggBloodboilControlMovementMultiplier(botAI));
-    multipliers.push_back(new GurtoggBloodboilNoThreatRedirectsDuringFelRageMultiplier(botAI));
     multipliers.push_back(new GurtoggBloodboilFelRageTargetHoldsAggroMultiplier(botAI));
     multipliers.push_back(new GurtoggBloodboilHoldThreatMultiplier(botAI));
 
@@ -312,7 +314,7 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new IllidariCouncilControlMovementAndTargetingMultiplier(botAI));
     multipliers.push_back(new IllidariCouncilDisableMageTankActionsMultiplier(botAI));
     multipliers.push_back(new IllidariCouncilHoldMisdirectionAndDispelsMultiplier(botAI));
-    multipliers.push_back(new IllidariCouncilSaveInterruptsForCircleOfHealingMultiplier(botAI));
+    multipliers.push_back(new IllidariCouncilManageInterruptsMultiplier(botAI));
     multipliers.push_back(new IllidariCouncilWaitForDpsMultiplier(botAI));
 
     // Illidan Stormrage <The Betrayer>
@@ -329,7 +331,6 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
 namespace
 {
 
-// Non-tanks leave the skulled Pleasure's Sister of Pain, since Pleasure takes the damage for both.
 void AppendSisterOfPainExclusions(Player* bot, GuidSet& exclusions)
 {
     if (PlayerbotAI::IsTank(bot))
@@ -354,7 +355,7 @@ void AppendShadowmoonReaverExclusions(PlayerbotAI* botAI, Player* bot, GuidSet& 
 }
 
 // Tanks and ranged other than shadow priests leave channelers and sorcerers to melee dps while
-// another add is up. This is needed so the skull doesn't affect their targeting.
+// another add is up. The exclusion ensures the skull doesn't affect targeting.
 void AppendShadeOfAkamaChannelerExclusions(PlayerbotAI* botAI, Player* bot, GuidSet& exclusions)
 {
     if (PlayerbotAI::IsDps(bot) && (bot->getClass() == CLASS_PRIEST || PlayerbotAI::IsMelee(bot)))
@@ -375,31 +376,24 @@ void AppendShadeOfAkamaChannelerExclusions(PlayerbotAI* botAI, Player* bot, Guid
     }
 }
 
+// Shadowy Constructs cannot be damaged by anyone other than the Spirit of Vengeance.
 void AppendShadowyConstructExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
     if (botAI->GetBot()->HasAura(Id(BtSpells::SPELL_SPIRITUAL_VENGEANCE)))
         return;
 
     auto const& constructs = botAI->GetAiObjectContext()
-        ->GetValue<GuidVector>("teron gorefiend shadowy constructs")
-        ->RefGet();
+        ->GetValue<GuidVector>("teron gorefiend shadowy constructs")->RefGet();
     exclusions.insert(constructs.begin(), constructs.end());
 }
 
-// Tanks and melee never pick Illidan's Shadowfiends themselves; ranged and pets kill them, and
-// melee only finish one in their reach, from assign target priority. Nor, in Demon Form, him or
-// the Shadow Demon walking to the warlock tank.
 void AppendIllidanMeleeExclusions(PlayerbotAI* botAI, Player* bot, GuidSet& exclusions)
 {
     if (!PlayerbotAI::IsMelee(bot))
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    // By leewheel 2026-10-16 合并 brighton 7ff17291：Demon 阶段 melee 排除 illidan 本体。
-    // By leewheel 2026-10-22 再合并：上游 illidan pass 2 在本段新增「把全部寄生腐蚀一并排除」
-    // （context 的 parasitic shadowfiends 值），且完整包含本核原有的 Demon 阶段排除，
-    // 属纯叠加，故采纳上游；按 entry 铁律把英文名回退为 entry 22917。
-    Unit* illidan = AI_VALUE2(Unit*, "find target", "22917");
+    Unit* illidan = GetBtBoss(bot, BtBosses::DATA_ILLIDAN_STORMRAGE);
     if (!illidan)
         return;
 

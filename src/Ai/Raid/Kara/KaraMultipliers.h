@@ -13,6 +13,7 @@
 #include "EncounterHelpers.h"
 #include "KaraHelpers.h"
 #include "Multiplier.h"
+#include <optional>
 #include <string>
 
 // Shared
@@ -20,17 +21,31 @@
 class KarazhanEncounterMultiplier : public Multiplier
 {
 public:
+    KarazhanEncounterMultiplier(PlayerbotAI* botAI, std::string const name)
+        : Multiplier(botAI, name) {}
     KarazhanEncounterMultiplier(
-        PlayerbotAI* botAI, std::string const name) : Multiplier(botAI, name) {}
+        PlayerbotAI* botAI, std::string const name, KaraHelpers::KaraBosses boss)
+        : Multiplier(botAI, name), _boss(boss) {}
 
     float GetValue(Action* action) final
     {
-        return EncounterHelpers::IsEncounterInProgress(bot, KaraHelpers::KARA_MAP_ID) ?
-            GetValueInEncounter(action) : 1.0f;
+        bool const inProgress = _boss ?
+            EncounterHelpers::IsBossInProgress(
+                bot, KaraHelpers::KARA_MAP_ID, KaraHelpers::Id(*_boss)) :
+            EncounterHelpers::IsEncounterInProgress(bot, KaraHelpers::KARA_MAP_ID);
+        return inProgress ? GetValueInEncounter(action) : 1.0f;
     }
 
 protected:
     virtual float GetValueInEncounter(Action* action) = 0;
+
+    Creature* GetEncounterBoss()
+    {
+        return _boss ? KaraHelpers::GetKaraBoss(bot, *_boss) : nullptr;
+    }
+
+private:
+    std::optional<KaraHelpers::KaraBosses> const _boss;
 };
 
 class KarazhanSetTremorTotemMultiplier : public Multiplier
@@ -57,7 +72,9 @@ class AttumenTheHuntsmanDisableAutoTargetingMultiplier : public KarazhanEncounte
 {
 public:
     AttumenTheHuntsmanDisableAutoTargetingMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "attumen the huntsman disable auto targeting") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "attumen the huntsman disable auto targeting",
+            KaraHelpers::KaraBosses::DATA_ATTUMEN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -67,7 +84,8 @@ class AttumenTheHuntsmanStayStackedMultiplier : public KarazhanEncounterMultipli
 {
 public:
     AttumenTheHuntsmanStayStackedMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "attumen the huntsman stay stacked") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "attumen the huntsman stay stacked", KaraHelpers::KaraBosses::DATA_ATTUMEN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -77,7 +95,8 @@ class AttumenTheHuntsmanWaitForDpsMultiplier : public KarazhanEncounterMultiplie
 {
 public:
     AttumenTheHuntsmanWaitForDpsMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "attumen the huntsman wait for dps") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "attumen the huntsman wait for dps", KaraHelpers::KaraBosses::DATA_ATTUMEN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -89,7 +108,9 @@ class MaidenOfVirtueDisableCombatFormationMoveMultiplier : public KarazhanEncoun
 {
 public:
     MaidenOfVirtueDisableCombatFormationMoveMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "maiden of virtue disable combat formation move") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "maiden of virtue disable combat formation move",
+            KaraHelpers::KaraBosses::DATA_MAIDEN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -99,7 +120,8 @@ class MaidenOfVirtueSetGroundingTotemMultiplier : public KarazhanEncounterMultip
 {
 public:
     MaidenOfVirtueSetGroundingTotemMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "maiden of virtue set grounding totem") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "maiden of virtue set grounding totem", KaraHelpers::KaraBosses::DATA_MAIDEN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -111,7 +133,8 @@ class TheCuratorDisableTankAssistMultiplier : public KarazhanEncounterMultiplier
 {
 public:
     TheCuratorDisableTankAssistMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "the curator disable tank assist") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "the curator disable tank assist", KaraHelpers::KaraBosses::DATA_CURATOR) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -121,7 +144,9 @@ class TheCuratorDisableCombatFormationMoveMultiplier : public KarazhanEncounterM
 {
 public:
     TheCuratorDisableCombatFormationMoveMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "the curator disable combat formation move") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "the curator disable combat formation move",
+            KaraHelpers::KaraBosses::DATA_CURATOR) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -133,7 +158,9 @@ class TerestianIllhoofDontDotFiendishImpsMultiplier : public KarazhanEncounterMu
 {
 public:
     TerestianIllhoofDontDotFiendishImpsMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "terestian illhoof don't dot fiendish imps") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "terestian illhoof don't dot fiendish imps",
+            KaraHelpers::KaraBosses::DATA_TERESTIAN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -145,7 +172,8 @@ class ShadeOfAranArcaneExplosionRunAwayMultiplier : public KarazhanEncounterMult
 {
 public:
     ShadeOfAranArcaneExplosionRunAwayMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "shade of aran arcane explosion run away") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "shade of aran arcane explosion run away", KaraHelpers::KaraBosses::DATA_ARAN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -155,7 +183,9 @@ class ShadeOfAranFlameWreathDisableMovementMultiplier : public KarazhanEncounter
 {
 public:
     ShadeOfAranFlameWreathDisableMovementMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "shade of aran flame wreath disable movement") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "shade of aran flame wreath disable movement",
+            KaraHelpers::KaraBosses::DATA_ARAN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -167,7 +197,8 @@ class NetherspiteKeepBlockingBeamMultiplier : public KarazhanEncounterMultiplier
 {
 public:
     NetherspiteKeepBlockingBeamMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "netherspite keep blocking beam") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "netherspite keep blocking beam", KaraHelpers::KaraBosses::DATA_NETHERSPITE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -177,7 +208,8 @@ class NetherspiteWaitForDpsMultiplier : public KarazhanEncounterMultiplier
 {
 public:
     NetherspiteWaitForDpsMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "netherspite wait for dps") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "netherspite wait for dps", KaraHelpers::KaraBosses::DATA_NETHERSPITE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -189,7 +221,8 @@ class PrinceMalchezaarEnfeebleMultiplier : public KarazhanEncounterMultiplier
 {
 public:
     PrinceMalchezaarEnfeebleMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "prince malchezaar enfeeble") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "prince malchezaar enfeeble", KaraHelpers::KaraBosses::DATA_MALCHEZAAR) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -201,7 +234,8 @@ class NightbaneDisablePetsMultiplier : public KarazhanEncounterMultiplier
 {
 public:
     NightbaneDisablePetsMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "nightbane disable pets") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "nightbane disable pets", KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -211,7 +245,8 @@ class NightbaneWaitForDpsMultiplier : public KarazhanEncounterMultiplier
 {
 public:
     NightbaneWaitForDpsMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "nightbane wait for dps") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "nightbane wait for dps", KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -221,7 +256,8 @@ class NightbaneDisableAvoidAoeMultiplier : public KarazhanEncounterMultiplier
 {
 public:
     NightbaneDisableAvoidAoeMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "nightbane disable avoid aoe") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "nightbane disable avoid aoe", KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -231,7 +267,8 @@ class NightbaneDisableMovementMultiplier : public KarazhanEncounterMultiplier
 {
 public:
     NightbaneDisableMovementMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(botAI, "nightbane disable movement") {}
+        : KarazhanEncounterMultiplier(
+            botAI, "nightbane disable movement", KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

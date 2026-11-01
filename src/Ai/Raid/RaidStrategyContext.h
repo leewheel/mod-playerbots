@@ -31,6 +31,8 @@
 //By leewheel 2026-07-11
 #include "VanillaNaxxStrategy.h"
 //End By leewheel
+//By leewheel 2026-11-01 合并上游：新增 ZG 策略（Zul'Gurub），与本核 VanillaNaxx 并存
+#include "ZGStrategy.h"
 
 class RaidStrategyContext : public NamedObjectContext<Strategy>
 {
@@ -40,6 +42,7 @@ public:
         creators["aq20"] = &RaidStrategyContext::aq20;
         creators["moltencore"] = &RaidStrategyContext::moltencore;
         creators["bwl"] = &RaidStrategyContext::bwl;
+        creators["zulgurub"] = &RaidStrategyContext::zulgurub;
         creators["karazhan"] = &RaidStrategyContext::karazhan;
         creators["gruulslair"] = &RaidStrategyContext::gruulslair;
         creators["magtheridon"] = &RaidStrategyContext::magtheridon;
@@ -66,6 +69,7 @@ private:
     static Strategy* aq20(PlayerbotAI* botAI) { return new RaidAq20Strategy(botAI); }
     static Strategy* moltencore(PlayerbotAI* botAI) { return new RaidMcStrategy(botAI); }
     static Strategy* bwl(PlayerbotAI* botAI) { return new RaidBwlStrategy(botAI); }
+    static Strategy* zulgurub(PlayerbotAI* botAI) { return new RaidZulGurubStrategy(botAI); }
     static Strategy* karazhan(PlayerbotAI* botAI) { return new RaidKarazhanStrategy(botAI); }
     static Strategy* gruulslair(PlayerbotAI* botAI) { return new RaidGruulsLairStrategy(botAI); }
     static Strategy* magtheridon(PlayerbotAI* botAI) { return new RaidMagtheridonStrategy(botAI); }

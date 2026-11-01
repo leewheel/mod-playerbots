@@ -109,9 +109,21 @@ bool BwlNefarianWildMagicTrigger::IsActive()
         bot->HasAura(static_cast<uint32>(BlackwingLairSpells::SPELL_WILD_MAGIC));
 }
 
-// By leewheel 2026-09-27 合并brighton the-lab：上游已整体移除 BwlNefarianFearWardTrigger，
-    //   本分支实现随之移除（与 Actions.cpp 移除动作保持一致）。
-    // End By leewheel
+bool BwlNefarianCorruptedTotemTrigger::IsActive()
+{
+    // Shaman call: the shamans drop totems that buff Nefarian and his adds or burn the raid. DPS kill them.
+    //By leewheel 2026-11-01 entry 铁律：上游本轮用英文名 "nefarian"，本核生物名中文恒 nullptr。
+    //  回退 entry 11583（奈法利安，仓内既有核定，见 BwlNefarianPositioningTrigger）。
+    if (!PlayerbotAI::IsDps(bot) || !AI_VALUE2(Unit*, "find target", "11583"))
+        return false;
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (target && target->IsAlive() && IsCorruptedTotem(target))
+        return false;
+
+    return FindCorruptedTotem(botAI) != nullptr;
+}
+
 // Trash
 
 bool BwlDeathTalonWyrmguardTankTrigger::IsActive()
