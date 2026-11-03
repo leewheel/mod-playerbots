@@ -7,6 +7,8 @@
 #include "KaraHelpers.h"
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
+#include "Spell.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <limits>
 #include <list>
@@ -24,26 +26,77 @@ namespace
 std::mutex karaStateMutex;
 std::unordered_map<uint32, KaraInstanceState> karaStates;
 
+bool IsInBearForm(Player* bot)
+{
+    return bot->GetShapeshiftForm() == FORM_BEAR || bot->GetShapeshiftForm() == FORM_DIREBEAR;
+}
+
+bool NeedsComboPointsForManaWarpStun(Player* bot)
+{
+    return bot->getClass() == CLASS_ROGUE ||
+        (bot->getClass() == CLASS_DRUID && bot->GetShapeshiftForm() == FORM_CAT);
+}
+
+bool IsManaWarpCastingWarpBreach(Unit* warp, uint32 reactionMs)
+{
+    Spell* breach = warp->FindCurrentSpellBySpellId(Id(KaraSpells::SPELL_WARP_BREACH));
+    return breach && breach->getState() == SPELL_STATE_PREPARING &&
+        breach->GetCastTime() - breach->GetCastTimeRemaining() >= static_cast<int32>(reactionMs);
+}
+
+bool IsManaWarpToStun(Player* bot, Unit* unit, float reach, uint32 reactionMs)
+{
+    return unit && unit->GetEntry() == Id(KaraNpcs::NPC_MANA_WARP) &&
+        bot->GetExactDist(unit) <= reach && IsManaWarpCastingWarpBreach(unit, reactionMs);
+}
+
+// The Opera is three plays with several actors each, and the Chess Event has no boss on a
+// threat list, so neither has a name.
+constexpr std::string_view BossName(KaraBosses boss)
+{
+    switch (boss)
+    {
+        case KaraBosses::DATA_ATTUMEN:
+            return "attumen the huntsman";
+        case KaraBosses::DATA_MOROES:
+            return "moroes";
+        case KaraBosses::DATA_MAIDEN:
+            return "maiden of virtue";
+        case KaraBosses::DATA_CURATOR:
+            return "the curator";
+        case KaraBosses::DATA_TERESTIAN:
+            return "terestian illhoof";
+        case KaraBosses::DATA_ARAN:
+            return "shade of aran";
+        case KaraBosses::DATA_NETHERSPITE:
+            return "netherspite";
+        case KaraBosses::DATA_MALCHEZAAR:
+            return "prince malchezaar";
+        case KaraBosses::DATA_NIGHTBANE:
+            return "nightbane";
+        default:
+            return {};
+    }
+}
+
 }
 
 // Shared
 
-Creature* GetKaraBoss(Player* bot, KaraBosses boss)
+Unit* GetKaraBoss(Player* bot, KaraBosses boss)
 {
-    return GetInstanceBoss(bot, KARA_MAP_ID, Id(boss));
+    if (!IsBossInProgress(bot, KARA_MAP_ID, Id(boss)))
+        return nullptr;
+
+    return FindThreatTarget(bot, BossName(boss));
 }
 
-Creature* GetKaraCreature(Player* bot, KaraCreatureData data)
-{
-    return GetInstanceCreature(bot, KARA_MAP_ID, Id(data));
-}
-
-Creature* GetOperaActor(Player* bot, KaraCreatureData data)
+Unit* GetOperaActor(Player* bot, std::string_view name)
 {
     if (!IsBossInProgress(bot, KARA_MAP_ID, Id(KaraBosses::DATA_OPERA_PERFORMANCE)))
         return nullptr;
 
-    Creature* actor = GetKaraCreature(bot, data);
+    Unit* actor = FindThreatTarget(bot, name);
     return actor && !actor->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) ? actor : nullptr;
 }
 
@@ -59,12 +112,145 @@ bool IsSafePosition(float x, float y, std::vector<Unit*> const& hazards, float h
     return true;
 }
 
+bool IsKarazhanFearCasterActive(Player* bot)
+{
+    if (FindThreatTarget(bot, "spectral charger") || GetOperaActor(bot, "the big bad wolf"))
+        return true;
+
+    Unit* nightbane = GetKaraBoss(bot, KaraBosses::DATA_NIGHTBANE);
+    if (nightbane && nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
+        return true;
+
+    return GetOperaActor(bot, "dorothee") || GetOperaActor(bot, "roar");
+}
+
+// Trash
+
+bool IsNearManaWarpPacks(Player* bot)
+{
+    return bot->GetExactDist(MANA_WARP_PACKS_CENTER) <= MANA_WARP_PACKS_RADIUS;
+}
+
+float GetManaWarpStunReach(Player* bot)
+{
+    float reach = 0.0f;
+    switch (bot->getClass())
+    {
+        case CLASS_DRUID:
+            if (IsInBearForm(bot) || bot->GetShapeshiftForm() == FORM_CAT)
+                reach = MELEE_STUN_REACH;
+            break;
+        case CLASS_PALADIN:
+            reach = HAMMER_OF_JUSTICE_REACH;
+            break;
+        case CLASS_ROGUE:
+        case CLASS_WARRIOR:
+            reach = MELEE_STUN_REACH;
+            break;
+        case CLASS_WARLOCK:
+            reach = SHADOWFURY_REACH;
+            break;
+        default:
+            break;
+    }
+
+    if (bot->getRace() == RACE_TAUREN)
+        reach = std::max(reach, WAR_STOMP_RADIUS);
+
+    return reach;
+}
+
+// The current target first, then any warp in reach that is casting.
+Unit* GetManaWarpToStun(PlayerbotAI* botAI, uint32 reactionMs)
+{
+    Player* bot = botAI->GetBot();
+    float const reach = GetManaWarpStunReach(bot);
+    if (reach <= 0.0f || !IsNearManaWarpPacks(bot))
+        return nullptr;
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    Unit* target = context->GetValue<Unit*>("current target")->Get();
+    bool const needsComboPoints = NeedsComboPointsForManaWarpStun(bot);
+    if (IsManaWarpToStun(bot, target, reach, reactionMs) &&
+        (!needsComboPoints || bot->GetComboPoints(target)))
+    {
+        return target;
+    }
+
+    if (needsComboPoints)
+        return nullptr;
+
+    for (auto const& attackers : context->GetValue<GuidVector>("attackers")->RefGet())
+    {
+        Unit* attacker = botAI->GetUnit(attackers);
+        if (IsManaWarpToStun(bot, attacker, reach, reactionMs))
+            return attacker;
+    }
+
+    return nullptr;
+}
+
+Unit* GetManaWarpToHoldFor(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    if (GetManaWarpStunReach(bot) <= 0.0f || PlayerbotAI::IsTank(bot) || !IsNearManaWarpPacks(bot))
+        return nullptr;
+
+    Unit* target = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
+    if (!target || target->GetEntry() != Id(KaraNpcs::NPC_MANA_WARP) || !target->IsAlive() ||
+        target->GetHealthPct() > MANA_WARP_STUNNER_HOLD_HEALTH_PCT)
+    {
+        return nullptr;
+    }
+
+    // A rogue or cat druid with no combo points on it keeps building them.
+    return !NeedsComboPointsForManaWarpStun(bot) || bot->GetComboPoints(target) ? target : nullptr;
+}
+
 // Attumen the Huntsman
 
-Unit* GetAttumenMounted(Player* bot)
+bool IsAttumenMounted(Unit const& midnight)
 {
-    constexpr float searchRadius = 50.0f;
-    return bot->FindNearestCreature(Id(KaraNpcs::NPC_ATTUMEN_THE_HUNTSMAN), searchRadius, true);
+    return !midnight.IsVisible();
+}
+
+Unit* GetMountedAttumen(Player* bot)
+{
+    Unit* attumen = GetKaraBoss(bot, KaraBosses::DATA_ATTUMEN);
+    if (!attumen || attumen->GetEntry() != Id(KaraNpcs::NPC_ATTUMEN_THE_HUNTSMAN_MOUNTED))
+        return nullptr;
+
+    return attumen;
+}
+
+// Maiden of Virtue
+
+Player* GetNearestRepentantHealer(Player* bot, Unit const& maiden)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
+        return nullptr;
+
+    Player* nearest = nullptr;
+    float nearestDist = std::numeric_limits<float>::max();
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive() ||
+            !member->HasAura(Id(KaraSpells::SPELL_REPENTANCE)) || !PlayerbotAI::IsHeal(member))
+        {
+            continue;
+        }
+
+        float const dist = maiden.GetExactDist2d(member);
+        if (dist < nearestDist)
+        {
+            nearest = member;
+            nearestDist = dist;
+        }
+    }
+
+    return nearest;
 }
 
 // Shade of Aran
@@ -473,19 +659,11 @@ KaraInstanceState& KaraState(uint32 instanceId)
     return karaStates[instanceId];
 }
 
-bool KaraResetBeamBlockers(uint32 instanceId)
+KaraInstanceState const* FindKaraState(uint32 instanceId)
 {
     std::lock_guard lock(karaStateMutex);
     auto it = karaStates.find(instanceId);
-    if (it == karaStates.end())
-        return false;
-
-    KaraInstanceState& state = it->second;
-    bool reset = false;
-    reset |= ResetIfSet(state.currentRedBlocker);
-    reset |= ResetIfSet(state.currentGreenBlocker);
-    reset |= ResetIfSet(state.currentBlueBlocker);
-    return reset;
+    return it != karaStates.end() ? &it->second : nullptr;
 }
 
 bool KaraResetInstance(uint32 instanceId)

@@ -12,6 +12,7 @@
 #include "RtiTargetValue.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <cmath>
 #include <list>
@@ -798,13 +799,11 @@ bool HasInnerDemon(Player* bot)
 Creature* GetPersonalInnerDemon(PlayerbotAI* botAI)
 {
     ObjectGuid const botGuid = botAI->GetBot()->GetGUID();
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    auto const& targets = context->GetValue<GuidVector>("possible targets no los")->RefGet();
-
     Creature* innerDemon = nullptr;
-    for (ObjectGuid const& guid : targets)
+    for (ObjectGuid const& targetGuid :
+         botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->RefGet())
     {
-        Creature* creature = botAI->GetCreature(guid);
+        Creature* creature = botAI->GetCreature(targetGuid);
         if (creature && creature->GetEntry() == Id(SscNpcs::NPC_INNER_DEMON) &&
             creature->GetSummonerGUID() == botGuid)
         {
@@ -865,14 +864,13 @@ Player* GetCouncilTank(Player* bot, int8 assistTankIndex)
 Unit* GetAssignedCouncilMember(PlayerbotAI* botAI)
 {
     Player* tank = botAI->GetBot();
-    AiObjectContext* context = botAI->GetAiObjectContext();
     for (KarathressCouncilAssignment const& assignment : KARATHRESS_COUNCIL)
     {
         bool const assigned = assignment.assistTankIndex < 0 ?
             PlayerbotAI::IsMainTank(tank) :
             PlayerbotAI::IsAssistTankOfIndex(tank, assignment.assistTankIndex, false);
         if (assigned)
-            return AI_VALUE2(Unit*, "find target", assignment.name);
+            return FindThreatTarget(tank, assignment.name);
     }
 
     return nullptr;
@@ -883,10 +881,9 @@ Unit* GetAssignedCouncilMember(PlayerbotAI* botAI)
 bool IsHoldingAnotherTanksCouncilMember(PlayerbotAI* botAI, Unit* ownTarget)
 {
     Player* bot = botAI->GetBot();
-    AiObjectContext* context = botAI->GetAiObjectContext();
     for (KarathressCouncilAssignment const& assignment : KARATHRESS_COUNCIL)
     {
-        Unit* member = AI_VALUE2(Unit*, "find target", assignment.name);
+        Unit* member = FindThreatTarget(bot, assignment.name);
         if (!member || member == ownTarget || member->GetVictim() != bot)
             continue;
 
@@ -901,11 +898,10 @@ bool IsHoldingAnotherTanksCouncilMember(PlayerbotAI* botAI, Unit* ownTarget)
 bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range)
 {
     Player* bot = botAI->GetBot();
-    AiObjectContext* context = botAI->GetAiObjectContext();
     Unit* ownMember = GetAssignedCouncilMember(botAI);
     for (KarathressCouncilAssignment const& assignment : KARATHRESS_COUNCIL)
     {
-        Unit* member = AI_VALUE2(Unit*, "find target", assignment.name);
+        Unit* member = FindThreatTarget(bot, assignment.name);
         if (member && member != ownMember && bot->GetDistance(member) < range)
             return true;
     }
@@ -916,9 +912,8 @@ bool IsAnotherCouncilMemberWithin(PlayerbotAI* botAI, float range)
 Unit* GetSharkkisTankTarget(PlayerbotAI* botAI)
 {
     Player* bot = botAI->GetBot();
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    Unit* sharkkis = AI_VALUE2(Unit*, "find target", "21966");
-    if (sharkkis && sharkkis->GetVictim() != bot)
+    //By leewheel 2026-11-04 采纳上游 FindThreatTarget 管线（英文名→entry 由 ThreatHelpers 登记表折算）
+    Unit* sharkkis = FindThreatTarget(bot, "fathom-guard sharkkis");    if (sharkkis && sharkkis->GetVictim() != bot)
         return sharkkis;
 
     Unit* heldPet = nullptr;

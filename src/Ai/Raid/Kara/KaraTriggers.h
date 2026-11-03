@@ -33,7 +33,7 @@ public:
 protected:
     virtual bool IsActiveInEncounter() = 0;
 
-    Creature* GetEncounterBoss() { return KaraHelpers::GetKaraBoss(bot, _boss); }
+    Unit* GetEncounterBoss() { return KaraHelpers::GetKaraBoss(bot, _boss); }
 
 private:
     KaraHelpers::KaraBosses const _boss;
@@ -59,46 +59,78 @@ public:
 
 // Trash
 
-class ManaWarpIsAboutToExplodeTrigger : public Trigger
+class ManaWarpCastsWarpBreachTrigger : public Trigger
 {
 public:
-    ManaWarpIsAboutToExplodeTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "mana warp is about to explode") {}
+    ManaWarpCastsWarpBreachTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "mana warp casts warp breach") {}
+    bool IsActive() override;
+};
+
+class ManaWarpStunnerShouldHoldTrigger : public Trigger
+{
+public:
+    ManaWarpStunnerShouldHoldTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "mana warp stunner should hold") {}
     bool IsActive() override;
 };
 
 // Attumen the Huntsman
 
-class AttumenTheHuntsmanPhaseOneActiveTrigger : public KarazhanEncounterTrigger
+class AttumenTheHuntsmanShouldBeTankedTrigger : public KarazhanEncounterTrigger
 {
 public:
-    AttumenTheHuntsmanPhaseOneActiveTrigger(PlayerbotAI* botAI)
+    AttumenTheHuntsmanShouldBeTankedTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "attumen the huntsman phase one active",
+            botAI, "attumen the huntsman should be tanked",
             KaraHelpers::KaraBosses::DATA_ATTUMEN) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class AttumenTheHuntsmanPhaseTwoActiveTrigger : public KarazhanEncounterTrigger
+class AttumenTheHuntsmanMidnightShouldBeFocusedTrigger : public KarazhanEncounterTrigger
 {
 public:
-    AttumenTheHuntsmanPhaseTwoActiveTrigger(PlayerbotAI* botAI)
+    AttumenTheHuntsmanMidnightShouldBeFocusedTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "attumen the huntsman phase two active",
+            botAI, "attumen the huntsman midnight should be focused",
             KaraHelpers::KaraBosses::DATA_ATTUMEN) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class AttumenTheHuntsmanPhaseTransitionTrigger : public KarazhanEncounterTrigger
+class AttumenTheHuntsmanMountedShouldBeTankedTrigger : public KarazhanEncounterTrigger
 {
 public:
-    AttumenTheHuntsmanPhaseTransitionTrigger(PlayerbotAI* botAI)
+    AttumenTheHuntsmanMountedShouldBeTankedTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "attumen the huntsman phase transition",
+            botAI, "attumen the huntsman mounted should be tanked",
+            KaraHelpers::KaraBosses::DATA_ATTUMEN) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class AttumenTheHuntsmanShouldStackBehindTrigger : public KarazhanEncounterTrigger
+{
+public:
+    AttumenTheHuntsmanShouldStackBehindTrigger(PlayerbotAI* botAI)
+        : KarazhanEncounterTrigger(
+            botAI, "attumen the huntsman should stack behind",
+            KaraHelpers::KaraBosses::DATA_ATTUMEN) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class AttumenTheHuntsmanShouldManageDpsTimerTrigger : public KarazhanEncounterTrigger
+{
+public:
+    AttumenTheHuntsmanShouldManageDpsTimerTrigger(PlayerbotAI* botAI)
+        : KarazhanEncounterTrigger(
+            botAI, "attumen the huntsman should manage dps timer",
             KaraHelpers::KaraBosses::DATA_ATTUMEN) {}
 
 protected:
@@ -131,6 +163,18 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
+class MaidenOfVirtueShouldBreakRepentanceTrigger : public KarazhanEncounterTrigger
+{
+public:
+    MaidenOfVirtueShouldBreakRepentanceTrigger(PlayerbotAI* botAI)
+        : KarazhanEncounterTrigger(
+            botAI, "maiden of virtue should break repentance",
+            KaraHelpers::KaraBosses::DATA_MAIDEN) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 class MaidenOfVirtueRangedShouldSpreadTrigger : public KarazhanEncounterTrigger
 {
 public:
@@ -142,12 +186,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class MaidenOfVirtueGroundingTotemConsumesHolyFireTrigger : public KarazhanEncounterTrigger
+class MaidenOfVirtueShouldGroundHolyFireTrigger : public KarazhanEncounterTrigger
 {
 public:
-    MaidenOfVirtueGroundingTotemConsumesHolyFireTrigger(PlayerbotAI* botAI)
+    MaidenOfVirtueShouldGroundHolyFireTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "maiden of virtue grounding totem consumes holy fire",
+            botAI, "maiden of virtue should ground holy fire",
             KaraHelpers::KaraBosses::DATA_MAIDEN) {}
 
 protected:
@@ -182,12 +226,12 @@ protected:
 
 // Romulo and Julianne
 
-class RomuloAndJulianneBothBossesRevivedTrigger : public KarazhanEncounterTrigger
+class RomuloAndJulianneShouldBeKilledTogetherTrigger : public KarazhanEncounterTrigger
 {
 public:
-    RomuloAndJulianneBothBossesRevivedTrigger(PlayerbotAI* botAI)
+    RomuloAndJulianneShouldBeKilledTogetherTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "romulo and julianne both bosses revived",
+            botAI, "romulo and julianne should be killed together",
             KaraHelpers::KaraBosses::DATA_OPERA_PERFORMANCE) {}
 
 protected:
@@ -196,24 +240,24 @@ protected:
 
 // The Wizard of Oz
 
-class WizardOfOzNeedTargetPriorityTrigger : public KarazhanEncounterTrigger
+class WizardOfOzShouldPrioritizeTargetsTrigger : public KarazhanEncounterTrigger
 {
 public:
-    WizardOfOzNeedTargetPriorityTrigger(PlayerbotAI* botAI)
+    WizardOfOzShouldPrioritizeTargetsTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "wizard of oz need target priority",
+            botAI, "wizard of oz should prioritize targets",
             KaraHelpers::KaraBosses::DATA_OPERA_PERFORMANCE) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class WizardOfOzStrawmanIsVulnerableToFireTrigger : public KarazhanEncounterTrigger
+class WizardOfOzMageShouldBurnStrawmanTrigger : public KarazhanEncounterTrigger
 {
 public:
-    WizardOfOzStrawmanIsVulnerableToFireTrigger(PlayerbotAI* botAI)
+    WizardOfOzMageShouldBurnStrawmanTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "wizard of oz strawman is vulnerable to fire",
+            botAI, "wizard of oz mage should burn strawman",
             KaraHelpers::KaraBosses::DATA_OPERA_PERFORMANCE) {}
 
 protected:
@@ -222,12 +266,13 @@ protected:
 
 // The Curator
 
-class TheCuratorAstralFlareSpawnedTrigger : public KarazhanEncounterTrigger
+class TheCuratorShouldPrioritizeAstralFlaresTrigger : public KarazhanEncounterTrigger
 {
 public:
-    TheCuratorAstralFlareSpawnedTrigger(PlayerbotAI* botAI)
+    TheCuratorShouldPrioritizeAstralFlaresTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "the curator astral flare spawned", KaraHelpers::KaraBosses::DATA_CURATOR) {}
+            botAI, "the curator should prioritize astral flares",
+            KaraHelpers::KaraBosses::DATA_CURATOR) {}
 
 protected:
     bool IsActiveInEncounter() override;

@@ -9,7 +9,9 @@
 #include "KaraHelpers.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
+#include "Random.h"
 #include "RtiTargetValue.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -49,11 +51,16 @@ bool KarazhanResetEncounterStatesAction::Execute(Event /*event*/)
         reset = true;
     }
 
-    reset |= KaraResetBeamBlockers(instanceId);
-
     Action* wolfAction = context->GetAction("big bad wolf little red riding hood run away");
     if (wolfAction &&
         static_cast<BigBadWolfLittleRedRidingHoodRunAwayAction*>(wolfAction)->ResetRunIndex())
+    {
+        reset = true;
+    }
+
+    Action* flightAction = context->GetAction("nightbane flight phase stack and move");
+    if (flightAction &&
+        static_cast<NightbaneFlightPhaseStackAndMoveAction*>(flightAction)->ResetRainOfBonesHit())
     {
         reset = true;
     }
@@ -92,97 +99,167 @@ bool KarazhanSetTremorTotemAction::Execute(Event /*event*/)
 
 // Trash
 
-bool ManaWarpStunCreatureBeforeWarpBreachAction::Execute(Event /*event*/)
+ManaWarpStunWarpBreachAction::ManaWarpStunWarpBreachAction(PlayerbotAI* botAI)
+    : Action(botAI, "mana warp stun warp breach"),
+      _reactionMs(urand(WARP_BREACH_MIN_REACTION_MS, WARP_BREACH_MAX_REACTION_MS)) {}
+
+bool ManaWarpStunWarpBreachAction::Execute(Event /*event*/)
 {
-    Unit* target = nullptr;
-    constexpr float searchRadius = 40.0f;
-    std::list<Creature*> manaWarps;
-    bot->GetCreatureListWithEntryInGrid(manaWarps, Id(KaraNpcs::NPC_MANA_WARP), searchRadius);
-
-    for (Creature* manaWarp : manaWarps)
-    {
-        if (!manaWarp || !manaWarp->IsAlive() || manaWarp->GetHealthPct() > 15.0f)
-            continue;
-
-        if (!target || manaWarp->GetGUID() < target->GetGUID())
-            target = manaWarp;
-    }
-
-    if (!target)
+    Unit* warp = GetManaWarpToStun(botAI, _reactionMs);
+    if (!warp)
         return false;
 
-    static constexpr std::array spells = {
-        "bash",
-        "concussion blow",
-        "hammer of justice",
-        "kidney shot",
-        "maim",
-        "shadowfury",
-        "shockwave",
+    auto const castStun = [&](char const* spell)
+    {
+        return botAI->CanCastSpell(spell, warp) && botAI->CastSpell(spell, warp);
     };
 
-    for (char const* spell : spells)
+    // The warp is within the bot's stun reach, but a Tauren's reach is War Stomp's, so melee stuns
+    // still test melee range: CanCastSpell passes targets out of range, and a failed cast still
+    // turns the bot.
+    bool const inMeleeRange = bot->IsWithinMeleeRange(warp);
+    bool stunned = false;
+    switch (bot->getClass())
     {
-        if (botAI->CanCastSpell(spell, target) && botAI->CastSpell(spell, target))
-            return true;
+        case CLASS_DRUID:
+        {
+            ShapeshiftForm const form = bot->GetShapeshiftForm();
+            if (form == FORM_BEAR || form == FORM_DIREBEAR)
+                stunned = inMeleeRange && castStun("bash");
+            else if (form == FORM_CAT)
+                stunned = inMeleeRange && castStun("maim");
+            break;
+        }
+        case CLASS_PALADIN:
+            stunned = castStun("hammer of justice");
+            break;
+        case CLASS_ROGUE:
+            stunned = inMeleeRange && castStun("kidney shot");
+            break;
+        case CLASS_WARLOCK:
+            stunned = castStun("shadowfury");
+            break;
+        case CLASS_WARRIOR:
+            stunned = inMeleeRange && (castStun("concussion blow") || castStun("shockwave"));
+            break;
+        default:
+            break;
     }
 
-    return false;
+    if (stunned)
+        return true;
+
+    return bot->getRace() == RACE_TAUREN && bot->GetExactDist(warp) <= WAR_STOMP_RADIUS &&
+        botAI->CanCastSpell("war stomp", bot) && botAI->CastSpell("war stomp", bot);
+}
+
+// Holding casts nothing, so the stun is off the global cooldown when the cast bar comes.
+bool ManaWarpStunnerHoldForWarpBreachAction::Execute(Event /*event*/)
+{
+    Unit* warp = GetManaWarpToHoldFor(botAI);
+    if (!warp)
+        return false;
+
+    float const reach = GetManaWarpStunReach(bot);
+    if (bot->GetExactDist(warp) <= reach)
+        return true;
+
+    // MoveTo measures edge to edge.
+    float const distance = std::max(
+        0.0f, reach - MANA_WARP_STUN_APPROACH_MARGIN - bot->GetCombatReach() -
+            warp->GetCombatReach());
+    return MoveTo(warp, distance, MovementPriority::MOVEMENT_COMBAT);
 }
 
 // Attumen the Huntsman
 
 // Midnight's CombatReach is 1.6 yards
 // Unmounted Attumen's CombatReach is 1.5 yards
-bool AttumenTheHuntsmanHandlePhaseOneAction::Execute(Event /*event*/)
+// Steps the tank away from every player in reach of Shadow Cleave (from the tank) or Intangible
+// Presence (from Attumen), until each is clear.
+bool AttumenTheHuntsmanAssistTankPositionUnmountedAction::Execute(Event /*event*/)
 {
-    Unit* midnight = GetKaraCreature(bot, KaraCreatureData::DATA_MIDNIGHT);
-    if (!midnight)
+    Unit* midnight = FindThreatTarget(bot, "midnight");
+    Unit* attumen = GetKaraBoss(bot, KaraBosses::DATA_ATTUMEN);
+    if (!midnight || !attumen)
         return false;
 
-    if (PlayerbotAI::IsAssistTank(bot))
-    {
-        Unit* attumen = GetKaraBoss(bot, KaraBosses::DATA_ATTUMEN);
-        return attumen && AssistTankMoveAttumenFromGroup(midnight, attumen);
-    }
-
-    return AI_VALUE(Unit*, "current target") != midnight && Attack(midnight);
-}
-
-bool AttumenTheHuntsmanHandlePhaseOneAction::AssistTankMoveAttumenFromGroup(
-    Unit* midnight, Unit* attumen)
-{
     if (AI_VALUE(Unit*, "current target") != attumen)
         return Attack(attumen);
 
     if (attumen->GetVictim() != bot || midnight->GetVictim() == bot)
         return false;
 
-    constexpr float safeDistance = 8.0f;
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, safeDistance);
-    if (!nearestPlayer || attumen->GetDistance2d(nearestPlayer) >= safeDistance)
+    Group* group = bot->GetGroup();
+    if (!group)
         return false;
 
-    return MoveFromGroup(safeDistance);
+    float shortfall = 0.0f;
+    float sumX = 0.0f;
+    float sumY = 0.0f;
+    uint32 count = 0;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || member == bot || !member->IsAlive() || member->GetMapId() != KARA_MAP_ID)
+            continue;
+
+        float const reach = member->GetCombatReach() + ATTUMEN_HAZARD_CLEARANCE;
+        float const memberShortfall = std::max(
+            SHADOW_CLEAVE_JUMP_RADIUS + reach - bot->GetExactDist2d(member),
+            INTANGIBLE_PRESENCE_RADIUS + reach - attumen->GetExactDist2d(member));
+        if (memberShortfall <= 0.0f)
+            continue;
+
+        shortfall = std::max(shortfall, memberShortfall);
+        sumX += member->GetPositionX();
+        sumY += member->GetPositionY();
+        ++count;
+    }
+
+    if (!count)
+        return false;
+
+    float const angle = bot->GetAngle(sumX / count, sumY / count) + M_PI;
+    Position const destination(
+        bot->GetPositionX() + std::cos(angle) * shortfall,
+        bot->GetPositionY() + std::sin(angle) * shortfall, bot->GetPositionZ());
+
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, destination, 0.0f, attumen, moveX, moveY, backwards))
+        return false;
+
+    float moveZ = bot->GetPositionZ();
+    if (!bot->GetMap()->CheckCollisionAndGetValidCoords(
+            bot, bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), moveX, moveY,
+            moveZ, false))
+    {
+        return false;
+    }
+
+    return MoveTo(
+        KARA_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-bool AttumenTheHuntsmanHandlePhaseTwoAction::Execute(Event /*event*/)
+bool AttumenTheHuntsmanAttackMidnightAction::Execute(Event /*event*/)
 {
-    Unit* attumen = AI_VALUE2(Unit*, "find target", "15550");
+    Unit* midnight = FindThreatTarget(bot, "midnight");
+    return midnight && AI_VALUE(Unit*, "current target") != midnight && Attack(midnight);
+}
+
+bool AttumenTheHuntsmanTankPositionMountedAction::Execute(Event /*event*/)
+{
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* attumen = GetMountedAttumen(bot);
     if (!attumen)
         return false;
 
     if (AI_VALUE(Unit*, "current target") != attumen)
         return Attack(attumen);
 
-    if (PlayerbotAI::IsTank(bot))
-        return CurrentTankPositionAttumen(attumen);
-
-    return StackBehindAttumen(attumen);
-}
-
-bool AttumenTheHuntsmanHandlePhaseTwoAction::CurrentTankPositionAttumen(Unit* attumen)
-{
     if (attumen->GetVictim() != bot || !bot->IsWithinMeleeRange(attumen))
         return false;
 
@@ -206,14 +283,19 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::CurrentTankPositionAttumen(Unit* at
 }
 
 // Mounted Attumen's CombatReach is 0 yards so defaults to 1.5 yards
-bool AttumenTheHuntsmanHandlePhaseTwoAction::StackBehindAttumen(Unit* attumen)
+bool AttumenTheHuntsmanStackBehindAction::Execute(Event /*event*/)
 {
-    float const distanceBehind = bot->getClass() == CLASS_HUNTER ? 8.0f : 2.0f;
+    Unit* attumen = GetMountedAttumen(bot);
+    if (!attumen)
+        return false;
+
+    float const distanceBehind = bot->getClass() == CLASS_HUNTER ?
+        ATTUMEN_HUNTER_STACK_DISTANCE : ATTUMEN_STACK_DISTANCE;
     float const orientation = attumen->GetOrientation() + M_PI;
     float const rearX = attumen->GetPositionX() + std::cos(orientation) * distanceBehind;
     float const rearY = attumen->GetPositionY() + std::sin(orientation) * distanceBehind;
 
-    if (bot->GetDistance2d(rearX, rearY) <= 0.2f)
+    if (bot->GetExactDist2d(rearX, rearY) <= ATTUMEN_STACK_TOLERANCE)
         return false;
 
     return MoveTo(
@@ -221,7 +303,7 @@ bool AttumenTheHuntsmanHandlePhaseTwoAction::StackBehindAttumen(Unit* attumen)
         MovementPriority::MOVEMENT_FORCED, true, false);
 }
 
-bool AttumenTheHuntsmanSetDpsTimerAction::Execute(Event /*event*/)
+bool AttumenTheHuntsmanManageDpsTimerAction::Execute(Event /*event*/)
 {
     uint32 const now = getMSTime();
     return EmplaceIfUnset(KaraState(bot->GetInstanceId()).attumenDpsWaitTimer, now);
@@ -242,7 +324,7 @@ bool MoroesMarkTargetAction::Execute(Event /*event*/)
 
     for (char const* name : moroesGuests)
     {
-        if (Unit* guest = AI_VALUE2(Unit*, "find target", name))
+        if (Unit* guest = FindThreatTarget(bot, name))
             return MarkTargetWithSkull(bot, guest);
     }
 
@@ -254,46 +336,39 @@ bool MoroesMarkTargetAction::Execute(Event /*event*/)
 
 bool MaidenOfVirtueTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* maiden = AI_VALUE2(Unit*, "find target", "16457");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* maiden = GetKaraBoss(bot, KaraBosses::DATA_MAIDEN);
     if (!maiden)
         return false;
 
     if (AI_VALUE(Unit*, "current target") != maiden)
         return Attack(maiden);
 
-    if (maiden->GetVictim() != bot)
+    if (maiden->GetVictim() != bot || !bot->IsWithinMeleeRange(maiden))
         return false;
 
-    Group* group = bot->GetGroup();
-    if (!group)
+    // While a healer is stunned she is taken to them, and stays until Holy Ground breaks it.
+    if (GetNearestRepentantHealer(bot, *maiden))
         return false;
 
-    Player* healer = nullptr;
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (!member || !member->IsAlive() || !PlayerbotAI::IsHeal(member) ||
-            !member->HasAura(Id(KaraSpells::SPELL_REPENTANCE)))
-        {
-            continue;
-        }
-
-        healer = member;
-        break;
-    }
-
-    if (healer)
-        return MoveBossToStunnedHealer(healer);
-
-    if (!bot->IsWithinMeleeRange(maiden))
+    Position const& position = MAIDEN_OF_VIRTUE_POSITION;
+    float const distToPosition = maiden->GetExactDist2d(position);
+    if (distToPosition <= MAIDEN_OF_VIRTUE_POSITION_TOLERANCE)
         return false;
 
-    Position const& position = MAIDEN_OF_VIRTUE_TANK_POSITION;
-    constexpr float arrivalDist = 2.0f;
+    // The tank leads her along the line from her through her spot, so it walks through her when
+    // she is between it and the spot.
+    float const ratio = MAIDEN_OF_VIRTUE_TANK_LEAD_DISTANCE / distToPosition;
+    Position const destination(
+        position.GetPositionX() + (position.GetPositionX() - maiden->GetPositionX()) * ratio,
+        position.GetPositionY() + (position.GetPositionY() - maiden->GetPositionY()) * ratio,
+        bot->GetPositionZ());
+
+    constexpr float arrivalDist = 0.5f;
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetStepToPosition(bot, position, arrivalDist, maiden, moveX, moveY, backwards))
+    if (!GetStepToPosition(bot, destination, arrivalDist, maiden, moveX, moveY, backwards))
         return false;
 
     return MoveTo(
@@ -301,16 +376,31 @@ bool MaidenOfVirtueTankPositionBossAction::Execute(Event /*event*/)
         false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-bool MaidenOfVirtueTankPositionBossAction::MoveBossToStunnedHealer(Player* healer)
+bool MaidenOfVirtueMoveBossToStunnedHealerAction::Execute(Event /*event*/)
 {
-    constexpr float endDistance = 6.0f;
-    float const angle = healer->GetOrientation();
-    float const targetX = healer->GetPositionX() + std::cos(angle) * endDistance;
-    float const targetY = healer->GetPositionY() + std::sin(angle) * endDistance;
+    Unit* maiden = GetKaraBoss(bot, KaraBosses::DATA_MAIDEN);
+    if (!maiden || maiden->GetVictim() != bot)
+        return false;
+
+    Player* healer = GetNearestRepentantHealer(bot, *maiden);
+    if (!healer)
+        return false;
+
+    float const breakReach =
+        HOLY_GROUND_RADIUS + healer->GetCombatReach() - MAIDEN_REPENTANCE_BREAK_CLEARANCE;
+    if (maiden->GetExactDist2d(healer) <= breakReach)
+        return false;
+
+    constexpr float arrivalDist = 2.0f;
+    float moveX;
+    float moveY;
+    bool backwards;
+    if (!GetStepToPosition(bot, *healer, arrivalDist, nullptr, moveX, moveY, backwards))
+        return false;
 
     return MoveTo(
-        KARA_MAP_ID, targetX, targetY, healer->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+        KARA_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
 bool MaidenOfVirtuePositionRangedBetweenPillarsAction::Execute(Event /*event*/)
@@ -359,7 +449,8 @@ bool MaidenOfVirtueSetGroundingTotemAction::Execute(Event /*event*/)
 
 bool BigBadWolfPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* wolf = AI_VALUE2(Unit*, "find target", "17521");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* wolf = GetOperaActor(bot, "the big bad wolf");
     if (!wolf)
         return false;
 
@@ -402,43 +493,40 @@ bool BigBadWolfLittleRedRidingHoodRunAwayAction::Execute(Event /*event*/)
 
 bool RomuloAndJulianneMarkTargetAction::Execute(Event /*event*/)
 {
-    Unit* romulo = GetOperaActor(bot, KaraCreatureData::DATA_ROMULO);
+    Unit* romulo = GetOperaActor(bot, "romulo");
     if (!romulo)
         return false;
 
-    Unit* julianne = GetOperaActor(bot, KaraCreatureData::DATA_JULIANNE);
+    Unit* julianne = GetOperaActor(bot, "julianne");
     if (!julianne)
         return false;
 
-    constexpr float maxPctDifference = 10.0f;
-    Unit* target = nullptr;
+    // Faking death
+    bool const romuloDown = romulo->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+    bool const julianneDown = julianne->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+    if (romuloDown && julianneDown)
+        return false;
 
-    if (julianne->GetHealthPct() + maxPctDifference < romulo->GetHealthPct() ||
-        julianne->GetHealthPct() < 1.0f)
-    {
-        target = romulo;
-    }
-    else if (romulo->GetHealthPct() + maxPctDifference < julianne->GetHealthPct() ||
-        romulo->GetHealthPct() < 1.0f)
-    {
-        target = julianne;
-    }
-    else
-    {
-        target = (romulo->GetHealthPct() >= julianne->GetHealthPct()) ? romulo : julianne;
-    }
+    if (romuloDown)
+        return MarkTargetWithSkull(bot, julianne);
 
-    if (target)
-        return MarkTargetWithSkull(bot, target);
+    if (julianneDown)
+        return MarkTargetWithSkull(bot, romulo);
 
-    return false;
+    // Within the gap the skull stays where it is; phase 2 leaves it on Romulo.
+    Unit* healthier = romulo->GetHealthPct() >= julianne->GetHealthPct() ? romulo : julianne;
+    Unit* other = healthier == romulo ? julianne : romulo;
+    if (healthier->GetHealthPct() - other->GetHealthPct() <= ROMULO_AND_JULIANNE_HEALTH_GAP_PCT)
+        return false;
+
+    return MarkTargetWithSkull(bot, healthier);
 }
 
 // The Wizard of Oz
 
 bool WizardOfOzMarkTargetAction::Execute(Event /*event*/)
 {
-    for (KaraCreatureData actor : OZ_TARGETS)
+    for (char const* actor : OZ_TARGETS)
     {
         if (Unit* target = GetOperaActor(bot, actor))
             return MarkTargetWithSkull(bot, target);
@@ -447,24 +535,35 @@ bool WizardOfOzMarkTargetAction::Execute(Event /*event*/)
     return false;
 }
 
-bool WizardOfOzScorchStrawmanAction::Execute(Event /*event*/)
+bool WizardOfOzCastScorchOnStrawmanAction::Execute(Event /*event*/)
 {
-    Unit* strawman = GetOperaActor(bot, KaraCreatureData::DATA_STRAWMAN);
-    return strawman &&
-        botAI->CanCastSpell("scorch", strawman) && botAI->CastSpell("scorch", strawman);
+    Unit* strawman = GetOperaActor(bot, "strawman");
+    if (!strawman)
+        return false;
+
+    // Both measure edge to edge.
+    if (!bot->IsWithinCombatRange(strawman, SCORCH_RANGE))
+    {
+        return MoveTo(
+            strawman, SCORCH_RANGE - SCORCH_APPROACH_MARGIN, MovementPriority::MOVEMENT_COMBAT);
+    }
+
+    return botAI->CanCastSpell("scorch", strawman) && botAI->CastSpell("scorch", strawman);
 }
 
 // The Curator
 
 bool TheCuratorMarkAstralFlareAction::Execute(Event /*event*/)
 {
-    Unit* flare = AI_VALUE2(Unit*, "find target", "17283");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* flare = FindThreatTarget(bot, "astral flare");
     return flare && MarkTargetWithSkull(bot, flare);
 }
 
 bool TheCuratorPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* curator = AI_VALUE2(Unit*, "find target", "15691");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* curator = GetKaraBoss(bot, KaraBosses::DATA_CURATOR);
     if (!curator)
         return false;
 
@@ -489,20 +588,24 @@ bool TheCuratorPositionBossAction::Execute(Event /*event*/)
 
 bool TheCuratorSpreadRangedAction::Execute(Event /*event*/)
 {
-    constexpr float minDistance = 5.0f;
-    Player* nearestPlayer = GetNearestPlayerInRadius(bot, minDistance);
-    return nearestPlayer && FleePosition(nearestPlayer->GetPosition(), minDistance);
+    Player* nearestPlayer = GetNearestPlayerInRadius(bot, THE_CURATOR_RANGED_SPREAD_DISTANCE);
+    return nearestPlayer &&
+        FleePosition(nearestPlayer->GetPosition(), THE_CURATOR_RANGED_SPREAD_DISTANCE);
 }
 
 // Terestian Illhoof
 
 bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
 {
-    static constexpr std::array illhoofAdds = { "demon chains", "kil'rek", };
+    constexpr float searchRadius = 100.0f;
+    static constexpr std::array illhoofAdds = {
+        KaraNpcs::NPC_DEMON_CHAINS,
+        KaraNpcs::NPC_KILREK,
+    };
 
-    for (char const* name : illhoofAdds)
+    for (KaraNpcs add : illhoofAdds)
     {
-        if (Unit* target = AI_VALUE2(Unit*, "find target", name))
+        if (Unit* target = bot->FindNearestCreature(Id(add), searchRadius))
             return MarkTargetWithSkull(bot, target);
     }
 
@@ -628,7 +731,8 @@ bool NetherspiteBlockRedBeamAction::Execute(Event /*event*/)
         _redBeamMoveTimer = getMSTime();
     }
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* netherspite = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
     if (!netherspite)
         return false;
 
@@ -695,7 +799,8 @@ bool NetherspiteBlockBlueBeamAction::Execute(Event /*event*/)
     }
     _wasBlockingBlueBeam = true;
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* netherspite = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
     if (!netherspite)
         return false;
 
@@ -747,7 +852,8 @@ bool NetherspiteBlockGreenBeamAction::Execute(Event /*event*/)
     }
     _wasBlockingGreenBeam = true;
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* netherspite = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
     if (!netherspite)
         return false;
 
@@ -766,7 +872,8 @@ bool NetherspiteBlockGreenBeamAction::Execute(Event /*event*/)
 
 bool NetherspiteAvoidBeamAndVoidZoneAction::Execute(Event /*event*/)
 {
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* netherspite = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
     if (!netherspite)
         return false;
 
@@ -890,13 +997,14 @@ bool NetherspiteBanishPhaseAvoidVoidZoneAction::Execute(Event /*event*/)
 {
     std::vector<Unit*> voidZones = GetAllVoidZones(bot);
     constexpr float safeDistance = 4.0f;
+    constexpr uint32 minInterval = 0;
 
     for (Unit* voidZone : voidZones)
     {
         if (voidZone->GetEntry() == Id(KaraNpcs::NPC_VOID_ZONE) &&
             bot->GetExactDist2d(voidZone) < safeDistance)
         {
-            return FleePosition(voidZone->GetPosition(), safeDistance);
+            return FleePosition(voidZone->GetPosition(), safeDistance, minInterval);
         }
     }
 
@@ -905,7 +1013,8 @@ bool NetherspiteBanishPhaseAvoidVoidZoneAction::Execute(Event /*event*/)
 
 bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
 {
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* netherspite = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
     if (!netherspite)
         return false;
 
@@ -954,7 +1063,8 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
 
 bool PrinceMalchezaarEnfeebledBotAvoidHazardAction::Execute(Event /*event*/)
 {
-    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "15690");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* malchezaar = GetKaraBoss(bot, KaraBosses::DATA_MALCHEZAAR);
     if (!malchezaar)
         return false;
 
@@ -1026,7 +1136,8 @@ bool PrinceMalchezaarEnfeebledBotAvoidHazardAction::Execute(Event /*event*/)
 
 bool PrinceMalchezaarNonTankAvoidInfernalAction::Execute(Event /*event*/)
 {
-    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "15690");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* malchezaar = GetKaraBoss(bot, KaraBosses::DATA_MALCHEZAAR);
     if (!malchezaar)
         return false;
 
@@ -1061,7 +1172,8 @@ bool PrinceMalchezaarNonTankAvoidInfernalAction::Execute(Event /*event*/)
 
 bool PrinceMalchezaarTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* malchezaar = AI_VALUE2(Unit*, "find target", "15690");
+    //By leewheel 2026-11-04 采纳上游数据驱动/FindThreatTarget（走 InstanceScript entry 登记与登记表折算）
+    Unit* malchezaar = GetKaraBoss(bot, KaraBosses::DATA_MALCHEZAAR);
     if (!malchezaar)
         return false;
 

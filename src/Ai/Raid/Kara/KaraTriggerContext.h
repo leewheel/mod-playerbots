@@ -26,18 +26,27 @@ public:
             &RaidKarazhanTriggerContext::karazhan_enemies_cast_fear;
 
         // Trash
-        creators["mana warp is about to explode"] =
-            &RaidKarazhanTriggerContext::mana_warp_is_about_to_explode;
+        creators["mana warp casts warp breach"] =
+            &RaidKarazhanTriggerContext::mana_warp_casts_warp_breach;
+
+        creators["mana warp stunner should hold"] =
+            &RaidKarazhanTriggerContext::mana_warp_stunner_should_hold;
 
         // Attumen the Huntsman
-        creators["attumen the huntsman phase one active"] =
-            &RaidKarazhanTriggerContext::attumen_the_huntsman_phase_one_active;
+        creators["attumen the huntsman should be tanked"] =
+            &RaidKarazhanTriggerContext::attumen_the_huntsman_should_be_tanked;
 
-        creators["attumen the huntsman phase two active"] =
-            &RaidKarazhanTriggerContext::attumen_the_huntsman_phase_two_active;
+        creators["attumen the huntsman midnight should be focused"] =
+            &RaidKarazhanTriggerContext::attumen_the_huntsman_midnight_should_be_focused;
 
-        creators["attumen the huntsman phase transition"] =
-            &RaidKarazhanTriggerContext::attumen_the_huntsman_phase_transition;
+        creators["attumen the huntsman mounted should be tanked"] =
+            &RaidKarazhanTriggerContext::attumen_the_huntsman_mounted_should_be_tanked;
+
+        creators["attumen the huntsman should stack behind"] =
+            &RaidKarazhanTriggerContext::attumen_the_huntsman_should_stack_behind;
+
+        creators["attumen the huntsman should manage dps timer"] =
+            &RaidKarazhanTriggerContext::attumen_the_huntsman_should_manage_dps_timer;
 
         // Moroes
         creators["moroes should prioritize adds"] =
@@ -47,11 +56,14 @@ public:
         creators["maiden of virtue should be tanked"] =
             &RaidKarazhanTriggerContext::maiden_of_virtue_should_be_tanked;
 
+        creators["maiden of virtue should break repentance"] =
+            &RaidKarazhanTriggerContext::maiden_of_virtue_should_break_repentance;
+
         creators["maiden of virtue ranged should spread"] =
             &RaidKarazhanTriggerContext::maiden_of_virtue_ranged_should_spread;
 
-        creators["maiden of virtue grounding totem consumes holy fire"] =
-            &RaidKarazhanTriggerContext::maiden_of_virtue_grounding_totem_consumes_holy_fire;
+        creators["maiden of virtue should ground holy fire"] =
+            &RaidKarazhanTriggerContext::maiden_of_virtue_should_ground_holy_fire;
 
         // The Big Bad Wolf
         creators["big bad wolf should be tanked"] =
@@ -61,19 +73,19 @@ public:
             &RaidKarazhanTriggerContext::big_bad_wolf_chasing_little_red_riding_hood;
 
         // Romulo and Julianne
-        creators["romulo and julianne both bosses revived"] =
-            &RaidKarazhanTriggerContext::romulo_and_julianne_both_bosses_revived;
+        creators["romulo and julianne should be killed together"] =
+            &RaidKarazhanTriggerContext::romulo_and_julianne_should_be_killed_together;
 
         // The Wizard of Oz
-        creators["wizard of oz need target priority"] =
-            &RaidKarazhanTriggerContext::wizard_of_oz_need_target_priority;
+        creators["wizard of oz should prioritize targets"] =
+            &RaidKarazhanTriggerContext::wizard_of_oz_should_prioritize_targets;
 
-        creators["wizard of oz strawman is vulnerable to fire"] =
-            &RaidKarazhanTriggerContext::wizard_of_oz_strawman_is_vulnerable_to_fire;
+        creators["wizard of oz mage should burn strawman"] =
+            &RaidKarazhanTriggerContext::wizard_of_oz_mage_should_burn_strawman;
 
         // The Curator
-        creators["the curator astral flare spawned"] =
-            &RaidKarazhanTriggerContext::the_curator_astral_flare_spawned;
+        creators["the curator should prioritize astral flares"] =
+            &RaidKarazhanTriggerContext::the_curator_should_prioritize_astral_flares;
 
         creators["the curator should be tanked"] =
             &RaidKarazhanTriggerContext::the_curator_should_be_tanked;
@@ -83,7 +95,7 @@ public:
 
         // Terestian Illhoof
         creators["terestian illhoof should prioritize chains"] =
-            &RaidKarazhanTriggerContext::terestian_illhoof_need_target_priority;
+            &RaidKarazhanTriggerContext::terestian_illhoof_should_prioritize_chains;
 
         // Shade of Aran
         creators["shade of aran arcane explosion is casting"] =
@@ -159,23 +171,35 @@ private:
     }
 
     // Trash
-    static Trigger* mana_warp_is_about_to_explode(PlayerbotAI* botAI)
+    static Trigger* mana_warp_casts_warp_breach(PlayerbotAI* botAI)
     {
-        return new ManaWarpIsAboutToExplodeTrigger(botAI);
+        return new ManaWarpCastsWarpBreachTrigger(botAI);
+    }
+    static Trigger* mana_warp_stunner_should_hold(PlayerbotAI* botAI)
+    {
+        return new ManaWarpStunnerShouldHoldTrigger(botAI);
     }
 
     // Attumen the Huntsman
-    static Trigger* attumen_the_huntsman_phase_one_active(PlayerbotAI* botAI)
+    static Trigger* attumen_the_huntsman_should_be_tanked(PlayerbotAI* botAI)
     {
-        return new AttumenTheHuntsmanPhaseOneActiveTrigger(botAI);
+        return new AttumenTheHuntsmanShouldBeTankedTrigger(botAI);
     }
-    static Trigger* attumen_the_huntsman_phase_two_active(PlayerbotAI* botAI)
+    static Trigger* attumen_the_huntsman_midnight_should_be_focused(PlayerbotAI* botAI)
     {
-        return new AttumenTheHuntsmanPhaseTwoActiveTrigger(botAI);
+        return new AttumenTheHuntsmanMidnightShouldBeFocusedTrigger(botAI);
     }
-    static Trigger* attumen_the_huntsman_phase_transition(PlayerbotAI* botAI)
+    static Trigger* attumen_the_huntsman_mounted_should_be_tanked(PlayerbotAI* botAI)
     {
-        return new AttumenTheHuntsmanPhaseTransitionTrigger(botAI);
+        return new AttumenTheHuntsmanMountedShouldBeTankedTrigger(botAI);
+    }
+    static Trigger* attumen_the_huntsman_should_stack_behind(PlayerbotAI* botAI)
+    {
+        return new AttumenTheHuntsmanShouldStackBehindTrigger(botAI);
+    }
+    static Trigger* attumen_the_huntsman_should_manage_dps_timer(PlayerbotAI* botAI)
+    {
+        return new AttumenTheHuntsmanShouldManageDpsTimerTrigger(botAI);
     }
 
     // Moroes
@@ -189,13 +213,17 @@ private:
     {
         return new MaidenOfVirtueShouldBeTankedTrigger(botAI);
     }
+    static Trigger* maiden_of_virtue_should_break_repentance(PlayerbotAI* botAI)
+    {
+        return new MaidenOfVirtueShouldBreakRepentanceTrigger(botAI);
+    }
     static Trigger* maiden_of_virtue_ranged_should_spread(PlayerbotAI* botAI)
     {
         return new MaidenOfVirtueRangedShouldSpreadTrigger(botAI);
     }
-    static Trigger* maiden_of_virtue_grounding_totem_consumes_holy_fire(PlayerbotAI* botAI)
+    static Trigger* maiden_of_virtue_should_ground_holy_fire(PlayerbotAI* botAI)
     {
-        return new MaidenOfVirtueGroundingTotemConsumesHolyFireTrigger(botAI);
+        return new MaidenOfVirtueShouldGroundHolyFireTrigger(botAI);
     }
 
     // The Big Bad Wolf
@@ -209,25 +237,25 @@ private:
     }
 
     // Romulo and Julianne
-    static Trigger* romulo_and_julianne_both_bosses_revived(PlayerbotAI* botAI)
+    static Trigger* romulo_and_julianne_should_be_killed_together(PlayerbotAI* botAI)
     {
-        return new RomuloAndJulianneBothBossesRevivedTrigger(botAI);
+        return new RomuloAndJulianneShouldBeKilledTogetherTrigger(botAI);
     }
 
     // The Wizard of Oz
-    static Trigger* wizard_of_oz_need_target_priority(PlayerbotAI* botAI)
+    static Trigger* wizard_of_oz_should_prioritize_targets(PlayerbotAI* botAI)
     {
-        return new WizardOfOzNeedTargetPriorityTrigger(botAI);
+        return new WizardOfOzShouldPrioritizeTargetsTrigger(botAI);
     }
-    static Trigger* wizard_of_oz_strawman_is_vulnerable_to_fire(PlayerbotAI* botAI)
+    static Trigger* wizard_of_oz_mage_should_burn_strawman(PlayerbotAI* botAI)
     {
-        return new WizardOfOzStrawmanIsVulnerableToFireTrigger(botAI);
+        return new WizardOfOzMageShouldBurnStrawmanTrigger(botAI);
     }
 
     // The Curator
-    static Trigger* the_curator_astral_flare_spawned(PlayerbotAI* botAI)
+    static Trigger* the_curator_should_prioritize_astral_flares(PlayerbotAI* botAI)
     {
-        return new TheCuratorAstralFlareSpawnedTrigger(botAI);
+        return new TheCuratorShouldPrioritizeAstralFlaresTrigger(botAI);
     }
     static Trigger* the_curator_should_be_tanked(PlayerbotAI* botAI)
     {
@@ -239,7 +267,7 @@ private:
     }
 
     // Terestian Illhoof
-    static Trigger* terestian_illhoof_need_target_priority(PlayerbotAI* botAI)
+    static Trigger* terestian_illhoof_should_prioritize_chains(PlayerbotAI* botAI)
     {
         return new TerestianIllhoofShouldPrioritizeChainsTrigger(botAI);
     }

@@ -9,6 +9,7 @@
 #include "ChooseTargetActions.h"
 #include "DKActions.h"
 #include "DruidActions.h"
+#include "DruidBearActions.h"
 #include "EncounterHelpers.h"
 #include "FollowActions.h"
 #include "HunterActions.h"
@@ -22,6 +23,8 @@
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "ShamanActions.h"
+#include "ThreatHelpers.h"
+#include "WarlockActions.h"
 #include "WarriorActions.h"
 
 using namespace KaraHelpers;
@@ -45,27 +48,13 @@ float KarazhanSetTremorTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    Unit* nightbane = GetKaraBoss(bot, KaraBosses::DATA_NIGHTBANE);
-    if (nightbane && nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
-        return 0.0f;
-
-    //By leewheel 2026-11-01 entry 铁律：上游本轮用英文名（spectral charger / the big bad wolf），
-    //  本核 creature_template 生物名为中文，英文 qualifier 子串匹配恒 nullptr（静默失效）。
-    //  回退 entry（仓内既有核定：15547=Spectral Charger / 17521=Big Bad Wolf）。
-    if (AI_VALUE2(Unit*, "find target", "15547") ||
-        AI_VALUE2(Unit*, "find target", "17521") ||
-        GetOperaActor(bot, KaraCreatureData::DATA_ROAR))
-    //End By leewheel
-    {
-        return 0.0f;
-    }
-
-    return 1.0f;
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+    return IsKarazhanFearCasterActive(bot) ? 0.0f : 1.0f;
 }
 
 float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (bot->GetMapId() != KARA_MAP_ID || botAI->GetState() == BOT_STATE_NON_COMBAT)
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
     if (!IsDpsCooldownAction(bot, action))
@@ -79,23 +68,40 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     Unit* boss = nullptr;
-    // Excluded: Moroes, Wizard of Oz, and Romulo and Julianne
     switch (static_cast<KaraBosses>(*bossId))
     {
         case KaraBosses::DATA_ATTUMEN:
-            boss = GetKaraCreature(bot, KaraCreatureData::DATA_MIDNIGHT);
+            boss = FindThreatTarget(bot, "midnight");
+            break;
+        case KaraBosses::DATA_MOROES:
+            boss = GetKaraBoss(bot, KaraBosses::DATA_MOROES);
             break;
         //By leewheel 2026-11-01 entry 铁律：同段英文名回退 entry（16457=Maiden of virtue /
         //  17521=Big Bad Wolf / 15691=The Curator / 15689=Netherspite / 15690=Prince Malchezaar，
         //  后三者取 KaraNpcs 枚举既有值）。
         case KaraBosses::DATA_MAIDEN:
-            boss = AI_VALUE2(Unit*, "find target", "16457");
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+            boss = GetKaraBoss(bot, KaraBosses::DATA_MAIDEN);
             break;
         case KaraBosses::DATA_OPERA_PERFORMANCE:
-            boss = AI_VALUE2(Unit*, "find target", "17521");
+        {
+            static constexpr std::array operaLeads = {
+                "the big bad wolf",
+                "dorothee",
+                "romulo",
+                "julianne",
+            };
+            for (char const* name : operaLeads)
+            {
+                boss = GetOperaActor(bot, name);
+                if (boss)
+                    break;
+            }
             break;
+        }
         case KaraBosses::DATA_CURATOR:
-            boss = AI_VALUE2(Unit*, "find target", "15691");
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+            boss = GetKaraBoss(bot, KaraBosses::DATA_CURATOR);
             break;
         //End By leewheel
         case KaraBosses::DATA_TERESTIAN:
@@ -106,10 +112,11 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
             break;
         //By leewheel 2026-11-01 entry 铁律：同上（15689=Netherspite / 15690=Prince Malchezaar）。
         case KaraBosses::DATA_NETHERSPITE:
-            boss = AI_VALUE2(Unit*, "find target", "15689");
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+            boss = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
             break;
         case KaraBosses::DATA_MALCHEZAAR:
-            boss = AI_VALUE2(Unit*, "find target", "15690");
+            boss = GetKaraBoss(bot, KaraBosses::DATA_MALCHEZAAR);
             break;
         //End By leewheel
         case KaraBosses::DATA_NIGHTBANE:
@@ -146,6 +153,51 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
     return 1.0f;
 }
 
+// Trash
+
+// Stock rotations spend these stuns on the pack (Shockwave and Shadowfury on AoE, Bash in the
+// rotation), so every stunner saves its stun for the cast bar.
+float ManaWarpSaveStunsMultiplier::GetValue(Action* action)
+{
+    if (botAI->GetState() == BOT_STATE_NON_COMBAT || !IsNearManaWarpPacks(bot))
+        return 1.0f;
+
+    bool isStun = false;
+    switch (bot->getClass())
+    {
+        case CLASS_DRUID:
+        {
+            isStun = dynamic_cast<CastBashAction*>(action) ||
+                dynamic_cast<CastBashOnEnemyHealerAction*>(action);
+            break;
+        }
+        case CLASS_PALADIN:
+        {
+            isStun = dynamic_cast<CastHammerOfJusticeAction*>(action) ||
+                dynamic_cast<CastHammerOfJusticeOnEnemyHealerAction*>(action) ||
+                dynamic_cast<CastHammerOfJusticeSnareAction*>(action);
+            break;
+        }
+        case CLASS_WARLOCK:
+            isStun = dynamic_cast<CastShadowfuryAction*>(action);
+            break;
+        case CLASS_WARRIOR:
+        {
+            isStun = dynamic_cast<CastConcussionBlowAction*>(action) ||
+                dynamic_cast<CastShockwaveAction*>(action) ||
+                dynamic_cast<CastShockwaveSnareAction*>(action);
+            break;
+        }
+        default:
+            break;
+    }
+
+    if (isStun)
+        return 0.0f;
+
+    return bot->getRace() == RACE_TAUREN && dynamic_cast<CastWarStompAction*>(action) ? 0.0f : 1.0f;
+}
+
 // Attumen the Huntsman
 
 float AttumenTheHuntsmanDisableAutoTargetingMultiplier::GetValueInEncounter(Action* action)
@@ -156,7 +208,9 @@ float AttumenTheHuntsmanDisableAutoTargetingMultiplier::GetValueInEncounter(Acti
     if (!dynamic_cast<DpsAssistAction*>(action) && !dynamic_cast<TankAssistAction*>(action))
         return 1.0f;
 
-    return GetKaraCreature(bot, KaraCreatureData::DATA_MIDNIGHT) ? 0.0f : 1.0f;
+    // Mounted Attumen is the only target left, so stock targeting finds him.
+    Unit* midnight = FindThreatTarget(bot, "midnight");
+    return midnight && !IsAttumenMounted(*midnight) ? 0.0f : 1.0f;
 }
 
 float AttumenTheHuntsmanStayStackedMultiplier::GetValueInEncounter(Action* action)
@@ -164,11 +218,11 @@ float AttumenTheHuntsmanStayStackedMultiplier::GetValueInEncounter(Action* actio
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (PlayerbotAI::IsTank(bot))
+    if (PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
     if (dynamic_cast<AttackAction*>(action) ||
-        dynamic_cast<AttumenTheHuntsmanHandlePhaseTwoAction*>(action))
+        dynamic_cast<AttumenTheHuntsmanStackBehindAction*>(action))
     {
         return 1.0f;
     }
@@ -181,10 +235,13 @@ float AttumenTheHuntsmanStayStackedMultiplier::GetValueInEncounter(Action* actio
         return 1.0f;
     }
 
-    if (!GetKaraCreature(bot, KaraCreatureData::DATA_MIDNIGHT))
+    Unit* midnight = FindThreatTarget(bot, "midnight");
+    if (!midnight || !IsAttumenMounted(*midnight))
         return 1.0f;
 
-    return GetAttumenMounted(bot) ? 0.0f : 1.0f;
+    // Whoever Attumen is on moves freely; everyone else stays stacked.
+    Unit* attumen = GetMountedAttumen(bot);
+    return attumen && attumen->GetVictim() == bot ? 1.0f : 0.0f;
 }
 
 // Give the main tank 5 seconds to grab aggro when Attumen mounts Midnight
@@ -199,23 +256,19 @@ float AttumenTheHuntsmanWaitForDpsMultiplier::GetValueInEncounter(Action* action
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    if (!GetKaraCreature(bot, KaraCreatureData::DATA_MIDNIGHT))
-        return 1.0f;
-
-    Unit* attumen = GetAttumenMounted(bot);
-    if (!attumen)
-        return 1.0f;
-
     if (PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
-    std::optional<uint32> const& waitStart =
-        KaraState(attumen->GetInstanceId()).attumenDpsWaitTimer;
-    if (!waitStart)
+    Unit* midnight = FindThreatTarget(bot, "midnight");
+    if (!midnight || !IsAttumenMounted(*midnight))
+        return 1.0f;
+
+    KaraInstanceState const* state = FindKaraState(bot->GetInstanceId());
+    if (!state || !state->attumenDpsWaitTimer)
         return 0.0f; // Timer blocking dps if not set yet is intentional in all cases
 
     constexpr uint32 dpsWaitMs = 5 * IN_MILLISECONDS;
-    return getMSTimeDiff(*waitStart, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(*state->attumenDpsWaitTimer, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
 }
 
 // Maiden of Virtue
@@ -231,7 +284,8 @@ float MaidenOfVirtueDisableCombatFormationMoveMultiplier::GetValueInEncounter(Ac
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "16457") ? 0.0f : 1.0f;
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+    return GetEncounterBoss() ? 0.0f : 1.0f;
 }
 
 float MaidenOfVirtueSetGroundingTotemMultiplier::GetValueInEncounter(Action* action)
@@ -246,7 +300,8 @@ float MaidenOfVirtueSetGroundingTotemMultiplier::GetValueInEncounter(Action* act
         return 1.0f;
     }
 
-    return AI_VALUE2(Unit*, "find target", "16457") ? 0.0f : 1.0f;
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+    return GetEncounterBoss() ? 0.0f : 1.0f;
 }
 
 // The Curator
@@ -259,7 +314,8 @@ float TheCuratorDisableTankAssistMultiplier::GetValueInEncounter(Action* action)
     if (!dynamic_cast<TankAssistAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "15691") ? 0.0f : 1.0f;
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+    return GetEncounterBoss() ? 0.0f : 1.0f;
 }
 
 float TheCuratorDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* action)
@@ -273,7 +329,8 @@ float TheCuratorDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    return AI_VALUE2(Unit*, "find target", "15691") ? 0.0f : 1.0f;
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+    return GetEncounterBoss() ? 0.0f : 1.0f;
 }
 
 // Terestian Illhoof
@@ -283,14 +340,15 @@ float TerestianIllhoofDontDotFiendishImpsMultiplier::GetValueInEncounter(Action*
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (!dynamic_cast<CastDebuffSpellOnAttackerAction*>(action))
+    //By leewheel 2026-11-04 采纳上游判定方式：从「全场是否存在魔仆小鬼(17267)」改为
+    //  「动作目标本身entry就是小鬼」，更精确且不依赖目标检索；同批上游把
+    //  CastDebuffSpellOnAttackerAction 放宽到基类 CastDebuffSpellAction，覆盖 on-attacker DoT。
+    // Also the on-attacker DoTs, which pick their own target.
+    if (!dynamic_cast<CastDebuffSpellAction*>(action))
         return 1.0f;
 
-    Unit* imp = AI_VALUE2(Unit*, "find target", "17267");
-    if (!imp)
-        return 1.0f;
-
-    return AI_VALUE(Unit*, "current target") == imp ? 0.0f : 1.0f;
+    Unit* target = action->GetTarget();
+    return target && target->GetEntry() == Id(KaraNpcs::NPC_FIENDISH_IMP) ? 0.0f : 1.0f;
 }
 
 // Shade of Aran
@@ -370,7 +428,8 @@ float NetherspiteKeepBlockingBeamMultiplier::GetValueInEncounter(Action* action)
     if (!isBlockedAction)
         return 1.0f;
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+    Unit* netherspite = GetEncounterBoss();
     if (!netherspite)
         return 1.0f;
 
@@ -404,17 +463,17 @@ float NetherspiteWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    Unit* netherspite = AI_VALUE2(Unit*, "find target", "15689");
+    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
+    Unit* netherspite = GetEncounterBoss();
     if (!netherspite || IsBanishPhase(netherspite))
         return 1.0f;
 
-    std::optional<uint32> const& waitStart =
-        KaraState(netherspite->GetInstanceId()).netherspiteDpsWaitTimer;
-    if (!waitStart)
+    KaraInstanceState const* state = FindKaraState(netherspite->GetInstanceId());
+    if (!state || !state->netherspiteDpsWaitTimer)
         return 0.0f;
 
     constexpr uint32 dpsWaitMs = 5 * IN_MILLISECONDS;
-    return getMSTimeDiff(*waitStart, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(*state->netherspiteDpsWaitTimer, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
 }
 
 // Prince Malchezaar
@@ -519,13 +578,12 @@ float NightbaneWaitForDpsMultiplier::GetValueInEncounter(Action* action)
     if (PlayerbotAI::IsMainTank(bot))
         return 1.0f;
 
-    std::optional<uint32> const& waitStart =
-        KaraState(nightbane->GetInstanceId()).nightbaneDpsWaitTimer;
-    if (!waitStart)
+    KaraInstanceState const* state = FindKaraState(nightbane->GetInstanceId());
+    if (!state || !state->nightbaneDpsWaitTimer)
         return 0.0f;
 
     constexpr uint32 dpsWaitMs = 8 * IN_MILLISECONDS;
-    return getMSTimeDiff(*waitStart, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(*state->nightbaneDpsWaitTimer, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
 }
 
 float NightbaneDisableAvoidAoeMultiplier::GetValueInEncounter(Action* action)
@@ -575,11 +633,11 @@ float NightbaneDisableMovementMultiplier::GetValueInEncounter(Action* action)
         return 0.0f;
 
     // After 35s, Nightbane goes to land, and bots freely follow their master
-    std::optional<uint32> const& flightStart =
-        KaraState(nightbane->GetInstanceId()).nightbaneFlightPhaseStartTimer;
-    if (!flightStart)
+    KaraInstanceState const* state = FindKaraState(nightbane->GetInstanceId());
+    if (!state || !state->nightbaneFlightPhaseStartTimer)
         return 0.0f;
 
     constexpr uint32 flightPhaseDurationMs = 35 * IN_MILLISECONDS;
-    return getMSTimeDiff(*flightStart, getMSTime()) < flightPhaseDurationMs ? 0.0f : 1.0f;
+    return getMSTimeDiff(*state->nightbaneFlightPhaseStartTimer, getMSTime()) <
+        flightPhaseDurationMs ? 0.0f : 1.0f;
 }

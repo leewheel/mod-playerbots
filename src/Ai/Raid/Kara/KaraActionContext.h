@@ -26,17 +26,26 @@ public:
             &RaidKarazhanActionContext::karazhan_set_tremor_totem;
 
         // Trash
-        creators["mana warp stun creature before warp breach"] =
-            &RaidKarazhanActionContext::mana_warp_stun_creature_before_warp_breach;
+        creators["mana warp stun warp breach"] =
+            &RaidKarazhanActionContext::mana_warp_stun_warp_breach;
+
+        creators["mana warp stunner hold for warp breach"] =
+            &RaidKarazhanActionContext::mana_warp_stunner_hold_for_warp_breach;
 
         // Attumen the Huntsman
-        creators["attumen the huntsman handle phase one"] =
-            &RaidKarazhanActionContext::attumen_the_huntsman_handle_phase_one;
+        creators["attumen the huntsman assist tank position unmounted"] =
+            &RaidKarazhanActionContext::attumen_the_huntsman_assist_tank_position_unmounted;
 
-        creators["attumen the huntsman handle phase two"] =
-            &RaidKarazhanActionContext::attumen_the_huntsman_handle_phase_two;
+        creators["attumen the huntsman attack midnight"] =
+            &RaidKarazhanActionContext::attumen_the_huntsman_attack_midnight;
 
-        creators["attumen the huntsman set dps timer"] =
+        creators["attumen the huntsman tank position mounted"] =
+            &RaidKarazhanActionContext::attumen_the_huntsman_tank_position_mounted;
+
+        creators["attumen the huntsman stack behind"] =
+            &RaidKarazhanActionContext::attumen_the_huntsman_stack_behind;
+
+        creators["attumen the huntsman manage dps timer"] =
             &RaidKarazhanActionContext::attumen_the_huntsman_manage_dps_timer;
 
         // Moroes
@@ -46,6 +55,9 @@ public:
         // Maiden of Virtue
         creators["maiden of virtue tank position boss"] =
             &RaidKarazhanActionContext::maiden_of_virtue_tank_position_boss;
+
+        creators["maiden of virtue move boss to stunned healer"] =
+            &RaidKarazhanActionContext::maiden_of_virtue_move_boss_to_stunned_healer;
 
         creators["maiden of virtue position ranged between pillars"] =
             &RaidKarazhanActionContext::maiden_of_virtue_position_ranged_between_pillars;
@@ -68,8 +80,8 @@ public:
         creators["wizard of oz mark target"] =
             &RaidKarazhanActionContext::wizard_of_oz_mark_target;
 
-        creators["wizard of oz scorch strawman"] =
-            &RaidKarazhanActionContext::wizard_of_oz_scorch_strawman;
+        creators["wizard of oz cast scorch on strawman"] =
+            &RaidKarazhanActionContext::wizard_of_oz_cast_scorch_on_strawman;
 
         // The Curator
         creators["the curator mark astral flare"] =
@@ -159,23 +171,35 @@ private:
     }
 
     // Trash
-    static Action* mana_warp_stun_creature_before_warp_breach(PlayerbotAI* botAI)
+    static Action* mana_warp_stun_warp_breach(PlayerbotAI* botAI)
     {
-        return new ManaWarpStunCreatureBeforeWarpBreachAction(botAI);
+        return new ManaWarpStunWarpBreachAction(botAI);
+    }
+    static Action* mana_warp_stunner_hold_for_warp_breach(PlayerbotAI* botAI)
+    {
+        return new ManaWarpStunnerHoldForWarpBreachAction(botAI);
     }
 
     // Attumen the Huntsman
-    static Action* attumen_the_huntsman_handle_phase_one(PlayerbotAI* botAI)
+    static Action* attumen_the_huntsman_assist_tank_position_unmounted(PlayerbotAI* botAI)
     {
-        return new AttumenTheHuntsmanHandlePhaseOneAction(botAI);
+        return new AttumenTheHuntsmanAssistTankPositionUnmountedAction(botAI);
     }
-    static Action* attumen_the_huntsman_handle_phase_two(PlayerbotAI* botAI)
+    static Action* attumen_the_huntsman_attack_midnight(PlayerbotAI* botAI)
     {
-        return new AttumenTheHuntsmanHandlePhaseTwoAction(botAI);
+        return new AttumenTheHuntsmanAttackMidnightAction(botAI);
+    }
+    static Action* attumen_the_huntsman_tank_position_mounted(PlayerbotAI* botAI)
+    {
+        return new AttumenTheHuntsmanTankPositionMountedAction(botAI);
+    }
+    static Action* attumen_the_huntsman_stack_behind(PlayerbotAI* botAI)
+    {
+        return new AttumenTheHuntsmanStackBehindAction(botAI);
     }
     static Action* attumen_the_huntsman_manage_dps_timer(PlayerbotAI* botAI)
     {
-        return new AttumenTheHuntsmanSetDpsTimerAction(botAI);
+        return new AttumenTheHuntsmanManageDpsTimerAction(botAI);
     }
 
     // Moroes
@@ -188,6 +212,10 @@ private:
     static Action* maiden_of_virtue_tank_position_boss(PlayerbotAI* botAI)
     {
         return new MaidenOfVirtueTankPositionBossAction(botAI);
+    }
+    static Action* maiden_of_virtue_move_boss_to_stunned_healer(PlayerbotAI* botAI)
+    {
+        return new MaidenOfVirtueMoveBossToStunnedHealerAction(botAI);
     }
     static Action* maiden_of_virtue_position_ranged_between_pillars(PlayerbotAI* botAI)
     {
@@ -219,9 +247,9 @@ private:
     {
         return new WizardOfOzMarkTargetAction(botAI);
     }
-    static Action* wizard_of_oz_scorch_strawman(PlayerbotAI* botAI)
+    static Action* wizard_of_oz_cast_scorch_on_strawman(PlayerbotAI* botAI)
     {
-        return new WizardOfOzScorchStrawmanAction(botAI);
+        return new WizardOfOzCastScorchOnStrawmanAction(botAI);
     }
 
     // The Curator

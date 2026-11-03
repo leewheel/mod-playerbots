@@ -16,6 +16,7 @@
 #include <array>
 #include <cmath>
 #include <optional>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -180,6 +181,7 @@ enum class BtNpcs : uint32
     NPC_ESSENCE_OF_DESIRE           = 23419,
 
     // Illidari Council
+    NPC_GATHIOS_THE_SHATTERER       = 22949,
     NPC_HIGH_NETHERMANCER_ZEREVOR   = 22950,
     NPC_LADY_MALANDE                = 22951,
 
@@ -211,7 +213,7 @@ enum class BtObjects : uint32
 
 inline constexpr uint32 BT_MAP_ID = 564;
 
-// DungeonEncounter.dbc encounterIndex, map 564; also each boss's ObjectData key
+// DungeonEncounter.dbc encounterIndex, map 564
 enum class BtBosses : uint32
 {
     DATA_HIGH_WARLORD_NAJENTUS      = 0,
@@ -225,21 +227,7 @@ enum class BtBosses : uint32
     DATA_ILLIDAN_STORMRAGE          = 8,
 };
 
-// ObjectData keys of the Council members and the Reliquary's essences, from black_temple.h; not in
-// the DBC
-enum class BtCreatureData : uint32
-{
-    DATA_GATHIOS_THE_SHATTERER      = 12,
-    DATA_HIGH_NETHERMANCER_ZEREVOR  = 13,
-    DATA_LADY_MALANDE               = 14,
-    DATA_VERAS_DARKSHADOW           = 15,
-    DATA_ESSENCE_OF_SUFFERING       = 19,
-    DATA_ESSENCE_OF_DESIRE          = 20,
-    DATA_ESSENCE_OF_ANGER           = 21,
-};
-
-Creature* GetBtBoss(Player* bot, BtBosses boss);
-Creature* GetBtCreature(Player* bot, BtCreatureData data);
+Unit* GetBtBoss(Player* bot, BtBosses boss);
 
 inline constexpr float PATH_STEP_DISTANCE = 3.5f;
 // How close to its assigned spot a bot has to stand to count as arrived.
@@ -256,7 +244,7 @@ void FaceUnit(Player* bot, Unit* unit);
 inline constexpr float SISTER_OF_PLEASURE_SEARCH_RADIUS = 100.0f;
 inline constexpr uint32 SISTER_OF_PLEASURE_CACHE_INTERVAL_MS = 1000;
 
-GuidVector FindSisterOfPleasureGuids(PlayerbotAI* botAI);
+GuidVector FindSisterOfPleasureGuids(Player* bot);
 Unit* GetLinkedSisterOfPain(Unit* pleasure);
 Unit* FindLinkedSisterOfPleasure(PlayerbotAI* botAI);
 Unit* GetSkulledSisterOfPain(Player* bot);
@@ -358,7 +346,7 @@ float GetSupremusFixateTimeRemaining(Unit* supremus);
 float GetSupremusCatchDistance(Player* bot, Unit* supremus);
 bool CanSupremusCatchStandingBot(Player* bot, Unit* supremus);
 bool IsSupremusVolcanoErupting(Unit* volcano);
-std::vector<SupremusHazard> FindSupremusHazards(PlayerbotAI* botAI);
+std::vector<SupremusHazard> FindSupremusHazards(Player* bot);
 std::vector<SupremusHazard> const& GetSupremusHazards(PlayerbotAI* botAI);
 bool IsInSupremusHazard(
     std::vector<SupremusHazard> const& hazards, float x, float y, SupremusHazardZone zone,
@@ -366,7 +354,7 @@ bool IsInSupremusHazard(
 float GetLineLengthInSupremusHazards(
     std::vector<SupremusHazard> const& hazards, Position const& from, Position const& to,
     SupremusHazardZone zone);
-bool CanWalkThroughSupremusFire(Player* bot);
+bool CanMoveThroughSupremusFire(Player* bot);
 bool IsSupremusReachBlockedByFire(PlayerbotAI* botAI, Unit* target, float range);
 Unit* GetSupremusFireBlockedReachTarget(PlayerbotAI* botAI);
 
@@ -381,7 +369,7 @@ inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MAX_Y = 473.5f;
 inline constexpr float SHADE_OF_AKAMA_ADD_SEARCH_RADIUS = 150.0f;
 inline constexpr uint32 SHADE_OF_AKAMA_ADD_CACHE_INTERVAL_MS = 1000;
 
-GuidVector FindShadeOfAkamaAddGuids(PlayerbotAI* botAI);
+GuidVector FindShadeOfAkamaAddGuids(Player* bot);
 Unit* GetShadeOfAkamaKillTarget(PlayerbotAI* botAI);
 
 // Teron Gorefiend
@@ -445,7 +433,7 @@ Player* GetGurtoggFelRageTarget(Unit* gurtogg);
 bool IsGurtoggFelRageTarget(Player* player);
 Position GetGurtoggFelRageMeleePosition(
     Player* bot, Unit const& gurtogg, Unit const& felRageTarget);
-float FindGurtoggSecondTankThreat(PlayerbotAI* botAI);
+float FindGurtoggSecondTankThreat(Player* bot);
 bool IsInGurtoggRectangle(
     Position const& point, Position const& center, Position const& facing, float halfWidth,
     float halfDepth);
@@ -469,7 +457,7 @@ inline constexpr uint32 RUNE_SHIELD_MAGE_PRIORITY_MS = 2 * IN_MILLISECONDS;
 inline constexpr float SPELLSTEAL_RANGE = 30.0f;
 
 // Null until the essence is in combat, about 4s after it emerges.
-Creature* GetReliquaryEssence(Player* bot, BtCreatureData essence);
+Unit* GetReliquaryEssence(Player* bot, std::string_view essence);
 bool IsSufferingFixateTank(Player* bot);
 bool IsOutOfSufferingPosition(Player* bot, Unit* suffering);
 
@@ -505,6 +493,7 @@ inline constexpr float COUNCIL_CLASS_ROLE_ANNOUNCE_DISTANCE = 125.0f;
 // 175 yd extends to the top of the steps leading to the courtyard outside the Council's room.
 inline constexpr float COUNCIL_CLASS_ROLE_REARM_DISTANCE = 175.0f;
 
+inline constexpr float COUNCIL_MEMBER_SEARCH_RADIUS = COUNCIL_CLASS_ROLE_ANNOUNCE_DISTANCE;
 inline constexpr uint32 COUNCIL_DPS_WAIT_MS = 5 * IN_MILLISECONDS; // on pull
 inline constexpr float COUNCIL_AOE_THREAT_CLEARANCE = 15.0f;
 // A minor spread is maintained by ranged when clear of hazards to avoid the next one hitting too
@@ -549,10 +538,10 @@ struct IllidariCouncilMembers
     Unit* veras = nullptr;
 };
 
-IllidariCouncilMembers GetIllidariCouncilMembers(PlayerbotAI* botAI);
+IllidariCouncilMembers GetIllidariCouncilMembers(Player* bot);
 bool UpdateIllidariCouncilClassRoleAnnouncement(PlayerbotAI* botAI);
-Player* GetZerevorMageTank(PlayerbotAI* botAI);
-bool IsZerevorMageTank(PlayerbotAI* botAI);
+Player* GetZerevorMageTank(Player* bot);
+bool IsZerevorMageTank(Player* player);
 bool HasDangerousCouncilAura(Player* bot);
 bool IsVerasVanished(Unit* veras);
 bool CanInterruptCircleOfHealing(Unit* malande);
@@ -560,7 +549,7 @@ bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin = 0.0f)
 bool IsInCouncilPatch(Position const& point, Unit* gathios, Unit* zerevor, float margin = 0.0f);
 bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor);
 bool ShouldRangedInterruptCircleOfHealing(Unit* malande, Unit* gathios, Unit* zerevor);
-bool IsZerevorOnMageTank(PlayerbotAI* botAI, Unit* zerevor);
+bool IsZerevorOnMageTank(Player* bot, Unit* zerevor);
 bool IsMageTankHealerPositionSafe(Position const& point, Player* mageTank, Unit* zerevor);
 bool FindMageTankHealerPosition(
     Player* bot, Player* mageTank, Unit* zerevor, Position& destination);
@@ -612,16 +601,15 @@ struct EyeBlastDangerArea
 };
 
 // Phase 4 positions, calculated from where Demon Form roots Illidan and the line from him through
-// the grate center. Ranged DPS slots are in spell reach of him and healer slots behind them. All
-// rows fill from the warlock tank's side first, to keep the raid close together and concentrate DPS
-// on Shadow Demons.
+// the grate center. Ranged DPS slots are in spell reach of him and healer and melee slots behind
+// them, with healer slots on the warlock tank's side. All rows fill from the warlock tank's side
+// first, to keep the raid close together and concentrate DPS on Shadow Demons.
 struct DemonFormLayout
 {
     Position warlockTankPosition;
-    Position mainTankWaitPosition;
     Position mainTankPickupPosition;
     Position mainTankStepInPosition;
-    std::vector<Position> rangedSlots;
+    std::vector<Position> rangedDpsSlots;
     std::vector<Position> healerSlots;
     std::vector<Position> meleeSlots;
 };
@@ -629,16 +617,16 @@ struct DemonFormLayout
 // A Shadow Demon and the player it has paralyzed and is moving to.
 struct ShadowDemon
 {
-    ObjectGuid demon = ObjectGuid::Empty;
-    ObjectGuid target = ObjectGuid::Empty;
+    ObjectGuid demonGuid = ObjectGuid::Empty;
+    ObjectGuid targetGuid = ObjectGuid::Empty;
 };
 
 // One Shadowfiend infection, recorded by the mechanic tracker. Once the trap is assigned, hunter is
 // empty if a Frost Trap already covered the position, or once the hunter has laid its trap.
 struct IllidanInfection
 {
-    Position infectionPosition;
-    ObjectGuid hunter = ObjectGuid::Empty;
+    Position position;
+    ObjectGuid hunterGuid = ObjectGuid::Empty;
     bool isTrapAssigned = false;
 };
 
@@ -696,26 +684,24 @@ inline constexpr float ILLIDAN_BACK_OFF_DISTANCE = 4.5f;
 // tank never triggers the back step, which can cause Illidan to step past the ring and screw up the
 // positioning (including leaving some ranged out of spell range).
 inline constexpr float ILLIDAN_ROUND_STEP_ANGLE = 60.0f * static_cast<float>(M_PI) / 180.0f;
-// On each Flame Crash, the main tank walks to the ring point this far counterclockwise of Illidan.
+// On each Flame Crash, the main tank moves to the ring point this far counterclockwise of Illidan.
 // Illidan chases once the main tank gets about 9.5 yd away, and the net result is that each move
 // is about 25° counterclockwise around the ring.
 inline constexpr float ILLIDAN_RING_LEAD_ANGLE = 35.0f * static_cast<float>(M_PI) / 180.0f;
-// A cast (Draw Soul often follows a Flame Crash) can freeze him while the tank walks to the lead
+// A cast (Draw Soul often follows a Flame Crash) can freeze him while the tank moves to the lead
 // point and stops. Once the cast ends, he closes only to 9.5 yd of it, moving only about 13°
 // along the tank ring and facing incorrectly as a result. Thus, a step that moves less than the
 // correct case (recall about 25°) is a failure, and the main tank moves again.
 inline constexpr float ILLIDAN_RING_SHORT_STEP_ANGLE = 20.0f * static_cast<float>(M_PI) / 180.0f;
 // The lead that moves Illidan away from the grate center. With Illidan under 15 yd from the center
-// and no lead running, the main tank walks out to 28 yd on its own bearing (due north after a
+// and no lead running, the main tank moves out to 28 yd on its own bearing (due north after a
 // landing), and he follows to 22 to 28 yd out.
 inline constexpr float ILLIDAN_PICKUP_DISTANCE = 15.0f;
 inline constexpr float ILLIDAN_PICKUP_LEAD_RADIUS = 28.0f;
 inline constexpr float ILLIDAN_LANDING_LEAD_ANGLE = 0.0f;
-// Once at the pull, before the first Flame Crash, the main tank leads him 62° clockwise of north
-// at 27 yd. Illidan stops about 58° clockwise, at grate angle 302. The first four Flame Crashes
-// then land at about 305°, 335°, 5°, and 35° (even at 50% damage, you are very unlikely to have
-// more than 4 and likely will not have more than 3, depending on DPS). This design is to allow
-// the Flame tanking loops in phase 2 to be clear of residual Flame Crashes, which last for 2 min.
+// At the pull, the main tank leads Illidan 62° clockwise of due north at 27 yd. This starting
+// position allows phase 1 Flame Crashes to land in positions that leave phase 2 Flame tanking loops
+// clear of residual Flame Crashes (which last for 2 min).
 inline constexpr float ILLIDAN_OPENING_LEAD_ANGLE = -62.0f * static_cast<float>(M_PI) / 180.0f;
 inline constexpr float ILLIDAN_OPENING_LEAD_RADIUS = 27.0f;
 // A generous duration that stands for the pull still being in progress. The lead should be done
@@ -732,10 +718,11 @@ inline constexpr size_t ILLIDAN_GRATE_OUTER_SLOT_COUNT = 12;
 inline constexpr float ILLIDAN_GRATE_INNER_RADIUS = 6.0f;
 inline constexpr float ILLIDAN_GRATE_OUTER_RADIUS = 12.0f;
 inline constexpr size_t ILLIDAN_RANGED_SLOT_COUNT =
-    1 + ILLIDAN_GRATE_INNER_SLOT_COUNT + ILLIDAN_GRATE_OUTER_SLOT_COUNT; // phases 3, 4, and 5
-// Phase 4: 8 healer positions (apart from the 19 ranged DPS positions) and 15 melee positions.
+    1 + ILLIDAN_GRATE_INNER_SLOT_COUNT + ILLIDAN_GRATE_OUTER_SLOT_COUNT; // phases 3 and 5
+// Phase 4: 15 ranged DPS positions, 8 healer positions, and 13 melee positions.
+inline constexpr size_t ILLIDAN_DEMON_RANGED_DPS_SLOT_COUNT = 15;
 inline constexpr size_t ILLIDAN_HEALER_SLOT_COUNT = 8;
-inline constexpr size_t ILLIDAN_MELEE_SLOT_COUNT = 15;
+inline constexpr size_t ILLIDAN_MELEE_SLOT_COUNT = 13;
 
 // Shadowfiends
 
@@ -751,12 +738,17 @@ inline constexpr float ILLIDAN_SHADOWFIEND_BIRTHER_DISTANCE = 8.0f;
 // immediately infecting an adjacent bot, and thus the birther can act again and melee can attack it
 // if it moves into melee range.
 inline constexpr float ILLIDAN_SHADOWFIEND_FINISH_HEALTH_PCT = 50.0f;
-// Shadowfiend infection position: 31 yd from the grate center (the main tank's circle), 135°
-// counterclockwise of Illidan, past Draw Soul's reach along the ring (110° at 31 yd). Also far
-// enough to be out of Shadow Blast range for a bot waiting out a residual phase 3/5 infection.
+// Phases 1, 3, and 5 position: on the main tank's ring, 135° counterclockwise of Illidan, past
+// Draw Soul's reach along the ring (110° at 31 yd). Also far enough to be out of Shadow Blast range
+// for a bot waiting out a residual phase 3/5 infection at the beginning of phase 4.
 inline constexpr float ILLIDAN_INFECTION_POSITION_DISTANCE = 31.0f;
 inline constexpr float ILLIDAN_INFECTION_POSITION_ANGLE =
     135.0f * static_cast<float>(M_PI) / 180.0f;
+// Phase 4 position, for secondary infections (phase 4 has no primary infections): 53 yd from
+// Illidan and 10° off his inward line away from the warlock tank, behind the melee.
+inline constexpr float ILLIDAN_DEMON_INFECTION_POSITION_DISTANCE = 53.0f;
+inline constexpr float ILLIDAN_DEMON_INFECTION_POSITION_ANGLE =
+    -10.0f * static_cast<float>(M_PI) / 180.0f;
 
 // Phase 2
 
@@ -796,6 +788,12 @@ inline constexpr float ILLIDAN_AURA_OF_DREAD_CLEARANCE =
     ILLIDAN_AURA_OF_DREAD_HAZARD_RADIUS + 2.0f;
 inline constexpr float ILLIDAN_SHADOW_BLAST_HAZARD_RADIUS = 20.0f;
 inline constexpr float ILLIDAN_SHADOW_BLAST_CLEARANCE = ILLIDAN_SHADOW_BLAST_HAZARD_RADIUS + 2.0f;
+// Melee hold their chase on a Shadow Demon until it is 10 yd from Illidan, so they meet it outside
+// Aura of Dread's clearance even at +15% run speed (Ret, Assassination, Unholy). Gap closers wait
+// until the Demon is 3 yd past that clearance. Sprint, Dash, and Spirit Walk are blocked.
+inline constexpr float ILLIDAN_SHADOW_DEMON_CHASE_DISTANCE = 10.0f;
+inline constexpr float ILLIDAN_SHADOW_DEMON_GAP_CLOSER_DISTANCE =
+    ILLIDAN_AURA_OF_DREAD_CLEARANCE + 3.0f;
 
 // When the Seed of Corruption and/or warlock tank Searing Pain action is active, use Life Tap when
 // below 20% mana and above 50% HP to ensure enough mana to cast the applicable spell.
@@ -806,15 +804,11 @@ inline constexpr float ILLIDAN_LIFE_TAP_HEALTH_PCT = 50.0f;
 inline constexpr float ILLIDAN_WARLOCK_POSITION_DISTANCE = 31.0f;
 inline constexpr float ILLIDAN_WARLOCK_POSITION_ANGLE = 75.0f * static_cast<float>(M_PI) / 180.0f;
 
-// The main tank waits beside other melee, on the first melee row one slot past a group of seven
-// (5 melee DPS and 2 tanks) on the side away from the warlock tank.
-inline constexpr float ILLIDAN_MAIN_TANK_WAIT_DISTANCE = 48.4f;
-inline constexpr float ILLIDAN_MAIN_TANK_WAIT_ANGLE = -35.0f * static_cast<float>(M_PI) / 180.0f;
 // 10s before the end of phase 4, the main tank moves to the pickup position in front of the raid,
 // just outside Aura of Dread and 22.5 yd from the warlock tank, to prepare for the phase 3/5
-// pickup. The walk is about 44 yards. There is no Flame Burst possible within the final 14s of
-// phase 4, and Shadow Demons are cleared by then, so this should be safe.
-inline constexpr uint32 ILLIDAN_MAIN_TANK_WALK_IN_MS = 10 * IN_MILLISECONDS;
+// pickup. The move from a melee slot is 23 to 43 yd. There is no Flame Burst possible within the
+// final 14s of phase 4, and Shadow Demons are cleared by then, so this should be safe.
+inline constexpr uint32 ILLIDAN_MAIN_TANK_MOVE_IN_MS = 10 * IN_MILLISECONDS;
 inline constexpr float ILLIDAN_PICKUP_POSITION_DISTANCE = 17.0f;
 inline constexpr float ILLIDAN_PICKUP_POSITION_ANGLE = 30.0f * static_cast<float>(M_PI) / 180.0f;
 // For the last 1.3s of phase 4, the main tank moves in on the same bearing to 9 yd from Illidan to
@@ -843,7 +837,8 @@ inline std::array const ILLIDAN_GRATE_POSITIONS = {
 };
 
 // The Flame tanks' Blaze steps, one per Flame Blast, in order. The Flame follows its tank in, so
-// each step is walked into on a line that turns the Flame Blast cone away from the grate stacks.
+// the tank moves from each step to the next on a line that turns the Flame Blast cone away from
+// the grate stacks.
 inline Position const ILLIDAN_E_GLAIVE_WAITING_POSITION = { 677.656f, 294.066f, 353.192f };
 inline std::array const ILLIDAN_E_GLAIVE_TANK_POSITIONS = {
     Position{ 657.100f, 291.200f, 354.000f },
@@ -874,50 +869,50 @@ bool IsIllidanPhaseStartWithin(Unit const& illidan, IllidanPhase phase, uint32 d
 IllidanPhase GetIllidanPhaseBefore(Unit const& illidan, IllidanPhase phase);
 bool IsIllidanDemonFormEnding(Unit const& illidan, uint32 durationMs);
 IllidanDpsHold GetIllidanHoldWindow(Unit* illidan);
-IllidanDpsHold GetIllidanDpsHold(PlayerbotAI* botAI, Unit* illidan);
+IllidanDpsHold GetIllidanDpsHold(Player* bot, Unit* illidan);
 bool IsFlameOfAzzinothDpsHeld(Unit const& illidan);
 bool IsOnlineOnIllidanThreatList(Unit const& illidan, Player* bot);
 bool IsIllidanTankAggroPending(Unit const& illidan, IllidanPhase phase);
-bool DoIllidanTanksHaveAggro(PlayerbotAI* botAI, Unit const& illidan, IllidanPhase phase);
-bool IsIllidanPickupPending(PlayerbotAI* botAI, Unit* illidan);
+bool DoIllidanTanksHaveAggro(Player* bot, Unit const& illidan, IllidanPhase phase);
+bool IsIllidanPickupPending(Player* bot, Unit* illidan);
 bool IsIllidanPickupExemptTarget(Unit* target, bool isAoe);
-bool ShouldIllidanPetsBePassive(PlayerbotAI* botAI, Unit* illidan);
-bool IsIllidanPickupChannelHeld(PlayerbotAI* botAI, Unit* illidan, Spell const& channel);
+bool ShouldIllidanPetsBePassive(Player* bot, Unit* illidan);
+bool IsIllidanPickupChannelHeld(Player* bot, Unit* illidan, Spell const& channel);
 float GetGrateAngle(Position const& position);
 Position GetRingPoint(float angle, float radius);
 Position GetIllidanSettlePosition(Unit const& illidan);
 Position GetGrateSlot(size_t index);
 DemonFormLayout GetDemonFormLayout(Unit const& illidan);
-Position GetIllidanInfectionPosition(Unit const& illidan);
-Position GetIllidanRecordedInfectionPosition(PlayerbotAI* botAI, Unit const& illidan);
+Position GetIllidanInfectionPosition(Unit const& illidan, IllidanPhase phase);
+Position GetIllidanRecordedInfectionPosition(Player* bot, Unit const& illidan, IllidanPhase phase);
 std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot);
-bool IsWestFlameOfAzzinothTank(Player* bot);
-bool IsEastFlameOfAzzinothTank(Player* bot);
-bool IsFlameOfAzzinothTank(Player* bot);
+bool IsWestFlameOfAzzinothTank(Player* player);
+bool IsEastFlameOfAzzinothTank(Player* player);
+bool IsFlameOfAzzinothTank(Player* player);
 Unit* GetAssignedFlameOfAzzinoth(Player* bot);
 bool UpdateIllidanClassRoleAnnouncement(PlayerbotAI* botAI);
-ObjectGuid GetIllidanWarlockTankGuid(Player* bot);
-Player* GetIllidanWarlockTank(PlayerbotAI* botAI);
-bool IsIllidanWarlockTank(PlayerbotAI* botAI);
+ObjectGuid GetIllidanWarlockTankGuid(Player* player);
+Player* GetIllidanWarlockTank(Player* player);
+bool IsIllidanWarlockTank(Player* bot);
 bool CastIllidanLifeTapIfLow(PlayerbotAI* botAI);
 GuidVector FindIllidanTrapHunterGuids(Player* bot);
 bool IsIllidanTrapHunterReady(Player* hunter);
-bool IsIllidanTrapHunterOnDuty(PlayerbotAI* botAI);
-bool IsExemptFromIllidanInfectionRun(PlayerbotAI* botAI, Unit* illidan, Player* player);
-bool IsIllidanInfectionPositionKeptInFlight(PlayerbotAI* botAI);
+bool IsIllidanTrapHunterOnDuty(Player* bot);
+bool IsExemptFromIllidanInfectionRun(Unit* illidan, Player* player);
+bool IsIllidanInfectionPositionKeptInFlight(Player* bot);
 bool IsFrostTrapAt(Player* bot, Position const& infectionPosition, int32 minDurationMs);
-int32 GetIllidanRangedIndex(PlayerbotAI* botAI, size_t slotCount, bool inDemonForm);
-int32 GetIllidanHealerIndex(PlayerbotAI* botAI, size_t slotCount);
-int32 GetIllidanMeleeIndex(PlayerbotAI* botAI, size_t slotCount);
-int32 GetIllidanGrateIndex(PlayerbotAI* botAI, Unit const& illidan);
-int32 GetIllidanGrateStackIndex(PlayerbotAI* botAI);
+int32 GetIllidanRangedIndex(Player* player, size_t slotCount, bool inDemonForm);
+int32 GetIllidanHealerIndex(Player* bot, size_t slotCount);
+int32 GetIllidanMeleeIndex(Player* bot, size_t slotCount);
+int32 GetIllidanGrateIndex(Player* bot, Unit const& illidan);
+int32 GetIllidanGrateStackIndex(Player* bot);
 Aura* GetParasiticShadowfiendAura(Player* player);
 bool HasParasiticShadowfiend(Player* player);
-GuidVector FindParasiticShadowfiendGuids(PlayerbotAI* botAI);
+GuidVector FindParasiticShadowfiendGuids(Player* bot);
 Unit* GetNearestParasiticShadowfiend(PlayerbotAI* botAI, Unit const& unit);
 bool IsNearNewParasiticShadowfiend(PlayerbotAI* botAI);
-GuidVector FindPlayersWithParasiticShadowfiendGuids(Player* bot);
-std::vector<ShadowDemon> FindShadowDemons(PlayerbotAI* botAI);
+GuidVector FindInfectedPlayerGuids(Player* bot);
+std::vector<ShadowDemon> FindShadowDemons(Player* bot);
 Unit* GetShadowDemonForRangedToAttack(PlayerbotAI* botAI, Unit const& from);
 Unit* GetShadowDemonMovingToWarlockTank(PlayerbotAI* botAI);
 Unit* GetShadowDemonForMeleeToAttack(PlayerbotAI* botAI, Unit const& from);

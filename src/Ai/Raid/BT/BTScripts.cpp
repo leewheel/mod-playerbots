@@ -6,7 +6,6 @@
 
 #include "AllSpellScript.h"
 #include "BTHelpers.h"
-#include "InstanceScript.h"
 #include "Pet.h"
 #include "Playerbots.h"
 #include "Spell.h"
@@ -119,16 +118,12 @@ public:
             return;
         }
 
-        InstanceScript* instance = caster->GetInstanceScript();
-        if (!instance)
-            return;
-
-        Creature* gathios = instance->GetCreature(Id(BtCreatureData::DATA_GATHIOS_THE_SHATTERER));
-        Creature* zerevor =
-            instance->GetCreature(Id(BtCreatureData::DATA_HIGH_NETHERMANCER_ZEREVOR));
         if (!ShouldRangedInterruptCircleOfHealing(
-                caster, gathios && gathios->IsAlive() ? gathios : nullptr,
-                zerevor && zerevor->IsAlive() ? zerevor : nullptr))
+                caster,
+                caster->FindNearestCreature(
+                    Id(BtNpcs::NPC_GATHIOS_THE_SHATTERER), COUNCIL_MEMBER_SEARCH_RADIUS),
+                caster->FindNearestCreature(
+                    Id(BtNpcs::NPC_HIGH_NETHERMANCER_ZEREVOR), COUNCIL_MEMBER_SEARCH_RADIUS)))
         {
             return;
         }
@@ -150,7 +145,7 @@ public:
 
             PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
             if (!botAI || !botAI->HasStrategy("blacktemple", BOT_STATE_COMBAT) ||
-                !PlayerbotAI::IsRangedDps(player) || IsZerevorMageTank(botAI) ||
+                !PlayerbotAI::IsRangedDps(player) || IsZerevorMageTank(player) ||
                 !CanInterrupt(player, caster))
             {
                 continue;
@@ -163,6 +158,9 @@ public:
 private:
     static bool CanInterrupt(Player* player, Unit* malande)
     {
+        if (!player)
+            return false;
+
         uint32 interrupt = 0;
         float range = 0.0f;
         switch (player->getClass())

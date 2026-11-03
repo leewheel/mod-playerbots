@@ -24,18 +24,27 @@ void RaidKarazhanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("karazhan set tremor totem", ACTION_RAID) }));
 
     // Trash
-    triggers.push_back(new TriggerNode("mana warp is about to explode",
-        { NextAction("mana warp stun creature before warp breach", ACTION_EMERGENCY + 6) }));
+    triggers.push_back(new TriggerNode("mana warp casts warp breach",
+        { NextAction("mana warp stun warp breach", ACTION_EMERGENCY + 6) }));
+
+    triggers.push_back(new TriggerNode("mana warp stunner should hold",
+        { NextAction("mana warp stunner hold for warp breach", ACTION_RAID) }));
 
     // Attumen the Huntsman
-    triggers.push_back(new TriggerNode("attumen the huntsman phase one active",
-        { NextAction("attumen the huntsman handle phase one", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("attumen the huntsman should be tanked",
+        { NextAction("attumen the huntsman assist tank position unmounted", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("attumen the huntsman phase two active",
-        { NextAction("attumen the huntsman handle phase two", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("attumen the huntsman midnight should be focused",
+        { NextAction("attumen the huntsman attack midnight", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("attumen the huntsman phase transition",
-        { NextAction("attumen the huntsman set dps timer", ACTION_EMERGENCY + 10) }));
+    triggers.push_back(new TriggerNode("attumen the huntsman mounted should be tanked",
+        { NextAction("attumen the huntsman tank position mounted", ACTION_RAID + 1) }));
+
+    triggers.push_back(new TriggerNode("attumen the huntsman should stack behind",
+        { NextAction("attumen the huntsman stack behind", ACTION_RAID + 1) }));
+
+    triggers.push_back(new TriggerNode("attumen the huntsman should manage dps timer",
+        { NextAction("attumen the huntsman manage dps timer", ACTION_EMERGENCY + 10) }));
 
     // Moroes
     triggers.push_back(new TriggerNode("moroes should prioritize adds",
@@ -45,10 +54,13 @@ void RaidKarazhanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("maiden of virtue should be tanked",
         { NextAction("maiden of virtue tank position boss", ACTION_RAID) }));
 
+    triggers.push_back(new TriggerNode("maiden of virtue should break repentance",
+        { NextAction("maiden of virtue move boss to stunned healer", ACTION_RAID + 1) }));
+
     triggers.push_back(new TriggerNode("maiden of virtue ranged should spread",
         { NextAction("maiden of virtue position ranged between pillars", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("maiden of virtue grounding totem consumes holy fire",
+    triggers.push_back(new TriggerNode("maiden of virtue should ground holy fire",
         { NextAction("maiden of virtue set grounding totem", ACTION_RAID) }));
 
     // The Big Bad Wolf
@@ -59,18 +71,18 @@ void RaidKarazhanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("big bad wolf position boss", ACTION_RAID) }));
 
     // Romulo and Julianne
-    triggers.push_back(new TriggerNode("romulo and julianne both bosses revived",
+    triggers.push_back(new TriggerNode("romulo and julianne should be killed together",
         { NextAction("romulo and julianne mark target", ACTION_RAID) }));
 
     // The Wizard of Oz
-    triggers.push_back(new TriggerNode("wizard of oz need target priority",
+    triggers.push_back(new TriggerNode("wizard of oz should prioritize targets",
         { NextAction("wizard of oz mark target", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("wizard of oz strawman is vulnerable to fire",
-        { NextAction("wizard of oz scorch strawman", ACTION_RAID + 1) }));
+    triggers.push_back(new TriggerNode("wizard of oz mage should burn strawman",
+        { NextAction("wizard of oz cast scorch on strawman", ACTION_RAID + 1) }));
 
     // The Curator
-    triggers.push_back(new TriggerNode("the curator astral flare spawned",
+    triggers.push_back(new TriggerNode("the curator should prioritize astral flares",
         { NextAction("the curator mark astral flare", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("the curator should be tanked",
@@ -149,6 +161,7 @@ void RaidKarazhanStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers
 {
     multipliers.push_back(new KarazhanSetTremorTotemMultiplier(botAI));
     multipliers.push_back(new KarazhanDelayDpsCooldownsMultiplier(botAI));
+    multipliers.push_back(new ManaWarpSaveStunsMultiplier(botAI));
     multipliers.push_back(new AttumenTheHuntsmanDisableAutoTargetingMultiplier(botAI));
     multipliers.push_back(new AttumenTheHuntsmanStayStackedMultiplier(botAI));
     multipliers.push_back(new AttumenTheHuntsmanWaitForDpsMultiplier(botAI));

@@ -9,6 +9,7 @@
 #include "Playerbots.h"
 #include "SSCHelpers.h"
 #include "SSCMultipliers.h"
+#include "ThreatHelpers.h"
 
 using namespace SscHelpers;
 using namespace EncounterHelpers;
@@ -293,18 +294,20 @@ namespace
 //   AppendHydrossAddTankExclusions（同时删掉 AppendTargetExclusions 里的调用点，并把触发器
 //   "hydross the unstable non-phase tank attacking" 改名为 "... off phase tank attacking"），
 //   本分支跟随上游移除，避免保留孤儿函数。辅助函数 IsHydrossAddTank 上游仍保留（SSCHelpers）。
+// By leewheel 2026-11-04 上游本批去掉未使用的 AiObjectContext* context 形参（调用点 SSCStrategy.cpp
+//   第 371 行本就是 (bot, exclusions) 两参），采纳上游签名。
 // End By leewheel
-void AppendFathomLordKarathressBlessingHoldExclusions(
-    Player* bot, AiObjectContext* context, GuidSet& exclusions)
+void AppendFathomLordKarathressBlessingHoldExclusions(Player* bot, GuidSet& exclusions)
 {
     if (PlayerbotAI::IsHeal(bot) || !PlayerbotAI::IsMelee(bot))
         return;
 
-    Unit* karathress = AI_VALUE2(Unit*, "find target", "21214");
+    //By leewheel 2026-11-04 采纳上游 FindThreatTarget 管线（英文名→entry 由 ThreatHelpers 折算）
+    Unit* karathress = FindThreatTarget(bot, "fathom-lord karathress");
     if (!karathress || karathress->GetHealthPct() > KARATHRESS_BLESSING_HOLD_HEALTH_PCT)
         return;
 
-    if (!AI_VALUE2(Unit*, "find target", "21964"))
+    if (!FindThreatTarget(bot, "fathom-guard caribdis"))
         return;
 
     if (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot))
@@ -328,10 +331,7 @@ void AppendMorogrimTidewalkerMurlocExclusions(
 
         if (!tidewalker)
         {
-            // By leewheel 2026-10-07 合并后复查：本服 creature_template 名已汉化，
-            //   英文名 "morogrim tidewalker" 在 FindTargetValue 里永远匹配不上（长度+子串比对），
-            //   必须改用 entry 21213，否则莫洛格里姆的小鱼人排除逻辑静默失效。
-            tidewalker = AI_VALUE2(Unit*, "find target", "21213");
+            tidewalker = FindThreatTarget(botAI->GetBot(), "morogrim tidewalker");
             if (!tidewalker)
                 return;
         }
@@ -342,11 +342,9 @@ void AppendMorogrimTidewalkerMurlocExclusions(
     }
 }
 
-void AppendLadyVashjGeneratorPhaseExclusions(AiObjectContext* context, GuidSet& exclusions)
+void AppendLadyVashjGeneratorPhaseExclusions(Player* bot, GuidSet& exclusions)
 {
-    // By leewheel 2026-10-07 合并后复查：同上，英文名必须换成 entry 21212（瓦斯琪女士），
-    //   否则"魔法屏障阶段把瓦斯琪排除出目标列表"这条逻辑静默失效。
-    Unit* vashj = AI_VALUE2(Unit*, "find target", "21212");
+    Unit* vashj = FindThreatTarget(bot, "lady vashj");
     if (vashj && vashj->HasAura(Id(SscSpells::SPELL_MAGIC_BARRIER)))
         exclusions.insert(vashj->GetGUID());
 }
@@ -360,7 +358,7 @@ void RaidSscStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExc
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    AppendFathomLordKarathressBlessingHoldExclusions(bot, context, exclusions);
+    AppendFathomLordKarathressBlessingHoldExclusions(bot, exclusions);
     AppendMorogrimTidewalkerMurlocExclusions(botAI, context, exclusions);
-    AppendLadyVashjGeneratorPhaseExclusions(context, exclusions);
+    AppendLadyVashjGeneratorPhaseExclusions(bot, exclusions);
 }

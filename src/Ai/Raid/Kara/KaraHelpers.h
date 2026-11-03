@@ -15,12 +15,14 @@
 #include "Position.h"
 #include <array>
 #include <optional>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <vector>
 
 class Creature;
 class Player;
+class PlayerbotAI;
 class Unit;
 
 namespace KaraHelpers
@@ -34,6 +36,9 @@ constexpr uint32 Id(T value)
 
 enum class KaraSpells : uint32
 {
+    // Trash
+    SPELL_WARP_BREACH             = 29919,
+
     // Maiden of Virtue
     SPELL_REPENTANCE              = 29511,
 
@@ -76,7 +81,7 @@ enum class KaraNpcs : uint32
     NPC_MANA_WARP                   = 16530,
 
     // Attumen the Huntsman
-    NPC_ATTUMEN_THE_HUNTSMAN        = 16152, // Mounted version
+    NPC_ATTUMEN_THE_HUNTSMAN_MOUNTED = 16152,
 
     // Moroes
     NPC_LADY_KEIRA_BERRYBUCK        = 17007,
@@ -104,6 +109,9 @@ enum class KaraNpcs : uint32
     NPC_TERESTIAN_ILLHOOF         = 15688,
     NPC_DEMON_CHAINS              = 17248,
     NPC_KILREK                    = 17229,
+    // By leewheel 2026-11-04 合并 brighton the-lab(740e85602)：上游本批新增魔仆小鬼 entry；
+    //   上游同一块把 15688/17229/17248 又重列了一遍（与本核既有完全同值），只取新增项，避免 enum 重定义。
+    NPC_FIENDISH_IMP              = 17267,
     // End By leewheel
 
     // The Curator
@@ -130,8 +138,7 @@ enum class KaraNpcs : uint32
 // Shared
 inline constexpr uint32 KARA_MAP_ID = 532;
 
-// DungeonEncounter.dbc encounterIndex, map 532; also each boss's ObjectData key, but only
-// Attumen (unmounted), Terestian, Aran and Nightbane are registered
+// DungeonEncounter.dbc encounterIndex, map 532
 enum class KaraBosses : uint32
 {
     DATA_ATTUMEN                    = 0,
@@ -147,33 +154,71 @@ enum class KaraBosses : uint32
     DATA_NIGHTBANE                  = 10,
 };
 
-// ObjectData keys from karazhan.h; not in the DBC
-enum class KaraCreatureData : uint32
-{
-    DATA_MIDNIGHT                   = 32,
-    DATA_DOROTHEE                   = 38,
-    DATA_ROMULO                     = 39,
-    DATA_JULIANNE                   = 40,
-    DATA_ROAR                       = 41,
-    DATA_STRAWMAN                   = 42,
-    DATA_TINHEAD                    = 43,
-    DATA_TITO                       = 44,
-};
-
-Creature* GetKaraBoss(Player* bot, KaraBosses boss);
-Creature* GetKaraCreature(Player* bot, KaraCreatureData data);
-// Barnes spawns the Opera cast non-attackable and the play's release clears the flag, so an
+Unit* GetKaraBoss(Player* bot, KaraBosses boss);
+// Barnes spawns the Opera cast non-attackable, and the play's release clears the flag, so an
 // actor counts only once released, as the script itself tests.
-Creature* GetOperaActor(Player* bot, KaraCreatureData data);
+Unit* GetOperaActor(Player* bot, std::string_view name);
 
 bool IsSafePosition (float x, float y, std::vector<Unit*> const& hazards, float hazardRadius);
 
+// Shamans drop Tremor Totem while a Spectral Charger, the Big Bad Wolf, Dorothee or Roar is
+// fighting, or Nightbane is on the ground.
+bool IsKarazhanFearCasterActive(Player* bot);
+
+// Trash
+
+// A stun stops Warp Breach for good if it lands during the 1 s cast; interrupts do nothing.
+// Each stunner waits its own delay after the cast starts, so the first stun ends that cast and the
+// others go to a warp still casting.
+inline constexpr uint32 WARP_BREACH_MIN_REACTION_MS = 200;
+inline constexpr uint32 WARP_BREACH_MAX_REACTION_MS = 600;
+// From here a stunner on the warp casts nothing else, keeping its global cooldown free.
+inline constexpr float MANA_WARP_STUNNER_HOLD_HEALTH_PCT = 15.0f;
+// Stun reaches, centre to centre
+inline constexpr float MELEE_STUN_REACH = 5.0f;
+inline constexpr float HAMMER_OF_JUSTICE_REACH = 10.0f;
+inline constexpr float SHADOWFURY_REACH = 30.0f;
+inline constexpr float WAR_STOMP_RADIUS = 8.0f;
+// A stunner out of reach walks to this far inside it.
+inline constexpr float MANA_WARP_STUN_APPROACH_MARGIN = 1.0f;
+// The nine Mana Warps stand in four packs within 30 yd of this point.
+inline Position const MANA_WARP_PACKS_CENTER = { -11326.0f, -1781.0f, 179.8f };
+inline constexpr float MANA_WARP_PACKS_RADIUS = 60.0f;
+
+bool IsNearManaWarpPacks(Player* bot);
+// Stunners: Hammer of Justice, Concussion Blow or Shockwave, Bash, Kidney Shot, Maim, Shadowfury,
+// War Stomp. 0 for a bot with none.
+float GetManaWarpStunReach(Player* bot);
+// Rogues and cat druids stun only their target, which holds their combo points.
+Unit* GetManaWarpToStun(PlayerbotAI* botAI, uint32 reactionMs);
+// Tanks keep tanking and stun without holding.
+Unit* GetManaWarpToHoldFor(PlayerbotAI* botAI);
+
 // Attumen the Huntsman
 inline Position const ATTUMEN_TANK_POSITION = { -11123.762f, -1926.619f, 49.215f };
-Unit* GetAttumenMounted(Player* bot);
+// Shadow Cleave jumps from the tank to two more players within 10 yd in front of Attumen.
+inline constexpr float SHADOW_CLEAVE_JUMP_RADIUS = 10.0f;
+// Intangible Presence curses every player within 10 yd of Attumen.
+inline constexpr float INTANGIBLE_PRESENCE_RADIUS = 10.0f;
+inline constexpr float ATTUMEN_HAZARD_CLEARANCE = 1.0f;
+// Behind mounted Attumen, centre to centre. Charge goes to a player more than 8 yd away edge to
+// edge (11 yd centre to centre), and Auto Shot fails within 5 yd.
+inline constexpr float ATTUMEN_STACK_DISTANCE = 2.0f;
+inline constexpr float ATTUMEN_HUNTER_STACK_DISTANCE = 8.0f;
+inline constexpr float ATTUMEN_STACK_TOLERANCE = 1.5f;
+
+// Midnight turns invisible when mounted Attumen is summoned.
+bool IsAttumenMounted(Unit const& midnight);
+// Both Attumens share a name. For up to 1 s after the merge, the unmounted one can be found
+// instead, and this returns null.
+Unit* GetMountedAttumen(Player* bot);
 
 // Maiden of Virtue
-inline Position const MAIDEN_OF_VIRTUE_TANK_POSITION = { -10945.881f, -2103.782f, 92.712f };
+// Her spawn point; the ranged spots are a ring around it.
+inline Position const MAIDEN_OF_VIRTUE_POSITION = { -10945.881f, -2103.782f, 92.712f };
+inline constexpr float MAIDEN_OF_VIRTUE_POSITION_TOLERANCE = 1.5f;
+// She stops 6.8 yd from a tank she follows, so the tank aims this far past her spot.
+inline constexpr float MAIDEN_OF_VIRTUE_TANK_LEAD_DISTANCE = 7.0f;
 inline std::array const MAIDEN_OF_VIRTUE_RANGED_POSITIONS = {
     Position{ -10959.242f, -2119.617f, 92.180f }, // SE (opposite entrance)
     Position{ -10944.495f, -2123.857f, 92.180f }, // E
@@ -184,6 +229,12 @@ inline std::array const MAIDEN_OF_VIRTUE_RANGED_POSITIONS = {
     Position{ -10947.590f, -2082.815f, 92.180f }, // W
     Position{ -10933.089f, -2088.502f, 92.180f }, // NW (entrance)
 };
+// Holy Ground hits a player within 12 yd of her plus the player's reach, and breaks Repentance.
+inline constexpr float HOLY_GROUND_RADIUS = 12.0f;
+inline constexpr float MAIDEN_REPENTANCE_BREAK_CLEARANCE = 1.0f;
+
+// Repentance stuns every healer at once; the tank takes her to the nearest one.
+Player* GetNearestRepentantHealer(Player* bot, Unit const& maiden);
 
 // The Big Bad Wolf
 inline Position const BIG_BAD_WOLF_TANK_POSITION = { -10913.391f, -1773.508f, 90.477f };
@@ -194,18 +245,31 @@ inline std::array const BIG_BAD_WOLF_RUN_POSITIONS = {
     Position{ -10913.391f, -1773.508f, 90.477f },
 };
 
+// Romulo and Julianne
+// Once one is down, the other must die within 10 s. The skull moves to the healthier one only
+// once it is this far ahead.
+inline constexpr float ROMULO_AND_JULIANNE_HEALTH_GAP_PCT = 10.0f;
+
 // Wizard of Oz
-// By leewheel 2026-08-29 entry化：绿野仙踪目标改用entry查找(经acore原版库3309验证)
+inline constexpr float SCORCH_RANGE = 30.0f;
+// A mage out of range walks to this far inside it; Strawman moves fast.
+inline constexpr float SCORCH_APPROACH_MARGIN = 2.0f;
+// By leewheel 2026-11-04 合并 brighton the-lab(740e85602)：上游本批新增 SCORCH_RANGE /
+//   SCORCH_APPROACH_MARGIN（稻草人灼烧距离），照上游保留。下面 OZ_TARGETS 仍是英文字面量，
+//   由 GetOperaActor → FindThreatTarget 统一在 ThreatHelpers 登记表折算成 entry
+//   （本核 2026-08-29 的 entry 化不改调用点，改在 helper，避免每轮合并重解 190+ 冲突）。
 inline std::array const OZ_TARGETS = {
-    KaraCreatureData::DATA_DOROTHEE,
-    KaraCreatureData::DATA_TITO,
-    KaraCreatureData::DATA_ROAR,
-    KaraCreatureData::DATA_STRAWMAN,
-    KaraCreatureData::DATA_TINHEAD,
+    "dorothee",
+    "tito",
+    "roar",
+    "strawman",
+    "tinhead",
 };
 // End By leewheel
 
 // The Curator
+// Arcing Sear jumps 13 yd centre to centre between players, so this spread only cuts its jumps.
+inline constexpr float THE_CURATOR_RANGED_SPREAD_DISTANCE = 7.0f;
 inline Position const THE_CURATOR_TANK_POSITION = { -11139.463f, -1884.645f, 165.765f };
 
 // Shade of Aran
@@ -263,8 +327,7 @@ struct KaraInstanceState
 };
 
 KaraInstanceState& KaraState(uint32 instanceId);
-// Every bot runs this one in the reset; only the mechanic tracker runs KaraResetInstance().
-bool KaraResetBeamBlockers(uint32 instanceId);
+KaraInstanceState const* FindKaraState(uint32 instanceId);
 bool KaraResetInstance(uint32 instanceId);
 
 }

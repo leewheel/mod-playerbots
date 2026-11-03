@@ -39,7 +39,7 @@ public:
 protected:
     virtual float GetValueInEncounter(Action* action) = 0;
 
-    Creature* GetEncounterBoss()
+    Unit* GetEncounterBoss()
     {
         return _boss ? KaraHelpers::GetKaraBoss(bot, *_boss) : nullptr;
     }
@@ -64,6 +64,16 @@ public:
 
 protected:
     float GetValueInEncounter(Action* action) override;
+};
+
+// Trash
+
+class ManaWarpSaveStunsMultiplier : public Multiplier
+{
+public:
+    ManaWarpSaveStunsMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "mana warp save stuns") {}
+    float GetValue(Action* action) override;
 };
 
 // Attumen the Huntsman

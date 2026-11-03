@@ -35,44 +35,63 @@ public:
 
 // Trash
 
-class ManaWarpStunCreatureBeforeWarpBreachAction : public AttackAction
+class ManaWarpStunWarpBreachAction : public Action
 {
 public:
-    ManaWarpStunCreatureBeforeWarpBreachAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "mana warp stun creature before warp breach") {}
+    ManaWarpStunWarpBreachAction(PlayerbotAI* botAI);
+    bool Execute(Event event) override;
+
+private:
+    uint32 const _reactionMs; // drawn once per bot
+};
+
+class ManaWarpStunnerHoldForWarpBreachAction : public MovementAction
+{
+public:
+    ManaWarpStunnerHoldForWarpBreachAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "mana warp stunner hold for warp breach") {}
     bool Execute(Event event) override;
 };
 
 // Attumen the Huntsman
 
-class AttumenTheHuntsmanHandlePhaseOneAction : public AttackAction
+class AttumenTheHuntsmanAssistTankPositionUnmountedAction : public AttackAction
 {
 public:
-    AttumenTheHuntsmanHandlePhaseOneAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "attumen the huntsman handle phase one") {}
+    AttumenTheHuntsmanAssistTankPositionUnmountedAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "attumen the huntsman assist tank position unmounted") {}
     bool Execute(Event event) override;
-
-private:
-    bool AssistTankMoveAttumenFromGroup(Unit* midnight, Unit* attumen);
 };
 
-class AttumenTheHuntsmanHandlePhaseTwoAction : public AttackAction
+class AttumenTheHuntsmanAttackMidnightAction : public AttackAction
 {
 public:
-    AttumenTheHuntsmanHandlePhaseTwoAction(PlayerbotAI* botAI)
-        : AttackAction(botAI, "attumen the huntsman handle phase two") {}
+    AttumenTheHuntsmanAttackMidnightAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "attumen the huntsman attack midnight") {}
     bool Execute(Event event) override;
-
-private:
-    bool CurrentTankPositionAttumen(Unit* attumen);
-    bool StackBehindAttumen(Unit* attumen);
 };
 
-class AttumenTheHuntsmanSetDpsTimerAction : public Action
+class AttumenTheHuntsmanTankPositionMountedAction : public AttackAction
 {
 public:
-    AttumenTheHuntsmanSetDpsTimerAction(PlayerbotAI* botAI)
-        : Action(botAI, "attumen the huntsman set dps timer") {}
+    AttumenTheHuntsmanTankPositionMountedAction(PlayerbotAI* botAI)
+        : AttackAction(botAI, "attumen the huntsman tank position mounted") {}
+    bool Execute(Event event) override;
+};
+
+class AttumenTheHuntsmanStackBehindAction : public MovementAction
+{
+public:
+    AttumenTheHuntsmanStackBehindAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "attumen the huntsman stack behind") {}
+    bool Execute(Event event) override;
+};
+
+class AttumenTheHuntsmanManageDpsTimerAction : public Action
+{
+public:
+    AttumenTheHuntsmanManageDpsTimerAction(PlayerbotAI* botAI)
+        : Action(botAI, "attumen the huntsman manage dps timer") {}
     bool Execute(Event event) override;
 };
 
@@ -94,9 +113,14 @@ public:
     MaidenOfVirtueTankPositionBossAction(PlayerbotAI* botAI)
         : AttackAction(botAI, "maiden of virtue tank position boss") {}
     bool Execute(Event event) override;
+};
 
-private:
-    bool MoveBossToStunnedHealer(Player* healer);
+class MaidenOfVirtueMoveBossToStunnedHealerAction : public MovementAction
+{
+public:
+    MaidenOfVirtueMoveBossToStunnedHealerAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "maiden of virtue move boss to stunned healer") {}
+    bool Execute(Event event) override;
 };
 
 class MaidenOfVirtuePositionRangedBetweenPillarsAction : public MovementAction
@@ -163,11 +187,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class WizardOfOzScorchStrawmanAction : public Action
+class WizardOfOzCastScorchOnStrawmanAction : public MovementAction
 {
 public:
-    WizardOfOzScorchStrawmanAction(PlayerbotAI* botAI)
-        : Action(botAI, "wizard of oz scorch strawman") {}
+    WizardOfOzCastScorchOnStrawmanAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "wizard of oz cast scorch on strawman") {}
     bool Execute(Event event) override;
 };
 
@@ -251,13 +275,12 @@ public:
     bool Execute(Event event) override;
     bool ResetRedBeamState()
     {
-        if (!_redBeamTimerWasSet)
-            return false;
+        bool const wasSet = _redBeamTimerWasSet || _lastBeamMoveSideways || _wasBlockingRedBeam;
         _redBeamMoveTimer = 0;
         _lastBeamMoveSideways = false;
         _wasBlockingRedBeam = false;
         _redBeamTimerWasSet = false;
-        return true;
+        return wasSet;
     }
 
 private:

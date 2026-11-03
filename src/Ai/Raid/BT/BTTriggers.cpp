@@ -10,6 +10,7 @@
 #include "Playerbots.h"
 #include "SharedDefines.h"
 #include "Spell.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -36,7 +37,7 @@ bool BlackTempleHunterShouldMisdirectTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* boss = _target ? GetBtCreature(bot, *_target) : GetEncounterBoss();
+    Unit* boss = _target ? FindThreatTarget(bot, *_target) : GetEncounterBoss();
     return boss && boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
 }
 
@@ -190,7 +191,7 @@ bool SupremusNearFireTrigger::IsActiveInEncounter()
     if (!GetEncounterBoss())
         return false;
 
-    if (bot->isMoving() && CanWalkThroughSupremusFire(bot))
+    if (bot->isMoving() && CanMoveThroughSupremusFire(bot))
         return false;
 
     return IsInSupremusHazard(
@@ -340,17 +341,17 @@ bool ReliquaryOfSoulsHunterShouldMisdirectTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* desire = GetReliquaryEssence(bot, BtCreatureData::DATA_ESSENCE_OF_DESIRE);
+    Unit* desire = GetReliquaryEssence(bot, "essence of desire");
     if (desire && desire->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
         return true;
 
-    Unit* anger = GetReliquaryEssence(bot, BtCreatureData::DATA_ESSENCE_OF_ANGER);
+    Unit* anger = GetReliquaryEssence(bot, "essence of anger");
     return anger && anger->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
 }
 
 bool ReliquaryOfSoulsShouldPositionForSufferingTrigger::IsActiveInEncounter()
 {
-    Unit* suffering = GetReliquaryEssence(bot, BtCreatureData::DATA_ESSENCE_OF_SUFFERING);
+    Unit* suffering = GetReliquaryEssence(bot, "essence of suffering");
     return suffering && !suffering->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) &&
         IsOutOfSufferingPosition(bot, suffering);
 }
@@ -364,7 +365,7 @@ bool ReliquaryOfSoulsHealersShouldAttackSufferingTrigger::IsActiveInEncounter()
     if (bot->getClass() == CLASS_PRIEST && botAI->HasStrategy("disc", BOT_STATE_COMBAT))
         return false;
 
-    Unit* suffering = GetReliquaryEssence(bot, BtCreatureData::DATA_ESSENCE_OF_SUFFERING);
+    Unit* suffering = GetReliquaryEssence(bot, "essence of suffering");
     return suffering && !suffering->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
 }
 
@@ -373,7 +374,7 @@ bool ReliquaryOfSoulsEssenceOfDesireHasRuneShieldTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_MAGE)
         return false;
 
-    Unit* desire = GetReliquaryEssence(bot, BtCreatureData::DATA_ESSENCE_OF_DESIRE);
+    Unit* desire = GetReliquaryEssence(bot, "essence of desire");
     return desire && desire->HasAura(Id(BtSpells::SPELL_RUNE_SHIELD));
 }
 
@@ -382,7 +383,7 @@ bool ReliquaryOfSoulsEssenceOfDesireCastingDeadenTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_WARRIOR || !PlayerbotAI::IsTank(bot))
         return false;
 
-    Unit* desire = GetReliquaryEssence(bot, BtCreatureData::DATA_ESSENCE_OF_DESIRE);
+    Unit* desire = GetReliquaryEssence(bot, "essence of desire");
     if (!desire)
         return false;
 
@@ -435,7 +436,7 @@ bool IllidariCouncilGathiosShouldBeTankedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!GetIllidariCouncilMembers(botAI).gathios)
+    if (!GetIllidariCouncilMembers(bot).gathios)
         return false;
 
     return PlayerbotAI::IsMainTank(bot);
@@ -446,7 +447,7 @@ bool IllidariCouncilGathiosCastingJudgementOfCommandTrigger::IsActiveInEncounter
     if (bot->getClass() != CLASS_WARRIOR || !PlayerbotAI::IsTank(bot))
         return false;
 
-    Unit* gathios = GetIllidariCouncilMembers(botAI).gathios;
+    Unit* gathios = GetIllidariCouncilMembers(bot).gathios;
     if (!gathios || !gathios->HasAura(Id(BtSpells::SPELL_SEAL_OF_COMMAND)))
         return false;
 
@@ -463,10 +464,10 @@ bool IllidariCouncilMalandeCastingCircleOfHealingTrigger::IsActiveInEncounter()
         return false;
     }
 
-    if (!PlayerbotAI::IsDps(bot) || IsZerevorMageTank(botAI))
+    if (!PlayerbotAI::IsDps(bot) || IsZerevorMageTank(bot))
         return false;
 
-    IllidariCouncilMembers const members = GetIllidariCouncilMembers(botAI);
+    IllidariCouncilMembers const members = GetIllidariCouncilMembers(bot);
     if (!members.malande || !members.gathios || !members.zerevor)
         return false;
 
@@ -481,7 +482,7 @@ bool IllidariCouncilMalandeCastingCircleOfHealingTrigger::IsActiveInEncounter()
 
 bool IllidariCouncilMalandeShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsTank(bot) && GetIllidariCouncilMembers(botAI).malande &&
+    return PlayerbotAI::IsTank(bot) && GetIllidariCouncilMembers(bot).malande &&
         PlayerbotAI::IsAssistTankOfIndex(bot, 0, false);
 }
 
@@ -490,7 +491,7 @@ bool IllidariCouncilVerasShouldBeTankedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    Unit* veras = GetIllidariCouncilMembers(botAI).veras;
+    Unit* veras = GetIllidariCouncilMembers(bot).veras;
     if (!veras || IsVerasVanished(veras))
         return false;
 
@@ -499,7 +500,7 @@ bool IllidariCouncilVerasShouldBeTankedTrigger::IsActiveInEncounter()
 
 bool IllidariCouncilZerevorShouldBeTankedByMageTrigger::IsActiveInEncounter()
 {
-    return IsZerevorMageTank(botAI) && GetIllidariCouncilMembers(botAI).zerevor;
+    return IsZerevorMageTank(bot) && GetIllidariCouncilMembers(bot).zerevor;
 }
 
 bool IllidariCouncilMageTankHealerShouldRepositionTrigger::IsActiveInEncounter()
@@ -509,14 +510,14 @@ bool IllidariCouncilMageTankHealerShouldRepositionTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsHeal(bot))
         return false;
 
-    Unit* zerevor = GetIllidariCouncilMembers(botAI).zerevor;
+    Unit* zerevor = GetIllidariCouncilMembers(bot).zerevor;
     if (!zerevor)
         return false;
 
-    if (!PlayerbotAI::IsAssistHealOfIndex(bot, 0, true) || !IsZerevorOnMageTank(botAI, zerevor))
+    if (!PlayerbotAI::IsAssistHealOfIndex(bot, 0, true) || !IsZerevorOnMageTank(bot, zerevor))
         return false;
 
-    Player* mageTank = GetZerevorMageTank(botAI);
+    Player* mageTank = GetZerevorMageTank(bot);
     return !IsMageTankHealerPositionSafe(bot->GetPosition(), mageTank, zerevor) ||
         !bot->IsWithinLOSInMap(mageTank);
 }
@@ -526,10 +527,10 @@ bool IllidariCouncilRangedShouldSpreadTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    if (!GetIllidariCouncilMembers(botAI).zerevor)
+    if (!GetIllidariCouncilMembers(bot).zerevor)
         return false;
 
-    if (IsZerevorMageTank(botAI) || PlayerbotAI::IsAssistHealOfIndex(bot, 0, true))
+    if (IsZerevorMageTank(bot) || PlayerbotAI::IsAssistHealOfIndex(bot, 0, true))
         return false;
 
     return !HasDangerousCouncilAura(bot) &&
@@ -548,13 +549,13 @@ bool IllidariCouncilPetShouldSwitchTargetTrigger::IsActiveInEncounter()
 
 bool IllidariCouncilShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 {
-    IllidariCouncilMembers const members = GetIllidariCouncilMembers(botAI);
+    IllidariCouncilMembers const members = GetIllidariCouncilMembers(bot);
     if (!members.gathios)
         return false;
 
     if ((PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot)) ||
         PlayerbotAI::IsAssistTankOfIndex(bot, 0, false) ||
-        IsZerevorMageTank(botAI))
+        IsZerevorMageTank(bot))
     {
         return false;
     }
@@ -568,7 +569,7 @@ bool IllidariCouncilShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 
 bool IllidariCouncilShouldManageDpsTimerTrigger::IsActiveInEncounter()
 {
-    return IsMechanicTrackerBot(bot, BT_MAP_ID) && GetIllidariCouncilMembers(botAI).gathios;
+    return IsMechanicTrackerBot(bot, BT_MAP_ID) && GetIllidariCouncilMembers(bot).gathios;
 }
 
 // Illidan Stormrage <The Betrayer>
@@ -623,7 +624,7 @@ bool IllidanStormrageShouldBeTankedTrigger::IsActiveInEncounter()
 // Frost Trap.
 bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncounter()
 {
-    if (!HasParasiticShadowfiend(bot) && !IsIllidanTrapHunterOnDuty(botAI))
+    if (!HasParasiticShadowfiend(bot) && !IsIllidanTrapHunterOnDuty(bot))
         return false;
 
     Unit* illidan = GetEncounterBoss();
@@ -634,10 +635,10 @@ bool IllidanStormrageParasiticShadowfiendOnGroupMemberTrigger::IsActiveInEncount
     if (phase == IllidanPhase::None)
         return false;
 
-    if (phase == IllidanPhase::Flying && !IsIllidanInfectionPositionKeptInFlight(botAI))
+    if (phase == IllidanPhase::Flying && !IsIllidanInfectionPositionKeptInFlight(bot))
         return false;
 
-    return !IsExemptFromIllidanInfectionRun(botAI, illidan, bot);
+    return !IsExemptFromIllidanInfectionRun(illidan, bot);
 }
 
 // The mechanic tracker records each new infection while there is an infection position, keeps
@@ -651,17 +652,21 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
     if (!illidan)
         return false;
 
-    auto const& infected = context->GetValue<GuidVector>(
-        "illidan stormrage players with parasitic shadowfiend")->RefGet();
+    auto const& infectedGuids = context
+        ->GetValue<GuidVector>("illidan stormrage infected players")->RefGet();
     IllidanPhase const phase = GetIllidanPhase(illidan);
     bool const hasInfectionPosition = phase != IllidanPhase::None && phase != IllidanPhase::Flying;
     auto const* infections = FindIllidanInfections(bot->GetInstanceId());
+
     if (infections)
     {
         for (auto const& [player, infection] : *infections)
         {
-            if (std::find(infected.begin(), infected.end(), player) == infected.end())
+            if (std::find(
+                    infectedGuids.begin(), infectedGuids.end(), player) == infectedGuids.end())
+            {
                 return true;
+            }
 
             if (!hasInfectionPosition)
                 continue;
@@ -669,21 +674,20 @@ bool IllidanStormrageShouldTrackInfectionsTrigger::IsActiveInEncounter()
             if (!infection.isTrapAssigned)
                 return true;
 
-            if (infection.hunter.IsEmpty())
+            if (infection.hunterGuid.IsEmpty())
                 continue;
 
-            if (IsExemptFromIllidanInfectionRun(
-                    botAI, illidan, ObjectAccessor::GetPlayer(*bot, player)) ||
-                !IsIllidanTrapHunterReady(ObjectAccessor::GetPlayer(*bot, infection.hunter)))
+            if (IsExemptFromIllidanInfectionRun(illidan, ObjectAccessor::GetPlayer(*bot, player)) ||
+                !IsIllidanTrapHunterReady(ObjectAccessor::GetPlayer(*bot, infection.hunterGuid)))
             {
                 return true;
             }
         }
     }
 
-    for (ObjectGuid const& guid : infected)
+    for (auto const& infectedGuid : infectedGuids)
     {
-        if (hasInfectionPosition && (!infections || !infections->contains(guid)))
+        if (hasInfectionPosition && (!infections || !infections->contains(infectedGuid)))
             return true;
     }
 
@@ -699,7 +703,7 @@ bool IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger::IsActiveInEncounter(
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Flying)
         return false;
 
-    return IsFlameOfAzzinothTank(bot) && !IsIllidanInfectionPositionKeptInFlight(botAI);
+    return IsFlameOfAzzinothTank(bot) && !IsIllidanInfectionPositionKeptInFlight(bot);
 }
 
 bool IllidanStormragePetsDieToHazardsTrigger::IsActiveInEncounter()
@@ -712,7 +716,7 @@ bool IllidanStormragePetsDieToHazardsTrigger::IsActiveInEncounter()
     if (!illidan)
         return false;
 
-    return ShouldIllidanPetsBePassive(botAI, illidan) != pet->HasReactState(REACT_PASSIVE);
+    return ShouldIllidanPetsBePassive(bot, illidan) != pet->HasReactState(REACT_PASSIVE);
 }
 
 // Pets are ideal for killing Shadowfiends because they cannot be infected.
@@ -787,7 +791,7 @@ bool IllidanStormrageShouldPositionAboveGrateTrigger::IsActiveInEncounter()
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Flying)
         return false;
 
-    if (IsIllidanInfectionPositionKeptInFlight(botAI))
+    if (IsIllidanInfectionPositionKeptInFlight(bot))
         return false;
 
     if (!PlayerbotAI::IsTank(bot))
@@ -898,13 +902,13 @@ bool IllidanStormrageShouldStopShootingTrigger::IsActiveInEncounter()
     if (!illidan)
         return false;
 
-    if (channel && IsIllidanPickupChannelHeld(botAI, illidan, *channel))
+    if (channel && IsIllidanPickupChannelHeld(bot, illidan, *channel))
         return true;
 
-    ObjectGuid const guid = illidan->GetGUID();
-    bool const isOnIllidan = (shot && shot->m_targets.GetUnitTargetGUID() == guid) ||
-        (channel && channel->m_targets.GetUnitTargetGUID() == guid);
-    return isOnIllidan && GetIllidanDpsHold(botAI, illidan) != IllidanDpsHold::None;
+    ObjectGuid const illidanGuid = illidan->GetGUID();
+    bool const isOnIllidan = (shot && shot->m_targets.GetUnitTargetGUID() == illidanGuid) ||
+        (channel && channel->m_targets.GetUnitTargetGUID() == illidanGuid);
+    return isOnIllidan && GetIllidanDpsHold(bot, illidan) != IllidanDpsHold::None;
 }
 
 bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
@@ -920,7 +924,7 @@ bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
 
     if (phase == IllidanPhase::Demon)
     {
-        if (IsIllidanWarlockTank(botAI))
+        if (IsIllidanWarlockTank(bot))
             return false;
 
         if (!PlayerbotAI::IsHeal(bot) && GetShadowDemonMovingToWarlockTank(botAI))
@@ -933,7 +937,7 @@ bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()
         phase == IllidanPhase::Maiev;
 }
 
-// A Demon fixated on the warlock tank is a 5-alarm fire so all ranged dps are freed from their
+// A Demon fixated on the warlock tank is a 5-alarm fire so all ranged DPS are freed from their
 // assigned positions to move into range to attack it.
 bool IllidanStormrageRangedShouldReachShadowDemonTrigger::IsActiveInEncounter()
 {
@@ -944,7 +948,7 @@ bool IllidanStormrageRangedShouldReachShadowDemonTrigger::IsActiveInEncounter()
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return false;
 
-    if (HasParasiticShadowfiend(bot) || IsIllidanWarlockTank(botAI))
+    if (HasParasiticShadowfiend(bot) || IsIllidanWarlockTank(bot))
         return false;
 
     Unit* demon = GetShadowDemonMovingToWarlockTank(botAI);
@@ -975,7 +979,7 @@ bool IllidanStormrageWarlockShouldTankDemonFormTrigger::IsActiveInEncounter()
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return false;
 
-    return IsIllidanWarlockTank(botAI);
+    return IsIllidanWarlockTank(bot);
 }
 
 // Every warlock, the tank included, casts Seed of Corruption on the Shadow Demons while two or more
@@ -1020,7 +1024,7 @@ bool IllidanStormrageShouldAssignTargetPriorityTrigger::IsActiveInEncounter()
         return true;
 
     return phase == IllidanPhase::Demon &&
-        !IsIllidanDemonFormEnding(*illidan, ILLIDAN_MAIN_TANK_WALK_IN_MS);
+        !IsIllidanDemonFormEnding(*illidan, ILLIDAN_MAIN_TANK_MOVE_IN_MS);
 }
 
 // By leewheel 2026-10-22 与上游 brighton 合并：IllidanStormrageMaievPlacedCageTrapTrigger 由上游

@@ -13,9 +13,9 @@ INSERT INTO ai_playerbot_texts (id, name, text, say_type, reply_type, text_loc1,
 -- By leewheel 2026-11-01 合并 brighton the-lab(force-push 新线 ea40aab87)：上游把本行
 --   craft_no_professions 写成 id 1945，与同批次 2026_10_29 black_temple_texts 的
 --   class_role_zerevor_mage_tank(id 1945) 主键自撞（上游 force-push 时未测重放）。
---   ⇒ 本核消解：本行顺移到 1957（全目录空闲；sunwell 占 1947-1956、black_temple 占 1945/1946）。
+--   ⇒ 本核消解：本行顺移到 1958（全目录空闲；sunwell 占 1948-1957、black_temple 占 1946/1947）。
 --   文本键是 name，代码按 name 取用，改 id 零影响。本文件是 DELETE + INSERT 定值幂等写入。
-(1957, 'craft_no_professions', 'I don''t know any crafting professions', 0, 0, '저는 제작 전문 기술을 하나도 모릅니다', 'Je ne connais aucun métier d''artisanat', 'Ich beherrsche keine Herstellungsberufe', '我不会任何制造专业', '我不會任何製造專業', 'No conozco ninguna profesión de fabricación', 'No conozco ninguna profesión de fabricación', 'Я не владею ни одной ремесленной профессией');
+(1958, 'craft_no_professions', 'I don''t know any crafting professions', 0, 0, '저는 제작 전문 기술을 하나도 모릅니다', 'Je ne connais aucun métier d''artisanat', 'Ich beherrsche keine Herstellungsberufe', '我不会任何制造专业', '我不會任何製造專業', 'No conozco ninguna profesión de fabricación', 'No conozco ninguna profesión de fabricación', 'Я не владею ни одной ремесленной профессией');
 
 INSERT INTO ai_playerbot_texts_chance (name, probability) VALUES
 ('craft_usage', 100),
