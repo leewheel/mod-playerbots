@@ -671,9 +671,16 @@ bool UseStartQuestItem::isUseful()
 
 bool UseStartQuestItem::isPossible()
 {
-    for (Item* questItem : AI_VALUE2(std::vector<Item*>, "inventory items", "start quest"))
+    //By leewheel 2026-11-04 防悬空崩溃（2026-11-04 门禁浸泡实锤 C0000005 @ 本行
+    //  → Item::GetTemplate → Object::GetUInt32Value）：AI_VALUE2 返回的是**缓存的**物品指针列表，
+    //  求值到解引用之间物品可能已被销毁或移出背包。Execute 里 2026-09-04 已加 FilterLive 过滤，
+    //  isPossible 这一处漏了（上游 ea40aab87 / 740e85602 两版同样漏），在此补齐。
+    std::vector<Item*> questStartItems = AI_VALUE2(std::vector<Item*>, "inventory items", "start quest");
+    questStartItems = InventoryItemValueBase::FilterLive(bot, questStartItems);
+    for (Item* questItem : questStartItems)
         if (QuestAction::CanAcceptQuest(bot, sObjectMgr->GetQuestTemplate(questItem->GetTemplate()->StartQuest)))
             return true;
 
     return false;
+    //End By leewheel
 }
