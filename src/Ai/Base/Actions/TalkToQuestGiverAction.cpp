@@ -24,7 +24,14 @@ bool TalkToQuestGiverAction::ProcessQuest(Quest const* quest, Object* questGiver
     QuestStatus status = bot->GetQuestStatus(quest->GetQuestId());
     Player* master = GetMaster();
 
-    if (sPlayerbotAIConfig.SyncQuestForPlayer && master)
+    //By leewheel 2026-11-04: 任务同步只对「与主人同队」的机器人生效 (bug_100)
+    //  离队自由活动的机器人自己去跑图做任务时，不能再替主人完成任务、也不能被主人的
+    //  任务进度反向推进——那是两支互不相干的队伍。玩家反馈「离队后仍可以共享任务」
+    //  的另一半就是这个：包转发已经被拦住了，但任务同步这条路还在。
+    bool const sameGroupAsMaster = master && bot->GetGroup() && bot->GetGroup() == master->GetGroup();
+    //End By leewheel
+
+    if (sPlayerbotAIConfig.SyncQuestForPlayer && master && sameGroupAsMaster)
     {
         PlayerbotAI* masterBotAI = GET_PLAYERBOT_AI(master);
         if (!masterBotAI || IsSelfBot(master))
@@ -35,7 +42,7 @@ bool TalkToQuestGiverAction::ProcessQuest(Quest const* quest, Object* questGiver
         }
     }
 
-    if (sPlayerbotAIConfig.SyncQuestWithPlayer)
+    if (sPlayerbotAIConfig.SyncQuestWithPlayer && sameGroupAsMaster)
     {
         if (master && master->GetQuestStatus(quest->GetQuestId()) == QUEST_STATUS_COMPLETE &&
             (status == QUEST_STATUS_INCOMPLETE || status == QUEST_STATUS_FAILED))

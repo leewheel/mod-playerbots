@@ -526,8 +526,21 @@ void PlayerbotAI::UpdateAIGroupMaster()
             Reset(true);
             ResetStrategies();
         }
+        //By leewheel 2026-11-04: 自建账号机器人（altbot）离队后进入自由活动 (bug_99)
+        //  原来这里只处理随机机器人，altbot 离队后 master 依旧保留、follow 策略依旧挂着，
+        //  于是玩家把它踢出队伍它仍然跟着跑、仍然替玩家接任务，玩家没法让它自己去活动。
+        //  这里改成：离队即切自主活动（保留 master 以便密语指挥），重新组队时再切回来。
+        else if (master && IsAltBot() && altBotHadGroup)
+            EnterAltBotFreeRoam();
+        //End By leewheel
         return;
     }
+
+    altBotHadGroup = true;
+
+    //By leewheel 2026-11-04: 重新组队即恢复跟随 (bug_99)
+    LeaveAltBotFreeRoam();
+    //End By leewheel
 
     // Bot in BG, but master no longer part of a group: release master
     // Exclude alt and addclass bots as they rely on current (real player) master, security-wise.
@@ -566,6 +579,54 @@ void PlayerbotAI::UpdateAIGroupMaster()
         }
     }
 }
+
+//By leewheel 2026-11-04: 自建账号机器人（altbot）被踢出队伍后转入「自主活动」(bug_99)
+//  只执行一次（状态机转换），玩家之后用密语 follow / stay / grind 覆盖都有效，
+//  不会被这里每 tick 抢回去；下一次「重新组队 -> 再离队」才会再次触发。
+void PlayerbotAI::EnterAltBotFreeRoam()
+{
+    if (altBotFreeRoam || !bot)
+        return;
+
+    if (!sPlayerbotAIConfig.AltBotFreeRoamOnLeave)
+        return;
+
+    altBotFreeRoam = true;
+
+    // 战场里不搞自主活动，跟大部队走
+    if (bot->InBattleground())
+        return;
+
+    // 摘掉跟随/停留，挂上与随机机器人同一套「自己找事做」的策略
+    ChangeStrategy("-follow,-stay,-move from group", BOT_STATE_NON_COMBAT);
+    ChangeStrategy("-follow,-stay,-move from group", BOT_STATE_COMBAT);
+    ChangeStrategy("-grind,-rpg,-new rpg,-move random", BOT_STATE_NON_COMBAT);
+
+    if (sPlayerbotAIConfig.EnableNewRpgStrategy)
+        ChangeStrategy("+new rpg", BOT_STATE_NON_COMBAT);
+    else if (sPlayerbotAIConfig.AutoDoQuests)
+        ChangeStrategy("+rpg", BOT_STATE_NON_COMBAT);
+    else
+        ChangeStrategy("+grind", BOT_STATE_NON_COMBAT);
+
+    LOG_DEBUG("playerbots", "{} 已离开队伍，转入自主活动", bot->GetName());
+}
+
+//By leewheel 2026-11-04: 重新组队后恢复跟随 (bug_99)
+void PlayerbotAI::LeaveAltBotFreeRoam()
+{
+    if (!altBotFreeRoam || !bot)
+        return;
+
+    altBotFreeRoam = false;
+
+    ChangeStrategy("-new rpg,-rpg,-grind,-move random", BOT_STATE_NON_COMBAT);
+    if (!bot->InBattleground())
+        ChangeStrategy("+follow", BOT_STATE_NON_COMBAT);
+
+    LOG_DEBUG("playerbots", "{} 已加入队伍，恢复跟随", bot->GetName());
+}
+//End By leewheel
 
 void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal)
 {

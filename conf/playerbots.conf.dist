@@ -157,6 +157,32 @@ Playerbots.KeepAltsInGroup = 0
 # Auto-login all player alts as altbots on player login
 Playerbots.BotAutologin = 0
 
+#By leewheel 2026-11-04 (bug_99 需求 2)
+# 登录时额外把「同公会的机器人角色」一起上线。
+# 只加载同时满足下面两条的角色，真人玩家号一律不动，避免出现"顶号"：
+#   1) 该角色所在账号在 Playerbots.RandomBotAccounts 里（机器人账号），
+#      或者该账号已通过 playerbots_account_link 与本账号建立信任链接；
+#   2) 该角色此刻不在线。
+# 受 Playerbots.MaxAddedBots 上限约束，超出的不会被加载。
+# 0 = 关闭（行为与上游一致：只自动上线同账号角色）
+# 1 = 开启（默认）
+Playerbots.AutoLoginGuildBots = 1
+#End By leewheel
+
+#By leewheel 2026-11-04 (bug_99 需求 1)
+# 自建账号机器人（altbot，同账号或跨账号都算）被移出队伍后，是否转为「自由活动」：
+# 摘掉 follow/stay，挂上 rpg/grind 自己跑图做任务；重新组队时自动恢复跟随。
+# 玩家仍可用密语指挥它（follow / stay / grind ...），指令不会被打回。
+# 0 = 关闭（行为与上游一致：离队后仍跟随主人）
+# 1 = 开启（离队即自由活动）
+Playerbots.AltBotFreeRoamOnLeave = 1
+
+# 玩家的操作包（接任务 / 点 NPC / 共享任务 / 使用物件等）是否只转发给「与玩家同队」的机器人。
+# 0 = 关闭（行为与上游一致：账号下所有机器人都接收）
+# 1 = 开启（离队后不再替玩家接任务、共享任务）
+Playerbots.MasterPacketRequiresGroup = 1
+#End By leewheel
+
 # Allow/deny inviting altbots from the player's account
 Playerbots.AllowAccountBots = 1
 

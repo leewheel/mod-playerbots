@@ -246,6 +246,13 @@ bool PlayerbotAIConfig::Initialize()
         UnobtainableItems);
 
     BotAutologin = sConfigMgr->GetOption<bool>("Playerbots.BotAutologin", false);
+    //By leewheel 2026-11-04 (bug_99 需求 2): 登录时是否连带把同公会的机器人角色一起上线
+    AutoLoginGuildBots = sConfigMgr->GetOption<bool>("Playerbots.AutoLoginGuildBots", true);
+    //End By leewheel
+    //By leewheel 2026-11-04 (bug_99 需求 1 / bug_100): 离队自由活动 与 主人操作包同队转发
+    AltBotFreeRoamOnLeave = sConfigMgr->GetOption<bool>("Playerbots.AltBotFreeRoamOnLeave", true);
+    MasterPacketRequiresGroup = sConfigMgr->GetOption<bool>("Playerbots.MasterPacketRequiresGroup", true);
+    //End By leewheel
     RandomBotAutologin = sConfigMgr->GetOption<bool>("Playerbots.RandomBotAutologin", true);
     MinRandomBots = sConfigMgr->GetOption<int32>("Playerbots.MinRandomBots", 500);
     MaxRandomBots = sConfigMgr->GetOption<int32>("Playerbots.MaxRandomBots", 500);

@@ -137,6 +137,12 @@ public:
     uint32 OpenGoSpell;
     bool RandomBotAutologin;
     bool BotAutologin;
+    //By leewheel 2026-11-04 (bug_99 需求 2): 登录时连带上线同公会的机器人角色
+    bool AutoLoginGuildBots;
+    //By leewheel 2026-11-04 (bug_99 需求 1 / bug_100): 离队自由活动 / 主人操作包同队转发
+    bool AltBotFreeRoamOnLeave;
+    bool MasterPacketRequiresGroup;
+    //End By leewheel
     std::string RandomBotMapsAsString;
     float ProbTeleToBankers;
     float ProbTeleToQuestGivers;

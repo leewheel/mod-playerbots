@@ -571,6 +571,11 @@ public:
     // Get the group leader or the master of the bot.
     // Checks if the bot is summoned an altbot of a player
     bool IsAltBot();
+    //By leewheel 2026-11-04: 自建账号机器人（altbot）离队后是否处于「自由活动」状态 (bug_99)
+    //  离队时切到自主活动（摘 follow、挂 rpg/grind）；重新组队时恢复跟随。
+    //  期间保留 master 指针，玩家离队后仍可用密语指挥它。
+    bool IsFreeRoaming() const { return altBotFreeRoam; }
+    //End By leewheel
     bool HasGameClientMaster();
     Player* GetGroupLeader();
     uint32 GetFixedBotNumber(uint32 maxNum = 100);
@@ -670,6 +675,10 @@ private:
                                    bool mixed = false);
     bool IsTellAllowed(PlayerbotSecurityLevel securityLevel = PLAYERBOT_SECURITY_ALLOW_ALL);
     void UpdateAIGroupMaster();
+    //By leewheel 2026-11-04: altbot 离队/归队时的策略切换 (bug_99)
+    void EnterAltBotFreeRoam();
+    void LeaveAltBotFreeRoam();
+    //End By leewheel
     Item* FindItemInInventory(std::function<bool(ItemTemplate const*)> checkItem) const;
     void HandleCommands();
     void HandleCommand(uint32 type, std::string const& text, Player& fromPlayer, const uint32 lang = LANG_UNIVERSAL);
@@ -685,6 +694,12 @@ private:
 protected:
     Player* bot;
     Player* master;
+    //By leewheel 2026-11-04: 自建账号机器人离队后进入自由活动，重新组队时恢复跟随 (bug_99)
+    bool altBotFreeRoam = false;
+    // 是否曾经和主人组过队：只有「组过队之后再离队」才算自由活动，
+    // 免得上线就 add 进来、还没邀请进组时机器人自己跑掉（那是玩家没让它动）。
+    bool altBotHadGroup = false;
+    //End By leewheel
     uint32 accountId;
     AiObjectContext* aiObjectContext;
     Engine* currentEngine;

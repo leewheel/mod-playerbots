@@ -1749,12 +1749,40 @@ void PlayerbotMgr::HandleCommand(uint32 type, std::string const text)
     }
 }
 
+//By leewheel 2026-11-04: 主人（玩家）的操作包只能转给「当前与主人同队」的机器人 (bug_100)
+//  原先账号下的 bot 无条件接收主人的全部操作包（CMSG_QUESTGIVER_ACCEPT_QUEST / CMSG_GOSSIP_HELLO /
+//  CMSG_PUSHQUESTTOPARTY / CMSG_GAMEOBJ_USE 等）。机器人一旦被踢出队伍，玩家再接任务、点 NPC、
+//  共享任务，这些包依然被转过去，bot 照旧去接同一个任务并回报「已接受」，表现为
+//  「离队后仍共享任务、仍跟随指挥」，玩家无法让它真正自由活动。
+//  这里按「同一 Group 实例」放行：同队时行为与原来完全一致，离队后不再代玩家执行任何操作。
+//  注意：密语指令走 PlayerbotMgr::HandleCommand，不经过本函数，离队后仍可正常指挥。
+static bool IsBotInMasterGroup(Player* bot, Player* master)
+{
+    if (!bot || !master)
+        return false;
+
+    if (!sPlayerbotAIConfig.MasterPacketRequiresGroup)
+        return true;
+
+    Group* botGroup = bot->GetGroup();
+    Group* masterGroup = master->GetGroup();
+    if (!botGroup || !masterGroup)
+        return false;
+
+    return botGroup->GetGUID() == masterGroup->GetGUID();
+}
+//End By leewheel
+
 void PlayerbotMgr::HandleMasterIncomingPacket(WorldPacket const& packet)
 {
+    Player* masterPlayer = GetMaster();
+
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* const bot = it->second;
         if (!bot)
+            continue;
+        if (!IsBotInMasterGroup(bot, masterPlayer))
             continue;
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
         if (botAI)
@@ -1766,7 +1794,7 @@ void PlayerbotMgr::HandleMasterIncomingPacket(WorldPacket const& packet)
     {
         Player* const bot = it->second;
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-        if (botAI && botAI->GetMaster() == GetMaster())
+        if (botAI && botAI->GetMaster() == masterPlayer && IsBotInMasterGroup(bot, masterPlayer))
             botAI->HandleMasterIncomingPacket(packet);
     }
 
@@ -1807,9 +1835,15 @@ void PlayerbotMgr::HandleMasterIncomingPacket(WorldPacket const& packet)
 
 void PlayerbotMgr::HandleMasterOutgoingPacket(WorldPacket const& packet)
 {
+    Player* master = GetMaster();
+
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* const bot = it->second;
+        if (!bot)
+            continue;
+        if (!IsBotInMasterGroup(bot, master))
+            continue;
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
         if (botAI)
             botAI->HandleMasterOutgoingPacket(packet);
@@ -1820,7 +1854,7 @@ void PlayerbotMgr::HandleMasterOutgoingPacket(WorldPacket const& packet)
     {
         Player* const bot = it->second;
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-        if (botAI && botAI->GetMaster() == GetMaster())
+        if (botAI && botAI->GetMaster() == master && IsBotInMasterGroup(bot, master))
             botAI->HandleMasterOutgoingPacket(packet);
     }
 }
@@ -1881,30 +1915,87 @@ void PlayerbotMgr::OnPlayerLogin(Player* player)
     if (sPlayerbotAIConfig.SelfBotLevel > 2)
         HandlePlayerbotCommand("self", player);
 
-    if (!sPlayerbotAIConfig.BotAutologin)
-        return;
-
     uint32 accountId = session->GetAccountId();
-    QueryResult results = CharacterDatabase.Query("SELECT name FROM characters WHERE account = {}", accountId);
-    if (results)
+
+    if (sPlayerbotAIConfig.BotAutologin)
     {
-        std::ostringstream out;
-        out << "add ";
-        bool first = true;
-        do
+        QueryResult results = CharacterDatabase.Query("SELECT name FROM characters WHERE account = {}", accountId);
+        if (results)
         {
-            Field* fields = results->Fetch();
+            std::ostringstream out;
+            out << "add ";
+            bool first = true;
+            do
+            {
+                Field* fields = results->Fetch();
 
-            if (first)
-                first = false;
-            else
-                out << ",";
+                if (first)
+                    first = false;
+                else
+                    out << ",";
 
-            out << fields[0].Get<std::string>();
-        } while (results->NextRow());
+                out << fields[0].Get<std::string>();
+            } while (results->NextRow());
 
-        HandlePlayerbotCommand(out.str().c_str(), player);
+            HandlePlayerbotCommand(out.str().c_str(), player);
+        }
     }
+
+    //By leewheel 2026-11-04 (bug_99 需求 2): 同公会机器人随玩家上线一起上线
+    //  只挑「机器人账号」或「已与本账号建立信任链接」的角色，真人号一律不碰——否则会把
+    //  公会里真人的离线角色拉起来顶号，玩家下次登录就会被踢下线。
+    //  同账号角色已经由上面的 BotAutologin 处理，这里跳过，避免重复 add。
+    if (sPlayerbotAIConfig.AutoLoginGuildBots && player->GetGuildId())
+    {
+        if (Guild* guild = sGuildMgr->GetGuildById(player->GetGuildId()))
+        {
+            uint32 const maxBots = uint32(sPlayerbotAIConfig.MaxAddedBots);
+            uint32 total = GetPlayerbotsCount();
+
+            std::ostringstream names;
+            bool first = true;
+
+            for (auto const& entry : guild->GetUnorderedMembers())
+            {
+                Guild::Member const& member = entry.second;
+
+                if (total >= maxBots)
+                    break;
+
+                if (member.GetGUID() == player->GetGUID())
+                    continue;
+
+                // Member::IsOnline() 不是 const 方法，这里直接读标志位
+                if (member.GetFlags() & GUILDMEMBER_STATUS_ONLINE)
+                    continue;
+
+                uint32 const memberAccountId = member.GetAccountId();
+                if (!memberAccountId || memberAccountId == accountId)
+                    continue;
+
+                bool const isBotAccount = sPlayerbotAIConfig.IsInRandomAccountList(memberAccountId);
+                bool const isLinked = sPlayerbotAIConfig.AllowTrustedAccountBots &&
+                                      IsAccountLinked(memberAccountId, accountId);
+                if (!isBotAccount && !isLinked)
+                    continue;
+
+                if (first)
+                {
+                    names << "add ";
+                    first = false;
+                }
+                else
+                    names << ",";
+
+                names << member.GetName();
+                ++total;
+            }
+
+            if (!first)
+                HandlePlayerbotCommand(names.str().c_str(), player);
+        }
+    }
+    //End By leewheel
 }
 
 void PlayerbotMgr::TellError(std::string const botName, std::string const text)
