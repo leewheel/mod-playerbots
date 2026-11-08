@@ -118,6 +118,9 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("gurtogg bloodboil fel rage on bot",
         { NextAction("gurtogg bloodboil lead boss to tank position", ACTION_RAID + 1) }));
 
+    triggers.push_back(new TriggerNode("gurtogg bloodboil should stop attacking",
+        { NextAction("gurtogg bloodboil stop attacking", ACTION_EMERGENCY + 2) }));
+
     // Reliquary of Souls
     triggers.push_back(new TriggerNode("reliquary of souls hunter should misdirect",
         { NextAction("reliquary of souls misdirect to main tank", ACTION_RAID + 3) }));
@@ -176,6 +179,12 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode("illidari council mage tank healer should reposition",
         { NextAction("illidari council position mage tank healer", ACTION_RAID + 1) }));
+
+    triggers.push_back(new TriggerNode("illidari council ranged interrupter should reposition",
+        { NextAction("illidari council position to interrupt malande", ACTION_RAID) }));
+
+    triggers.push_back(new TriggerNode("illidari council non-tanks should avoid zerevor",
+        { NextAction("illidari council non-tanks avoid zerevor", ACTION_EMERGENCY + 2) }));
 
     triggers.push_back(new TriggerNode("illidari council ranged should spread",
         { NextAction("illidari council spread ranged", ACTION_RAID + 2) }));
@@ -237,11 +246,8 @@ void RaidBlackTempleStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("illidan stormrage should position for landing",
         { NextAction("illidan stormrage position for landing", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("illidan stormrage melee should stop attacking",
-        { NextAction("illidan stormrage melee stop attacking", ACTION_EMERGENCY + 2) }));
-
-    triggers.push_back(new TriggerNode("illidan stormrage should stop shooting",
-        { NextAction("illidan stormrage stop shooting", ACTION_EMERGENCY + 2) }));
+    triggers.push_back(new TriggerNode("illidan stormrage should stop attacking",
+        { NextAction("illidan stormrage stop attacking", ACTION_EMERGENCY + 2) }));
 
     triggers.push_back(new TriggerNode("illidan stormrage ranged should spread",
         { NextAction("illidan stormrage spread ranged", ACTION_RAID + 2) }));
@@ -277,6 +283,7 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
 
     // Trash
     multipliers.push_back(new ShadowmoonReaverHoldChargeBuildingSpellsMultiplier(botAI));
+    multipliers.push_back(new SisterOfPainHoldDpsMultiplier(botAI));
 
     // High Warlord Naj'entus
     multipliers.push_back(new HighWarlordNajentusDisableCombatFormationMoveMultiplier(botAI));
@@ -315,7 +322,7 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new IllidariCouncilDisableMageTankActionsMultiplier(botAI));
     multipliers.push_back(new IllidariCouncilHoldMisdirectionAndDispelsMultiplier(botAI));
     multipliers.push_back(new IllidariCouncilManageInterruptsMultiplier(botAI));
-    multipliers.push_back(new IllidariCouncilWaitForDpsMultiplier(botAI));
+    multipliers.push_back(new IllidariCouncilHoldDpsMultiplier(botAI));
 
     // Illidan Stormrage <The Betrayer>
     multipliers.push_back(new IllidanStormrageHoldPullPositionsMultiplier(botAI));
@@ -323,21 +330,32 @@ void RaidBlackTempleStrategy::InitMultipliers(std::vector<Multiplier*>& multipli
     multipliers.push_back(new IllidanStormrageHoldNearNewShadowfiendMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageHoldGuardianSummonsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageHoldTotemsMultiplier(botAI));
-    multipliers.push_back(new IllidanStormrageWaitForDpsMultiplier(botAI));
+    multipliers.push_back(new IllidanStormrageHoldDpsMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageDisableTankSoulshatterMultiplier(botAI));
     multipliers.push_back(new IllidanStormrageDisableAoeOnShadowDemonsMultiplier(botAI));
+
+    // Must be registered last because an action blocked by another multiplier does not reach the
+    // threat check that clears the flag, causing it to carry over to whatever action comes next.
+    multipliers.push_back(new IllidanStormrageNeglectThreatOnAddsMultiplier(botAI));
 }
 
 namespace
 {
 
-void AppendSisterOfPainExclusions(Player* bot, GuidSet& exclusions)
+void AppendSisterOfPainExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
-    if (PlayerbotAI::IsTank(bot))
+    if (PlayerbotAI::IsTank(botAI->GetBot()))
         return;
 
-    if (Unit* pain = GetSkulledSisterOfPain(bot))
-        exclusions.insert(pain->GetGUID());
+    for (ObjectGuid const& guid :
+         botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->RefGet())
+    {
+        if (guid.GetEntry() == Id(BtNpcs::NPC_SISTER_OF_PAIN) &&
+            IsSisterOfPainHeld(botAI, botAI->GetUnit(guid)))
+        {
+            exclusions.insert(guid);
+        }
+    }
 }
 
 void AppendShadowmoonReaverExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
@@ -412,6 +430,21 @@ void AppendIllidanMeleeExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
         exclusions.insert(demon->GetGUID());
 }
 
+// Exclude secondary DoTs on Zerevor to not take aggro from the Mage tank at pull (and after pull,
+// Zerevor will be out of range anyway).
+void AppendZerevorDebuffExclusion(Player* bot, GuidSet& exclusions)
+{
+    if (!IsBossInProgress(bot, BT_MAP_ID, Id(BtBosses::DATA_ILLIDARI_COUNCIL)))
+        return;
+
+    Player* mageTank = GetZerevorMageTank(bot);
+    if (!mageTank || mageTank == bot)
+        return;
+
+    if (Unit* zerevor = GetIllidariCouncilMembers(bot).zerevor)
+        exclusions.insert(zerevor->GetGUID());
+}
+
 } // end anonymous namespace
 
 void RaidBlackTempleStrategy::AppendTargetExclusions(
@@ -423,7 +456,7 @@ void RaidBlackTempleStrategy::AppendTargetExclusions(
 
     if (type != TargetValueExclusionType::TankTarget)
     {
-        AppendSisterOfPainExclusions(bot, exclusions);
+        AppendSisterOfPainExclusions(botAI, exclusions);
         AppendShadowmoonReaverExclusions(botAI, exclusions);
     }
 
@@ -432,6 +465,9 @@ void RaidBlackTempleStrategy::AppendTargetExclusions(
 
     if (type == TargetValueExclusionType::TankTarget || type == TargetValueExclusionType::DpsTarget)
         AppendShadeOfAkamaChannelerExclusions(botAI, exclusions);
+
+    if (type == TargetValueExclusionType::DebuffTarget)
+        AppendZerevorDebuffExclusion(bot, exclusions);
 
     AppendShadowyConstructExclusions(botAI, exclusions);
     AppendIllidanMeleeExclusions(botAI, exclusions);

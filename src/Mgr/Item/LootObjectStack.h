@@ -9,6 +9,9 @@
 
 #include <array>
 #include <chrono>
+//By leewheel 2026-11-08 (bug_107): 放弃表用 unordered_map
+#include <unordered_map>
+//End By leewheel
 
 #include "ObjectGuid.h"
 
@@ -81,6 +84,9 @@ public:
     bool operator<(LootTarget const& other) const;
     bool IsReady() const;
     void Defer();
+    //By leewheel 2026-11-08 (bug_107): 供放弃机制判断已重试次数
+    uint8 GetRetryCount() const { return _retryCount; }
+    //End By leewheel
 
 public:
     ObjectGuid guid;
@@ -115,6 +121,16 @@ public:
     void DeferLoot(ObjectGuid guid);
     bool CanAttemptLoot(ObjectGuid guid) const;
 
+    //By leewheel 2026-11-08 (bug_107): 放弃机制
+    //  上游 Defer() 的重试上限只有 16s（5 次退避后恒 16s），对「这个目标怎么试都拿不到」的情形
+    //  等于每 16s 无限重试一次 —— 机器人卡在采不了的草药/矿石点上反复上下马就是这个循环。
+    //  这里给单次放弃加时间窗：窗口内不进 available loot 队列、也不被 GetNearest 选中。
+    uint8 GetRetryCount(ObjectGuid guid) const;
+    void GiveUp(ObjectGuid guid, uint32 seconds);
+    bool IsGivenUp(ObjectGuid guid);
+    bool IsRetryExhausted(ObjectGuid guid) const;
+    //End By leewheel
+
 private:
     LootObject GetNearest(float maxDistance = 0);
 
@@ -123,6 +139,9 @@ private:
     ObjectGuid _pendingLoot;
     std::chrono::steady_clock::time_point _pendingUntil;
     bool _awaitingRelease = false;
+    //By leewheel 2026-11-08 (bug_107): guid -> 放弃截止时刻（到期自动恢复，节点重生/条件变化后能重新尝试）
+    std::unordered_map<ObjectGuid, std::chrono::steady_clock::time_point> _givenUpUntil;
+    //End By leewheel
 };
 
 #endif

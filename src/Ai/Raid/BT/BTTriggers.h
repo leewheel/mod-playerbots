@@ -363,6 +363,18 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
+class GurtoggBloodboilShouldStopAttackingTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    GurtoggBloodboilShouldStopAttackingTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "gurtogg bloodboil should stop attacking",
+            BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 // Reliquary of Souls
 
 class ReliquaryOfSoulsHunterShouldMisdirectTrigger : public BlackTempleEncounterTrigger
@@ -552,6 +564,30 @@ public:
     IllidariCouncilMageTankHealerShouldRepositionTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
             botAI, "illidari council mage tank healer should reposition",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class IllidariCouncilRangedInterrupterShouldRepositionTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidariCouncilRangedInterrupterShouldRepositionTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council ranged interrupter should reposition",
+            BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class IllidariCouncilNonTanksShouldAvoidZerevorTrigger : public BlackTempleEncounterTrigger
+{
+public:
+    IllidariCouncilNonTanksShouldAvoidZerevorTrigger(PlayerbotAI* botAI)
+        : BlackTempleEncounterTrigger(
+            botAI, "illidari council non-tanks should avoid zerevor",
             BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
@@ -773,24 +809,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class IllidanStormrageMeleeShouldStopAttackingTrigger : public BlackTempleEncounterTrigger
+class IllidanStormrageShouldStopAttackingTrigger : public BlackTempleEncounterTrigger
 {
 public:
-    IllidanStormrageMeleeShouldStopAttackingTrigger(PlayerbotAI* botAI)
+    IllidanStormrageShouldStopAttackingTrigger(PlayerbotAI* botAI)
         : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage melee should stop attacking",
-            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
-
-class IllidanStormrageShouldStopShootingTrigger : public BlackTempleEncounterTrigger
-{
-public:
-    IllidanStormrageShouldStopShootingTrigger(PlayerbotAI* botAI)
-        : BlackTempleEncounterTrigger(
-            botAI, "illidan stormrage should stop shooting",
+            botAI, "illidan stormrage should stop attacking",
             BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:

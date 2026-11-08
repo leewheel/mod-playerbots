@@ -107,6 +107,18 @@ bool OpenLootAction::Execute(Event /*event*/)
     else if (!lootObject.IsEmpty() && !wasMoving && !wasMounted)
     {
         availableLoot->DeferLoot(lootObject.guid);
+
+        //By leewheel 2026-11-08 (bug_107): 退避到顶仍拿不到 ⇒ 放弃一段时间。
+        //  Defer() 的退避上限是 16s，没有这层放弃的话就是「每 16s 重试一次」的永久循环
+        //  （采集类节点表现为反复上下马）。采集类放弃 5 分钟（够节点重生），其余 1 分钟。
+        //  放弃到期自动解禁，不会把地图上的节点永久拉黑。
+        if (availableLoot->IsRetryExhausted(lootObject.guid))
+        {
+            bool const gatheringNode = lootObject.skillId != SKILL_NONE;
+            availableLoot->GiveUp(lootObject.guid, gatheringNode ? 300 : 60);
+        }
+        //End By leewheel
+
         if (AI_VALUE(LootObject, "loot target").guid == lootObject.guid)
             context->GetValue<LootObject>("loot target")->Set(LootObject());
     }
@@ -129,6 +141,52 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
         botAI->SetNextCheckDelay(sPlayerbotAIConfig.LootDelay);
         return false;
     }
+
+    //By leewheel 2026-11-08 (bug_107): 先确认「真能动手」再下马。
+    //  原顺序是先 RemoveAurasByType(MOUNTED)，再校验交互距离 / GO 状态 / 专业技能；
+    //  只要有一项不过（够不到、状态不对、没学专业、锁打不开），每 tick 就变成
+    //  「下马 → 失败 → 走两步 → 上马 → 下马」的死循环 —— 玩家看到的就是机器人长期
+    //  卡在草药/矿石刷新点反复上下马、直到玩家把节点采掉才恢复。
+    //  改法：所有前置校验放在下马之前，只有确定能拾取/采集时才下马。
+    GameObject* go = creature ? nullptr : botAI->GetGameObject(lootObject.guid);
+
+    if (go)
+    {
+        if (!go->IsAtInteractDistance(bot))
+            return false;
+
+        if (go->GetGoState() != GO_STATE_READY)
+            return false;
+
+        // This prevents dungeon chests like Tribunal Chest (Halls of Stone) from being ninja'd by the bots.
+        // Quest objects carry the same flag but are gated on quest state, which ActivateToQuest answers.
+        if (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_INTERACT_COND) && !go->ActivateToQuest(bot))
+            return false;
+
+        // This prevents raid chests like Gunship Armory (ICC) from being ninja'd by the bots
+        if (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE))
+            return false;
+
+        if (lootObject.reqItem && !bot->GetItemByEntry(lootObject.reqItem))
+            return false;
+
+        // 采集类节点：没学对应专业一律不下马（下马也采不了，只会反复上下马）
+        if (lootObject.skillId == SKILL_MINING && !botAI->HasSkill(SKILL_MINING))
+            return false;
+
+        if (lootObject.skillId == SKILL_HERBALISM && !botAI->HasSkill(SKILL_HERBALISM))
+            return false;
+    }
+    else if (creature)
+    {
+        // 需要专业技能才能取的尸体（剥皮 / 工程拆解）：技能不够同样不下马
+        if (!creature->HasFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE) &&
+            !CanOpenLock(creature->GetCreatureTemplate()->GetRequiredLootSkill(), lootObject.reqSkillValue))
+            return false;
+    }
+    else
+        return false;
+    //End By leewheel
 
     if (bot->IsMounted())
     {
@@ -165,22 +223,6 @@ bool OpenLootAction::DoLoot(LootObject& lootObject)
                 return botAI->HasSkill(SKILL_SKINNING) ? botAI->CastSpell(SKINNING, creature) : false;
         }
     }
-
-    GameObject* go = botAI->GetGameObject(lootObject.guid);
-    if (go && !go->IsAtInteractDistance(bot))
-        return false;
-
-    if (go && (go->GetGoState() != GO_STATE_READY))
-        return false;
-
-    // This prevents dungeon chests like Tribunal Chest (Halls of Stone) from being ninja'd by the bots.
-    // Quest objects carry the same flag but are gated on quest state, which ActivateToQuest answers.
-    if (go && go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_INTERACT_COND) && !go->ActivateToQuest(bot))
-        return false;
-
-    // This prevents raid chests like Gunship Armory (ICC) from being ninja'd by the bots
-    if (go && go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE))
-        return false;
 
     if (lootObject.reqItem)
     {

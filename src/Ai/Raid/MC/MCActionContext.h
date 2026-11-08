@@ -49,6 +49,7 @@ public:
         creators["mc hazzrash evocation"] = &RaidMcActionContext::hazzrash_evocation;
         creators["mc hazzrash ranged spread"] = &RaidMcActionContext::hazzrash_ranged_spread;
         //End By leewheel
+        creators["mc majordomo stop attack"] = &RaidMcActionContext::majordomo_stop_attack;
     }
 
 private:
@@ -83,6 +84,7 @@ private:
     static Action* hazzrash_evocation(PlayerbotAI* botAI) { return new McHazzrashEvocationAction(botAI); }
     static Action* hazzrash_ranged_spread(PlayerbotAI* botAI) { return new McHazzrashRangedSpreadAction(botAI); }
     //End By leewheel
+    static Action* majordomo_stop_attack(PlayerbotAI* botAI) { return new McMajordomoStopAttackAction(botAI); }
 };
 
 #endif

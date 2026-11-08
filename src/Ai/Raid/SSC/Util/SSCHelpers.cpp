@@ -284,13 +284,13 @@ HydrossDpsHoldWindow GetHydrossDpsHoldWindow(Unit* hydross)
         frostPhase ? state.hydrossFrostMarkMaxedTime : state.hydrossNatureMarkMaxedTime;
 
     uint32 const now = getMSTime();
-    constexpr uint32 handOverWaitMs = 1 * IN_MILLISECONDS;
-    constexpr uint32 phaseStartWaitMs = 5 * IN_MILLISECONDS;
+    constexpr uint32 handOverHoldMs = 1 * IN_MILLISECONDS;
+    constexpr uint32 phaseStartHoldMs = 5 * IN_MILLISECONDS;
 
-    if (markMaxedTime && getMSTimeDiff(*markMaxedTime, now) >= handOverWaitMs)
+    if (markMaxedTime && getMSTimeDiff(*markMaxedTime, now) >= handOverHoldMs)
         return HydrossDpsHoldWindow::BeforePhaseChange;
 
-    if (!phaseStartTime || getMSTimeDiff(*phaseStartTime, now) < phaseStartWaitMs)
+    if (!phaseStartTime || getMSTimeDiff(*phaseStartTime, now) < phaseStartHoldMs)
     {
         return HydrossDpsHoldWindow::AfterPhaseChange;
     }
@@ -736,7 +736,7 @@ bool IsLeotherasDpsHoldActive(PlayerbotAI* botAI, Unit* leotheras)
         if (!whirlwindEnd || now < *whirlwindEnd)
             return false;
 
-        return now - *whirlwindEnd < LEOTHERAS_WHIRLWIND_DPS_WAIT_MS;
+        return now - *whirlwindEnd < LEOTHERAS_WHIRLWIND_DPS_HOLD_MS;
     };
 
     if (IsLeotherasHumanoidPhase(botAI))
@@ -745,10 +745,8 @@ bool IsLeotherasDpsHoldActive(PlayerbotAI* botAI, Unit* leotheras)
             return false;
 
         std::optional<uint32> const& start = state.leotherasHumanoidPhaseStartTime;
-        if (!start || getMSTimeDiff(*start, now) < LEOTHERAS_HUMANOID_DPS_WAIT_MS)
-        {
+        if (!start || getMSTimeDiff(*start, now) < LEOTHERAS_HUMANOID_DPS_HOLD_MS)
             return true;
-        }
 
         return isJustAfterWhirlwind();
     }
@@ -765,7 +763,7 @@ bool IsLeotherasDpsHoldActive(PlayerbotAI* botAI, Unit* leotheras)
         if (!start)
             return true;
 
-        return getMSTimeDiff(*start, now) < LEOTHERAS_DEMON_DPS_WAIT_MS;
+        return getMSTimeDiff(*start, now) < LEOTHERAS_DEMON_DPS_HOLD_MS;
     }
 
     if (IsLeotherasFinalPhase(botAI))
@@ -774,10 +772,8 @@ bool IsLeotherasDpsHoldActive(PlayerbotAI* botAI, Unit* leotheras)
             return false;
 
         std::optional<uint32> const& start = state.leotherasFinalPhaseStartTime;
-        if (!start || getMSTimeDiff(*start, now) < LEOTHERAS_FINAL_DPS_WAIT_MS)
-        {
+        if (!start || getMSTimeDiff(*start, now) < LEOTHERAS_FINAL_DPS_HOLD_MS)
             return true;
-        }
 
         return isJustAfterWhirlwind();
     }
@@ -937,6 +933,35 @@ Unit* GetSharkkisTankTarget(PlayerbotAI* botAI)
         return sharkkis;
 
     return heldPet;
+}
+
+bool IsKarathressBlessingHoldActive(Player* bot)
+{
+    if (PlayerbotAI::IsHeal(bot) || !PlayerbotAI::IsMelee(bot))
+        return false;
+
+    if (PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot))
+        return false;
+
+    Unit* karathress = FindThreatTarget(bot, "fathom-lord karathress");
+    if (!karathress || karathress->GetHealthPct() > KARATHRESS_BLESSING_HOLD_HEALTH_PCT)
+        return false;
+
+    return FindThreatTarget(bot, "fathom-guard caribdis");
+}
+
+bool IsKarathressStartDpsHoldActive(Player* bot)
+{
+    if (PlayerbotAI::IsTank(bot))
+        return false;
+
+    Unit* karathress = FindThreatTarget(bot, "fathom-lord karathress");
+    if (!karathress)
+        return false;
+
+    std::optional<uint32> const& holdStart =
+        SscState(karathress->GetInstanceId()).karathressDpsHoldTimer;
+    return !holdStart || getMSTimeDiff(*holdStart, getMSTime()) < KARATHRESS_DPS_HOLD_MS;
 }
 
 Unit* GetSharkkisPet(Player* bot)
@@ -2701,7 +2726,7 @@ bool SscResetInstance(uint32 instanceId)
         state.hydrossFrostMarkMaxedTime || state.hydrossNatureMarkMaxedTime ||
         state.lurkerGuardianTankAssignments || state.leotherasHumanoidPhaseStartTime ||
         state.leotherasWhirlwindEndTime || state.leotherasDemonPhaseStartTime ||
-        state.leotherasFinalPhaseStartTime || state.karathressDpsWaitTimer ||
+        state.leotherasFinalPhaseStartTime || state.karathressDpsHoldTimer ||
         state.vashjGroundingShaman || state.vashjStationHolders || state.vashjTaintedCoreLooter ||
         state.vashjCorePassingChain;
 

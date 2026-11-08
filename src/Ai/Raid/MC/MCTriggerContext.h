@@ -48,6 +48,7 @@ public:
         creators["mc hazzrash evocation"] = &RaidMcTriggerContext::hazzrash_evocation;
         creators["mc hazzrash ranged spread"] = &RaidMcTriggerContext::hazzrash_ranged_spread;
         //End By leewheel
+        creators["mc majordomo damage shield"] = &RaidMcTriggerContext::majordomo_damage_shield;
     }
 
 private:
@@ -82,6 +83,7 @@ private:
     static Trigger* hazzrash_evocation(PlayerbotAI* botAI) { return new McHazzrashEvocationTrigger(botAI); }
     static Trigger* hazzrash_ranged_spread(PlayerbotAI* botAI) { return new McHazzrashRangedSpreadTrigger(botAI); }
     //End By leewheel
+    static Trigger* majordomo_damage_shield(PlayerbotAI* botAI) { return new McMajordomoDamageShieldTrigger(botAI); }
 };
 
 #endif

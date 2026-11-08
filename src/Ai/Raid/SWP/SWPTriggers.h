@@ -17,8 +17,7 @@
 class SunwellEncounterTrigger : public Trigger
 {
 public:
-    SunwellEncounterTrigger(PlayerbotAI* botAI, std::string const name, int32 checkInterval = 1)
-        : Trigger(botAI, name, checkInterval) {}
+    SunwellEncounterTrigger(PlayerbotAI* botAI, std::string const name) : Trigger(botAI, name) {}
 
     bool IsActive() final
     {
@@ -329,6 +328,16 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
+class FelmystLandingDpsHoldIsActiveTrigger : public SunwellEncounterTrigger
+{
+public:
+    FelmystLandingDpsHoldIsActiveTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "felmyst landing dps hold is active") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 // Eredar Twins
 
 class EredarTwinsMeleeIsAtBalconyTrigger : public SunwellEncounterTrigger
@@ -406,6 +415,16 @@ class EredarTwinsShouldFocusDpsTrigger : public SunwellEncounterTrigger
 public:
     EredarTwinsShouldFocusDpsTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(botAI, "eredar twins should focus dps") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class EredarTwinsPetsShouldBeHeldTrigger : public SunwellEncounterTrigger
+{
+public:
+    EredarTwinsPetsShouldBeHeldTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(botAI, "eredar twins pets should be held") {}
 
 protected:
     bool IsActiveInEncounter() override;

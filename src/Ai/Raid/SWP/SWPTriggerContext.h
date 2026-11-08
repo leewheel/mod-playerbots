@@ -108,6 +108,9 @@ public:
         creators["felmyst should hold dps while landing"] =
             &RaidSwpTriggerContext::felmyst_should_hold_dps_while_landing;
 
+        creators["felmyst landing dps hold is active"] =
+            &RaidSwpTriggerContext::felmyst_landing_dps_hold_is_active;
+
         // Eredar Twins
         creators["eredar twins melee is at balcony"] =
             &RaidSwpTriggerContext::eredar_twins_melee_is_at_balcony;
@@ -135,6 +138,9 @@ public:
 
         creators["eredar twins should focus dps"] =
             &RaidSwpTriggerContext::eredar_twins_should_focus_dps;
+
+        creators["eredar twins pets should be held"] =
+            &RaidSwpTriggerContext::eredar_twins_pets_should_be_held;
 
         creators["eredar twins active conflagration target"] =
             &RaidSwpTriggerContext::eredar_twins_active_conflagration_target;
@@ -355,6 +361,10 @@ private:
     {
         return new FelmystShouldHoldDpsWhileLandingTrigger(botAI);
     }
+    static Trigger* felmyst_landing_dps_hold_is_active(PlayerbotAI* botAI)
+    {
+        return new FelmystLandingDpsHoldIsActiveTrigger(botAI);
+    }
 
     // Eredar Twins
     static Trigger* eredar_twins_melee_is_at_balcony(PlayerbotAI* botAI)
@@ -393,6 +403,10 @@ private:
     static Trigger* eredar_twins_should_focus_dps(PlayerbotAI* botAI)
     {
         return new EredarTwinsShouldFocusDpsTrigger(botAI);
+    }
+    static Trigger* eredar_twins_pets_should_be_held(PlayerbotAI* botAI)
+    {
+        return new EredarTwinsPetsShouldBeHeldTrigger(botAI);
     }
     static Trigger* eredar_twins_active_conflagration_target(PlayerbotAI* botAI)
     {

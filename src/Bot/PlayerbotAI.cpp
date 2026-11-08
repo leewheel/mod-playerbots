@@ -481,7 +481,7 @@ bool PlayerbotAI::UpdateAIReaction(uint32 elapsed, bool minimal, bool canControl
         if (reaction)
         {
             if (reaction->ShouldInterruptCast())
-                bot->InterruptNonMeleeSpells(true);
+                bot->CastStop();
 
             if (reaction->ShouldInterruptMovement())
                 bot->StopMoving();
@@ -640,20 +640,13 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
     if (!bot->GetMap())
         return; // instances are created and destroyed on demand
 
-    // By leewheel 2026-08-19
-    // 原注释：每次 updateAI 都做这个昂贵调用，我们真的需要这个信息吗？（kinda expensive call...）
-    // 性能优化：原代码每 tick 每 bot 都无条件构造 WorldPosition 并拼接统计名字符串（堆分配），
-    // 但 PerfMonitor 默认关闭（perfMonEnabled=false）时，start() 直接返回 nullptr，
-    // 拼接结果根本不会被使用，白白浪费 CPU 与内存。
-    // 改为仅在 perfMonEnabled 开启时才执行构造与拼接，行为与原逻辑完全一致。
+    // Only build the metric name when the profiler is enabled; start() returns nullptr otherwise.
     PerfMonitorOperation* pmo = nullptr;
-    if (sPlayerbotAIConfig.PerfMonEnabled)
+    if (sPerfMonitor.IsEnabled())
     {
-        std::string const mapString = PlayerbotAI::IsOverworldMap(bot->GetMapId())
-            ? std::to_string(bot->GetMapId()) : "I";
+        std::string const mapString = WorldPosition(bot).isOverworld() ? std::to_string(bot->GetMapId()) : "I";
         pmo = sPerfMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
     }
-    // End By leewheel
 
     ExternalEventHelper helper(aiObjectContext);
 
@@ -681,7 +674,8 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
     {
         WorldSession* botWorldSessionPtr = bot->GetSession();
         bool logout = botWorldSessionPtr->ShouldLogOut(time(nullptr));
-        if (!master || !master->GetSession()->GetPlayer())
+
+        if (!master || !master->IsInWorld() || !master->GetSession() || !master->GetSession()->GetPlayer())
             logout = true;
 
         if (bot->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || bot->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
@@ -690,7 +684,7 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
             logout = true;
         }
 
-        if (master &&
+        if (master && master->IsInWorld() &&
             (master->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || master->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
              (master->GetSession() &&
               master->GetSession()->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT))))
@@ -838,6 +832,12 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const& text, Player& fr
     if (filtered.empty())
         return;
 
+    // Security gate for all commands, including "debug" (same rule as the Player* overload).
+    if (!IsAllowedCommand(filtered) &&
+        !GetSecurity()->CheckLevelFor(PlayerbotSecurityLevel::PLAYERBOT_SECURITY_ALLOW_ALL,
+                                      type != CHAT_MSG_WHISPER, &fromPlayer))
+        return;
+
     if (filtered.substr(0, 6) == "debug ")
     {
         std::string response = HandleRemoteCommand(filtered.substr(6));
@@ -849,9 +849,6 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const& text, Player& fr
     }
 
     bool const allowedCommand = IsAllowedCommand(filtered);
-    if (!allowedCommand && !GetSecurity()->CheckLevelFor(PlayerbotSecurityLevel::PLAYERBOT_SECURITY_ALLOW_ALL,
-                                                         type != CHAT_MSG_WHISPER, &fromPlayer))
-        return;
 
     PlayerbotSecurityLevel const requiredLevel =
         allowedCommand ? PLAYERBOT_SECURITY_DENY_ALL : PLAYERBOT_SECURITY_ALLOW_ALL;
@@ -1192,6 +1189,11 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
     if (filtered.empty())
         return;
 
+    // Gate "debug" to prevent AI state leaking to INVITE-level players.
+    if (!IsAllowedCommand(filtered) &&
+        (!GetSecurity()->CheckLevelFor(PLAYERBOT_SECURITY_ALLOW_ALL, type != CHAT_MSG_WHISPER, fromPlayer)))
+        return;
+
     if (filtered.substr(0, 6) == "debug ")
     {
         std::string const response = HandleRemoteCommand(filtered.substr(6));
@@ -1202,9 +1204,6 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         return;
     }
     bool const allowedCommand = IsAllowedCommand(filtered);
-    if (!allowedCommand &&
-        (!GetSecurity()->CheckLevelFor(PLAYERBOT_SECURITY_ALLOW_ALL, type != CHAT_MSG_WHISPER, fromPlayer)))
-        return;
 
     PlayerbotSecurityLevel const requiredLevel =
         allowedCommand ? PLAYERBOT_SECURITY_INVITE : PLAYERBOT_SECURITY_ALLOW_ALL;
@@ -4075,11 +4074,13 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
         }
     }
 
-    if (bot->isMoving() && spell->GetCastTime())
+    // Before prepare(): afterwards the event owns it and GetCastTime() becomes valid; a
+    // CanPrepare veto returns before the event exists, so the spell would leak instead.
+    if (bot->isMoving() && (spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT) &&
+        spellInfo->CalcCastTime(bot) > 0)
     {
         // bot->StopMoving();
         SetNextCheckDelay(sPlayerbotAIConfig.ReactDelay);
-        spell->cancel();
         delete spell;
         return false;
     }
@@ -4278,6 +4279,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
     }
     else
     {
+        delete spell;
         return false;
     }
 
@@ -4289,16 +4291,20 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
         return false;
     }
 
-    spell->prepare(&targets);
-
-    if (bot->isMoving() && spell->GetCastTime())
+    // Before prepare(): afterwards the event owns and deletes the spell (no double free).
+    // A CanPrepare veto returns before the event exists, so the spell would leak instead.
+    if (bot->isMoving() && (spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT) &&
+        spellInfo->CalcCastTime(bot) > 0)
     {
         // bot->StopMoving();
         SetNextCheckDelay(sPlayerbotAIConfig.ReactDelay);
-        spell->cancel();
         delete spell;
         return false;
     }
+
+    SpellCastResult result = spell->prepare(&targets);
+    if (result != SPELL_CAST_OK)
+        return false;
 
     // WaitForSpellCast(spell);
     aiObjectContext->GetValue<LastSpellCast&>("last spell cast")->Get().Set(spellId, bot->GetGUID(), time(nullptr));
@@ -5973,6 +5979,7 @@ Item* PlayerbotAI::FindStoneFor(Item* weapon) const
         ADAMANTITE_SHARPENING_STONE, FEL_SHARPENING_STONE,   ELEMENTAL_SHARPENING_STONE, DENSE_SHARPENING_STONE,
         SOLID_SHARPENING_STONE,      HEAVY_SHARPENING_STONE, COARSE_SHARPENING_STONE,    ROUGH_SHARPENING_STONE};
 
+    // Elemental Sharpening Stone also works on maces/staves/fists, so it is a valid fallback.
     static const std::vector<uint32_t> uPrioritizedWeightStoneIds = {
         ADAMANTITE_WEIGHTSTONE, FEL_WEIGHTSTONE,    ELEMENTAL_SHARPENING_STONE, DENSE_WEIGHTSTONE, SOLID_WEIGHTSTONE,
         HEAVY_WEIGHTSTONE,      COARSE_WEIGHTSTONE, ROUGH_WEIGHTSTONE};

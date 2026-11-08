@@ -15,8 +15,8 @@
 class MagtheridonEncounterTrigger : public Trigger
 {
 public:
-    MagtheridonEncounterTrigger(PlayerbotAI* botAI, std::string const name, int32 checkInterval = 1)
-        : Trigger(botAI, name, checkInterval) {}
+    MagtheridonEncounterTrigger(PlayerbotAI* botAI, std::string const name)
+        : Trigger(botAI, name) {}
 
     bool IsActive() final
     {
@@ -71,6 +71,16 @@ class MagtheridonShouldAssignDpsPriorityTrigger : public MagtheridonEncounterTri
 public:
     MagtheridonShouldAssignDpsPriorityTrigger(PlayerbotAI* botAI)
         : MagtheridonEncounterTrigger(botAI, "magtheridon should assign dps priority") {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class MagtheridonDpsHoldIsActiveTrigger : public MagtheridonEncounterTrigger
+{
+public:
+    MagtheridonDpsHoldIsActiveTrigger(PlayerbotAI* botAI)
+        : MagtheridonEncounterTrigger(botAI, "magtheridon dps hold is active") {}
 
 protected:
     bool IsActiveInEncounter() override;

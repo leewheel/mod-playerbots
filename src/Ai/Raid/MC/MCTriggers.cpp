@@ -185,3 +185,11 @@ bool McHazzrashRangedSpreadTrigger::IsActive()
     return false;
 }
 //End By leewheel
+bool McMajordomoDamageShieldTrigger::IsActive()
+{
+    if (PlayerbotAI::IsTank(bot) || !bot->HasUnitState(UNIT_STATE_MELEE_ATTACKING))
+        return false;
+
+    Unit* victim = bot->GetVictim();
+    return IsMajordomoAdd(victim) && victim->HasAura(SPELL_DAMAGE_SHIELD);
+}

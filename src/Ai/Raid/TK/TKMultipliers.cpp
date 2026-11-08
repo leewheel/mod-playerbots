@@ -225,13 +225,11 @@ float HighAstromancerSolarianDisableMeleeTargetingMultiplier::GetValueInEncounte
 
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
-float KaelthasSunstriderWaitForDpsMultiplier::GetValueInEncounter(Action* action)
+float KaelthasSunstriderHoldDpsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!dynamic_cast<CastSpellAction*>(action) && !dynamic_cast<AttackAction*>(action))
-        return 1.0f;
-
-    if (dynamic_cast<CastHealingSpellAction*>(action) ||
-        dynamic_cast<CastFearWardOnMainTankAction*>(action))
+    if (!IsDpsHoldCandidate(bot, action) ||
+        dynamic_cast<CastFearWardOnMainTankAction*>(action) ||
+        dynamic_cast<KaelthasSunstriderAssignAdvisorDpsPriorityAction*>(action))
     {
         return 1.0f;
     }
@@ -240,30 +238,7 @@ float KaelthasSunstriderWaitForDpsMultiplier::GetValueInEncounter(Action* action
     if (!kaelthas)
         return 1.0f;
 
-    if (GetKaelthasTkPhase(kaelthas) != PHASE_SINGLE_ADVISOR)
-        return 1.0f;
-
-    constexpr uint32 dpsWaitMs = 10 * IN_MILLISECONDS;
-    std::optional<uint32> const& waitStart = TkState(kaelthas->GetInstanceId()).advisorDpsWaitTimer;
-    if (waitStart && *waitStart != ADVISOR_DPS_WAIT_NOT_STARTED &&
-        getMSTimeDiff(*waitStart, getMSTime()) >= dpsWaitMs)
-    {
-        return 1.0f;
-    }
-
-    // Only the applicable tank may attack during the first 10 seconds of an advisor in phase 1.
-    // By leewheel 2026-09-13 合并brighton 8c96a663: 采纳上游 IsCapernianTank() 简化写法（取代原先的
-    // "术士 + GetCapernianTank(bot) == bot" 组合判定），并按 AGENTS.md 第81条保留 entry 化写法。
-    if (IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20060")))  // 20060 = 萨古纳尔男爵
-        return PlayerbotAI::IsMainTank(bot) ? 1.0f : 0.0f;
-
-    if (IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20062")))  // 20062 = 大星术师卡普尼恩
-        return IsCapernianTank(bot) ? 1.0f : 0.0f;
-
-    if (IsAdvisorActive(AI_VALUE2(Unit*, "find target", "20063")))
-        return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) ? 1.0f : 0.0f;
-
-    return 1.0f;
+    return IsKaelthasAdvisorDpsHoldActive(botAI, kaelthas) ? GetDpsHoldValue(bot, action) : 1.0f;
 }
 
 float KaelthasSunstriderKiteThaladredMultiplier::GetValueInEncounter(Action* action)
@@ -431,6 +406,20 @@ float KaelthasSunstriderManageAutomaticTargetingMultiplier::GetValueInEncounter(
 
     // Only main tank is blocked during weapons/transition phases.
     return PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
+}
+
+// Stop melee from dropping to their non-combat engines during the weapon phase (in the event that
+// the only weapons remaining are in range of the axe).
+float KaelthasSunstriderKeepMeleeInCombatMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!dynamic_cast<DropTargetAction*>(action))
+        return 1.0f;
+
+    if (!PlayerbotAI::IsMelee(bot) || !PlayerbotAI::IsDps(bot))
+        return 1.0f;
+
+    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    return kaelthas && GetKaelthasTkPhase(kaelthas) == PHASE_WEAPONS ? 0.0f : 1.0f;
 }
 
 float KaelthasSunstriderDisableDisperseMultiplier::GetValueInEncounter(Action* action)

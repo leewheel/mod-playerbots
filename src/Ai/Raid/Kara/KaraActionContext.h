@@ -45,6 +45,12 @@ public:
         creators["attumen the huntsman stack behind"] =
             &RaidKarazhanActionContext::attumen_the_huntsman_stack_behind;
 
+        creators["attumen the huntsman stop attacking"] =
+            &RaidKarazhanActionContext::attumen_the_huntsman_stop_attacking;
+
+        creators["attumen the huntsman select target for hold"] =
+            &RaidKarazhanActionContext::attumen_the_huntsman_select_target_for_hold;
+
         creators["attumen the huntsman manage dps timer"] =
             &RaidKarazhanActionContext::attumen_the_huntsman_manage_dps_timer;
 
@@ -66,11 +72,17 @@ public:
             &RaidKarazhanActionContext::maiden_of_virtue_set_grounding_totem;
 
         // The Big Bad Wolf
-        creators["big bad wolf position boss"] =
-            &RaidKarazhanActionContext::big_bad_wolf_position_boss;
+        creators["big bad wolf tank position boss"] =
+            &RaidKarazhanActionContext::big_bad_wolf_tank_position_boss;
 
-        creators["big bad wolf little red riding hood run away"] =
-            &RaidKarazhanActionContext::big_bad_wolf_little_red_riding_hood_run_away;
+        creators["big bad wolf red hood run away"] =
+            &RaidKarazhanActionContext::big_bad_wolf_red_hood_run_away;
+
+        creators["big bad wolf red hood use escape"] =
+            &RaidKarazhanActionContext::big_bad_wolf_red_hood_use_escape;
+
+        creators["big bad wolf protect red hood"] =
+            &RaidKarazhanActionContext::big_bad_wolf_protect_red_hood;
 
         // Romulo and Julianne
         creators["romulo and julianne mark target"] =
@@ -87,8 +99,8 @@ public:
         creators["the curator mark astral flare"] =
             &RaidKarazhanActionContext::the_curator_mark_astral_flare;
 
-        creators["the curator position boss"] =
-            &RaidKarazhanActionContext::the_curator_position_boss;
+        creators["the curator tank position boss"] =
+            &RaidKarazhanActionContext::the_curator_tank_position_boss;
 
         creators["the curator spread ranged"] =
             &RaidKarazhanActionContext::the_curator_spread_ranged;
@@ -100,6 +112,9 @@ public:
         // Shade of Aran
         creators["shade of aran run away from arcane explosion"] =
             &RaidKarazhanActionContext::shade_of_aran_run_away_from_arcane_explosion;
+
+        creators["shade of aran run out of blizzard"] =
+            &RaidKarazhanActionContext::shade_of_aran_run_out_of_blizzard;
 
         creators["shade of aran stop moving during flame wreath"] =
             &RaidKarazhanActionContext::shade_of_aran_stop_moving_during_flame_wreath;
@@ -114,17 +129,26 @@ public:
         creators["netherspite block red beam"] =
             &RaidKarazhanActionContext::netherspite_block_red_beam;
 
-        creators["netherspite block blue beam"] =
-            &RaidKarazhanActionContext::netherspite_block_blue_beam;
+        creators["netherspite block green or blue beam"] =
+            &RaidKarazhanActionContext::netherspite_block_green_or_blue_beam;
 
-        creators["netherspite block green beam"] =
-            &RaidKarazhanActionContext::netherspite_block_green_beam;
+        creators["netherspite wait to block beam"] =
+            &RaidKarazhanActionContext::netherspite_wait_to_block_beam;
 
-        creators["netherspite avoid beam and void zone"] =
-            &RaidKarazhanActionContext::netherspite_avoid_beam_and_void_zone;
+        creators["netherspite move between beams"] =
+            &RaidKarazhanActionContext::netherspite_move_between_beams;
 
-        creators["netherspite banish phase avoid void zone"] =
-            &RaidKarazhanActionContext::netherspite_banish_phase_avoid_void_zone;
+        creators["netherspite move to banish slot"] =
+            &RaidKarazhanActionContext::netherspite_move_to_banish_slot;
+
+        creators["netherspite stop attacking"] =
+            &RaidKarazhanActionContext::netherspite_stop_attacking;
+
+        creators["netherspite select target for hold"] =
+            &RaidKarazhanActionContext::netherspite_select_target_for_hold;
+
+        creators["netherspite control pet aggression"] =
+            &RaidKarazhanActionContext::netherspite_control_pet_aggression;
 
         creators["netherspite manage timers and trackers"] =
             &RaidKarazhanActionContext::netherspite_manage_timers_and_trackers;
@@ -133,27 +157,33 @@ public:
         creators["prince malchezaar enfeebled bot avoid hazard"] =
             &RaidKarazhanActionContext::prince_malchezaar_enfeebled_bot_avoid_hazard;
 
-        creators["prince malchezaar non-tank avoid infernal"] =
-            &RaidKarazhanActionContext::prince_malchezaar_non_tank_avoid_infernal;
+        creators["prince malchezaar move clear of hazards"] =
+            &RaidKarazhanActionContext::prince_malchezaar_move_clear_of_hazards;
 
-        creators["prince malchezaar tanks position boss"] =
-            &RaidKarazhanActionContext::prince_malchezaar_tanks_position_boss;
+        creators["prince malchezaar tank position boss"] =
+            &RaidKarazhanActionContext::prince_malchezaar_tank_position_boss;
 
         // Nightbane
-        creators["nightbane ground phase tanks position boss"] =
-            &RaidKarazhanActionContext::nightbane_ground_phase_position_boss;
+        creators["nightbane tank position boss"] =
+            &RaidKarazhanActionContext::nightbane_tank_position_boss;
 
-        creators["nightbane ground phase coordinate ranged movement"] =
-            &RaidKarazhanActionContext::nightbane_ground_phase_rotate_ranged_positions;
+        creators["nightbane ranged stack and move from charred earth"] =
+            &RaidKarazhanActionContext::nightbane_ranged_stack_and_move_from_charred_earth;
 
         creators["nightbane control pet aggression"] =
             &RaidKarazhanActionContext::nightbane_control_pet_aggression;
 
-        creators["nightbane flight phase stack and move"] =
-            &RaidKarazhanActionContext::nightbane_flight_phase_stack_and_move;
+        creators["nightbane stop attacking"] =
+            &RaidKarazhanActionContext::nightbane_stop_attacking;
 
-        creators["nightbane teleport back to terrace"] =
-            &RaidKarazhanActionContext::nightbane_teleport_back_to_terrace;
+        creators["nightbane select target for hold"] =
+            &RaidKarazhanActionContext::nightbane_select_target_for_hold;
+
+        creators["nightbane stack away from rain of bones"] =
+            &RaidKarazhanActionContext::nightbane_stack_away_from_rain_of_bones;
+
+        creators["nightbane leave combat for landing"] =
+            &RaidKarazhanActionContext::nightbane_leave_combat_for_landing;
 
         creators["nightbane manage timers and trackers"] =
             &RaidKarazhanActionContext::nightbane_manage_timers_and_trackers;
@@ -197,6 +227,14 @@ private:
     {
         return new AttumenTheHuntsmanStackBehindAction(botAI);
     }
+    static Action* attumen_the_huntsman_stop_attacking(PlayerbotAI* botAI)
+    {
+        return new AttumenTheHuntsmanStopAttackingAction(botAI);
+    }
+    static Action* attumen_the_huntsman_select_target_for_hold(PlayerbotAI* botAI)
+    {
+        return new AttumenTheHuntsmanSelectTargetForHoldAction(botAI);
+    }
     static Action* attumen_the_huntsman_manage_dps_timer(PlayerbotAI* botAI)
     {
         return new AttumenTheHuntsmanManageDpsTimerAction(botAI);
@@ -227,13 +265,21 @@ private:
     }
 
     // The Big Bad Wolf
-    static Action* big_bad_wolf_position_boss(PlayerbotAI* botAI)
+    static Action* big_bad_wolf_tank_position_boss(PlayerbotAI* botAI)
     {
-        return new BigBadWolfPositionBossAction(botAI);
+        return new BigBadWolfTankPositionBossAction(botAI);
     }
-    static Action* big_bad_wolf_little_red_riding_hood_run_away(PlayerbotAI* botAI)
+    static Action* big_bad_wolf_red_hood_run_away(PlayerbotAI* botAI)
     {
-        return new BigBadWolfLittleRedRidingHoodRunAwayAction(botAI);
+        return new BigBadWolfRedHoodRunAwayAction(botAI);
+    }
+    static Action* big_bad_wolf_red_hood_use_escape(PlayerbotAI* botAI)
+    {
+        return new BigBadWolfRedHoodUseEscapeAction(botAI);
+    }
+    static Action* big_bad_wolf_protect_red_hood(PlayerbotAI* botAI)
+    {
+        return new BigBadWolfProtectRedHoodAction(botAI);
     }
 
     // Romulo and Julianne
@@ -257,9 +303,9 @@ private:
     {
         return new TheCuratorMarkAstralFlareAction(botAI);
     }
-    static Action* the_curator_position_boss(PlayerbotAI* botAI)
+    static Action* the_curator_tank_position_boss(PlayerbotAI* botAI)
     {
-        return new TheCuratorPositionBossAction(botAI);
+        return new TheCuratorTankPositionBossAction(botAI);
     }
     static Action* the_curator_spread_ranged(PlayerbotAI* botAI)
     {
@@ -276,6 +322,10 @@ private:
     static Action* shade_of_aran_run_away_from_arcane_explosion(PlayerbotAI* botAI)
     {
         return new ShadeOfAranRunAwayFromArcaneExplosionAction(botAI);
+    }
+    static Action* shade_of_aran_run_out_of_blizzard(PlayerbotAI* botAI)
+    {
+        return new ShadeOfAranRunOutOfBlizzardAction(botAI);
     }
     static Action* shade_of_aran_stop_moving_during_flame_wreath(PlayerbotAI* botAI)
     {
@@ -295,21 +345,33 @@ private:
     {
         return new NetherspiteBlockRedBeamAction(botAI);
     }
-    static Action* netherspite_block_blue_beam(PlayerbotAI* botAI)
+    static Action* netherspite_block_green_or_blue_beam(PlayerbotAI* botAI)
     {
-        return new NetherspiteBlockBlueBeamAction(botAI);
+        return new NetherspiteBlockGreenOrBlueBeamAction(botAI);
     }
-    static Action* netherspite_block_green_beam(PlayerbotAI* botAI)
+    static Action* netherspite_wait_to_block_beam(PlayerbotAI* botAI)
     {
-        return new NetherspiteBlockGreenBeamAction(botAI);
+        return new NetherspiteWaitToBlockBeamAction(botAI);
     }
-    static Action* netherspite_avoid_beam_and_void_zone(PlayerbotAI* botAI)
+    static Action* netherspite_move_between_beams(PlayerbotAI* botAI)
     {
-        return new NetherspiteAvoidBeamAndVoidZoneAction(botAI);
+        return new NetherspiteMoveBetweenBeamsAction(botAI);
     }
-    static Action* netherspite_banish_phase_avoid_void_zone(PlayerbotAI* botAI)
+    static Action* netherspite_move_to_banish_slot(PlayerbotAI* botAI)
     {
-        return new NetherspiteBanishPhaseAvoidVoidZoneAction(botAI);
+        return new NetherspiteMoveToBanishSlotAction(botAI);
+    }
+    static Action* netherspite_stop_attacking(PlayerbotAI* botAI)
+    {
+        return new NetherspiteStopAttackingAction(botAI);
+    }
+    static Action* netherspite_select_target_for_hold(PlayerbotAI* botAI)
+    {
+        return new NetherspiteSelectTargetForHoldAction(botAI);
+    }
+    static Action* netherspite_control_pet_aggression(PlayerbotAI* botAI)
+    {
+        return new NetherspiteControlPetAggressionAction(botAI);
     }
     static Action* netherspite_manage_timers_and_trackers(PlayerbotAI* botAI)
     {
@@ -321,35 +383,43 @@ private:
     {
         return new PrinceMalchezaarEnfeebledBotAvoidHazardAction(botAI);
     }
-    static Action* prince_malchezaar_non_tank_avoid_infernal(PlayerbotAI* botAI)
+    static Action* prince_malchezaar_move_clear_of_hazards(PlayerbotAI* botAI)
     {
-        return new PrinceMalchezaarNonTankAvoidInfernalAction(botAI);
+        return new PrinceMalchezaarMoveClearOfHazardsAction(botAI);
     }
-    static Action* prince_malchezaar_tanks_position_boss(PlayerbotAI* botAI)
+    static Action* prince_malchezaar_tank_position_boss(PlayerbotAI* botAI)
     {
-        return new PrinceMalchezaarTanksPositionBossAction(botAI);
+        return new PrinceMalchezaarTankPositionBossAction(botAI);
     }
 
     // Nightbane
-    static Action* nightbane_ground_phase_position_boss(PlayerbotAI* botAI)
+    static Action* nightbane_tank_position_boss(PlayerbotAI* botAI)
     {
-        return new NightbaneGroundPhaseTanksPositionBossAction(botAI);
+        return new NightbaneTankPositionBossAction(botAI);
     }
-    static Action* nightbane_ground_phase_rotate_ranged_positions(PlayerbotAI* botAI)
+    static Action* nightbane_ranged_stack_and_move_from_charred_earth(PlayerbotAI* botAI)
     {
-        return new NightbaneGroundPhaseCoordinateRangedMovementAction(botAI);
+        return new NightbaneRangedStackAndMoveFromCharredEarthAction(botAI);
     }
     static Action* nightbane_control_pet_aggression(PlayerbotAI* botAI)
     {
         return new NightbaneControlPetAggressionAction(botAI);
     }
-    static Action* nightbane_flight_phase_stack_and_move(PlayerbotAI* botAI)
+    static Action* nightbane_stop_attacking(PlayerbotAI* botAI)
     {
-        return new NightbaneFlightPhaseStackAndMoveAction(botAI);
+        return new NightbaneStopAttackingAction(botAI);
     }
-    static Action* nightbane_teleport_back_to_terrace(PlayerbotAI* botAI)
+    static Action* nightbane_select_target_for_hold(PlayerbotAI* botAI)
     {
-        return new NightbaneTeleportBackToTerraceAction(botAI);
+        return new NightbaneSelectTargetForHoldAction(botAI);
+    }
+    static Action* nightbane_stack_away_from_rain_of_bones(PlayerbotAI* botAI)
+    {
+        return new NightbaneStackAwayFromRainOfBonesAction(botAI);
+    }
+    static Action* nightbane_leave_combat_for_landing(PlayerbotAI* botAI)
+    {
+        return new NightbaneLeaveCombatForLandingAction(botAI);
     }
     static Action* nightbane_manage_timers_and_trackers(PlayerbotAI* botAI)
     {

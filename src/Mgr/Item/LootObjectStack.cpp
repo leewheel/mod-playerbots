@@ -488,6 +488,11 @@ bool LootObject::IsLootPossible(Player* bot)
 
 bool LootObjectStack::Add(ObjectGuid guid)
 {
+    //By leewheel 2026-11-08 (bug_107): 放弃窗口内不再入队，避免每 tick 被重新加回来
+    if (IsGivenUp(guid))
+        return false;
+    //End By leewheel
+
     if (availableLoot.size() >= MAX_LOOT_OBJECT_COUNT)
     {
         availableLoot.shrink(time(nullptr) - 30);
@@ -604,6 +609,45 @@ bool LootObjectStack::CanAttemptLoot(ObjectGuid guid) const
     return itr == availableLoot.end() || itr->IsReady();
 }
 
+//By leewheel 2026-11-08 (bug_107): 放弃机制实现
+uint8 LootObjectStack::GetRetryCount(ObjectGuid guid) const
+{
+    LootTargetList::const_iterator itr = availableLoot.find(guid);
+    return itr == availableLoot.end() ? 0 : itr->GetRetryCount();
+}
+
+bool LootObjectStack::IsGivenUp(ObjectGuid guid)
+{
+    auto itr = _givenUpUntil.find(guid);
+    if (itr == _givenUpUntil.end())
+        return false;
+
+    if (std::chrono::steady_clock::now() < itr->second)
+        return true;
+
+    // 到期自动解禁：节点重生、玩家开锁技能变化、僵死状态解除后都能重新尝试
+    _givenUpUntil.erase(itr);
+    return false;
+}
+
+void LootObjectStack::GiveUp(ObjectGuid guid, uint32 seconds)
+{
+    if (!guid || !seconds)
+        return;
+
+    _givenUpUntil[guid] = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+    Remove(guid);
+
+    if (_pendingLoot == guid)
+        CancelLoot(guid);
+}
+
+bool LootObjectStack::IsRetryExhausted(ObjectGuid guid) const
+{
+    return GetRetryCount(guid) >= MAX_LOOT_RETRY_ATTEMPTS;
+}
+//End By leewheel
+
 LootObject LootObjectStack::GetLoot(float maxDistance) { return GetNearest(maxDistance); }
 
 LootObject LootObjectStack::GetNearest(float maxDistance)
@@ -622,6 +666,14 @@ LootObject LootObjectStack::GetNearest(float maxDistance)
             ++i;
             continue;
         }
+
+        //By leewheel 2026-11-08 (bug_107): 已放弃的目标不参与选靶
+        if (IsGivenUp(guid))
+        {
+            i = availableLoot.erase(i);
+            continue;
+        }
+        //End By leewheel
 
         WorldObject* worldObj = ObjectAccessor::GetWorldObject(*bot, guid);
         if (!worldObj)

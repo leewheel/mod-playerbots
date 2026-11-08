@@ -10,6 +10,7 @@
 #include "DKActions.h"
 #include "DruidActions.h"
 #include "DruidBearActions.h"
+#include "DruidCatActions.h"
 #include "EncounterHelpers.h"
 #include "FollowActions.h"
 #include "HunterActions.h"
@@ -26,6 +27,8 @@
 #include "ThreatHelpers.h"
 #include "WarlockActions.h"
 #include "WarriorActions.h"
+#include "WipeAction.h"
+#include <array>
 
 using namespace KaraHelpers;
 using namespace EncounterHelpers;
@@ -48,7 +51,6 @@ float KarazhanSetTremorTotemMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
     return IsKarazhanFearCasterActive(bot) ? 0.0f : 1.0f;
 }
 
@@ -76,11 +78,7 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
         case KaraBosses::DATA_MOROES:
             boss = GetKaraBoss(bot, KaraBosses::DATA_MOROES);
             break;
-        //By leewheel 2026-11-01 entry 铁律：同段英文名回退 entry（16457=Maiden of virtue /
-        //  17521=Big Bad Wolf / 15691=The Curator / 15689=Netherspite / 15690=Prince Malchezaar，
-        //  后三者取 KaraNpcs 枚举既有值）。
         case KaraBosses::DATA_MAIDEN:
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
             boss = GetKaraBoss(bot, KaraBosses::DATA_MAIDEN);
             break;
         case KaraBosses::DATA_OPERA_PERFORMANCE:
@@ -100,25 +98,20 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
             break;
         }
         case KaraBosses::DATA_CURATOR:
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
             boss = GetKaraBoss(bot, KaraBosses::DATA_CURATOR);
             break;
-        //End By leewheel
         case KaraBosses::DATA_TERESTIAN:
             boss = GetKaraBoss(bot, KaraBosses::DATA_TERESTIAN);
             break;
         case KaraBosses::DATA_ARAN:
             boss = GetKaraBoss(bot, KaraBosses::DATA_ARAN);
             break;
-        //By leewheel 2026-11-01 entry 铁律：同上（15689=Netherspite / 15690=Prince Malchezaar）。
         case KaraBosses::DATA_NETHERSPITE:
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
             boss = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
             break;
         case KaraBosses::DATA_MALCHEZAAR:
             boss = GetKaraBoss(bot, KaraBosses::DATA_MALCHEZAAR);
             break;
-        //End By leewheel
         case KaraBosses::DATA_NIGHTBANE:
             boss = GetKaraBoss(bot, KaraBosses::DATA_NIGHTBANE);
             break;
@@ -145,7 +138,7 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
         return 0.0f;
 
     if (boss->GetEntry() == Id(KaraNpcs::NPC_NIGHTBANE))
-        return boss->GetPositionZ() > NIGHTBANE_FLIGHT_Z ? 0.0f : 1.0f;
+        return IsNightbaneFlying(*boss) ? 0.0f : 1.0f;
 
     if (boss->GetEntry() == Id(KaraNpcs::NPC_NETHERSPITE))
         return IsBanishPhase(boss) ? 0.0f : 1.0f;
@@ -168,7 +161,8 @@ float ManaWarpSaveStunsMultiplier::GetValue(Action* action)
         case CLASS_DRUID:
         {
             isStun = dynamic_cast<CastBashAction*>(action) ||
-                dynamic_cast<CastBashOnEnemyHealerAction*>(action);
+                dynamic_cast<CastBashOnEnemyHealerAction*>(action) ||
+                dynamic_cast<CastMaimAction*>(action);
             break;
         }
         case CLASS_PALADIN:
@@ -218,9 +212,6 @@ float AttumenTheHuntsmanStayStackedMultiplier::GetValueInEncounter(Action* actio
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (PlayerbotAI::IsMainTank(bot))
-        return 1.0f;
-
     if (dynamic_cast<AttackAction*>(action) ||
         dynamic_cast<AttumenTheHuntsmanStackBehindAction*>(action))
     {
@@ -239,36 +230,22 @@ float AttumenTheHuntsmanStayStackedMultiplier::GetValueInEncounter(Action* actio
     if (!midnight || !IsAttumenMounted(*midnight))
         return 1.0f;
 
-    // Whoever Attumen is on moves freely; everyone else stays stacked.
+    // Whoever Attumen is on, and the main tank, move freely; everyone else stays stacked.
     Unit* attumen = GetMountedAttumen(bot);
-    return attumen && attumen->GetVictim() == bot ? 1.0f : 0.0f;
+    if (attumen && attumen->GetVictim() == bot)
+        return 1.0f;
+
+    return PlayerbotAI::IsMainTank(bot) ? 1.0f : 0.0f;
 }
 
-// Give the main tank 5 seconds to grab aggro when Attumen mounts Midnight
-float AttumenTheHuntsmanWaitForDpsMultiplier::GetValueInEncounter(Action* action)
+// Give the main tank 5 seconds to grab aggro when Attumen mounts Midnight. Mounted Attumen is the
+// only thing left to attack then, so the hold doesn't need to look at the target.
+float AttumenTheHuntsmanHoldDpsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!dynamic_cast<AttackAction*>(action) &&
-        !dynamic_cast<CastSpellAction*>(action))
-    {
-        return 1.0f;
-    }
-
-    if (dynamic_cast<CastHealingSpellAction*>(action))
+    if (!IsDpsHoldCandidate(bot, action) || dynamic_cast<CastHealingSpellAction*>(action))
         return 1.0f;
 
-    if (PlayerbotAI::IsMainTank(bot))
-        return 1.0f;
-
-    Unit* midnight = FindThreatTarget(bot, "midnight");
-    if (!midnight || !IsAttumenMounted(*midnight))
-        return 1.0f;
-
-    KaraInstanceState const* state = FindKaraState(bot->GetInstanceId());
-    if (!state || !state->attumenDpsWaitTimer)
-        return 0.0f; // Timer blocking dps if not set yet is intentional in all cases
-
-    constexpr uint32 dpsWaitMs = 5 * IN_MILLISECONDS;
-    return getMSTimeDiff(*state->attumenDpsWaitTimer, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return IsAttumenDpsHeld(bot) ? GetDpsHoldValue(bot, action) : 1.0f;
 }
 
 // Maiden of Virtue
@@ -284,7 +261,6 @@ float MaidenOfVirtueDisableCombatFormationMoveMultiplier::GetValueInEncounter(Ac
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
     return GetEncounterBoss() ? 0.0f : 1.0f;
 }
 
@@ -293,15 +269,31 @@ float MaidenOfVirtueSetGroundingTotemMultiplier::GetValueInEncounter(Action* act
     if (bot->getClass() != CLASS_SHAMAN)
         return 1.0f;
 
+    // Call of the Elements drops whatever air totem the totem bar holds.
     if (!dynamic_cast<CastWrathOfAirTotemAction*>(action) &&
         !dynamic_cast<CastNatureResistanceTotemAction*>(action) &&
-        !dynamic_cast<CastWindfuryTotemAction*>(action))
+        !dynamic_cast<CastWindfuryTotemAction*>(action) &&
+        !dynamic_cast<CastCallOfTheElementsAction*>(action))
     {
         return 1.0f;
     }
 
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
     return GetEncounterBoss() ? 0.0f : 1.0f;
+}
+
+// The Big Bad Wolf
+
+// Moving, turning or casting ends Feign Death, and standing up with Hood on brings him back, so a
+// feigning Hood target does nothing until Hood ends.
+float BigBadWolfRedHoodHunterStayDownMultiplier::GetValueInEncounter(Action* action)
+{
+    if (bot->getClass() != CLASS_HUNTER || !bot->HasAura(Id(KaraSpells::SPELL_FEIGN_DEATH)))
+        return 1.0f;
+
+    if (!IsLittleRedRidingHood(bot))
+        return 1.0f;
+
+    return dynamic_cast<WipeAction*>(action) ? 1.0f : 0.0f;
 }
 
 // The Curator
@@ -314,7 +306,6 @@ float TheCuratorDisableTankAssistMultiplier::GetValueInEncounter(Action* action)
     if (!dynamic_cast<TankAssistAction*>(action))
         return 1.0f;
 
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
     return GetEncounterBoss() ? 0.0f : 1.0f;
 }
 
@@ -329,7 +320,6 @@ float TheCuratorDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action
     if (dynamic_cast<SetBehindTargetAction*>(action))
         return 1.0f;
 
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
     return GetEncounterBoss() ? 0.0f : 1.0f;
 }
 
@@ -340,9 +330,6 @@ float TerestianIllhoofDontDotFiendishImpsMultiplier::GetValueInEncounter(Action*
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    //By leewheel 2026-11-04 采纳上游判定方式：从「全场是否存在魔仆小鬼(17267)」改为
-    //  「动作目标本身entry就是小鬼」，更精确且不依赖目标检索；同批上游把
-    //  CastDebuffSpellOnAttackerAction 放宽到基类 CastDebuffSpellAction，覆盖 on-attacker DoT。
     // Also the on-attacker DoTs, which pick their own target.
     if (!dynamic_cast<CastDebuffSpellAction*>(action))
         return 1.0f;
@@ -358,16 +345,17 @@ float ShadeOfAranArcaneExplosionRunAwayMultiplier::GetValueInEncounter(Action* a
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (dynamic_cast<AttackAction*>(action) ||
-        dynamic_cast<ShadeOfAranRunAwayFromArcaneExplosionAction*>(action))
+    if (!dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<CastBlinkBackAction*>(action) &&
+        !dynamic_cast<CastDisengageAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action) &&
+        !dynamic_cast<CastKillingSpreeAction*>(action))
     {
         return 1.0f;
     }
 
-    if (!dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<CastBlinkBackAction*>(action) &&
-        !dynamic_cast<CastDisengageAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action))
+    if (dynamic_cast<AttackAction*>(action) ||
+        dynamic_cast<ShadeOfAranRunAwayFromArcaneExplosionAction*>(action))
     {
         return 1.0f;
     }
@@ -379,18 +367,19 @@ float ShadeOfAranArcaneExplosionRunAwayMultiplier::GetValueInEncounter(Action* a
     return IsAranCastingArcaneExplosion(aran) ? 0.0f : 1.0f;
 }
 
+// Includes set behind, as he faces a random player with each cast.
+float ShadeOfAranDisableReactiveMovementMultiplier::GetValueInEncounter(Action* action)
+{
+    bool const isReactiveMovement =
+        dynamic_cast<AvoidAoeAction*>(action) || dynamic_cast<FleeAction*>(action) ||
+        dynamic_cast<CombatFormationMoveAction*>(action);
+
+    return isReactiveMovement ? 0.0f : 1.0f;
+}
+
 // I will not move when Flame Wreath is cast or the raid blows up.
 float ShadeOfAranFlameWreathDisableMovementMultiplier::GetValueInEncounter(Action* action)
 {
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    if (dynamic_cast<AttackAction*>(action) ||
-        dynamic_cast<ShadeOfAranStopMovingDuringFlameWreathAction*>(action))
-    {
-        return 1.0f;
-    }
-
     if (!dynamic_cast<MovementAction*>(action) &&
         !dynamic_cast<CastBlinkBackAction*>(action) &&
         !dynamic_cast<CastDisengageAction*>(action) &&
@@ -400,89 +389,78 @@ float ShadeOfAranFlameWreathDisableMovementMultiplier::GetValueInEncounter(Actio
         return 1.0f;
     }
 
-    if (!GetEncounterBoss())
-        return 1.0f;
-
-    return IsFlameWreathActive(bot) ? 0.0f : 1.0f;
-}
-
-// Netherspite
-
-float NetherspiteKeepBlockingBeamMultiplier::GetValueInEncounter(Action* action)
-{
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
-    bool const isReachTargetAction =
-        dynamic_cast<ReachTargetAction*>(action) ||
-        dynamic_cast<CastReachTargetSpellAction*>(action);
-
-    bool const isBlockedAction =
-        isReachTargetAction ||
-        dynamic_cast<FollowAction*>(action) ||
-        dynamic_cast<CombatFormationMoveAction*>(action) ||
-        dynamic_cast<FleeAction*>(action) ||
-        dynamic_cast<AvoidAoeAction*>(action) ||
-        dynamic_cast<CastKillingSpreeAction*>(action);
-
-    if (!isBlockedAction)
-        return 1.0f;
-
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
-    Unit* netherspite = GetEncounterBoss();
-    if (!netherspite)
-        return 1.0f;
-
-    // Derived from CombatFormationMoveAction. Block even in Banish phase so the tank stays put.
-    if (dynamic_cast<TankFaceAction*>(action))
-        return 0.0f;
-
-    if (IsBanishPhase(netherspite))
-        return 1.0f;
-
-    auto [redBlocker, greenBlocker, blueBlocker] = GetCurrentBeamBlockers(bot);
-
-    if (bot == greenBlocker || bot == blueBlocker)
-        return 0.0f;
-
-    return bot == redBlocker && !isReachTargetAction ? 0.0f : 1.0f;
-}
-
-// Give tanks 5 seconds to get aggro during phase transitions
-float NetherspiteWaitForDpsMultiplier::GetValueInEncounter(Action* action)
-{
-    if (PlayerbotAI::IsTank(bot))
-        return 1.0f;
-
-    if (!dynamic_cast<AttackAction*>(action) &&
-        !dynamic_cast<CastSpellAction*>(action))
+    if (dynamic_cast<AttackAction*>(action) ||
+        dynamic_cast<ShadeOfAranStopMovingDuringFlameWreathAction*>(action))
     {
         return 1.0f;
     }
 
-    if (dynamic_cast<CastHealingSpellAction*>(action))
+    Unit* aran = GetEncounterBoss();
+    if (!IsFlameWreathInProgress(botAI, aran))
         return 1.0f;
 
-    //By leewheel 2026-11-04 采纳上游数据驱动（GetKaraBoss/GetOperaActor 走 InstanceScript entry 登记，符合 entry 铁律）
-    Unit* netherspite = GetEncounterBoss();
-    if (!netherspite || IsBanishPhase(netherspite))
-        return 1.0f;
+    bool const isReachingTarget =
+        dynamic_cast<ReachMeleeAction*>(action) || dynamic_cast<ReachSpellAction*>(action);
 
-    KaraInstanceState const* state = FindKaraState(netherspite->GetInstanceId());
-    if (!state || !state->netherspiteDpsWaitTimer)
+    return isReachingTarget && CanReachTargetDuringFlameWreath(botAI, aran) ? 1.0f : 0.0f;
+}
+
+// Netherspite
+
+// The beam area and the banish slots are where every bot stands, so nothing else moves them. Bots
+// on a beam or waiting for one don't reach either, except that a red blocker can follow him.
+float NetherspiteDisableReactiveMovementMultiplier::GetValueInEncounter(Action* action)
+{
+    if (dynamic_cast<CombatFormationMoveAction*>(action) ||
+        dynamic_cast<AvoidAoeAction*>(action) ||
+        dynamic_cast<FleeAction*>(action) ||
+        dynamic_cast<FollowAction*>(action) ||
+        dynamic_cast<CastKillingSpreeAction*>(action))
+    {
         return 0.0f;
+    }
 
-    constexpr uint32 dpsWaitMs = 5 * IN_MILLISECONDS;
-    return getMSTimeDiff(*state->netherspiteDpsWaitTimer, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    if (!dynamic_cast<ReachTargetAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action))
+    {
+        return 1.0f;
+    }
+
+    KaraInstanceState const* state = FindKaraState(bot->GetInstanceId());
+    if (!state ||
+        state->netherspiteBeams[Id(NetherspiteBeam::Red)].blocker == bot->GetGUID())
+    {
+        return 1.0f;
+    }
+
+    return IsNetherspiteBlockerOrNext(*state, bot->GetGUID()) ? 0.0f : 1.0f;
+}
+
+float NetherspiteHoldDpsMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!IsDpsHoldCandidate(bot, action) || dynamic_cast<CastHealingSpellAction*>(action))
+        return 1.0f;
+
+    Unit* netherspite = GetEncounterBoss();
+    if (!netherspite || !IsNetherspiteDpsHeld(bot, *netherspite))
+        return 1.0f;
+
+    return action->GetTarget() == netherspite ? GetDpsHoldValue(bot, action) : 1.0f;
 }
 
 // Prince Malchezaar
 
+float PrinceMalchezaarDisableReactiveMovementMultiplier::GetValueInEncounter(Action* action)
+{
+    bool const isReactiveMovement =
+        dynamic_cast<AvoidAoeAction*>(action) || dynamic_cast<FleeAction*>(action) ||
+        dynamic_cast<CombatFormationMoveAction*>(action);
+
+    return isReactiveMovement ? 0.0f : 1.0f;
+}
+
 float PrinceMalchezaarEnfeebleMultiplier::GetValueInEncounter(Action* action)
 {
-    if (botAI->GetState() == BOT_STATE_NON_COMBAT)
-        return 1.0f;
-
     if (!bot->HasAura(Id(KaraSpells::SPELL_ENFEEBLE)))
         return 1.0f;
 
@@ -556,34 +534,29 @@ float NightbaneDisablePetsMultiplier::GetValueInEncounter(Action* action)
         return 0.0f;
 
     // PetAttackAction
-    return nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z ? 0.0f : 1.0f;
+    return IsNightbaneFlying(*nightbane) ? 0.0f : 1.0f;
 }
 
-// Give the main tank 8 seconds to get aggro during phase transitions
-float NightbaneWaitForDpsMultiplier::GetValueInEncounter(Action* action)
+// In flight, a unit hold on Nightbane, with drop target zeroed until he leaves the flight position
+// so bots stay in their combat engine fighting skeletons and healing. After each landing, the main
+// tank has 8 seconds to get aggro.
+float NightbaneHoldDpsMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!dynamic_cast<AttackAction*>(action) &&
-        !dynamic_cast<CastSpellAction*>(action))
-    {
-        return 1.0f;
-    }
-
-    if (dynamic_cast<CastHealingSpellAction*>(action))
+    bool const isDropTarget = dynamic_cast<DropTargetAction*>(action);
+    if (!isDropTarget && !IsDpsHoldCandidate(bot, action))
         return 1.0f;
 
     Unit* nightbane = GetEncounterBoss();
-    if (!nightbane || nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
+    if (!nightbane)
         return 1.0f;
 
-    if (PlayerbotAI::IsMainTank(bot))
+    if (isDropTarget)
+        return IsNightbaneFlightPhaseActive(*nightbane) ? 0.0f : 1.0f;
+
+    if (dynamic_cast<CastHealingSpellAction*>(action) || !IsNightbaneDpsHeld(bot, *nightbane))
         return 1.0f;
 
-    KaraInstanceState const* state = FindKaraState(nightbane->GetInstanceId());
-    if (!state || !state->nightbaneDpsWaitTimer)
-        return 0.0f;
-
-    constexpr uint32 dpsWaitMs = 8 * IN_MILLISECONDS;
-    return getMSTimeDiff(*state->nightbaneDpsWaitTimer, getMSTime()) < dpsWaitMs ? 0.0f : 1.0f;
+    return action->GetTarget() == nightbane ? GetDpsHoldValue(bot, action) : 1.0f;
 }
 
 float NightbaneDisableAvoidAoeMultiplier::GetValueInEncounter(Action* action)
@@ -595,7 +568,7 @@ float NightbaneDisableAvoidAoeMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     Unit* nightbane = GetEncounterBoss();
-    if (!nightbane || nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z)
+    if (!nightbane || IsNightbaneFlying(*nightbane))
         return 1.0f;
 
     return PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
@@ -626,18 +599,12 @@ float NightbaneDisableMovementMultiplier::GetValueInEncounter(Action* action)
     if (isBlockedMovement)
         return 0.0f;
 
-    if (nightbane->GetPositionZ() <= NIGHTBANE_FLIGHT_Z)
+    if (!IsNightbaneFlying(*nightbane))
         return 1.0f;
 
     if (isReachAction)
         return 0.0f;
 
-    // After 35s, Nightbane goes to land, and bots freely follow their master
-    KaraInstanceState const* state = FindKaraState(nightbane->GetInstanceId());
-    if (!state || !state->nightbaneFlightPhaseStartTimer)
-        return 0.0f;
-
-    constexpr uint32 flightPhaseDurationMs = 35 * IN_MILLISECONDS;
-    return getMSTimeDiff(*state->nightbaneFlightPhaseStartTimer, getMSTime()) <
-        flightPhaseDurationMs ? 0.0f : 1.0f;
+    // Once he leaves the flight position to land, bots freely follow their master
+    return IsNightbaneFlightPhaseActive(*nightbane) ? 0.0f : 1.0f;
 }

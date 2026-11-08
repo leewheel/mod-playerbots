@@ -8,6 +8,7 @@
 #include "MCHelpers.h"
 #include "MCMultipliers.h"
 #include "Playerbots.h"
+#include "RtiTargetValue.h"
 #include "Strategy.h"
 #include "MCHelpers.h"
 
@@ -82,6 +83,9 @@ void RaidMcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(
         new TriggerNode("mc majordomo shadow resistance",
                         { NextAction("mc majordomo shadow resistance", ACTION_RAID) }));
+    triggers.push_back(
+        new TriggerNode("mc majordomo damage shield",
+                        { NextAction("mc majordomo stop attack", ACTION_RAID + 1) }));
 
     // Ragnaros
     triggers.push_back(
@@ -131,6 +135,7 @@ void RaidMcStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new GarrDisableDpsAoeMultiplier(botAI));
     multipliers.push_back(new BaronGeddonAbilityMultiplier(botAI));
     multipliers.push_back(new GolemaggMultiplier(botAI));
+    multipliers.push_back(new MajordomoReflectionMultiplier(botAI));
 }
 
 void RaidMcStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExclusionType type)
@@ -140,12 +145,20 @@ void RaidMcStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExcl
         return;
 
     // Damage into these is wasted: Core Ragers are unkillable while Golemagg
-    // lives (full heal at 50%), and Majordomo reflects and cannot die; his
-    // encounter ends when the eight adds are dead. Tanks still pick them up
-    // through their own target selection.
+    // lives (full heal at 50%), and Majordomo cannot die; his encounter ends
+    // when the eight adds are dead. Tanks still pick them up through their own
+    // target selection.
     AiObjectContext* context = botAI->GetAiObjectContext();
     //By leewheel 2026-08-26 合并后entry规则修正(Golemagg=11988)
+    //By leewheel 2026-11-08 合并 brighton 48 提交：上游此处又把名字写回英文串（"golemagg the incinerator"），
+    //  按 entry 铁律回退为 11988（中文库下英文名 qualifier 恒 nullptr）。
     bool const golemaggAlive = AI_VALUE2(Unit*, "find target", "11988") != nullptr;
+    // The DPS target search skips the moon (crowd control) mark, so a moon-marked healer does not count.
+    Group const* group = botAI->GetBot()->GetGroup();
+    ObjectGuid const moonGuid = group ? group->GetTargetIcon(RtiTargetValue::moonIndex) : ObjectGuid::Empty;
+    bool flamewakerHealerAlive = false;
+    GuidVector flamewakerElites;
+    //End By leewheel
     for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* unit = botAI->GetUnit(guid);
@@ -154,5 +167,13 @@ void RaidMcStrategy::AppendTargetExclusions(GuidSet& exclusions, TargetValueExcl
 
         if ((golemaggAlive && unit->GetEntry() == NPC_CORE_RAGER) || unit->GetEntry() == NPC_MAJORDOMO_EXECUTUS)
             exclusions.insert(guid);
+        else if (unit->GetEntry() == NPC_FLAMEWAKER_HEALER && unit->IsAlive() && guid != moonGuid)
+            flamewakerHealerAlive = true;
+        else if (unit->GetEntry() == NPC_FLAMEWAKER_ELITE)
+            flamewakerElites.push_back(guid);
     }
+
+    // Majordomo's healers first: they heal the elites and each other.
+    if (type == TargetValueExclusionType::DpsTarget && flamewakerHealerAlive)
+        exclusions.insert(flamewakerElites.begin(), flamewakerElites.end());
 }

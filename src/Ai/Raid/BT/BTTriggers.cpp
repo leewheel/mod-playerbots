@@ -51,9 +51,8 @@ bool SisterOfPleasureShouldBeFocusedTrigger::IsActive()
     if (PlayerbotAI::IsTank(bot))
         return false;
 
-    Unit* target = AI_VALUE(Unit*, "current target");
-    return target && target->GetEntry() == Id(BtNpcs::NPC_SISTER_OF_PAIN) &&
-        GetSkulledSisterOfPain(bot) == target;
+    Unit* pain = FindEngagedSisterOfPain(botAI);
+    return pain && IsSisterOfPainHeld(botAI, pain);
 }
 
 // Wands keep shooting once started, so a multiplier alone can't stop wanding.
@@ -334,6 +333,13 @@ bool GurtoggBloodboilFelRageOnBotTrigger::IsActiveInEncounter()
         bot->GetExactDist2d(GURTOGG_TANK_POSITION) > BT_ARRIVAL_DISTANCE;
 }
 
+bool GurtoggBloodboilShouldStopAttackingTrigger::IsActiveInEncounter()
+{
+    Unit* gurtogg = GetEncounterBoss();
+    return gurtogg && IsAttackingTarget(bot, *gurtogg) &&
+        IsGurtoggThreatHoldActive(botAI, gurtogg);
+}
+
 // Reliquary of Souls
 
 bool ReliquaryOfSoulsHunterShouldMisdirectTrigger::IsActiveInEncounter()
@@ -520,6 +526,34 @@ bool IllidariCouncilMageTankHealerShouldRepositionTrigger::IsActiveInEncounter()
     Player* mageTank = GetZerevorMageTank(bot);
     return !IsMageTankHealerPositionSafe(bot->GetPosition(), mageTank, zerevor) ||
         !bot->IsWithinLOSInMap(mageTank);
+}
+
+bool IllidariCouncilRangedInterrupterShouldRepositionTrigger::IsActiveInEncounter()
+{
+    if (!IsCircleRangedInterrupter(bot) || bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+        return false;
+
+    Unit* malande = GetIllidariCouncilMembers(bot).malande;
+    return malande && !IsInMalandeInterruptPosition(botAI, malande);
+}
+
+bool IllidariCouncilNonTanksShouldAvoidZerevorTrigger::IsActiveInEncounter()
+{
+    if (PlayerbotAI::IsTank(bot) || IsZerevorMageTank(bot))
+        return false;
+
+    Unit* zerevor = GetIllidariCouncilMembers(bot).zerevor;
+    if (!zerevor || bot->GetExactDist2d(zerevor) >= ZEREVOR_ARCANE_EXPLOSION_SAFE_DISTANCE)
+        return false;
+
+    Player* mageTank = GetZerevorMageTank(bot);
+    if (!mageTank)
+        return false;
+
+    if (zerevor->GetVictim() == mageTank && PlayerbotAI::IsAssistHealOfIndex(bot, 0, true))
+        return false;
+
+    return true;
 }
 
 bool IllidariCouncilRangedShouldSpreadTrigger::IsActiveInEncounter()
@@ -874,41 +908,18 @@ bool IllidanStormrageShouldPositionForLandingTrigger::IsActiveInEncounter()
     return !HasParasiticShadowfiend(bot);
 }
 
-// Melee stop attacking during the Demon Form transformation since they need to get away before
-// Aura of Dread becomes active.
-bool IllidanStormrageMeleeShouldStopAttackingTrigger::IsActiveInEncounter()
+bool IllidanStormrageShouldStopAttackingTrigger::IsActiveInEncounter()
 {
-    if (!PlayerbotAI::IsMelee(bot))
-        return false;
-
-    Unit* illidan = GetEncounterBoss();
-    if (!illidan || (bot->GetVictim() != illidan && AI_VALUE(Unit*, "current target") != illidan))
-        return false;
-
-    IllidanDpsHold const window = GetIllidanHoldWindow(illidan);
-    return window == IllidanDpsHold::DemonFormStart || window == IllidanDpsHold::DemonFormNoPush;
-}
-
-// Auto Shot, wands, and channels (Drain Soul, Mind Flay) need to be cancelled by an action during
-// a hold.
-bool IllidanStormrageShouldStopShootingTrigger::IsActiveInEncounter()
-{
-    Spell* shot = bot->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL);
-    Spell* channel = bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
-    if (!shot && !channel)
-        return false;
-
     Unit* illidan = GetEncounterBoss();
     if (!illidan)
         return false;
 
+    Spell* channel = bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
     if (channel && IsIllidanPickupChannelHeld(bot, illidan, *channel))
         return true;
 
-    ObjectGuid const illidanGuid = illidan->GetGUID();
-    bool const isOnIllidan = (shot && shot->m_targets.GetUnitTargetGUID() == illidanGuid) ||
-        (channel && channel->m_targets.GetUnitTargetGUID() == illidanGuid);
-    return isOnIllidan && GetIllidanDpsHold(bot, illidan) != IllidanDpsHold::None;
+    return IsAttackingTarget(bot, *illidan) &&
+        GetIllidanDpsHold(bot, illidan) != IllidanDpsHold::None;
 }
 
 bool IllidanStormrageRangedShouldSpreadTrigger::IsActiveInEncounter()

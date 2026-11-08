@@ -44,6 +44,7 @@ enum class BtSpells : uint32
 {
     // Trash
     SPELL_SHARED_BONDS              = 41363,
+    SPELL_SHELL_OF_PAIN             = 41371,
     SPELL_SPELL_ABSORPTION          = 41034,
 
     // High Warlord Naj'entus
@@ -232,9 +233,9 @@ Unit* GetBtBoss(Player* bot, BtBosses boss);
 inline constexpr float PATH_STEP_DISTANCE = 3.5f;
 // How close to its assigned spot a bot has to stand to count as arrived.
 inline constexpr float BT_ARRIVAL_DISTANCE = 2.0f;
+inline constexpr float SPELLSTEAL_RANGE = 30.0f;
 
 bool MisdirectTargetToTank(PlayerbotAI* botAI, Unit* target, Player* tank);
-bool CommandPetAttack(Creature* pet, Unit* target);
 GuidVector FindAttackerGuidsWithEntry(PlayerbotAI* botAI, uint32 entry);
 uint32 GetAuraElapsedMs(Aura const* aura);
 void FaceUnit(Player* bot, Unit* unit);
@@ -247,7 +248,10 @@ inline constexpr uint32 SISTER_OF_PLEASURE_CACHE_INTERVAL_MS = 1000;
 GuidVector FindSisterOfPleasureGuids(Player* bot);
 Unit* GetLinkedSisterOfPain(Unit* pleasure);
 Unit* FindLinkedSisterOfPleasure(PlayerbotAI* botAI);
+Unit* FindSisterOfPleasureLinkedTo(PlayerbotAI* botAI, Unit* pain);
 Unit* GetSkulledSisterOfPain(Player* bot);
+Unit* FindEngagedSisterOfPain(PlayerbotAI* botAI);
+bool IsSisterOfPainHeld(PlayerbotAI* botAI, Unit* pain);
 
 enum class ChaoticChargeReach : uint8
 {
@@ -434,6 +438,7 @@ bool IsGurtoggFelRageTarget(Player* player);
 Position GetGurtoggFelRageMeleePosition(
     Player* bot, Unit const& gurtogg, Unit const& felRageTarget);
 float FindGurtoggSecondTankThreat(Player* bot);
+bool IsGurtoggThreatHoldActive(PlayerbotAI* botAI, Unit* gurtogg);
 bool IsInGurtoggRectangle(
     Position const& point, Position const& center, Position const& facing, float halfWidth,
     float halfDepth);
@@ -454,7 +459,6 @@ inline constexpr float SUFFERING_RANGED_DISTANCE = 15.0f;
 // Non-mage dispellers wait this long into each Rune Shield to dispel to leave a window for mages
 // to Spellsteal.
 inline constexpr uint32 RUNE_SHIELD_MAGE_PRIORITY_MS = 2 * IN_MILLISECONDS;
-inline constexpr float SPELLSTEAL_RANGE = 30.0f;
 
 // Null until the essence is in combat, about 4s after it emerges.
 Unit* GetReliquaryEssence(Player* bot, std::string_view essence);
@@ -506,6 +510,8 @@ inline constexpr float MAGE_TANK_HEALER_MAX_DISTANCE = 38.0f;
 inline constexpr float MAGE_TANK_HEALER_MIN_DISTANCE = 12.5f;
 // Zerevor casts Arcane Explosion when anyone is within 10 yd, plus both combat reaches (14.65 yd).
 inline constexpr float ZEREVOR_ARCANE_EXPLOSION_SAFE_DISTANCE = 15.0f;
+// Non-tanks closer than the safe distance move away to this distance from Zerevor.
+inline constexpr float ZEREVOR_AVOID_DISTANCE = 18.0f;
 // A patch hits a player whose center is within its radius plus the player's 1.5 yd combat reach,
 // and we add another yard for good measure.
 inline constexpr float COUNCIL_PATCH_MARGIN = 2.5f;
@@ -517,6 +523,11 @@ inline constexpr int32 CIRCLE_OF_HEALING_CASTER_MARGIN_MS = 500;
 inline constexpr float COUNTERSPELL_RANGE = 30.0f;
 inline constexpr float WIND_SHEAR_RANGE = 25.0f;
 inline constexpr float SPELL_LOCK_RANGE = 30.0f;
+// Mages and elemental shamans aim this far inside their interrupt's range of Malande.
+inline constexpr float CIRCLE_INTERRUPTER_RANGE_MARGIN = 2.0f;
+// The strategy needs extra spacing and thus assumes all Elemental Shamans have taken Elemental
+// Reach, which is part of the standard ele pve bot build.
+inline constexpr float ELEMENTAL_REACH_BONUS_RANGE = 6.0f;
 
 inline std::array const GATHIOS_TANK_POSITIONS = {
     Position{ 662.977f, 296.246f, 271.688f },
@@ -542,6 +553,7 @@ IllidariCouncilMembers GetIllidariCouncilMembers(Player* bot);
 bool UpdateIllidariCouncilClassRoleAnnouncement(PlayerbotAI* botAI);
 Player* GetZerevorMageTank(Player* bot);
 bool IsZerevorMageTank(Player* player);
+bool IsIllidariCouncilDpsHoldActive(Player* bot);
 bool HasDangerousCouncilAura(Player* bot);
 bool IsVerasVanished(Unit* veras);
 bool CanInterruptCircleOfHealing(Unit* malande);
@@ -549,7 +561,12 @@ bool IsInZerevorPatch(Unit* zerevor, Position const& point, float margin = 0.0f)
 bool IsInCouncilPatch(Position const& point, Unit* gathios, Unit* zerevor, float margin = 0.0f);
 bool IsMalandeInCouncilPatch(Unit* malande, Unit* gathios, Unit* zerevor);
 bool ShouldRangedInterruptCircleOfHealing(Unit* malande, Unit* gathios, Unit* zerevor);
+bool IsCircleRangedInterrupter(Player* bot);
+bool IsInMalandeInterruptPosition(PlayerbotAI* botAI, Unit* malande);
+bool FindMalandeInterruptPosition(
+    PlayerbotAI* botAI, IllidariCouncilMembers const& members, Position& destination);
 bool IsZerevorOnMageTank(Player* bot, Unit* zerevor);
+bool FindZerevorAvoidPosition(Player* bot, Unit* gathios, Unit* zerevor, Position& destination);
 bool IsMageTankHealerPositionSafe(Position const& point, Player* mageTank, Unit* zerevor);
 bool FindMageTankHealerPosition(
     Player* bot, Player* mageTank, Unit* zerevor, Position& destination);
@@ -798,7 +815,7 @@ inline constexpr float ILLIDAN_SHADOW_DEMON_GAP_CLOSER_DISTANCE =
 // When the Seed of Corruption and/or warlock tank Searing Pain action is active, use Life Tap when
 // below 20% mana and above 50% HP to ensure enough mana to cast the applicable spell.
 inline constexpr float ILLIDAN_LIFE_TAP_MANA_PCT = 20.0f;
-inline constexpr float ILLIDAN_LIFE_TAP_HEALTH_PCT = 50.0f;
+inline constexpr float ILLIDAN_LIFE_TAP_HEALTH_PCT = 75.0f;
 // The warlock tank's phase 4 position, 31 yd from Illidan and off his inward line. His reach is
 // only 1.5 yd in Demon Form, so a standard 30 yd spell (like Searing Pain) has a 33 yd range.
 inline constexpr float ILLIDAN_WARLOCK_POSITION_DISTANCE = 31.0f;

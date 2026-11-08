@@ -452,3 +452,8 @@ bool McHazzrashRangedSpreadAction::Execute(Event /*event*/)
     return false;
 }
 //End By leewheel
+bool McMajordomoStopAttackAction::Execute(Event /*event*/)
+{
+    // Auto-attack keeps swinging into the Damage Shield; the multiplier keeps a melee bot from re-engaging.
+    return bot->AttackStop();
+}

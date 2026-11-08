@@ -309,6 +309,7 @@ class BlastWaveOffCdTrigger : public SpellNoCooldownTrigger
 {
 public:
     BlastWaveOffCdTrigger(PlayerbotAI* botAI) : SpellNoCooldownTrigger(botAI, "blast wave") {}
+    bool IsActive() override;
 };
 
 class BlastWaveOffCdTriggerAndMediumAoeTrigger : public TwoTriggers
@@ -323,10 +324,7 @@ class NoFirestarterStrategyTrigger : public Trigger
 public:
     NoFirestarterStrategyTrigger(PlayerbotAI* botAI) : Trigger(botAI, "no firestarter strategy") {}
 
-    bool IsActive() override
-    {
-        return !botAI->HasStrategy("firestarter", BOT_STATE_COMBAT);
-    }
+    bool IsActive() override;
 };
 
 class EnemyIsCloseAndNoFirestarterStrategyTrigger : public TwoTriggers

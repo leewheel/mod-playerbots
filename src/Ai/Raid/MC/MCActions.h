@@ -140,5 +140,12 @@ public:
     bool Execute(Event event) override;
 };
 //End By leewheel
+class McMajordomoStopAttackAction : public Action
+{
+public:
+    McMajordomoStopAttackAction(PlayerbotAI* botAI, std::string const name = "mc majordomo stop attack")
+        : Action(botAI, name) {};
+    bool Execute(Event event) override;
+};
 
 #endif

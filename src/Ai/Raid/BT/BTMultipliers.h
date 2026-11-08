@@ -86,6 +86,15 @@ public:
     float GetValue(Action* action) override;
 };
 
+class SisterOfPainHoldDpsMultiplier : public Multiplier
+{
+public:
+    SisterOfPainHoldDpsMultiplier(PlayerbotAI* botAI)
+        : Multiplier(botAI, "sister of pain hold dps") {}
+
+    float GetValue(Action* action) override;
+};
+
 // High Warlord Naj'entus
 
 class HighWarlordNajentusDisableCombatFormationMoveMultiplier
@@ -328,6 +337,7 @@ private:
     float GetTankValue(Action* action);
     float GetNonTankValue(Action* action);
     float GetHealerValue(Action* action);
+    bool IsMeleeTargetNearZerevor();
 };
 
 class IllidariCouncilDisableMageTankActionsMultiplier : public BlackTempleEncounterMultiplier
@@ -366,12 +376,12 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class IllidariCouncilWaitForDpsMultiplier : public BlackTempleEncounterMultiplier
+class IllidariCouncilHoldDpsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    IllidariCouncilWaitForDpsMultiplier(PlayerbotAI* botAI)
+    IllidariCouncilHoldDpsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "illidari council wait for dps", BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
+            botAI, "illidari council hold dps", BtHelpers::BtBosses::DATA_ILLIDARI_COUNCIL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -441,12 +451,12 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
-class IllidanStormrageWaitForDpsMultiplier : public BlackTempleEncounterMultiplier
+class IllidanStormrageHoldDpsMultiplier : public BlackTempleEncounterMultiplier
 {
 public:
-    IllidanStormrageWaitForDpsMultiplier(PlayerbotAI* botAI)
+    IllidanStormrageHoldDpsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
-            botAI, "illidan stormrage wait for dps", BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
+            botAI, "illidan stormrage hold dps", BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -470,6 +480,18 @@ public:
     IllidanStormrageDisableAoeOnShadowDemonsMultiplier(PlayerbotAI* botAI)
         : BlackTempleEncounterMultiplier(
             botAI, "illidan stormrage disable aoe on shadow demons",
+            BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class IllidanStormrageNeglectThreatOnAddsMultiplier : public BlackTempleEncounterMultiplier
+{
+public:
+    IllidanStormrageNeglectThreatOnAddsMultiplier(PlayerbotAI* botAI)
+        : BlackTempleEncounterMultiplier(
+            botAI, "illidan stormrage neglect threat on adds",
             BtHelpers::BtBosses::DATA_ILLIDAN_STORMRAGE) {}
 
 protected:

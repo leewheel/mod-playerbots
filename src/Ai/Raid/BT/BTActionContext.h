@@ -113,6 +113,9 @@ public:
         creators["gurtogg bloodboil lead boss to tank position"] =
             &RaidBlackTempleActionContext::gurtogg_bloodboil_lead_boss_to_tank_position;
 
+        creators["gurtogg bloodboil stop attacking"] =
+            &RaidBlackTempleActionContext::gurtogg_bloodboil_stop_attacking;
+
         // Reliquary of Souls
         creators["reliquary of souls misdirect to main tank"] =
             &RaidBlackTempleActionContext::reliquary_of_souls_misdirect_to_main_tank;
@@ -170,6 +173,12 @@ public:
         creators["illidari council position mage tank healer"] =
             &RaidBlackTempleActionContext::illidari_council_position_mage_tank_healer;
 
+        creators["illidari council position to interrupt malande"] =
+            &RaidBlackTempleActionContext::illidari_council_position_to_interrupt_malande;
+
+        creators["illidari council non-tanks avoid zerevor"] =
+            &RaidBlackTempleActionContext::illidari_council_non_tanks_avoid_zerevor;
+
         creators["illidari council spread ranged"] =
             &RaidBlackTempleActionContext::illidari_council_spread_ranged;
 
@@ -225,11 +234,8 @@ public:
         creators["illidan stormrage position for landing"] =
             &RaidBlackTempleActionContext::illidan_stormrage_position_for_landing;
 
-        creators["illidan stormrage melee stop attacking"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_melee_stop_attacking;
-
-        creators["illidan stormrage stop shooting"] =
-            &RaidBlackTempleActionContext::illidan_stormrage_stop_shooting;
+        creators["illidan stormrage stop attacking"] =
+            &RaidBlackTempleActionContext::illidan_stormrage_stop_attacking;
 
         creators["illidan stormrage spread ranged"] =
             &RaidBlackTempleActionContext::illidan_stormrage_spread_ranged;
@@ -419,6 +425,10 @@ private:
             botAI, "gurtogg bloodboil lead boss to tank position",
             BtHelpers::BtBosses::DATA_GURTOGG_BLOODBOIL, BtHelpers::GURTOGG_TANK_POSITION);
     }
+    static Action* gurtogg_bloodboil_stop_attacking(PlayerbotAI* botAI)
+    {
+        return new GurtoggBloodboilStopAttackingAction(botAI);
+    }
 
     // Reliquary of Souls
     static Action* reliquary_of_souls_misdirect_to_main_tank(PlayerbotAI* botAI)
@@ -501,6 +511,14 @@ private:
     {
         return new IllidariCouncilPositionMageTankHealerAction(botAI);
     }
+    static Action* illidari_council_position_to_interrupt_malande(PlayerbotAI* botAI)
+    {
+        return new IllidariCouncilPositionToInterruptMalandeAction(botAI);
+    }
+    static Action* illidari_council_non_tanks_avoid_zerevor(PlayerbotAI* botAI)
+    {
+        return new IllidariCouncilNonTanksAvoidZerevorAction(botAI);
+    }
     static Action* illidari_council_spread_ranged(PlayerbotAI* botAI)
     {
         return new BlackTempleSpreadRangedAction(
@@ -576,13 +594,9 @@ private:
     {
         return new IllidanStormragePositionForLandingAction(botAI);
     }
-    static Action* illidan_stormrage_melee_stop_attacking(PlayerbotAI* botAI)
+    static Action* illidan_stormrage_stop_attacking(PlayerbotAI* botAI)
     {
-        return new IllidanStormrageMeleeStopAttackingAction(botAI);
-    }
-    static Action* illidan_stormrage_stop_shooting(PlayerbotAI* botAI)
-    {
-        return new IllidanStormrageStopShootingAction(botAI);
+        return new IllidanStormrageStopAttackingAction(botAI);
     }
     static Action* illidan_stormrage_spread_ranged(PlayerbotAI* botAI)
     {

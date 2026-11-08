@@ -13,6 +13,11 @@
 #include <cstdlib>
 #include <string>
 // End By leewheel
+// By leewheel 2026-11-08 (bug_106) 登记表漏项时要打一次 WARN，避免再次静默失效
+#include "Log.h"
+#include <mutex>
+#include <unordered_set>
+// End By leewheel
 
 namespace
 {
@@ -71,8 +76,68 @@ constexpr ThreatNameEntry kThreatNameEntries[] = {
     {"strawman", 17543},                  // NPC_STRAWMAN
     {"tinhead", 17547},                   // NPC_TINHEAD
     {"the big bad wolf", 17521},          // 本核既有核定（大灰狼）
+    // 罗密欧与朱丽叶（核心 karazhan.h NPC_ROMULO / NPC_JULIANNE）
+    {"romulo", 17533},                    // NPC_ROMULO
+    {"julianne", 17534},                  // NPC_JULIANNE
+    // By leewheel 2026-11-08 (bug_106)：Kara 首领名漏登记 ⇒ GetKaraBoss() 恒 nullptr
+    {"attumen the huntsman", 16152},      // NPC_ATTUMEN_THE_HUNTSMAN
+    {"moroes", 15687},                    // NPC_MOROES
+    {"maiden of virtue", 16457},          // NPC_MAIDEN_OF_VIRTUE
+    {"the curator", 15691},               // NPC_THE_CURATOR
+    {"terestian illhoof", 15688},         // NPC_TERESTIAN_ILLHOOF
+    {"shade of aran", 16524},             // NPC_SHADE_OF_ARAN
+    {"netherspite", 15689},               // NPC_NETHERSPITE
+    {"prince malchezaar", 15690},         // NPC_PRINCE_MALCHEZAAR
+    {"nightbane", 17225},                 // NPC_NIGHTBANE
+    // 莫罗斯六名宾客（核心 boss_moroes.cpp GuestEntries[]）
+    {"lady keira berrybuck", 17007},      // GuestEntries[0]
+    {"lady catriona von'indi", 19872},    // GuestEntries[1]
+    {"lord crispin ference", 19873},      // GuestEntries[2]
+    {"baron rafe dreuger", 19874},        // GuestEntries[3]
+    {"baroness dorothea millstipe", 19875}, // GuestEntries[4]
+    {"lord robin daris", 19876},          // GuestEntries[5]
     // --- Black Temple（核心 black_temple.h） ---
     {"gathios the shatterer", 22949},     // NPC_GATHIOS_THE_SHATTERER
+    // By leewheel 2026-11-08 (bug_106)：BT 首领名全部漏登记 ⇒ GetBtBoss() 恒 nullptr，
+    //   老一拔刺/投刺、塔隆血魔杀构造体、伊利丹火人坦克等整套机制静默失效。
+    //   名字来源：模块 BTHelpers.cpp BossName() 的字面量，entry 来源核心 black_temple.h。
+    {"high warlord naj'entus", 22887},    // NPC_HIGH_WARLORD_NAJENTUS
+    {"supremus", 22898},                  // NPC_SUPREMUS
+    {"shade of akama", 22841},            // NPC_SHADE_OF_AKAMA
+    {"teron gorefiend", 22871},           // NPC_TERON_GOREFIEND
+    {"gurtogg bloodboil", 22948},         // NPC_GURTOGG_BLOODBOIL
+    {"reliquary of the lost", 22856},     // NPC_RELIQUARY_OF_THE_LOST（BossName 用这个名字）
+    {"reliquary of souls", 22856},        // 同上的别名（DATA_RELIQUARY_OF_SOULS）
+    {"mother shahraz", 22947},            // NPC_MOTHER_SHAHRAZ
+    {"illidan stormrage", 22917},         // NPC_ILLIDAN_STORMRAGE
+    {"flame of azzinoth", 22997},         // NPC_FLAME_OF_AZZINOTH
+    {"shadowy construct", 23111},         // NPC_SHADOWY_CONSTRUCT（塔隆血魔点名）
+    // 灵魂圣骨匣三张脸（核心 black_temple.h）
+    {"essence of suffering", 23418},      // NPC_ESSENCE_OF_SUFFERING
+    {"essence of desire", 23419},         // NPC_ESSENCE_OF_DESIRE
+    {"essence of anger", 23420},          // NPC_ESSENCE_OF_ANGER
+    // 伊利达雷议会其余三名（gathios 见上）
+    {"high nethermancer zerevor", 22950}, // NPC_HIGH_NETHERMANCER_ZEREVOR
+    {"lady malande", 22951},              // NPC_LADY_MALANDE
+    {"veras darkshadow", 22952},          // NPC_VERAS_DARKSHADOW
+    // By leewheel 2026-11-08 (bug_106 续)：Hyjal 五首领名同罪漏登记。
+    //   来源：HyjalTriggerContext.h 以英文名传进 HyjalEncounterTrigger::_bossName，
+    //   HyjalActions/HyjalMultipliers 里数字实参走 entry 分支本来可用，
+    //   但 Trigger 侧这 5 个走名字 ⇒ IsActiveInEncounter() 恒 false，整套触发器静默失效。
+    //   entry 来源核心 hyjal.h:107-111。
+    {"rage winterchill", 17767},          // NPC_WINTERCHILL
+    {"anetheron", 17808},                 // NPC_ANETHERON
+    {"kaz'rogal", 17888},                 // NPC_KAZROGAL
+    {"azgalor", 17842},                   // NPC_AZGALOR
+    {"archimonde", 17968},                // NPC_ARCHIMONDE
+    // By leewheel 2026-11-08 (bug_106 续)：太阳井四首领名同罪漏登记。
+    //   来源：SWPActionContext.h / SWPTriggerContext.h 的英文名实参，
+    //   entry 来源核心 sunwell_plateau.h:63/67/69/74。
+    {"kalecgos", 24850},                  // NPC_KALECGOS
+    {"brutallus", 24882},                 // NPC_BRUTALLUS
+    {"felmyst", 25038},                   // NPC_FELMYST
+    {"grand warlock alythess", 25166},    // NPC_GRAND_WARLOCK_ALYTHESS
+    //End By leewheel
 };
 
 uint32 EntryForThreatName(std::string_view name)
@@ -85,6 +150,26 @@ uint32 EntryForThreatName(std::string_view name)
 
     return 0;
 }
+
+//By leewheel 2026-11-08 (bug_106): 登记表漏项告警（每个名字只报一次）
+//  上游新增英文名 qualifier 而没补表时，中文库下 unit->GetName() 与英文名恒不相等，
+//  机制会静默失效（本次 BT/Kara 全灭就是这么来的）。这里打一条 WARN 让问题立刻可见，
+//  按名字去重 + 加锁，避免 165 个调用点每 tick 刷屏。
+void WarnMissingThreatName(std::string_view name)
+{
+    static std::mutex warnMutex;
+    static std::unordered_set<std::string> warnedNames;
+
+    std::lock_guard<std::mutex> lock(warnMutex);
+    if (!warnedNames.emplace(std::string(name)).second)
+        return;
+
+    LOG_WARN("playerbots",
+        "FindThreatTarget: 英文名 \"{}\" 不在 ThreatHelpers 登记表内，且库内生物名不匹配（中文库必然失配）"
+        " ⇒ 该 raid 机制会静默失效。请在 src/Util/ThreatHelpers.cpp 的 kThreatNameEntries 补一行 entry。",
+        std::string(name));
+}
+//End By leewheel
 
 } // end anonymous namespace
 
@@ -120,6 +205,12 @@ Unit* FindThreatTarget(Player* bot, std::string_view name)
         if (EqualsIgnoringAsciiCase(unit->GetName(), name))
             return unit->IsInWorld() ? unit : nullptr;
     }
+
+    //By leewheel 2026-11-08: 只有「名字没登记 + 墙上也没有」才告警；
+    //  登记过但目标不在威胁列表（正常脱战/未进战斗）属于正常情况，不报警。
+    if (entry == 0)
+        WarnMissingThreatName(name);
+    //End By leewheel
 
     return nullptr;
 }
