@@ -137,6 +137,81 @@ constexpr ThreatNameEntry kThreatNameEntries[] = {
     {"brutallus", 24882},                 // NPC_BRUTALLUS
     {"felmyst", 25038},                   // NPC_FELMYST
     {"grand warlock alythess", 25166},    // NPC_GRAND_WARLOCK_ALYTHESS
+    // By leewheel 2026-11-10（the-lab 17 提交合并）：上游把 5 人本的取目标方式也全面
+    //   改成了 `FindThreatTarget(bot, "<英文名>")`（原来本核是 `AI_VALUE2(Unit*,"find target","<entry>")`）。
+    //   本服库内生物名是中文，`unit->GetName()` 与英文名恒不相等 ⇒ 不登记就是静默 nullptr，
+    //   整套 5 人本机制直接失效（与 bug_106 的 raid 侧同一个病）。
+    //   处置照旧：上游调用点一个字不改，只在本表按 entry 折算；entry 逐条取自合并前
+    //   本核原数字 qualifier，不是猜的。以下按 entry 升序，分组注释标明所属副本。
+    // ---- 地狱火城墙 / 鲜血熔炉 ----
+    {"fiendish hound", 17280},
+    {"omor the unscarred", 17308},
+    {"hellfire watcher", 17309},
+    {"nazan", 17536},                     // 地狱火城墙坐骑阶段
+    {"vazruden", 17537},                  // 地狱火城墙尾王
+    // ---- 幽暗沼泽 / 旧希尔斯布莱德 / 塞泰克大厅 ----
+    {"hungarfen", 17770},
+    {"time-lost controller", 18327},      // 旧希尔斯布莱德：敦霍尔德
+    {"sethekk prophet", 18328},
+    {"shirrak the dead watcher", 18371},
+    {"darkweaver syth", 18472},
+    {"talon king ikiss", 18473},
+    {"syth arcane elemental", 20702},     // 塞斯召唤的四元素：库里名字带 " (1)" 后缀
+    {"syth fire elemental", 20703},       //   ⇒ 即便按英文名也比对不上，只能按 entry
+    {"syth frost elemental", 20704},
+    {"syth shadow elemental", 20705},
+    {"anzu", 23035},                      // 塞泰克大厅英雄难度召唤
+    // ---- 能源舰 / 乌特加德城堡 ----
+    {"nethermancer sepethrea", 19221},
+    {"prince keleseth", 23953},
+    {"ingvar the plunderer", 23954},
+    // ---- 逃离敦霍尔德（时光之穴） ----
+    {"salramm the fleshcrafter", 26530},
+    {"chrono-lord epoch", 26532},
+    // ---- 达克萨隆要塞 / 魔枢 / 魔环 / 乌特加德之巅 ----
+    {"trollgore", 26630},
+    {"novos the summoner", 26631},
+    {"skadi the ruthless", 26693},
+    {"keristrasza", 26723},
+    {"grand magus telestra", 26731},
+    {"anomalus", 26763},
+    {"ormorok the tree-shaper", 26794},
+    {"commander stoutbeard", 26796},      // 乌特加德之巅（联盟线）
+    {"commander kolurg", 26798},          // 乌特加德之巅（部落线）
+    {"king ymiron", 26861},
+    {"grauf", 26893},                     // 乌特加德之巅坐骑阶段
+    // ---- 紫罗兰监狱 / 岩石大厅 / 闪电大厅 ----
+    {"dalronn the controller", 27389},
+    {"varos cloudstrider", 27447},
+    {"drakos the interrogator", 27654},
+    {"mage-lord urom", 27655},
+    {"ley-guardian eregos", 27656},
+    {"horde commander", 27947},
+    {"alliance commander", 27949},
+    {"krystallus", 27977},
+    {"sjonnir the ironshaper", 27978},
+    {"ionar", 28546},
+    {"general bjarngrim", 28586},
+    {"volkhan", 28587},
+    {"loken", 28923},
+    // ---- 艾卓-尼鲁布 / 安卡赫特 / 古达克 ----
+    {"anub'arak", 29120},
+    {"slad'ran", 29304},
+    {"gal'darah", 29306},
+    {"elder nadox", 29309},
+    {"jedoga shadowseeker", 29310},
+    {"ichoron", 29313},
+    {"zuramat the obliterator", 29314},
+    {"erekem", 29315},
+    {"ahn'kahar guardian", 30176},
+    {"forgotten one", 30414},
+    {"cyanigosa", 31134},                 // 魔环尾王
+    // ---- 冠军的试炼 / 灵魂洪炉 / 萨隆矿坑 / 映像大厅 ----
+    {"eadric the pure", 35119},
+    {"ick", 36476},
+    {"bronjahm", 36497},
+    {"devourer of souls", 36502},
+    {"scourgelord tyrannus", 36658},
     //End By leewheel
 };
 
