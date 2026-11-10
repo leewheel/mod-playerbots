@@ -10,6 +10,8 @@
 #include "MovementActions.h"
 #include "NexActions.h"
 #include "NexTriggers.h"
+#include "Playerbots.h"
+#include "ThreatHelpers.h"
 
 float FactionCommanderMultiplier::GetValue(Action* action)
 {
@@ -21,21 +23,21 @@ float FactionCommanderMultiplier::GetValue(Action* action)
         case DUNGEON_DIFFICULTY_NORMAL:
             if (faction == TEAM_ALLIANCE)
             {
-                boss = AI_VALUE2(Unit*, "find target", "27947");
+                boss = FindThreatTarget(bot, "horde commander");
             }
             else //if (faction == TEAM_HORDE)
             {
-                boss = AI_VALUE2(Unit*, "find target", "27949");
+                boss = FindThreatTarget(bot, "alliance commander");
             }
             break;
         case DUNGEON_DIFFICULTY_HEROIC:
             if (faction == TEAM_ALLIANCE)
             {
-                boss = AI_VALUE2(Unit*, "find target", "26798");
+                boss = FindThreatTarget(bot, "commander kolurg");
             }
             else //if (faction == TEAM_HORDE)
             {
-                boss = AI_VALUE2(Unit*, "find target", "26796");
+                boss = FindThreatTarget(bot, "commander stoutbeard");
             }
             break;
         default:
@@ -55,7 +57,7 @@ float FactionCommanderMultiplier::GetValue(Action* action)
 
 float TelestraMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26731");
+    Unit* boss = FindThreatTarget(bot, "grand magus telestra");
     if (boss && boss->GetEntry() != NPC_TELESTRA)
     {
         // boss is split into clones, do not auto acquire target
@@ -69,7 +71,7 @@ float TelestraMultiplier::GetValue(Action* action)
 
 float AnomalusMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26763");
+    Unit* boss = FindThreatTarget(bot, "anomalus");
     if (boss && boss->HasAura(BUFF_RIFT_SHIELD))
     {
         if (dynamic_cast<DpsAssistAction*>(action))
@@ -82,7 +84,7 @@ float AnomalusMultiplier::GetValue(Action* action)
 
 float OrmorokMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26794");
+    Unit* boss = FindThreatTarget(bot, "ormorok the tree-shaper");
     if (!boss) { return 1.0f; }
 
     // These are used for auto ranged repositioning, need to suppress so ranged dps don't ping-pong
@@ -95,8 +97,8 @@ float OrmorokMultiplier::GetValue(Action* action)
     if (dynamic_cast<MovementAction*>(action) && !dynamic_cast<DodgeSpikesAction*>(action)
         && PlayerbotAI::IsTank(bot) && bot->IsWithinMeleeRange(boss)
         && AI_VALUE2(bool, "facing", "current target"))
-        {
-            return 0.0f;
-        }
+    {
+        return 0.0f;
+    }
     return 1.0f;
 }

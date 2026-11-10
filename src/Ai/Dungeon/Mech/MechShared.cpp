@@ -14,6 +14,7 @@
 #include "MechTriggers.h"
 #include "ObjectAccessor.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <cmath>
 #include <list>
@@ -158,7 +159,6 @@ namespace MechanarFlames
         }
     }
 
-    //By leewheel 2026-07-27 收集正在追踪机器人的追逐之火
     void CollectChasingFlames(Player* bot, std::vector<Creature*>& out)
     {
         std::list<Creature*> flames;
@@ -261,7 +261,6 @@ namespace MechanarFlames
 
     Unit* GetSepethrea(Player* bot)
     {
-        PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-        return botAI->GetAiObjectContext()->GetValue<Unit*>("find target", "19221")->Get();
+        return FindThreatTarget(bot, "nethermancer sepethrea");
     }
 }

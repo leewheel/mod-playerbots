@@ -358,7 +358,7 @@ bool EredarTwinsDpsPrioritizeSacrolashAction::Execute(Event /*event*/)
 
     if (shouldHoldThreat)
     {
-        return IsAttackingTarget(bot, *twinTarget) ? StopAttackingTarget(bot, *twinTarget) :
+        return IsAttackingTarget(bot, twinTarget) ? StopAttackingTarget(bot, twinTarget) :
             SelectTarget(botAI, twinTarget);
     }
 
@@ -368,29 +368,16 @@ bool EredarTwinsDpsPrioritizeSacrolashAction::Execute(Event /*event*/)
     return isDpsHeld ? SelectTarget(botAI, twinTarget) : Attack(twinTarget);
 }
 
-bool EredarTwinsControlPetAggressionAction::Execute(Event /*event*/)
+bool EredarTwinsSetPetStanceAction::Execute(Event /*event*/)
 {
-    Pet* pet = bot->GetPet();
-    if (!pet)
-        return false;
+    return SetMinionStancesForHold(bot, IsEredarTwinsStartHoldActive(botAI), _previousReactStates);
+}
 
-    if (IsEredarTwinsStartHoldActive(botAI))
-    {
-        if (!pet->HasReactState(REACT_PASSIVE))
-        {
-            _previousReactState = pet->GetReactState();
-            _setPassive = true;
-            CallBackPets(bot);
-            pet->SetReactState(REACT_PASSIVE);
-        }
-    }
-    else if (_setPassive)
-    {
-        pet->SetReactState(_previousReactState);
-        _setPassive = false;
-    }
-
-    return false;
+bool EredarTwinsSetPetStanceAction::ResetPetStance()
+{
+    bool const restored = SetMinionStancesForHold(bot, false, _previousReactStates);
+    _previousReactStates.clear();
+    return restored;
 }
 
 bool EredarTwinsConflagrationTargetMoveFromGroupAction::Execute(Event /*event*/)

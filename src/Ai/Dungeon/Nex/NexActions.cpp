@@ -5,7 +5,9 @@
  */
 
 #include "NexActions.h"
+#include "NexTriggers.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 
 bool MoveFromWhirlwindAction::Execute(Event /*event*/)
 {
@@ -17,25 +19,24 @@ bool MoveFromWhirlwindAction::Execute(Event /*event*/)
     {
         case DUNGEON_DIFFICULTY_NORMAL:
             if (faction == TEAM_ALLIANCE)
-                boss = AI_VALUE2(Unit*, "find target", "27947");
+                boss = FindThreatTarget(bot, "horde commander");
 
             else // TEAM_HORDE
-                boss = AI_VALUE2(Unit*, "find target", "27949");
+                boss = FindThreatTarget(bot, "alliance commander");
 
             break;
         case DUNGEON_DIFFICULTY_HEROIC:
             if (faction == TEAM_ALLIANCE)
-                boss = AI_VALUE2(Unit*, "find target", "26798");
+                boss = FindThreatTarget(bot, "commander kolurg");
 
             else // TEAM_HORDE
-                boss = AI_VALUE2(Unit*, "find target", "26796");
+                boss = FindThreatTarget(bot, "commander stoutbeard");
 
             break;
         default:
             break;
     }
 
-    // Ensure boss is valid before accessing its methods
     if (!boss)
         return false;
 
@@ -45,16 +46,15 @@ bool MoveFromWhirlwindAction::Execute(Event /*event*/)
     if (bossDistance > targetDist)
         return false;
 
-    // Move away from the boss to avoid Whirlwind
     return MoveAway(boss, targetDist - bossDistance);
 }
 
 bool FirebombSpreadAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26731");
+    if (!FindThreatTarget(bot, "grand magus telestra")) { return false; }
+
     float radius = 5.0f;
     float targetDist = radius + 1.0f;
-    if (!boss) { return false; }
 
     GuidVector members = AI_VALUE(GuidVector, "group members");
     for (auto& member : members)
@@ -119,15 +119,12 @@ bool ChaoticRiftTargetAction::isUseful() { return !PlayerbotAI::IsHeal(bot); }
 bool ChaoticRiftTargetAction::Execute(Event /*event*/)
 {
     Unit* chaoticRift = nullptr;
-
-    // Target is not findable from threat table using AI_VALUE2(),
-    // therefore need to search manually for the unit name
     GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
 
     for (auto i = targets.begin(); i != targets.end(); ++i)
     {
         Unit* unit = botAI->GetUnit(*i);
-        if (unit && (unit->GetName() == "Chaotic Rift" || unit->GetEntry() == 26918))
+        if (unit && unit->GetName() == "Chaotic Rift")
         {
             chaoticRift = unit;
             break;
@@ -141,14 +138,14 @@ bool ChaoticRiftTargetAction::Execute(Event /*event*/)
 
 bool DodgeSpikesAction::isUseful()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26794");
+    Unit* boss = FindThreatTarget(bot, "ormorok the tree-shaper");
     if (!boss) { return false; }
 
     return bot->GetExactDist2d(boss) > 0.5f;
 }
 bool DodgeSpikesAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26794");
+    Unit* boss = FindThreatTarget(bot, "ormorok the tree-shaper");
     if (!boss) { return false; }
 
     return Move(bot->GetAngle(boss), bot->GetExactDist2d(boss) - 0.3f);
@@ -162,5 +159,4 @@ bool IntenseColdJumpAction::Execute(Event /*event*/)
     // Adding extra Z offset causes floating, and appears to scale the jump speed based on Z difference.
     // Probably best to revisit once bot movement is improved
     return JumpTo(bot->GetMap()->GetId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() + 0.01f);
-    // bot->GetMotionMaster()->MoveFall();
 }

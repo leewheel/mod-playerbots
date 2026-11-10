@@ -26,11 +26,11 @@ public:
             &RaidKarazhanActionContext::karazhan_set_tremor_totem;
 
         // Trash
-        creators["mana warp stun warp breach"] =
-            &RaidKarazhanActionContext::mana_warp_stun_warp_breach;
+        creators["mana warp cast stun spell"] =
+            &RaidKarazhanActionContext::mana_warp_cast_stun_spell;
 
-        creators["mana warp stunner hold for warp breach"] =
-            &RaidKarazhanActionContext::mana_warp_stunner_hold_for_warp_breach;
+        creators["mana warp stand by to stun"] =
+            &RaidKarazhanActionContext::mana_warp_stand_by_to_stun;
 
         // Attumen the Huntsman
         creators["attumen the huntsman assist tank position unmounted"] =
@@ -75,18 +75,18 @@ public:
         creators["big bad wolf tank position boss"] =
             &RaidKarazhanActionContext::big_bad_wolf_tank_position_boss;
 
+        creators["big bad wolf red hood use escape ability"] =
+            &RaidKarazhanActionContext::big_bad_wolf_red_hood_use_escape_ability;
+
         creators["big bad wolf red hood run away"] =
             &RaidKarazhanActionContext::big_bad_wolf_red_hood_run_away;
-
-        creators["big bad wolf red hood use escape"] =
-            &RaidKarazhanActionContext::big_bad_wolf_red_hood_use_escape;
 
         creators["big bad wolf protect red hood"] =
             &RaidKarazhanActionContext::big_bad_wolf_protect_red_hood;
 
         // Romulo and Julianne
-        creators["romulo and julianne mark target"] =
-            &RaidKarazhanActionContext::romulo_and_julianne_mark_target;
+        creators["romulo and julianne skull higher health"] =
+            &RaidKarazhanActionContext::romulo_and_julianne_skull_higher_health;
 
         // The Wizard of Oz
         creators["wizard of oz mark target"] =
@@ -119,8 +119,8 @@ public:
         creators["shade of aran stop moving during flame wreath"] =
             &RaidKarazhanActionContext::shade_of_aran_stop_moving_during_flame_wreath;
 
-        creators["shade of aran mark conjured elemental"] =
-            &RaidKarazhanActionContext::shade_of_aran_mark_conjured_elemental;
+        creators["shade of aran mark elemental"] =
+            &RaidKarazhanActionContext::shade_of_aran_mark_elemental;
 
         creators["shade of aran ranged maintain distance"] =
             &RaidKarazhanActionContext::shade_of_aran_ranged_maintain_distance;
@@ -147,15 +147,15 @@ public:
         creators["netherspite select target for hold"] =
             &RaidKarazhanActionContext::netherspite_select_target_for_hold;
 
-        creators["netherspite control pet aggression"] =
-            &RaidKarazhanActionContext::netherspite_control_pet_aggression;
+        creators["netherspite set pet stance"] =
+            &RaidKarazhanActionContext::netherspite_set_pet_stance;
 
         creators["netherspite manage timers and trackers"] =
             &RaidKarazhanActionContext::netherspite_manage_timers_and_trackers;
 
         // Prince Malchezaar
-        creators["prince malchezaar enfeebled bot avoid hazard"] =
-            &RaidKarazhanActionContext::prince_malchezaar_enfeebled_bot_avoid_hazard;
+        creators["prince malchezaar enfeebled bot run to safety"] =
+            &RaidKarazhanActionContext::prince_malchezaar_enfeebled_bot_run_to_safety;
 
         creators["prince malchezaar move clear of hazards"] =
             &RaidKarazhanActionContext::prince_malchezaar_move_clear_of_hazards;
@@ -170,8 +170,8 @@ public:
         creators["nightbane ranged stack and move from charred earth"] =
             &RaidKarazhanActionContext::nightbane_ranged_stack_and_move_from_charred_earth;
 
-        creators["nightbane control pet aggression"] =
-            &RaidKarazhanActionContext::nightbane_control_pet_aggression;
+        creators["nightbane set pet stance"] =
+            &RaidKarazhanActionContext::nightbane_set_pet_stance;
 
         creators["nightbane stop attacking"] =
             &RaidKarazhanActionContext::nightbane_stop_attacking;
@@ -201,13 +201,13 @@ private:
     }
 
     // Trash
-    static Action* mana_warp_stun_warp_breach(PlayerbotAI* botAI)
+    static Action* mana_warp_cast_stun_spell(PlayerbotAI* botAI)
     {
-        return new ManaWarpStunWarpBreachAction(botAI);
+        return new ManaWarpCastStunSpellAction(botAI);
     }
-    static Action* mana_warp_stunner_hold_for_warp_breach(PlayerbotAI* botAI)
+    static Action* mana_warp_stand_by_to_stun(PlayerbotAI* botAI)
     {
-        return new ManaWarpStunnerHoldForWarpBreachAction(botAI);
+        return new ManaWarpStandByToStunAction(botAI);
     }
 
     // Attumen the Huntsman
@@ -269,13 +269,13 @@ private:
     {
         return new BigBadWolfTankPositionBossAction(botAI);
     }
+    static Action* big_bad_wolf_red_hood_use_escape_ability(PlayerbotAI* botAI)
+    {
+        return new BigBadWolfRedHoodUseEscapeAbilityAction(botAI);
+    }
     static Action* big_bad_wolf_red_hood_run_away(PlayerbotAI* botAI)
     {
         return new BigBadWolfRedHoodRunAwayAction(botAI);
-    }
-    static Action* big_bad_wolf_red_hood_use_escape(PlayerbotAI* botAI)
-    {
-        return new BigBadWolfRedHoodUseEscapeAction(botAI);
     }
     static Action* big_bad_wolf_protect_red_hood(PlayerbotAI* botAI)
     {
@@ -283,9 +283,9 @@ private:
     }
 
     // Romulo and Julianne
-    static Action* romulo_and_julianne_mark_target(PlayerbotAI* botAI)
+    static Action* romulo_and_julianne_skull_higher_health(PlayerbotAI* botAI)
     {
-        return new RomuloAndJulianneMarkTargetAction(botAI);
+        return new RomuloAndJulianneSkullHigherHealthAction(botAI);
     }
 
     // The Wizard of Oz
@@ -331,9 +331,9 @@ private:
     {
         return new ShadeOfAranStopMovingDuringFlameWreathAction(botAI);
     }
-    static Action* shade_of_aran_mark_conjured_elemental(PlayerbotAI* botAI)
+    static Action* shade_of_aran_mark_elemental(PlayerbotAI* botAI)
     {
-        return new ShadeOfAranMarkConjuredElementalAction(botAI);
+        return new ShadeOfAranMarkElementalAction(botAI);
     }
     static Action* shade_of_aran_ranged_maintain_distance(PlayerbotAI* botAI)
     {
@@ -369,9 +369,9 @@ private:
     {
         return new NetherspiteSelectTargetForHoldAction(botAI);
     }
-    static Action* netherspite_control_pet_aggression(PlayerbotAI* botAI)
+    static Action* netherspite_set_pet_stance(PlayerbotAI* botAI)
     {
-        return new NetherspiteControlPetAggressionAction(botAI);
+        return new NetherspiteSetPetStanceAction(botAI);
     }
     static Action* netherspite_manage_timers_and_trackers(PlayerbotAI* botAI)
     {
@@ -379,9 +379,9 @@ private:
     }
 
     // Prince Malchezaar
-    static Action* prince_malchezaar_enfeebled_bot_avoid_hazard(PlayerbotAI* botAI)
+    static Action* prince_malchezaar_enfeebled_bot_run_to_safety(PlayerbotAI* botAI)
     {
-        return new PrinceMalchezaarEnfeebledBotAvoidHazardAction(botAI);
+        return new PrinceMalchezaarEnfeebledBotRunToSafetyAction(botAI);
     }
     static Action* prince_malchezaar_move_clear_of_hazards(PlayerbotAI* botAI)
     {
@@ -401,9 +401,9 @@ private:
     {
         return new NightbaneRangedStackAndMoveFromCharredEarthAction(botAI);
     }
-    static Action* nightbane_control_pet_aggression(PlayerbotAI* botAI)
+    static Action* nightbane_set_pet_stance(PlayerbotAI* botAI)
     {
-        return new NightbaneControlPetAggressionAction(botAI);
+        return new NightbaneSetPetStanceAction(botAI);
     }
     static Action* nightbane_stop_attacking(PlayerbotAI* botAI)
     {

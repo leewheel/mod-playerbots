@@ -6,13 +6,14 @@
 
 #include "UBTriggers.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include "UBShared.h"
 
 using namespace UnderbogHungarfen;
 
 bool UBFoulSporesTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "17770");
+    Unit* boss = FindThreatTarget(bot, "hungarfen");
     return boss && boss->HasAura(SPELL_FOUL_SPORES);
 }
 

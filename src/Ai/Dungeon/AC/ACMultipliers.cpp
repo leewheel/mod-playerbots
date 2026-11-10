@@ -12,13 +12,13 @@
 #include "MovementActions.h"
 #include "Playerbots.h"
 #include "ReachTargetActions.h"
+#include "ThreatHelpers.h"
 
 // Shirrak the Dead Watcher
 
 // Flee from Focus Fire and dont run back in
 float ShirrakFleeFocusFireMultiplier::GetValue(Action* action)
 {
-    //By leewheel 2026-08-26 合并：采用对侧移动施法过滤新逻辑，查找串按本项目规则转回entry(Shirrak=18371)
     if (dynamic_cast<AttackAction*>(action))
         return 1.0f;
 
@@ -28,7 +28,7 @@ float ShirrakFleeFocusFireMultiplier::GetValue(Action* action)
     if (!isMovementSpell && !dynamic_cast<MovementAction*>(action))
         return 1.0f;
 
-    if (!AI_VALUE2(Unit*, "find target", "18371"))
+    if (!FindThreatTarget(bot, "shirrak the dead watcher"))
         return 1.0f;
 
     if (dynamic_cast<ShirrakFleeFocusFireAction*>(action))

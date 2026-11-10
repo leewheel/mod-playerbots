@@ -10,6 +10,7 @@
 #include "EncounterHelpers.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "Random.h"
 #include "Spell.h"
@@ -19,7 +20,9 @@
 #include <initializer_list>
 #include <limits>
 #include <list>
+#include <map>
 #include <mutex>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -168,7 +171,7 @@ bool IsKarazhanFearCasterActive(Player* bot)
         return true;
 
     Unit* nightbane = GetKaraBoss(bot, KaraBosses::DATA_NIGHTBANE);
-    if (nightbane && !IsNightbaneFlying(*nightbane))
+    if (nightbane && !IsNightbaneFlying(nightbane))
         return true;
 
     return GetOperaActor(bot, "dorothee") || GetOperaActor(bot, "roar");
@@ -240,7 +243,7 @@ Unit* GetManaWarpToStun(PlayerbotAI* botAI, uint32 reactionMs)
     return nullptr;
 }
 
-Unit* GetManaWarpToHoldFor(PlayerbotAI* botAI)
+Unit* GetManaWarpToStunNext(PlayerbotAI* botAI)
 {
     Player* bot = botAI->GetBot();
     if (GetManaWarpStunReach(bot) <= 0.0f || !IsNearManaWarpPacks(bot) ||
@@ -251,7 +254,7 @@ Unit* GetManaWarpToHoldFor(PlayerbotAI* botAI)
 
     Unit* target = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
     if (!target || target->GetEntry() != Id(KaraNpcs::NPC_MANA_WARP) || !target->IsAlive() ||
-        target->GetHealthPct() > MANA_WARP_STUNNER_HOLD_HEALTH_PCT)
+        target->GetHealthPct() > MANA_WARP_STAND_BY_HEALTH_PCT)
     {
         return nullptr;
     }
@@ -262,9 +265,9 @@ Unit* GetManaWarpToHoldFor(PlayerbotAI* botAI)
 
 // Attumen the Huntsman
 
-bool IsAttumenMounted(Unit const& midnight)
+bool IsAttumenMounted(Unit* midnight)
 {
-    return !midnight.IsVisible();
+    return midnight && !midnight->IsVisible();
 }
 
 Unit* GetMountedAttumen(Player* bot)
@@ -276,15 +279,18 @@ Unit* GetMountedAttumen(Player* bot)
     return attumen;
 }
 
-std::optional<Position> GetAttumenStackPosition(Player* bot, Unit const& attumen)
+std::optional<Position> GetAttumenStackPosition(Player* bot, Unit* attumen)
 {
+    if (!attumen)
+        return std::nullopt;
+
     float const distanceBehind = bot->getClass() == CLASS_HUNTER ?
         ATTUMEN_HUNTER_STACK_DISTANCE : ATTUMEN_STACK_DISTANCE;
-    float const orientation = attumen.GetOrientation() + M_PI;
+    float const orientation = attumen->GetOrientation() + M_PI;
     Position const position(
-        attumen.GetPositionX() + std::cos(orientation) * distanceBehind,
-        attumen.GetPositionY() + std::sin(orientation) * distanceBehind,
-        attumen.GetPositionZ());
+        attumen->GetPositionX() + std::cos(orientation) * distanceBehind,
+        attumen->GetPositionY() + std::sin(orientation) * distanceBehind,
+        attumen->GetPositionZ());
     if (bot->GetExactDist2d(position) <= ATTUMEN_STACK_TOLERANCE)
         return std::nullopt;
 
@@ -294,7 +300,7 @@ std::optional<Position> GetAttumenStackPosition(Player* bot, Unit const& attumen
 bool IsAttumenDpsHeld(Player* bot)
 {
     Unit* midnight = FindThreatTarget(bot, "midnight");
-    if (!midnight || !IsAttumenMounted(*midnight))
+    if (!midnight || !IsAttumenMounted(midnight))
         return false;
 
     constexpr uint32 holdMs = 5 * IN_MILLISECONDS;
@@ -310,8 +316,11 @@ bool IsAttumenDpsHeld(Player* bot)
 
 // Maiden of Virtue
 
-Player* GetNearestRepentantHealer(Player* bot, Unit const& maiden)
+Player* GetNearestRepentantHealer(Player* bot, Unit* maiden)
 {
+    if (!maiden)
+        return nullptr;
+
     Group* group = bot->GetGroup();
     if (!group)
         return nullptr;
@@ -327,7 +336,7 @@ Player* GetNearestRepentantHealer(Player* bot, Unit const& maiden)
             continue;
         }
 
-        float const dist = maiden.GetExactDist2d(member);
+        float const dist = maiden->GetExactDist2d(member);
         if (dist < nearestDist)
         {
             nearest = member;
@@ -381,9 +390,12 @@ BigBadWolfRunPlan GetBigBadWolfRunPlan(Player* bot, Unit const& wolf, float seco
     return best;
 }
 
-Player* GetBigBadWolfRedHood(Unit const& wolf)
+Player* GetBigBadWolfRedHood(Unit* wolf)
 {
-    Unit* victim = wolf.GetVictim();
+    if (!wolf)
+        return nullptr;
+
+    Unit* victim = wolf->GetVictim();
     Player* target = victim ? victim->ToPlayer() : nullptr;
     if (!target || !IsLittleRedRidingHood(target) ||
         target->IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL))
@@ -394,8 +406,11 @@ Player* GetBigBadWolfRedHood(Unit const& wolf)
     return target;
 }
 
-Player* GetBigBadWolfTargetToProtect(Unit const& wolf)
+Player* GetBigBadWolfTargetToProtect(Unit* wolf)
 {
+    if (!wolf)
+        return nullptr;
+
     Player* target = GetBigBadWolfRedHood(wolf);
     if (!target)
         return nullptr;
@@ -411,8 +426,11 @@ Player* GetBigBadWolfTargetToProtect(Unit const& wolf)
     }
 
     // The test his swings use, with the leeway while both move.
-    if (!wolf.IsWithinMeleeRange(target) || GET_PLAYERBOT_AI(target) || PlayerbotAI::IsTank(target))
+    if (!wolf->IsWithinMeleeRange(target) || GET_PLAYERBOT_AI(target) ||
+        PlayerbotAI::IsTank(target))
+    {
         return nullptr;
+    }
 
     return target;
 }
@@ -597,8 +615,8 @@ NetherspiteArc GetNetherspiteStandingArc(
         return { side.start + (side.width - width) / 2.0f, width };
     }
 
-    NetherspiteBeam const ownBeam = bot->getPowerType() == POWER_MANA ?
-        NetherspiteBeam::Blue : NetherspiteBeam::Green;
+    NetherspiteBeam const ownBeam =
+        IsManaUser(bot) ? NetherspiteBeam::Blue : NetherspiteBeam::Green;
     float const width = std::min(side.width, NETHERSPITE_MAX_OWN_LINE_ARC);
     float const own = GetBeamAngle(netherspite, state, ownBeam);
     bool const isStart = GetNetherspiteInnerSide(netherspite, state, ownBeam) > 0.0f;
@@ -674,6 +692,30 @@ bool CrossesBeamAfterStart(
     return CrossesBeam(bot, netherspite, state, x, y);
 }
 
+// The nearest to the bot, so a step goes around that one first.
+Position const* FindFirstVoidZoneOnPath(
+    KaraInstanceState const& state, Position const& from, Position const& to)
+{
+    Position const* first = nullptr;
+    float firstDistance = std::numeric_limits<float>::max();
+    for (Position const& zone : state.netherspiteVoidZones)
+    {
+        float const fromZone = zone.GetExactDist2d(from);
+        if (fromZone < VOID_ZONE_RADIUS || fromZone >= firstDistance)
+            continue;
+
+        float const clearance =
+            fromZone < VOID_ZONE_CLEARANCE ? VOID_ZONE_RADIUS : VOID_ZONE_CLEARANCE;
+        if (GetDistanceToSegment2d(zone, from, to) < clearance)
+        {
+            first = &zone;
+            firstDistance = fromZone;
+        }
+    }
+
+    return first;
+}
+
 // False if the floor stops the way there short of it.
 bool GetFloorAt(Player* bot, float x, float y, float& outZ)
 {
@@ -697,12 +739,26 @@ bool IsBanishPhase(Unit* netherspite)
     return netherspite && netherspite->HasAura(Id(KaraSpells::SPELL_NETHERSPITE_BANISHED));
 }
 
-bool IsNetherspiteDpsHeld(Player* bot, Unit const& netherspite)
+bool IsManaUser(Player* player)
 {
-    if (PlayerbotAI::IsTank(bot) || netherspite.HasAura(Id(KaraSpells::SPELL_NETHERSPITE_BANISHED)))
+    if (player->getClass() == CLASS_DRUID)
+        return PlayerbotAI::IsRanged(player);
+
+    return player->getPowerType() == POWER_MANA;
+}
+
+bool IsNetherspiteDpsHeld(Player* bot, Unit* netherspite)
+{
+    if (!netherspite)
         return false;
 
-    KaraInstanceState const* state = FindKaraState(netherspite.GetInstanceId());
+    if (PlayerbotAI::IsTank(bot) ||
+        netherspite->HasAura(Id(KaraSpells::SPELL_NETHERSPITE_BANISHED)))
+    {
+        return false;
+    }
+
+    KaraInstanceState const* state = FindKaraState(netherspite->GetInstanceId());
     if (!state || !state->netherspiteDpsHoldTimer)
         return true;
 
@@ -713,9 +769,23 @@ bool IsNetherspiteDpsHeld(Player* bot, Unit const& netherspite)
     if (elapsed >= NETHERSPITE_BEAMS_START_MS)
         return false;
 
-    Unit* victim = netherspite.GetVictim();
+    Unit* victim = netherspite->GetVictim();
     Player* player = victim ? victim->ToPlayer() : nullptr;
     return !player || !PlayerbotAI::IsTank(player);
+}
+
+bool HasNetherspiteBeamStackLimit(Player* player, NetherspiteBeam beam)
+{
+    if (beam == NetherspiteBeam::Red)
+        return false;
+
+    return beam == NetherspiteBeam::Blue || IsManaUser(player) || PlayerbotAI::IsHeal(player);
+}
+
+uint8 GetNetherspiteBeamStacks(Player* player, NetherspiteBeamData const& data)
+{
+    Aura const* buff = player->GetAura(Id(data.buff));
+    return buff ? buff->GetStackAmount() : 0;
 }
 
 bool AreNetherspitePortalsKnown(KaraInstanceState const& state)
@@ -769,6 +839,61 @@ NetherspiteBanishSlot const* FindNetherspiteBanishSlot(
     return nullptr;
 }
 
+float GetNetherspiteBanishRadius(Player* player)
+{
+    constexpr float radius = 20.0f;
+    constexpr float hunterRadius = 25.0f;
+    return player->getClass() == CLASS_HUNTER ? hunterRadius : radius;
+}
+
+void YellNetherspiteBeamText(Player* player, std::string const& key, std::string const& text)
+{
+    std::map<std::string, std::string> placeholders{{"%player", player->GetName()}};
+    player->Yell(
+        PlayerbotTextMgr::instance().GetBotTextOrDefault(key, text, placeholders), LANG_UNIVERSAL);
+}
+
+void YellNetherspiteBeamHandover(Player* leaving, Player* blocking, NetherspiteBeam beam)
+{
+    if (leaving && leaving->IsAlive())
+    {
+        if (beam == NetherspiteBeam::Green)
+        {
+            YellNetherspiteBeamText(
+                leaving, "netherspite_beam_leaving_green",
+                "%player is leaving the green beam. Next blocker up!");
+        }
+        else if (beam == NetherspiteBeam::Blue)
+        {
+            YellNetherspiteBeamText(
+                leaving, "netherspite_beam_leaving_blue",
+                "%player is leaving the blue beam. Next blocker up!");
+        }
+    }
+
+    if (!blocking)
+        return;
+
+    switch (beam)
+    {
+        case NetherspiteBeam::Red:
+            YellNetherspiteBeamText(
+                blocking, "netherspite_beam_blocking_red",
+                "%player is moving to block the red beam!");
+            break;
+        case NetherspiteBeam::Green:
+            YellNetherspiteBeamText(
+                blocking, "netherspite_beam_blocking_green",
+                "%player is moving to block the green beam!");
+            break;
+        case NetherspiteBeam::Blue:
+            YellNetherspiteBeamText(
+                blocking, "netherspite_beam_blocking_blue",
+                "%player is moving to block the blue beam!");
+            break;
+    }
+}
+
 NetherspiteBeamOffset GetNetherspiteBeamOffset(
     Unit const& netherspite, Position const& portal, float x, float y)
 {
@@ -783,13 +908,28 @@ NetherspiteBeamOffset GetNetherspiteBeamOffset(
     return { dx * dirX + dy * dirY, dy * dirX - dx * dirY };
 }
 
-bool IsOnNetherspiteBeam(Unit const& netherspite, Position const& portal, Unit const& unit)
+bool IsOnNetherspiteBeam(Unit* netherspite, Position const& portal, Unit* unit)
 {
+    if (!netherspite || !unit)
+        return false;
+
     NetherspiteBeamOffset const offset = GetNetherspiteBeamOffset(
-        netherspite, portal, unit.GetPositionX(), unit.GetPositionY());
+        *netherspite, portal, unit->GetPositionX(), unit->GetPositionY());
     return offset.along > NETHERSPITE_BEAM_START &&
-        offset.along < netherspite.GetExactDist2d(portal) &&
+        offset.along < netherspite->GetExactDist2d(portal) &&
         std::abs(offset.off) < NETHERSPITE_BEAM_WIDTH;
+}
+
+Position GetPositionOnNetherspiteBeam(
+    Unit const& netherspite, Position const& portal, float distance)
+{
+    float const length = netherspite.GetExactDist2d(portal);
+    return Position(
+        netherspite.GetPositionX() +
+            (portal.GetPositionX() - netherspite.GetPositionX()) / length * distance,
+        netherspite.GetPositionY() +
+            (portal.GetPositionY() - netherspite.GetPositionY()) / length * distance,
+        netherspite.GetPositionZ());
 }
 
 bool IsClearOfVoidZones(KaraInstanceState const& state, float x, float y, float clearance)
@@ -797,6 +937,44 @@ bool IsClearOfVoidZones(KaraInstanceState const& state, float x, float y, float 
     return std::none_of(
         state.netherspiteVoidZones.begin(), state.netherspiteVoidZones.end(),
         [x, y, clearance](Position const& zone) { return zone.GetExactDist2d(x, y) < clearance; });
+}
+
+bool CrossesVoidZone(KaraInstanceState const& state, Position const& from, Position const& to)
+{
+    return FindFirstVoidZoneOnPath(state, from, to) != nullptr;
+}
+
+float FindNetherspiteBeamPositionDistance(
+    Unit const& netherspite, Position const& portal, KaraInstanceState const& state,
+    Player* blocker)
+{
+    bool const isHunter = blocker->getClass() == CLASS_HUNTER;
+    float const preferred =
+        isHunter ? NETHERSPITE_HUNTER_BLOCKER_DISTANCE : NETHERSPITE_BLOCKER_DISTANCE;
+    float const low =
+        isHunter ? NETHERSPITE_HUNTER_BLOCKER_DISTANCE : NETHERSPITE_BLOCKER_MIN_DISTANCE;
+    float const length = netherspite.GetExactDist2d(portal);
+    float const dirX = (portal.GetPositionX() - netherspite.GetPositionX()) / length;
+    float const dirY = (portal.GetPositionY() - netherspite.GetPositionY()) / length;
+
+    // Past the portal, a bot is off the beam.
+    float const high = std::min(NETHERSPITE_BEAM_SEARCH_MAX_DISTANCE, length - 1.0f);
+    constexpr float searchStep = 0.5f;
+    float best = preferred;
+    float bestGap = std::numeric_limits<float>::max();
+    for (float distance = low; distance <= high; distance += searchStep)
+    {
+        float const x = netherspite.GetPositionX() + dirX * distance;
+        float const y = netherspite.GetPositionY() + dirY * distance;
+        float const gap = std::abs(distance - preferred);
+        if (gap < bestGap && IsClearOfVoidZones(state, x, y, VOID_ZONE_BEAM_POSITION_CLEARANCE))
+        {
+            best = distance;
+            bestGap = gap;
+        }
+    }
+
+    return best;
 }
 
 float GetNetherspiteInnerSide(
@@ -846,22 +1024,32 @@ bool IsBetweenNetherspiteBeams(
     return fromRed > M_PI / 2.0f && fromRed < 3.0f * M_PI / 2.0f;
 }
 
-std::optional<Position> FindPositionBetweenNetherspiteBeams(
-    Player* bot, Unit const& netherspite, KaraInstanceState const& state)
+bool CanMoveBetweenNetherspiteBeams(
+    Player* bot, Unit* netherspite, KaraInstanceState const& state, float x, float y)
 {
+    return netherspite && IsBetweenNetherspiteBeams(bot, *netherspite, state, x, y) &&
+        !CrossesVoidZone(state, bot->GetPosition(), Position(x, y)) &&
+        !CrossesBeamAfterStart(bot, *netherspite, state, x, y);
+}
+
+std::optional<Position> FindPositionBetweenNetherspiteBeams(
+    Player* bot, Unit* netherspite, KaraInstanceState const& state)
+{
+    if (!netherspite)
+        return std::nullopt;
+
     float z = bot->GetPositionZ();
     if (!PlayerbotAI::IsTank(bot))
     {
-        NetherspiteArc const arc = GetNetherspiteStandingArc(bot, netherspite, state);
+        NetherspiteArc const arc = GetNetherspiteStandingArc(bot, *netherspite, state);
         NetherspiteRadiusBand const band = GetNetherspiteRadiusBand(bot);
         for (uint8 i = 0; i < NETHERSPITE_POSITION_TRIES; ++i)
         {
             float const angle = arc.start + frand(0.0f, arc.width);
             float const radius = frand(band.low, band.high);
-            float const x = netherspite.GetPositionX() + std::cos(angle) * radius;
-            float const y = netherspite.GetPositionY() + std::sin(angle) * radius;
-            if (IsBetweenNetherspiteBeams(bot, netherspite, state, x, y) &&
-                !CrossesBeamAfterStart(bot, netherspite, state, x, y) &&
+            float const x = netherspite->GetPositionX() + std::cos(angle) * radius;
+            float const y = netherspite->GetPositionY() + std::sin(angle) * radius;
+            if (CanMoveBetweenNetherspiteBeams(bot, netherspite, state, x, y) &&
                 GetFloorAt(bot, x, y, z))
             {
                 return Position(x, y, z);
@@ -871,7 +1059,7 @@ std::optional<Position> FindPositionBetweenNetherspiteBeams(
 
     // A bot that can't get to the area without crossing a beam stays put unless it's in danger.
     if (IsClearOfVoidZones(state, bot->GetPositionX(), bot->GetPositionY(), VOID_ZONE_CLEARANCE) &&
-        IsClearOfBeams(netherspite, state, bot->GetPositionX(), bot->GetPositionY()))
+        IsClearOfBeams(*netherspite, state, bot->GetPositionX(), bot->GetPositionY()))
     {
         return std::nullopt;
     }
@@ -888,8 +1076,9 @@ std::optional<Position> FindPositionBetweenNetherspiteBeams(
             float const x = bot->GetPositionX() + std::cos(angle) * distance;
             float const y = bot->GetPositionY() + std::sin(angle) * distance;
             if (IsClearOfVoidZones(state, x, y, VOID_ZONE_CLEARANCE) &&
-                IsClearOfBeams(netherspite, state, x, y) &&
-                !CrossesBeamAfterStart(bot, netherspite, state, x, y) &&
+                IsClearOfBeams(*netherspite, state, x, y) &&
+                !CrossesVoidZone(state, bot->GetPosition(), Position(x, y)) &&
+                !CrossesBeamAfterStart(bot, *netherspite, state, x, y) &&
                 GetFloorAt(bot, x, y, z))
             {
                 return Position(x, y, z);
@@ -898,6 +1087,59 @@ std::optional<Position> FindPositionBetweenNetherspiteBeams(
     }
 
     return std::nullopt;
+}
+
+std::optional<Position> GetStepAroundVoidZones(
+    Player* bot, Unit* netherspite, KaraInstanceState const& state,
+    Position const& destination)
+{
+    if (!netherspite)
+        return std::nullopt;
+
+    Position const from = bot->GetPosition();
+    Position const* zone = FindFirstVoidZoneOnPath(state, from, destination);
+    float const length = from.GetExactDist2d(destination);
+    if (!zone || length == 0.0f)
+        return destination;
+
+    float const normalX = (from.GetPositionY() - destination.GetPositionY()) / length;
+    float const normalY = (destination.GetPositionX() - from.GetPositionX()) / length;
+    float const zoneSide = (zone->GetPositionX() - from.GetPositionX()) * normalX +
+        (zone->GetPositionY() - from.GetPositionY()) * normalY;
+    float const away = zoneSide > 0.0f ? -1.0f : 1.0f;
+    for (float const distance :
+         { VOID_ZONE_STEP_AROUND_DISTANCE, VOID_ZONE_WIDE_STEP_AROUND_DISTANCE })
+    {
+        for (float const side : { away, -away })
+        {
+            float const x = zone->GetPositionX() + normalX * side * distance;
+            float const y = zone->GetPositionY() + normalY * side * distance;
+            float z = bot->GetPositionZ();
+            if (IsClearOfVoidZones(state, x, y, VOID_ZONE_CLEARANCE) &&
+                IsClearOfBeams(*netherspite, state, x, y) &&
+                !CrossesVoidZone(state, from, Position(x, y)) &&
+                !CrossesBeamAfterStart(bot, *netherspite, state, x, y) &&
+                GetFloorAt(bot, x, y, z))
+            {
+                return Position(x, y, z);
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+Position GetReachEndPosition(Unit const& bot, Unit const& target, float range)
+{
+    float const distance = bot.GetExactDist2d(target);
+    float const end = range + bot.GetCombatReach() + target.GetCombatReach();
+    if (distance <= end)
+        return bot.GetPosition();
+
+    float const fraction = end / distance;
+    return Position(
+        target.GetPositionX() + (bot.GetPositionX() - target.GetPositionX()) * fraction,
+        target.GetPositionY() + (bot.GetPositionY() - target.GetPositionY()) * fraction);
 }
 
 // Prince Malchezaar
@@ -954,13 +1196,16 @@ bool CanWalkStraightTo(Player* bot, Position const& destination)
     if (!bot->GetMap()->CanReachPositionAndGetValidCoords(bot, x, y, z, true, false))
         return false;
 
-    // An incomplete path can cut the point short without counting as a collision.
-    constexpr float truncationTolerance = 1.0f;
+    // An incomplete path can cut the point short without counting as a collision. A point the walk
+    // stops further short of than the movers' arrival distance is rejected, not clamped.
     return std::hypot(x - destination.GetPositionX(), y - destination.GetPositionY()) <=
-        truncationTolerance;
+        MALCHEZAAR_ARRIVAL_DISTANCE;
 }
 
-std::optional<Position> FindMalchezaarClearPosition(
+namespace
+{
+
+std::optional<Position> FindMalchezaarRingPosition(
     PlayerbotAI* botAI, Unit const& malchezaar, std::vector<Position> const& infernals)
 {
     Player* bot = botAI->GetBot();
@@ -1016,22 +1261,41 @@ std::optional<Position> FindMalchezaarClearPosition(
         }
     }
 
+    return std::nullopt;
+}
+
+}
+
+std::optional<Position> FindMalchezaarClearPosition(
+    PlayerbotAI* botAI, Unit const* malchezaar, std::vector<Position> const& infernals)
+{
+    if (malchezaar)
+    {
+        std::optional<Position> const position =
+            FindMalchezaarRingPosition(botAI, *malchezaar, infernals);
+        if (position)
+            return position;
+    }
+
+    Player* bot = botAI->GetBot();
+    bool const isRanged = PlayerbotAI::IsRanged(bot);
     constexpr float searchDistance = 60.0f;
     return FindMalchezaarPosition(
-        bot, origin, infernals, searchDistance, true, [&](Position const& candidate)
+        bot, bot->GetPosition(), infernals, searchDistance, true, [&](Position const& candidate)
         {
             return IsClearOfInfernals(candidate, infernals, HELLFIRE_CLEARANCE) &&
-                (!isRanged || malchezaar.GetExactDist2d(candidate) >= SHADOW_NOVA_CLEARANCE);
+                (!isRanged || !malchezaar ||
+                 malchezaar->GetExactDist2d(candidate) >= SHADOW_NOVA_CLEARANCE);
         });
 }
 
 bool IsClearOfMalchezaarHazards(
-    Player* bot, Unit const& malchezaar, std::vector<Position> const& infernals,
+    Player* bot, Unit const* malchezaar, std::vector<Position> const& infernals,
     Position const& position)
 {
     return IsClearOfInfernals(position, infernals, HELLFIRE_CLEARANCE) &&
-        (!PlayerbotAI::IsRanged(bot) ||
-         malchezaar.GetExactDist2d(position) >= SHADOW_NOVA_MOVE_DISTANCE);
+        (!malchezaar || !PlayerbotAI::IsRanged(bot) ||
+         malchezaar->GetExactDist2d(position) >= SHADOW_NOVA_MOVE_DISTANCE);
 }
 
 std::optional<Position> FindMalchezaarTankPosition(
@@ -1075,6 +1339,25 @@ float GetTerraceAngle(Position const& position)
     return angle < TERRACE_ARC_START ? angle + 2.0f * static_cast<float>(M_PI) : angle;
 }
 
+Position GetTerraceWalkPosition(Position const& from, Position const& destination)
+{
+    if (GetDistanceToSegment2d(TERRACE_DOME_CENTER, from, destination) >= TERRACE_INNER_RADIUS)
+        return destination;
+
+    constexpr float stepDist = 3.5f;
+    float const radius =
+        std::max(from.GetExactDist2d(TERRACE_DOME_CENTER), NIGHTBANE_STACK_RADIUS);
+    float const fromAngle = GetTerraceAngle(from);
+    float const angleLeft = GetTerraceAngle(destination) - fromAngle;
+    float const angle =
+        fromAngle + std::copysign(std::min(stepDist / radius, std::fabs(angleLeft)), angleLeft);
+
+    return Position(
+        TERRACE_DOME_CENTER.GetPositionX() + radius * std::cos(angle),
+        TERRACE_DOME_CENTER.GetPositionY() + radius * std::sin(angle),
+        from.GetPositionZ());
+}
+
 bool IsClearOfCharredEarth(Position const& position, std::vector<Position> const& charredEarths)
 {
     for (Position const& charredEarth : charredEarths)
@@ -1086,48 +1369,58 @@ bool IsClearOfCharredEarth(Position const& position, std::vector<Position> const
     return true;
 }
 
-bool IsOutsideNightbaneTerrace(Unit const& unit)
+bool IsOutsideNightbaneTerrace(Unit* unit)
 {
+    if (!unit)
+        return false;
+
     constexpr float belowTerraceLeeway = 5.0f;
-    if (unit.GetPositionZ() < NIGHTBANE_GROUND_Z - belowTerraceLeeway)
+    if (unit->GetPositionZ() < NIGHTBANE_GROUND_Z - belowTerraceLeeway)
         return true;
 
-    return unit.GetExactDist2d(TERRACE_DOME_CENTER) > TERRACE_OUTER_RADIUS &&
-        GetTerraceAngle(unit) <= TERRACE_ARC_END;
+    return unit->GetExactDist2d(TERRACE_DOME_CENTER) > TERRACE_OUTER_RADIUS &&
+        GetTerraceAngle(*unit) <= TERRACE_ARC_END;
 }
 
-bool IsNightbaneFlying(Unit const& nightbane)
+bool IsNightbaneFlying(Unit* nightbane)
 {
-    return nightbane.GetPositionZ() > NIGHTBANE_FLIGHT_Z;
+    return nightbane && nightbane->GetPositionZ() > NIGHTBANE_FLIGHT_Z;
 }
 
-bool IsNightbaneFlightPhaseActive(Unit const& nightbane)
+bool IsNightbaneFlightPhaseActive(Unit* nightbane)
 {
     if (!IsNightbaneFlying(nightbane))
         return false;
 
-    KaraInstanceState const* state = FindKaraState(nightbane.GetInstanceId());
+    KaraInstanceState const* state = FindKaraState(nightbane->GetInstanceId());
     return !state || state->nightbaneFlightStage != NightbaneFlightStage::Landing;
 }
 
-bool IsNightbaneDpsHeld(Player* bot, Unit const& nightbane)
+bool IsNightbaneDpsHeld(Player* bot, Unit* nightbane)
 {
+    if (!nightbane)
+        return false;
+
     if (IsNightbaneFlying(nightbane))
         return true;
 
-    if (PlayerbotAI::IsMainTank(bot))
+    // The timer first: IsMainTank can loop over the group.
+    KaraInstanceState const* state = FindKaraState(nightbane->GetInstanceId());
+    if (state && state->nightbaneDpsHoldTimer &&
+        getMSTimeDiff(*state->nightbaneDpsHoldTimer, getMSTime()) >= NIGHTBANE_DPS_HOLD_MS)
+    {
         return false;
+    }
 
-    KaraInstanceState const* state = FindKaraState(nightbane.GetInstanceId());
-    if (!state || !state->nightbaneDpsHoldTimer)
-        return true;
-
-    return getMSTimeDiff(*state->nightbaneDpsHoldTimer, getMSTime()) < NIGHTBANE_DPS_HOLD_MS;
+    return !PlayerbotAI::IsMainTank(bot);
 }
 
-Position const* GetRainOfBonesCenter(Unit const& nightbane)
+Position const* GetRainOfBonesCenter(Unit* nightbane)
 {
-    Spell const* channel = nightbane.GetCurrentSpell(CURRENT_CHANNELED_SPELL);
+    if (!nightbane)
+        return nullptr;
+
+    Spell const* channel = nightbane->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
     if (!channel || channel->m_spellInfo->Id != Id(KaraSpells::SPELL_RAIN_OF_BONES) ||
         !channel->m_targets.HasDst())
     {

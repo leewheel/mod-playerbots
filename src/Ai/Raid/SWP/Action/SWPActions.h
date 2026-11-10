@@ -9,6 +9,7 @@
 
 #include "Action.h"
 #include "AttackAction.h"
+#include "EncounterHelpers.h"
 #include "MovementActions.h"
 #include "ObjectGuid.h"
 #include "Position.h"
@@ -404,16 +405,16 @@ public:
     bool Execute(Event event) override;
 };
 
-class EredarTwinsControlPetAggressionAction : public Action
+class EredarTwinsSetPetStanceAction : public Action
 {
 public:
-    EredarTwinsControlPetAggressionAction(PlayerbotAI* botAI)
-        : Action(botAI, "eredar twins control pet aggression") {}
+    EredarTwinsSetPetStanceAction(PlayerbotAI* botAI)
+        : Action(botAI, "eredar twins set pet stance") {}
     bool Execute(Event event) override;
+    bool ResetPetStance();
 
 private:
-    ReactStates _previousReactState = REACT_DEFENSIVE;
-    bool _setPassive = false;
+    std::vector<EncounterHelpers::SavedMinionStance> _previousReactStates;
 };
 
 class EredarTwinsConflagrationTargetMoveFromGroupAction : public MovementAction

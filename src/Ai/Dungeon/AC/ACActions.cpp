@@ -9,6 +9,7 @@
 #include "EncounterHelpers.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <iterator>
 #include <vector>
@@ -18,7 +19,7 @@ using namespace EncounterHelpers;
 // Tank will position Shirrak at the specified coordinates, up the stairs
 bool ShirrakTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* shirrak = AI_VALUE2(Unit*, "find target", "18371");
+    Unit* shirrak = FindThreatTarget(bot, "shirrak the dead watcher");
     if (!shirrak)
         return false;
 
@@ -65,8 +66,7 @@ bool ShirrakFleeFocusFireAction::Execute(Event /*event*/)
 // Ranged should keep distance from Shirrak, staying at the edge of the stairs
 bool ShirrakRangedKeepDistanceAction::Execute(Event /*event*/)
 {
-    //By leewheel 2026-08-26 合并后entry规则修正(Shirrak=18371)
-    Unit* shirrak = AI_VALUE2(Unit*, "find target", "18371");
+    Unit* shirrak = FindThreatTarget(bot, "shirrak the dead watcher");
     if (!shirrak)
         return false;
 

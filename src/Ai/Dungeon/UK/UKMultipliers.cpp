@@ -7,13 +7,14 @@
 #include "UKMultipliers.h"
 #include "ChooseTargetActions.h"
 #include "GenericSpellActions.h"
+#include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include "UKActions.h"
 #include "UKTriggers.h"
 
 float PrinceKelesethMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "23953");
-    if (!boss) { return 1.0f; }
+    if (!FindThreatTarget(bot, "prince keleseth")) { return 1.0f; }
 
     // Suppress auto-targeting behaviour only when a tomb is up
     if (dynamic_cast<DpsAssistAction*>(action))
@@ -34,7 +35,7 @@ float PrinceKelesethMultiplier::GetValue(Action* action)
 float SkarvaldAndDalronnMultiplier::GetValue(Action* action)
 {
     // Only need to deal with Dalronn here. If he's dead, just fall back to normal dps strat
-    Unit* dalronn = AI_VALUE2(Unit*, "find target", "27389");
+    Unit* dalronn = FindThreatTarget(bot, "dalronn the controller");
     if (!dalronn) { return 1.0f; }
 
     // Only suppress DpsAssistAction if Dalronn is alive
@@ -47,10 +48,9 @@ float SkarvaldAndDalronnMultiplier::GetValue(Action* action)
 
 float IngvarThePlundererMultiplier::GetValue(Action* action)
 {
-// By leewheel 2026-10-07 合并 #2854：静态调用；目标按 entry 查找（汉化库英文名匹配不上）
-    Unit* boss = AI_VALUE2(Unit*, "find target", "23954");
-    bool isTank = PlayerbotAI::IsTank(bot);
+    Unit* boss = FindThreatTarget(bot, "ingvar the plunderer");
     if (!boss) { return 1.0f; }
+    bool isTank = PlayerbotAI::IsTank(bot);
 
     // Prevent movement actions overriding current movement, we're probably dodging a slam
     if (isTank && bot->isMoving() && dynamic_cast<MovementAction*>(action))

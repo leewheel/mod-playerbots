@@ -251,7 +251,7 @@ bool TeronGorefiendCastsShadowOfDeathTrigger::IsActiveInEncounter()
 
 bool TeronGorefiendShouldPositionForVengefulSpiritTrigger::IsActiveInEncounter()
 {
-    Aura* shadow = bot->GetAura(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
+    Aura const* shadow = bot->GetAura(Id(BtSpells::SPELL_SHADOW_OF_DEATH));
     return shadow && shadow->GetDuration() <= GOREFIEND_SHADOW_OF_DEATH_MOVE_MS;
 }
 
@@ -320,7 +320,7 @@ bool GurtoggBloodboilRangedShouldAvoidFrontalConeTrigger::IsActiveInEncounter()
 
     // Arcing Smash only hits in front of Gurtogg, but he turns faster than bots can react, so at
     // the start of Fel Rage, everyone near the target moves away.
-    Aura* felRage = gurtogg->GetAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE));
+    Aura const* felRage = gurtogg->GetAura(Id(BtSpells::SPELL_BOSS_FEL_RAGE));
     if (felRage && GetAuraElapsedMs(felRage) < GURTOGG_FEL_RAGE_EARLY_AVOID_MS)
         return true;
 
@@ -336,7 +336,7 @@ bool GurtoggBloodboilFelRageOnBotTrigger::IsActiveInEncounter()
 bool GurtoggBloodboilShouldStopAttackingTrigger::IsActiveInEncounter()
 {
     Unit* gurtogg = GetEncounterBoss();
-    return gurtogg && IsAttackingTarget(bot, *gurtogg) &&
+    return gurtogg && IsAttackingTarget(bot, gurtogg) &&
         IsGurtoggThreatHoldActive(botAI, gurtogg);
 }
 
@@ -740,17 +740,13 @@ bool IllidanStormrageFlamesOfAzzinothShouldBeTankedTrigger::IsActiveInEncounter(
     return IsFlameOfAzzinothTank(bot) && !IsIllidanInfectionPositionKeptInFlight(bot);
 }
 
-bool IllidanStormragePetsDieToHazardsTrigger::IsActiveInEncounter()
+bool IllidanStormrageShouldManagePetAggressionTrigger::IsActiveInEncounter()
 {
-    Pet* pet = bot->GetPet();
-    if (!pet || !pet->IsAlive())
+    if (!HasControllableMinion(bot))
         return false;
 
     Unit* illidan = GetEncounterBoss();
-    if (!illidan)
-        return false;
-
-    return ShouldIllidanPetsBePassive(bot, illidan) != pet->HasReactState(REACT_PASSIVE);
+    return illidan && IsMinionStanceWrongForHold(bot, ShouldIllidanPetsBePassive(bot, illidan));
 }
 
 // Pets are ideal for killing Shadowfiends because they cannot be infected.
@@ -779,7 +775,7 @@ bool IllidanStormragePetShouldAttackShadowfiendTrigger::IsActiveInEncounter()
     IllidanPhase const phase = GetIllidanPhase(illidan);
     if (phase == IllidanPhase::Demon)
     {
-        if (GetShadowDemonForPetToAttack(botAI, *pet))
+        if (GetShadowDemonForPetToAttack(botAI, pet))
             return false;
     }
     else if (phase == IllidanPhase::Initial || phase == IllidanPhase::Flying ||
@@ -799,7 +795,7 @@ bool IllidanStormragePetShouldAttackShadowfiendTrigger::IsActiveInEncounter()
         return false;
     }
 
-    return GetNearestParasiticShadowfiend(botAI, *pet);
+    return GetNearestParasiticShadowfiend(botAI, pet);
 }
 
 bool IllidanStormragePetShouldAttackShadowDemonTrigger::IsActiveInEncounter()
@@ -816,7 +812,7 @@ bool IllidanStormragePetShouldAttackShadowDemonTrigger::IsActiveInEncounter()
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return false;
 
-    return GetShadowDemonForPetToAttack(botAI, *pet);
+    return GetShadowDemonForPetToAttack(botAI, pet);
 }
 
 bool IllidanStormrageShouldPositionAboveGrateTrigger::IsActiveInEncounter()
@@ -891,7 +887,7 @@ bool IllidanStormrageShamanHasTotemsBeforeTanksHaveAggroTrigger::IsActiveInEncou
         return false;
 
     Unit* illidan = GetEncounterBoss();
-    return illidan && IsIllidanTankAggroPending(*illidan, GetIllidanPhase(illidan));
+    return illidan && IsIllidanTankAggroPending(illidan, GetIllidanPhase(illidan));
 }
 
 bool IllidanStormrageShouldPositionForLandingTrigger::IsActiveInEncounter()
@@ -914,11 +910,10 @@ bool IllidanStormrageShouldStopAttackingTrigger::IsActiveInEncounter()
     if (!illidan)
         return false;
 
-    Spell* channel = bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
-    if (channel && IsIllidanPickupChannelHeld(bot, illidan, *channel))
+    if (IsIllidanPickupChannelHeld(bot, illidan, bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL)))
         return true;
 
-    return IsAttackingTarget(bot, *illidan) &&
+    return IsAttackingTarget(bot, illidan) &&
         GetIllidanDpsHold(bot, illidan) != IllidanDpsHold::None;
 }
 
@@ -1035,7 +1030,7 @@ bool IllidanStormrageShouldAssignTargetPriorityTrigger::IsActiveInEncounter()
         return true;
 
     return phase == IllidanPhase::Demon &&
-        !IsIllidanDemonFormEnding(*illidan, ILLIDAN_MAIN_TANK_MOVE_IN_MS);
+        !IsIllidanDemonFormEnding(illidan, ILLIDAN_MAIN_TANK_MOVE_IN_MS);
 }
 
 // By leewheel 2026-10-22 与上游 brighton 合并：IllidanStormrageMaievPlacedCageTrapTrigger 由上游

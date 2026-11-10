@@ -5,7 +5,9 @@
  */
 
 #include "HoLActions.h"
+#include "HoLTriggers.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 
 bool BjarngrimTargetAction::Execute(Event /*event*/)
 {
@@ -42,7 +44,7 @@ bool BjarngrimTargetAction::Execute(Event /*event*/)
 
 bool AvoidWhirlwindAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "28586");
+    Unit* boss = FindThreatTarget(bot, "general bjarngrim");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());
@@ -59,7 +61,7 @@ bool AvoidWhirlwindAction::Execute(Event /*event*/)
 
 bool VolkhanTargetAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "28587");
+    Unit* boss = FindThreatTarget(bot, "volkhan");
     if (!boss || AI_VALUE(Unit*, "current target") == boss)
     {
         return false;
@@ -140,7 +142,7 @@ bool LokenStackAction::isUseful()
 }
 bool LokenStackAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "28923");
+    Unit* boss = FindThreatTarget(bot, "loken");
     if (!boss) { return false; }
 
     float maxMovement = 10.0f;
@@ -159,7 +161,7 @@ bool LokenStackAction::Execute(Event /*event*/)
 
 bool AvoidLightningNovaAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "28923");
+    Unit* boss = FindThreatTarget(bot, "loken");
     if (!boss) { return false; }
 
     float distance = bot->GetExactDist2d(boss->GetPosition());

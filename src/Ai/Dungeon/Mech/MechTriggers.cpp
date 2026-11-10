@@ -5,8 +5,6 @@
  */
 
 #include "MechTriggers.h"
-#include "AiObject.h"
-#include "AiObjectContext.h"
 #include "MechShared.h"
 #include "Playerbots.h"
 

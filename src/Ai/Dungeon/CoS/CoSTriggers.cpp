@@ -5,13 +5,12 @@
  */
 
 #include "CoSTriggers.h"
-#include "AiObjectContext.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 
 bool ExplodeGhoulTrigger::IsActive()
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "26530");
-    if (!boss) { return false; }
+    if (!FindThreatTarget(bot, "salramm the fleshcrafter")) { return false; }
 
     float distance = 10.0f;
     float distanceExtra = 2.0f;
@@ -32,7 +31,5 @@ bool ExplodeGhoulTrigger::IsActive()
 
 bool EpochRangedTrigger::IsActive()
 {
-// By leewheel 2026-10-07 合并 #2854：采纳上游静态调用写法 PlayerbotAI::IsMelee；
-    //   目标仍按 entry 查找（本服 creature_template 名已汉化，英文名 chrono-lord epoch 匹配不上）。
-    return !PlayerbotAI::IsMelee(bot) && AI_VALUE2(Unit*, "find target", "26532");
+    return !PlayerbotAI::IsMelee(bot) && FindThreatTarget(bot, "chrono-lord epoch");
 }

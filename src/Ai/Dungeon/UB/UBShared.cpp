@@ -12,6 +12,7 @@
 #include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <cmath>
 #include <list>
@@ -56,12 +57,9 @@ float MaxEffectRadius(uint32 spellId, float fallback)
     return radius > 0.0f ? radius : fallback;
 }
 
-Unit* HungarfenTarget(AiObjectContext* context)
+Unit* HungarfenTarget(Player* bot)
 {
-    // By leewheel 2026-09-12 - 规则81：boss 名称一律 entry 化（同目录 UBActions/UBMultipliers/UBTriggers
-    //   均已使用 entry）。原英文名 "hungarfen" 在本项目中文 creature_template 下无法命中；17770 = Hungarfen
-    return AI_VALUE2(Unit*, "find target", "17770");
-    // End By leewheel
+    return FindThreatTarget(bot, "hungarfen");
 }
 
 ObjectGuid FindHungarfenGuid(Player* bot)

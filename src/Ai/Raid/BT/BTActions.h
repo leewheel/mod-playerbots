@@ -10,6 +10,7 @@
 #include "Action.h"
 #include "AttackAction.h"
 #include "BTHelpers.h"
+#include "EncounterHelpers.h"
 #include "MovementActions.h"
 #include "Unit.h"
 #include <string>
@@ -219,7 +220,8 @@ private:
 
     float GetCollisionFreeDistance(float angle, float maxDistance);
     float SimulateChase(
-        Unit* supremus, float timeRemaining, float catchDistance, float angle, float runDistance);
+        Unit const& supremus, float timeRemaining, float catchDistance, float angle,
+        float runDistance);
 
     float _lastAngle = 0.0f;
     uint32 _lastStepTime = 0;
@@ -622,9 +624,9 @@ public:
     }
 
 private:
-    bool FindDemonFormPosition(Unit const& illidan, Position& position);
-    bool FindRingPosition(Unit const& illidan, BtHelpers::IllidanPhase phase, Position& position);
-    void StartRingLead(Unit const& illidan, BtHelpers::IllidanPhase phase);
+    bool FindDemonFormPosition(Unit* illidan, Position& position);
+    bool FindRingPosition(Unit* illidan, BtHelpers::IllidanPhase phase, Position& position);
+    void StartRingLead(Unit* illidan, BtHelpers::IllidanPhase phase);
     void RouteRoundIllidan(Unit const& illidan, Position& position);
 
     uint32 _phaseStartTime = 0;
@@ -654,7 +656,7 @@ public:
 
 private:
     bool FindTrapHunter(
-        Player& infected, Position const& infectionPosition,
+        Player* infected, Position const& infectionPosition,
         std::unordered_map<ObjectGuid, BtHelpers::IllidanInfection> const& infections,
         ObjectGuid& hunterGuid);
 };
@@ -682,16 +684,16 @@ private:
     uint8 _tankStep = 0;
 };
 
-class IllidanStormrageControlPetAggressionAction : public Action
+class IllidanStormrageSetPetStanceAction : public Action
 {
 public:
-    IllidanStormrageControlPetAggressionAction(PlayerbotAI* botAI)
-        : Action(botAI, "illidan stormrage control pet aggression") {}
+    IllidanStormrageSetPetStanceAction(PlayerbotAI* botAI)
+        : Action(botAI, "illidan stormrage set pet stance") {}
     bool Execute(Event event) override;
+    bool ResetPetStance();
 
 private:
-    ReactStates _previousReactState = REACT_DEFENSIVE;
-    bool _setPassive = false;
+    std::vector<EncounterHelpers::SavedMinionStance> _previousReactStates;
 };
 
 class IllidanStormrageCommandPetAttackAddAction : public Action
@@ -763,7 +765,7 @@ public:
     bool Execute(Event event) override;
 
 private:
-    bool FindDemonFormSlot(Unit const& illidan, Position& position);
+    bool FindDemonFormSlot(Unit* illidan, Position& position);
 };
 
 // Short steps toward the Demon, so the bot stops once in reach, never into Aura of Dread or near

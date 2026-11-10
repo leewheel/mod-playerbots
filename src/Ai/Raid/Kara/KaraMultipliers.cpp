@@ -35,7 +35,23 @@ using namespace EncounterHelpers;
 
 // Shared
 
-float KarazhanSetTremorTotemMultiplier::GetValue(Action* action)
+namespace
+{
+
+bool IsRepositionAction(Player* bot, Action* action)
+{
+    return (bot->getClass() == CLASS_HUNTER && dynamic_cast<CastDisengageAction*>(action)) ||
+        (bot->getClass() == CLASS_MAGE && dynamic_cast<CastBlinkBackAction*>(action));
+}
+
+bool IsKillingSpree(Player* bot, Action* action)
+{
+    return bot->getClass() == CLASS_ROGUE && dynamic_cast<CastKillingSpreeAction*>(action);
+}
+
+}
+
+float KarazhanKeepTremorTotemMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -138,7 +154,7 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
         return 0.0f;
 
     if (boss->GetEntry() == Id(KaraNpcs::NPC_NIGHTBANE))
-        return IsNightbaneFlying(*boss) ? 0.0f : 1.0f;
+        return IsNightbaneFlying(boss) ? 0.0f : 1.0f;
 
     if (boss->GetEntry() == Id(KaraNpcs::NPC_NETHERSPITE))
         return IsBanishPhase(boss) ? 0.0f : 1.0f;
@@ -204,7 +220,7 @@ float AttumenTheHuntsmanDisableAutoTargetingMultiplier::GetValueInEncounter(Acti
 
     // Mounted Attumen is the only target left, so stock targeting finds him.
     Unit* midnight = FindThreatTarget(bot, "midnight");
-    return midnight && !IsAttumenMounted(*midnight) ? 0.0f : 1.0f;
+    return midnight && !IsAttumenMounted(midnight) ? 0.0f : 1.0f;
 }
 
 float AttumenTheHuntsmanStayStackedMultiplier::GetValueInEncounter(Action* action)
@@ -220,14 +236,13 @@ float AttumenTheHuntsmanStayStackedMultiplier::GetValueInEncounter(Action* actio
 
     if (!dynamic_cast<MovementAction*>(action) &&
         !dynamic_cast<CastBlinkBackAction*>(action) &&
-        !dynamic_cast<CastDisengageAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action))
+        !IsRepositionAction(bot, action))
     {
         return 1.0f;
     }
 
     Unit* midnight = FindThreatTarget(bot, "midnight");
-    if (!midnight || !IsAttumenMounted(*midnight))
+    if (!midnight || !IsAttumenMounted(midnight))
         return 1.0f;
 
     // Whoever Attumen is on, and the main tank, move freely; everyone else stays stacked.
@@ -235,7 +250,7 @@ float AttumenTheHuntsmanStayStackedMultiplier::GetValueInEncounter(Action* actio
     if (attumen && attumen->GetVictim() == bot)
         return 1.0f;
 
-    return PlayerbotAI::IsMainTank(bot) ? 1.0f : 0.0f;
+    return PlayerbotAI::IsTank(bot) && PlayerbotAI::IsMainTank(bot) ? 1.0f : 0.0f;
 }
 
 // Give the main tank 5 seconds to grab aggro when Attumen mounts Midnight. Mounted Attumen is the
@@ -264,7 +279,7 @@ float MaidenOfVirtueDisableCombatFormationMoveMultiplier::GetValueInEncounter(Ac
     return GetEncounterBoss() ? 0.0f : 1.0f;
 }
 
-float MaidenOfVirtueSetGroundingTotemMultiplier::GetValueInEncounter(Action* action)
+float MaidenOfVirtueKeepGroundingTotemMultiplier::GetValueInEncounter(Action* action)
 {
     if (bot->getClass() != CLASS_SHAMAN)
         return 1.0f;
@@ -325,7 +340,7 @@ float TheCuratorDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action
 
 // Terestian Illhoof
 
-float TerestianIllhoofDontDotFiendishImpsMultiplier::GetValueInEncounter(Action* action)
+float TerestianIllhoofDisableDotsOnFiendishImpsMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
@@ -340,16 +355,13 @@ float TerestianIllhoofDontDotFiendishImpsMultiplier::GetValueInEncounter(Action*
 
 // Shade of Aran
 
-float ShadeOfAranArcaneExplosionRunAwayMultiplier::GetValueInEncounter(Action* action)
+float ShadeOfAranArcaneExplosionDisableMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT)
         return 1.0f;
 
-    if (!dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<CastBlinkBackAction*>(action) &&
-        !dynamic_cast<CastDisengageAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action) &&
-        !dynamic_cast<CastKillingSpreeAction*>(action))
+    if (!dynamic_cast<MovementAction*>(action) && !IsRepositionAction(bot, action) &&
+        !IsKillingSpree(bot, action))
     {
         return 1.0f;
     }
@@ -370,6 +382,9 @@ float ShadeOfAranArcaneExplosionRunAwayMultiplier::GetValueInEncounter(Action* a
 // Includes set behind, as he faces a random player with each cast.
 float ShadeOfAranDisableReactiveMovementMultiplier::GetValueInEncounter(Action* action)
 {
+    if (!dynamic_cast<MovementAction*>(action))
+        return 1.0f;
+
     bool const isReactiveMovement =
         dynamic_cast<AvoidAoeAction*>(action) || dynamic_cast<FleeAction*>(action) ||
         dynamic_cast<CombatFormationMoveAction*>(action);
@@ -380,11 +395,8 @@ float ShadeOfAranDisableReactiveMovementMultiplier::GetValueInEncounter(Action* 
 // I will not move when Flame Wreath is cast or the raid blows up.
 float ShadeOfAranFlameWreathDisableMovementMultiplier::GetValueInEncounter(Action* action)
 {
-    if (!dynamic_cast<MovementAction*>(action) &&
-        !dynamic_cast<CastBlinkBackAction*>(action) &&
-        !dynamic_cast<CastDisengageAction*>(action) &&
-        !dynamic_cast<CastReachTargetSpellAction*>(action) &&
-        !dynamic_cast<CastKillingSpreeAction*>(action))
+    if (!dynamic_cast<MovementAction*>(action) && !IsRepositionAction(bot, action) &&
+        !IsKillingSpree(bot, action))
     {
         return 1.0f;
     }
@@ -399,23 +411,31 @@ float ShadeOfAranFlameWreathDisableMovementMultiplier::GetValueInEncounter(Actio
     if (!IsFlameWreathInProgress(botAI, aran))
         return 1.0f;
 
-    bool const isReachingTarget =
+    bool const isReachToAttack =
         dynamic_cast<ReachMeleeAction*>(action) || dynamic_cast<ReachSpellAction*>(action);
 
-    return isReachingTarget && CanReachTargetDuringFlameWreath(botAI, aran) ? 1.0f : 0.0f;
+    return isReachToAttack && CanReachTargetDuringFlameWreath(botAI, aran) ? 1.0f : 0.0f;
 }
 
 // Netherspite
 
 // The beam area and the banish slots are where every bot stands, so nothing else moves them. Bots
-// on a beam or waiting for one don't reach either, except that a red blocker can follow him.
+// on a beam or waiting for one don't reach either, except that a red blocker can follow him. Nobody
+// else reaches or charges through a void zone.
 float NetherspiteDisableReactiveMovementMultiplier::GetValueInEncounter(Action* action)
 {
+    if (!dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action) &&
+        !IsKillingSpree(bot, action) && !IsRepositionAction(bot, action))
+    {
+        return 1.0f;
+    }
+
     if (dynamic_cast<CombatFormationMoveAction*>(action) ||
         dynamic_cast<AvoidAoeAction*>(action) ||
         dynamic_cast<FleeAction*>(action) ||
         dynamic_cast<FollowAction*>(action) ||
-        dynamic_cast<CastKillingSpreeAction*>(action))
+        IsKillingSpree(bot, action) || IsRepositionAction(bot, action))
     {
         return 0.0f;
     }
@@ -433,7 +453,23 @@ float NetherspiteDisableReactiveMovementMultiplier::GetValueInEncounter(Action* 
         return 1.0f;
     }
 
-    return IsNetherspiteBlockerOrNext(*state, bot->GetGUID()) ? 0.0f : 1.0f;
+    if (IsNetherspiteBlockerOrNext(*state, bot->GetGUID()))
+        return 0.0f;
+
+    Unit* target = action->GetTarget();
+    if (!target)
+        return 1.0f;
+
+    float range = 0.0f; // Charges end at the target.
+    if (dynamic_cast<ReachMeleeAction*>(action))
+        range = sPlayerbotAIConfig.MeleeDistance;
+    else if (dynamic_cast<ReachPartyMemberToHealAction*>(action))
+        range = botAI->GetRange("heal");
+    else if (dynamic_cast<ReachTargetAction*>(action))
+        range = botAI->GetRange("spell");
+
+    Position const end = GetReachEndPosition(*bot, *target, range);
+    return CrossesVoidZone(*state, bot->GetPosition(), end) ? 0.0f : 1.0f;
 }
 
 float NetherspiteHoldDpsMultiplier::GetValueInEncounter(Action* action)
@@ -442,7 +478,7 @@ float NetherspiteHoldDpsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     Unit* netherspite = GetEncounterBoss();
-    if (!netherspite || !IsNetherspiteDpsHeld(bot, *netherspite))
+    if (!netherspite || !IsNetherspiteDpsHeld(bot, netherspite))
         return 1.0f;
 
     return action->GetTarget() == netherspite ? GetDpsHoldValue(bot, action) : 1.0f;
@@ -452,6 +488,9 @@ float NetherspiteHoldDpsMultiplier::GetValueInEncounter(Action* action)
 
 float PrinceMalchezaarDisableReactiveMovementMultiplier::GetValueInEncounter(Action* action)
 {
+    if (!dynamic_cast<MovementAction*>(action))
+        return 1.0f;
+
     bool const isReactiveMovement =
         dynamic_cast<AvoidAoeAction*>(action) || dynamic_cast<FleeAction*>(action) ||
         dynamic_cast<CombatFormationMoveAction*>(action);
@@ -459,13 +498,13 @@ float PrinceMalchezaarDisableReactiveMovementMultiplier::GetValueInEncounter(Act
     return isReactiveMovement ? 0.0f : 1.0f;
 }
 
-float PrinceMalchezaarEnfeebleMultiplier::GetValueInEncounter(Action* action)
+float PrinceMalchezaarEnfeebledBotFocusOnEscapeMultiplier::GetValueInEncounter(Action* action)
 {
     if (!bot->HasAura(Id(KaraSpells::SPELL_ENFEEBLE)))
         return 1.0f;
 
     if (dynamic_cast<AttackAction*>(action) ||
-        dynamic_cast<PrinceMalchezaarEnfeebledBotAvoidHazardAction*>(action))
+        dynamic_cast<PrinceMalchezaarEnfeebledBotRunToSafetyAction*>(action))
     {
         return 1.0f;
     }
@@ -478,63 +517,113 @@ float PrinceMalchezaarEnfeebleMultiplier::GetValueInEncounter(Action* action)
     }
 
     // Disable some cooldowns that are used upon low/critical health.
-    if (dynamic_cast<CastIceBlockAction*>(action) ||
-        dynamic_cast<CastManaShieldAction*>(action) ||
-        dynamic_cast<CastDivineShieldAction*>(action) ||
-        dynamic_cast<CastLayOnHandsAction*>(action) ||
-        dynamic_cast<CastCloakOfShadowsAction*>(action) ||
-        dynamic_cast<CastEvasionAction*>(action) ||
-        dynamic_cast<CastShamanisticRageAction*>(action) ||
-        dynamic_cast<CastBindingHealAction*>(action) ||
-        dynamic_cast<CastDesperatePrayerAction*>(action) ||
-        dynamic_cast<CastPainSuppressionAction*>(action) ||
-        dynamic_cast<CastDispersionAction*>(action) ||
-        dynamic_cast<CastEnragedRegenerationAction*>(action) ||
-        dynamic_cast<CastLastStandAction*>(action) ||
-        dynamic_cast<CastShieldWallAction*>(action) ||
-        dynamic_cast<CastSurvivalInstinctsAction*>(action) ||
-        dynamic_cast<CastDeterrenceAction*>(action) ||
-        dynamic_cast<CastIceboundFortitudeAction*>(action) ||
-        dynamic_cast<CastRuneTapAction*>(action) ||
-        dynamic_cast<CastVampiricBloodAction*>(action) ||
-        dynamic_cast<CastDeathStrikeAction*>(action) ||
-        dynamic_cast<CastDeathPactAction*>(action) ||
-        dynamic_cast<UseItemAction*>(action))
+    bool isDefensive = false;
+    switch (bot->getClass())
     {
-        return 0.0f;
+        case CLASS_MAGE:
+        {
+            isDefensive = dynamic_cast<CastIceBlockAction*>(action) ||
+                dynamic_cast<CastManaShieldAction*>(action);
+            break;
+        }
+        case CLASS_PALADIN:
+        {
+            isDefensive = dynamic_cast<CastDivineShieldAction*>(action) ||
+                dynamic_cast<CastLayOnHandsAction*>(action);
+            break;
+        }
+        case CLASS_ROGUE:
+        {
+            isDefensive = dynamic_cast<CastCloakOfShadowsAction*>(action) ||
+                dynamic_cast<CastEvasionAction*>(action);
+            break;
+        }
+        case CLASS_SHAMAN:
+            isDefensive = dynamic_cast<CastShamanisticRageAction*>(action);
+            break;
+        case CLASS_PRIEST:
+        {
+            isDefensive = dynamic_cast<CastBindingHealAction*>(action) ||
+                dynamic_cast<CastDesperatePrayerAction*>(action) ||
+                dynamic_cast<CastPainSuppressionAction*>(action) ||
+                dynamic_cast<CastDispersionAction*>(action);
+            break;
+        }
+        case CLASS_WARRIOR:
+        {
+            isDefensive = dynamic_cast<CastEnragedRegenerationAction*>(action) ||
+                dynamic_cast<CastLastStandAction*>(action) ||
+                dynamic_cast<CastShieldWallAction*>(action);
+            break;
+        }
+        case CLASS_DRUID:
+            isDefensive = dynamic_cast<CastSurvivalInstinctsAction*>(action);
+            break;
+        case CLASS_HUNTER:
+            isDefensive = dynamic_cast<CastDeterrenceAction*>(action);
+            break;
+        case CLASS_DEATH_KNIGHT:
+        {
+            isDefensive = dynamic_cast<CastIceboundFortitudeAction*>(action) ||
+                dynamic_cast<CastRuneTapAction*>(action) ||
+                dynamic_cast<CastVampiricBloodAction*>(action) ||
+                dynamic_cast<CastDeathStrikeAction*>(action) ||
+                dynamic_cast<CastDeathPactAction*>(action);
+            break;
+        }
+        default:
+            break;
     }
 
-    return 1.0f;
+    return isDefensive || dynamic_cast<UseItemAction*>(action) ? 0.0f : 1.0f;
 }
 
 // Nightbane
 
-// Pets tend to run out of bounds and cause skeletons to spawn off the map
-// Pets also tend to pull adds from inside of the tower through the floor
-// This multiplier DOES NOT impact Hunter and Warlock pets
-// Hunter and Warlock pets are addressed in ControlPetAggressionAction
-float NightbaneDisablePetsMultiplier::GetValueInEncounter(Action* action)
+// In flight, pets would leave the terrace after skeletons or him. Summons wait out the hold, since
+// it sets them passive (see the pet action). The Fire Elemental Totem's elemental can't be called
+// back, so it waits for the last ground phase.
+float NightbaneDelaySummonsAndPetAttacksMultiplier::GetValueInEncounter(Action* action)
 {
-    bool const isTemporarySummonSpell =
-        dynamic_cast<CastForceOfNatureAction*>(action) ||
-        dynamic_cast<CastFeralSpiritAction*>(action) ||
-        dynamic_cast<CastFireElementalTotemAction*>(action) ||
-        dynamic_cast<CastFireElementalTotemMeleeAction*>(action) ||
-        dynamic_cast<CastSummonWaterElementalAction*>(action) ||
-        dynamic_cast<CastShadowfiendAction*>(action);
+    bool isFireElementalTotem = false;
+    bool isSummon = false;
+    switch (bot->getClass())
+    {
+        case CLASS_SHAMAN:
+        {
+            isFireElementalTotem = dynamic_cast<CastFireElementalTotemAction*>(action) ||
+                dynamic_cast<CastFireElementalTotemMeleeAction*>(action);
+            isSummon = isFireElementalTotem || dynamic_cast<CastFeralSpiritAction*>(action);
+            break;
+        }
+        case CLASS_PRIEST:
+            isSummon = dynamic_cast<CastShadowfiendAction*>(action);
+            break;
+        case CLASS_MAGE:
+            isSummon = dynamic_cast<CastSummonWaterElementalAction*>(action);
+            break;
+        case CLASS_DRUID:
+            isSummon = dynamic_cast<CastForceOfNatureAction*>(action);
+            break;
+        default:
+            break;
+    }
 
-    if (!isTemporarySummonSpell && !dynamic_cast<PetAttackAction*>(action))
+    if (!isSummon && !dynamic_cast<PetAttackAction*>(action))
         return 1.0f;
 
     Unit* nightbane = GetEncounterBoss();
     if (!nightbane)
         return 1.0f;
 
-    if (isTemporarySummonSpell)
+    if (!isSummon)
+        return IsNightbaneFlying(nightbane) ? 0.0f : 1.0f;
+
+    if (IsNightbaneDpsHeld(bot, nightbane))
         return 0.0f;
 
-    // PetAttackAction
-    return IsNightbaneFlying(*nightbane) ? 0.0f : 1.0f;
+    return (!isFireElementalTotem ||
+        nightbane->GetHealthPct() <= NIGHTBANE_FINAL_PHASE_HEALTH_PCT) ? 1.0f : 0.0f;
 }
 
 // In flight, a unit hold on Nightbane, with drop target zeroed until he leaves the flight position
@@ -551,9 +640,9 @@ float NightbaneHoldDpsMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     if (isDropTarget)
-        return IsNightbaneFlightPhaseActive(*nightbane) ? 0.0f : 1.0f;
+        return IsNightbaneFlightPhaseActive(nightbane) ? 0.0f : 1.0f;
 
-    if (dynamic_cast<CastHealingSpellAction*>(action) || !IsNightbaneDpsHeld(bot, *nightbane))
+    if (dynamic_cast<CastHealingSpellAction*>(action) || !IsNightbaneDpsHeld(bot, nightbane))
         return 1.0f;
 
     return action->GetTarget() == nightbane ? GetDpsHoldValue(bot, action) : 1.0f;
@@ -568,7 +657,7 @@ float NightbaneDisableAvoidAoeMultiplier::GetValueInEncounter(Action* action)
         return 1.0f;
 
     Unit* nightbane = GetEncounterBoss();
-    if (!nightbane || IsNightbaneFlying(*nightbane))
+    if (!nightbane || IsNightbaneFlying(nightbane))
         return 1.0f;
 
     return PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsMainTank(bot) ? 0.0f : 1.0f;
@@ -576,21 +665,27 @@ float NightbaneDisableAvoidAoeMultiplier::GetValueInEncounter(Action* action)
 
 float NightbaneDisableMovementMultiplier::GetValueInEncounter(Action* action)
 {
-    if (dynamic_cast<SetBehindTargetAction*>(action))
+    if (!dynamic_cast<MovementAction*>(action) &&
+        !dynamic_cast<CastReachTargetSpellAction*>(action) && !IsRepositionAction(bot, action))
+    {
         return 1.0f;
+    }
 
-    bool const isReachAction =
-        dynamic_cast<ReachTargetAction*>(action) ||
-        dynamic_cast<CastReachTargetSpellAction*>(action);
+    bool const isSetBehind = dynamic_cast<SetBehindTargetAction*>(action);
 
-    bool const isBlockedMovement =
-        dynamic_cast<CombatFormationMoveAction*>(action) ||
-        dynamic_cast<CastBlinkBackAction*>(action) ||
-        dynamic_cast<CastDisengageAction*>(action) ||
-        dynamic_cast<FleeAction*>(action);
+    bool const isReachAction = !isSetBehind &&
+        (dynamic_cast<ReachTargetAction*>(action) ||
+         dynamic_cast<CastReachTargetSpellAction*>(action));
 
-    if (!isReachAction && !isBlockedMovement && !dynamic_cast<FollowAction*>(action))
+    bool const isBlockedMovement = !isSetBehind &&
+        (dynamic_cast<CombatFormationMoveAction*>(action) ||
+         IsRepositionAction(bot, action) || dynamic_cast<FleeAction*>(action));
+
+    if (!isSetBehind && !isReachAction && !isBlockedMovement &&
+        !dynamic_cast<FollowAction*>(action))
+    {
         return 1.0f;
+    }
 
     Unit* nightbane = GetEncounterBoss();
     if (!nightbane)
@@ -599,12 +694,13 @@ float NightbaneDisableMovementMultiplier::GetValueInEncounter(Action* action)
     if (isBlockedMovement)
         return 0.0f;
 
-    if (!IsNightbaneFlying(*nightbane))
+    if (!IsNightbaneFlying(nightbane))
         return 1.0f;
 
     if (isReachAction)
         return 0.0f;
 
-    // Once he leaves the flight position to land, bots freely follow their master
-    return IsNightbaneFlightPhaseActive(*nightbane) ? 0.0f : 1.0f;
+    // Follow, and set behind on a skeleton, would pull bots off the stack. Once he leaves the
+    // flight position to land, bots freely follow their master.
+    return IsNightbaneFlightPhaseActive(nightbane) ? 0.0f : 1.0f;
 }

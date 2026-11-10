@@ -11,12 +11,13 @@
 #include "HoLActions.h"
 #include "HoLTriggers.h"
 #include "MovementActions.h"
+#include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include "WarriorActions.h"
 
 float BjarngrimMultiplier::GetValue(Action* action)
 {
-// By leewheel 2026-10-07 合并 #2854：静态调用 PlayerbotAI::IsHeal；目标按 entry 查找（汉化库英文名匹配不上）
-    Unit* boss = AI_VALUE2(Unit*, "find target", "28586");
+    Unit* boss = FindThreatTarget(bot, "general bjarngrim");
     if (!boss || PlayerbotAI::IsHeal(bot)) { return 1.0f; }
 
     if (boss->HasUnitState(UNIT_STATE_CASTING) && boss->FindCurrentSpellBySpellId(SPELL_WHIRLWIND_BJARNGRIM))
@@ -29,7 +30,6 @@ float BjarngrimMultiplier::GetValue(Action* action)
 
     // Detect boss adds this way as sometimes they don't get added to threat table on dps bots,
     // and some dps just stand at range and don't engage the boss at all as they can't find the adds
-    // Unit* boss_add = AI_VALUE2(Unit*, "find target", "29240");
     Unit* boss_add = nullptr;
     GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
 
@@ -60,9 +60,7 @@ float BjarngrimMultiplier::GetValue(Action* action)
 
 float VolkhanMultiplier::GetValue(Action* action)
 {
-// By leewheel 2026-10-07 合并 #2854：静态调用 PlayerbotAI::IsTank/IsHeal；目标按 entry 查找
-    Unit* boss = AI_VALUE2(Unit*, "find target", "28587");
-    if (!boss || PlayerbotAI::IsTank(bot) || PlayerbotAI::IsHeal(bot)) { return 1.0f; }
+    if (!FindThreatTarget(bot, "volkhan") || !PlayerbotAI::IsDps(bot)) { return 1.0f; }
 
     if (dynamic_cast<DpsAssistAction*>(action))
     {
@@ -79,13 +77,12 @@ float VolkhanMultiplier::GetValue(Action* action)
 
 float IonarMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "28546");
+    Unit* boss = FindThreatTarget(bot, "ionar");
     if (!boss) { return 1.0f; }
 
     // Check if the boss has dispersed into Sparks (not visible).
     if (!bot->CanSeeOrDetect(boss))
     {
-        // Block MovementActions except for specific exceptions.
         if (dynamic_cast<MovementAction*>(action)
             && !dynamic_cast<DispersePositionAction*>(action)
             && !dynamic_cast<StaticOverloadSpreadAction*>(action))
@@ -106,10 +103,9 @@ float IonarMultiplier::GetValue(Action* action)
 }
 float LokenMultiplier::GetValue(Action* action)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", "28923");
+    Unit* boss = FindThreatTarget(bot, "loken");
     if (!boss) { return 1.0f; }
 
-    // Prevent FleeAction from being executed.
     if (dynamic_cast<FleeAction*>(action)) { return 0.0f; }
 
     // Prevent MovementActions during Lightning Nova unless it's AvoidLightningNovaAction.
@@ -128,5 +124,5 @@ float LokenMultiplier::GetValue(Action* action)
         }
     }
 
-    return 1.0f; // Default multiplier value for other cases.
+    return 1.0f;
 }

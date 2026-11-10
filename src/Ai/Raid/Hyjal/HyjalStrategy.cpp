@@ -173,7 +173,7 @@ void RaidHyjalStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 
     // Archimonde
     multipliers.push_back(new ArchimondeControlDoomfireAvoidanceMultiplier(botAI));
-    multipliers.push_back(new ArchimondeSetTremorTotemMultiplier(botAI));
+    multipliers.push_back(new ArchimondeKeepTremorTotemMultiplier(botAI));
 }
 
 // Limit Infernals to Infernal tank
