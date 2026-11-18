@@ -583,13 +583,17 @@ void PlayerbotAI::UpdateAIGroupMaster()
 //By leewheel 2026-11-04: 自建账号机器人（altbot）被踢出队伍后转入「自主活动」(bug_99)
 //  只执行一次（状态机转换），玩家之后用密语 follow / stay / grind 覆盖都有效，
 //  不会被这里每 tick 抢回去；下一次「重新组队 -> 再离队」才会再次触发。
-void PlayerbotAI::EnterAltBotFreeRoam()
+void PlayerbotAI::EnterAltBotFreeRoam(bool force)
 {
     if (altBotFreeRoam || !bot)
         return;
 
-    if (!sPlayerbotAIConfig.AltBotFreeRoamOnLeave)
+    //By leewheel 2026-11-14 (bug_122)
+    //  force = 随玩家登录自动上线的公会机器人：它们上线时就不该跟随主人，
+    //  所以不能被 AltBotFreeRoamOnLeave 关掉（否则玩家又会看到"几个机器人跟着"）。
+    if (!force && !sPlayerbotAIConfig.AltBotFreeRoamOnLeave)
         return;
+    //End By leewheel
 
     altBotFreeRoam = true;
 

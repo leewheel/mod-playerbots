@@ -576,6 +576,12 @@ public:
     //  期间保留 master 指针，玩家离队后仍可用密语指挥它。
     bool IsFreeRoaming() const { return altBotFreeRoam; }
     //End By leewheel
+    //By leewheel 2026-11-14 (bug_122): 供 PlayerbotMgr::OnBotLogin 使用。
+    //  随玩家登录自动上线的「同公会机器人」上线即转自主活动：不建队、不入队、不跟随。
+    //  force=true 时不受 AltBotFreeRoamOnLeave 配置影响——这类 bot 本来就不该跟着玩家，
+    //  否则配置一关，玩家又会看到"退队后还是有几个机器人跟着"。
+    void EnterAutoLoginFreeRoam() { EnterAltBotFreeRoam(true); }
+    //End By leewheel
     bool HasGameClientMaster();
     Player* GetGroupLeader();
     uint32 GetFixedBotNumber(uint32 maxNum = 100);
@@ -676,7 +682,7 @@ private:
     bool IsTellAllowed(PlayerbotSecurityLevel securityLevel = PLAYERBOT_SECURITY_ALLOW_ALL);
     void UpdateAIGroupMaster();
     //By leewheel 2026-11-04: altbot 离队/归队时的策略切换 (bug_99)
-    void EnterAltBotFreeRoam();
+    void EnterAltBotFreeRoam(bool force = false);
     void LeaveAltBotFreeRoam();
     //End By leewheel
     Item* FindItemInInventory(std::function<bool(ItemTemplate const*)> checkItem) const;

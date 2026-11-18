@@ -108,6 +108,29 @@ std::unordered_map<ObjectGuid, PendingBotLogin> PlayerbotHolder::botLoading;
 // End By leewheel
 std::unordered_map<ObjectGuid, time_t> PlayerbotHolder::botLoadingTime;
 
+//By leewheel 2026-11-14 (bug_122)：随玩家登录自动上线的同公会机器人登记表
+//  玩家登录在世界线程、bot 登录在异步查询回调线程，两侧都要过这把锁。
+std::unordered_set<ObjectGuid> PlayerbotHolder::autoLoginGuildBots;
+std::mutex PlayerbotHolder::autoLoginGuildBotsMutex;
+
+void PlayerbotHolder::MarkAutoLoginGuildBot(ObjectGuid guid)
+{
+    std::lock_guard<std::mutex> lock(autoLoginGuildBotsMutex);
+    autoLoginGuildBots.insert(guid);
+}
+
+bool PlayerbotHolder::ConsumeAutoLoginGuildBot(ObjectGuid guid)
+{
+    std::lock_guard<std::mutex> lock(autoLoginGuildBotsMutex);
+    auto it = autoLoginGuildBots.find(guid);
+    if (it == autoLoginGuildBots.end())
+        return false;
+
+    autoLoginGuildBots.erase(it);
+    return true;
+}
+//End By leewheel
+
 PlayerbotHolder::PlayerbotHolder() : PlayerbotAIBase(false) {}
 class PlayerbotLoginQueryHolder : public LoginQueryHolder
 {
@@ -603,6 +626,11 @@ Player* PlayerbotHolder::GetPlayerBot(ObjectGuid::LowType lowGuid) const
 
 void PlayerbotHolder::OnBotLogin(Player* const bot)
 {
+    //By leewheel 2026-11-14 (bug_122)：一次性取走"随玩家登录自动上线的公会机器人"标记。
+    //  放在最前面，重复登录/后续失败分支也不会把 guid 残留在登记表里。
+    bool const autoLoginGuildBot = ConsumeAutoLoginGuildBot(bot->GetGUID());
+    //End By leewheel
+
     // Prevent duplicate login
     if (playerBots.find(bot->GetGUID()) != playerBots.end())
     {
@@ -692,7 +720,16 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
         "hello", "你好！", {}), PLAYERBOT_SECURITY_TALK);
 
     // Queue group operations for world thread
-    if (master && master->GetGroup() && !group)
+    //By leewheel 2026-11-14 (bug_122)
+    //  随玩家登录自动上线的同公会机器人：只上线，不建队、不入队，并当场转入自主活动。
+    //  否则它们带着 master 上线，会被下面那段无条件拉进队伍（主人没队伍时还会新建一个），
+    //  玩家看到的就是"每次登录游戏都会自动组队"。玩家真要它们跟随，手动邀请进组即可
+    //  （进组时 LeaveAltBotFreeRoam 会摘掉自主策略、恢复 follow）。
+    if (autoLoginGuildBot)
+    {
+        botAI->EnterAutoLoginFreeRoam();
+    }
+    else if (master && master->GetGroup() && !group)
     {
         Group* mgroup = master->GetGroup();
         if (mgroup->GetMembersCount() >= 5)
@@ -1949,8 +1986,22 @@ void PlayerbotMgr::OnPlayerLogin(Player* player)
     {
         if (Guild* guild = sGuildMgr->GetGuildById(player->GetGuildId()))
         {
+            //By leewheel 2026-11-14 (bug_122)
+            //  机器人自建公会（会长号本身就是机器人账号）一律不自动上线。
+            //  本服 RandomBotGuildCount=20，机器人会自己建 20 个公会并互相拉人；玩家一旦被
+            //  邀进这种公会，登录时整公会的机器人账号角色都会被 add，等于每次上线被十几个机器人围住。
+            uint32 const leaderAccountId = sCharacterCache->GetCharacterAccountIdByGuid(guild->GetLeaderGUID());
+            if (!leaderAccountId || sPlayerbotAIConfig.IsInRandomAccountList(leaderAccountId))
+                return;
+            //End By leewheel
+
             uint32 const maxBots = uint32(sPlayerbotAIConfig.MaxAddedBots);
             uint32 total = GetPlayerbotsCount();
+            //By leewheel 2026-11-14 (bug_122)：单次最多带上线 5 个。
+            //  需求只是"同公会机器人一起上线"，没必要把整个公会拉起来。
+            constexpr uint32 kMaxGuildBotsPerLogin = 5;
+            uint32 added = 0;
+            //End By leewheel
 
             std::ostringstream names;
             bool first = true;
@@ -1959,7 +2010,7 @@ void PlayerbotMgr::OnPlayerLogin(Player* player)
             {
                 Guild::Member const& member = entry.second;
 
-                if (total >= maxBots)
+                if (total >= maxBots || added >= kMaxGuildBotsPerLogin)
                     break;
 
                 if (member.GetGUID() == player->GetGUID())
@@ -1988,7 +2039,11 @@ void PlayerbotMgr::OnPlayerLogin(Player* player)
                     names << ",";
 
                 names << member.GetName();
+                //By leewheel 2026-11-14 (bug_122)：登记为"自动上线的公会机器人"，上线时不入队
+                MarkAutoLoginGuildBot(member.GetGUID());
+                //End By leewheel
                 ++total;
+                ++added;
             }
 
             if (!first)

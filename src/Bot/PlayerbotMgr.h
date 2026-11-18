@@ -11,6 +11,8 @@
 #include "Player.h"
 #include "PlayerbotAIBase.h"
 #include <ctime>
+#include <mutex>
+#include <unordered_set>
 
 class ChatHandler;
 class PlayerbotAI;
@@ -67,6 +69,19 @@ public:
 
 protected:
     virtual void OnBotLoginInternal(Player* const bot) = 0;
+
+    // By leewheel 2026-11-14 (bug_122)
+    //   「登录时随玩家一起上线的同公会机器人」登记表。
+    //   bug_99 需求 2 的原话是"同公会机器人玩家上线即上线"，只要求上线，不要求组队；
+    //   但 OnBotLogin 里 bot 只要带 master 就会被无条件 QueueOperation(GroupInviteOperation)，
+    //   于是玩家一登录就被公会里的机器人自动组队围观，退队后它们仍以自己的主人身份留在身边，
+    //   下次登录再重复 —— 玩家反馈"每次登录游戏都会自动组队，退队后还是有几个机器人跟着"。
+    //   这里把这类 guid 记下来，OnBotLogin 组队那一段先取用（一次性），命中则跳过组队并转入自主活动。
+    static void MarkAutoLoginGuildBot(ObjectGuid guid);
+    static bool ConsumeAutoLoginGuildBot(ObjectGuid guid);
+    static std::unordered_set<ObjectGuid> autoLoginGuildBots;
+    static std::mutex autoLoginGuildBotsMutex;
+    // End By leewheel
 
     PlayerBotMap playerBots;
     // By leewheel 2026-09-27 合并brighton the-lab：采纳上游新登录架构
