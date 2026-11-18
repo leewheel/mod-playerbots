@@ -9,6 +9,20 @@
 #include "Playerbots.h"
 #include "SpellNameIdFallback.h"
 #include "Vehicle.h"
+#include <algorithm>
+
+namespace
+{
+// A name can match a rank chain and unrelated chainless spells, such as the Blacksmithing
+// recipe "Corruption"; the chain always wins.
+bool IsBetterRank(SpellInfo const* candidate, SpellInfo const* best)
+{
+    if (candidate->IsRanked() != best->IsRanked())
+        return candidate->IsRanked();
+
+    return candidate->GetRank() > best->GetRank();
+}
+}  // namespace
 
 #include <cctype>
 
@@ -182,75 +196,40 @@ uint32 SpellIdValue::Calculate()
     if (spellIds.empty())
         return 0;
 
-    int32 saveMana = (int32)round(AI_VALUE(double, "mana save level"));
-    uint32 rank = 1;
-    uint32 highestRank = 0;
-    uint32 highestSpellId = 0;
-    uint32 lowestRank = 0;
-    uint32 lowestSpellId = 0;
+    // By leewheel 2026-11-18：上游本批把 rank 选择从「解析 Rank 字符串 atoi」改成
+    //   SpellInfo::IsRanked()/GetRank() 比较（IsBetterRank），是有意改进，照上游采纳；
+    //   本核的 DBC 兜底段仍在其之前，兜底成功时 best 从兜底结果里挑最高 rank，语义一致。
+    SpellInfo const* best = nullptr;
+    for (uint32 spellId : spellIds)
+    {
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+        if (spellInfo && (!best || IsBetterRank(spellInfo, best)))
+            best = spellInfo;
+    }
+    // End By leewheel
+
+    if (!best)
+        return 0;
+
+    int32 const saveMana = static_cast<int32>(std::round(AI_VALUE(double, "mana save level")));
     if (saveMana <= 1)
+        return best->Id;
+
+    // Mana save level N picks the Nth-highest rank of the chosen spell, else its lowest.
+    std::vector<SpellInfo const*> ranks;
+    for (uint32 spellId : spellIds)
     {
-        for (auto it = spellIds.rbegin(); it != spellIds.rend(); ++it)
-        {
-            auto spellId = *it;
-            SpellInfo const* pSpellInfo = sSpellMgr->GetSpellInfo(spellId);
-            if (!pSpellInfo)
-                continue;
-
-            std::string spellName = pSpellInfo->Rank[sWorld->GetDefaultDbcLocale()];
-            if (spellName.empty())
-                spellName = pSpellInfo->Rank[LOCALE_enUS];
-            if (spellName.empty() && pSpellInfo->Rank[0])
-                spellName = pSpellInfo->Rank[0];
-
-            // For atoi, the input string has to start with a digit, so lets search for the first digit
-            size_t i = 0;
-            for (; i < spellName.length(); i++)
-            {
-                if (isdigit(spellName[i]))
-                    break;
-            }
-
-            // remove the first chars, which aren't digits
-            spellName = spellName.substr(i, spellName.length() - i);
-
-            // convert the remaining text to an integer
-            int id = atoi(spellName.c_str());
-
-            if (!id)
-            {
-                highestSpellId = spellId;
-                continue;
-            }
-
-            if (!highestRank || (uint32)id > highestRank)
-            {
-                highestRank = id;
-                highestSpellId = spellId;
-            }
-
-            if (!lowestRank || (lowestRank && (uint32)id < lowestRank))
-            {
-                lowestRank = id;
-                lowestSpellId = spellId;
-            }
-        }
-    }
-    else
-    {
-        for (auto it = spellIds.rbegin(); it != spellIds.rend(); ++it)
-        {
-            auto spellId = *it;
-            if (!highestSpellId)
-                highestSpellId = spellId;
-            if (saveMana == (int32)rank)
-                return spellId;
-            lowestSpellId = spellId;
-            rank++;
-        }
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+        if (spellInfo && spellInfo->IsRankOf(best))
+            ranks.push_back(spellInfo);
     }
 
-    return saveMana > 1 ? lowestSpellId : highestSpellId;
+    std::sort(
+        ranks.begin(), ranks.end(),
+        [](SpellInfo const* a, SpellInfo const* b) { return a->GetRank() > b->GetRank(); });
+
+    size_t const index = std::min<size_t>(saveMana - 1, ranks.size() - 1);
+    return ranks[index]->Id;
 }
 
 uint32 VehicleSpellIdValue::Calculate()

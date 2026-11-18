@@ -20,25 +20,14 @@
 
 using namespace BtHelpers;
 using namespace EncounterHelpers;
-// By leewheel 2026-10-17 合并 brighton the-lab（illidan 重构迭代 17 个提交，上游 946+/831- 远大于
-//   本核 BT 改动）：按铁律整文件采纳上游重构版，再把全部 find target 英文名换回 NPC entry。
-//   映射共 15 个，本轮已按「实库 acore_world.creature_template（ScriptName 铁证）
-//   + base data/sql/base/db_world/creature_template.sql（原始英文名）」双方重新核定 15/15，
-//   并与 2026-10-13 历史核定表逐条比对一致：
-//   illidan stormrage=22917 gathios the shatterer=22949 supremus=22898
-//   high nethermancer zerevor=22950 high warlord naj'entus=22887 gurtogg bloodboil=22948
-//   lady malande=22951 essence of suffering=23418 teron gorefiend=22871
-//   veras darkshadow=22952 mother shahraz=22947 essence of desire=23419
-//   essence of anger=23420 reliquary of the lost=22856 sister of pleasure=22964
-//   flame of azzinoth=22997
-//
-//   注：reliquary of the lost 对应 base 生物 22856「Reliquary of the Lost」/实库「迷失者的圣骨匣」
-//   （ScriptName=boss_reliquary_of_souls），非 GameObject，实测命名无误。
-//
-//   ⛔ 本轮同时发现：若直接 takes-theirs 而不做本步回换，81 处 find target 会退回英文名；
-//   本核 TargetValue.cpp（By leewheel 2026-08-21 改）对数字 qualifier 走 GetEntry() 精确匹配，
-//   英文名则与中文 creture 名做子串匹配必然失败 ⇒ 整套 illidan 机制（本次 17 个提交的全部内容）
-//   会静默失效。故「整文件采纳上游」后必须紧跟本步。
+
+// By leewheel 2026-11-18 合并 brighton the-lab(8ec3850d3)：上游本批已把 BT 全部
+//   "find target" 英文名统一改成 creature entry（commit「convert SWP to boss state &
+//   findthreattarget」沿线），与本核 entry 铁律方向一致，逐点对拍 120 个 qualifier 全为数字。
+//   历史沿革（2026-10-17 整文件采纳上游 + 15 个英文名回换 entry、2026-10-22 上游整类删除
+//   IllidanStormrageUseCageTrapAction 只留孤儿实现故一并移除）已随上游 entry 化自然收敛，
+//   不再需要人工回换。若后续上游再写回英文名，改动请落在 src/Util/ThreatHelpers.cpp 的
+//   kThreatNameEntries 登记表（单点），不要改这里的调用点。
 // End By leewheel
 
 // Shared
@@ -187,6 +176,9 @@ bool BlackTemplePositionBossAction::Execute(Event /*event*/)
 
 bool BlackTempleSpreadRangedAction::Execute(Event /*event*/)
 {
+    if (IsWaitingForLastMove(MovementPriority::MOVEMENT_COMBAT)) // FleePosition()'s priority
+        return false;
+
     Player* nearestPlayer = GetNearestPlayerInRadius(bot, _distance);
     return nearestPlayer && FleePosition(nearestPlayer->GetPosition(), _distance);
 }
@@ -199,6 +191,8 @@ bool BlackTempleCastSpellReflectionAction::Execute(Event /*event*/)
 
 // Trash
 
+// Damage on the Sister of Pleasure is split evenly with her Sister of Pain, and they have equal
+// health, so killing Pleasure kills both without anyone hitting Pain through Shell of Pain.
 bool SisterOfPleasureFocusDpsAction::Execute(Event /*event*/)
 {
     if (IsMechanicTrackerBot(bot, BT_MAP_ID))
@@ -229,6 +223,9 @@ bool ShadowmoonReaverStopWandAction::Execute(Event /*event*/)
     return true;
 }
 
+// Imps, water elementals, succubi and felhunters are kept off Reavers while anything else can be
+// attacked. With only Reavers left, the pet waits passive by its owner while one is unsafe, and
+// is sent onto them otherwise.
 bool ShadowmoonReaverControlCasterPetAction::Execute(Event /*event*/)
 {
     Guardian* pet = bot->GetGuardianPet();
@@ -349,7 +346,7 @@ bool HighWarlordNajentusRemoveImpalingSpineAction::Execute(Event /*event*/)
     constexpr float useDistance = 3.0f;
     bool const atSpine = bot->GetExactDist2d(spineGo) <= useDistance;
 
-    // For realism, a reaction delay of 1 to 2s per spine, before clicking or moving to it.
+    // For realism, a reaction delay of 1 to 2s per spine before clicking or moving to it.
     constexpr uint32 minReactionMs = 1000;
     constexpr uint32 maxReactionMs = 2000;
     if (spineGo->GetGUID() != _spineGuid)
@@ -434,7 +431,7 @@ bool HighWarlordNajentusThrowImpalingSpineAction::Execute(Event /*event*/)
 
 // Supremus
 
-namespace // Supremus
+namespace
 {
 
 constexpr float NEVER_CAUGHT = std::numeric_limits<float>::max();
@@ -878,9 +875,13 @@ bool ShadeOfAkamaAttackChannelersAndSorcerersAction::Execute(Event /*event*/)
 
 // Teron Gorefiend
 
-// Assume positions in arc at the edge of the balcony (farthest from Constructs)
+// Assume positions in arc at the edge of the balcony (farthest from Constructs).
 bool TeronGorefiendPositionRangedOnBalconyAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_COMBAT;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     Group* group = bot->GetGroup();
     if (!group)
         return false;
@@ -921,8 +922,8 @@ bool TeronGorefiendPositionRangedOnBalconyAction::Execute(Event /*event*/)
         return false;
 
     return MoveTo(
-        BT_MAP_ID, targetX, targetY, bot->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED, true, false);
+        BT_MAP_ID, targetX, targetY, bot->GetPositionZ(), false, false, false, false, priority,
+        true, false);
 }
 
 bool TeronGorefiendAvoidShadowOfDeathAction::Execute(Event /*event*/)
@@ -1095,6 +1096,10 @@ Unit* TeronGorefiendDestroyShadowyConstructsAction::GetLanceTarget(
 
 bool GurtoggBloodboilRotateRangedGroupsAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_FORCED;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     Position const& center = GetGurtoggBloodboilPosition(bot);
     if (IsInGurtoggRectangle(
             bot->GetPosition(), center, GURTOGG_TANK_POSITION, GURTOGG_RANGED_HALF_WIDTH,
@@ -1109,7 +1114,7 @@ bool GurtoggBloodboilRotateRangedGroupsAction::Execute(Event /*event*/)
     bot->CastStop();
     return MoveTo(
         BT_MAP_ID, point.GetPositionX(), point.GetPositionY(), point.GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        false, false, priority, true, false);
 }
 
 bool GurtoggBloodboilMeleeMoveBehindAction::Execute(Event /*event*/)
@@ -1218,6 +1223,9 @@ bool ReliquaryOfSoulsAdjustDistanceFromSufferingAction::MoveToDistanceFromSuffer
 bool ReliquaryOfSoulsAdjustDistanceFromSufferingAction::RangedMoveAwayFromBoss(Unit* suffering)
 {
     if (bot->GetExactDist2d(suffering) >= SUFFERING_RANGED_DISTANCE)
+        return false;
+
+    if (IsWaitingForLastMove(MovementPriority::MOVEMENT_COMBAT)) // FleePosition()'s priority
         return false;
 
     constexpr uint32 minInterval = 0;
@@ -1366,6 +1374,10 @@ bool MotherShahrazPositionRangedUnderStatueAction::Execute(Event /*event*/)
 
 bool MotherShahrazBreakFatalAttractionAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_FORCED;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     std::vector<Player*> const attractedPlayers = GetAttractedPlayers();
     if (attractedPlayers.size() < 2)
         return false;
@@ -1400,8 +1412,7 @@ bool MotherShahrazBreakFatalAttractionAction::Execute(Event /*event*/)
                 bot, x, y, SHAHRAZ_FATAL_ATTRACTION_STEP_DISTANCE, stepX, stepY, stepZ))
         {
             return MoveTo(
-                BT_MAP_ID, stepX, stepY, stepZ, false, false, false, false,
-                MovementPriority::MOVEMENT_FORCED, true, false);
+                BT_MAP_ID, stepX, stepY, stepZ, false, false, false, false, priority, true, false);
         }
     }
 
@@ -1687,6 +1698,10 @@ bool IllidariCouncilMageTankPositionZerevorAction::Execute(Event /*event*/)
     {
         if (!bot->IsWithinCombatRange(zerevor, SPELLSTEAL_RANGE))
         {
+            constexpr MovementPriority priority = MovementPriority::MOVEMENT_FORCED;
+            if (IsWaitingForLastMove(priority))
+                return false;
+
             float stepX;
             float stepY;
             if (GetPathStepTowardUnit(
@@ -1694,7 +1709,7 @@ bool IllidariCouncilMageTankPositionZerevorAction::Execute(Event /*event*/)
             {
                 return MoveTo(
                     BT_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false,
-                    MovementPriority::MOVEMENT_FORCED, true, false);
+                    priority, true, false);
             }
         }
         else if (botAI->CanCastSpell(Id(BtSpells::SPELL_SPELLSTEAL), zerevor))
@@ -1749,18 +1764,22 @@ bool IllidariCouncilPositionMageTankHealerAction::Execute(Event /*event*/)
     float stepX;
     float stepY;
     if (!GetPathStepTowardUnit(
-            bot, mageTank, MAGE_TANK_HEALER_MIN_DISTANCE, PATH_STEP_DISTANCE, stepX, stepY))
+            bot, mageTank, MAGE_TANK_HEALER_STEP_STOP_DISTANCE, PATH_STEP_DISTANCE, stepX, stepY))
     {
         return false;
     }
 
     return MoveTo(
-        BT_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false,
-        priority, true, false);
+        BT_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false, priority, true,
+        false);
 }
 
 bool IllidariCouncilPositionToInterruptMalandeAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_COMBAT;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     Position destination;
     if (!FindMalandeInterruptPosition(botAI, GetIllidariCouncilMembers(bot), destination))
         return false;
@@ -1773,12 +1792,16 @@ bool IllidariCouncilPositionToInterruptMalandeAction::Execute(Event /*event*/)
         return false;
 
     return MoveTo(
-        BT_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_COMBAT, true, backwards);
+        BT_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false, priority, true,
+        backwards);
 }
 
 bool IllidariCouncilNonTanksAvoidZerevorAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_FORCED;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     IllidariCouncilMembers const members = GetIllidariCouncilMembers(bot);
     Position destination;
     if (!FindZerevorAvoidPosition(bot, members.gathios, members.zerevor, destination))
@@ -1794,8 +1817,8 @@ bool IllidariCouncilNonTanksAvoidZerevorAction::Execute(Event /*event*/)
     }
 
     return MoveTo(
-        BT_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
-        MovementPriority::MOVEMENT_FORCED, true, backwards);
+        BT_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false, priority, true,
+        backwards);
 }
 
 bool IllidariCouncilCommandPetTargetAction::Execute(Event /*event*/)
@@ -2646,6 +2669,10 @@ bool IllidanStormrageCommandPetAttackAddAction::Execute(Event /*event*/)
 
 bool IllidanStormragePositionAboveGrateAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_FORCED;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     int32 const index = GetIllidanGrateStackIndex(bot);
     if (index < 0)
         return false;
@@ -2657,7 +2684,7 @@ bool IllidanStormragePositionAboveGrateAction::Execute(Event /*event*/)
 
     return MoveTo(
         BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_FORCED, true, false);
+        false, false, false, false, priority, true, false);
 }
 
 bool IllidanStormrageClearDebuffWithImmunityAction::Execute(Event /*event*/)
@@ -2713,6 +2740,10 @@ bool IllidanStormrageStopAttackingAction::Execute(Event /*event*/)
 
 bool IllidanStormrageSpreadRangedAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_COMBAT;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     if (HasParasiticShadowfiend(bot))
         return false;
 
@@ -2762,11 +2793,10 @@ bool IllidanStormrageSpreadRangedAction::Execute(Event /*event*/)
 
     return MoveTo(
         BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+        false, false, false, false, priority, true, false);
 }
 
-bool IllidanStormrageSpreadRangedAction::FindDemonFormSlot(
-    Unit* illidan, Position& position)
+bool IllidanStormrageSpreadRangedAction::FindDemonFormSlot(Unit* illidan, Position& position)
 {
     DemonFormLayout const layout = GetDemonFormLayout(*illidan);
     if (PlayerbotAI::IsHeal(bot))
@@ -2828,6 +2858,10 @@ bool IllidanStormrageReachShadowDemonAction::Execute(Event /*event*/)
 
 bool IllidanStormrageMeleeStayAwayFromDemonFormAction::Execute(Event /*event*/)
 {
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_COMBAT;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
     Unit* illidan = GetBtBoss(bot, BtBosses::DATA_ILLIDAN_STORMRAGE);
     if (!illidan)
         return false;
@@ -2846,7 +2880,7 @@ bool IllidanStormrageMeleeStayAwayFromDemonFormAction::Execute(Event /*event*/)
 
     return MoveTo(
         BT_MAP_ID, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ(),
-        false, false, false, false, MovementPriority::MOVEMENT_COMBAT, true, false);
+        false, false, false, false, priority, true, false);
 }
 
 bool IllidanStormrageWarlockTankHandleDemonFormAction::Execute(Event /*event*/)
@@ -3048,12 +3082,6 @@ Unit* IllidanStormrageAssignTargetPriorityAction::FindShadowfiendForRanged(Illid
     return distance > minDistance && distance <= maxDistance ? shadowfiend : nullptr;
 }
 
-// By leewheel 2026-10-22 与上游 brighton 合并：IllidanStormrageUseCageTrapAction 由上游
-// illidan pass 2 整类删除（类声明 BTActions.h、ActionContext 注册、辅助函数
-// BtHelpers::FindNearestCageTrap、配套的 IllidanStormrageMaievPlacedCageTrapTrigger 一并移除）。
-// 自动合并已删掉声明/注册/辅助函数，此处为实现残留，若保留会因「无声明的定义」与
-// 未解析的 FindNearestCageTrap 而编译失败，故按上游重构一并移除。本核对该段原本唯一的
-// 改动只是把 illidan 英文名回退为 entry 22917，无本核独有逻辑，删除不损失本核功能。
 bool IllidanStormrageManageDpsTimersAction::Execute(Event /*event*/)
 {
     Unit* illidan = GetBtBoss(bot, BtBosses::DATA_ILLIDAN_STORMRAGE);

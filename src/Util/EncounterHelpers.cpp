@@ -454,110 +454,6 @@ bool CanTakeStepTowards(
     return true;
 }
 
-//By leewheel 20261002 恢复4参重载实现（合并时声明保留但实现缺失，致 worldserver LNK2019 无法解析外部符号）
-// 语义按 fork 注释：tracker 角色限定 DPS bot，且排除 exclude 成员；与历史 commit 68fae590 实现一致
-// Return the first alive DPS bot in the specified instance map, excluding any specified bot
-// Intended for purposes of storing and erasing timers and trackers in associative containers
-// Fork note: keeps the extended signature (botAI + optional exclude) so the mechanic tracker
-// role stays limited to DPS bots, matching the fork's TK/SWP/ZA behavior.
-bool IsMechanicTrackerBot(PlayerbotAI* botAI, Player* bot, uint32 mapId, Player* exclude)
-{
-    if (!botAI->IsDps(bot) || !bot->IsAlive() || bot->GetMapId() != mapId)
-        return false;
-
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (!member || !member->IsAlive() || member->GetMapId() != mapId || member == exclude)
-            continue;
-
-        PlayerbotAI* memberAI = GET_PLAYERBOT_AI(member);
-        if (!memberAI || !memberAI->IsDps(member))
-            continue;
-
-        return member == bot;
-    }
-
-    return false;
-}
-
-// 2 参 IsMechanicTrackerBot 实现已随上游移至文件后段（保留一份，避免 C2084 重定义）。
-//By leewheel 2026-11-01 合并上游：采纳新增的 GetPathStepTowardPoint 寻路步进辅助。
-bool GetPathStepTowardPoint(
-    Player* bot, Position const& destination, float stopDistance, float stepDistance,
-    float& stepX, float& stepY)
-{
-    if (bot->GetExactDist(destination) < stopDistance)
-        return false;
-
-    PathGenerator path(bot);
-    path.CalculatePath(
-        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
-    if (!(path.GetPathType() & (PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORTCUT)))
-        return false;
-
-    Movement::PointsArray const& points = path.GetPath();
-    if (points.size() < 2)
-        return false;
-
-    G3D::Vector3 const targetPos(
-        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
-
-    float remaining = stepDistance;
-    for (std::size_t i = 1; i < points.size(); ++i)
-    {
-        G3D::Vector3 const& from = points[i - 1];
-        G3D::Vector3 const& to = points[i];
-
-        float const segment = (to - from).length();
-        if (segment <= 0.0f)
-            continue;
-
-        float const toDist = (to - targetPos).length();
-        float ratio = 1.0f;
-
-        if (toDist < stopDistance)
-        {
-            float const fromDist = (from - targetPos).length();
-            if (fromDist <= stopDistance)
-                break;
-
-            float const a = segment * segment;
-            float const b = (from - targetPos).dot(to - from);
-            float const c = fromDist * fromDist - stopDistance * stopDistance;
-            ratio = (-b - std::sqrt(std::max(0.0f, b * b - a * c))) / a;
-        }
-
-        if (segment * ratio >= remaining)
-            ratio = remaining / segment;
-
-        remaining -= segment * ratio;
-
-        G3D::Vector3 const step = from + (to - from) * ratio;
-        stepX = step.x;
-        stepY = step.y;
-
-        if (remaining <= 0.0f || ratio < 1.0f)
-            return true;
-    }
-
-    return remaining < stepDistance;
-}
-
-bool GetPathStepTowardUnit(
-    Player* bot, Unit* target, float stopDistance, float stepDistance, float& stepX, float& stepY)
-{
-    if (!target)
-        return false;
-
-    return GetPathStepTowardPoint(
-        bot, target->GetPosition(), stopDistance, stepDistance, stepX, stepY);
-}
-
 bool GetStepToPosition(
     Player* bot, Position const& position, float arrivalDist, Unit* facing, float& stepX,
     float& stepY, bool& backwards)
@@ -602,15 +498,83 @@ bool GetStepToPosition(
     return true;
 }
 
-//By leewheel 2026-10-06 合并 brighton the-lab: 删除了紧随其后的第二份 4 参
-//   IsMechanicTrackerBot 实现（288-315 行那份「2026-10-02 补回」注释块）。
-//   原因：上游 #2811（fix: never read an Item after a call that can free it）改写了本文件，
-//   自动合并把本核 234 行的实现与这段补回实现同时保留，两份逐字相同 ⇒ C2084 函数已有主体。
-//   本核 234 行那份注释更完整（带 fork note 与 68fae590 出处），保留它，删除重复的那份。
-//   4 参重载本身仍是必需的：EncounterHelpers.h 有声明，Seth/Kara 等调用点依赖它，
-//   删掉实现会 LNK2019。
+bool GetPathStepTowardPoint(
+    Player* bot, Position const& destination, float stopDistance, float stepDistance,
+    float& stepX, float& stepY)
+{
+    if (bot->GetExactDist(destination) < stopDistance)
+        return false;
 
-// Requires the main tank to be alive
+    // Steps end a little inside stopDistance. If a step ended exactly on it, float rounding would
+    // decide a caller's arrival test at the same distance, and a bot that failed it would be stuck
+    // due to having not arrived but having no step left to take it closer.
+    constexpr float stopMargin = 0.1f;
+    float const aimDistance = std::max(0.0f, stopDistance - stopMargin);
+
+    PathGenerator path(bot);
+    path.CalculatePath(
+        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
+    if (!(path.GetPathType() & (PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORTCUT)))
+        return false;
+
+    Movement::PointsArray const& points = path.GetPath();
+    if (points.size() < 2)
+        return false;
+
+    G3D::Vector3 const targetPos(
+        destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
+
+    float remaining = stepDistance;
+    for (std::size_t i = 1; i < points.size(); ++i)
+    {
+        G3D::Vector3 const& from = points[i - 1];
+        G3D::Vector3 const& to = points[i];
+
+        float const segment = (to - from).length();
+        if (segment <= 0.0f)
+            continue;
+
+        float const toDist = (to - targetPos).length();
+        float ratio = 1.0f;
+
+        if (toDist < aimDistance)
+        {
+            float const fromDist = (from - targetPos).length();
+            if (fromDist <= aimDistance)
+                break;
+
+            float const a = segment * segment;
+            float const b = (from - targetPos).dot(to - from);
+            float const c = fromDist * fromDist - aimDistance * aimDistance;
+            ratio = (-b - std::sqrt(std::max(0.0f, b * b - a * c))) / a;
+        }
+
+        if (segment * ratio >= remaining)
+            ratio = remaining / segment;
+
+        remaining -= segment * ratio;
+
+        G3D::Vector3 const step = from + (to - from) * ratio;
+        stepX = step.x;
+        stepY = step.y;
+
+        if (remaining <= 0.0f || ratio < 1.0f)
+            return true;
+    }
+
+    return remaining < stepDistance;
+}
+
+bool GetPathStepTowardUnit(
+    Player* bot, Unit* target, float stopDistance, float stepDistance, float& stepX, float& stepY)
+{
+    if (!target)
+        return false;
+
+    return GetPathStepTowardPoint(
+        bot, target->GetPosition(), stopDistance, stepDistance, stepX, stepY);
+}
+
 // Player Getters
 
 Player* GetGroupMainTank(Player* bot)
@@ -684,7 +648,7 @@ Player* GetNearestPlayerInRadius(Player* bot, float radius)
     Player* nearestPlayer = nullptr;
     float nearestDistance = radius;
 
-    for (GroupReference* ref = group->GetFirstMember(); ref != nullptr; ref = ref->next())
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
         if (!member || !member->IsAlive() || member == bot)
@@ -1207,6 +1171,41 @@ bool IsMechanicTrackerBot(Player* bot, uint32 mapId)
 
     return false;
 }
+
+//By leewheel 20261002 恢复4参重载实现（合并时声明保留但实现缺失，致 worldserver LNK2019 无法解析外部符号）
+// 语义按 fork 注释：tracker 角色限定 DPS bot，且排除 exclude 成员；与历史 commit 68fae590 实现一致
+// Return the first alive DPS bot in the specified instance map, excluding any specified bot
+// Intended for purposes of storing and erasing timers and trackers in associative containers
+// Fork note: keeps the extended signature (botAI + optional exclude) so the mechanic tracker
+// role stays limited to DPS bots, matching the fork's TK/SWP/ZA behavior.
+// By leewheel 2026-11-18：合并 brighton 8ec3850d3 后上游又只留下 2 参实现，而
+//   EncounterHelpers.h:290 的 4 参声明仍在，Seth/Kara 等调用点也仍在用它 ⇒ 缺实现即 LNK2019。
+//   再次按本核语义补回，位置紧随 2 参实现（上方），避免与将来上游实现撞 C2084。
+bool IsMechanicTrackerBot(PlayerbotAI* botAI, Player* bot, uint32 mapId, Player* exclude)
+{
+    if (!botAI->IsDps(bot) || !bot->IsAlive() || bot->GetMapId() != mapId)
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+        return false;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive() || member->GetMapId() != mapId || member == exclude)
+            continue;
+
+        PlayerbotAI* memberAI = GET_PLAYERBOT_AI(member);
+        if (!memberAI || !memberAI->IsDps(member))
+            continue;
+
+        return member == bot;
+    }
+
+    return false;
+}
+//End By leewheel
 
 std::vector<Position> GetDynamicObjectPositions(Player* bot, float searchRadius, uint32 spellId)
 {

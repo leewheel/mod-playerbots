@@ -70,6 +70,8 @@ Position const WS_GY_CAMPING_ALLIANCE = {1422.320f, 1551.978f, 342.834f, 0.0f};
 std::vector<Position> const WS_FLAG_HIDE_HORDE = {WS_FLAG_HIDE_HORDE_1, WS_FLAG_HIDE_HORDE_2, WS_FLAG_HIDE_HORDE_3};
 std::vector<Position> const WS_FLAG_HIDE_ALLIANCE = {WS_FLAG_HIDE_ALLIANCE_1, WS_FLAG_HIDE_ALLIANCE_2,
                                                      WS_FLAG_HIDE_ALLIANCE_3};
+Position const WS_FLAG_FRONT_HORDE = WS_WAITING_POS_HORDE_3;
+Position const WS_FLAG_FRONT_ALLIANCE = {1531.44f, 1481.79f, 351.959f, 0.0f};
 
 Position const AB_WAITING_POS_HORDE = {702.884f, 703.045f, -16.115f, 0.77f};
 Position const AB_WAITING_POS_ALLIANCE = {1286.054f, 1282.500f, -15.697f, 3.95f};
@@ -3093,6 +3095,11 @@ bool BGTactics::selectObjective(bool reset)
             // ① 我是旗手 → 走向本方交旗点(NPCBots：无任何附加条件)
             if (!handled && (hasFlag || carryingEnemyFlag))
             {
+                // By leewheel 2026-11-18 合并 brighton 8ec3850d3：上游 #3054 又改了一次 WSG 旗房
+                //   防守者的落点（在旗房 25 码内做锥形散布）。本核 2026-10-06 已明确不走上游那套
+                //   内联攻防展开（见下方 defendersProhab 决策注释），防守落点由 AttackDefenseStep
+                //   lambda 的节点图 + 配额公式决定，本来就不指向固定旗房坐标，不存在上游修的
+                //   「防守者卡在不可达位置」问题 ⇒ 此处仍取本核实现。
                 if (myFlagOnBase)
                 {
                     if (deliverNode && deliverNode != curNode)

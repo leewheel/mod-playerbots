@@ -14,6 +14,7 @@
 #include "SWPEncounter_KJ.h"
 #include "SWPEncounter_Twins.h"
 #include "SWPShared.h"
+#include "SWPTriggers.h"
 #include <list>
 #include <vector>
 
@@ -80,12 +81,34 @@ Player* GetFirstPlayerSpellTarget(Spell* spell, Unit* caster)
     return nullptr;
 }
 
-void RequestInterruptForBotsNeedingFelmystFogMovement(Unit* contextUnit)
+// Each test is the one the move's trigger uses: the fog move, the group move (the early move
+// included), and the sidestep.
+bool IsFelmystMoveDueForBot(Player* player, PlayerbotAI* botAI, Creature* felmyst)
 {
-    if (!contextUnit)
+    FogOfCorruptionState fogState;
+    if (TryGetActiveFogOfCorruptionState(player, felmyst, fogState))
+        return true;
+
+    Position groupPosition;
+    if ((IsFelmystAirGroupMoveActive(player, felmyst) || HasFelmystEarlyMoveStarted(botAI) ||
+         IsFelmystEarlyMoveDue(player, felmyst)) &&
+        TryGetFelmystAirGroupPosition(felmyst, groupPosition) &&
+        player->GetExactDist2d(groupPosition) > FELMYST_GROUP_ARRIVAL_DISTANCE)
+    {
+        return true;
+    }
+
+    return felmyst->IsFlying() && !GetFelmystOwnDemonicVapor(player) &&
+        IsNearFelmystDemonicVaporHazard(player);
+}
+
+void RequestInterruptForBotsNeedingFelmystMovement(Creature* felmyst)
+{
+    // No state before the bots' triggers first see the encounter in progress
+    if (!felmyst || !FindFelmystState(felmyst->GetInstanceId()))
         return;
 
-    Map::PlayerList const& players = contextUnit->GetMap()->GetPlayers();
+    Map::PlayerList const& players = felmyst->GetMap()->GetPlayers();
     for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
     {
         Player* player = it->GetSource();
@@ -96,19 +119,8 @@ void RequestInterruptForBotsNeedingFelmystFogMovement(Unit* contextUnit)
         if (!botAI || !botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
             continue;
 
-        Unit* felmyst = PAI_VALUE2(Unit*, "find target", "25038");
-        if (!felmyst || !felmyst->IsFlying())
-            continue;
-
-        FogOfCorruptionState fogState;
-        if (!TryGetActiveFogOfCorruptionState(player, felmyst, fogState))
-            continue;
-
-        Position ignored;
-        if (!TryGetFelmystFogCrossingDestination(player, fogState.lane, ignored))
-            continue;
-
-        botAI->RequestSpellInterrupt();
+        if (IsFelmystMoveDueForBot(player, botAI, felmyst))
+            botAI->RequestSpellInterrupt();
     }
 }
 
@@ -134,28 +146,37 @@ void RequestInterruptForBotsWithFelmystEncapsulate(Creature* felmyst)
     }
 }
 
+void RequestInterruptForEredarTwinsBot(Player* player)
+{
+    if (!player || !player->IsAlive() || !IsCastingOrChanneling(player))
+        return;
+
+    PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
+    if (botAI && botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
+        botAI->RequestSpellInterrupt();
+}
+
+// The Conflagration target moves away from the raid, and a bot that pulls aggro on Alythess
+// steps aside from its stack.
 void RequestInterruptForEredarTwinsAlythessTargets(Creature* alythess)
 {
     if (!alythess)
         return;
 
-    Map::PlayerList const& players = alythess->GetMap()->GetPlayers();
-    for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
-    {
-        Player* player = it->GetSource();
-        if (!player || !player->IsAlive() || !IsCastingOrChanneling(player))
-            continue;
+    ObjectGuid const conflagTargetGuid =
+        GetEredarTwinsConflagrationTargetGuid(alythess->GetInstanceId());
+    if (!conflagTargetGuid.IsEmpty())
+        RequestInterruptForEredarTwinsBot(ObjectAccessor::GetPlayer(*alythess, conflagTargetGuid));
 
-        PlayerbotAI* botAI = GET_PLAYERBOT_AI(player);
-        if (!botAI || !botAI->HasStrategy("sunwell", BOT_STATE_COMBAT))
-            continue;
+    Unit* victim = alythess->GetVictim();
+    Player* player = victim ? victim->ToPlayer() : nullptr;
+    if (!IsHoldingAlythessAggro(player, alythess))
+        return;
 
-        if (GetEredarTwinsConflagrationTarget(player) == player ||
-            (GetEredarTwinsBlazeTarget(player) == player && PlayerbotAI::IsRanged(player)))
-        {
-            botAI->RequestSpellInterrupt();
-        }
-    }
+    Position const aside = GetEredarTwinsStepAsidePosition(
+        alythess, player->GetPositionZ() > EREDAR_TWINS_BALCONY_Z);
+    if (player->GetExactDist2d(aside) > EREDAR_TWINS_STEP_ASIDE_ARRIVAL_DISTANCE)
+        RequestInterruptForEredarTwinsBot(player);
 }
 
 } // end anonymous namespace
@@ -168,13 +189,7 @@ public:
     void OnSpellCast(
         Spell* /*spell*/, Unit* caster, SpellInfo const* spellInfo, bool /*skipCheck*/) override
     {
-        // By leewheel 2026-10-13 acore 上游 #26152（GameObjects cast their own spells）后
-        // OnSpellCast 的 caster 参数可能为 null（GameObject 施法时），必须判空，否则段错误。
-        // 2026-10-15 合并：brighton a00d894a 同步加了 caster 判空（三目写法），语义等价，保本核写法。
-        if (!caster)
-            return;
-
-        Player* player = caster->ToPlayer();
+        Player* player = caster ? caster->ToPlayer() : nullptr;
         if (!player)
             return;
 
@@ -224,6 +239,9 @@ public:
             return;
 
         Player* target = GetFirstPlayerSpellTarget(spell, caster);
+        if (FindFirstSunwellCombatBotInGroup(target))
+            RecordFelmystDemonicVaporSummon(target);
+
         if (!IsCastingOrChanneling(target))
             return;
 
@@ -240,20 +258,14 @@ public:
 
     void OnSpellPrepare(Spell* spell, Unit* caster, SpellInfo const* spellInfo) override
     {
-        if (!caster || (spellInfo->Id != Id(SwpSpells::SPELL_CONFLAGRATION) &&
-            spellInfo->Id != Id(SwpSpells::SPELL_BLAZE)))
-        {
+        if (!caster || spellInfo->Id != Id(SwpSpells::SPELL_CONFLAGRATION))
             return;
-        }
 
         Player* target = GetFirstPlayerSpellTarget(spell, caster);
         if (!target || !FindFirstSunwellCombatBotInGroup(target))
             return;
 
-        if (spellInfo->Id == Id(SwpSpells::SPELL_CONFLAGRATION))
-            RecordIncomingEredarTwinsConflagrationTarget(target);
-        else
-            RecordEredarTwinsBlazeTarget(target);
+        RecordIncomingEredarTwinsConflagrationTarget(target);
     }
 };
 
@@ -290,10 +302,6 @@ public:
         if (!caster || spellInfo->Id != Id(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS))
             return;
 
-        // By leewheel 2026-10-13 acore 上游 #26152 后 caster 可能为 null（GameObject 施法），判空防护。
-        if (!caster)
-            return;
-
         Map::PlayerList const& players = caster->GetMap()->GetPlayers();
         for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
         {
@@ -325,7 +333,7 @@ public:
         {
             case Id(SwpNpcs::NPC_FELMYST):
             {
-                RequestInterruptForBotsNeedingFelmystFogMovement(creature);
+                RequestInterruptForBotsNeedingFelmystMovement(creature);
                 RequestInterruptForBotsWithFelmystEncapsulate(creature);
                 break;
             }

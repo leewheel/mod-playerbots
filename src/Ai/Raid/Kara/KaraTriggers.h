@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #ifndef PLAYERBOTS_KARATRIGGERS_H
 #define PLAYERBOTS_KARATRIGGERS_H
 
@@ -20,8 +17,9 @@ class KarazhanEncounterTrigger : public Trigger
 {
 public:
     KarazhanEncounterTrigger(
-        PlayerbotAI* botAI, std::string const name, KaraHelpers::KaraBosses boss)
-        : Trigger(botAI, name), _boss(boss) {}
+        PlayerbotAI* botAI, std::string const name, KaraHelpers::KaraBosses boss,
+        int32 checkInterval = 1)
+        : Trigger(botAI, name, checkInterval), _boss(boss) {}
 
     bool IsActive() final
     {
@@ -31,7 +29,6 @@ public:
 
 protected:
     virtual bool IsActiveInEncounter() = 0;
-
     Unit* GetEncounterBoss() { return KaraHelpers::GetKaraBoss(bot, _boss); }
 
 private:
@@ -41,8 +38,6 @@ private:
 class KarazhanNoEncounterInProgressTrigger : public Trigger
 {
 public:
-    // Throttled to once per second. This trigger is true for all trash and downtime and, being
-    // for between-encounter clean-up, has no real urgency to it.
     KarazhanNoEncounterInProgressTrigger(PlayerbotAI* botAI)
         : Trigger(botAI, "karazhan no encounter in progress", 1000) {}
     bool IsActive() override;
@@ -150,12 +145,12 @@ protected:
 
 // Moroes <Tower Steward>
 
-class MoroesShouldPrioritizeAddsTrigger : public KarazhanEncounterTrigger
+class MoroesShouldPrioritizeGuestsTrigger : public KarazhanEncounterTrigger
 {
 public:
-    MoroesShouldPrioritizeAddsTrigger(PlayerbotAI* botAI)
+    MoroesShouldPrioritizeGuestsTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "moroes should prioritize adds", KaraHelpers::KaraBosses::DATA_MOROES) {}
+            botAI, "moroes should prioritize guests", KaraHelpers::KaraBosses::DATA_MOROES, 1000) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -412,12 +407,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class NetherspiteShouldBlockGreenOrBlueBeamTrigger : public KarazhanEncounterTrigger
+class NetherspiteShouldBlockBlueOrGreenBeamTrigger : public KarazhanEncounterTrigger
 {
 public:
-    NetherspiteShouldBlockGreenOrBlueBeamTrigger(PlayerbotAI* botAI)
+    NetherspiteShouldBlockBlueOrGreenBeamTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "netherspite should block green or blue beam",
+            botAI, "netherspite should block blue or green beam",
             KaraHelpers::KaraBosses::DATA_NETHERSPITE) {}
 
 protected:
@@ -514,8 +509,7 @@ class PrinceMalchezaarNearHazardTrigger : public KarazhanEncounterTrigger
 public:
     PrinceMalchezaarNearHazardTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "prince malchezaar near hazard",
-            KaraHelpers::KaraBosses::DATA_MALCHEZAAR) {}
+            botAI, "prince malchezaar near hazard", KaraHelpers::KaraBosses::DATA_MALCHEZAAR) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -558,6 +552,18 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
+class NightbaneMeleeShouldAvoidCharredEarthTrigger : public KarazhanEncounterTrigger
+{
+public:
+    NightbaneMeleeShouldAvoidCharredEarthTrigger(PlayerbotAI* botAI)
+        : KarazhanEncounterTrigger(
+            botAI, "nightbane melee should avoid charred earth",
+            KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 class NightbaneShouldManagePetAggressionTrigger : public KarazhanEncounterTrigger
 {
 public:
@@ -581,13 +587,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class NightbaneShouldAvoidRainOfBonesTrigger : public KarazhanEncounterTrigger
+class NightbaneInFlightPhaseTrigger : public KarazhanEncounterTrigger
 {
 public:
-    NightbaneShouldAvoidRainOfBonesTrigger(PlayerbotAI* botAI)
+    NightbaneInFlightPhaseTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
-            botAI, "nightbane should avoid rain of bones",
-            KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
+            botAI, "nightbane in flight phase", KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
 
 protected:
     bool IsActiveInEncounter() override;

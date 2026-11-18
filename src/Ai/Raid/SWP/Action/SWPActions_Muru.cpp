@@ -9,6 +9,7 @@
 #include "Playerbots.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPShared.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -23,13 +24,13 @@ bool MuruMisdirectEnemyToTankAction::Execute(Event /*event*/)
     Unit* enemy = nullptr;
     Player* tank = nullptr;
 
-    if (Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
+    if (Unit* voidSentinel = FindThreatTarget(bot, "void sentinel");
         voidSentinel && voidSentinel->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT)
     {
         enemy = voidSentinel;
         tank = GetGroupAssistTank(bot, 0);
     }
-    else if (Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+    else if (Unit* entropius = FindThreatTarget(bot, "entropius");
         entropius && entropius->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT)
     {
         enemy = entropius;
@@ -44,7 +45,7 @@ bool MuruMisdirectEnemyToTankAction::Execute(Event /*event*/)
 
 bool MuruMainTankPickUpEntropiusAction::Execute(Event /*event*/)
 {
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+    Unit* entropius = FindThreatTarget(bot, "entropius");
     if (!entropius)
         return false;
 
@@ -53,7 +54,7 @@ bool MuruMainTankPickUpEntropiusAction::Execute(Event /*event*/)
 
 bool MuruPositionRangedByPhaseAction::Execute(Event /*event*/)
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
+    Unit* muru = GetSwpBoss(bot, SwpBosses::DATA_MURU);
     if (IsMuruPhaseActive(muru))
     {
         _entropiusRangedPositionReached = false;
@@ -357,8 +358,8 @@ Unit* MuruAssignDpsPriorityAction::ResolveMuruDpsTarget(Unit* currentTarget)
 
 bool MuruKillDarkFiendsWithDispelAction::Execute(Event /*event*/)
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+    Unit* muru = GetSwpBoss(bot, SwpBosses::DATA_MURU);
+    Unit* entropius = FindThreatTarget(bot, "entropius");
     if (!muru && !entropius)
         return false;
 
@@ -418,7 +419,7 @@ bool MuruKillDarkFiendsWithDispelAction::Execute(Event /*event*/)
 
 bool MuruTanksMoveSentinelToSafePositionAction::Execute(Event /*event*/)
 {
-    Unit* voidSentinel = AI_VALUE2(Unit*, "find target", "25772");
+    Unit* voidSentinel = FindThreatTarget(bot, "void sentinel");
     if (!voidSentinel)
     {
         constexpr float arrivalDistance = 3.0f;
@@ -480,7 +481,7 @@ bool MuruSecondAssistTankGuardRangedAction::Execute(Event /*event*/)
 
 bool MuruMeleeFleeTheDarknessAction::Execute(Event /*event*/)
 {
-    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
+    Unit* muru = GetSwpBoss(bot, SwpBosses::DATA_MURU);
     if (!muru)
         return false;
 
@@ -594,14 +595,6 @@ bool MuruInterruptFelFireballAction::Execute(Event /*event*/)
             return castInterrupt(Id(SwpSpells::SPELL_SILENCING_SHOT));
         case CLASS_MAGE:
             return castInterrupt(Id(SwpSpells::SPELL_COUNTERSPELL));
-        // By leewheel 2026-10-23 合并brighton-chi the-lab ce7e85a6：上游删除了本处的
-        //   CLASS_PALADIN（原 castInterrupt("avenger's shield")）。初判像是「字符串→id」改造时
-        //   顺手漏改，本核一度按「只叠加不删改」恢复为 Id(SwpSpells::SPELL_AVENGERS_SHIELD)（链顶 48827），
-        //   但同提交在 SWPTriggers.cpp 的 MuruFuryMageCastingFelFireballTrigger 里同步加了
-        //   「|| bot->getClass() == CLASS_PALADIN」，注释写明「圣骑只有制裁之锤，要留给狂暴者当晕」，
-        //   说明这是有意的功能决策而非漏改：触发器已让圣骑根本不会进入本动作，恢复分支只会留下死代码。
-        //   ⇒ 采纳上游删除。本核 SWPShared.h 的 SPELL_AVENGERS_SHIELD(48827) 保留备用（无害）。
-        // End By leewheel
         case CLASS_PRIEST:
             return castInterrupt(Id(SwpSpells::SPELL_SILENCE));
         case CLASS_ROGUE:
@@ -761,7 +754,7 @@ bool MuruKeepDistanceFromDarkFiendsAction::Execute(Event /*event*/)
 
 bool MuruEscapeTheSingularityAction::Execute(Event /*event*/)
 {
-    Unit* entropius = AI_VALUE2(Unit*, "find target", "25840");
+    Unit* entropius = FindThreatTarget(bot, "entropius");
     if (!entropius)
         return false;
 

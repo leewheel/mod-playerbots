@@ -5,12 +5,7 @@
  */
 
 #include "HyjalStrategy.h"
-#include "AiObjectContext.h"
-#include "HyjalHelpers.h"
 #include "HyjalMultipliers.h"
-#include "Playerbots.h"
-
-using namespace HyjalHelpers;
 
 void RaidHyjalStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
@@ -74,7 +69,7 @@ void RaidHyjalStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("kaz'rogal ranged should avoid war stomp",
         { NextAction("kaz'rogal spread ranged in arc", ACTION_RAID) }));
 
-// By leewheel 2026-09-12 合并brighton b72069ab(trigger renames): 采纳其新trigger名 "kaz'rogal low on mana"
+    // By leewheel 2026-09-12 合并brighton b72069ab(trigger renames): 采纳其新trigger名 "kaz'rogal low on mana"
     //   (trigger/action 注册名必须与 brighton 侧一致); 本地把优先级由 +2 上调为 +3 的调整保留
     //   —— 卡兹洛加低蓝量要更及时地跑开, 优先于其它 RAID 级动作
     // By leewheel 2026-10-05 合并brighton the-lab 9提交: 上游57118aa8仅重排大括号, 未改优先级(+2) ⇒ 保留本核 +3
@@ -104,14 +99,14 @@ void RaidHyjalStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("azgalor ranged should spread",
         { NextAction("azgalor disperse ranged", ACTION_RAID + 1) }));
 
-// By leewheel 2026-10-05 合并brighton the-lab: 保留本核 +2 (上游侧为 +1, 属上游 d2aba0fe 的整体下调, 本核不跟随)
+    // By leewheel 2026-10-05 合并brighton the-lab: 保留本核 +2 (上游侧为 +1, 属上游 d2aba0fe 的整体下调, 本核不跟随)
     triggers.push_back(new TriggerNode("azgalor melee near rain of fire",
         { NextAction("azgalor melee maneuver through fire", ACTION_EMERGENCY + 2) }));
 
     triggers.push_back(new TriggerNode("azgalor ranged in rain of fire",
         { NextAction("azgalor ranged get out of rain of fire", ACTION_EMERGENCY + 1) }));
 
-// By leewheel 2026-10-05 合并brighton the-lab: 保留本核 +3 (上游侧为 +2, 本核不跟随其下调)
+    // By leewheel 2026-10-05 合并brighton the-lab: 保留本核 +3 (上游侧为 +2, 本核不跟随其下调)
     triggers.push_back(new TriggerNode("azgalor bot is doomed",
         { NextAction("azgalor move to doomguard tank", ACTION_EMERGENCY + 3) }));
 
@@ -174,29 +169,4 @@ void RaidHyjalStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     // Archimonde
     multipliers.push_back(new ArchimondeControlDoomfireAvoidanceMultiplier(botAI));
     multipliers.push_back(new ArchimondeKeepTremorTotemMultiplier(botAI));
-}
-
-// Limit Infernals to Infernal tank
-void RaidHyjalStrategy::AppendTargetExclusions(
-    GuidSet& exclusions, TargetValueExclusionType type)
-{
-    //By leewheel 20261002 枚举成员名对齐修复：Tank 在 TargetValueExclusionType 中不存在（正名 TankTarget），原写法致编译报错 C2065/C2838
-    //By leewheel 2026-10-06 合并 brighton the-lab: 本次冲突解决时该行一度被回退成 Tank（丢失了这条修复），
-    //   已按备份 patch 逐字恢复。TankTarget 是核心 TargetValueExclusionType 的实际成员名，不可改回。
-    if (type != TargetValueExclusionType::TankTarget)
-        return;
-
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    Unit* anetheron = AI_VALUE2(Unit*, "find target", "17808");
-    if (!anetheron)
-        return;
-
-    GuidVector const& infernals = GetInfernalGuids(botAI);
-    if (infernals.empty())
-        return;
-
-    if (IsInfernalTank(botAI->GetBot()))
-        exclusions.insert(anetheron->GetGUID());
-    else
-        exclusions.insert(infernals.begin(), infernals.end());
 }

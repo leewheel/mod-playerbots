@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #ifndef PLAYERBOTS_KARAACTIONS_H
 #define PLAYERBOTS_KARAACTIONS_H
 
@@ -32,8 +29,7 @@ public:
 class KarazhanSetTremorTotemAction : public Action
 {
 public:
-    KarazhanSetTremorTotemAction(PlayerbotAI* botAI)
-        : Action(botAI, "karazhan set tremor totem") {}
+    KarazhanSetTremorTotemAction(PlayerbotAI* botAI) : Action(botAI, "karazhan set tremor totem") {}
     bool Execute(Event event) override;
 };
 
@@ -42,11 +38,8 @@ public:
 class ManaWarpCastStunSpellAction : public Action
 {
 public:
-    ManaWarpCastStunSpellAction(PlayerbotAI* botAI);
+    ManaWarpCastStunSpellAction(PlayerbotAI* botAI) : Action(botAI, "mana warp cast stun spell") {}
     bool Execute(Event event) override;
-
-private:
-    uint32 const _reactionMs; // drawn once per bot
 };
 
 class ManaWarpStandByToStunAction : public MovementAction
@@ -121,8 +114,7 @@ public:
 class MoroesMarkTargetAction : public Action
 {
 public:
-    MoroesMarkTargetAction(PlayerbotAI* botAI)
-        : Action(botAI, "moroes mark target") {}
+    MoroesMarkTargetAction(PlayerbotAI* botAI) : Action(botAI, "moroes mark target") {}
     bool Execute(Event event) override;
 };
 
@@ -225,8 +217,7 @@ public:
 class WizardOfOzMarkTargetAction : public Action
 {
 public:
-    WizardOfOzMarkTargetAction(PlayerbotAI* botAI)
-        : Action(botAI, "wizard of oz mark target") {}
+    WizardOfOzMarkTargetAction(PlayerbotAI* botAI) : Action(botAI, "wizard of oz mark target") {}
     bool Execute(Event event) override;
 };
 
@@ -284,19 +275,19 @@ public:
     bool Execute(Event event) override;
 };
 
-class ShadeOfAranRunOutOfBlizzardAction : public MovementAction
+class ShadeOfAranMoveBehindBlizzardAction : public MovementAction
 {
 public:
-    ShadeOfAranRunOutOfBlizzardAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "shade of aran run out of blizzard") {}
+    ShadeOfAranMoveBehindBlizzardAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "shade of aran move behind blizzard") {}
     bool Execute(Event event) override;
 };
 
-class ShadeOfAranStopMovingDuringFlameWreathAction : public MovementAction
+class ShadeOfAranStopMovingAction : public MovementAction
 {
 public:
-    ShadeOfAranStopMovingDuringFlameWreathAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "shade of aran stop moving during flame wreath") {}
+    ShadeOfAranStopMovingAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "shade of aran stop moving") {}
     bool Execute(Event event) override;
 };
 
@@ -339,11 +330,11 @@ private:
     bool _redBeamTimerWasSet = false;
 };
 
-class NetherspiteBlockGreenOrBlueBeamAction : public MovementAction
+class NetherspiteBlockBlueOrGreenBeamAction : public MovementAction
 {
 public:
-    NetherspiteBlockGreenOrBlueBeamAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "netherspite block green or blue beam") {}
+    NetherspiteBlockBlueOrGreenBeamAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "netherspite block blue or green beam") {}
     bool Execute(Event event) override;
 };
 
@@ -355,11 +346,11 @@ public:
     bool Execute(Event event) override;
 };
 
-class NetherspiteMoveBetweenBeamsAction : public MovementAction
+class NetherspiteMoveBetweenBlueAndGreenBeamsAction : public MovementAction
 {
 public:
-    NetherspiteMoveBetweenBeamsAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "netherspite move between beams") {}
+    NetherspiteMoveBetweenBlueAndGreenBeamsAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "netherspite move between blue and green beams") {}
     bool Execute(Event event) override;
     bool ResetDestination()
     {
@@ -423,10 +414,14 @@ private:
         std::vector<ObjectGuid> const& taken);
     bool IsNextPositionGood(
         Unit* netherspite, Position const& portal, KaraHelpers::KaraInstanceState const& state,
-        float side, Position const& position, float low);
+        float side, Position const& position, float low, bool isHunter);
     std::optional<Position> FindNextPosition(
         Unit* netherspite, Position const& portal, KaraHelpers::KaraInstanceState const& state,
         float side, float low);
+    std::optional<Position> ShiftNextPositionAlongLine(
+        Unit* netherspite, Position const& portal, KaraHelpers::KaraInstanceState const& state,
+        float side, Position const& position, float low, bool isHunter);
+    std::optional<Position> GetFloorPosition(Unit* netherspite, float x, float y);
     void UpdateBeamBlockers(
         Unit* netherspite, KaraHelpers::KaraInstanceState& state,
         KaraHelpers::NetherspiteBeamData const& data, std::vector<ObjectGuid>& taken);
@@ -445,22 +440,24 @@ public:
     PrinceMalchezaarEnfeebledBotRunToSafetyAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "prince malchezaar enfeebled bot run to safety") {}
     bool Execute(Event event) override;
-    // A destination from an earlier Enfeeble doesn't count.
-    bool HasDestinationFor(time_t enfeebleApplyTime) const
+    bool HasDestinationFor(time_t enfeebleApplyTime, bool forShadowNova) const
     {
-        return _destination.has_value() && _enfeebleApplyTime == enfeebleApplyTime;
+        return _destination.has_value() && _enfeebleApplyTime == enfeebleApplyTime &&
+            _forShadowNova == forShadowNova;
     }
     bool ResetDestination()
     {
         bool const wasSet = _destination.has_value();
         _destination.reset();
         _enfeebleApplyTime = 0;
+        _forShadowNova = false;
         return wasSet;
     }
 
 private:
     std::optional<Position> _destination;
     time_t _enfeebleApplyTime = 0;
+    bool _forShadowNova = false;
 };
 
 class PrinceMalchezaarMoveClearOfHazardsAction : public MovementAction
@@ -499,7 +496,6 @@ public:
 private:
     std::optional<Position> _destination;
     float _destinationClearance = 0.0f;
-    // No new search until the number of landed infernals changes.
     std::optional<size_t> _searchedInfernalCount;
 };
 
@@ -513,23 +509,26 @@ public:
     bool Execute(Event event) override;
 };
 
-class NightbaneRangedStackAndMoveFromCharredEarthAction : public MovementAction
+class NightbaneRangedMoveFromCharredEarthAction : public MovementAction
 {
 public:
-    NightbaneRangedStackAndMoveFromCharredEarthAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "nightbane ranged stack and move from charred earth") {}
+    NightbaneRangedMoveFromCharredEarthAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "nightbane ranged move from charred earth") {}
     bool Execute(Event event) override;
+};
 
-private:
-    bool MoveRangedLeaderToSafePosition();
-    bool StackOnRangedLeader(Player* rangedLeader);
+class NightbaneMeleeMoveFromCharredEarthAction : public MovementAction
+{
+public:
+    NightbaneMeleeMoveFromCharredEarthAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "nightbane melee move from charred earth") {}
+    bool Execute(Event event) override;
 };
 
 class NightbaneSetPetStanceAction : public Action
 {
 public:
-    NightbaneSetPetStanceAction(PlayerbotAI* botAI)
-        : Action(botAI, "nightbane set pet stance") {}
+    NightbaneSetPetStanceAction(PlayerbotAI* botAI) : Action(botAI, "nightbane set pet stance") {}
     bool Execute(Event event) override;
     bool ResetPetStance();
 
@@ -540,8 +539,7 @@ private:
 class NightbaneStopAttackingAction : public Action
 {
 public:
-    NightbaneStopAttackingAction(PlayerbotAI* botAI)
-        : Action(botAI, "nightbane stop attacking") {}
+    NightbaneStopAttackingAction(PlayerbotAI* botAI) : Action(botAI, "nightbane stop attacking") {}
     bool Execute(Event event) override;
 };
 
@@ -576,6 +574,14 @@ public:
     NightbaneManageTimersAndTrackersAction(PlayerbotAI* botAI)
         : Action(botAI, "nightbane manage timers and trackers") {}
     bool Execute(Event event) override;
+
+private:
+    bool UpdateMeleePosition(
+        KaraHelpers::KaraInstanceState& state, Unit const& nightbane,
+        std::vector<Position> const& charredEarths);
+    bool UpdateRangedPosition(
+        KaraHelpers::KaraInstanceState& state, Unit const& nightbane,
+        std::vector<Position> const& charredEarths);
 };
 
 #endif

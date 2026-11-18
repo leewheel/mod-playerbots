@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #include "KaraStrategy.h"
 #include "AiObjectContext.h"
 #include "KaraHelpers.h"
@@ -50,7 +47,7 @@ void RaidKarazhanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("attumen the huntsman manage dps timer", ACTION_EMERGENCY + 10) }));
 
     // Moroes
-    triggers.push_back(new TriggerNode("moroes should prioritize adds",
+    triggers.push_back(new TriggerNode("moroes should prioritize guests",
         { NextAction("moroes mark target", ACTION_RAID) }));
 
     // Maiden of Virtue
@@ -107,10 +104,10 @@ void RaidKarazhanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("shade of aran run away from arcane explosion", ACTION_EMERGENCY + 6) }));
 
     triggers.push_back(new TriggerNode("shade of aran ranged in blizzard",
-        { NextAction("shade of aran run out of blizzard", ACTION_EMERGENCY + 5) }));
+        { NextAction("shade of aran move behind blizzard", ACTION_EMERGENCY + 5) }));
 
     triggers.push_back(new TriggerNode("shade of aran flame wreath active",
-        { NextAction("shade of aran stop moving during flame wreath", ACTION_EMERGENCY + 7) }));
+        { NextAction("shade of aran stop moving", ACTION_EMERGENCY + 7) }));
 
     triggers.push_back(new TriggerNode("shade of aran should prioritize elementals",
         { NextAction("shade of aran mark elemental", ACTION_RAID) }));
@@ -122,14 +119,14 @@ void RaidKarazhanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("netherspite should block red beam",
         { NextAction("netherspite block red beam", ACTION_EMERGENCY + 6) }));
 
-    triggers.push_back(new TriggerNode("netherspite should block green or blue beam",
-        { NextAction("netherspite block green or blue beam", ACTION_EMERGENCY + 6) }));
+    triggers.push_back(new TriggerNode("netherspite should block blue or green beam",
+        { NextAction("netherspite block blue or green beam", ACTION_EMERGENCY + 6) }));
 
     triggers.push_back(new TriggerNode("netherspite next beam blocker should prepare",
         { NextAction("netherspite wait to block beam", ACTION_EMERGENCY + 6) }));
 
     triggers.push_back(new TriggerNode("netherspite should stand between beams",
-        { NextAction("netherspite move between beams", ACTION_EMERGENCY + 6) }));
+        { NextAction("netherspite move between blue and green beams", ACTION_EMERGENCY + 6) }));
 
     triggers.push_back(new TriggerNode("netherspite should spread for netherbreath",
         { NextAction("netherspite move to banish slot", ACTION_EMERGENCY + 1) }));
@@ -159,8 +156,10 @@ void RaidKarazhanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("nightbane tank position boss", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("nightbane ranged should avoid charred earth",
-        { NextAction(
-            "nightbane ranged stack and move from charred earth", ACTION_EMERGENCY + 1) }));
+        { NextAction("nightbane ranged move from charred earth", ACTION_EMERGENCY + 1) }));
+
+    triggers.push_back(new TriggerNode("nightbane melee should avoid charred earth",
+        { NextAction("nightbane melee move from charred earth", ACTION_EMERGENCY + 1) }));
 
     triggers.push_back(new TriggerNode("nightbane should manage pet aggression",
         { NextAction("nightbane set pet stance", ACTION_RAID + 1) }));
@@ -169,7 +168,7 @@ void RaidKarazhanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("nightbane stop attacking", ACTION_RAID + 3),
           NextAction("nightbane select target for hold", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("nightbane should avoid rain of bones",
+    triggers.push_back(new TriggerNode("nightbane in flight phase",
         { NextAction("nightbane stack away from rain of bones", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("nightbane in landing phase",
@@ -184,14 +183,21 @@ void RaidKarazhanStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers
     multipliers.push_back(new KarazhanKeepTremorTotemMultiplier(botAI));
     multipliers.push_back(new KarazhanDelayDpsCooldownsMultiplier(botAI));
     multipliers.push_back(new ManaWarpSaveStunsMultiplier(botAI));
+    multipliers.push_back(new KarazhanDisableCombatFormationMoveMultiplier(
+        botAI, "attumen the huntsman disable combat formation move",
+        KaraHelpers::KaraBosses::DATA_ATTUMEN));
     multipliers.push_back(new AttumenTheHuntsmanDisableAutoTargetingMultiplier(botAI));
     multipliers.push_back(new AttumenTheHuntsmanStayStackedMultiplier(botAI));
     multipliers.push_back(new AttumenTheHuntsmanHoldDpsMultiplier(botAI));
-    multipliers.push_back(new MaidenOfVirtueDisableCombatFormationMoveMultiplier(botAI));
+    multipliers.push_back(new KarazhanDisableCombatFormationMoveMultiplier(
+        botAI, "maiden of virtue disable combat formation move",
+        KaraHelpers::KaraBosses::DATA_MAIDEN));
     multipliers.push_back(new MaidenOfVirtueKeepGroundingTotemMultiplier(botAI));
     multipliers.push_back(new BigBadWolfRedHoodHunterStayDownMultiplier(botAI));
     multipliers.push_back(new TheCuratorDisableTankAssistMultiplier(botAI));
-    multipliers.push_back(new TheCuratorDisableCombatFormationMoveMultiplier(botAI));
+    multipliers.push_back(new KarazhanDisableCombatFormationMoveMultiplier(
+        botAI, "the curator disable combat formation move",
+        KaraHelpers::KaraBosses::DATA_CURATOR));
     multipliers.push_back(new TerestianIllhoofDisableDotsOnFiendishImpsMultiplier(botAI));
     multipliers.push_back(new ShadeOfAranArcaneExplosionDisableMovementMultiplier(botAI));
     multipliers.push_back(new ShadeOfAranDisableReactiveMovementMultiplier(botAI));
@@ -202,12 +208,10 @@ void RaidKarazhanStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers
     multipliers.push_back(new PrinceMalchezaarEnfeebledBotFocusOnEscapeMultiplier(botAI));
     multipliers.push_back(new NightbaneDelaySummonsAndPetAttacksMultiplier(botAI));
     multipliers.push_back(new NightbaneHoldDpsMultiplier(botAI));
-    multipliers.push_back(new NightbaneDisableAvoidAoeMultiplier(botAI));
     multipliers.push_back(new NightbaneDisableMovementMultiplier(botAI));
 }
 
-void RaidKarazhanStrategy::AppendTargetExclusions(
-    GuidSet& exclusions, TargetValueExclusionType /*type*/)
+void AppendNightbaneFlightPhaseExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
 {
     Unit* nightbane =
         KaraHelpers::GetKaraBoss(botAI->GetBot(), KaraHelpers::KaraBosses::DATA_NIGHTBANE);
@@ -217,7 +221,8 @@ void RaidKarazhanStrategy::AppendTargetExclusions(
     if (KaraHelpers::IsNightbaneFlying(nightbane))
         exclusions.insert(nightbane->GetGUID());
 
-    // Reach would walk a bot off the terrace after a skeleton that spawned out of bounds.
+    // Somehow, skeletons can get out of bounds, and bots can chase them out of bounds as a result.
+    // So we ensure only in-bounds skeletons are valid targets.
     uint32 const skeletonEntry = KaraHelpers::Id(KaraHelpers::KaraNpcs::NPC_RESTLESS_SKELETON);
     GuidVector const targets =
         botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->Get();
@@ -230,4 +235,31 @@ void RaidKarazhanStrategy::AppendTargetExclusions(
         if (skeleton && KaraHelpers::IsOutsideNightbaneTerrace(skeleton))
             exclusions.insert(guid);
     }
+}
+
+// Midnight is the phase 1 target. Do not count Attumen for AoE or put secondary DoTs on him, or
+// DPS him at all.
+void AppendAttumenUnmountedNonTankExclusions(PlayerbotAI* botAI, GuidSet& exclusions)
+{
+    Unit* attumen = KaraHelpers::GetKaraBoss(
+        botAI->GetBot(), KaraHelpers::KaraBosses::DATA_ATTUMEN);
+    if (!attumen || attumen->GetEntry() ==
+            KaraHelpers::Id(KaraHelpers::KaraNpcs::NPC_ATTUMEN_THE_HUNTSMAN_MOUNTED))
+    {
+        return;
+    }
+
+    exclusions.insert(attumen->GetGUID());
+}
+
+void RaidKarazhanStrategy::AppendTargetExclusions(
+    GuidSet& exclusions, TargetValueExclusionType type)
+{
+    if (botAI->GetBot()->GetMapId() != KaraHelpers::KARA_MAP_ID)
+        return;
+
+    AppendNightbaneFlightPhaseExclusions(botAI, exclusions);
+
+    if (type != TargetValueExclusionType::TankTarget)
+        AppendAttumenUnmountedNonTankExclusions(botAI, exclusions);
 }

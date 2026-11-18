@@ -20,21 +20,26 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     // Shared
     triggers.push_back(new TriggerNode("sunwell no encounter in progress",
-        { NextAction("sunwell reset encounter states", ACTION_EMERGENCY + 10) }));
+        { NextAction("sunwell reset encounter states", ACTION_EMERGENCY + 10),
+          NextAction("eredar twins announce class roles", ACTION_EMERGENCY + 8) }));
+
+    triggers.push_back(new TriggerNode("sunwell class roles should be assigned",
+        { NextAction("sunwell assign class roles", ACTION_EMERGENCY + 9) }));
 
     triggers.push_back(new TriggerNode("sunwell aura to remove",
         { NextAction("sunwell remove aura", ACTION_EMERGENCY) }));
 
     // Trash
     triggers.push_back(new TriggerNode("volatile fiend self destructs when near",
-        { NextAction("volatile fiend keep enemy away from group", ACTION_EMERGENCY + 1) }));
+        { NextAction("volatile fiend intercept", ACTION_EMERGENCY + 1),
+          NextAction("volatile fiend move away", ACTION_EMERGENCY + 1) }));
 
     triggers.push_back(new TriggerNode("apocalypse guard protected by infernal defense",
         { NextAction("apocalypse guard attack with holy magic", ACTION_RAID) }));
 
     // Kalecgos
     triggers.push_back(new TriggerNode("kalecgos should communicate boss health",
-        { NextAction("kalecgos announce boss health", ACTION_RAID + 1) }));
+        { NextAction("kalecgos announce boss health", ACTION_RAID + 5) }));
 
     triggers.push_back(new TriggerNode("kalecgos hunter should misdirect",
         { NextAction("kalecgos misdirect to main tank", ACTION_RAID + 1) }));
@@ -56,6 +61,18 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode("kalecgos bots don't observe gravity",
         { NextAction("kalecgos return to spectral realm ground", ACTION_EMERGENCY + 10) }));
+
+    triggers.push_back(new TriggerNode("kalecgos should manage raid assignments",
+        { NextAction("kalecgos update raid assignments", ACTION_EMERGENCY + 8) }));
+
+    triggers.push_back(new TriggerNode("kalecgos dps hold is active",
+        {
+            NextAction("kalecgos stop attacking for hold", ACTION_EMERGENCY + 2),
+            NextAction("kalecgos select target for hold", ACTION_RAID),
+        }));
+
+    triggers.push_back(new TriggerNode("kalecgos should manage pet aggression",
+        { NextAction("kalecgos set pet stance", ACTION_RAID + 4) }));
 
     // Brutallus
     triggers.push_back(new TriggerNode("brutallus hunter should misdirect",
@@ -95,8 +112,14 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("felmyst player has gas nova",
         { NextAction("felmyst mass dispel gas nova", ACTION_EMERGENCY + 6) }));
 
+    triggers.push_back(new TriggerNode("felmyst takeoff is near",
+        { NextAction("felmyst move to air group position", ACTION_EMERGENCY + 1) }));
+
+    triggers.push_back(new TriggerNode("felmyst air phase has started",
+        { NextAction("felmyst move to air group position", ACTION_EMERGENCY + 1) }));
+
     triggers.push_back(new TriggerNode("felmyst should avoid demonic vapor trails",
-        { NextAction("felmyst avoid demonic vapor", ACTION_EMERGENCY + 1) }));
+        { NextAction("felmyst avoid demonic vapor", ACTION_EMERGENCY + 2) }));
 
     triggers.push_back(new TriggerNode("felmyst targeted by demonic vapor",
         { NextAction("felmyst kite demonic vapor", ACTION_EMERGENCY + 10) }));
@@ -120,22 +143,19 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         }));
 
     // Eredar Twins
-    triggers.push_back(new TriggerNode("eredar twins melee is at balcony",
-        { NextAction("eredar twins melee jump from balcony", ACTION_EMERGENCY + 1) }));
-
-    triggers.push_back(new TriggerNode("eredar twins should announce alythess tank",
-        { NextAction("eredar twins announce alythess tank", ACTION_RAID) }));
+    triggers.push_back(new TriggerNode("eredar twins should leave balcony",
+        { NextAction("eredar twins jump from balcony", ACTION_EMERGENCY + 1) }));
 
     triggers.push_back(new TriggerNode("eredar twins hunter should misdirect",
         { NextAction("eredar twins misdirect to tanks", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("eredar twins sacrolash requires two tanks",
+    triggers.push_back(new TriggerNode("eredar twins sacrolash should be tanked",
         { NextAction("eredar twins position sacrolash tanks", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("eredar twins alythess casts blaze on tank",
+    triggers.push_back(new TriggerNode("eredar twins alythess should be tanked",
         { NextAction("eredar twins alythess tank move out of blaze", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("eredar twins ranged needs los",
+    triggers.push_back(new TriggerNode("eredar twins ranged should stack on balcony",
         { NextAction("eredar twins ranged stack at balcony edge", ACTION_RAID + 1) }));
 
     triggers.push_back(new TriggerNode("eredar twins should focus dps",
@@ -148,7 +168,10 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("eredar twins remove flame sear", ACTION_RAID + 3) }));
 
     triggers.push_back(new TriggerNode("eredar twins only alythess remains",
-        { NextAction("eredar twins stack in room center", ACTION_RAID + 4) }));
+        { NextAction("eredar twins stack behind alythess", ACTION_RAID + 4) }));
+
+    triggers.push_back(new TriggerNode("eredar twins alythess targets non-tank",
+        { NextAction("eredar twins step aside from stack", ACTION_EMERGENCY + 2) }));
 
     triggers.push_back(new TriggerNode("eredar twins active conflagration target",
         { NextAction(
@@ -255,11 +278,13 @@ void RaidSwpStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new KalecgosRestrictTauntMultiplier(botAI));
     multipliers.push_back(new KalecgosSuppressAssistTankPullThreatMultiplier(botAI));
     multipliers.push_back(new KalecgosEnterSpectralRiftMultiplier(botAI));
+    multipliers.push_back(new KalecgosHoldDpsMultiplier(botAI));
 
     // Brutallus
     multipliers.push_back(new BrutallusControlMovementMultiplier(botAI));
     multipliers.push_back(new BrutallusNoKillingSpreeWhenNearbyBurnMultiplier(botAI));
     multipliers.push_back(new BrutallusRestrictTauntMultiplier(botAI));
+    multipliers.push_back(new BrutallusNoRebirthWhileBurningMultiplier(botAI));
 
     // Felmyst
     multipliers.push_back(new FelmystControlMovementMultiplier(botAI));
@@ -292,26 +317,47 @@ namespace
 {
 
 void AppendVolatileFiendMeleeDpsExclusions(
-    PlayerbotAI* botAI, Player* bot, AiObjectContext* context, GuidSet& exclusions)
+    PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
+    Player* bot = botAI->GetBot();
     if (PlayerbotAI::IsRanged(bot) || PlayerbotAI::IsTank(bot))
         return;
 
-    Creature* volatileFiend = botAI->GetCreature(AI_VALUE(ObjectGuid, "swp volatile fiend"));
-    if (volatileFiend && volatileFiend->IsAlive())
-        exclusions.insert(volatileFiend->GetGUID());
+    for (auto const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
+    {
+        Unit* attacker = botAI->GetUnit(guid);
+        if (attacker && attacker->GetEntry() == Id(SwpNpcs::NPC_VOLATILE_FIEND))
+            exclusions.insert(guid);
+    }
 }
 
-void AppendFelmystVaporPhaseMeleeExclusions(
-    Player* bot, AiObjectContext* context, GuidSet& exclusions)
+void AppendApocalypseGuardInfernalDefenseExclusions(
+    PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
+{
+    Player* bot = botAI->GetBot();
+    if (PlayerbotAI::IsTank(bot) || bot->getClass() == CLASS_PALADIN ||
+        bot->getClass() == CLASS_PRIEST)
+    {
+        return;
+    }
+
+    for (auto const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
+    {
+        Unit* attacker = botAI->GetUnit(guid);
+        if (attacker && attacker->GetEntry() == Id(SwpNpcs::NPC_APOCALYPSE_GUARD) &&
+            attacker->HasAura(Id(SwpSpells::SPELL_INFERNAL_DEFENSE)))
+        {
+            exclusions.insert(guid);
+        }
+    }
+}
+
+void AppendFelmystVaporPhaseMeleeExclusions(Player* bot, GuidSet& exclusions)
 {
     if (!PlayerbotAI::IsMelee(bot))
         return;
 
-// By leewheel 2026-10-06 合并 brighton the-lab：保留本 fork 的 entry 查找
-    //   （本服 creature_template 名已汉化，用英文名 find target 会找不到），
-    //   同时补上上游新增的空指针保护（felmyst 为空时原写法会解引用崩溃）。
-    Unit* felmyst = AI_VALUE2(Unit*, "find target", "25038");
+    Unit* felmyst = GetSwpBoss(bot, SwpBosses::DATA_FELMYST);
     if (felmyst && IsFelmystAirPhaseTargetSuppressed(felmyst))
         exclusions.insert(felmyst->GetGUID());
 }
@@ -319,11 +365,6 @@ void AppendFelmystVaporPhaseMeleeExclusions(
 void AppendMuruDarkFiendExclusions(
     PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
-// By leewheel 2026-10-06 合并 brighton the-lab：保留本 fork 的 entry 前置判据
-    //   （M'uru 不在目标列表时不必遍历 attackers 做暗影魔排除），entry 查找避免中文库名匹配失败。
-    if (!AI_VALUE2(Unit*, "find target", "25741"))
-        return;
-
     for (auto const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
     {
         Unit* attacker = botAI->GetUnit(guid);
@@ -339,14 +380,12 @@ void AppendMuruTankExclusions(
     if (!PlayerbotAI::IsTank(bot))
         return;
 
-// By leewheel 2026-10-06 合并 brighton the-lab：entry 查找 + 上游的空指针保护
-    //   （下方 muru->GetGUID() 无条件使用，muru 为空必须提前返回）。
-    Unit* muru = AI_VALUE2(Unit*, "find target", "25741");
+    Unit* muru = GetSwpBoss(bot, SwpBosses::DATA_MURU);
     if (!muru || !IsMuruPhaseActive(muru))
         return;
 
     bool const darknessActive = PeekMuruDarknessActiveState(bot);
-    // Even during Darkness, the Sentinel Tank has full freedom to pick up Sentinels
+    // Even during Darkness, the Sentinel Tank has full freedom to pick up Sentinels.
     bool const distanceUnrestricted = darknessActive &&
         PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 
@@ -378,10 +417,6 @@ void AppendKiljaedenShieldOrbExclusions(
     if (!PlayerbotAI::IsMelee(botAI->GetBot()))
         return;
 
-// By leewheel 2026-10-06 合并 brighton the-lab：保留本 fork 的 entry 前置判据（基尔加丹不在场则不遍历）。
-    if (!AI_VALUE2(Unit*, "find target", "25315"))
-        return;
-
     for (auto const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
     {
         Unit* attacker = botAI->GetUnit(guid);
@@ -390,7 +425,6 @@ void AppendKiljaedenShieldOrbExclusions(
     }
 }
 
-// By leewheel 2026-08-29 合并：删除对侧已清理的被注释死代码块(SinisterReflectionExclusions残留)
 } // end anonymous namespace
 
 void RaidSwpStrategy::AppendTargetExclusions(
@@ -401,12 +435,13 @@ void RaidSwpStrategy::AppendTargetExclusions(
         return;
 
     AiObjectContext* context = botAI->GetAiObjectContext();
-    AppendVolatileFiendMeleeDpsExclusions(botAI, bot, context, exclusions);
+    AppendVolatileFiendMeleeDpsExclusions(botAI, context, exclusions);
+    AppendApocalypseGuardInfernalDefenseExclusions(botAI, context, exclusions);
 
     if (!IsEncounterInProgress(bot, SWP_MAP_ID))
         return;
 
-    AppendFelmystVaporPhaseMeleeExclusions(bot, context, exclusions);
+    AppendFelmystVaporPhaseMeleeExclusions(bot, exclusions);
     AppendMuruDarkFiendExclusions(botAI, context, exclusions);
     AppendMuruTankExclusions(botAI, context, exclusions);
     AppendKiljaedenShieldOrbExclusions(botAI, context, exclusions);

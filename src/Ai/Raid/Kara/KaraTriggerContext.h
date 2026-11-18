@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #ifndef PLAYERBOTS_KARATRIGGERCONTEXT_H
 #define PLAYERBOTS_KARATRIGGERCONTEXT_H
 
@@ -52,8 +49,8 @@ public:
             &RaidKarazhanTriggerContext::attumen_the_huntsman_should_manage_dps_timer;
 
         // Moroes
-        creators["moroes should prioritize adds"] =
-            &RaidKarazhanTriggerContext::moroes_should_prioritize_adds;
+        creators["moroes should prioritize guests"] =
+            &RaidKarazhanTriggerContext::moroes_should_prioritize_guests;
 
         // Maiden of Virtue
         creators["maiden of virtue should be tanked"] =
@@ -123,8 +120,8 @@ public:
         creators["netherspite should block red beam"] =
             &RaidKarazhanTriggerContext::netherspite_should_block_red_beam;
 
-        creators["netherspite should block green or blue beam"] =
-            &RaidKarazhanTriggerContext::netherspite_should_block_green_or_blue_beam;
+        creators["netherspite should block blue or green beam"] =
+            &RaidKarazhanTriggerContext::netherspite_should_block_blue_or_green_beam;
 
         creators["netherspite next beam blocker should prepare"] =
             &RaidKarazhanTriggerContext::netherspite_next_beam_blocker_should_prepare;
@@ -161,14 +158,17 @@ public:
         creators["nightbane ranged should avoid charred earth"] =
             &RaidKarazhanTriggerContext::nightbane_ranged_should_avoid_charred_earth;
 
+        creators["nightbane melee should avoid charred earth"] =
+            &RaidKarazhanTriggerContext::nightbane_melee_should_avoid_charred_earth;
+
         creators["nightbane should manage pet aggression"] =
             &RaidKarazhanTriggerContext::nightbane_should_manage_pet_aggression;
 
         creators["nightbane should hold dps"] =
             &RaidKarazhanTriggerContext::nightbane_should_hold_dps;
 
-        creators["nightbane should avoid rain of bones"] =
-            &RaidKarazhanTriggerContext::nightbane_should_avoid_rain_of_bones;
+        creators["nightbane in flight phase"] =
+            &RaidKarazhanTriggerContext::nightbane_in_flight_phase;
 
         creators["nightbane in landing phase"] =
             &RaidKarazhanTriggerContext::nightbane_in_landing_phase;
@@ -225,9 +225,9 @@ private:
     }
 
     // Moroes
-    static Trigger* moroes_should_prioritize_adds(PlayerbotAI* botAI)
+    static Trigger* moroes_should_prioritize_guests(PlayerbotAI* botAI)
     {
-        return new MoroesShouldPrioritizeAddsTrigger(botAI);
+        return new MoroesShouldPrioritizeGuestsTrigger(botAI);
     }
 
     // Maiden of Virtue
@@ -325,9 +325,9 @@ private:
     {
         return new NetherspiteShouldBlockRedBeamTrigger(botAI);
     }
-    static Trigger* netherspite_should_block_green_or_blue_beam(PlayerbotAI* botAI)
+    static Trigger* netherspite_should_block_blue_or_green_beam(PlayerbotAI* botAI)
     {
-        return new NetherspiteShouldBlockGreenOrBlueBeamTrigger(botAI);
+        return new NetherspiteShouldBlockBlueOrGreenBeamTrigger(botAI);
     }
     static Trigger* netherspite_next_beam_blocker_should_prepare(PlayerbotAI* botAI)
     {
@@ -377,6 +377,10 @@ private:
     {
         return new NightbaneRangedShouldAvoidCharredEarthTrigger(botAI);
     }
+    static Trigger* nightbane_melee_should_avoid_charred_earth(PlayerbotAI* botAI)
+    {
+        return new NightbaneMeleeShouldAvoidCharredEarthTrigger(botAI);
+    }
     static Trigger* nightbane_should_manage_pet_aggression(PlayerbotAI* botAI)
     {
         return new NightbaneShouldManagePetAggressionTrigger(botAI);
@@ -385,9 +389,9 @@ private:
     {
         return new NightbaneShouldHoldDpsTrigger(botAI);
     }
-    static Trigger* nightbane_should_avoid_rain_of_bones(PlayerbotAI* botAI)
+    static Trigger* nightbane_in_flight_phase(PlayerbotAI* botAI)
     {
-        return new NightbaneShouldAvoidRainOfBonesTrigger(botAI);
+        return new NightbaneInFlightPhaseTrigger(botAI);
     }
     static Trigger* nightbane_in_landing_phase(PlayerbotAI* botAI)
     {

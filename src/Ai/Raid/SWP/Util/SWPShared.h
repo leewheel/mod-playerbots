@@ -39,6 +39,7 @@ enum class SwpSpells : uint32
     SPELL_CURSE_OF_BOUNDLESS_AGONY_SEC = 45034,
     SPELL_TELEPORT_SPECTRAL            = 46019,
     SPELL_SPECTRAL_REALM               = 46021,
+    SPELL_KALECGOS_BANISH              = 44836, // Kalecgos and Sathrovarr at 1%
 
     // Brutallus
     SPELL_METEOR_SLASH                 = 45150, // 120° cone
@@ -52,7 +53,6 @@ enum class SwpSpells : uint32
     SPELL_FOG_OF_CORRUPTION_CHARM      = 45717,
 
     // Eredar Twins
-    SPELL_BLAZE                        = 45235,
     SPELL_CONFLAGRATION                = 45342,
     SPELL_FLAME_TOUCHED                = 45348,
     SPELL_FLAME_SEAR                   = 46771,
@@ -232,6 +232,19 @@ enum class SwpObjects : uint32
 
 inline constexpr uint32 SWP_MAP_ID = 580;
 
+// DungeonEncounter.dbc encounterIndex, map 580
+enum class SwpBosses : uint32
+{
+    DATA_KALECGOS                   = 0,
+    DATA_BRUTALLUS                  = 1,
+    DATA_FELMYST                    = 2,
+    DATA_EREDAR_TWINS               = 3,
+    DATA_MURU                       = 4,
+    DATA_KILJAEDEN                  = 5,
+};
+
+Unit* GetSwpBoss(Player* bot, SwpBosses boss);
+
 // Steps short enough to navigate poor terrain, matching the standard in EncounterHelpers.
 inline constexpr float PATH_STEP_DISTANCE = 3.5f;
 inline constexpr float PATH_BACKWARD_STEP_DISTANCE = 2.25f;
@@ -254,16 +267,6 @@ inline constexpr float SELF_AOE_RACIAL_RADIUS = 8.0f;
 // Radius for Challenging Shout and Challenging Roar.
 inline constexpr float TAUNT_SHOUT_RADIUS = 10.0f;
 
-inline constexpr uint32 VOLATILE_FIEND_CACHE_INTERVAL_MS = 200;
-// Felfire Fission (45779), the fiend's death explosion, hits within 10y and just murders melee
-// bots (and me). This distance is farther since the fiends are running toward the raid.
-inline constexpr float VOLATILE_FIEND_SAFE_DISTANCE = 20.0f;
-// Don't try to reach targets if within this distance of a fiend. Works fine in practice since the
-// gauntlet is always going forwards so nobody needs to go the other way to reach a target.
-inline constexpr float VOLATILE_FIEND_APPROACH_SUPPRESSION_RADIUS = 25.0f;
-inline constexpr float VOLATILE_FIEND_SEARCH_RADIUS =
-    VOLATILE_FIEND_APPROACH_SUPPRESSION_RADIUS + 2.0f;
-ObjectGuid FindSwpVolatileFiendGuid(Player* bot);
 // Offset from the center of an arc for assigning positioning slots, filling outward and
 // alternating sides. Slot 0 is the center when the count is odd and straddles it when even.
 float GetCenteredArcSlotAngleOffset(uint8 slotIndex, uint8 slotCount, float arcWidth);
@@ -277,12 +280,42 @@ bool MisdirectTargetToTank(PlayerbotAI* botAI, Unit* target, Player* tank);
 // The Spell Lock rank a living Felhunter can cast at the target now. This is needed because
 // PlayerbotAI::CanCastSpell passes any spell the pet knows without checking range or cooldown.
 uint32 GetReadySpellLock(Creature* pet, Unit* target);
-// GetStepToPosition() from EncounterHelpers, but each step follows the path. Pass the unit being
-// tanked as facing to walk the step backwards when it leads away from that unit. Returns false
-// once the bot is within arrivalDist or when there is no path. Pass the bot's Z to MoveTo().
-bool GetPathStepToPosition(
-    Player* bot, Position const& position, float arrivalDist, Unit* facing, float& stepX,
+// A path step for a tank that keeps the unit it is tanking in front of it. While the bot is
+// tankedUnit's victim and in melee range, the step takes the shorter backward length and is moved
+// backwards when it leads away from that unit; otherwise it is a normal forward step. Returns
+// false once the bot is within arrivalDist or when there is no path. Pass the bot's Z to MoveTo().
+bool GetTankPathStep(
+    Player* bot, Position const& position, float arrivalDist, Unit* tankedUnit, float& stepX,
     float& stepY, bool& backwards);
+
+// Volatile Fiends: one entry, two types:
+// (1) a gauntlet (summoned) fiend explodes 2s after it engages, dealing from itself and every other
+// mob in combat reach (!) 6013+ fire damage within 12 yds of their centers, and
+// (2) a static fiend explodes on death, dealing 2025+ fire damage within 10 yds of its center.
+
+inline constexpr uint32 VOLATILE_FIEND_CACHE_INTERVAL_MS = 200;
+// A fiend's aggro radius against a level 70 player.
+inline constexpr float VOLATILE_FIEND_AGGRO_RADIUS = 21.0f;
+inline constexpr float VOLATILE_FIEND_SAFE_DISTANCE = VOLATILE_FIEND_AGGRO_RADIUS + 1.0f;
+// Do not try to reach targets if within this distance of a fiend. The intent (and effect) is to
+// keep bots from approaching a fiend, since the raid moves forwards only through the gauntlet.
+inline constexpr float VOLATILE_FIEND_APPROACH_SUPPRESSION_RADIUS =
+    VOLATILE_FIEND_AGGRO_RADIUS + 5.0f;
+inline constexpr float VOLATILE_FIEND_SEARCH_RADIUS = VOLATILE_FIEND_AGGRO_RADIUS + 10.0f;
+
+// The smallest sphere holding every point of the gauntlet fiends' path and their summoner.
+inline Position const GAUNTLET_CENTER = { 1628.0f, 536.0f, 59.6f };
+inline constexpr float GAUNTLET_PATH_RADIUS = 82.4f;
+// Gauntlet fiends can engage bots only within this distance of GAUNTLET_CENTER.
+inline constexpr float GAUNTLET_RADIUS = GAUNTLET_PATH_RADIUS + VOLATILE_FIEND_AGGRO_RADIUS;
+
+bool IsNearGauntlet(Player* bot);
+ObjectGuid FindSwpVolatileFiendGuid(PlayerbotAI* botAI);
+bool IsVolatileFiendInterceptor(Player* bot);
+
+// Apocalypse Guards
+
+Unit* GetInfernalDefenseGuard(PlayerbotAI* botAI);
 
 }
 

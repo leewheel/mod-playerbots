@@ -59,6 +59,7 @@
 #include "Vehicle.h"
 #include "WsgRouteState.h"
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <map>
 #include <mutex>
@@ -88,6 +89,9 @@ constexpr uint32 VEHICLE_FLAG_FIXED_POSITION = 0x00200000;
 std::vector<std::string> PlayerbotAI::dispel_whitelist = {
     "mutating injection",
     "frostbolt",
+    "dreamless sleep",
+    "greater dreamless sleep",
+    "major dreamless sleep",
 };
 
 std::vector<std::string>& split(std::string const s, char delim, std::vector<std::string>& elems);
@@ -307,6 +311,10 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     bool isCasting = bot->IsNonMeleeSpellCast(true);
     if (bot->IsInCombat())
     {
+        // RPG move action may not run in combat, so reset its stuck timer here
+        rpgInfo.stuckTs = getMSTime();
+        rpgInfo.stuckAttempts = 0;
+
         if (!inCombat)
         {
             // "attackers" is cached for 1 s; refresh it so the assist actions see the new attacker
@@ -322,6 +330,10 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     {
         if (inCombat && !isCasting)
             ResetActionDuration();
+
+        // after combat, measure travel progress from the current spot
+        if (inCombat)
+            rpgInfo.nearestMoveFarDis = FLT_MAX;
 
         inCombat = false;
     }
@@ -1842,7 +1854,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
 {
     static const std::vector<std::string> allInstanceStrategies =
     {
-        "aq20", "blacktemple", "bwl", "gruulslair", "hyjal", "icc", "karazhan", "magtheridon",
+        "aq20", "aq40", "blacktemple", "bwl", "gruulslair", "hyjal", "icc", "karazhan", "magtheridon",
         "moltencore", "naxx", "onyxia", "rs", "ssc", "sunwell", "tbc-ac", "tbc-mech", "tbc-mgt",
         "tbc-ramp", "tbc-seth", "tbc-ub", "tempestkeep", "ulduar", "voa", "wotlk-an", "wotlk-cos",
         // By leewheel 2026-09-19 保留我方独有内容：破碎大厅（Hellfire Citadel: Shattered Halls, map 540）
@@ -1944,6 +1956,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             break;
         case 509:
             strategyName = "aq20";  // Ruins of Ahn'Qiraj
+            break;
+        case 531:
+            strategyName = "aq40";  // Temple of Ahn'Qiraj
             break;
         case 532:
             strategyName = "karazhan";  // Karazhan

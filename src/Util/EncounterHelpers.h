@@ -166,21 +166,23 @@ bool ClearStrategyTargetIcon(Player* bot, uint8 iconId, std::initializer_list<ui
 bool CanTakeStepTowards(
     Player* bot, float destinationX, float destinationY, float moveDist, float& stepX, float& stepY,
     float& stepZ);
-// One step along the bot's path to a point, stopping short of it by stopDistance. The step follows
-// the path corner-by-corner, rather than aiming at the far end of it, so a bot can move around an
-// obstacle between it and the point.
-bool GetPathStepTowardPoint(
-    Player* bot, Position const& destination, float stopDistance, float stepDistance, float& stepX,
-    float& stepY);
-// The same as GetPathStepTowardPoint, but toward a unit's position.
-bool GetPathStepTowardUnit(
-    Player* bot, Unit* target, float stopDistance, float stepDistance, float& stepX, float& stepY);
 // Calculate incremental movement to a position. No ground or collision is validated, unlike
 // CanTakeStepTowards(). The Z position passed for the MoveTo() action using this helper should
 // use the bot's Z, not the position's. Returns false once the bot is within arrivalDist.
 bool GetStepToPosition(
     Player* bot, Position const& position, float arrivalDist, Unit* facing, float& stepX,
     float& stepY, bool& backwards);
+// One step along the bot's path to a point, stopping short of it by stopDistance - 0.1 yd. The step
+// follows the path corner-by-corner, rather than aiming at the far end of it, so a bot can move
+// around an obstacle between it and the point. Measured in 3D. A 2D distance is never longer, so a
+// caller testing arrival in 2D at the same distance sees the bot arrive no later than this does. A
+// caller that keeps a bot at least stopDistance AWAY in 2D needs a margin for height changes.
+bool GetPathStepTowardPoint(
+    Player* bot, Position const& destination, float stopDistance, float stepDistance, float& stepX,
+    float& stepY);
+// The same as GetPathStepTowardPoint, but toward a unit's position.
+bool GetPathStepTowardUnit(
+    Player* bot, Unit* target, float stopDistance, float stepDistance, float& stepX, float& stepY);
 
 // Player Getters
 

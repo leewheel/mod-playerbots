@@ -498,7 +498,6 @@ inline constexpr EncounterHelpers::ClassRole ZEREVOR_MAGE_TANK_ROLE = {
 inline constexpr float COUNCIL_CLASS_ROLE_ANNOUNCE_DISTANCE = 125.0f;
 // 175 yd extends to the top of the steps leading to the courtyard outside the Council's room.
 inline constexpr float COUNCIL_CLASS_ROLE_REARM_DISTANCE = 175.0f;
-
 inline constexpr float COUNCIL_MEMBER_SEARCH_RADIUS = COUNCIL_CLASS_ROLE_ANNOUNCE_DISTANCE;
 inline constexpr uint32 COUNCIL_DPS_WAIT_MS = 5 * IN_MILLISECONDS; // on pull
 inline constexpr float COUNCIL_AOE_THREAT_CLEARANCE = 15.0f;
@@ -510,6 +509,11 @@ inline constexpr float MAGE_TANK_HEALER_MAX_DISTANCE = 38.0f;
 // Far enough that a patch centered on the mage tank can't reach the healer. Patches reach 11.5 yd
 // (10 yd radius plus a player's combat reach), and this leaves another yard.
 inline constexpr float MAGE_TANK_HEALER_MIN_DISTANCE = 12.5f;
+// A step toward the mage tank stops here, not at MIN_DISTANCE. Path steps end a little inside their
+// stop distance so that a bot moving to a position always counts as arrived. Here, the stop is a
+// minimum to stay OUTSIDE, so that margin would leave the healer just inside it. The extra half
+// yard also covers path steps measuring in 3D, while the minimum is checked in 2D.
+inline constexpr float MAGE_TANK_HEALER_STEP_STOP_DISTANCE = MAGE_TANK_HEALER_MIN_DISTANCE + 0.5f;
 // Zerevor casts Arcane Explosion when anyone is within 10 yd, plus both combat reaches (14.65 yd).
 inline constexpr float ZEREVOR_ARCANE_EXPLOSION_SAFE_DISTANCE = 15.0f;
 // Non-tanks closer than the safe distance move away to this distance from Zerevor.
@@ -801,7 +805,6 @@ inline constexpr uint32 ILLIDAN_DEMON_FORM_END_HOLD_MS = 3 * IN_MILLISECONDS;
 // phase 5 while in Demon Form is very bad because he will return to humanoid form without a threat
 // wipe and will proceed to kill the warlock tank and then other ranged from phase 4 threat.
 inline constexpr float ILLIDAN_DEMON_FORM_NO_PUSH_HEALTH_PCT = 33.0f;
-
 inline constexpr float ILLIDAN_AURA_OF_DREAD_HAZARD_RADIUS = 15.0f;
 inline constexpr float ILLIDAN_AURA_OF_DREAD_CLEARANCE =
     ILLIDAN_AURA_OF_DREAD_HAZARD_RADIUS + 2.0f;
@@ -813,7 +816,6 @@ inline constexpr float ILLIDAN_SHADOW_BLAST_CLEARANCE = ILLIDAN_SHADOW_BLAST_HAZ
 inline constexpr float ILLIDAN_SHADOW_DEMON_CHASE_DISTANCE = 10.0f;
 inline constexpr float ILLIDAN_SHADOW_DEMON_GAP_CLOSER_DISTANCE =
     ILLIDAN_AURA_OF_DREAD_CLEARANCE + 3.0f;
-
 // When the Seed of Corruption and/or warlock tank Searing Pain action is active, use Life Tap when
 // below 20% mana and above 50% HP to ensure enough mana to cast the applicable spell.
 inline constexpr float ILLIDAN_LIFE_TAP_MANA_PCT = 20.0f;
@@ -822,7 +824,6 @@ inline constexpr float ILLIDAN_LIFE_TAP_HEALTH_PCT = 75.0f;
 // only 1.5 yd in Demon Form, so a standard 30 yd spell (like Searing Pain) has a 33 yd range.
 inline constexpr float ILLIDAN_WARLOCK_POSITION_DISTANCE = 31.0f;
 inline constexpr float ILLIDAN_WARLOCK_POSITION_ANGLE = 75.0f * static_cast<float>(M_PI) / 180.0f;
-
 // 10s before the end of phase 4, the main tank moves to the pickup position in front of the raid,
 // just outside Aura of Dread and 22.5 yd from the warlock tank, to prepare for the phase 3/5
 // pickup. The move from a melee slot is 23 to 43 yd. There is no Flame Burst possible within the

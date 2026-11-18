@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #ifndef PLAYERBOTS_KARAACTIONCONTEXT_H
 #define PLAYERBOTS_KARAACTIONCONTEXT_H
 
@@ -55,8 +52,7 @@ public:
             &RaidKarazhanActionContext::attumen_the_huntsman_manage_dps_timer;
 
         // Moroes
-        creators["moroes mark target"] =
-            &RaidKarazhanActionContext::moroes_mark_target;
+        creators["moroes mark target"] = &RaidKarazhanActionContext::moroes_mark_target;
 
         // Maiden of Virtue
         creators["maiden of virtue tank position boss"] =
@@ -113,11 +109,11 @@ public:
         creators["shade of aran run away from arcane explosion"] =
             &RaidKarazhanActionContext::shade_of_aran_run_away_from_arcane_explosion;
 
-        creators["shade of aran run out of blizzard"] =
-            &RaidKarazhanActionContext::shade_of_aran_run_out_of_blizzard;
+        creators["shade of aran move behind blizzard"] =
+            &RaidKarazhanActionContext::shade_of_aran_move_behind_blizzard;
 
-        creators["shade of aran stop moving during flame wreath"] =
-            &RaidKarazhanActionContext::shade_of_aran_stop_moving_during_flame_wreath;
+        creators["shade of aran stop moving"] =
+            &RaidKarazhanActionContext::shade_of_aran_stop_moving;
 
         creators["shade of aran mark elemental"] =
             &RaidKarazhanActionContext::shade_of_aran_mark_elemental;
@@ -129,14 +125,14 @@ public:
         creators["netherspite block red beam"] =
             &RaidKarazhanActionContext::netherspite_block_red_beam;
 
-        creators["netherspite block green or blue beam"] =
-            &RaidKarazhanActionContext::netherspite_block_green_or_blue_beam;
+        creators["netherspite block blue or green beam"] =
+            &RaidKarazhanActionContext::netherspite_block_blue_or_green_beam;
 
         creators["netherspite wait to block beam"] =
             &RaidKarazhanActionContext::netherspite_wait_to_block_beam;
 
-        creators["netherspite move between beams"] =
-            &RaidKarazhanActionContext::netherspite_move_between_beams;
+        creators["netherspite move between blue and green beams"] =
+            &RaidKarazhanActionContext::netherspite_move_between_blue_and_green_beams;
 
         creators["netherspite move to banish slot"] =
             &RaidKarazhanActionContext::netherspite_move_to_banish_slot;
@@ -167,14 +163,15 @@ public:
         creators["nightbane tank position boss"] =
             &RaidKarazhanActionContext::nightbane_tank_position_boss;
 
-        creators["nightbane ranged stack and move from charred earth"] =
-            &RaidKarazhanActionContext::nightbane_ranged_stack_and_move_from_charred_earth;
+        creators["nightbane ranged move from charred earth"] =
+            &RaidKarazhanActionContext::nightbane_ranged_move_from_charred_earth;
 
-        creators["nightbane set pet stance"] =
-            &RaidKarazhanActionContext::nightbane_set_pet_stance;
+        creators["nightbane melee move from charred earth"] =
+            &RaidKarazhanActionContext::nightbane_melee_move_from_charred_earth;
 
-        creators["nightbane stop attacking"] =
-            &RaidKarazhanActionContext::nightbane_stop_attacking;
+        creators["nightbane set pet stance"] = &RaidKarazhanActionContext::nightbane_set_pet_stance;
+
+        creators["nightbane stop attacking"] = &RaidKarazhanActionContext::nightbane_stop_attacking;
 
         creators["nightbane select target for hold"] =
             &RaidKarazhanActionContext::nightbane_select_target_for_hold;
@@ -323,13 +320,13 @@ private:
     {
         return new ShadeOfAranRunAwayFromArcaneExplosionAction(botAI);
     }
-    static Action* shade_of_aran_run_out_of_blizzard(PlayerbotAI* botAI)
+    static Action* shade_of_aran_move_behind_blizzard(PlayerbotAI* botAI)
     {
-        return new ShadeOfAranRunOutOfBlizzardAction(botAI);
+        return new ShadeOfAranMoveBehindBlizzardAction(botAI);
     }
-    static Action* shade_of_aran_stop_moving_during_flame_wreath(PlayerbotAI* botAI)
+    static Action* shade_of_aran_stop_moving(PlayerbotAI* botAI)
     {
-        return new ShadeOfAranStopMovingDuringFlameWreathAction(botAI);
+        return new ShadeOfAranStopMovingAction(botAI);
     }
     static Action* shade_of_aran_mark_elemental(PlayerbotAI* botAI)
     {
@@ -345,17 +342,17 @@ private:
     {
         return new NetherspiteBlockRedBeamAction(botAI);
     }
-    static Action* netherspite_block_green_or_blue_beam(PlayerbotAI* botAI)
+    static Action* netherspite_block_blue_or_green_beam(PlayerbotAI* botAI)
     {
-        return new NetherspiteBlockGreenOrBlueBeamAction(botAI);
+        return new NetherspiteBlockBlueOrGreenBeamAction(botAI);
     }
     static Action* netherspite_wait_to_block_beam(PlayerbotAI* botAI)
     {
         return new NetherspiteWaitToBlockBeamAction(botAI);
     }
-    static Action* netherspite_move_between_beams(PlayerbotAI* botAI)
+    static Action* netherspite_move_between_blue_and_green_beams(PlayerbotAI* botAI)
     {
-        return new NetherspiteMoveBetweenBeamsAction(botAI);
+        return new NetherspiteMoveBetweenBlueAndGreenBeamsAction(botAI);
     }
     static Action* netherspite_move_to_banish_slot(PlayerbotAI* botAI)
     {
@@ -397,9 +394,13 @@ private:
     {
         return new NightbaneTankPositionBossAction(botAI);
     }
-    static Action* nightbane_ranged_stack_and_move_from_charred_earth(PlayerbotAI* botAI)
+    static Action* nightbane_ranged_move_from_charred_earth(PlayerbotAI* botAI)
     {
-        return new NightbaneRangedStackAndMoveFromCharredEarthAction(botAI);
+        return new NightbaneRangedMoveFromCharredEarthAction(botAI);
+    }
+    static Action* nightbane_melee_move_from_charred_earth(PlayerbotAI* botAI)
+    {
+        return new NightbaneMeleeMoveFromCharredEarthAction(botAI);
     }
     static Action* nightbane_set_pet_stance(PlayerbotAI* botAI)
     {

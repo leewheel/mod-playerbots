@@ -660,20 +660,20 @@ public:
 
 void AddPlayerbotsSecureLoginScripts();
 void AddPlayerbotsSelfBotAfkScripts();
+void AddSC_Aq40BotScripts();
+void AddSC_BlackTempleBotScripts();
+void AddSC_HyjalBotScripts();
+void AddSC_IcecrownBotScripts();
 void AddSC_MagtheridonBotScripts();
+void AddSC_RubySanctumBotScripts();
 void AddSC_SerpentshrineCavernBotScripts();
 void AddSC_TempestKeepBotScripts();
-void AddSC_HyjalBotScripts();
-void AddSC_BlackTempleBotScripts();
 void AddSC_SunwellBotScripts();
-void AddSC_IcecrownBotScripts();
-void AddSC_RubySanctumBotScripts();
-//By leewheel 2026-08-01 - 太阳之井高地机器人脚本注册声明
-//  根因：AddSC_SunwellPlateauBotScripts 只定义未注册，导致 SWP 全部技能监听失效——
-//  Kalecgos 传送门状态永远为空(bot不进内场无法击杀)、Kil'jaeden 末日决战规避失效、
-//  Felmyst封装/双子点燃/千魂之暗预警和打断辅助全部缺失。
-void AddSC_SunwellPlateauBotScripts();
-//End By leewheel
+// By leewheel 2026-11-18 合并 brighton 8ec3850d3：
+//   上游已把太阳井脚本改名 AddSC_SunwellBotScripts（SWPScripts.cpp:414 定义）并在上方声明/注册，
+//   本核旧的 AddSC_SunwellPlateauBotScripts 已经没有定义，保留会 LNK2019；
+//   AddSC_IcecrownBotScripts / AddSC_RubySanctumBotScripts 上游也已声明，不重复。
+//   下面只留本核自建的 6 个脚本。
 
 //By leewheel 2026-07-06 - 快速组队系统
 void AddSC_FastGroup();
@@ -698,7 +698,6 @@ void AddSC_ForPlayerCommand();
 //By leewheel 2026-07-26 - 组队钓鱼策略
 void AddSC_FishingParty();
 //End By leewheel
-
 void AddSC_randombot_level_mgr();
 
 //By leewheel 2026-09-22 - 特殊机器人「赵与风」（战士，组随机本/团本时 25% 概率被组到，全需求）
@@ -725,16 +724,17 @@ void AddPlayerbotsScripts()
     AddPlayerbotsSelfBotAfkScripts();
     AddPlayerbotsCommandscripts();
     PlayerBotsGuildValidationScript();
+    AddSC_Aq40BotScripts();
+    AddSC_BlackTempleBotScripts();
+    AddSC_HyjalBotScripts();
+    AddSC_IcecrownBotScripts();
     AddSC_MagtheridonBotScripts();
+    AddSC_RubySanctumBotScripts();
     AddSC_SerpentshrineCavernBotScripts();
     AddSC_TempestKeepBotScripts();
-    AddSC_HyjalBotScripts();
-    AddSC_BlackTempleBotScripts();
     AddSC_SunwellBotScripts();
-    AddSC_IcecrownBotScripts();
-    AddSC_RubySanctumBotScripts();
-    //By leewheel 2026-08-18 - 删除重复注册：brighton-the-lab 版本已在上方 (AddSC_SunwellPlateauBotScripts) 正式注册此脚本，此处旧补丁（2026-08-01 曾修复"漏注册"）与之重复，会令 SWP 的 6 个 ListenerScript/BossUpdateScript/TargetTracker 脚本对象被 new 两次并重复注册，导致 Spell 事件回调触发两次
-    //End By leewheel
+    // By leewheel 2026-11-18：上游已注册 Icecrown / RubySanctum / SunwellBot，此处不再重复
+    //   （重复注册会让 ListenerScript 对象被 new 两次、Spell 回调触发两次）。
 
     //By leewheel 2026-07-06 - 快速组队系统
     AddSC_FastGroup();
@@ -755,7 +755,6 @@ void AddPlayerbotsScripts()
     //By leewheel 2026-07-20 - 玩家自用机器人辅助命令
     AddSC_ForPlayerCommand();
     //End By leewheel
-
     AddSC_randombot_level_mgr();
 
     //By leewheel 2026-09-22 - 特殊机器人「赵与风」

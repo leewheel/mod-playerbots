@@ -65,9 +65,6 @@ bool KiljaedenMarkHandOfTheDeceiverAction::Execute(Event /*event*/)
     if (!group)
         return false;
 
-    // The standard FindTargetValue doesn't work here because zone combat isn't set when the Hands
-    // are pulled so individual bots need to take action to get the Hands on their threat lists
-    // for FindTargetValue. This is particularly problematic if the MechanicTracker is a healer.
     std::vector<Unit*> const hands = GetKiljaedenHands(botAI);
     if (hands.empty())
         return false;
@@ -135,72 +132,71 @@ bool KiljaedenControlHandsOfTheDeceiverAction::Execute(Event /*event*/)
 
 bool KiljaedenControlHandsOfTheDeceiverAction::CastStunOnHand(Unit* hand)
 {
-    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
-    auto const castSpell = [&](uint32 spellId)
+    auto const castSpell = [&](auto const& spell)
     {
-        return botAI->CanCastSpell(spellId, hand) && botAI->CastSpell(spellId, hand);
+        return botAI->CanCastSpell(spell, hand) && botAI->CastSpell(spell, hand);
     };
 
-    auto const castSelfAoe = [&](uint32 spellId, float radius)
+    auto const castSelfAoe = [&](auto const& spell, float radius)
     {
-        return bot->GetExactDist(hand) < radius && castSpell(spellId);
+        return bot->GetExactDist(hand) < radius && castSpell(spell);
     };
 
     switch (bot->getClass())
     {
         case CLASS_DRUID:
-            return (botAI->HasStrategy("bear", BOT_STATE_COMBAT) && castSpell(Id(SwpSpells::SPELL_BASH))) ||
+        {
+            // By leewheel 2026-11-18：上游本批只把部分职业的施法 entry 化，剩下的仍是英文名字符串。
+            //   CanCastSpell(string) 走名字→id 查找，本服中文库下会退到基础 rank，而机器人法术书
+            //   只有链顶 rank ⇒ HasSpell 恒 false、静默失效。故全部改回 SwpSpells 枚举的链顶 id。
+            return (botAI->HasStrategy("bear", BOT_STATE_COMBAT) &&
+                    castSpell(Id(SwpSpells::SPELL_BASH))) ||
                 (botAI->HasStrategy("cat", BOT_STATE_COMBAT) &&
                  bot->GetComboPoints() >= 4 && castSpell(Id(SwpSpells::SPELL_MAIM)));
-
+        }
         case CLASS_MAGE:
             return castSpell(Id(SwpSpells::SPELL_DEEP_FREEZE));
-
         case CLASS_PALADIN:
             return castSpell(Id(SwpSpells::SPELL_HAMMER_OF_JUSTICE));
-
         case CLASS_ROGUE:
             return bot->GetComboPoints() >= 4 && castSpell(Id(SwpSpells::SPELL_KIDNEY_SHOT));
-
         case CLASS_WARLOCK:
             return castSpell(Id(SwpSpells::SPELL_SHADOWFURY));
-
         case CLASS_WARRIOR:
+        {
             return castSpell(Id(SwpSpells::SPELL_CONCUSSION_BLOW)) ||
                 castSelfAoe(Id(SwpSpells::SPELL_SHOCKWAVE), SHOCKWAVE_RADIUS);
-
+        }
         default:
+        {
             return bot->getRace() == RACE_TAUREN &&
                 castSelfAoe(Id(SwpSpells::SPELL_WAR_STOMP), SELF_AOE_RACIAL_RADIUS);
+        }
     }
-    // End By leewheel
 }
 
 bool KiljaedenControlHandsOfTheDeceiverAction::CastSilenceOnHand(Unit* hand)
 {
-    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
-    auto const castSpell = [&](uint32 spellId)
+    auto const castSpell = [&](auto const& spell)
     {
-        return botAI->CanCastSpell(spellId, hand) && botAI->CastSpell(spellId, hand);
+        return botAI->CanCastSpell(spell, hand) && botAI->CastSpell(spell, hand);
     };
 
     switch (bot->getClass())
     {
         case CLASS_HUNTER:
             return castSpell(Id(SwpSpells::SPELL_SILENCING_SHOT));
-
         case CLASS_PRIEST:
             return castSpell(Id(SwpSpells::SPELL_SILENCE));
-
         case CLASS_DEATH_KNIGHT:
             return castSpell(Id(SwpSpells::SPELL_STRANGULATE));
-
         default:
+        {
             return bot->getRace() == RACE_BLOODELF &&
                 bot->GetExactDist(hand) < SELF_AOE_RACIAL_RADIUS &&
                 castSpell(Id(SwpSpells::SPELL_ARCANE_TORRENT));
+        }
     }
-    // End By leewheel
 }
 
 bool KiljaedenPositionAndMoveTanksAction::Execute(Event /*event*/)
@@ -239,7 +235,8 @@ bool KiljaedenPositionAndMoveTanksAction::PickUpSinisterReflections(Creature* re
         return Attack(reflection);
 
     float const distance = bot->GetExactDist(reflection);
-    // By leewheel 2026-08-29 技能entry化：lambda改收spellID，调用点全部改用SwpSpells枚举，不再传英文名
+    // By leewheel 2026-11-18：lambda 收 spellId（同 CastStunOnHand 的理由），调用点全部改用
+    //   SwpSpells 枚举的 80 级链顶 rank；上游原写法传英文名字符串，中文库下会落到基础 rank。
     auto const castSpell = [&](uint32 spellId, float reach)
     {
         return distance < reach && botAI->CanCastSpell(spellId, reflection) &&
@@ -249,25 +246,28 @@ bool KiljaedenPositionAndMoveTanksAction::PickUpSinisterReflections(Creature* re
     switch (bot->getClass())
     {
         case CLASS_DEATH_KNIGHT:
+        {
             return castSpell(Id(SwpSpells::SPELL_DEATH_AND_DECAY), RANGED_ABILITY_REACH) ||
                 castSpell(Id(SwpSpells::SPELL_ICY_TOUCH), ICY_TOUCH_REACH);
-
+        }
         case CLASS_DRUID:
+        {
             return castSpell(Id(SwpSpells::SPELL_FERAL_CHARGE_BEAR), CHARGE_REACH) ||
                 castSpell(Id(SwpSpells::SPELL_CHALLENGING_ROAR), TAUNT_SHOUT_RADIUS);
-
+        }
         case CLASS_PALADIN:
+        {
             return castSpell(Id(SwpSpells::SPELL_AVENGERS_SHIELD), RANGED_ABILITY_REACH) ||
                 castSpell(Id(SwpSpells::SPELL_CONSECRATION), CONSECRATION_RADIUS);
-
+        }
         case CLASS_WARRIOR:
+        {
             return castSpell(Id(SwpSpells::SPELL_CHARGE), CHARGE_REACH) ||
                 castSpell(Id(SwpSpells::SPELL_CHALLENGING_SHOUT), TAUNT_SHOUT_RADIUS);
-
+        }
         default:
             return false;
     }
-    // End By leewheel
 }
 
 bool KiljaedenPositionMeleeAndAvoidArmageddonsAction::Execute(Event /*event*/)
@@ -333,7 +333,7 @@ bool KiljaedenPositionMeleeAndAvoidArmageddonsAction::TryAdjustMeleeForArmageddo
     if (!state || state->armageddons.empty())
         return true;
 
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
+    Unit* kiljaeden = GetSwpBoss(bot, SwpBosses::DATA_KILJAEDEN);
     if (!kiljaeden || IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden) ||
         HasKiljaedenDragonAura(bot))
     {
@@ -436,7 +436,7 @@ bool KiljaedenStackForShieldOfTheBlueAction::Execute(Event /*event*/)
 
     if (bot->HasAura(Id(SwpSpells::SPELL_FIRE_BLOOM)))
     {
-        Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
+        Unit* kiljaeden = GetSwpBoss(bot, SwpBosses::DATA_KILJAEDEN);
         if (!kiljaeden)
             return false;
 
@@ -542,7 +542,7 @@ bool KiljaedenUseDragonOrbAction::Execute(Event /*event*/)
 
 bool KiljaedenDragonBuffAndProtectRaidAction::Execute(Event /*event*/)
 {
-    Unit* kiljaeden = AI_VALUE2(Unit*, "find target", "25315");
+    Unit* kiljaeden = GetSwpBoss(bot, SwpBosses::DATA_KILJAEDEN);
     if (!kiljaeden)
         return false;
 
@@ -555,7 +555,8 @@ bool KiljaedenDragonBuffAndProtectRaidAction::Execute(Event /*event*/)
             return false;
 
         bot->RemoveOwnedAura(
-            Id(SwpSpells::SPELL_VENGEANCE_OF_THE_BLUE_FLIGHT), ObjectGuid::Empty, 0, AURA_REMOVE_BY_CANCEL);
+            Id(SwpSpells::SPELL_VENGEANCE_OF_THE_BLUE_FLIGHT),
+            ObjectGuid::Empty, 0, AURA_REMOVE_BY_CANCEL);
 
         return true;
     }
@@ -662,7 +663,6 @@ bool KiljaedenDragonBuffAndProtectRaidAction::ExecuteOutsideDarknessOfAThousandS
         return false;
 
     float const distanceToTarget = dragon->GetExactDist2d(target);
-
     if (distanceToTarget > KILJAEDEN_DRAGON_BREATH_STANDOFF + KILJAEDEN_DRAGON_STANDOFF_TOLERANCE ||
         (distanceToTarget > std::numeric_limits<float>::min() &&
          distanceToTarget < KILJAEDEN_DRAGON_BREATH_STANDOFF - KILJAEDEN_DRAGON_STANDOFF_TOLERANCE))
@@ -679,7 +679,6 @@ bool KiljaedenDragonBuffAndProtectRaidAction::ExecuteOutsideDarknessOfAThousandS
     }
 
     dragon->SetFacingToObject(target);
-
     return CastKiljaedenDragonSpell(dragon, spellId);
 }
 

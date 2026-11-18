@@ -21,6 +21,9 @@ public:
 
         creators["sunwell aura to remove"] = &RaidSwpTriggerContext::sunwell_aura_to_remove;
 
+        creators["sunwell class roles should be assigned"] =
+            &RaidSwpTriggerContext::sunwell_class_roles_should_be_assigned;
+
         // Trash
         creators["volatile fiend self destructs when near"] =
             &RaidSwpTriggerContext::volatile_fiend_self_destructs_when_near;
@@ -52,6 +55,15 @@ public:
 
         creators["kalecgos bots don't observe gravity"] =
             &RaidSwpTriggerContext::kalecgos_bots_dont_observe_gravity;
+
+        creators["kalecgos should manage raid assignments"] =
+            &RaidSwpTriggerContext::kalecgos_should_manage_raid_assignments;
+
+        creators["kalecgos dps hold is active"] =
+            &RaidSwpTriggerContext::kalecgos_dps_hold_is_active;
+
+        creators["kalecgos should manage pet aggression"] =
+            &RaidSwpTriggerContext::kalecgos_should_manage_pet_aggression;
 
         // Brutallus
         creators["brutallus hunter should misdirect"] =
@@ -90,6 +102,11 @@ public:
         creators["felmyst player has gas nova"] =
             &RaidSwpTriggerContext::felmyst_player_has_gas_nova;
 
+        creators["felmyst takeoff is near"] = &RaidSwpTriggerContext::felmyst_takeoff_is_near;
+
+        creators["felmyst air phase has started"] =
+            &RaidSwpTriggerContext::felmyst_air_phase_has_started;
+
         creators["felmyst should avoid demonic vapor trails"] =
             &RaidSwpTriggerContext::felmyst_should_avoid_demonic_vapor_trails;
 
@@ -112,26 +129,26 @@ public:
             &RaidSwpTriggerContext::felmyst_landing_dps_hold_is_active;
 
         // Eredar Twins
-        creators["eredar twins melee is at balcony"] =
-            &RaidSwpTriggerContext::eredar_twins_melee_is_at_balcony;
-
-        creators["eredar twins should announce alythess tank"] =
-            &RaidSwpTriggerContext::eredar_twins_should_announce_alythess_tank;
+        creators["eredar twins should leave balcony"] =
+            &RaidSwpTriggerContext::eredar_twins_should_leave_balcony;
 
         creators["eredar twins hunter should misdirect"] =
             &RaidSwpTriggerContext::eredar_twins_hunter_should_misdirect;
 
-        creators["eredar twins sacrolash requires two tanks"] =
-            &RaidSwpTriggerContext::eredar_twins_sacrolash_requires_two_tanks;
+        creators["eredar twins sacrolash should be tanked"] =
+            &RaidSwpTriggerContext::eredar_twins_sacrolash_should_be_tanked;
 
-        creators["eredar twins alythess casts blaze on tank"] =
-            &RaidSwpTriggerContext::eredar_twins_alythess_casts_blaze_on_tank;
+        creators["eredar twins alythess should be tanked"] =
+            &RaidSwpTriggerContext::eredar_twins_alythess_should_be_tanked;
 
-        creators["eredar twins ranged needs los"] =
-            &RaidSwpTriggerContext::eredar_twins_ranged_needs_los;
+        creators["eredar twins ranged should stack on balcony"] =
+            &RaidSwpTriggerContext::eredar_twins_ranged_should_stack_on_balcony;
 
         creators["eredar twins only alythess remains"] =
             &RaidSwpTriggerContext::eredar_twins_only_alythess_remains;
+
+        creators["eredar twins alythess targets non-tank"] =
+            &RaidSwpTriggerContext::eredar_twins_alythess_targets_non_tank;
 
         creators["eredar twins too many flame touched stacks"] =
             &RaidSwpTriggerContext::eredar_twins_too_many_flame_touched_stacks;
@@ -235,6 +252,10 @@ private:
     {
         return new SunwellNoEncounterInProgressTrigger(botAI);
     }
+    static Trigger* sunwell_class_roles_should_be_assigned(PlayerbotAI* botAI)
+    {
+        return new SunwellClassRolesShouldBeAssignedTrigger(botAI);
+    }
     static Trigger* sunwell_aura_to_remove(PlayerbotAI* botAI)
     {
         return new SunwellAuraToRemoveTrigger(botAI);
@@ -254,7 +275,7 @@ private:
     static Trigger* kalecgos_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new SunwellHunterShouldMisdirectTrigger(
-            botAI, "kalecgos hunter should misdirect", "kalecgos");
+            botAI, "kalecgos hunter should misdirect", SwpHelpers::SwpBosses::DATA_KALECGOS);
     }
     static Trigger* kalecgos_should_communicate_boss_health(PlayerbotAI* botAI)
     {
@@ -284,12 +305,24 @@ private:
     {
         return new KalecgosBotsDontObserveGravityTrigger(botAI);
     }
+    static Trigger* kalecgos_should_manage_raid_assignments(PlayerbotAI* botAI)
+    {
+        return new KalecgosShouldManageRaidAssignmentsTrigger(botAI);
+    }
+    static Trigger* kalecgos_dps_hold_is_active(PlayerbotAI* botAI)
+    {
+        return new KalecgosDpsHoldIsActiveTrigger(botAI);
+    }
+    static Trigger* kalecgos_should_manage_pet_aggression(PlayerbotAI* botAI)
+    {
+        return new KalecgosShouldManagePetAggressionTrigger(botAI);
+    }
 
     // Brutallus
     static Trigger* brutallus_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new SunwellHunterShouldMisdirectTrigger(
-            botAI, "brutallus hunter should misdirect", "brutallus");
+            botAI, "brutallus hunter should misdirect", SwpHelpers::SwpBosses::DATA_BRUTALLUS);
     }
     static Trigger* brutallus_requires_two_tanks(PlayerbotAI* botAI)
     {
@@ -337,6 +370,14 @@ private:
     {
         return new FelmystPlayerHasGasNovaTrigger(botAI);
     }
+    static Trigger* felmyst_takeoff_is_near(PlayerbotAI* botAI)
+    {
+        return new FelmystTakeoffIsNearTrigger(botAI);
+    }
+    static Trigger* felmyst_air_phase_has_started(PlayerbotAI* botAI)
+    {
+        return new FelmystAirPhaseHasStartedTrigger(botAI);
+    }
     static Trigger* felmyst_should_avoid_demonic_vapor_trails(PlayerbotAI* botAI)
     {
         return new FelmystShouldAvoidDemonicVaporTrailsTrigger(botAI);
@@ -367,34 +408,35 @@ private:
     }
 
     // Eredar Twins
-    static Trigger* eredar_twins_melee_is_at_balcony(PlayerbotAI* botAI)
+    static Trigger* eredar_twins_should_leave_balcony(PlayerbotAI* botAI)
     {
-        return new EredarTwinsMeleeIsAtBalconyTrigger(botAI);
-    }
-    static Trigger* eredar_twins_should_announce_alythess_tank(PlayerbotAI* botAI)
-    {
-        return new EredarTwinsShouldAnnounceAlythessTankTrigger(botAI);
+        return new EredarTwinsShouldLeaveBalconyTrigger(botAI);
     }
     static Trigger* eredar_twins_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new SunwellHunterShouldMisdirectTrigger(
-            botAI, "eredar twins hunter should misdirect", "grand warlock alythess");
+            botAI, "eredar twins hunter should misdirect",
+            SwpHelpers::SwpBosses::DATA_EREDAR_TWINS);
     }
-    static Trigger* eredar_twins_sacrolash_requires_two_tanks(PlayerbotAI* botAI)
+    static Trigger* eredar_twins_sacrolash_should_be_tanked(PlayerbotAI* botAI)
     {
-        return new EredarTwinsSacrolashRequiresTwoTanksTrigger(botAI);
+        return new EredarTwinsSacrolashShouldBeTankedTrigger(botAI);
     }
-    static Trigger* eredar_twins_alythess_casts_blaze_on_tank(PlayerbotAI* botAI)
+    static Trigger* eredar_twins_alythess_should_be_tanked(PlayerbotAI* botAI)
     {
-        return new EredarTwinsAlythessCastsBlazeOnTankTrigger(botAI);
+        return new EredarTwinsAlythessShouldBeTankedTrigger(botAI);
     }
-    static Trigger* eredar_twins_ranged_needs_los(PlayerbotAI* botAI)
+    static Trigger* eredar_twins_ranged_should_stack_on_balcony(PlayerbotAI* botAI)
     {
-        return new EredarTwinsRangedNeedsLosTrigger(botAI);
+        return new EredarTwinsRangedShouldStackOnBalconyTrigger(botAI);
     }
     static Trigger* eredar_twins_only_alythess_remains(PlayerbotAI* botAI)
     {
         return new EredarTwinsOnlyAlythessRemainsTrigger(botAI);
+    }
+    static Trigger* eredar_twins_alythess_targets_non_tank(PlayerbotAI* botAI)
+    {
+        return new EredarTwinsAlythessTargetsNonTankTrigger(botAI);
     }
     static Trigger* eredar_twins_too_many_flame_touched_stacks(PlayerbotAI* botAI)
     {

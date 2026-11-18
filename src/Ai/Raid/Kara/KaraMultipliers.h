@@ -4,9 +4,6 @@
  * or (at your option) any later version.
  */
 
-//By leewheel 20260729 同步 brighton-chi/mod-playerbots 最终版本
-//End By leewheel
-
 #ifndef PLAYERBOTS_KARAMULTIPLIERS_H
 #define PLAYERBOTS_KARAMULTIPLIERS_H
 
@@ -38,7 +35,6 @@ public:
 
 protected:
     virtual float GetValueInEncounter(Action* action) = 0;
-
     Unit* GetEncounterBoss()
     {
         return _boss ? KaraHelpers::GetKaraBoss(bot, *_boss) : nullptr;
@@ -66,13 +62,24 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+// For Attumen, Maiden of Virtue, and The Curator.
+class KarazhanDisableCombatFormationMoveMultiplier : public KarazhanEncounterMultiplier
+{
+public:
+    KarazhanDisableCombatFormationMoveMultiplier(
+        PlayerbotAI* botAI, std::string const name, KaraHelpers::KaraBosses boss)
+        : KarazhanEncounterMultiplier(botAI, name, boss) {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 // Trash
 
 class ManaWarpSaveStunsMultiplier : public Multiplier
 {
 public:
-    ManaWarpSaveStunsMultiplier(PlayerbotAI* botAI)
-        : Multiplier(botAI, "mana warp save stuns") {}
+    ManaWarpSaveStunsMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "mana warp save stuns") {}
     float GetValue(Action* action) override;
 };
 
@@ -114,18 +121,6 @@ protected:
 
 // Maiden of Virtue
 
-class MaidenOfVirtueDisableCombatFormationMoveMultiplier : public KarazhanEncounterMultiplier
-{
-public:
-    MaidenOfVirtueDisableCombatFormationMoveMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(
-            botAI, "maiden of virtue disable combat formation move",
-            KaraHelpers::KaraBosses::DATA_MAIDEN) {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
-};
-
 class MaidenOfVirtueKeepGroundingTotemMultiplier : public KarazhanEncounterMultiplier
 {
 public:
@@ -159,18 +154,6 @@ public:
     TheCuratorDisableTankAssistMultiplier(PlayerbotAI* botAI)
         : KarazhanEncounterMultiplier(
             botAI, "the curator disable tank assist", KaraHelpers::KaraBosses::DATA_CURATOR) {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
-};
-
-class TheCuratorDisableCombatFormationMoveMultiplier : public KarazhanEncounterMultiplier
-{
-public:
-    TheCuratorDisableCombatFormationMoveMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(
-            botAI, "the curator disable combat formation move",
-            KaraHelpers::KaraBosses::DATA_CURATOR) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -299,17 +282,6 @@ public:
     NightbaneHoldDpsMultiplier(PlayerbotAI* botAI)
         : KarazhanEncounterMultiplier(
             botAI, "nightbane hold dps", KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
-
-protected:
-    float GetValueInEncounter(Action* action) override;
-};
-
-class NightbaneDisableAvoidAoeMultiplier : public KarazhanEncounterMultiplier
-{
-public:
-    NightbaneDisableAvoidAoeMultiplier(PlayerbotAI* botAI)
-        : KarazhanEncounterMultiplier(
-            botAI, "nightbane disable avoid aoe", KaraHelpers::KaraBosses::DATA_NIGHTBANE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

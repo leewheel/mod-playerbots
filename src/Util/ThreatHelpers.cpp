@@ -212,6 +212,14 @@ constexpr ThreatNameEntry kThreatNameEntries[] = {
     {"bronjahm", 36497},
     {"devourer of souls", 36502},
     {"scourgelord tyrannus", 36658},
+    // By leewheel 2026-11-18 (bug_106 第四次发作)：上游把太阳井整套改成 boss state 后，
+    //   GetSwpBoss() = FindThreatTarget(bot, BossName(boss))，而 BossName(SwpBosses) 返回英文名
+    //   （SWPShared.cpp:30-50）⇒ 中文库下 FindThreatTarget 恒 nullptr ⇒ 整个太阳井
+    //   （卡雷苟斯 / 布鲁塔卢斯 / 菲米丝 / 双子 / 穆鲁 / 基尔加丹）机制全部静默失效。
+    //   卡雷苟斯等四条已在上方 2026-11-08 段登记，这里补漏掉的两条。
+    //   entry 来源核心 sunwell_plateau.h:78 / :85。
+    {"m'uru", 25741},                     // NPC_MURU
+    {"kil'jaeden", 25315},                // NPC_KILJAEDEN
     //End By leewheel
 };
 

@@ -10,7 +10,6 @@
 #include "Playerbots.h"
 #include "SharedDefines.h"
 #include "Spell.h"
-#include "ThreatHelpers.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -31,13 +30,13 @@ bool BlackTempleClassRolesShouldBeAssignedTrigger::IsActive()
 }
 
 // Misdirect immediately after the pull. Used for High Warlord Naj'entus, Supremus, Teron Gorefiend,
-// Gurtogg Bloodboil, Mother Shahraz, and the Illidari Council (on Gathios).
+// Gurtogg Bloodboil, Mother Shahraz, and the Illidari Council.
 bool BlackTempleHunterShouldMisdirectTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* boss = _target ? FindThreatTarget(bot, *_target) : GetEncounterBoss();
+    Unit* boss = GetEncounterBoss();
     return boss && boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
 }
 
@@ -81,15 +80,12 @@ bool ShadowmoonReaverShouldControlCasterPetTrigger::IsActive()
 
 bool HighWarlordNajentusShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsTank(bot) && GetEncounterBoss();
+    return PlayerbotAI::IsTank(bot);
 }
 
 bool HighWarlordNajentusRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
-        return false;
-
-    if (!GetEncounterBoss())
         return false;
 
     return GetNearestPlayerInRadius(bot, NAJENTUS_RANGED_SPREAD_DISTANCE);
@@ -98,9 +94,6 @@ bool HighWarlordNajentusRangedShouldSpreadTrigger::IsActiveInEncounter()
 bool HighWarlordNajentusImpaledPlayerNeedsRemoverTrigger::IsActiveInEncounter()
 {
     if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
-        return false;
-
-    if (!GetEncounterBoss())
         return false;
 
     return FindNajentusUnassignedImpaledPlayer(bot);
@@ -114,9 +107,6 @@ bool HighWarlordNajentusImpalingSpineOnGroupMemberTrigger::IsActiveInEncounter()
 bool HighWarlordNajentusNeedsSpineThrowerTrigger::IsActiveInEncounter()
 {
     if (!IsMechanicTrackerBot(bot, BT_MAP_ID))
-        return false;
-
-    if (!GetEncounterBoss())
         return false;
 
     return !GetNajentusSpineThrower(bot);
@@ -187,9 +177,6 @@ bool SupremusFixatedOnBotTrigger::IsActiveInEncounter()
 
 bool SupremusNearFireTrigger::IsActiveInEncounter()
 {
-    if (!GetEncounterBoss())
-        return false;
-
     if (bot->isMoving() && CanMoveThroughSupremusFire(bot))
         return false;
 
@@ -200,9 +187,6 @@ bool SupremusNearFireTrigger::IsActiveInEncounter()
 
 bool SupremusReachBlockedByFireTrigger::IsActiveInEncounter()
 {
-    if (!GetEncounterBoss())
-        return false;
-
     return GetSupremusFireBlockedReachTarget(botAI);
 }
 
@@ -224,12 +208,12 @@ bool ShadeOfAkamaShouldAttackChannelersAndSorcerersTrigger::IsActiveInEncounter(
 
 bool TeronGorefiendShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsTank(bot) && GetEncounterBoss();
+    return PlayerbotAI::IsTank(bot);
 }
 
 bool TeronGorefiendRangedShouldPositionOnBalconyTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsRanged(bot) && GetEncounterBoss();
+    return PlayerbotAI::IsRanged(bot);
 }
 
 // Feign Death and Vanish cancel the Shadow of Death cast. It is Blizzlike for Ice Block and Divine
@@ -405,9 +389,6 @@ bool MotherShahrazShouldBeTankedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!GetEncounterBoss())
-        return false;
-
     return !bot->HasAura(Id(BtSpells::SPELL_FATAL_ATTRACTION));
 }
 
@@ -422,9 +403,6 @@ bool MotherShahrazBeingPositionedTrigger::IsActiveInEncounter()
 bool MotherShahrazRangedShouldPositionUnderStatueTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
-        return false;
-
-    if (!GetEncounterBoss())
         return false;
 
     return !bot->HasAura(Id(BtSpells::SPELL_FATAL_ATTRACTION));
@@ -868,10 +846,7 @@ bool IllidanStormrageImmunityNoLongerNeededTrigger::IsActiveInEncounter()
     // Below half health is a proxy for a scenario in which the immunity is keeping the bot from
     // dying, so do not remove it.
     constexpr float keepImmunityHealthPct = 50.0f;
-    if (bot->GetHealthPct() <= keepImmunityHealthPct)
-        return false;
-
-    return GetEncounterBoss();
+    return bot->GetHealthPct() > keepImmunityHealthPct;
 }
 
 bool IllidanStormrageShamanHasTotemsBeforeTanksHaveAggroTrigger::IsActiveInEncounter()
@@ -1041,8 +1016,7 @@ bool IllidanStormrageShouldAssignTargetPriorityTrigger::IsActiveInEncounter()
 // illidan 英文名回退为 entry 22917，无本核独有逻辑，删除不损失本核功能。
 bool IllidanStormrageShouldManageDpsTimersTrigger::IsActiveInEncounter()
 {
-    return IsMechanicTrackerBot(bot, BT_MAP_ID) &&
-        GetEncounterBoss();
+    return IsMechanicTrackerBot(bot, BT_MAP_ID);
 }
 
 // Destroying hazards after phase 2 is not gated behind CheatMask. The strategy simply cannot work
