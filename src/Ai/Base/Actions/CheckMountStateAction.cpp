@@ -13,6 +13,7 @@
 #include "DBCStores.h"
 #include "Event.h"
 #include "ItemCountValue.h"
+#include "LootObjectStack.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotSpellRepository.h"
@@ -165,6 +166,30 @@ bool CheckMountStateAction::isUseful()
     // If they are already mounted (manually), allow dismount logic to proceed.
     if (IsSelfBot(bot) && !bot->IsMounted())
         return false;
+
+    // By leewheel 2026-11-18 (bug_129)：采集/拾取进行中一律不上马。
+    //   起因（玩家反馈「草药/矿石/箱子 机器人还是在刷新点不停的上下马，无法完成拾取」）：
+    //   OpenLootAction::DoLoot 为了采集先下马，然后 return false；引擎 DoNextAction 在
+    //   动作返回 false 时**不会 break**，会继续按优先级往下跑同一 tick 的后续动作，
+    //   而 check mount state 的优先级只有 1.0（NonCombatStrategy 挂在 timer 触发器上），
+    //   必定在这一次 fall-through 里被执行 ⇒ 同一 tick 内「刚下马就又上马」。
+    //   下一 tick 同样先 open loot（8.0）→ 又下马 → 又 fall-through 上马……
+    //   机器人永远走不到 DoLoot 里真正的那一步采集施法，表现就是原地反复上下马。
+    //   判据用现成的 "can loot"（= loot 目标非空 + 可尝试 + 已到交互距离 + 确实能开），
+    //   它自带 100ms 缓存，代价可忽略；一旦离开交互距离或节点被写掉就自动放行上马，
+    //   长距离移动依旧骑马，不影响漫游速度。
+    //   ⛔ 不要改成"只要 loot 目标非空就不上马"：DoGather 状态会全程挂着远处节点，
+    //      那样机器人只能一路步行，属于修 A 破 B。
+    //   ⛔ 也不要放宽到尸体：尸体走的 DoLoot 分支是「发 CMSG_LOOT 后 return true」，
+    //      不会 fall-through，本来就不会抖；只管 GameObject（草药/矿石/箱子），
+    //      把改动面压到最小。
+    if (AI_VALUE(bool, "can loot"))
+    {
+        LootObject lootTarget = AI_VALUE(LootObject, "loot target");
+        if (!lootTarget.IsEmpty() && lootTarget.guid.IsGameObject())
+            return false;
+    }
+    // End By leewheel
 
     master = GetMaster();
 

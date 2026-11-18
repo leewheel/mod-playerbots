@@ -4675,6 +4675,39 @@ bool PlayerbotAI::IsInterruptableSpellCasting(Unit* target, std::string const sp
     if (!spellid || !target->IsNonMeleeSpellCast(true))
         return false;
 
+    // By leewheel 2026-11-18 (bug_132)
+    // 目标正在施放「复活 / 唤醒」类法术时，机器人一律不去打断。
+    // 起因：血色大教堂怀特迈恩用 Scarlet Resurrection(9232) 唤醒莫格莱尼，机器人按"见读条就踢"
+    //   把它打断，莫格莱尼永不复活，DATA_MOGRAINE 不推进 ⇒ 副本卡死（玩家反馈"卡本"）。
+    // 判定按**效果类型**走，不逐个副本加黑名单：
+    //   SPELL_EFFECT_RESURRECT(18) / SPELL_EFFECT_SELF_RESURRECT(94) / SPELL_EFFECT_RESURRECT_NEW(113)
+    //   这类法术本身对团队没有威胁，打断只会把脚本推进死状态。
+    // 另外显式列出脚本关键法术 9232（Scarlet Resurrection）与 9256（Deep Sleep），
+    //   它们由 SmartAI 施放、效果位不一定落在上面三类里，但从战斗语义上同样不能被踢。
+    {
+        Spell* targetCast = target->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+        SpellInfo const* targetInfo = targetCast ? targetCast->GetSpellInfo() : nullptr;
+        if (targetInfo)
+        {
+            if (targetInfo->Id == 9232 || targetInfo->Id == 9256)
+                return false;
+
+            for (uint8 i = EFFECT_0; i <= EFFECT_2; ++i)
+            {
+                switch (targetInfo->Effects[i].Effect)
+                {
+                    case SPELL_EFFECT_RESURRECT:
+                    case SPELL_EFFECT_SELF_RESURRECT:
+                    case SPELL_EFFECT_RESURRECT_NEW:
+                        return false;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+    // End By leewheel
+
     // By leewheel 2026-09-01
     // 卡条窗口判定（移植 NPCBots bot_ai.cpp:16617-16631）：只在目标读条剩余 ≤ 800ms 时才确认打断，
     // 保证打断落在读条末段（等效真人卡条），避免目标刚起手就交打断被假读条骗掉。
