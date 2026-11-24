@@ -29,6 +29,16 @@ static constexpr uint32 AutoTankMarkCcAbsoluteTimeoutMs = 45000;
 // 我方没有 route 表，缩小到 25 码，只收紧贴首领的那几只侍从/ADD，避免跨包误标。
 static constexpr float AutoTankMarkCcSearchRange = 25.0f;
 
+// By leewheel 2026-11-24 (bug_138)：允许上控场标记的最少交战敌人数。
+//   玩家反馈（bug_138）：只有一两只怪的小包也照样被标记月亮，术士跟着放逐，
+//   而被放逐的目标免疫全部伤害（Spell.dbc：710/18647 = MOD_STUN + SCHOOL_IMMUNITY misc=127），
+//   等于把一包 1-2 只的怪硬生生拖成两倍时间；即使不上放逐，月亮也会让普通 DPS 主动避开它
+//   （FindNonCcTargetStrategy），同样是白等。
+//   判据：控场的意义是"减少同时承伤"，只有当这一包真有三只以上同时压上来才成立。
+//   ⛔ 不要用 "possible targets" 计数：那个列表按距离粗筛，会把这波之外的怪也算进来，
+//      在副本里恒大于 3，等于没有门槛。必须用 "attackers"（真正在打我们的）。
+static constexpr uint32 AutoTankMarkMinHostilesForCc = 3;
+
 // By leewheel 2026-09-22: 目标的"威胁等级"分级。
 //   参考 mod-playerbots-dungeon-lead 的 FindBossNear 只认 boss 的思路扩展而来：
 //   3 = 副本首领 / 世界首领，2 = 精英（含稀有精英），1 = 稀有，0 = 普通怪。
@@ -276,6 +286,22 @@ static Unit* SelectCcTarget(PlayerbotAI* botAI, Group* group, Unit* skull)
     };
 
     GuidVector const attackers = botAI->GetAiObjectContext()->GetValue<GuidVector>("attackers")->Get();
+
+    // By leewheel 2026-11-24 (bug_138)：这一包怪不够多就不上控场标记（判据见常量处注释）。
+    //   放在挑选之前直接返回 nullptr，等价于"这一 tick 不标月亮"，
+    //   已经标上的月亮由 CheckCcMarkAction 依原有生命周期（超时/目标死亡）正常释放。
+    uint32 engagedHostiles = 0;
+    for (ObjectGuid const guid : attackers)
+    {
+        Unit* attacker = botAI->GetUnit(guid);
+        if (attacker && attacker->IsAlive())
+            ++engagedHostiles;
+    }
+
+    if (engagedHostiles < AutoTankMarkMinHostilesForCc)
+        return nullptr;
+    // End By leewheel
+
     Unit* best = nullptr;
     pickBest(attackers, true, best);
     if (best)

@@ -160,6 +160,19 @@ public:
 };
 // End By leewheel
 
+// By leewheel 2026-11-24 (bug_138)：只要被放逐的目标正在被队友打，放逐就是纯拖时间，
+//   必须立刻解除（老大明确定的兜底规则）。触发器与解除动作共用同一个判定。
+bool IsGroupAttackingBanishedTarget(Player* bot, Unit* target);
+
+class BanishAttackedTrigger : public Trigger
+{
+public:
+    BanishAttackedTrigger(PlayerbotAI* botAI) : Trigger(botAI, "banish target attacked") {}
+    bool IsActive() override;
+};
+// End By leewheel
+
+
 class FearTrigger : public RtiCcTrigger
 {
 public:

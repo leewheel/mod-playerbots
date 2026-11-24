@@ -185,6 +185,15 @@ public:
 };
 // End By leewheel
 
+// By leewheel 2026-11-24 (bug_138) 队友正在打的被放逐目标 ⇒ 立刻解除放逐（老大定的兜底规则）。
+class CancelBanishOnAttackedAction : public Action
+{
+public:
+    CancelBanishOnAttackedAction(PlayerbotAI* botAI) : Action(botAI, "cancel banish on attacked") {}
+    bool Execute(Event event) override;
+};
+// End By leewheel
+
 class CastFearOnCcAction : public CastCrowdControlSpellAction
 {
 public:

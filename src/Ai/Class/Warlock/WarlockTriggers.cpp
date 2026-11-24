@@ -7,10 +7,13 @@
 #include "WarlockTriggers.h"
 #include "AiObjectContext.h"
 #include "GenericTriggers.h"
+#include "Group.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
+#include "RtiTargetValue.h"
+#include "Spell.h"
 #include "TargetValue.h"
 
 static const uint32 SOUL_SHARD_ITEM_ID = 6265;
@@ -289,6 +292,31 @@ bool BanishTrigger::IsActive()
     if (aliveCount <= 1)
         return false;
 
+    // By leewheel 2026-11-24 (bug_138)：交战敌人不足 3 只时不放逐。
+    //   玩家反馈（bug_138）：术士"不会判断情况，瞎放逐"，一两只怪的普通小包也照放，
+    //   而被放逐的目标免疫全部伤害 ⇒ 这一包要打两倍时间。
+    //   判据与主坦克标月亮的门槛一致（AutoTankMarkActions.cpp 的 AutoTankMarkMinHostilesForCc），
+    //   但这里独立判一次：玩家手动标月亮时也要受同一个门槛约束。
+    //   ⛔ 必须用 "attackers"（真正在打我们的）而不是 "possible targets"（按距离粗筛，
+    //      会把这一波之外的怪算进来，副本里恒 > 3，等于没门槛）。
+    //   ★ 团队副本例外：团队本里月亮通常是副本策略/带队模块**特意**标的那只（如"SSC 控一只"
+    //     "BT 血沸控一只"），此时放逐是机制要求而不是瞎放，故维持原来的"只排除最后一只"。
+    Group* group = bot->GetGroup();
+    bool const isRaidGroup = group && group->isRaidGroup();
+
+    uint32 engagedHostiles = 0;
+    GuidVector const attackers = AI_VALUE(GuidVector, "attackers");
+    for (ObjectGuid const guid : attackers)
+    {
+        Unit* attacker = botAI->GetUnit(guid);
+        if (attacker && attacker->IsAlive())
+            ++engagedHostiles;
+    }
+
+    if (!isRaidGroup && engagedHostiles < 3)
+        return false;
+    // End By leewheel
+
     return RtiCcTrigger::IsActive();
 }
 
@@ -312,5 +340,99 @@ bool BanishLastEnemyTrigger::IsActive()
         return false;
 
     return true;
+}
+// End By leewheel
+
+// By leewheel 2026-11-24 (bug_138)：老大定的兜底规则 ——
+//   「当团队或者队伍攻击的目标为放逐状态，该目标自动解除放逐状态」。
+//   理由：放逐（710/18647）的效果是 MOD_STUN + SCHOOL_IMMUNITY misc=127，
+//   被放逐的目标免疫一切伤害。只要队友正在打它，放逐就纯粹是在拖时间。
+//   判定四条任一成立即算"正在打"：
+//     1) 团队骷髅图标指向它（= 全队集火目标）；
+//     2) 队伍中某个成员的当前近战目标就是它（GetVictim）；
+//     3) 某个成员最近一次造成伤害的目标就是它（GetLastDamagedTargetGuid，覆盖远程/瞬发）；
+//     4) 某个成员正在对它读条/引导（当前法术的目标就是它）。
+//   ⛔ 绝对不要用威胁列表（GetThreatMgr().IsThreatenedBy / GetThreatList）来判：
+//      坦克对这只怪从头到尾都挂着仇恨，用威胁判会让**每一次**放逐在下一 tick 被立刻解除，
+//      放逐等于被彻底废掉。威胁 ≠ 正在攻击，这里要的是"真的在打"。
+//   ⛔ 也不要只看 bot 自己：放逐往往是 A 术士放的、B 队友在打，只看自己会漏。
+static bool IsUnitBeingAttackedByMember(Player* member, Unit* target)
+{
+    if (!member || !target || !member->IsInWorld())
+        return false;
+
+    // 近战：当前攻击目标就是它
+    if (member->GetVictim() == target)
+        return true;
+
+    // 远程/瞬发：最近一次造成伤害的目标就是它
+    if (member->GetLastDamagedTargetGuid() == target->GetGUID())
+        return true;
+
+    // 读条 / 引导：当前法术的目标就是它
+    for (CurrentSpellTypes const type : { CURRENT_GENERIC_SPELL, CURRENT_CHANNELED_SPELL })
+    {
+        if (Spell* spell = member->GetCurrentSpell(type))
+        {
+            if (spell->m_targets.GetUnitTarget() == target)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+bool IsGroupAttackingBanishedTarget(Player* bot, Unit* target)
+{
+    if (!bot || !target)
+        return false;
+
+    Group* group = bot->GetGroup();
+    if (!group)
+    {
+        // 无队伍（单刷/跟随）时只看自己
+        return IsUnitBeingAttackedByMember(bot, target);
+    }
+
+    if (group->GetTargetIcon(RtiTargetValue::skullIndex) == target->GetGUID())
+        return true;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        if (IsUnitBeingAttackedByMember(ref->GetSource(), target))
+            return true;
+    }
+
+    return false;
+}
+
+bool BanishAttackedTrigger::IsActive()
+{
+    Player* bot = botAI->GetBot();
+    if (!bot || bot->getClass() != CLASS_WARLOCK)
+        return false;
+
+    if (!bot->IsInCombat())
+        return false;
+
+    // 只有学过放逐的术士才去解除（会这个法术才知道怎么解）
+    if (!bot->HasSpell(710) && !bot->HasSpell(18647))
+        return false;
+
+    GuidVector const targets = AI_VALUE(GuidVector, "possible targets");
+    for (ObjectGuid const guid : targets)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        if (!unit->HasAura(710) && !unit->HasAura(18647))
+            continue;
+
+        if (IsGroupAttackingBanishedTarget(bot, unit))
+            return true;
+    }
+
+    return false;
 }
 // End By leewheel

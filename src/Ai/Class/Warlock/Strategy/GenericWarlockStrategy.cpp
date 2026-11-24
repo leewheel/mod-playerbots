@@ -128,6 +128,18 @@ void WarlockCcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         )
     );
 // End By leewheel
+// By leewheel 2026-11-24 (bug_138)：队友正在打的被放逐目标立刻解除（老大定的兜底）。
+//   优先级 39：低于"只剩最后一只"的收尾(40)、高于下面的 banish(33)，
+//   这样同一轮里先解掉不该有的放逐，不会出现"刚解除又补放"。
+    triggers.push_back(
+        new TriggerNode(
+            "banish target attacked",
+            {
+                NextAction("cancel banish on attacked", 39.0f)
+            }
+        )
+    );
+// End By leewheel
     triggers.push_back(
         new TriggerNode(
             "banish",

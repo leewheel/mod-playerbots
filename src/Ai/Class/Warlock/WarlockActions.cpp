@@ -15,6 +15,9 @@
 #include "ServerFacade.h"
 #include "Timer.h"
 #include "Unit.h"
+// By leewheel 2026-11-24 (bug_138)：解除放逐动作要用触发侧那个"队友正在打它"的统一判定
+#include "WarlockTriggers.h"
+// End By leewheel
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -95,6 +98,40 @@ bool CancelBanishAction::Execute(Event /*event*/)
     if (banished->HasAura(18647))
         banished->RemoveAurasDueToSpell(18647);
     return true;
+}
+// End By leewheel
+
+// By leewheel 2026-11-24 (bug_138)：老大定的兜底 —— 队友正在打的被放逐目标，立刻解除放逐。
+//   与 "cancel banish"（只在剩最后一只时解）互补：那个收尾，这个防拖时间。
+//   判定复用 WarlockTriggers.cpp 的 IsGroupAttackingBanishedTarget()，保证触发与执行口径一致。
+bool CancelBanishOnAttackedAction::Execute(Event /*event*/)
+{
+    Player* bot = botAI->GetBot();
+    if (!bot)
+        return false;
+
+    GuidVector const targets = AI_VALUE(GuidVector, "possible targets");
+    for (ObjectGuid const guid : targets)
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        if (!unit->HasAura(710) && !unit->HasAura(18647))
+            continue;
+
+        if (!IsGroupAttackingBanishedTarget(bot, unit))
+            continue;
+
+        if (unit->HasAura(710))
+            unit->RemoveAurasDueToSpell(710);
+        if (unit->HasAura(18647))
+            unit->RemoveAurasDueToSpell(18647);
+
+        return true;
+    }
+
+    return false;
 }
 // End By leewheel
 

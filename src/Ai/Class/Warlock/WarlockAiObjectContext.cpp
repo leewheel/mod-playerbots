@@ -158,6 +158,9 @@ public:
 // By leewheel 20261013 只剩一个被放逐的敌人时需要立即解除放逐
         creators["banish last enemy"] = &WarlockTriggerFactoryInternal::banish_last_enemy;
 // End By leewheel
+// By leewheel 2026-11-24 (bug_138) 队友正在打的被放逐目标 ⇒ 立即解除放逐
+        creators["banish target attacked"] = &WarlockTriggerFactoryInternal::banish_target_attacked;
+// End By leewheel
         creators["fear"] = &WarlockTriggerFactoryInternal::fear;
         creators["spell lock"] = &WarlockTriggerFactoryInternal::spell_lock;
         creators["devour magic purge"] = &WarlockTriggerFactoryInternal::devour_magic_purge;
@@ -210,6 +213,9 @@ private:
     static Trigger* banish(PlayerbotAI* botAI) { return new BanishTrigger(botAI); }
 // By leewheel 20261013 只剩一个被放逐的敌人时需要立即解除放逐
     static Trigger* banish_last_enemy(PlayerbotAI* botAI) { return new BanishLastEnemyTrigger(botAI); }
+// End By leewheel
+// By leewheel 2026-11-24 (bug_138) 队友正在打的被放逐目标 ⇒ 立即解除放逐
+    static Trigger* banish_target_attacked(PlayerbotAI* botAI) { return new BanishAttackedTrigger(botAI); }
 // End By leewheel
     static Trigger* fear(PlayerbotAI* botAI) { return new FearTrigger(botAI); }
     static Trigger* spell_lock(PlayerbotAI* botAI) { return new SpellLockInterruptSpellTrigger(botAI); }
@@ -281,6 +287,9 @@ public:
         creators["banish on cc"] = &WarlockAiObjectContextInternal::banish_on_cc;
 // By leewheel 20261013 解除放逐动作
         creators["cancel banish"] = &WarlockAiObjectContextInternal::cancel_banish;
+// End By leewheel
+// By leewheel 2026-11-24 (bug_138) 解除"队友正在打"的被放逐目标
+        creators["cancel banish on attacked"] = &WarlockAiObjectContextInternal::cancel_banish_on_attacked;
 // End By leewheel
         creators["fear on cc"] = &WarlockAiObjectContextInternal::fear_on_cc;
         creators["spell lock"] = &WarlockAiObjectContextInternal::spell_lock;
@@ -357,6 +366,9 @@ private:
     static Action* banish_on_cc(PlayerbotAI* botAI) { return new CastBanishOnCcAction(botAI); }
 // By leewheel 20261013 解除放逐动作
     static Action* cancel_banish(PlayerbotAI* botAI) { return new CancelBanishAction(botAI); }
+// End By leewheel
+// By leewheel 2026-11-24 (bug_138) 解除"队友正在打"的被放逐目标
+    static Action* cancel_banish_on_attacked(PlayerbotAI* botAI) { return new CancelBanishOnAttackedAction(botAI); }
 // End By leewheel
     static Action* fear_on_cc(PlayerbotAI* botAI) { return new CastFearOnCcAction(botAI); }
     static Action* spell_lock(PlayerbotAI* botAI) { return new CastSpellLockAction(botAI); }
