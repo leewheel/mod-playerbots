@@ -5,14 +5,22 @@
  */
 
 #include "SWPEncounter_KJ.h"
+#include "EncounterHelpers.h"
 #include "PlayerbotAI.h"
+#include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "SWPInstanceState.h"
 #include "SWPShared.h"
+#include "Spell.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <list>
+#include <map>
+#include <string>
+
+using namespace EncounterHelpers;
 
 namespace SwpHelpers
 {
@@ -47,18 +55,7 @@ bool HasAuraFromDragon(Player* member, uint32 spellId)
     return auraSpellId && member && member->HasAura(auraSpellId);
 }
 
-float GetRangedSlotAngle(uint8 slotIndex)
-{
-    Position position;
-    if (!TryGetKiljaedenRangedSlotPosition(slotIndex, position))
-        return 0.0f;
-
-    return Position::NormalizeOrientation(std::atan2(
-        position.GetPositionY() - SUNWELL_CENTER_POSITION.GetPositionY(),
-        position.GetPositionX() - SUNWELL_CENTER_POSITION.GetPositionX()));
-}
-
-bool IsRangedSlotSafeFromArmageddons(
+bool IsOutsideArmageddons(
     Position const& position, std::vector<KiljaedenArmageddon> const& armageddons)
 {
     for (KiljaedenArmageddon const& armageddon : armageddons)
@@ -94,40 +91,128 @@ bool ShouldRebuildKiljaedenAssignments(uint32& lastRebuildMs, uint32 intervalMs)
     return true;
 }
 
-} // end anonymous namespace
-
-GuidVector FindKiljaedenHandGuids(Player* bot)
+// A point on the ring round Kil'jaeden to aim for when the straight line to the destination would
+// pass through his Knockback: a little past the bot's tangent to the ring, on the side nearer the
+// destination.
+bool TryGetKiljaedenDetourPoint(Player* bot, Position const& destination, Position& detourPoint)
 {
-    GuidVector guids;
+    if (!IsLineThroughKiljaedenKnockback(*bot, destination))
+        return false;
 
-    std::list<Creature*> creatures;
-    bot->GetCreatureListWithEntryInGrid(
-        creatures, Id(SwpNpcs::NPC_HAND_OF_THE_DECEIVER), HAND_SEARCH_RADIUS);
+    Position const& center = SUNWELL_CENTER_POSITION;
+    float const radius = KILJAEDEN_KNOCKBACK_CLEARANCE;
+    float const botDistance = std::max(bot->GetExactDist2d(center), radius);
+    float const botAngle = center.GetAngle(bot);
+    float const arc = Position::NormalizeOrientation(center.GetAngle(&destination) - botAngle);
+    float const turn = arc <= static_cast<float>(M_PI) ? 1.0f : -1.0f;
+    float const angle =
+        botAngle + turn * (std::acos(radius / botDistance) + KILJAEDEN_ROUTE_LEAD_ANGLE);
 
-    for (Creature* creature : creatures)
+    detourPoint = Position(
+        center.GetPositionX() + std::cos(angle) * radius,
+        center.GetPositionY() + std::sin(angle) * radius, bot->GetPositionZ());
+    return true;
+}
+
+bool SayKiljaedenDragonOrbUser(PlayerbotAI* botAI, ClassRoleChoice const& choice, bool isHandover)
+{
+    std::string text;
+    if (choice.guid.IsEmpty())
     {
-        if (creature && creature->IsAlive() && creature->IsInCombat())
-            guids.push_back(creature->GetGUID());
+        text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "kiljaeden_no_designated_dragon_orb_user",
+            "No bot has an assistant flag, and therefore a player must control the dragons. If you "
+            "would like a bot to control the dragons, please set the assistant flag for a bot.",
+            {});
+    }
+    else
+    {
+        Player* orbUser = ObjectAccessor::GetPlayer(*botAI->GetBot(), choice.guid);
+        if (!orbUser)
+            return false;
+
+        std::map<std::string, std::string> placeholders = { { "%bot", orbUser->GetName() } };
+        if (isHandover)
+        {
+            text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "kiljaeden_dragon_orb_user_handover", "%bot takes over as the dragon orb user.",
+                placeholders);
+        }
+        else
+        {
+            text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                "kiljaeden_designated_dragon_orb_user",
+                "%bot is the first assistant bot and the designated dragon orb user. If you would "
+                "like only players to control dragons, please remove assistant flags from all "
+                "bots.",
+                placeholders);
+        }
     }
 
-    std::sort(guids.begin(), guids.end());
+    return botAI->SayToRaid(text);
+}
 
+} // end anonymous namespace
+
+GuidVector FindKiljaedenAddGuids(Player* bot)
+{
+    GuidVector guids = FindCreatureGuidsAround(
+        bot, SUNWELL_CENTER_POSITION, KILJAEDEN_ADD_SEARCH_RADIUS,
+        { Id(SwpNpcs::NPC_HAND_OF_THE_DECEIVER), Id(SwpNpcs::NPC_SINISTER_REFLECTION) });
+    std::sort(guids.begin(), guids.end());
     return guids;
 }
+
+namespace
+{
+
+GuidVector const& GetKiljaedenAdds(Player* bot)
+{
+    return GetInstanceCreatureList(
+        SwpState(bot->GetInstanceId()).kiljaedenAdds, KILJAEDEN_ADD_CACHE_INTERVAL_MS, bot,
+        FindKiljaedenAddGuids);
+}
+
+} // end anonymous namespace
 
 std::vector<Unit*> GetKiljaedenHands(PlayerbotAI* botAI)
 {
     std::vector<Unit*> hands;
-
-    for (auto const& guid :
-         botAI->GetAiObjectContext()->GetValue<GuidVector>("kiljaeden hands")->RefGet())
+    for (ObjectGuid const& guid : GetKiljaedenAdds(botAI->GetBot()))
     {
+        if (guid.GetEntry() != Id(SwpNpcs::NPC_HAND_OF_THE_DECEIVER))
+            continue;
+
         Unit* hand = botAI->GetUnit(guid);
         if (hand && hand->IsAlive())
             hands.push_back(hand);
     }
 
     return hands;
+}
+
+Creature* GetNearestSinisterReflection(Player* bot)
+{
+    Creature* nearest = nullptr;
+    float nearestDistance = std::numeric_limits<float>::max();
+    for (ObjectGuid const& guid : GetKiljaedenAdds(bot))
+    {
+        if (guid.GetEntry() != Id(SwpNpcs::NPC_SINISTER_REFLECTION))
+            continue;
+
+        Creature* reflection = ObjectAccessor::GetCreature(*bot, guid);
+        if (!reflection || !reflection->IsAlive())
+            continue;
+
+        float const distance = bot->GetDistance(reflection);
+        if (distance < nearestDistance)
+        {
+            nearestDistance = distance;
+            nearest = reflection;
+        }
+    }
+
+    return nearest;
 }
 
 bool IsKiljaedenHandControlClaimed(Unit* hand)
@@ -169,31 +254,11 @@ void AddKiljaedenArmageddon(
     KiljaedenState(instanceId).armageddons.push_back(armageddon);
 }
 
-bool TryGetKiljaedenNearestArmageddon(Player* bot, KiljaedenArmageddon& armageddon)
+// Callers prune expired Armageddons first (PruneExpiredKiljaedenArmageddons).
+bool IsOutsideKiljaedenArmageddons(uint32 instanceId, Position const& position)
 {
-    PruneExpiredKiljaedenArmageddons(bot->GetInstanceId());
-    KiljaedenEncounterState const* state = FindKiljaedenState(bot->GetInstanceId());
-    if (!state)
-        return false;
-
-    bool foundArmageddon = false;
-    float bestDistance = std::numeric_limits<float>::max();
-
-    for (KiljaedenArmageddon const& candidate : state->armageddons)
-    {
-        float const distance = bot->GetExactDist2d(candidate.destination);
-        if (distance >= candidate.safeDistance)
-            continue;
-
-        if (distance < bestDistance)
-        {
-            armageddon = candidate;
-            bestDistance = distance;
-            foundArmageddon = true;
-        }
-    }
-
-    return foundArmageddon;
+    KiljaedenEncounterState const* state = FindKiljaedenState(instanceId);
+    return !state || IsOutsideArmageddons(position, state->armageddons);
 }
 
 void PruneExpiredKiljaedenArmageddons(uint32 instanceId)
@@ -215,29 +280,7 @@ bool TryGetKiljaedenRangedSlotPosition(uint8 slotIndex, Position& position)
     if (slotIndex >= KILJAEDEN_TOTAL_RANGED_SLOT_COUNT)
         return false;
 
-    float radius = KILJAEDEN_OUTER_RANGED_RADIUS;
-    uint8 localSlotIndex = slotIndex;
-    uint8 slotCount = KILJAEDEN_OUTER_RANGED_SLOT_COUNT;
-
-    if (slotIndex < KILJAEDEN_INNER_RANGED_SLOT_COUNT)
-    {
-        radius = KILJAEDEN_INNER_RANGED_RADIUS;
-        slotCount = KILJAEDEN_INNER_RANGED_SLOT_COUNT;
-    }
-    else
-    {
-        localSlotIndex -= KILJAEDEN_INNER_RANGED_SLOT_COUNT;
-    }
-
-    float const angleOffset = GetCenteredArcSlotAngleOffset(localSlotIndex, slotCount, M_PI);
-    float const angle = Position::NormalizeOrientation(
-        KILJAEDEN_RANGED_ARC_ORIENTATION + angleOffset);
-
-    Position const& center = SUNWELL_CENTER_POSITION;
-    float const positionX = center.GetPositionX() + std::cos(angle) * radius;
-    float const positionY = center.GetPositionY() + std::sin(angle) * radius;
-
-    position = Position{ positionX, positionY, center.GetPositionZ() };
+    position = KILJAEDEN_RANGED_POSITIONS[slotIndex];
     return true;
 }
 
@@ -342,8 +385,7 @@ void EnsureKiljaedenRangedArmageddonAssignments(Player* bot)
     struct CandidateSlotScore
     {
         uint8 slotIndex = 0;
-        bool sameRow = false;
-        float angleDistance = 0.0f;
+        float moveDistance = 0.0f;
         uint8 occupancy = 0;
         float armageddonDistance = 0.0f;
     };
@@ -404,17 +446,12 @@ void EnsureKiljaedenRangedArmageddonAssignments(Player* bot)
         });
 
     std::array<bool, KILJAEDEN_TOTAL_RANGED_SLOT_COUNT> safeSlots = {};
-    std::array<float, KILJAEDEN_TOTAL_RANGED_SLOT_COUNT> slotAngles = {};
     std::array<float, KILJAEDEN_TOTAL_RANGED_SLOT_COUNT> nearestArmageddonDistances = {};
 
     for (uint8 slotIndex = 0; slotIndex < KILJAEDEN_TOTAL_RANGED_SLOT_COUNT; ++slotIndex)
     {
-        Position slotPosition;
-        if (!TryGetKiljaedenRangedSlotPosition(slotIndex, slotPosition))
-            continue;
-
-        safeSlots[slotIndex] = IsRangedSlotSafeFromArmageddons(slotPosition, armageddons);
-        slotAngles[slotIndex] = GetRangedSlotAngle(slotIndex);
+        Position const& slotPosition = KILJAEDEN_RANGED_POSITIONS[slotIndex];
+        safeSlots[slotIndex] = IsOutsideArmageddons(slotPosition, armageddons);
         nearestArmageddonDistances[slotIndex] =
             GetNearestArmageddonDistance(slotPosition, armageddons);
     }
@@ -428,16 +465,8 @@ void EnsureKiljaedenRangedArmageddonAssignments(Player* bot)
     {
         CandidateSlotScore score;
         score.slotIndex = candidateSlotIndex;
-        score.sameRow =
-            (candidateSlotIndex < KILJAEDEN_INNER_RANGED_SLOT_COUNT) ==
-            (rangedBot.slotIndex < KILJAEDEN_INNER_RANGED_SLOT_COUNT);
-
-        float angleDistance = Position::NormalizeOrientation(
-            slotAngles[candidateSlotIndex] - slotAngles[rangedBot.slotIndex]);
-        if (angleDistance > static_cast<float>(M_PI))
-            angleDistance -= 2.0f * static_cast<float>(M_PI);
-
-        score.angleDistance = std::fabs(angleDistance);
+        score.moveDistance = KILJAEDEN_RANGED_POSITIONS[rangedBot.slotIndex].GetExactDist2d(
+            KILJAEDEN_RANGED_POSITIONS[candidateSlotIndex]);
         score.occupancy = plannedOccupancy[candidateSlotIndex];
         score.armageddonDistance = nearestArmageddonDistances[candidateSlotIndex];
         return score;
@@ -449,11 +478,8 @@ void EnsureKiljaedenRangedArmageddonAssignments(Player* bot)
         if (!bestFound)
             return true;
 
-        if (candidate.sameRow != best.sameRow)
-            return candidate.sameRow;
-
-        if (candidate.angleDistance != best.angleDistance)
-            return candidate.angleDistance < best.angleDistance;
+        if (candidate.moveDistance != best.moveDistance)
+            return candidate.moveDistance < best.moveDistance;
 
         if (candidate.occupancy != best.occupancy)
             return candidate.occupancy < best.occupancy;
@@ -508,8 +534,142 @@ void EnsureKiljaedenRangedArmageddonAssignments(Player* bot)
 
 bool IsKiljaedenCastingDarknessOfAThousandSouls(Unit* kiljaeden)
 {
-    return kiljaeden && kiljaeden->HasUnitState(UNIT_STATE_CASTING) &&
+    return kiljaeden &&
         kiljaeden->FindCurrentSpellBySpellId(Id(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS));
+}
+
+// Milliseconds until Darkness of a Thousand Souls lands, or -1 if he isn't casting it. Its cast bar
+// comes before its channel, and GetCastTimeRemaining reads only the one in progress.
+int32 GetKiljaedenDarknessTimeLeftMs(Unit* kiljaeden)
+{
+    if (!kiljaeden)
+        return -1;
+
+    Spell* darkness =
+        kiljaeden->FindCurrentSpellBySpellId(Id(SwpSpells::SPELL_DARKNESS_OF_A_THOUSAND_SOULS));
+    if (!darkness)
+        return -1;
+
+    int32 timeLeftMs = darkness->GetCastTimeRemaining();
+    if (darkness->getState() == SPELL_STATE_PREPARING)
+        timeLeftMs += darkness->GetSpellInfo()->GetDuration();
+
+    return timeLeftMs;
+}
+
+bool IsKiljaedenStartDpsHoldActive(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    if (PlayerbotAI::IsMainTank(bot))
+        return false;
+
+    KiljaedenEncounterState const* state = FindKiljaedenState(bot->GetInstanceId());
+    if (state && state->dpsHoldStartMs)
+        return getMSTimeDiff(*state->dpsHoldStartMs, getMSTime()) < KILJAEDEN_DPS_HOLD_MS;
+
+    // He is found once he engages the raid, which is when he becomes attackable.
+    return GetSwpBoss(bot, SwpBosses::DATA_KILJAEDEN) != nullptr;
+}
+
+// Whether a straight line from one point to another passes too close to Kil'jaeden's center. A line
+// whose nearest point to him is either end doesn't, so a bot moving away from him, or onto a
+// position on the ring, goes straight.
+bool IsLineThroughKiljaedenKnockback(Position const& from, Position const& to)
+{
+    Position const& center = SUNWELL_CENTER_POSITION;
+    float const fromX = from.GetPositionX();
+    float const fromY = from.GetPositionY();
+    float const deltaX = to.GetPositionX() - fromX;
+    float const deltaY = to.GetPositionY() - fromY;
+    float const lengthSq = deltaX * deltaX + deltaY * deltaY;
+    if (lengthSq <= 0.0f)
+        return false;
+
+    float const t = ((center.GetPositionX() - fromX) * deltaX +
+        (center.GetPositionY() - fromY) * deltaY) / lengthSq;
+    if (t <= 0.0f || t >= 1.0f)
+        return false;
+
+    return center.GetExactDist2d(fromX + deltaX * t, fromY + deltaY * t) <
+        KILJAEDEN_ROUTE_LINE_CLEARANCE;
+}
+
+// Whether meleeing a unit means entering Kil'jaeden's Knockback: the unit stands inside the ring
+// the route keeps clear, or the straight line to it crosses the Knockback.
+bool IsMeleeBlockedByKiljaedenKnockback(Position const& from, Position const& target)
+{
+    return SUNWELL_CENTER_POSITION.GetExactDist2d(target) < KILJAEDEN_ROUTE_LINE_CLEARANCE ||
+        IsLineThroughKiljaedenKnockback(from, target);
+}
+
+// One step toward the destination, going round Kil'jaeden's Knockback when the straight line would
+// cross it. Returns false once the bot is within arrivalDist (2D) of the destination.
+bool GetKiljaedenStepToPosition(
+    Player* bot, Position const& destination, float arrivalDist, float& stepX, float& stepY)
+{
+    if (bot->GetExactDist2d(destination) <= arrivalDist)
+        return false;
+
+    Position detourPoint;
+    bool const isDetour = TryGetKiljaedenDetourPoint(bot, destination, detourPoint);
+    bool backwards;
+    return GetStepToPosition(
+        bot, isDetour ? detourPoint : destination, isDetour ? 0.0f : arrivalDist, nullptr, stepX,
+        stepY, backwards);
+}
+
+// Where a bot with Fire Bloom waits during Darkness: FIRE_BLOOM_STANDOFF from the stack toward the
+// bot, turned round the stack to just outside the Knockback ring when it would fall inside it.
+Position GetKiljaedenFireBloomWaitPosition(Player* bot)
+{
+    Position const& stack = KILJAEDEN_TANK_POSITION;
+    Position const& center = SUNWELL_CENTER_POSITION;
+    float const stackDistance = stack.GetExactDist2d(center);
+    float const towardCenter = stack.GetAngle(&center);
+
+    // The angle from the stack-to-center line at which the wait circle meets the ring
+    float const ringCos = (FIRE_BLOOM_STANDOFF * FIRE_BLOOM_STANDOFF +
+        stackDistance * stackDistance -
+        KILJAEDEN_KNOCKBACK_CLEARANCE * KILJAEDEN_KNOCKBACK_CLEARANCE) /
+        (2.0f * FIRE_BLOOM_STANDOFF * stackDistance);
+    float const ringAngle = std::acos(std::clamp(ringCos, -1.0f, 1.0f));
+
+    float angle = stack.GetAngle(bot);
+    float const offset = Position::NormalizeOrientation(angle - towardCenter);
+    if (offset < ringAngle)
+        angle = towardCenter + ringAngle;
+    else if (offset > 2.0f * static_cast<float>(M_PI) - ringAngle)
+        angle = towardCenter - ringAngle;
+
+    return Position(
+        stack.GetPositionX() + std::cos(angle) * FIRE_BLOOM_STANDOFF,
+        stack.GetPositionY() + std::sin(angle) * FIRE_BLOOM_STANDOFF, bot->GetPositionZ());
+}
+
+// Whether the bot clears Fire Bloom with its immunity (Cloak of Shadows, Ice Block, or Divine
+// Shield) as soon as the global cooldown allows, so it need not move away with it. Cloak of Shadows
+// has a short cooldown; Ice Block and Divine Shield are saved for phase 4. The global cooldown is
+// left out on purpose: all three spells are on it, and a bot that waits out the rest of it should
+// not set off for its Fire Bloom position meanwhile.
+bool CanClearKiljaedenFireBloomWithImmunity(Player* bot, Unit* kiljaeden)
+{
+    if (PlayerbotAI::IsTank(bot))
+        return false;
+
+    uint32 const spellId = GetSelfImmunitySpell(bot);
+    if (!spellId || !bot->HasSpell(spellId) || bot->HasSpellCooldown(spellId))
+        return false;
+
+    if (bot->getClass() != CLASS_ROGUE &&
+        (!kiljaeden || kiljaeden->GetHealthPct() >= KILJAEDEN_PHASE4_HP_THRESHOLD))
+    {
+        return false;
+    }
+
+    // Forbearance blocks Divine Shield, and Hypothermia Ice Block.
+    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+    return spellInfo &&
+        !(spellInfo->ExcludeCasterAuraSpell && bot->HasAura(spellInfo->ExcludeCasterAuraSpell));
 }
 
 GuidVector FindKiljaedenDragonOrbGuids(Player* bot)
@@ -529,26 +689,81 @@ GuidVector FindKiljaedenDragonOrbGuids(Player* bot)
     return guids;
 }
 
-Player* GetKiljaedenDragonOrbUser(Player* bot)
+// The orb user is the first living assistant bot in group order; with none, a player flies. As with
+// the class roles, it is picked again out of encounters and, during one, replaced only if it dies
+// or leaves, with the handover announced.
+bool UpdateKiljaedenDragonOrbUser(PlayerbotAI* botAI)
 {
+    Player* bot = botAI->GetBot();
     Group* group = bot->GetGroup();
     if (!group)
-        return nullptr;
+        return false;
 
+    ClassRoleAssignment& assignment = SwpState(bot->GetInstanceId()).kiljaedenDragonOrbUser;
+    bool const isInEncounter = IsEncounterInProgress(bot, SWP_MAP_ID);
+    if (isInEncounter && GetClassRolePlayer(bot, assignment))
+        return false;
+
+    ClassRoleChoice next;
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
         if (!member || !member->IsAlive() || member->GetMapId() != SWP_MAP_ID ||
-            !GET_PLAYERBOT_AI(member))
+            !GET_PLAYERBOT_AI(member) || !group->IsAssistant(member->GetGUID()))
         {
             continue;
         }
 
-        if (group->IsAssistant(member->GetGUID()))
-            return member;
+        next = { member->GetGUID(), ClassRoleChoiceReason::Assistant };
+        break;
     }
 
-    return nullptr;
+    if (assignment.choice == next)
+        return false;
+
+    bool const isHandover = isInEncounter && assignment.choice && !next.guid.IsEmpty();
+    assignment.choice = next;
+
+    if (isHandover && SayKiljaedenDragonOrbUser(botAI, next, true))
+        assignment.announcedChoice = next;
+
+    return true;
+}
+
+// Announces an unannounced orb user once the bot is within the announce distance and below the
+// announce Z coordinate, and forgets the announcement beyond the rearm distance. The controller
+// dies with Kil'jaeden, so nothing is announced after the kill.
+bool UpdateKiljaedenDragonOrbUserAnnouncement(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    ClassRoleAssignment& assignment = SwpState(bot->GetInstanceId()).kiljaedenDragonOrbUser;
+    float const distance = bot->GetExactDist2d(SUNWELL_CENTER_POSITION);
+    if (distance > KILJAEDEN_ORB_USER_REARM_DISTANCE)
+        return ResetIfSet(assignment.announcedChoice);
+
+    if (distance > KILJAEDEN_ORB_USER_ANNOUNCE_DISTANCE ||
+        bot->GetPositionZ() > KILJAEDEN_ORB_USER_ANNOUNCE_Z ||
+        !assignment.choice || assignment.choice == assignment.announcedChoice)
+    {
+        return false;
+    }
+
+    if (!bot->FindNearestCreature(
+            Id(SwpNpcs::NPC_KILJAEDEN_CONTROLLER), KILJAEDEN_ORB_USER_REARM_DISTANCE))
+    {
+        return false;
+    }
+
+    assignment.announcedChoice = assignment.choice;
+    SayKiljaedenDragonOrbUser(botAI, *assignment.choice, false);
+    return true;
+}
+
+// Null if nobody is the orb user, or it is dead or not in the bot's instance.
+Player* GetKiljaedenDragonOrbUser(Player* bot)
+{
+    SwpInstanceState const* state = FindSwpState(bot->GetInstanceId());
+    return state ? GetClassRolePlayer(bot, state->kiljaedenDragonOrbUser) : nullptr;
 }
 
 bool HasUsedKiljaedenDragonOrb(Player* bot)
@@ -583,7 +798,7 @@ bool CastKiljaedenDragonSpell(Unit* dragon, uint32 spellId)
     dragon->AddSpellCooldown(spellId, 0, GetManualCastCooldown(spellId));
 
     // The engine records no global cooldown for a triggered cast, so hold the dragon's other
-    // abilities here. Without it, Haste and Revitalize go out on consecutive ticks.
+    // abilities here. Without it, Haste and Revitalize can cast on consecutive ticks.
     if (uint32 const globalCooldownMs = GetManualCastGlobalCooldown(spellId))
     {
         for (uint32 otherSpellId : KILJAEDEN_DRAGON_SPELLS)

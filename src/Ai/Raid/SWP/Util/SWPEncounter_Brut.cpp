@@ -10,8 +10,7 @@
 #include "SWPInstanceState.h"
 #include "SWPShared.h"
 #include <algorithm>
-#include <array>
-#include <cmath>
+#include <optional>
 #include <vector>
 
 using namespace EncounterHelpers;
@@ -265,7 +264,7 @@ float GetAngleOffset(float angle, float reference)
 
 // Where the main tank stands once Brutallus is on the anchor: on its own bearing from him if
 // that is within tolerance of BRUTALLUS_MAIN_TANK_BEARING, otherwise on the nearer limit.
-Position GetMainTankStandInPosition(Player* bot, Unit const& brutallus)
+Position GetMainTankStandInPosition(Player* bot, Unit& brutallus)
 {
     float const offset = std::clamp(
         GetAngleOffset(brutallus.GetAbsoluteAngle(bot), BRUTALLUS_MAIN_TANK_BEARING),
@@ -330,7 +329,7 @@ float GetBrutallusAssistTankAngle(Unit* brutallus, Player* assistTank, float mai
         mainTankAngle + BRUTALLUS_ASSIST_TANK_ANGLE_OFFSET));
 }
 
-Position GetBrutallusPositionAtAngle(Player* bot, Unit const& brutallus, float angle, float radius)
+Position GetBrutallusPositionAtAngle(Player* bot, Unit& brutallus, float angle, float radius)
 {
     float const x = brutallus.GetPositionX() + std::cos(angle) * radius;
     float const y = brutallus.GetPositionY() + std::sin(angle) * radius;
@@ -340,7 +339,7 @@ Position GetBrutallusPositionAtAngle(Player* bot, Unit const& brutallus, float a
 // Where the main tank is heading while it places Brutallus. With him off the anchor, it first
 // lines up on the far side of him from the anchor, then backs out past the anchor so that he
 // follows onto it. With him on the anchor, it stands in.
-Position GetBrutallusMainTankDestination(Player* bot, Unit const& brutallus)
+Position GetBrutallusMainTankDestination(Player* bot, Unit& brutallus)
 {
     Position const& anchor = BRUTALLUS_ANCHOR_POSITION;
     Position destination;
@@ -491,8 +490,8 @@ bool TryGetBrutallusAssignedPositionIndex(Player* bot, uint8& positionIndex)
 }
 
 bool TryGetBrutallusRangedPosition(
-    Player* bot, Unit* brutallus, Player* mainTank, Player* assistTank,
-    uint8 rangedIndex, float radius, Position& position)
+    Player* bot, Unit* brutallus, Player* mainTank, Player* assistTank, uint8 rangedIndex,
+    float radius, Position& position)
 {
     if (!brutallus || rangedIndex >= BRUTALLUS_TOTAL_RANGED_POSITIONS)
         return false;
@@ -517,8 +516,8 @@ bool TryGetBrutallusRangedPosition(
 }
 
 bool TryGetBrutallusBurnPadPosition(
-    Player* bot, Unit* brutallus, Player* mainTank,
-    uint8 rangedIndex, float radius, Position& position)
+    Player* bot, Unit* brutallus, Player* mainTank, uint8 rangedIndex, float radius,
+    Position& position)
 {
     if (!brutallus || rangedIndex >= BRUTALLUS_TOTAL_RANGED_POSITIONS)
         return false;
@@ -548,8 +547,8 @@ bool TryGetBrutallusBurnPadPosition(
 }
 
 bool TryGetBrutallusLaneTraversalPosition(
-    Player* bot, Unit* brutallus, float targetX, float targetY, float radius,
-    float currentX, float currentY, Position& position)
+    Player* bot, Unit* brutallus, float targetX, float targetY, float radius, float currentX,
+    float currentY, Position& position)
 {
     if (!brutallus)
         return false;
@@ -568,13 +567,8 @@ bool TryGetBrutallusLaneTraversalPosition(
     float const stepRatio = stepDistance / (2.0f * radius);
     float const clampedStepRatio = std::clamp(stepRatio, 0.0f, 1.0f);
     float const stepAngle = 2.0f * std::asin(clampedStepRatio);
-    float nextAngle = targetAngle;
-
-    if (std::fabs(remainingAngle) > stepAngle)
-    {
-        nextAngle = Position::NormalizeOrientation(
-            currentAngle + std::copysign(stepAngle, remainingAngle));
-    }
+    float const nextAngle = Position::NormalizeOrientation(
+        currentAngle + std::clamp(remainingAngle, -stepAngle, stepAngle));
 
     position = GetBrutallusPositionAtAngle(bot, *brutallus, nextAngle, radius);
     return true;

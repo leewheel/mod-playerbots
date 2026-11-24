@@ -214,8 +214,7 @@ private:
     };
     float GetCollisionFreeDistance(float angle, float maxDistance);
     float SimulateChase(
-        Unit const& supremus, float timeRemaining, float catchDistance, float angle,
-        float runDistance);
+        Unit& supremus, float timeRemaining, float catchDistance, float angle, float runDistance);
     float _lastAngle = 0.0f;
     uint32 _lastStepTime = 0;
 };
@@ -315,7 +314,7 @@ public:
     bool Execute(Event event) override;
 
 private:
-    std::vector<Unit*> GetConstructs(Unit* gorefiend) const;
+    std::vector<Unit*> GetConstructs() const;
     Unit* GetLeadConstruct(Unit* gorefiend, std::vector<Unit*> const& constructs) const;
     Unit* GetLanceTarget(Unit* gorefiend, std::vector<Unit*> const& constructs) const;
 };
@@ -618,7 +617,7 @@ private:
     bool FindDemonFormPosition(Unit* illidan, Position& position);
     bool FindRingPosition(Unit* illidan, BtHelpers::IllidanPhase phase, Position& position);
     void StartRingLead(Unit* illidan, BtHelpers::IllidanPhase phase);
-    void RouteRoundIllidan(Unit const& illidan, Position& position);
+    void RouteRoundIllidan(Unit& illidan, Position& position);
 
     uint32 _phaseStartTime = 0;
     ObjectGuid _lastFlameCrash;

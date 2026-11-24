@@ -23,6 +23,7 @@
 #include "PriestActions.h"
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
+#include "RogueFinishingActions.h"
 #include "ShamanActions.h"
 #include "ThreatHelpers.h"
 #include "WarlockActions.h"
@@ -108,6 +109,14 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
                 if (boss)
                     break;
             }
+
+            // For Wizard of Oz, Dorothee's HP is used for the initial cooldown hold.
+            static constexpr std::array ozActors = { "roar", "strawman", "tinhead", "the crone" };
+            for (char const* name : ozActors)
+            {
+                if (!boss && FindThreatTarget(bot, name))
+                    return 1.0f;
+            }
             break;
         }
         case KaraBosses::DATA_CURATOR:
@@ -133,7 +142,7 @@ float KarazhanDelayDpsCooldownsMultiplier::GetValueInEncounter(Action* action)
     }
 
     // If the boss cannot be found but the encounter is in progress, it is probably because the bot
-    // was rezzed and zone combat hasn't reapplied, so block cooldowns.
+    // was battle rezzed and zone combat hasn't reapplied, so block cooldowns.
     if (!boss)
         return 0.0f;
 
@@ -171,8 +180,9 @@ float KarazhanDisableCombatFormationMoveMultiplier::GetValueInEncounter(Action* 
 
 // Trash
 
-// Some stun abilities are used in standard rotations. Every stunner should save them for the mana
-// warps at the right time. Block all stuns used by the stun action just for belt-and-suspenders.
+// Block all stuns used by the stun action for as long as a Mana Warp is among the attackers. Some
+// of these are not currently part of standard rotations but are included anyway in case they are
+// eventually added to class strategies.
 float ManaWarpSaveStunsMultiplier::GetValue(Action* action)
 {
     if (botAI->GetState() == BOT_STATE_NON_COMBAT || !IsNearManaWarpPacks(bot))
@@ -195,6 +205,11 @@ float ManaWarpSaveStunsMultiplier::GetValue(Action* action)
                 dynamic_cast<CastHammerOfJusticeSnareAction*>(action);
             break;
         }
+        case CLASS_ROGUE:
+        {
+            isStun = dynamic_cast<CastKidneyShotAction*>(action);
+            break;
+        }
         case CLASS_WARLOCK:
         {
             isStun = dynamic_cast<CastShadowfuryAction*>(action);
@@ -211,10 +226,17 @@ float ManaWarpSaveStunsMultiplier::GetValue(Action* action)
             break;
     }
 
-    if (isStun)
-        return 0.0f;
+    if (!isStun && (bot->getRace() != RACE_TAUREN || !dynamic_cast<CastWarStompAction*>(action)))
+        return 1.0f;
 
-    return bot->getRace() == RACE_TAUREN && dynamic_cast<CastWarStompAction*>(action) ? 0.0f : 1.0f;
+    uint32 const manaWarpEntry = Id(KaraNpcs::NPC_MANA_WARP);
+    for (ObjectGuid const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
+    {
+        if (guid.GetEntry() == manaWarpEntry)
+            return 0.0f;
+    }
+
+    return 1.0f;
 }
 
 // Attumen the Huntsman
@@ -338,12 +360,12 @@ float ShadeOfAranArcaneExplosionDisableMovementMultiplier::GetValueInEncounter(A
     return aran && IsAranCastingArcaneExplosion(aran) ? 0.0f : 1.0f;
 }
 
-// Includes set behind, as he faces a random player with each cast.
 float ShadeOfAranDisableReactiveMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<MovementAction*>(action))
         return 1.0f;
 
+    // Don't add the typical carveout for set behind. Aran faces a random player with each cast.
     bool const isReactiveMovement =
         dynamic_cast<AvoidAoeAction*>(action) || dynamic_cast<FleeAction*>(action) ||
         dynamic_cast<CombatFormationMoveAction*>(action);
@@ -355,7 +377,7 @@ float ShadeOfAranDisableReactiveMovementMultiplier::GetValueInEncounter(Action* 
 float ShadeOfAranFlameWreathDisableMovementMultiplier::GetValueInEncounter(Action* action)
 {
     if (!dynamic_cast<MovementAction*>(action) && !IsRepositionAction(bot, action) &&
-        !IsKillingSpree(bot, action))
+        !IsKillingSpree(bot, action) && !dynamic_cast<CastReachTargetSpellAction*>(action))
     {
         return 1.0f;
     }
@@ -366,22 +388,106 @@ float ShadeOfAranFlameWreathDisableMovementMultiplier::GetValueInEncounter(Actio
         return 1.0f;
     }
 
+    // Do not check for Aran here. A bot that does not find Aran (most likely due to being battle
+    // rezzed between the 5s zone combat pulses) still needs to stop moving for Flame Wreath.
     Unit* aran = GetEncounterBoss();
-    if (!aran || !IsFlameWreathInProgress(botAI, aran))
+    if (!IsFlameWreathInProgress(botAI, aran))
         return 1.0f;
 
-    bool const isReachToAttack =
-        dynamic_cast<ReachMeleeAction*>(action) || dynamic_cast<ReachSpellAction*>(action);
+    if (!dynamic_cast<ReachTargetAction*>(action))
+        return 0.0f;
 
-    return isReachToAttack && CanReachTargetDuringFlameWreath(botAI, aran) ? 1.0f : 0.0f;
+    return CanReachTargetDuringFlameWreath(botAI, aran) ? 1.0f : 0.0f;
+}
+
+namespace
+{
+
+// Hammer of Justice and Bash are left out: they interrupt by stunning, and Aran is immune to stuns.
+bool IsAranInterruptAction(Player* bot, Action* action)
+{
+    switch (bot->getClass())
+    {
+        case CLASS_DEATH_KNIGHT:
+            return dynamic_cast<CastMindFreezeAction*>(action) ||
+                dynamic_cast<CastMindFreezeOnEnemyHealerAction*>(action) ||
+                dynamic_cast<CastStrangulateAction*>(action);
+        case CLASS_HUNTER:
+            return dynamic_cast<CastSilencingShotAction*>(action);
+        case CLASS_MAGE:
+            return dynamic_cast<CastCounterspellAction*>(action) ||
+                dynamic_cast<CastCounterspellOnEnemyHealerAction*>(action);
+        case CLASS_PRIEST:
+            return dynamic_cast<CastSilenceAction*>(action) ||
+                dynamic_cast<CastSilenceOnEnemyHealerAction*>(action);
+        case CLASS_ROGUE:
+            return dynamic_cast<CastKickAction*>(action) ||
+                dynamic_cast<CastKickOnEnemyHealerAction*>(action);
+        case CLASS_SHAMAN:
+            return dynamic_cast<CastWindShearAction*>(action) ||
+                dynamic_cast<CastWindShearOnEnemyHealerAction*>(action);
+        case CLASS_WARLOCK:
+            return dynamic_cast<CastSpellLockAction*>(action);
+        case CLASS_WARRIOR:
+            return dynamic_cast<CastPummelAction*>(action) ||
+                dynamic_cast<CastPummelOnEnemyHealerAction*>(action) ||
+                dynamic_cast<CastShieldBashAction*>(action) ||
+                dynamic_cast<CastShieldBashOnEnemyHealerAction*>(action);
+        default:
+            return false;
+    }
+}
+
+} // end anonymous namespace (Shade of Aran)
+
+// Arcane Missiles is never interrupted. Fireball and Frostbolt are, near the end of the cast.
+float ShadeOfAranDelayInterruptsMultiplier::GetValueInEncounter(Action* action)
+{
+    if (!IsAranInterruptAction(bot, action))
+        return 1.0f;
+
+    Unit* aran = GetEncounterBoss();
+    if (!aran || action->GetTarget() != aran)
+        return 1.0f;
+
+    if (aran->FindCurrentSpellBySpellId(Id(KaraSpells::SPELL_ARAN_ARCANE_MISSILES)))
+        return 0.0f;
+
+    for (KaraSpells const spell :
+         { KaraSpells::SPELL_ARAN_FIREBALL, KaraSpells::SPELL_ARAN_FROSTBOLT })
+    {
+        if (Spell* cast = aran->FindCurrentSpellBySpellId(Id(spell)))
+            return cast->GetCastTimeRemaining() > ARAN_INTERRUPT_CAST_REMAINING_MS ? 0.0f : 1.0f;
+    }
+
+    return 1.0f;
 }
 
 // Netherspite
 
+namespace
+{
+
+// Where a standard reach toward the target stops, worked out the way ReachCombatTo does it: range
+// plus both combat reaches from the target. The reach action doesn't expose that position, and the
+// void zone hold needs it before the reach runs.
+Position GetNetherspiteReachEndPosition(Unit& bot, Unit& target, float range)
+{
+    float const distance = bot.GetExactDist2d(target);
+    float const end = range + bot.GetCombatReach() + target.GetCombatReach();
+    if (distance <= end)
+        return bot.GetPosition();
+
+    float const fraction = end / distance;
+    return Position(
+        target.GetPositionX() + (bot.GetPositionX() - target.GetPositionX()) * fraction,
+        target.GetPositionY() + (bot.GetPositionY() - target.GetPositionY()) * fraction);
+}
+
+} // end anonymous namespace (Netherspite)
+
 // Positioning in and around the beams decides the outcome of the fight, and a tight formation is
-// kept during the Banish phase, so reactive and unpredictable movement is blocked. Blue and green
-// blockers themselves and those on deck are further blocked from reaching targets, as their primary
-// purpose is to maintain position in or along the beam, even at the expense of DPS or healing.
+// kept during the Banish phase, so reactive and unpredictable movement is blocked.
 float NetherspiteDisableReactiveMovementMultiplier::GetValueInEncounter(Action* action)
 {
     bool const isReactiveMovement =
@@ -400,14 +506,22 @@ float NetherspiteDisableReactiveMovementMultiplier::GetValueInEncounter(Action* 
     if (!state || state->netherspiteBeams[Id(NetherspiteBeam::Red)].blocker == bot->GetGUID())
         return 1.0f;
 
+    // Active blue and green blockers and those up next are blocked from reaching targets. Their
+    // primary purpose is to keep blocking (or remain ready to block) a beam, so they need to
+    // maintain their position along the beam while also staying alive (i.e., out of void zones),
+    // which means the ability to DPS or heal might have to be sacrificed at times. The red blocker
+    // does not have this constraint since it does not avoid void zones.
     if (IsNetherspiteBlockerOrNext(*state, bot->GetGUID()))
         return 0.0f;
 
+    // Other bots' reach and charge are blocked if they would go through a void zone, since the
+    // standard actions don't avoid them.
     Unit* target = action->GetTarget();
     if (!target)
         return 1.0f;
 
-    float range = 0.0f;
+    // A void zone past where the move stops, between that point and the target, doesn't count.
+    float range = 0.0f; // Charges go all the way to the target.
     if (dynamic_cast<ReachMeleeAction*>(action))
         range = sPlayerbotAIConfig.MeleeDistance;
     else if (dynamic_cast<ReachPartyMemberToHealAction*>(action))
@@ -448,7 +562,7 @@ float PrinceMalchezaarDisableReactiveMovementMultiplier::GetValueInEncounter(Act
     if (!malchezaar)
         return 1.0f;
 
-    return IsClearOfInfernals(*malchezaar, GetLandedInfernals(botAI), MALCHEZAAR_MELEE_CLEARANCE) ?
+    return IsClearOfInfernals(*malchezaar, GetLandedInfernals(bot), MALCHEZAAR_MELEE_CLEARANCE) ?
         1.0f : 0.0f;
 }
 
@@ -607,7 +721,7 @@ float NightbaneHoldDpsMultiplier::GetValueInEncounter(Action* action)
     if (dynamic_cast<CastHealingSpellAction*>(action) || !IsNightbaneDpsHeld(bot, nightbane))
         return 1.0f;
 
-    return action->GetTarget() == nightbane ? GetDpsHoldValue(bot, action) : 1.0f;
+    return action && action->GetTarget() == nightbane ? GetDpsHoldValue(bot, action) : 1.0f;
 }
 
 // Movement is highly controlled on Nightbane. The most important note is that during the ground

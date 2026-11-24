@@ -6,11 +6,12 @@
 
 #include "ZAActions.h"
 #include "EncounterHelpers.h"
+#include "ObjectAccessor.h"
 #include "Playerbots.h"
 #include "RtiTargetValue.h"
+#include "ThreatHelpers.h"
 #include "ZAHelpers.h"
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <iterator>
 #include <vector>
@@ -41,7 +42,7 @@ bool ZulAmanResetEncounterStatesAction::Execute(Event /*event*/)
 
 bool ZulAmanMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", _bossName);
+    Unit* boss = GetZaBoss(bot, _boss);
     if (!boss)
         return false;
 
@@ -60,7 +61,7 @@ bool ZulAmanMisdirectBossToMainTankAction::Execute(Event /*event*/)
 
 bool ZulAmanTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", _bossName);
+    Unit* boss = GetZaBoss(bot, _boss);
     if (!boss)
         return false;
 
@@ -90,16 +91,16 @@ bool ZulAmanSpreadRangedAction::Execute(Event /*event*/)
 
 bool ZulAmanRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 {
-    Unit* boss = AI_VALUE2(Unit*, "find target", _bossName);
+    Unit* boss = GetZaBoss(bot, _boss);
     if (!boss)
         return false;
 
     float const currentDistance = bot->GetExactDist2d(boss);
-    if (currentDistance >= ZA_WHIRLWIND_SAFE_DISTANCE)
+    if (currentDistance >= ZA_WHIRLWIND_CLEARANCE)
         return false;
 
     bot->CastStop();
-    return MoveAway(boss, ZA_WHIRLWIND_SAFE_DISTANCE - currentDistance);
+    return MoveAway(boss, ZA_WHIRLWIND_CLEARANCE - currentDistance);
 }
 
 // Trash
@@ -120,7 +121,6 @@ bool AmanishiMedicineManMarkWardAction::Execute(Event /*event*/)
 
 bool AkilzonMoveToEyeOfTheStormAction::Execute(Event /*event*/)
 {
-    // 合并brighton 2026-08-26: 改用雷暴目标判定, 不再依赖find target --By leewheel 2026年8月26日
     Player* target = GetElectricalStormTarget(bot);
     if (!target && !PlayerbotAI::IsMainTank(bot))
         target = GetGroupMainTank(bot);
@@ -144,7 +144,7 @@ bool AkilzonStartElectricalStormTimerAction::Execute(Event /*event*/)
 
 bool NalorakkTanksPositionBossAction::Execute(Event event)
 {
-    Unit* nalorakk = AI_VALUE2(Unit*, "find target", "23576");
+    Unit* nalorakk = GetZaBoss(bot, ZaBosses::DATA_NALORAKK);
     if (!nalorakk)
         return false;
 
@@ -183,8 +183,6 @@ bool NalorakkTanksPositionBossAction::Execute(Event event)
         MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
-// 合并brighton 2026-08-26: AkilzonSpreadRangedAction/NalorakkSpreadRangedAction/JanalaiTanksPositionBossAction
-// 及Nalorakk辅助方法均为废弃旧实现(类已从ZAActions.h移除), 删除; Jan'alai新实现见下方 --By leewheel 2026年8月26日
 // Jan'alai <Dragonhawk Avatar>
 
 bool JanalaiSpreadRangedInCircleAction::Execute(Event /*event*/)
@@ -229,7 +227,7 @@ bool JanalaiSpreadRangedInCircleAction::Execute(Event /*event*/)
 
 bool JanalaiAvoidFireBombsAction::Execute(Event /*event*/)
 {
-    std::vector<Unit*> const bombs = GetNearbyFireBombs(botAI);
+    std::vector<Unit*> const bombs = GetFireBombs(bot);
 
     if (bombs.empty())
         return false;
@@ -237,7 +235,7 @@ bool JanalaiAvoidFireBombsAction::Execute(Event /*event*/)
     bool inDanger = false;
     for (Unit* bomb : bombs)
     {
-        if (bot->GetExactDist2d(bomb) < JANALAI_FIRE_BOMB_SAFE_DISTANCE)
+        if (bot->GetExactDist2d(bomb) < JANALAI_FIRE_BOMB_CLEARANCE)
         {
             inDanger = true;
             break;
@@ -257,7 +255,7 @@ bool JanalaiAvoidFireBombsAction::Execute(Event /*event*/)
     float stepZ;
     if (!FindSafeStepInJanalaiZone(
             bot, bombs, JANALAI_SAFE_ZONE, JANALAI_FIRE_BOMB_SAFE_SPOT_SEARCH_RADIUS,
-            JANALAI_FIRE_BOMB_SAFE_DISTANCE, moveDist, stepX, stepY, stepZ))
+            JANALAI_FIRE_BOMB_CLEARANCE, moveDist, stepX, stepY, stepZ))
     {
         return false;
     }
@@ -270,7 +268,7 @@ bool JanalaiAvoidFireBombsAction::Execute(Event /*event*/)
 
 bool JanalaiMarkAmanishiHatchersAction::Execute(Event /*event*/)
 {
-    auto [hatcherLow, hatcherHigh] = GetAmanishiHatcherPair(botAI);
+    auto [hatcherLow, hatcherHigh] = GetAmanishiHatcherPair(bot);
     if (!hatcherLow || !hatcherHigh || hatcherHigh == hatcherLow)
         return false;
 
@@ -279,19 +277,15 @@ bool JanalaiMarkAmanishiHatchersAction::Execute(Event /*event*/)
 
 // Halazzi <Lynx Avatar>
 
-// 合并brighton 2026-08-26: HalazziMainTankPositionBossAction已从ZAActions.h移除(职责并入FirstAssistTank与Dps行动), 删除旧实现
-// 同步brighton 2026-09-08: Execute接收事件参数并透传给taunt动作(替代原空事件) --By leewheel 2026年9月8日
 bool HalazziFirstAssistTankAttackSpiritLynxAction::Execute(Event event)
 {
-// 合并brighton 2026-08-26: spirit of the lynx按entry规则转23877 --By leewheel 2026年8月26日
-    if (Unit* lynx = AI_VALUE2(Unit*, "find target", "23877"))
+    if (Unit* lynx = FindThreatTarget(bot, "spirit of the lynx"))
     {
         if (AI_VALUE(Unit*, "current target") != lynx)
             return Attack(lynx);
 
-// 合并brighton 2026-08-26: taunt失败立即返回 --By leewheel 2026年8月26日
-        if (lynx->GetVictim() != bot && botAI->DoSpecificAction("taunt spell", event, true))
-            return true;
+        if (lynx->GetVictim() != bot)
+            return botAI->DoSpecificAction("taunt spell", event, true);
     }
 
     Position const& position = HALAZZI_TANK_POSITION;
@@ -309,8 +303,7 @@ bool HalazziFirstAssistTankAttackSpiritLynxAction::Execute(Event event)
 bool HalazziDpsAttackTotemAndBossAction::Execute(Event /*event*/)
 {
     // Target priority 1: Corrupted Lightning Totems
-    if (Creature* totem = bot->FindNearestCreature(
-            Id(ZaNpcs::NPC_CORRUPTED_LIGHTNING_TOTEM), ZA_CREATURE_SEARCH_RADIUS))
+    if (Creature* totem = GetNearestCorruptedLightningTotem(bot))
     {
         if (MarkTargetWithSkull(bot, totem))
             return true;
@@ -319,8 +312,7 @@ bool HalazziDpsAttackTotemAndBossAction::Execute(Event /*event*/)
     }
 
     // Target priority 2: Halazzi
-    // 合并brighton 2026-08-26: halazzi按entry规则转23577 --By leewheel 2026年8月26日
-    if (Unit* halazzi = AI_VALUE2(Unit*, "find target", "23577"))
+    if (Unit* halazzi = GetZaBoss(bot, ZaBosses::DATA_HALAZZI))
         return AI_VALUE(Unit*, "current target") != halazzi && Attack(halazzi);
 
     // Don't attack the Lynx.
@@ -331,28 +323,21 @@ bool HalazziDpsAttackTotemAndBossAction::Execute(Event /*event*/)
 
 bool HexLordMalacrassAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-    static constexpr std::array hexLordAdds = {
-        Id(ZaNpcs::NPC_LORD_RAADAN),
-        Id(ZaNpcs::NPC_ALYSON_ANTILLE),
-        Id(ZaNpcs::NPC_KORAGG),
-        Id(ZaNpcs::NPC_DARKHEART),
-        Id(ZaNpcs::NPC_FENSTALKER),
-        Id(ZaNpcs::NPC_GAZAKROTH),
-        Id(ZaNpcs::NPC_THURG),
-        Id(ZaNpcs::NPC_SLITHER),
-        Id(ZaNpcs::NPC_HEX_LORD_MALACRASS)
-    };
-
+    auto const& priority = HEX_LORD_MALACRASS_DPS_PRIORITY;
     Unit* priorityTarget = nullptr;
-    size_t bestRank = hexLordAdds.size();
-    for (auto const& guid : AI_VALUE(GuidVector, "possible targets no los"))
+    size_t bestRank = priority.size();
+    GuidVector const& guids = GetInstanceCreatureList(
+        ZaState(bot->GetInstanceId()).hexLordMalacrassDpsTargets,
+        HEX_LORD_MALACRASS_DPS_TARGET_CACHE_INTERVAL_MS, bot, FindHexLordMalacrassDpsTargetGuids);
+    for (ObjectGuid const& guid : guids)
     {
-        Unit* unit = botAI->GetUnit(guid);
-        if (!unit || !unit->IsAlive())
+        Creature* unit = ObjectAccessor::GetCreature(*bot, guid);
+        if (!unit || !unit->IsAlive() || !unit->IsInWorld())
             continue;
 
-        auto const it = std::find(hexLordAdds.begin(), hexLordAdds.end(), unit->GetEntry());
-        size_t const rank = std::distance(hexLordAdds.begin(), it);
+        auto const it =
+            std::find(priority.begin(), priority.end(), static_cast<ZaNpcs>(unit->GetEntry()));
+        size_t const rank = std::distance(priority.begin(), it);
         if (rank < bestRank)
         {
             bestRank = rank;
@@ -362,7 +347,7 @@ bool HexLordMalacrassAssignDpsPriorityAction::Execute(Event /*event*/)
 
     return priorityTarget && MarkTargetWithSkull(bot, priorityTarget);
 }
-// 合并brighton 2026-08-26: HexLordMalacrassRunAwayFromWhirlwind/CastersStopAttacking已从ZAActions.h移除, 删除旧实现 --By leewheel 2026年8月26日
+
 bool HexLordMalacrassMoveAwayFromFreezingTrapAction::Execute(Event /*event*/)
 {
     GameObject* trap = GetNearbyFreezingTrap(botAI);
@@ -370,11 +355,11 @@ bool HexLordMalacrassMoveAwayFromFreezingTrapAction::Execute(Event /*event*/)
         return false;
 
     float const currentDistance = bot->GetExactDist2d(trap);
-    if (currentDistance >= ZA_FREEZING_TRAP_SAFE_DISTANCE)
+    if (currentDistance >= ZA_FREEZING_TRAP_CLEARANCE)
         return false;
 
     constexpr uint32 minInterval = 0;
-    return FleePosition(trap->GetPosition(), ZA_FREEZING_TRAP_SAFE_DISTANCE, minInterval);
+    return FleePosition(trap->GetPosition(), ZA_FREEZING_TRAP_CLEARANCE, minInterval);
 }
 
 // Zul'jin

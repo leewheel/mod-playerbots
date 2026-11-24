@@ -8,7 +8,9 @@
 #include "EncounterHelpers.h"
 #include "InstanceScript.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include "ZAHelpers.h"
+#include <optional>
 
 using namespace ZaHelpers;
 using namespace EncounterHelpers;
@@ -28,7 +30,7 @@ bool ZulAmanHunterShouldMisdirectTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    Unit* boss = AI_VALUE2(Unit*, "find target", _bossName);
+    Unit* boss = GetEncounterBoss();
     return boss && boss->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT;
 }
 
@@ -37,7 +39,7 @@ bool ZulAmanHunterShouldMisdirectTrigger::IsActiveInEncounter()
 bool AmanishiMedicineManSummonedWardTrigger::IsActive()
 {
     return IsMechanicTrackerBot(bot, ZA_MAP_ID) &&
-        AI_VALUE2(Unit*, "find target", "23581");
+        FindThreatTarget(bot, "amani'shi medicine man");
 }
 
 // Akil'zon <Eagle Avatar>
@@ -47,18 +49,12 @@ bool AkilzonShouldBeTankedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!AI_VALUE2(Unit*, "find target", "23574"))
-        return false;
-
     return !GetElectricalStormTarget(bot);
 }
 
 bool AkilzonSpreadForStaticDisruptionTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
-        return false;
-
-    if (!AI_VALUE2(Unit*, "find target", "23574"))
         return false;
 
     std::optional<uint32> const& stormTimer = ZaState(bot->GetInstanceId()).akilzonStormTimer;
@@ -70,9 +66,6 @@ bool AkilzonSpreadForStaticDisruptionTrigger::IsActiveInEncounter()
 
 bool AkilzonElectricalStormIncomingTrigger::IsActiveInEncounter()
 {
-    if (!AI_VALUE2(Unit*, "find target", "23574"))
-        return false;
-
     std::optional<uint32> const& stormTimer = ZaState(bot->GetInstanceId()).akilzonStormTimer;
     if (!stormTimer)
         return false;
@@ -82,26 +75,19 @@ bool AkilzonElectricalStormIncomingTrigger::IsActiveInEncounter()
 
 bool AkilzonShouldTrackElectricalStormTrigger::IsActiveInEncounter()
 {
-    if (!IsMechanicTrackerBot(bot, ZA_MAP_ID))
-        return false;
-
-    // 合并brighton 2026-08-26: akil'zon按entry规则转23574 --By leewheel 2026年8月26日
-    return AI_VALUE2(Unit*, "find target", "23574");
+    return IsMechanicTrackerBot(bot, ZA_MAP_ID);
 }
 
 // Nalorakk <Bear Avatar>
 
 bool NalorakkBothFormsShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    if (!AI_VALUE2(Unit*, "find target", "23576"))
-        return false;
-
     return PlayerbotAI::IsMainTank(bot) || PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 }
 
 bool NalorakkSpreadForSurgeTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "23576");
+    return PlayerbotAI::IsRanged(bot);
 }
 
 // Jan'alai <Dragonhawk Avatar>
@@ -111,9 +97,7 @@ bool JanalaiShouldBeTankedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-// By leewheel 2026-08-30 合并上游：改用IsJanalaiBombing判定；entry规则查怪(23578=jan'alai)
-    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
-
+    Unit* janalai = GetEncounterBoss();
     return janalai && !IsJanalaiBombing(janalai);
 }
 
@@ -122,22 +106,23 @@ bool JanalaiSpreadForFlameBreathTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    // By leewheel 2026-08-30 合并上游：改用IsJanalaiBombing判定；entry规则查怪(23578=jan'alai)
-    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
+    Unit* janalai = GetEncounterBoss();
     if (!janalai)
         return false;
 
-    if (AI_VALUE2(Unit*, "find target", "23598"))
+    if (!GetJanalaiAdds(bot, ZaNpcs::NPC_AMANI_DRAGONHAWK_HATCHLING).empty())
         return false;
 
     return !IsJanalaiBombing(janalai);
 }
 
-bool JanalaiIsFireBombingTrigger::IsActiveInEncounter()
+bool JanalaiFireBombingTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-08-30 合并上游：改用IsJanalaiBombing helper；entry规则查怪(23578=jan'alai)
-    return IsJanalaiBombing(AI_VALUE2(Unit*, "find target", "23578"));
-    // End By leewheel
+    Unit* janalai = GetEncounterBoss();
+    if (!janalai)
+        return false;
+
+    return IsJanalaiBombing(janalai);
 }
 
 bool JanalaiAmanishiHatchersSpawnedTrigger::IsActiveInEncounter()
@@ -145,45 +130,46 @@ bool JanalaiAmanishiHatchersSpawnedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRangedDps(bot))
         return false;
 
-    // By leewheel 2026-09-04 合并冲突解决: 采纳brighton新增的孵化血量判断(JANALAI_HATCH_ALL_HEALTH_PCT),
-    //   boss查找保留entry"23578"遵循项目规则
-    // End By leewheel
-    Unit* janalai = AI_VALUE2(Unit*, "find target", "23578");
+    Unit* janalai = GetEncounterBoss();
     if (!janalai || janalai->GetHealthPct() <= JANALAI_HATCH_ALL_HEALTH_PCT)
         return false;
 
-    return bot->FindNearestCreature(Id(ZaNpcs::NPC_AMANISHI_HATCHER), ZA_CREATURE_SEARCH_RADIUS);
+    for (Unit* hatcher : GetJanalaiAdds(bot, ZaNpcs::NPC_AMANISHI_HATCHER))
+    {
+        if (bot->GetDistance(hatcher) <= ZA_CREATURE_SEARCH_RADIUS)
+            return true;
+    }
+
+    return false;
 }
 
 // Halazzi <Lynx Avatar>
 
 bool HalazziShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsMainTank(bot) && AI_VALUE2(Unit*, "find target", "23577");
+    return PlayerbotAI::IsMainTank(bot);
 }
 
 bool HalazziSpiritLynxHasAppearedTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) &&
-        AI_VALUE2(Unit*, "find target", "23577");
+    return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 }
 
 bool HalazziShouldFocusDpsTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "23577");
+    return PlayerbotAI::IsDps(bot);
 }
 
 // Hex Lord Malacrass
 
 bool HexLordMalacrassShouldPrioritizeAddsTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsDps(bot) && AI_VALUE2(Unit*, "find target", "24239");
+    return PlayerbotAI::IsDps(bot);
 }
 
 bool HexLordMalacrassChannelingWhirlwindTrigger::IsActiveInEncounter()
 {
-    // 合并brighton 2026-08-26: hex lord malacrass按entry规则转24239; 攻击者为bot时视为安全(非通道旋风目标); 移除孤立的BossHasSpellReflectionTrigger(无声明) --By leewheel 2026年8月26日
-    Unit* malacrass = AI_VALUE2(Unit*, "find target", "24239");
+    Unit* malacrass = GetEncounterBoss();
     if (!malacrass || malacrass->GetVictim() == bot)
         return false;
 
@@ -192,9 +178,6 @@ bool HexLordMalacrassChannelingWhirlwindTrigger::IsActiveInEncounter()
 
 bool HexLordMalacrassFreezingTrapPlacedTrigger::IsActiveInEncounter()
 {
-    if (!AI_VALUE2(Unit*, "find target", "24239"))
-        return false;
-
     return GetNearbyFreezingTrap(botAI);
 }
 
@@ -205,17 +188,19 @@ bool ZuljinShouldBeTankedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    // By leewheel 2026-09-05 合并：Zul'jin按entry规则查找(23863)，替代上游名字查找
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
-    return zuljin &&
-           !zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_EAGLE)) &&
-           !zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_DRAGONHAWK));
-    // End By leewheel
+    Unit* zuljin = GetEncounterBoss();
+    if (!zuljin)
+        return false;
+
+    // Eagle can't be tanked, and flexibility for the tank to turn Zul'jin during Dragonhawk
+    // is preferable.
+    return !zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_EAGLE)) &&
+        !zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_DRAGONHAWK));
 }
 
 bool ZuljinChannelingWhirlwindInTrollFormTrigger::IsActiveInEncounter()
 {
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
+    Unit* zuljin = GetEncounterBoss();
     if (!zuljin || !zuljin->HasAura(Id(ZaSpells::SPELL_ZULJIN_WHIRLWIND)))
         return false;
 
@@ -224,12 +209,10 @@ bool ZuljinChannelingWhirlwindInTrollFormTrigger::IsActiveInEncounter()
 
 bool ZuljinCreepingParalysisInBearFormTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-09-09 合并brighton 2026-09-08: 采用brighton重塑逻辑(牧师+熊形态+可驱散目标),
-    //   boss查找按entry规则用23863 -- End By leewheel
     if (bot->getClass() != CLASS_PRIEST)
         return false;
 
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
+    Unit* zuljin = GetEncounterBoss();
     if (!zuljin || !zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_BEAR)))
         return false;
 
@@ -241,8 +224,7 @@ bool ZuljinSummoningCyclonesInEagleFormTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    // By leewheel 2026-09-09 合并brighton: Zul'jin按entry规则查找(23863)
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
+    Unit* zuljin = GetEncounterBoss();
     if (!zuljin)
         return false;
 
@@ -260,6 +242,6 @@ bool ZuljinSpreadForDragonhawkAoeTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    Unit* zuljin = AI_VALUE2(Unit*, "find target", "23863");
+    Unit* zuljin = GetEncounterBoss();
     return zuljin && zuljin->HasAura(Id(ZaSpells::SPELL_SHAPE_OF_THE_DRAGONHAWK));
 }

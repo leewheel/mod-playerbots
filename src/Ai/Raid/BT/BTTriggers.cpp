@@ -432,18 +432,19 @@ bool IllidariCouncilGathiosCastingJudgementOfCommandTrigger::IsActiveInEncounter
         return false;
 
     Unit* gathios = GetIllidariCouncilMembers(bot).gathios;
-    if (!gathios || !gathios->HasAura(Id(BtSpells::SPELL_SEAL_OF_COMMAND)))
+    if (!gathios || !gathios->HasAura(Id(BtSpells::SPELL_GATHIOS_SEAL_OF_COMMAND)))
         return false;
 
-    Spell* judgement = gathios->FindCurrentSpellBySpellId(Id(BtSpells::SPELL_JUDGEMENT));
+    Spell* judgement = gathios->FindCurrentSpellBySpellId(Id(BtSpells::SPELL_GATHIOS_JUDGEMENT));
     return judgement && judgement->getState() == SPELL_STATE_PREPARING &&
         judgement->m_targets.GetUnitTarget() == bot && PlayerbotAI::IsMainTank(bot);
 }
 
 bool IllidariCouncilMalandeCastingCircleOfHealingTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() == CLASS_DRUID || bot->getClass() == CLASS_HUNTER ||
-        bot->getClass() == CLASS_PALADIN || bot->getClass() == CLASS_PRIEST)
+    uint8 const botClass = bot->getClass();
+    if (botClass == CLASS_DRUID || botClass == CLASS_HUNTER || botClass == CLASS_PALADIN ||
+        botClass == CLASS_PRIEST)
     {
         return false;
     }
@@ -586,11 +587,11 @@ bool IllidariCouncilShouldManageDpsTimerTrigger::IsActiveInEncounter()
 
 // Illidan Stormrage <The Betrayer>
 
-// Not gated on the encounter, which starts as the speech ends, so throttled to once per second.
+// Not gated on the encounter, which starts as the speech ends.
 bool IllidanStormrageShouldPositionForPullTrigger::IsActive()
 {
     // You are not prepared!
-    return AI_VALUE(bool, "illidan stormrage speech in progress");
+    return IsIllidanSpeechInProgress(bot);
 }
 
 bool IllidanStormrageHunterShouldMisdirectTrigger::IsActiveInEncounter()
@@ -977,9 +978,7 @@ bool IllidanStormrageWarlockShouldSeedShadowDemonsTrigger::IsActiveInEncounter()
     if (IsIllidanPhaseStartWithin(*illidan, IllidanPhase::Demon, ILLIDAN_SHADOW_DEMON_SPAWN_MS))
         return false;
 
-    auto const& shadowDemons =
-        context->GetValue<std::vector<ShadowDemon>>("illidan stormrage shadow demons")->RefGet();
-    if (shadowDemons.size() < 2)
+    if (GetShadowDemons(bot).size() < 2)
         return false;
 
     return !IsNearNewParasiticShadowfiend(botAI);

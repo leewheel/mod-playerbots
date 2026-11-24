@@ -26,6 +26,17 @@ constexpr uint32 Id(T value)
     return static_cast<uint32>(value);
 }
 
+// Boss ids from sunwell_plateau.h, matching DungeonEncounter.dbc's encounterIndex.
+enum class SwpBosses : uint32
+{
+    DATA_KALECGOS                   = 0,
+    DATA_BRUTALLUS                  = 1,
+    DATA_FELMYST                    = 2,
+    DATA_EREDAR_TWINS               = 3,
+    DATA_MURU                       = 4,
+    DATA_KILJAEDEN                  = 5,
+};
+
 enum class SwpSpells : uint32
 {
     // Trash - Apocalypse Guard
@@ -60,7 +71,7 @@ enum class SwpSpells : uint32
     // M'uru
     SPELL_DARKNESS                     = 45996,
     SPELL_DARKNESS_PRE_EFFECT          = 45999,
-    SPELL_ENTROPIUS_DARKNESS           = 46269,
+    SPELL_VOID_ZONE_VISUAL             = 46265,
     SPELL_SHADOW_BOLT_VOLLEY           = 46082,
     SPELL_FEL_FIREBALL                 = 46101,
     SPELL_SPELL_FURY                   = 46102,
@@ -210,6 +221,7 @@ enum class SwpNpcs : uint32
     NPC_KILJAEDEN                = 25315,
     NPC_SHIELD_ORB               = 25502,
     NPC_HAND_OF_THE_DECEIVER     = 25588,
+    NPC_KILJAEDEN_CONTROLLER     = 25608,
     NPC_POWER_OF_THE_BLUE_FLIGHT = 25653,
     NPC_SINISTER_REFLECTION      = 25708,
     NPC_ARMAGEDDON_TARGET        = 25735,
@@ -232,19 +244,6 @@ enum class SwpObjects : uint32
 
 inline constexpr uint32 SWP_MAP_ID = 580;
 
-// DungeonEncounter.dbc encounterIndex, map 580
-enum class SwpBosses : uint32
-{
-    DATA_KALECGOS                   = 0,
-    DATA_BRUTALLUS                  = 1,
-    DATA_FELMYST                    = 2,
-    DATA_EREDAR_TWINS               = 3,
-    DATA_MURU                       = 4,
-    DATA_KILJAEDEN                  = 5,
-};
-
-Unit* GetSwpBoss(Player* bot, SwpBosses boss);
-
 // Steps short enough to navigate poor terrain, matching the standard in EncounterHelpers.
 inline constexpr float PATH_STEP_DISTANCE = 3.5f;
 inline constexpr float PATH_BACKWARD_STEP_DISTANCE = 2.25f;
@@ -259,6 +258,7 @@ inline constexpr float ICY_TOUCH_REACH = 20.0f;
 inline constexpr float CHARGE_REACH = 25.0f;
 inline constexpr float WIND_SHEAR_REACH = 25.0f;
 inline constexpr float SILENCING_SHOT_REACH = 35.0f;
+inline constexpr float MASS_DISPEL_REACH = 30.0f;
 inline constexpr float CONSECRATION_RADIUS = 8.0f;
 inline constexpr float SHOCKWAVE_RADIUS = 10.0f;
 
@@ -267,6 +267,7 @@ inline constexpr float SELF_AOE_RACIAL_RADIUS = 8.0f;
 // Radius for Challenging Shout and Challenging Roar.
 inline constexpr float TAUNT_SHOUT_RADIUS = 10.0f;
 
+Unit* GetSwpBoss(Player* bot, SwpBosses boss);
 // Offset from the center of an arc for assigning positioning slots, filling outward and
 // alternating sides. Slot 0 is the center when the count is odd and straddles it when even.
 float GetCenteredArcSlotAngleOffset(uint8 slotIndex, uint8 slotCount, float arcWidth);
@@ -296,7 +297,7 @@ bool GetTankPathStep(
 inline constexpr uint32 VOLATILE_FIEND_CACHE_INTERVAL_MS = 200;
 // A fiend's aggro radius against a level 70 player.
 inline constexpr float VOLATILE_FIEND_AGGRO_RADIUS = 21.0f;
-inline constexpr float VOLATILE_FIEND_SAFE_DISTANCE = VOLATILE_FIEND_AGGRO_RADIUS + 1.0f;
+inline constexpr float VOLATILE_FIEND_CLEARANCE = VOLATILE_FIEND_AGGRO_RADIUS + 1.0f;
 // Do not try to reach targets if within this distance of a fiend. The intent (and effect) is to
 // keep bots from approaching a fiend, since the raid moves forwards only through the gauntlet.
 inline constexpr float VOLATILE_FIEND_APPROACH_SUPPRESSION_RADIUS =
@@ -310,7 +311,8 @@ inline constexpr float GAUNTLET_PATH_RADIUS = 82.4f;
 inline constexpr float GAUNTLET_RADIUS = GAUNTLET_PATH_RADIUS + VOLATILE_FIEND_AGGRO_RADIUS;
 
 bool IsNearGauntlet(Player* bot);
-ObjectGuid FindSwpVolatileFiendGuid(PlayerbotAI* botAI);
+GuidVector FindGauntletVolatileFiendGuids(Player* bot);
+Creature* GetSwpVolatileFiend(PlayerbotAI* botAI);
 bool IsVolatileFiendInterceptor(Player* bot);
 
 // Apocalypse Guards

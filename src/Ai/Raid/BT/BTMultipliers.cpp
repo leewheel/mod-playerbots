@@ -33,7 +33,9 @@
 #include "WarriorActions.h"
 #include "WipeAction.h"
 #include <algorithm>
+#include <initializer_list>
 #include <limits>
+#include <string_view>
 #include <vector>
 
 using namespace BtHelpers;
@@ -935,7 +937,7 @@ float IllidanStormrageHoldPullPositionsMultiplier::GetValue(Action* action)
         return 1.0f;
     }
 
-    return AI_VALUE(bool, "illidan stormrage speech in progress") ? 0.0f : 1.0f;
+    return IsIllidanSpeechInProgress(bot) ? 0.0f : 1.0f;
 }
 
 float IllidanStormrageControlMovementAndTargetingMultiplier::GetValueInEncounter(Action* action)
@@ -1350,9 +1352,7 @@ float IllidanStormrageDisableAoeOnShadowDemonsMultiplier::GetValueInEncounter(Ac
     if (!illidan || GetIllidanPhase(illidan) != IllidanPhase::Demon)
         return 1.0f;
 
-    auto const& shadowDemons =
-        context->GetValue<std::vector<ShadowDemon>>("illidan stormrage shadow demons")->RefGet();
-    return shadowDemons.empty() ? 1.0f : 0.0f;
+    return GetShadowDemons(bot).empty() ? 1.0f : 0.0f;
 }
 
 // Lets the bot cast on a Demon or Shadowfiend even with the +threat strategy, which reads an add

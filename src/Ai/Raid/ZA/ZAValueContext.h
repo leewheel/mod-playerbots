@@ -12,17 +12,6 @@
 #include "Value.h"
 #include "ZAHelpers.h"
 
-class JanalaiFireBombsValue : public CalculatedValue<GuidVector>
-{
-public:
-    JanalaiFireBombsValue(PlayerbotAI* botAI)
-        : CalculatedValue<GuidVector>(
-              botAI, "jan'alai fire bombs", ZaHelpers::FIRE_BOMB_CACHE_INTERVAL_MS) {}
-
-protected:
-    GuidVector Calculate() override { return ZaHelpers::FindNearbyFireBombGuids(bot); }
-};
-
 class HexLordMalacrassFreezingTrapValue : public ObjectGuidCalculatedValue
 {
 public:
@@ -40,17 +29,11 @@ class RaidZulAmanValueContext : public NamedObjectContext<UntypedValue>
 public:
     RaidZulAmanValueContext()
     {
-        creators["jan'alai fire bombs"] = &RaidZulAmanValueContext::janalai_fire_bombs;
         creators["hex lord malacrass freezing trap"] =
             &RaidZulAmanValueContext::hex_lord_malacrass_freezing_trap;
     }
 
 private:
-    static UntypedValue* janalai_fire_bombs(PlayerbotAI* botAI)
-    {
-        return new JanalaiFireBombsValue(botAI);
-    }
-
     static UntypedValue* hex_lord_malacrass_freezing_trap(PlayerbotAI* botAI)
     {
         return new HexLordMalacrassFreezingTrapValue(botAI);

@@ -8,6 +8,7 @@
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
 #include "SWPEncounter_Felmyst.h"
+#include "SWPEncounter_KJ.h"
 #include "SWPEncounter_Muru.h"
 #include "SWPEncounter_Twins.h"
 #include "SWPMultipliers.h"
@@ -21,7 +22,8 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     // Shared
     triggers.push_back(new TriggerNode("sunwell no encounter in progress",
         { NextAction("sunwell reset encounter states", ACTION_EMERGENCY + 10),
-          NextAction("eredar twins announce class roles", ACTION_EMERGENCY + 8) }));
+          NextAction("eredar twins announce class roles", ACTION_EMERGENCY + 8),
+          NextAction("kil'jaeden announce dragon orb user", ACTION_EMERGENCY + 8) }));
 
     triggers.push_back(new TriggerNode("sunwell class roles should be assigned",
         { NextAction("sunwell assign class roles", ACTION_EMERGENCY + 9) }));
@@ -110,7 +112,10 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("felmyst run away from encapsulated player", ACTION_EMERGENCY + 7) }));
 
     triggers.push_back(new TriggerNode("felmyst player has gas nova",
-        { NextAction("felmyst mass dispel gas nova", ACTION_EMERGENCY + 6) }));
+        {
+            NextAction("felmyst mass dispel gas nova", ACTION_EMERGENCY + 6),
+            NextAction("felmyst move into mass dispel reach", ACTION_EMERGENCY + 5),
+        }));
 
     triggers.push_back(new TriggerNode("felmyst takeoff is near",
         { NextAction("felmyst move to air group position", ACTION_EMERGENCY + 1) }));
@@ -181,10 +186,10 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("eredar twins move away from sacrolash victim", ACTION_EMERGENCY + 10) }));
 
     // M'uru
-    triggers.push_back(new TriggerNode("m'uru hunter should misdirect new enemy",
+    triggers.push_back(new TriggerNode("m'uru hunter should misdirect",
         { NextAction("m'uru misdirect enemy to tank", ACTION_RAID + 2) }));
 
-    triggers.push_back(new TriggerNode("m'uru transformed into entropius",
+    triggers.push_back(new TriggerNode("m'uru entropius should be tanked",
         { NextAction("m'uru main tank pick up entropius", ACTION_RAID + 2) }));
 
     triggers.push_back(new TriggerNode("m'uru ranged should stack or spread",
@@ -193,7 +198,7 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("m'uru void sentinel should be tanked",
         { NextAction("m'uru tanks move sentinel to safe position", ACTION_RAID + 1) }));
 
-    triggers.push_back(new TriggerNode("m'uru adds spawn at entrance",
+    triggers.push_back(new TriggerNode("m'uru entrance should be guarded",
         { NextAction("m'uru second assist tank guard ranged", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("m'uru should assign dps priority",
@@ -202,7 +207,7 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("m'uru dark fiends spawned",
         { NextAction("m'uru kill dark fiends with dispel", ACTION_EMERGENCY + 10) }));
 
-    triggers.push_back(new TriggerNode("m'uru darkness is coming",
+    triggers.push_back(new TriggerNode("m'uru darkness is active",
         { NextAction("m'uru melee flee the darkness", ACTION_EMERGENCY + 8) }));
 
     triggers.push_back(new TriggerNode("m'uru berserker has flurry",
@@ -220,34 +225,40 @@ void RaidSwpStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("m'uru warlock has enslaved void spawn",
         { NextAction("m'uru void spawn cast shadow bolt volley", ACTION_RAID + 4) }));
 
-    triggers.push_back(new TriggerNode("m'uru entropius summons void zones",
-        { NextAction("m'uru keep distance from dark fiends", ACTION_EMERGENCY + 9) }));
+    triggers.push_back(new TriggerNode("m'uru void zone is near",
+        { NextAction("m'uru move clear of void zones and fiends", ACTION_EMERGENCY + 9) }));
+
+    triggers.push_back(new TriggerNode("m'uru dark fiend is near",
+        { NextAction("m'uru move clear of void zones and fiends", ACTION_EMERGENCY + 9) }));
 
     triggers.push_back(new TriggerNode("m'uru the singularity is near",
         { NextAction("m'uru escape the singularity", ACTION_EMERGENCY + 7) }));
 
     // Kil'jaeden <The Deceiver>
-    triggers.push_back(new TriggerNode("kil'jaeden should coordinate orb use",
-        { NextAction("kil'jaeden announce dragon orb user", ACTION_RAID - 1) }));
-
     triggers.push_back(new TriggerNode("kil'jaeden hands of the deceiver are active",
         { NextAction("kil'jaeden control hands of the deceiver", ACTION_EMERGENCY),
           NextAction("kil'jaeden mark hand of the deceiver", ACTION_RAID + 1),
           NextAction("kil'jaeden move holy paladin into stun range", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("kil'jaeden tanks should hold boss and reflections",
+    triggers.push_back(new TriggerNode("kil'jaeden should hold dps at start",
+        { NextAction("kil'jaeden start dps hold timer", ACTION_EMERGENCY + 8) }));
+
+    triggers.push_back(new TriggerNode("kil'jaeden dps hold is active",
+        { NextAction("kil'jaeden select target for hold", ACTION_RAID) }));
+
+    triggers.push_back(new TriggerNode("kil'jaeden should be tanked",
         { NextAction("kil'jaeden position and move tanks", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("kil'jaeden melee should split into two groups",
         { NextAction("kil'jaeden position melee and avoid armageddons", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("kil'jaeden ranged should spread in two arcs",
+    triggers.push_back(new TriggerNode("kil'jaeden ranged should keep formation",
         { NextAction("kil'jaeden position ranged and avoid armageddons", ACTION_RAID) }));
 
     triggers.push_back(new TriggerNode("kil'jaeden fire bloom on immunity class",
-        { NextAction("kil'jaeden remove fire bloom", ACTION_EMERGENCY + 1) }));
+        { NextAction("kil'jaeden remove fire bloom", ACTION_EMERGENCY + 11) }));
 
-    triggers.push_back(new TriggerNode("kil'jaeden says: Chaos! Destruction! Oblivion!",
+    triggers.push_back(new TriggerNode("kil'jaeden casts darkness of a thousand souls",
         { NextAction("kil'jaeden stack for shield of the blue", ACTION_EMERGENCY + 10) }));
 
     triggers.push_back(new TriggerNode("kil'jaeden dragon orb is active",
@@ -290,6 +301,7 @@ void RaidSwpStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     multipliers.push_back(new FelmystControlMovementMultiplier(botAI));
     multipliers.push_back(new FelmystWaitForLandingDpsMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeEncapsulateAvoidanceMultiplier(botAI));
+    multipliers.push_back(new FelmystKeepHealersInSideStacksMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeDemonicVaporAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystPrioritizeFogAvoidanceMultiplier(botAI));
     multipliers.push_back(new FelmystFocusAttacksOnCharmedPlayerMultiplier(botAI));
@@ -305,9 +317,12 @@ void RaidSwpStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
     // M'uru
     multipliers.push_back(new MuruDisableDefaultTargetingMultiplier(botAI));
     multipliers.push_back(new MuruControlMovementMultiplier(botAI));
+    multipliers.push_back(new MuruHoldDpsOnEntropiusMultiplier(botAI));
+    multipliers.push_back(new MuruLetMagesStealSpellFuryMultiplier(botAI));
 
     // Kil'jaeden <The Deceiver>
     multipliers.push_back(new KiljaedenSingleTargetHandsMultiplier(botAI));
+    multipliers.push_back(new KiljaedenHoldDpsAtStartMultiplier(botAI));
     multipliers.push_back(new KiljaedenControlMovementAndTargetingMultiplier(botAI));
     multipliers.push_back(new KiljaedenPrioritizeDarknessProtectionMultiplier(botAI));
     multipliers.push_back(new KiljaedenControlDragonMultiplier(botAI));
@@ -384,7 +399,7 @@ void AppendMuruTankExclusions(
     if (!muru || !IsMuruPhaseActive(muru))
         return;
 
-    bool const darknessActive = PeekMuruDarknessActiveState(bot);
+    bool const darknessActive = IsMuruDarknessActive(muru);
     // Even during Darkness, the Sentinel Tank has full freedom to pick up Sentinels.
     bool const distanceUnrestricted = darknessActive &&
         PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
@@ -411,16 +426,62 @@ void AppendMuruTankExclusions(
     }
 }
 
+// Shield Orbs fly out of melee reach. Ranged skip the ones they cannot hit from where they stand,
+// since they cannot leave their positions to reach them.
 void AppendKiljaedenShieldOrbExclusions(
     PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
 {
-    if (!PlayerbotAI::IsMelee(botAI->GetBot()))
-        return;
+    Player* bot = botAI->GetBot();
+    bool const isMelee = PlayerbotAI::IsMelee(bot);
+    // The same test as the standard "enemy out of spell range" trigger
+    float const spellRange = botAI->GetRange("spell") + CONTACT_DISTANCE;
 
     for (auto const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
     {
         Unit* attacker = botAI->GetUnit(guid);
-        if (attacker && attacker->GetEntry() == Id(SwpNpcs::NPC_SHIELD_ORB))
+        if (!attacker || attacker->GetEntry() != Id(SwpNpcs::NPC_SHIELD_ORB))
+            continue;
+
+        if (isMelee || !bot->IsWithinCombatRange(attacker, spellRange))
+            exclusions.insert(guid);
+    }
+}
+
+// Non-tanks do not attack Reflections they cannot hit from where they stand, since their position
+// actions would pull them straight back. Melee and Demo Locks in Metamorphosis (who may leave their
+// positions while Reflections are up) also skip Reflections inside Kil'jaeden's Knockback radius,
+// or if reaching them would require crossing it.
+void AppendKiljaedenReflectionExclusions(
+    PlayerbotAI* botAI, AiObjectContext* context, GuidSet& exclusions)
+{
+    Player* bot = botAI->GetBot();
+    if (PlayerbotAI::IsTank(bot))
+        return;
+
+    bool const isMetamorphosis = bot->getClass() == CLASS_WARLOCK &&
+        bot->HasAura(Id(SwpSpells::SPELL_METAMORPHOSIS));
+    bool const isMelee = PlayerbotAI::IsMelee(bot);
+    // The same test as the standard "enemy out of spell range" trigger
+    float const spellRange = botAI->GetRange("spell") + CONTACT_DISTANCE;
+
+    for (auto const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
+    {
+        Unit* attacker = botAI->GetUnit(guid);
+        if (!attacker || attacker->GetEntry() != Id(SwpNpcs::NPC_SINISTER_REFLECTION))
+            continue;
+
+        bool isExcluded = false;
+        if (isMetamorphosis)
+            isExcluded = IsMeleeBlockedByKiljaedenKnockback(*bot, *attacker);
+        else if (isMelee)
+        {
+            isExcluded = IsMeleeBlockedByKiljaedenKnockback(*bot, *attacker) ||
+                !bot->IsWithinMeleeRange(attacker);
+        }
+        else
+            isExcluded = !bot->IsWithinCombatRange(attacker, spellRange);
+
+        if (isExcluded)
             exclusions.insert(guid);
     }
 }
@@ -445,4 +506,5 @@ void RaidSwpStrategy::AppendTargetExclusions(
     AppendMuruDarkFiendExclusions(botAI, context, exclusions);
     AppendMuruTankExclusions(botAI, context, exclusions);
     AppendKiljaedenShieldOrbExclusions(botAI, context, exclusions);
+    AppendKiljaedenReflectionExclusions(botAI, context, exclusions);
 }

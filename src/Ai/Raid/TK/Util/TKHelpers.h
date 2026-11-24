@@ -12,7 +12,6 @@
 #include "ObjectGuid.h"
 #include "PlayerbotAI.h"
 #include "Position.h"
-#include "SharedDefines.h"
 #include <array>
 #include <optional>
 #include <type_traits>
@@ -32,6 +31,15 @@ constexpr uint32 Id(T value)
 {
     return static_cast<uint32>(value);
 }
+
+// Boss ids from the_eye.h, matching DungeonEncounter.dbc's encounterIndex.
+enum class TkBosses : uint32
+{
+    DATA_ALAR                       = 0,
+    DATA_VOID_REAVER                = 1,
+    DATA_HIGH_ASTROMANCER_SOLARIAN  = 2,
+    DATA_KAELTHAS_SUNSTRIDER        = 3,
+};
 
 enum class TkSpells : uint32
 {
@@ -76,6 +84,7 @@ enum class TkNpcs : uint32
 
     // High Astromancer Solarian
     NPC_SOLARIUM_PRIEST             = 18806,
+    NPC_SOLARIUM_AGENT              = 18925,
 
     // Kael'thas Sunstrider
     NPC_KAELTHAS_SUNSTRIDER         = 19622,
@@ -115,7 +124,12 @@ enum class TkItems : uint32
 inline constexpr uint32 TK_MAP_ID = 550;
 inline constexpr uint32 TK_CACHE_INTERVAL_MS = 200;
 
-std::pair<Unit*, Unit*> GetTargetUnitPair(PlayerbotAI* botAI, uint32 entry);
+Unit* GetTkBoss(Player* bot, TkBosses boss);
+// Living adds of one entry (Embers of Al'ar, Solarium Priests and Agents, or Phoenixes), oldest
+// first, from its encounter's list in the instance state.
+std::vector<Unit*> GetTkAdds(PlayerbotAI* botAI, TkNpcs npc);
+// The oldest and newest living adds of one entry (the same unit if only one is up).
+std::pair<Unit*, Unit*> GetTargetUnitPair(PlayerbotAI* botAI, TkNpcs npc);
 Player* GetNearestNonTankPlayerInRadius(Player* bot, float radius);
 
 // Trash
@@ -188,7 +202,8 @@ inline Position const ALAR_SE_RAMP_BASE        = { 281.064f, -36.590f, -2.389f }
 inline Position const ALAR_SW_RAMP_BASE        = { 281.064f,  36.590f, -2.389f };
 inline Position const ALAR_ROOM_S_CENTER       = { 281.064f,   0.000f, -2.389f };
 
-inline constexpr float ALAR_FLAME_PATCH_SEARCH_DISTANCE = 40.0f;
+// Around ALAR_ROOM_CENTER. Every platform, ramp, and ground position is within 70 yd of it.
+inline constexpr float ALAR_ROOM_SEARCH_RADIUS = 100.0f;
 
 bool IsAlarInPhase2(uint32 instanceId);
 int8 GetAlarDestinationLocationIndex(Unit* alar);
@@ -199,6 +214,7 @@ bool IsPrimaryEmberTank(Player* bot);
 bool IsFirstAlarTank(Player* bot);
 bool IsSecondAlarTank(Player* bot);
 Player* GetSecondaryEmberTank(Player* bot);
+GuidVector FindAlarEmberGuids(Player* bot);
 GuidVector FindFlamePatchGuids(Player* bot);
 std::vector<Unit*> GetFlamePatches(PlayerbotAI* botAI);
 
@@ -213,7 +229,7 @@ struct ArcaneOrbData
 
 inline constexpr uint32 ARCANE_ORB_DURATION_MS = 7000;
 inline constexpr float ARCANE_ORB_HAZARD_RADIUS = 20.0f;
-inline constexpr float ARCANE_ORB_SAFE_DISTANCE = ARCANE_ORB_HAZARD_RADIUS + 2.0f;
+inline constexpr float ARCANE_ORB_CLEARANCE = ARCANE_ORB_HAZARD_RADIUS + 2.0f;
 inline constexpr float ARCANE_ORB_BUFFER_DISTANCE = ARCANE_ORB_HAZARD_RADIUS + 10.0f;
 
 // Center of the room
@@ -225,7 +241,13 @@ bool IsNearActiveArcaneOrb(Player* bot, float radius);
 
 // High Astromancer Solarian
 
+// Around Solarian's spawn; 100 yd covers her room.
+inline constexpr float SOLARIAN_ROOM_SEARCH_RADIUS = 100.0f;
+
+inline Position const SOLARIAN_SPAWN_POSITION = { 432.740f, -373.645f, 18.014f };
+
 bool HasWrathOfTheAstromancer(Player* bot);
+GuidVector FindSolarianAddGuids(Player* bot);
 
 // Kael'thas Sunstrider <Lord of the Blood Elves>
 
@@ -241,8 +263,8 @@ enum KTPhases
     PHASE_FINAL          = 5
 };
 
-inline constexpr uint32 KAELTHAS_DB_GUID = 158218;
-// 125 yards is about the exact distance from Kael to the entrances to his room.
+// 125 yards is about the exact distance from Kael to the entrances to his room. Also the radius of
+// the room searches around KAELTHAS_SPAWN_POSITION.
 inline constexpr float KAELTHAS_ROOM_SEARCH_DISTANCE = 125.0f;
 inline constexpr uint32 ADVISOR_DPS_HOLD_NOT_STARTED = 0;
 inline constexpr uint32 ADVISOR_DPS_HOLD_MS = 10 * IN_MILLISECONDS;
@@ -291,6 +313,8 @@ bool IsCapernianTank(Player* bot);
 // The Debuff Hunter attacks Sanguinar in phase 3 with melee (after Thaladred) to apply Armor
 // Disruption from the Netherstrand Longbow (as opposed to other ranged, who attack Capernian).
 bool IsSanguinarDebuffHunter(Player* bot);
+GuidVector FindPhoenixGuids(Player* bot);
+// Dead weapons included, for looting.
 GuidVector FindLegendaryWeaponGuids(Player* bot);
 Unit* GetLegendaryWeapon(PlayerbotAI* botAI, uint32 weaponEntry);
 Creature* GetDeadLegendaryWeapon(PlayerbotAI* botAI, uint32 weaponEntry);
@@ -298,8 +322,11 @@ bool HasDeadLegendaryWeapon(PlayerbotAI* botAI);
 bool IsLegendaryWeaponItem(uint32 itemId);
 bool HasEquippableItemForSlot(Player* bot, uint8 slot);
 Item* GetEquippedItemInSlot(Player* bot, uint8 slot, uint32 itemId);
+GuidVector FindFlameStrikeGuids(Player* bot);
 Creature* GetNearestFlameStrikeInRadius(Player* bot, float radius);
+GuidVector FindPhoenixEggGuids(Player* bot);
 Creature* GetPhoenixEgg(Player* bot);
+std::vector<Unit*> GetActivePhoenixes(PlayerbotAI* botAI);
 
 // Shared encounter state
 
@@ -307,8 +334,15 @@ struct TkInstanceState
 {
     std::optional<bool> lastRebirthState;
     std::optional<bool> isAlarInPhase2;
+    EncounterHelpers::InstanceCreatureList alarEmbers;
+    EncounterHelpers::InstanceCreatureList alarFlamePatches;
     std::vector<ArcaneOrbData> voidReaverArcaneOrbs;
+    EncounterHelpers::InstanceCreatureList solarianAdds;
     std::optional<uint32> advisorDpsHoldTimer;
+    EncounterHelpers::InstanceCreatureList kaelthasPhoenixes;
+    EncounterHelpers::InstanceCreatureList kaelthasLegendaryWeapons;
+    EncounterHelpers::InstanceCreatureList kaelthasFlameStrikes;
+    EncounterHelpers::InstanceCreatureList kaelthasPhoenixEggs;
     EncounterHelpers::ClassRoleAssignment capernianTank;
     EncounterHelpers::ClassRoleAssignment sanguinarDebuffHunter;
 };

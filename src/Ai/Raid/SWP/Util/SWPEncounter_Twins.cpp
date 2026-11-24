@@ -13,11 +13,13 @@
 #include "NearestGameObjects.h"
 #include "Playerbots.h"
 #include "SWPInstanceState.h"
+#include "Spell.h"
+#include "SpellInfo.h"
 #include "ThreatHelpers.h"
 #include "ThreatManager.h"
 #include <algorithm>
+#include <initializer_list>
 #include <list>
-#include <unordered_map>
 
 using namespace EncounterHelpers;
 
@@ -58,8 +60,8 @@ Position GetAdjustedPosition(Unit* alythess, Position const& basePosition)
     return { baseX + offsetX, baseY + offsetY, baseZ + offsetZ };
 }
 
-// True if a straight move from the bot to the destination keeps out of avoid-AoE range of a
-// patch at every Alythess tank position.
+// True if a straight move from the bot to the destination keeps clear of a patch at every
+// Alythess tank position.
 bool IsClearOfAlythessTankPositions(Player* bot, Unit* alythess, Position const& destination)
 {
     float const startX = bot->GetPositionX();
@@ -77,7 +79,18 @@ bool IsClearOfAlythessTankPositions(Player* bot, Unit* alythess, Position const&
             std::clamp((toX * deltaX + toY * deltaY) / lengthSq, 0.0f, 1.0f) : 0.0f;
         float const nearX = startX + t * deltaX;
         float const nearY = startY + t * deltaY;
-        if (position.GetExactDist2d(nearX, nearY) < BLAZE_AVOID_AOE_DISTANCE)
+        if (position.GetExactDist2d(nearX, nearY) < BLAZE_ROUTE_CLEARANCE)
+            return false;
+    }
+
+    return true;
+}
+
+bool IsClearOfBlaze(PlayerbotAI* botAI, Position const& position, float clearance)
+{
+    for (Position const& blaze : GetCachedBlazePositions(botAI))
+    {
+        if (blaze.GetExactDist2d(position) <= clearance)
             return false;
     }
 
@@ -93,6 +106,16 @@ bool HasClosedOnTankThreat(Unit* boss, Player* bot, float tankThreat, float thre
 
 } // end anonymous namespace
 
+Unit* FindAlythess(Player* bot)
+{
+    return GetSwpBoss(bot, SwpBosses::DATA_EREDAR_TWINS);
+}
+
+Unit* FindSacrolash(Player* bot)
+{
+    return FindThreatTarget(bot, "lady sacrolash");
+}
+
 Position GetAlythessTankPosition(Unit* alythess, uint8 index)
 {
     if (index >= ALYTHESS_TANK_POSITIONS.size())
@@ -101,9 +124,28 @@ Position GetAlythessTankPosition(Unit* alythess, uint8 index)
     return GetAdjustedPosition(alythess, ALYTHESS_TANK_POSITIONS[index]);
 }
 
-Position GetEredarTwinsP2StackPosition(Unit* alythess)
+Position GetEredarTwinsPhase2Position(Player* bot, Unit* alythess)
 {
-    return GetAdjustedPosition(alythess, EREDAR_TWINS_P2_STACK_POSITION);
+    return GetAdjustedPosition(
+        alythess, bot->getClass() == CLASS_HUNTER ?
+            EREDAR_TWINS_P2_HUNTER_POSITION : EREDAR_TWINS_P2_STACK_POSITION);
+}
+
+std::optional<Position> GetEredarTwinsPhase2Fallback(PlayerbotAI* botAI, Unit* alythess)
+{
+    Player* bot = botAI->GetBot();
+    constexpr float clearance = EREDAR_TWINS_P2_BLAZE_CLEARANCE;
+    if (IsClearOfBlaze(botAI, GetEredarTwinsPhase2Position(bot, alythess), clearance))
+        return std::nullopt;
+
+    for (Position const& basePosition : EREDAR_TWINS_P2_FALLBACK_POSITIONS)
+    {
+        Position const fallback = GetAdjustedPosition(alythess, basePosition);
+        if (IsClearOfBlaze(botAI, fallback, clearance))
+            return fallback;
+    }
+
+    return std::nullopt;
 }
 
 Position GetEredarTwinsStepAsidePosition(Unit* alythess, bool onBalcony)
@@ -112,13 +154,22 @@ Position GetEredarTwinsStepAsidePosition(Unit* alythess, bool onBalcony)
         GetAdjustedPosition(alythess, EREDAR_TWINS_FLOOR_ASIDE_POSITION);
 }
 
-Position GetEredarTwinsP2StackRouteTarget(Player* bot, Unit* alythess)
+// Every waypoint leads to the stack waypoint, from which the straight line to the bot's position is
+// clear. The position 4 waypoint serves the landing and the floor step-aside; from Sacrolash's
+// side its line crosses the tank positions, so bots there go round position 0.
+Position GetEredarTwinsPhase2RouteTarget(PlayerbotAI* botAI, Unit* alythess)
 {
-    Position const stack = GetEredarTwinsP2StackPosition(alythess);
-    Position const firstWaypoint =
-        GetAdjustedPosition(alythess, EREDAR_TWINS_PHASE_CHANGE_WAYPOINTS[0]);
-    Position const secondWaypoint =
-        GetAdjustedPosition(alythess, EREDAR_TWINS_PHASE_CHANGE_WAYPOINTS[1]);
+    if (std::optional<Position> const fallback = GetEredarTwinsPhase2Fallback(botAI, alythess))
+        return *fallback;
+
+    Player* bot = botAI->GetBot();
+
+    Position const destination = GetEredarTwinsPhase2Position(bot, alythess);
+    Position const stackWaypoint = GetAdjustedPosition(alythess, EREDAR_TWINS_P2_STACK_WAYPOINT);
+    Position const position0Waypoint =
+        GetAdjustedPosition(alythess, EREDAR_TWINS_P2_POSITION_0_WAYPOINT);
+    Position const position4Waypoint =
+        GetAdjustedPosition(alythess, EREDAR_TWINS_P2_POSITION_4_WAYPOINT);
     constexpr float arrival = EREDAR_TWINS_WAYPOINT_ARRIVAL_DISTANCE;
 
     // A bot on the leg between two route points keeps heading for the second, since the straight
@@ -129,19 +180,24 @@ Position GetEredarTwinsP2StackRouteTarget(Player* bot, Unit* alythess)
             from.GetExactDist2d(to) + EREDAR_TWINS_ROUTE_LEG_TOLERANCE;
     };
 
-    if (IsClearOfAlythessTankPositions(bot, alythess, stack) || isOnLeg(secondWaypoint, stack) ||
-        bot->GetExactDist2d(secondWaypoint) <= arrival)
+    if (IsClearOfAlythessTankPositions(bot, alythess, destination) ||
+        isOnLeg(stackWaypoint, destination) || bot->GetExactDist2d(stackWaypoint) <= arrival)
     {
-        return stack;
+        return destination;
     }
 
-    if (IsClearOfAlythessTankPositions(bot, alythess, secondWaypoint) ||
-        isOnLeg(firstWaypoint, secondWaypoint) || bot->GetExactDist2d(firstWaypoint) <= arrival)
+    if (IsClearOfAlythessTankPositions(bot, alythess, stackWaypoint) ||
+        isOnLeg(position0Waypoint, stackWaypoint) || isOnLeg(position4Waypoint, stackWaypoint) ||
+        bot->GetExactDist2d(position0Waypoint) <= arrival ||
+        bot->GetExactDist2d(position4Waypoint) <= arrival)
     {
-        return secondWaypoint;
+        return stackWaypoint;
     }
 
-    return firstWaypoint;
+    if (IsClearOfAlythessTankPositions(bot, alythess, position4Waypoint))
+        return position4Waypoint;
+
+    return position0Waypoint;
 }
 
 bool UpdateEredarTwinsClassRoleAnnouncement(PlayerbotAI* botAI)
@@ -154,8 +210,8 @@ bool UpdateEredarTwinsClassRoleAnnouncement(PlayerbotAI* botAI)
         });
 }
 
-// The class role's paladin. The main tank stands in only if no protection paladin was ever chosen,
-// so a paladin who dies during the fight isn't replaced by the main tank.
+// A prot paladin, chosen by the class role picker rules. If there is no prot paladin, then the main
+// tank, whatever class, is assigned to Alythess.
 Player* GetAlythessTank(Player* bot)
 {
     SwpInstanceState const* state = FindSwpState(bot->GetInstanceId());
@@ -186,7 +242,7 @@ bool IsHoldingAlythessAggro(Player* player, Unit* alythess)
 // This ordering is needed only to determine Misdirection assignments.
 Player* GetSacrolashTank(Player* bot, uint8 index)
 {
-    Player* const alythessTank = GetAlythessTank(bot);
+    Player* alythessTank = GetAlythessTank(bot);
 
     Player* mainTank = GetGroupMainTank(bot);
     if (mainTank && (!PlayerbotAI::IsTank(mainTank) || mainTank == alythessTank))
@@ -228,7 +284,7 @@ bool ShouldHoldAlythessThreat(Player* bot, Unit* alythess)
     if (PlayerbotAI::IsHeal(bot))
         return false;
 
-    Player* const alythessTank = GetAlythessTank(bot);
+    Player* alythessTank = GetAlythessTank(bot);
     if (!alythessTank || alythessTank == bot || !alythessTank->IsAlive())
         return false;
 
@@ -245,11 +301,19 @@ bool ShouldHoldSacrolashThreat(Player* bot, Unit* sacrolash)
     if (PlayerbotAI::IsHeal(bot) || IsAnySacrolashTank(bot))
         return false;
 
-    Player* const alythessTank = GetAlythessTank(bot);
+    Player* tank = GetSacrolashSecondTank(bot, sacrolash);
+    return tank && HasClosedOnTankThreat(
+        sacrolash, bot, sacrolash->GetThreatMgr().GetThreat(tank), SACROLASH_THREAT_HOLD_RATIO);
+}
 
-    float highestTankThreat = 0.0f;
-    float secondTankThreat = 0.0f;
-    uint8 tankCount = 0;
+// The Sacrolash tank second on her threat, whom Confounding Blow sends her to, or the only one.
+Player* GetSacrolashSecondTank(Player* bot, Unit* sacrolash)
+{
+    Player* alythessTank = GetAlythessTank(bot);
+    Player* highestTank = nullptr;
+    Player* secondTank = nullptr;
+    float highestThreat = 0.0f;
+    float secondThreat = 0.0f;
 
     auto const threatList = sacrolash->GetThreatMgr().GetUnsortedThreatList();
     for (auto itr = threatList.begin(); itr != threatList.end(); ++itr)
@@ -268,25 +332,40 @@ bool ShouldHoldSacrolashThreat(Player* bot, Unit* sacrolash)
         }
 
         float const threat = threatRef->GetThreat();
-        ++tankCount;
-
-        if (threat > highestTankThreat)
+        if (!highestTank || threat > highestThreat)
         {
-            secondTankThreat = highestTankThreat;
-            highestTankThreat = threat;
+            secondTank = highestTank;
+            secondThreat = highestThreat;
+            highestTank = threatPlayer;
+            highestThreat = threat;
         }
-        else if (threat > secondTankThreat)
+        else if (!secondTank || threat > secondThreat)
         {
-            secondTankThreat = threat;
+            secondTank = threatPlayer;
+            secondThreat = threat;
         }
     }
 
-    if (!tankCount)
+    return secondTank ? secondTank : highestTank;
+}
+
+bool IsAlythessPullMisdirectHunter(Player* bot)
+{
+    Group* group = bot->GetGroup();
+    if (!group)
         return false;
 
-    float const tankThreat = tankCount > 1 ? secondTankThreat : highestTankThreat;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (member && member->IsAlive() && member->GetMapId() == SWP_MAP_ID &&
+            member->getClass() == CLASS_HUNTER && GET_PLAYERBOT_AI(member))
+        {
+            return member == bot;
+        }
+    }
 
-    return HasClosedOnTankThreat(sacrolash, bot, tankThreat, SACROLASH_THREAT_HOLD_RATIO);
+    return false;
 }
 
 bool IsEredarTwinsStartHoldActive(PlayerbotAI* botAI)
@@ -295,7 +374,7 @@ bool IsEredarTwinsStartHoldActive(PlayerbotAI* botAI)
     if (PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!FindThreatTarget(bot, "lady sacrolash"))
+    if (!FindSacrolash(bot))
         return false;
 
     EredarTwinsEncounterState const* state = FindEredarTwinsState(bot->GetInstanceId());
@@ -312,11 +391,11 @@ EredarTwinsThreatHolds FindEredarTwinsThreatHolds(Player* bot)
         return holds;
 
     // Fine to exclude all tanks for Sacrolash because the Alythess tank never attacks her.
-    Unit* sacrolash = FindThreatTarget(bot, "lady sacrolash");
+    Unit* sacrolash = FindSacrolash(bot);
     if (sacrolash && !PlayerbotAI::IsTank(bot) && ShouldHoldSacrolashThreat(bot, sacrolash))
         holds.sacrolash = sacrolash->GetGUID();
 
-    Unit* alythess = GetSwpBoss(bot, SwpBosses::DATA_EREDAR_TWINS);
+    Unit* alythess = FindAlythess(bot);
     if (alythess && ShouldHoldAlythessThreat(bot, alythess))
         holds.alythess = alythess->GetGUID();
 
@@ -343,46 +422,46 @@ std::vector<Position> FindEredarTwinsBlazePositions(Player* bot)
 
 bool IsAlythessTankPositionSafe(PlayerbotAI* botAI, Position const& position)
 {
-    for (Position const& blaze : GetCachedBlazePositions(botAI))
+    return IsClearOfBlaze(botAI, position, BLAZE_CLEARANCE);
+}
+
+// Alythess casts Conflagration while Sacrolash lives; Sacrolash casts it if Alythess dies first.
+// The cast is read live; once it ends, the twin's next cast replaces it, so the missile's flight
+// comes from the record the spell listener writes.
+ObjectGuid GetEredarTwinsConflagrationTargetGuid(Unit* alythess, Unit* sacrolash)
+{
+    for (Unit* twin : { alythess, sacrolash })
     {
-        if (blaze.GetExactDist2d(position) <= BLAZE_CLEARANCE)
-            return false;
+        Spell* spell = twin ? twin->GetCurrentSpell(CURRENT_GENERIC_SPELL) : nullptr;
+        if (spell && spell->m_spellInfo->Id == Id(SwpSpells::SPELL_CONFLAGRATION) &&
+            spell->GetCastTime() - spell->GetCastTimeRemaining() >= CONFLAGRATION_DELAY_MS)
+        {
+            return spell->m_targets.GetUnitTargetGUID();
+        }
     }
 
-    return true;
-}
-
-void RecordIncomingEredarTwinsConflagrationTarget(Player* target)
-{
-    if (!target)
-        return;
-
-    uint32 const now = getMSTime();
-    std::optional<EredarTwinsIncomingConflagrationState>& incoming =
-        EredarTwinsState(target->GetInstanceId()).incomingConflagration;
-    EredarTwinsIncomingConflagrationState& state = incoming ? *incoming : incoming.emplace();
-    state.targetGuid = target->GetGUID();
-    state.delayMs = now + CONFLAGRATION_DELAY_MS;
-    state.expireMs = now + CONFLAGRATION_WINDOW_MS;
-}
-
-ObjectGuid GetEredarTwinsConflagrationTargetGuid(uint32 instanceId)
-{
-    EredarTwinsEncounterState const* twinsState = FindEredarTwinsState(instanceId);
-    if (!twinsState || !twinsState->incomingConflagration)
+    Unit* twin = alythess ? alythess : sacrolash;
+    EredarTwinsEncounterState const* state =
+        twin ? FindEredarTwinsState(twin->GetInstanceId()) : nullptr;
+    if (!state || !state->conflagrationImpact ||
+        state->conflagrationImpact->expireMs <= getMSTime())
+    {
         return ObjectGuid::Empty;
+    }
 
-    EredarTwinsIncomingConflagrationState const& state = *twinsState->incomingConflagration;
-    uint32 const now = getMSTime();
-    if (state.expireMs <= now || state.delayMs > now)
-        return ObjectGuid::Empty;
-
-    return state.targetGuid;
+    return state->conflagrationImpact->targetGuid;
 }
 
-bool IsEredarTwinsConflagrationTarget(Player* bot)
+bool IsEredarTwinsConflagrationTarget(Player* bot, Unit* alythess, Unit* sacrolash)
 {
-    return GetEredarTwinsConflagrationTargetGuid(bot->GetInstanceId()) == bot->GetGUID();
+    ObjectGuid const targetGuid = GetEredarTwinsConflagrationTargetGuid(alythess, sacrolash);
+    return !targetGuid.IsEmpty() && targetGuid == bot->GetGUID();
+}
+
+void RecordEredarTwinsConflagrationImpact(Player* target)
+{
+    EredarTwinsState(target->GetInstanceId()).conflagrationImpact = EredarTwinsConflagrationImpact{
+        target->GetGUID(), getMSTime() + CONFLAGRATION_IMPACT_WINDOW_MS };
 }
 
 // Shared encounter state

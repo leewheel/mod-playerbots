@@ -59,7 +59,7 @@ public:
         creators["jan'alai spread for flame breath"] =
             &RaidZulAmanTriggerContext::janalai_spread_for_flame_breath;
 
-        creators["jan'alai is fire bombing"] = &RaidZulAmanTriggerContext::janalai_is_fire_bombing;
+        creators["jan'alai fire bombing"] = &RaidZulAmanTriggerContext::janalai_fire_bombing;
 
         creators["jan'alai amani'shi hatchers spawned"] =
             &RaidZulAmanTriggerContext::janalai_amanishi_hatchers_spawned;
@@ -121,17 +121,10 @@ private:
     }
 
     // Akil'zon <Eagle Avatar>
-    // By leewheel 2026-10-13 合并 brighton the-lab：上游把 ZulAmanPullingBossTrigger（"on the pull"）
-    //   整体替换为 ZulAmanHunterShouldMisdirectTrigger（"after the pull"，ZATriggers.h:54，旧类已删），
-    //   新触发器 IsActiveInEncounter() 内部直接 find target(_bossName)（ZATriggers.cpp:31）
-    //   ⇒ 按本核铁律把 bossName 换回 NPC entry（entry 已双源核定：上游 ZAHelpers.h NPC_* 常量 +
-    //   acore_world.creature_template 实查一致）：akil'zon=23574 / nalorakk=23576 / jan'alai=23578 /
-    //   halazzi=23577 / hex lord malacrass=24239 / zul'jin=23863。
-    // End By leewheel
     static Trigger* akilzon_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new ZulAmanHunterShouldMisdirectTrigger(
-            botAI, "akil'zon hunter should misdirect", "23574");
+            botAI, "akil'zon hunter should misdirect", ZaHelpers::ZaBosses::DATA_AKILZON);
     }
     static Trigger* akilzon_should_be_tanked(PlayerbotAI* botAI)
     {
@@ -154,7 +147,7 @@ private:
     static Trigger* nalorakk_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new ZulAmanHunterShouldMisdirectTrigger(
-            botAI, "nalorakk hunter should misdirect", "23576");
+            botAI, "nalorakk hunter should misdirect", ZaHelpers::ZaBosses::DATA_NALORAKK);
     }
     static Trigger* nalorakk_spread_for_surge(PlayerbotAI* botAI)
     {
@@ -169,7 +162,7 @@ private:
     static Trigger* janalai_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new ZulAmanHunterShouldMisdirectTrigger(
-            botAI, "jan'alai hunter should misdirect", "23578");
+            botAI, "jan'alai hunter should misdirect", ZaHelpers::ZaBosses::DATA_JANALAI);
     }
     static Trigger* janalai_should_be_tanked(PlayerbotAI* botAI)
     {
@@ -179,9 +172,9 @@ private:
     {
         return new JanalaiSpreadForFlameBreathTrigger(botAI);
     }
-    static Trigger* janalai_is_fire_bombing(PlayerbotAI* botAI)
+    static Trigger* janalai_fire_bombing(PlayerbotAI* botAI)
     {
-        return new JanalaiIsFireBombingTrigger(botAI);
+        return new JanalaiFireBombingTrigger(botAI);
     }
     static Trigger* janalai_amanishi_hatchers_spawned(PlayerbotAI* botAI)
     {
@@ -192,7 +185,7 @@ private:
     static Trigger* halazzi_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new ZulAmanHunterShouldMisdirectTrigger(
-            botAI, "halazzi hunter should misdirect", "23577");
+            botAI, "halazzi hunter should misdirect", ZaHelpers::ZaBosses::DATA_HALAZZI);
     }
     static Trigger* halazzi_should_be_tanked(PlayerbotAI* botAI)
     {
@@ -211,7 +204,8 @@ private:
     static Trigger* hex_lord_malacrass_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new ZulAmanHunterShouldMisdirectTrigger(
-            botAI, "hex lord malacrass hunter should misdirect", "24239");
+            botAI, "hex lord malacrass hunter should misdirect",
+            ZaHelpers::ZaBosses::DATA_HEX_LORD_MALACRASS);
     }
     static Trigger* hex_lord_malacrass_should_prioritize_adds(PlayerbotAI* botAI)
     {
@@ -230,7 +224,7 @@ private:
     static Trigger* zuljin_hunter_should_misdirect(PlayerbotAI* botAI)
     {
         return new ZulAmanHunterShouldMisdirectTrigger(
-            botAI, "zul'jin hunter should misdirect", "23863");
+            botAI, "zul'jin hunter should misdirect", ZaHelpers::ZaBosses::DATA_ZULJIN);
     }
     static Trigger* zuljin_should_be_tanked(PlayerbotAI* botAI)
     {

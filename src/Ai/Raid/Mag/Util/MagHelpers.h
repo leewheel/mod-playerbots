@@ -8,6 +8,7 @@
 #define PLAYERBOTS_MAGHELPERS_H
 
 #include "Common.h"
+#include "EncounterHelpers.h"
 #include "ObjectGuid.h"
 #include "Position.h"
 #include <optional>
@@ -31,6 +32,12 @@ constexpr uint32 Id(T value)
     return static_cast<uint32>(value);
 }
 
+// Boss id from magtheridons_lair.h, matching DungeonEncounter.dbc's encounterIndex.
+enum class MagBosses : uint32
+{
+    DATA_MAGTHERIDON = 0,
+};
+
 enum class MagSpells : uint32
 {
     // Magtheridon
@@ -47,13 +54,13 @@ enum class MagSpells : uint32
 
 enum class MagNpcs : uint32
 {
-    NPC_HELLFIRE_CHANNELER  = 17256,
-    NPC_BURNING_ABYSSAL     = 17454,
+    NPC_HELLFIRE_CHANNELER = 17256,
+    NPC_BURNING_ABYSSAL    = 17454,
 };
 
 enum class MagObjects : uint32
 {
-    GO_BLAZE                = 181832,
+    GO_BLAZE = 181832,
 };
 
 struct CubeInfo
@@ -63,13 +70,14 @@ struct CubeInfo
 };
 
 // Magtheridon's CombatReach is 12 yards.
-inline constexpr uint32 MAG_MAP_ID                   = 544;
-inline constexpr uint32 SOUTH_CHANNELER_DB_GUID      = 90978;
-inline constexpr uint32 WEST_CHANNELER_DB_GUID       = 90979;
-inline constexpr uint32 NORTHWEST_CHANNELER_DB_GUID  = 90980;
-inline constexpr uint32 EAST_CHANNELER_DB_GUID       = 90982;
-inline constexpr uint32 NORTHEAST_CHANNELER_DB_GUID  = 90981;
-inline constexpr uint32 MAG_CACHE_INTERVAL_MS        = 200;
+inline constexpr uint32 MAG_MAP_ID = 544;
+inline constexpr uint32 MAG_CACHE_INTERVAL_MS = 200;
+
+inline constexpr uint32 SOUTH_CHANNELER_DB_GUID     = 90978;
+inline constexpr uint32 WEST_CHANNELER_DB_GUID      = 90979;
+inline constexpr uint32 NORTHWEST_CHANNELER_DB_GUID = 90980;
+inline constexpr uint32 EAST_CHANNELER_DB_GUID      = 90982;
+inline constexpr uint32 NORTHEAST_CHANNELER_DB_GUID = 90981;
 
 // Hold dps for this long after Magtheridon first becomes attackable.
 inline constexpr float MAG_DPS_HOLD_MS = 8 * IN_MILLISECONDS;
@@ -87,11 +95,15 @@ inline constexpr float CONFLAGRATION_HAZARD_RADIUS = 5.0f;
 // Quake is cast 28.3s after Magtheridon joins the fight and is repeated every 56.3-64.3s. Each
 // cast delays Blast Nova by (essentially) 7s.
 inline constexpr float QUAKE_DELAY_MS = 6999;
-// At 30% HP, Magtheridon causes the ceiling to fall on players, dealing 5,250+ damage & a 2s stun.
+// At 30% HP, Magtheridon causes the ceiling to fall on players, dealing 5,250+ damage and 2s stun.
 inline constexpr float CEILING_COLLAPSE_HP_PCT = 30.0f;
 // The ceiling collapse delays Quake and Blast Nova by 18s.
 inline constexpr uint32 CEILING_COLLAPSE_DELAY_MS = 18 * IN_MILLISECONDS;
 
+// Around Magtheridon's spawn. The Channelers are within about 40 yd of it; 100 yd covers the room.
+inline constexpr float BURNING_ABYSSAL_SEARCH_RADIUS = 100.0f;
+
+inline Position const MAGTHERIDON_SPAWN_POSITION =       { -18.701f,   2.241f, -0.321f,   0.0f };
 // The waiting position is SE-ish of Magtheridon.
 inline Position const WAITING_FOR_MAGTHERIDON_POSITION = { -31.962f,  -8.514f, -0.304f, 0.657f };
 // The tank position is up against the Eastern wall.
@@ -100,10 +112,11 @@ inline Position const NW_CHANNELER_TANK_POSITION =       { -11.764f,  30.818f, -
 inline Position const NE_CHANNELER_TANK_POSITION =       { -12.490f, -26.211f, -0.411f,   0.0f };
 
 extern std::vector<uint32> const MANTICRON_CUBE_DB_GUIDS;
+Unit* GetMagtheridon(Player* bot);
 std::vector<CubeInfo> GetAllCubeInfosByDbGuids(Map* map, std::vector<uint32> const& cubeDbGuids);
 Creature* GetChanneler(Player* bot, uint32 dbGuid);
 GuidVector FindBurningAbyssalGuids(Player* bot);
-std::vector<Unit*> GetBurningAbyssals(PlayerbotAI* botAI);
+std::vector<Unit*> GetBurningAbyssals(Player* bot);
 bool IsMagtheridonActive(Unit* magtheridon);
 bool IsAnyChannelerAlive(Player* bot);
 // Magtheridon is released when the last Channeler dies, but he stays caged and unselectable for 3s.
@@ -129,6 +142,7 @@ struct MagInstanceState
     std::optional<bool> lastBlastNovaState;
     bool ceilingCollapseApplied = false;
     std::unordered_map<ObjectGuid, CubeInfo> botToCubeAssignments;
+    EncounterHelpers::InstanceCreatureList burningAbyssals;
 };
 
 MagInstanceState& MagState(uint32 instanceId);

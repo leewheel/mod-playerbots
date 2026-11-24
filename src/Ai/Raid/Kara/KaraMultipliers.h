@@ -15,6 +15,7 @@
 
 // Shared
 
+// Without a boss, gated on any Karazhan encounter in progress (for the shared multipliers).
 class KarazhanEncounterMultiplier : public Multiplier
 {
 public:
@@ -206,6 +207,17 @@ public:
         : KarazhanEncounterMultiplier(
             botAI, "shade of aran flame wreath disable movement",
             KaraHelpers::KaraBosses::DATA_ARAN) {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class ShadeOfAranDelayInterruptsMultiplier : public KarazhanEncounterMultiplier
+{
+public:
+    ShadeOfAranDelayInterruptsMultiplier(PlayerbotAI* botAI)
+        : KarazhanEncounterMultiplier(
+            botAI, "shade of aran delay interrupts", KaraHelpers::KaraBosses::DATA_ARAN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

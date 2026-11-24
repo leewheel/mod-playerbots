@@ -10,6 +10,7 @@
 #include "EncounterHelpers.h"
 #include "KaraHelpers.h"
 #include "Trigger.h"
+#include <string>
 
 // Shared
 
@@ -250,6 +251,18 @@ public:
     RomuloAndJulianneShouldDieTogetherTrigger(PlayerbotAI* botAI)
         : KarazhanEncounterTrigger(
             botAI, "romulo and julianne should die together",
+            KaraHelpers::KaraBosses::DATA_OPERA_PERFORMANCE) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class JulianneDrinkingPoisonTrigger : public KarazhanEncounterTrigger
+{
+public:
+    JulianneDrinkingPoisonTrigger(PlayerbotAI* botAI)
+        : KarazhanEncounterTrigger(
+            botAI, "julianne drinking poison",
             KaraHelpers::KaraBosses::DATA_OPERA_PERFORMANCE) {}
 
 protected:

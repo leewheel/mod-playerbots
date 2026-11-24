@@ -5,10 +5,11 @@
  */
 
 #include "GruulHelpers.h"
+#include "ObjectAccessor.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <limits>
-#include <list>
 #include <mutex>
 #include <unordered_map>
 
@@ -17,6 +18,8 @@ using namespace EncounterHelpers;
 namespace GruulHelpers
 {
 
+// Shared
+
 namespace
 {
 
@@ -24,6 +27,17 @@ std::mutex gruulStateMutex;
 std::unordered_map<uint32, GruulInstanceState> gruulStates;
 
 } // end anonymous namespace (Shared)
+
+Unit* GetGruulsLairBoss(Player* bot, GruulBosses boss)
+{
+    if (boss == GruulBosses::DATA_HIGH_KING_MAULGAR)
+        return GetMaulgarCouncilMember(bot, GruulNpcs::NPC_HIGH_KING_MAULGAR);
+
+    if (!IsBossInProgress(bot, GRUUL_MAP_ID, Id(boss)))
+        return nullptr;
+
+    return FindThreatTarget(bot, "gruul the dragonkiller");
+}
 
 // High King Maulgar
 
@@ -38,7 +52,7 @@ bool IsMaulgarTank(Player* bot)
 bool IsOlmTank(Player* bot)
 {
     // Although passing true for indexLivingOnly means a death will swap the Blindeye tank to Olm,
-    // this is intended since Blindeye dies first and Olm is more important to control anyway.
+    // this is intended since Blindeye dies first and Olm is more important to control.
     return PlayerbotAI::IsAssistTankOfIndex(bot, 0, true);
 }
 
@@ -101,22 +115,14 @@ bool IsKigglerMoonkinTank(PlayerbotAI* botAI)
     return state && IsClassRolePlayer(bot, state->kigglerMoonkinTank);
 }
 
-GuidVector FindNearbyWildFelStalkerGuids(Player* bot)
+GuidVector FindWildFelStalkerGuids(Player* bot)
 {
     if (bot->GetMapId() != GRUUL_MAP_ID)
         return {};
 
-    std::list<Creature*> creatureList;
-    bot->GetCreatureListWithEntryInGrid(
-        creatureList, Id(GruulNpcs::NPC_WILD_FEL_STALKER), WILD_FEL_STALKER_SEARCH_RADIUS);
-
-    GuidVector guids;
-    guids.reserve(creatureList.size());
-    for (Creature* creature : creatureList)
-    {
-        if (creature && creature->IsAlive())
-            guids.push_back(creature->GetGUID());
-    }
+    GuidVector guids = FindCreatureGuidsAround(
+        bot, MAULGAR_SPAWN_POSITION, WILD_FEL_STALKER_SEARCH_RADIUS,
+        { Id(GruulNpcs::NPC_WILD_FEL_STALKER) });
 
     std::sort(guids.begin(), guids.end(), [](ObjectGuid const& lhs, ObjectGuid const& rhs)
     {
@@ -126,21 +132,56 @@ GuidVector FindNearbyWildFelStalkerGuids(Player* bot)
     return guids;
 }
 
-std::vector<Unit*> GetNearbyWildFelStalkers(PlayerbotAI* botAI)
+std::vector<Unit*> GetWildFelStalkers(Player* bot)
 {
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    auto const& guids = AI_VALUE_REF(GuidVector, "high king maulgar wild fel stalkers");
+    GuidVector const& guids = GetInstanceCreatureList(
+        GruulState(bot->GetInstanceId()).wildFelStalkers, WILD_FEL_STALKER_CACHE_INTERVAL_MS, bot,
+        FindWildFelStalkerGuids);
 
     std::vector<Unit*> felStalkers;
     felStalkers.reserve(guids.size());
     for (ObjectGuid const& guid : guids)
     {
-        Unit* felStalker = botAI->GetUnit(guid);
+        Creature* felStalker = ObjectAccessor::GetCreature(*bot, guid);
         if (felStalker && felStalker->IsAlive())
             felStalkers.push_back(felStalker);
     }
 
     return felStalkers;
+}
+
+GuidVector FindMaulgarCouncilGuids(Player* bot)
+{
+    std::vector<uint32> const entries = {
+        Id(GruulNpcs::NPC_HIGH_KING_MAULGAR),
+        Id(GruulNpcs::NPC_KROSH_FIREHAND),
+        Id(GruulNpcs::NPC_OLM_THE_SUMMONER),
+        Id(GruulNpcs::NPC_KIGGLER_THE_CRAZED),
+        Id(GruulNpcs::NPC_BLINDEYE_THE_SEER),
+    };
+
+    return FindCreatureGuidsAround(
+        bot, MAULGAR_SPAWN_POSITION, MAULGAR_COUNCIL_SEARCH_RADIUS, entries);
+}
+
+Unit* GetMaulgarCouncilMember(Player* bot, GruulNpcs npc)
+{
+    if (!IsBossInProgress(bot, GRUUL_MAP_ID, Id(GruulBosses::DATA_HIGH_KING_MAULGAR)))
+        return nullptr;
+
+    GuidVector const& guids = GetInstanceCreatureList(
+        GruulState(bot->GetInstanceId()).maulgarCouncil, MAULGAR_COUNCIL_CACHE_INTERVAL_MS, bot,
+        FindMaulgarCouncilGuids);
+    for (ObjectGuid const& guid : guids)
+    {
+        if (guid.GetEntry() != Id(npc))
+            continue;
+
+        Creature* member = ObjectAccessor::GetCreature(*bot, guid);
+        return member && member->IsAlive() && member->IsInWorld() ? member : nullptr;
+    }
+
+    return nullptr;
 }
 
 // Gruul the Dragonkiller
@@ -152,7 +193,7 @@ std::vector<Position> const& GetCaveInPositions(PlayerbotAI* botAI)
     return botAI->GetAiObjectContext()
         ->GetValue<std::vector<Position>>("gruul the dragonkiller cave in")->RefGet();
 }
-}
+} // end anonymous namespace (Gruul the Dragonkiller)
 
 bool GetNearestCaveInPosition(PlayerbotAI* botAI, Position& pool)
 {
@@ -209,6 +250,16 @@ GruulInstanceState* FindGruulState(uint32 instanceId)
     std::lock_guard lock(gruulStateMutex);
     auto it = gruulStates.find(instanceId);
     return it != gruulStates.end() ? &it->second : nullptr;
+}
+
+void GruulResetInstance(uint32 instanceId)
+{
+    GruulInstanceState* state = FindGruulState(instanceId);
+    if (!state)
+        return;
+
+    ResetInstanceCreatureList(state->maulgarCouncil);
+    ResetInstanceCreatureList(state->wildFelStalkers);
 }
 
 }

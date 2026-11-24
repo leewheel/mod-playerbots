@@ -9,7 +9,6 @@
 #include "Playerbots.h"
 #include "SWPEncounter_Felmyst.h"
 #include "SWPShared.h"
-#include <vector>
 
 using namespace SwpHelpers;
 using namespace EncounterHelpers;
@@ -188,9 +187,35 @@ bool FelmystRunAwayFromEncapsulatedPlayerAction::Execute(Event /*event*/)
 bool FelmystMassDispelGasNovaAction::Execute(Event /*event*/)
 {
     Player* gasNovaTarget = GetFelmystGasNovaDispelTarget(bot);
-    return gasNovaTarget &&
-        botAI->CanCastSpell(Id(SwpSpells::SPELL_MASS_DISPEL), gasNovaTarget) &&
+    if (!gasNovaTarget || bot->GetExactDist(gasNovaTarget) > MASS_DISPEL_REACH)
+        return false;
+
+    return botAI->CanCastSpell(Id(SwpSpells::SPELL_MASS_DISPEL), gasNovaTarget) &&
         botAI->CastSpell(Id(SwpSpells::SPELL_MASS_DISPEL), gasNovaTarget);
+}
+
+bool FelmystMoveIntoMassDispelReachAction::Execute(Event /*event*/)
+{
+    Player* gasNovaTarget = GetFelmystGasNovaDispelTarget(bot);
+    if (!gasNovaTarget || bot->GetExactDist(gasNovaTarget) <= MASS_DISPEL_REACH ||
+        !IsFelmystMassDispelReady(bot))
+    {
+        return false;
+    }
+
+    constexpr float arrivalDist = MASS_DISPEL_REACH - 2.0f;
+    constexpr MovementPriority priority = MovementPriority::MOVEMENT_COMBAT;
+    if (IsWaitingForLastMove(priority))
+        return false;
+
+    float moveX;
+    float moveY;
+    if (!GetPathStepTowardUnit(bot, gasNovaTarget, arrivalDist, PATH_STEP_DISTANCE, moveX, moveY))
+        return false;
+
+    return MoveTo(
+        SWP_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false, priority,
+        true, false);
 }
 
 bool FelmystMoveToAirGroupPositionAction::Execute(Event /*event*/)
@@ -271,13 +296,13 @@ bool FelmystKiteDemonicVaporAction::Execute(Event /*event*/)
         _throughPosition = nullptr;
     }
 
-    while (!_throughPosition && _routePointIndex + 1 < _route.size() &&
-        bot->GetExactDist2d(_route[_routePointIndex]) <= FELMYST_ROUTE_POINT_ARRIVAL_DISTANCE)
+    while (!_throughPosition && _routePointIndex + 1 < _route->size() &&
+        bot->GetExactDist2d((*_route)[_routePointIndex]) <= FELMYST_ROUTE_POINT_ARRIVAL_DISTANCE)
     {
         ++_routePointIndex;
     }
 
-    Position const& target = _throughPosition ? *_throughPosition : _route[_routePointIndex];
+    Position const& target = _throughPosition ? *_throughPosition : (*_route)[_routePointIndex];
 
     // The route is not turned aside for patches, heads, or the crate; it passes clear of all three.
     float stepX;
@@ -307,7 +332,7 @@ void FelmystKiteDemonicVaporAction::StartRoute(Unit* felmyst, ObjectGuid const& 
     uint8 const demonicVaporCount = state ? state->demonicVaporCount : 0;
 
     _demonicVaporGuid = demonicVaporGuid;
-    _route = GetFelmystDemonicVaporRoute(end, demonicVaporCount);
+    _route = &GetFelmystDemonicVaporRoute(end, demonicVaporCount);
     _routePointIndex = 0;
     _throughPosition = demonicVaporCount >= 2 &&
         state->firstDemonicVaporTargetGuid == bot->GetGUID() ?
@@ -316,11 +341,11 @@ void FelmystKiteDemonicVaporAction::StartRoute(Unit* felmyst, ObjectGuid const& 
 
 bool FelmystKiteDemonicVaporAction::ResetRouteProgress()
 {
-    if (_demonicVaporGuid.IsEmpty() && _route.empty() && !_routePointIndex && !_throughPosition)
+    if (_demonicVaporGuid.IsEmpty() && !_route && !_routePointIndex && !_throughPosition)
         return false;
 
     _demonicVaporGuid = ObjectGuid::Empty;
-    _route = {};
+    _route = nullptr;
     _routePointIndex = 0;
     _throughPosition = nullptr;
     return true;
@@ -429,7 +454,8 @@ bool FelmystManageLandingDpsTimerAction::Execute(Event /*event*/)
 
     if (felmyst->IsFlying())
     {
-        if (!IsFelmystLanding(felmyst))
+        // Felmyst is coming down for the pull on the engaging unit's position (95% health proxy).
+        if (!IsFelmystLanding(felmyst) && felmyst->GetHealthPct() <= BOSS_ENGAGED_HEALTH_PCT)
             return clearTimers();
 
         if (state.landingDpsWaitStartMs)

@@ -14,9 +14,7 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include "SWPShared.h"
-#include <limits>
 #include <optional>
-#include <span>
 #include <string>
 #include <vector>
 
@@ -123,7 +121,6 @@ public:
     bool Execute(Event event) override;
 };
 
-// Takes the target dps assist would take, without attacking it, for a bot in its non-combat engine.
 class KalecgosSelectTargetForHoldAction : public Action
 {
 public:
@@ -306,6 +303,14 @@ public:
     bool Execute(Event event) override;
 };
 
+class FelmystMoveIntoMassDispelReachAction : public MovementAction
+{
+public:
+    FelmystMoveIntoMassDispelReachAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "felmyst move into mass dispel reach") {}
+    bool Execute(Event event) override;
+};
+
 class FelmystMoveToAirGroupPositionAction : public MovementAction
 {
 public:
@@ -332,7 +337,7 @@ public:
 
 private:
     ObjectGuid _demonicVaporGuid;
-    std::span<Position const> _route;
+    std::vector<Position> const* _route = nullptr;
     size_t _routePointIndex = 0;
     // G1, which the first vapor's target passes through if the second vapor picks it again
     Position const* _throughPosition = nullptr;
@@ -379,7 +384,6 @@ public:
     bool Execute(Event event) override;
 };
 
-// Takes the target dps assist would take, without attacking it, for a bot in its non-combat engine.
 class FelmystSelectTargetForHoldAction : public Action
 {
 public:
@@ -576,6 +580,9 @@ public:
     MuruMeleeFleeTheDarknessAction(PlayerbotAI* botAI)
         : MovementAction(botAI, "m'uru melee flee the darkness") {}
     bool Execute(Event event) override;
+
+private:
+    bool StepToPosition(Position const& position, float arrivalDistance);
 };
 
 class MuruCastStunOnBerserkerAction : public Action
@@ -613,31 +620,23 @@ public:
     bool Execute(Event event) override;
 };
 
-class MuruEnslavedVoidSpawnAttackAction : public Action
+class MuruVoidSpawnCastShadowBoltVolleyAction : public Action
 {
 public:
-    MuruEnslavedVoidSpawnAttackAction(PlayerbotAI* botAI, std::string const name)
-        : Action(botAI, name) {}
+    MuruVoidSpawnCastShadowBoltVolleyAction(PlayerbotAI* botAI)
+        : Action(botAI, "m'uru void spawn cast shadow bolt volley") {}
+    bool Execute(Event event) override;
 
-protected:
+private:
     Unit* GetControlledVoidSpawn() const;
     Unit* GetVoidSpawnVolleyPriorityTarget(Unit* voidSpawn) const;
 };
 
-class MuruVoidSpawnCastShadowBoltVolleyAction : public MuruEnslavedVoidSpawnAttackAction
+class MuruMoveClearOfVoidZonesAndFiendsAction : public MovementAction
 {
 public:
-    MuruVoidSpawnCastShadowBoltVolleyAction(PlayerbotAI* botAI)
-        : MuruEnslavedVoidSpawnAttackAction(
-            botAI, "m'uru void spawn cast shadow bolt volley") {}
-    bool Execute(Event event) override;
-};
-
-class MuruKeepDistanceFromDarkFiendsAction : public MovementAction
-{
-public:
-    MuruKeepDistanceFromDarkFiendsAction(PlayerbotAI* botAI)
-        : MovementAction(botAI, "m'uru keep distance from dark fiends") {}
+    MuruMoveClearOfVoidZonesAndFiendsAction(PlayerbotAI* botAI)
+        : MovementAction(botAI, "m'uru move clear of void zones and fiends") {}
     bool Execute(Event event) override;
 };
 
@@ -687,6 +686,23 @@ public:
     bool Execute(Event event) override;
 };
 
+class KiljaedenStartDpsHoldTimerAction : public Action
+{
+public:
+    KiljaedenStartDpsHoldTimerAction(PlayerbotAI* botAI)
+        : Action(botAI, "kil'jaeden start dps hold timer") {}
+    bool Execute(Event event) override;
+};
+
+class KiljaedenSelectTargetForHoldAction : public Action
+{
+public:
+    KiljaedenSelectTargetForHoldAction(PlayerbotAI* botAI)
+        : Action(botAI, "kil'jaeden select target for hold") {}
+    bool isUseful() override;
+    bool Execute(Event event) override;
+};
+
 class KiljaedenPositionAndMoveTanksAction : public AttackAction
 {
 public:
@@ -696,6 +712,7 @@ public:
 
 private:
     bool PickUpSinisterReflections(Creature* reflection);
+    bool MoveAroundKiljaedenToReflection();
 };
 
 class KiljaedenPositionMeleeAndAvoidArmageddonsAction : public MovementAction

@@ -15,6 +15,7 @@
 #include "MovementActions.h"
 #include "Playerbots.h"
 #include "ReachTargetActions.h"
+#include <optional>
 
 using namespace MagHelpers;
 using namespace EncounterHelpers;
@@ -38,7 +39,7 @@ float MagtheridonUseManticronCubeMultiplier::GetValueInEncounter(Action* action)
     if (!IsCubeClicker(bot))
         return 1.0f;
 
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return 1.0f;
 
@@ -54,9 +55,7 @@ float MagtheridonHoldDpsMultiplier::GetValueInEncounter(Action* action)
     if (!IsDpsHoldCandidate(bot, action))
         return 1.0f;
 
-    //By leewheel 2026-11-08 合并 brighton 48 提交：上游此处写回英文名 "magtheridon"（中文库恒 nullptr），
-    //  按 entry 铁律回退 17257。
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     if (!IsMagtheridonDpsHoldActive(bot, magtheridon))
         return 1.0f;
 
@@ -83,7 +82,7 @@ float MagtheridonKeepInCombatBeforeReleaseMultiplier::GetValueInEncounter(Action
             return 1.0f;
     }
 
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     return IsMagtheridonReleasePending(bot, magtheridon) ? 0.0f : 1.0f;
 }
 
@@ -105,7 +104,7 @@ float MagtheridonControlTankActionsMultiplier::GetValueInEncounter(Action* actio
         return 1.0f;
     }
 
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     if (!magtheridon)
         return 1.0f;
 
@@ -138,7 +137,7 @@ float MagtheridonAvoidDebrisDangerMultiplier::GetValueInEncounter(Action* action
     if (!IsCeilingCollapsed(bot))
         return 1.0f;
 
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return 1.0f;
 

@@ -29,61 +29,48 @@ bool GruulsLairClassRolesShouldBeAssignedTrigger::IsActive()
 bool HighKingMaulgarThreeOgresNeedMeleeTanksTrigger::IsActiveInEncounter()
 {
     if (IsBlindeyeTank(bot))
-        return AI_VALUE2(Unit*, "find target", "18831");
+        return GetMaulgarCouncilMember(bot, GruulNpcs::NPC_BLINDEYE_THE_SEER);
 
-    // By leewheel 2026-08-29 合并：采用对侧完整岗位判断(BlindEye/Olm/Maulgar三坦克各自对应目标)，entry规则查找
     if (IsOlmTank(bot))
-        return AI_VALUE2(Unit*, "find target", "18834");
+        return GetMaulgarCouncilMember(bot, GruulNpcs::NPC_OLM_THE_SUMMONER);
 
-    return IsMaulgarTank(bot) && AI_VALUE2(Unit*, "find target", "18836");
-    // End By leewheel
+    return IsMaulgarTank(bot);
 }
 
 bool HighKingMaulgarKroshNeedsMageTankTrigger::IsActiveInEncounter()
 {
-// By leewheel 2026-09-05 合并：Krosh法师坦克触发采用entry规则(18832)；助手签名随上游统一为botAI
-    return IsKroshMageTank(botAI) && AI_VALUE2(Unit*, "find target", "18832");
-    // End By leewheel
+    return IsKroshMageTank(botAI) && GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KROSH_FIREHAND);
 }
 
 bool HighKingMaulgarKigglerNeedsMoonkinTankTrigger::IsActiveInEncounter()
 {
-// By leewheel 2026-09-05 合并：Kiggler月光坦克触发采用entry规则(18835)；助手签名随上游统一为botAI
-    return IsKigglerMoonkinTank(botAI) && AI_VALUE2(Unit*, "find target", "18835");
-    // End By leewheel
+    return IsKigglerMoonkinTank(botAI) &&
+        GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KIGGLER_THE_CRAZED);
 }
 
 bool HighKingMaulgarShouldAssignDpsPriorityTrigger::IsActiveInEncounter()
 {
-    if (!AI_VALUE2(Unit*, "find target", "18831"))
-        return false;
-
     if (IsMaulgarTank(bot))
         return false;
 
     if (IsOlmTank(bot))
-        return !AI_VALUE2(Unit*, "find target", "18834");
+        return !GetMaulgarCouncilMember(bot, GruulNpcs::NPC_OLM_THE_SUMMONER);
 
     if (IsBlindeyeTank(bot))
-        return !AI_VALUE2(Unit*, "find target", "18836");
+        return !GetMaulgarCouncilMember(bot, GruulNpcs::NPC_BLINDEYE_THE_SEER);
 
-// By leewheel 2026-09-05 合并：Krosh(18832)/Kiggler(18835)按entry规则查找；助手签名随上游统一为botAI
     if (IsKroshMageTank(botAI))
-        return !AI_VALUE2(Unit*, "find target", "18832");
+        return !GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KROSH_FIREHAND);
 
     if (IsKigglerMoonkinTank(botAI))
-        return !AI_VALUE2(Unit*, "find target", "18835");
-    // End By leewheel
+        return !GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KIGGLER_THE_CRAZED);
 
     return true;
 }
 
 bool HighKingMaulgarChannelingWhirlwindTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-08-29 修复：旋风斩是 High King Maulgar(18836) 的技能，
-    // 旧代码误用 18831(Blindeye the Seer) 导致该触发器永远无法在正确的boss身上生效
-    Unit* maulgar = AI_VALUE2(Unit*, "find target", "18836");
-    // End By leewheel
+    Unit* maulgar = GetEncounterBoss();
     if (!maulgar || !maulgar->HasAura(Id(GruulSpells::SPELL_WHIRLWIND)))
         return false;
 
@@ -92,19 +79,15 @@ bool HighKingMaulgarChannelingWhirlwindTrigger::IsActiveInEncounter()
 
 bool HighKingMaulgarShouldStandBackFromKroshTrigger::IsActiveInEncounter()
 {
-// By leewheel 2026-09-05 合并：坦克与Krosh法师坦克放行；助手签名随上游统一为botAI
     if (PlayerbotAI::IsTank(bot) || IsKroshMageTank(botAI))
         return false;
 
-    return AI_VALUE2(Unit*, "find target", "18832");
-    // End By leewheel
+    return GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KROSH_FIREHAND);
 }
 
 bool HighKingMaulgarWildFelStalkerSpawnedTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-09-04 合并冲突解决: 采纳brighton的GetNearbyWildFelStalkers缓存式助手(内部已用entry 18847判断)
-    // End By leewheel
-    return bot->getClass() == CLASS_WARLOCK && !GetNearbyWildFelStalkers(botAI).empty();
+    return bot->getClass() == CLASS_WARLOCK && !GetWildFelStalkers(bot).empty();
 }
 
 bool HighKingMaulgarHunterShouldMisdirectTrigger::IsActiveInEncounter()
@@ -112,9 +95,7 @@ bool HighKingMaulgarHunterShouldMisdirectTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_HUNTER)
         return false;
 
-    // By leewheel 2026-08-29 合并：修正entry错配(拉怪监控对象是Blindeye 18831而非Maulgar 18836)；
-    //   2026-08-30 合并上游：HP常量统一为 BLINDEYE_ENGAGED_HEALTH_PCT
-    Unit* blindeye = AI_VALUE2(Unit*, "find target", "18831");
+    Unit* blindeye = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_BLINDEYE_THE_SEER);
     return blindeye && blindeye->GetHealthPct() > BLINDEYE_ENGAGED_HEALTH_PCT;
 }
 
@@ -122,24 +103,21 @@ bool HighKingMaulgarHunterShouldMisdirectTrigger::IsActiveInEncounter()
 
 bool GruulTheDragonkillerShouldBeTankedTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsTank(bot) && AI_VALUE2(Unit*, "find target", "19044");
+    return PlayerbotAI::IsTank(bot);
 }
 
 bool GruulTheDragonkillerRangedShouldSpreadTrigger::IsActiveInEncounter()
 {
-    return PlayerbotAI::IsRanged(bot) && AI_VALUE2(Unit*, "find target", "19044");
+    return PlayerbotAI::IsRanged(bot);
 }
 
 bool GruulTheDragonkillerBotInCaveInTrigger::IsActiveInEncounter()
 {
-    // By leewheel 2026-09-12 按 AGENTS.md 第81条修正历史遗留英文名: 19044 = 屠龙者格鲁尔
-    // End By leewheel
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
+    Unit* gruul = GetEncounterBoss();
     if (!gruul)
         return false;
 
-    // The tank holding Gruul eats it. Moving him messes up the spread and puts other bots in
-    // danger.
+    // The tank holding Gruul eats cave in. Moving him messes up the spread.
     if (gruul->GetVictim() == bot)
         return false;
 

@@ -21,8 +21,6 @@ using namespace EncounterHelpers;
 
 bool GruulsLairResetEncounterStatesAction::Execute(Event /*event*/)
 {
-    // 合并brighton 2026-08-26: 不再依赖find target守卫, 直接统一重置图标与分散走位初始位置
-    //By leewheel 2026年8月26日
     bool reset = false;
 
     Action* action = context->GetAction("gruul the dragonkiller spread ranged");
@@ -42,10 +40,10 @@ bool GruulsLairResetEncounterStatesAction::Execute(Event /*event*/)
         });
         reset |= ClearStrategyTargetIcon(
             bot, RtiTargetValue::crossIndex, { Id(GruulNpcs::NPC_KROSH_FIREHAND) });
+        GruulResetInstance(bot->GetInstanceId());
     }
 
     return reset;
-    //End By leewheel
 }
 
 bool GruulsLairAssignClassRolesAction::Execute(Event /*event*/)
@@ -61,17 +59,17 @@ bool HighKingMaulgarMeleeTanksPositionBossesAction::Execute(Event /*event*/)
     Position position;
     if (IsMaulgarTank(bot))
     {
-        target = AI_VALUE2(Unit*, "find target", "18831");
+        target = GetGruulsLairBoss(bot, GruulBosses::DATA_HIGH_KING_MAULGAR);
         position = MAULGAR_TANK_POSITION;
     }
     else if (IsOlmTank(bot))
     {
-        target = AI_VALUE2(Unit*, "find target", "18834");
+        target = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_OLM_THE_SUMMONER);
         position = OLM_TANK_POSITION;
     }
     else if (IsBlindeyeTank(bot))
     {
-        target = AI_VALUE2(Unit*, "find target", "18836");
+        target = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_BLINDEYE_THE_SEER);
         position = BLINDEYE_TANK_POSITION;
     }
 
@@ -92,13 +90,13 @@ bool HighKingMaulgarMeleeTanksPositionBossesAction::Execute(Event /*event*/)
         return false;
 
     return MoveTo(
-        GRUUL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
+        GRUUL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
 bool HighKingMaulgarMageTankAttackKroshAction::Execute(Event /*event*/)
 {
-    Unit* krosh = AI_VALUE2(Unit*, "find target", "18832");
+    Unit* krosh = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KROSH_FIREHAND);
     if (!krosh)
         return false;
 
@@ -123,13 +121,10 @@ bool HighKingMaulgarMageTankAttackKroshAction::AttackAndCast(Unit* krosh)
     if (AI_VALUE(Unit*, "current target") != krosh)
         return Attack(krosh);
 
-    if (!bot->HasAura(Id(GruulSpells::SPELL_SPELL_SHIELD)) &&
-        botAI->CanCastSpell("fire ward", bot))
-    {
-        return botAI->CastSpell("fire ward", bot);
-    }
+    if (bot->HasAura(Id(GruulSpells::SPELL_SPELL_SHIELD)))
+        return false;
 
-    return false;
+    return botAI->CanCastSpell("fire ward", bot) && botAI->CastSpell("fire ward", bot);
 }
 
 // The Mage tank moves to a designated position only if Krosh is far enough from that position to
@@ -160,7 +155,7 @@ bool HighKingMaulgarMageTankAttackKroshAction::MoveToDesiredDistance(Unit* krosh
 // The moonkin tank has no tank position, but usually Kiggler remains close to where he starts.
 bool HighKingMaulgarMoonkinTankAttackKigglerAction::Execute(Event /*event*/)
 {
-    Unit* kiggler = AI_VALUE2(Unit*, "find target", "18835");
+    Unit* kiggler = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KIGGLER_THE_CRAZED);
     if (!kiggler)
         return false;
 
@@ -180,32 +175,26 @@ bool HighKingMaulgarMoonkinTankAttackKigglerAction::Execute(Event /*event*/)
 // Priority: (1) Blindeye, (2) Olm, (3) Krosh (ranged only), (4) Kiggler, and (5) Maulgar
 bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
 {
-// By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游 nullptr 初始化,
-    // 上游新增末位 maulgar 兜底分支(本分支用entry 18836, 见下), 初值不再承担兜底职责。
     Unit* target = nullptr;
     Unit* krosh = nullptr;
-    if (Unit* blindeye = AI_VALUE2(Unit*, "find target", "18831"))
+    if (Unit* blindeye = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_BLINDEYE_THE_SEER))
     {
         target = blindeye;
     }
-    else if (Unit* olm = AI_VALUE2(Unit*, "find target", "18834"))
+    else if (Unit* olm = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_OLM_THE_SUMMONER))
     {
         target = olm;
     }
-// By leewheel 2026-09-04 合并brighton-chi/the-lab: 采纳上游"先判断远程再查找krosh"的顺序,
-    // 但本铁律boss按entry查找, 故仍用 18832 而非上游的 "krosh firehand"。
     else if (PlayerbotAI::IsRanged(bot) &&
-        (krosh = AI_VALUE2(Unit*, "find target", "18832")))
+        (krosh = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KROSH_FIREHAND)))
     {
         target = krosh;
     }
-    else if (Unit* kiggler = AI_VALUE2(Unit*, "find target", "18835"))
+    else if (Unit* kiggler = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KIGGLER_THE_CRAZED))
     {
         target = kiggler;
     }
-// By leewheel 2026-09-04 合并brighton-chi/the-lab: 上游新增 maulgar 兜底分支,
-    // boss按entry查找(18836), 不用上游的名字查找。
-    else if (Unit* maulgar = AI_VALUE2(Unit*, "find target", "18836"))
+    else if (Unit* maulgar = GetGruulsLairBoss(bot, GruulBosses::DATA_HIGH_KING_MAULGAR))
     {
         target = maulgar;
     }
@@ -228,10 +217,7 @@ bool HighKingMaulgarAssignDpsPriorityAction::Execute(Event /*event*/)
 
 bool HighKingMaulgarRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-08-29 修复：旋风斩是 High King Maulgar(18836) 的技能，
-    // 旧代码误用 18831(Blindeye the Seer) 导致机器人对着错误的boss躲避走位
-    Unit* maulgar = AI_VALUE2(Unit*, "find target", "18836");
-    // End By leewheel
+    Unit* maulgar = GetGruulsLairBoss(bot, GruulBosses::DATA_HIGH_KING_MAULGAR);
     if (!maulgar)
         return false;
 
@@ -245,7 +231,7 @@ bool HighKingMaulgarRunAwayFromWhirlwindAction::Execute(Event /*event*/)
 
 bool HighKingMaulgarBackAwayFromKroshAction::Execute(Event /*event*/)
 {
-    Unit* krosh = AI_VALUE2(Unit*, "find target", "18832");
+    Unit* krosh = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KROSH_FIREHAND);
     if (!krosh)
         return false;
 
@@ -264,7 +250,7 @@ bool HighKingMaulgarBanishFelStalkerAction::Execute(Event /*event*/)
         return false;
 
     // Ordered by GUID so that every bot warlock indexes the same list.
-    std::vector<Unit*> const felStalkers = GetNearbyWildFelStalkers(botAI);
+    std::vector<Unit*> const felStalkers = GetWildFelStalkers(bot);
     std::vector<Player*> warlocks;
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
@@ -285,13 +271,11 @@ bool HighKingMaulgarBanishFelStalkerAction::Execute(Event /*event*/)
         return false;
 
     Unit* assignedFelStalker = felStalkers[warlockIndex];
-    if (!botAI->HasAura("banish", assignedFelStalker) &&
-        botAI->CanCastSpell("banish", assignedFelStalker))
-    {
-        return botAI->CastSpell("banish", assignedFelStalker);
-    }
+    if (botAI->HasAura("banish", assignedFelStalker))
+        return false;
 
-    return false;
+    return botAI->CanCastSpell("banish", assignedFelStalker) &&
+        botAI->CastSpell("banish", assignedFelStalker);
 }
 
 // Misdirect order: Blindeye, Olm, Kiggler, Krosh
@@ -327,49 +311,39 @@ bool HighKingMaulgarMisdirectOgresToTanksAction::Execute(Event /*event*/)
     if (hunterIndex == -1)
         return false;
 
-    Unit* ogreTarget = nullptr;
-    Player* tankTarget = nullptr;
+    Unit* ogre = nullptr;
+    Player* tank = nullptr;
     if (hunterIndex == 0)
     {
-        //By leewheel 2026-08-26 合并：保留entry规则查找，采用对侧1参数助手坦克签名，变量名随周边上下文
-        ogreTarget = AI_VALUE2(Unit*, "find target", "18836");
-        tankTarget = GetGroupAssistTank(bot, 1);
+        ogre = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_BLINDEYE_THE_SEER);
+        tank = GetGroupAssistTank(bot, 1);
     }
     else if (hunterIndex == 1)
     {
-        //By leewheel 2026-08-29 合并：保留entry规则与本项目变量名，采用对侧直取助手坦克的简化写法(去除冗余循环)
-        ogreTarget = AI_VALUE2(Unit*, "find target", "18834");
-        tankTarget = GetGroupAssistTank(bot, 0);
+        ogre = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_OLM_THE_SUMMONER);
+        tank = GetGroupAssistTank(bot, 0);
     }
     else if (hunterIndex == 2)
     {
-        //By leewheel 2026-09-05 合并：保留entry规则(18835)与本项目变量名；助手签名随上游统一为botAI
-        ogreTarget = AI_VALUE2(Unit*, "find target", "18835");
-        tankTarget = GetKigglerMoonkinTank(botAI);
+        ogre = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KIGGLER_THE_CRAZED);
+        tank = GetKigglerMoonkinTank(botAI);
     }
     else if (hunterIndex == 3)
     {
-        //By leewheel 2026-09-05 合并：保留entry规则(18832)与本项目变量名；助手签名随上游统一为botAI
-        ogreTarget = AI_VALUE2(Unit*, "find target", "18832");
-        tankTarget = GetKroshMageTank(botAI);
+        ogre = GetMaulgarCouncilMember(bot, GruulNpcs::NPC_KROSH_FIREHAND);
+        tank = GetKroshMageTank(botAI);
     }
 
-    if (!ogreTarget || !tankTarget || !tankTarget->IsAlive())
+    if (!ogre || !tank || !tank->IsAlive())
         return false;
 
-    // By leewheel 2026-10-13 合并 brighton the-lab(c3e1911d 统一 TBC raid)：采纳上游新逻辑 ——
-    //   ① 误导按 spell id(34477) 施放，不再走字符串名查找；② 输出前提改为"猎人身上有误导 aura"，
-    //   用 SPELL_MISDIRECTION_AURA=35079（core spell_hunter.cpp:55 实锤：34477=施放法术，
-    //   35079=Misdirection(Proc) 即猎人身上的 aura；本核旧写法查 34477 语义有误）。
-    //   变量名沿用本核 tankTarget/ogreTarget（上游侧的 tank/ogre 在本文件上下文不存在）。
-    if (botAI->CanCastSpell(Id(GruulSpells::SPELL_MISDIRECTION), tankTarget))
-        return botAI->CastSpell(Id(GruulSpells::SPELL_MISDIRECTION), tankTarget);
+    if (botAI->CanCastSpell(Id(GruulSpells::SPELL_MISDIRECTION), tank))
+        return botAI->CastSpell(Id(GruulSpells::SPELL_MISDIRECTION), tank);
 
     if (!bot->HasAura(Id(GruulSpells::SPELL_MISDIRECTION_AURA)))
         return false;
 
-    return botAI->CanCastSpell("steady shot", ogreTarget) && botAI->CastSpell("steady shot", ogreTarget);
-    // End By leewheel
+    return botAI->CanCastSpell("steady shot", ogre) && botAI->CastSpell("steady shot", ogre);
 }
 
 bool HighKingMaulgarAnnounceClassRolesAction::Execute(Event /*event*/)
@@ -381,7 +355,7 @@ bool HighKingMaulgarAnnounceClassRolesAction::Execute(Event /*event*/)
 
 bool GruulTheDragonkillerTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* gruul = AI_VALUE2(Unit*, "find target", "19044");
+    Unit* gruul = GetGruulsLairBoss(bot, GruulBosses::DATA_GRUUL_THE_DRAGONKILLER);
     if (!gruul)
         return false;
 
@@ -399,8 +373,8 @@ bool GruulTheDragonkillerTanksPositionBossAction::Execute(Event /*event*/)
         return false;
 
     return MoveTo(
-        GRUUL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false,
-        false, false, MovementPriority::MOVEMENT_COMBAT, true, backwards);
+        GRUUL_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
+        MovementPriority::MOVEMENT_COMBAT, true, backwards);
 }
 
 bool GruulTheDragonkillerSpreadRangedAction::Execute(Event /*event*/)

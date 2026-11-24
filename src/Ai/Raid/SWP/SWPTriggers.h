@@ -80,8 +80,8 @@ public:
 
 // Shared Bosses
 
-// For Misdirection before BOSS_ENGAGED_HEALTH_PCT (i.e., shortly after pull). Used for Kalecgos,
-// Brutallus, and the Eredar Twins (on Alythess).
+// For Misdirection before BOSS_ENGAGED_HEALTH_PCT (i.e., shortly after pull). Used for Kalecgos
+// and Brutallus.
 class SunwellHunterShouldMisdirectTrigger : public SunwellEncounterTrigger
 {
 public:
@@ -449,6 +449,18 @@ protected:
 
 // Eredar Twins
 
+class EredarTwinsHunterShouldMisdirectTrigger : public SunwellEncounterTrigger
+{
+public:
+    EredarTwinsHunterShouldMisdirectTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(
+            botAI, "eredar twins hunter should misdirect",
+            SwpHelpers::SwpBosses::DATA_EREDAR_TWINS) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
 class EredarTwinsShouldLeaveBalconyTrigger : public SunwellEncounterTrigger
 {
 public:
@@ -582,23 +594,23 @@ protected:
 
 // M'uru
 
-class MuruHunterShouldMisdirectNewEnemyTrigger : public SunwellEncounterTrigger
+class MuruHunterShouldMisdirectTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruHunterShouldMisdirectNewEnemyTrigger(PlayerbotAI* botAI)
+    MuruHunterShouldMisdirectTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(
-            botAI, "m'uru hunter should misdirect new enemy", SwpHelpers::SwpBosses::DATA_MURU) {}
+            botAI, "m'uru hunter should misdirect", SwpHelpers::SwpBosses::DATA_MURU) {}
 
 protected:
     bool IsActiveInEncounter() override;
 };
 
-class MuruTransformedIntoEntropiusTrigger : public SunwellEncounterTrigger
+class MuruEntropiusShouldBeTankedTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruTransformedIntoEntropiusTrigger(PlayerbotAI* botAI)
+    MuruEntropiusShouldBeTankedTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(
-            botAI, "m'uru transformed into entropius", SwpHelpers::SwpBosses::DATA_MURU) {}
+            botAI, "m'uru entropius should be tanked", SwpHelpers::SwpBosses::DATA_MURU) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -637,12 +649,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class MuruAddsSpawnAtEntranceTrigger : public SunwellEncounterTrigger
+class MuruEntranceShouldBeGuardedTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruAddsSpawnAtEntranceTrigger(PlayerbotAI* botAI)
+    MuruEntranceShouldBeGuardedTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(
-            botAI, "m'uru adds spawn at entrance", SwpHelpers::SwpBosses::DATA_MURU) {}
+            botAI, "m'uru entrance should be guarded", SwpHelpers::SwpBosses::DATA_MURU) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -659,12 +671,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class MuruDarknessIsComingTrigger : public SunwellEncounterTrigger
+class MuruDarknessIsActiveTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruDarknessIsComingTrigger(PlayerbotAI* botAI)
+    MuruDarknessIsActiveTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(
-            botAI, "m'uru darkness is coming", SwpHelpers::SwpBosses::DATA_MURU) {}
+            botAI, "m'uru darkness is active", SwpHelpers::SwpBosses::DATA_MURU) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -725,12 +737,23 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class MuruEntropiusSummonsVoidZonesTrigger : public SunwellEncounterTrigger
+class MuruVoidZoneIsNearTrigger : public SunwellEncounterTrigger
 {
 public:
-    MuruEntropiusSummonsVoidZonesTrigger(PlayerbotAI* botAI)
+    MuruVoidZoneIsNearTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(
-            botAI, "m'uru entropius summons void zones", SwpHelpers::SwpBosses::DATA_MURU) {}
+            botAI, "m'uru void zone is near", SwpHelpers::SwpBosses::DATA_MURU) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class MuruDarkFiendIsNearTrigger : public SunwellEncounterTrigger
+{
+public:
+    MuruDarkFiendIsNearTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(
+            botAI, "m'uru dark fiend is near", SwpHelpers::SwpBosses::DATA_MURU) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -749,17 +772,6 @@ protected:
 
 // Kil'jaeden <The Deceiver>
 
-class KiljaedenShouldCoordinateOrbUseTrigger : public SunwellEncounterTrigger
-{
-public:
-    KiljaedenShouldCoordinateOrbUseTrigger(PlayerbotAI* botAI)
-        : SunwellEncounterTrigger(
-            botAI, "kil'jaeden should coordinate orb use", SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
-
-protected:
-    bool IsActiveInEncounter() override;
-};
-
 class KiljaedenHandsOfTheDeceiverAreActiveTrigger : public SunwellEncounterTrigger
 {
 public:
@@ -772,13 +784,34 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class KiljaedenTanksShouldHoldBossAndReflectionsTrigger : public SunwellEncounterTrigger
+class KiljaedenShouldHoldDpsAtStartTrigger : public SunwellEncounterTrigger
 {
 public:
-    KiljaedenTanksShouldHoldBossAndReflectionsTrigger(PlayerbotAI* botAI)
+    KiljaedenShouldHoldDpsAtStartTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(
-            botAI, "kil'jaeden tanks should hold boss and reflections",
-            SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
+            botAI, "kil'jaeden should hold dps at start", SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class KiljaedenDpsHoldIsActiveTrigger : public SunwellEncounterTrigger
+{
+public:
+    KiljaedenDpsHoldIsActiveTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(
+            botAI, "kil'jaeden dps hold is active", SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
+
+protected:
+    bool IsActiveInEncounter() override;
+};
+
+class KiljaedenShouldBeTankedTrigger : public SunwellEncounterTrigger
+{
+public:
+    KiljaedenShouldBeTankedTrigger(PlayerbotAI* botAI)
+        : SunwellEncounterTrigger(
+            botAI, "kil'jaeden should be tanked", SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
 
 protected:
     bool IsActiveInEncounter() override;
@@ -796,12 +829,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class KiljaedenRangedShouldSpreadInTwoArcsTrigger : public SunwellEncounterTrigger
+class KiljaedenRangedShouldKeepFormationTrigger : public SunwellEncounterTrigger
 {
 public:
-    KiljaedenRangedShouldSpreadInTwoArcsTrigger(PlayerbotAI* botAI)
+    KiljaedenRangedShouldKeepFormationTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(
-            botAI, "kil'jaeden ranged should spread in two arcs",
+            botAI, "kil'jaeden ranged should keep formation",
             SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
 
 protected:
@@ -820,12 +853,12 @@ protected:
     bool IsActiveInEncounter() override;
 };
 
-class KiljaedenSaysChaosDestructionOblivionTrigger : public SunwellEncounterTrigger
+class KiljaedenCastsDarknessOfAThousandSoulsTrigger : public SunwellEncounterTrigger
 {
 public:
-    KiljaedenSaysChaosDestructionOblivionTrigger(PlayerbotAI* botAI)
+    KiljaedenCastsDarknessOfAThousandSoulsTrigger(PlayerbotAI* botAI)
         : SunwellEncounterTrigger(
-            botAI, "kil'jaeden says: Chaos! Destruction! Oblivion!",
+            botAI, "kil'jaeden casts darkness of a thousand souls",
             SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
 
 protected:

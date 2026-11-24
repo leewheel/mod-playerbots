@@ -12,7 +12,6 @@
 #include "SWPShared.h"
 #include <array>
 #include <limits>
-#include <span>
 #include <vector>
 
 class Creature;
@@ -111,14 +110,9 @@ struct FogSafeThreshold
     bool safeSideIsNorth;  // true = safe side has higher X (north), false = lower X (south)
 };
 
-struct FelmystDemonicVaporGuids
-{
-    GuidVector heads;
-    GuidVector trails;
-};
-
 inline constexpr uint32 DEMONIC_VAPOR_CACHE_INTERVAL_MS = 200;
-inline constexpr float DEMONIC_VAPOR_SEARCH_RADIUS = 100.0f;
+// Around FELMYST_ROOM_CENTER.
+inline constexpr float DEMONIC_VAPOR_SEARCH_RADIUS = 110.0f;
 // A trail patch's reach, center to center.
 inline constexpr float DEMONIC_VAPOR_HAZARD_RADIUS = 3.0f;
 // How far bots keep from a patch or another player's head, except in the fog move.
@@ -154,8 +148,8 @@ inline constexpr float FELMYST_CHARMED_TARGET_RANGE = 30.0f;
 inline constexpr uint32 FELMYST_GROUNDED_DPS_WAIT_MS = 3 * IN_MILLISECONDS;
 // How close Felmyst must be to a specified position to be considered there.
 inline constexpr float FELMYST_LOCATION_MATCH_DISTANCE = 2.0f;
-// How far a fog destination must be from any vapor. Vapor has a 3y radius and no real buffer is
-// needed since this distance is for a non-moving bot, but the visual looks much wider than 3y
+// How far a fog destination must be from any vapor. Vapor has a 3 yd radius and no real buffer is
+// needed since this distance is for a non-moving bot, but the visual looks much wider than 3 yd
 // so a bit of leeway allows for some more realism as players would not stand so close.
 inline constexpr float FOG_DESTINATION_VAPOR_CLEARANCE = 8.0f;
 inline constexpr uint8 TOTAL_FOG_LANES = 3;
@@ -167,6 +161,8 @@ inline Position const FOG_RIGHT_SIDE = { 1458.556f, 502.200f, 59.900f, 1.606f };
 
 inline Position const FELMYST_LEFT_LANDING_POSITION =  { 1476.770f, 665.094f, 20.642f };
 inline Position const FELMYST_RIGHT_LANDING_POSITION = { 1469.930f, 557.009f, 22.632f };
+// Midway between the landing positions. Every bot position in this file is within 97 yd of it.
+inline Position const FELMYST_ROOM_CENTER = { 1473.350f, 611.052f, 21.637f };
 
 // The navmesh treats most of the crate as floor, so stepped moves keep this far from its center.
 inline Position const FELMYST_CRATE_POSITION = { 1483.0f, 591.0f, 23.4f };
@@ -183,7 +179,6 @@ inline std::array const FOG_LEFT_LANES = {
     Position{ 1469.923f, 703.239f, 50.086f, 4.747f },
     Position{ 1446.515f, 701.518f, 50.085f, 4.747f },
 };
-
 inline std::array const FOG_RIGHT_LANES = {
     Position{ 1492.820f, 515.668f, 50.083f, 1.449f },
     Position{ 1466.732f, 515.595f, 50.572f, 1.449f },
@@ -215,7 +210,6 @@ inline std::array const FELMYST_WEST_GROUP_POSITIONS = {
     Position{ 1480.0f, 634.0f, 22.3f },
     Position{ 1480.0f, 619.0f, 23.5f },
 };
-
 inline std::array const FELMYST_EAST_GROUP_POSITIONS = {
     Position{ 1473.0f, 582.0f, 22.6f },
     Position{ 1473.0f, 597.0f, 23.1f },
@@ -224,7 +218,7 @@ inline std::array const FELMYST_EAST_GROUP_POSITIONS = {
 
 // The routes vapor targets follow: the first vapor's loops north, the second's south, both toward
 // the near end. The last point is far enough away that the beam always ends first.
-inline std::array const FELMYST_WEST_FIRST_VAPOR_ROUTE = {
+inline std::vector<Position> const FELMYST_WEST_FIRST_VAPOR_ROUTE = {
     Position{ 1484.9f, 653.9f, 21.6f },
     Position{ 1488.5f, 657.5f, 21.7f },
     Position{ 1494.5f, 660.8f, 22.5f },
@@ -235,8 +229,7 @@ inline std::array const FELMYST_WEST_FIRST_VAPOR_ROUTE = {
     Position{ 1502.0f, 638.1f, 25.3f },
     Position{ 1483.4f, 621.5f, 23.8f },
 };
-
-inline std::array const FELMYST_WEST_SECOND_VAPOR_ROUTE = {
+inline std::vector<Position> const FELMYST_WEST_SECOND_VAPOR_ROUTE = {
     Position{ 1475.1f, 638.9f, 21.7f },
     Position{ 1471.5f, 642.5f, 21.4f },
     Position{ 1465.7f, 645.8f, 20.4f },
@@ -247,8 +240,7 @@ inline std::array const FELMYST_WEST_SECOND_VAPOR_ROUTE = {
     Position{ 1453.1f, 624.1f, 19.7f },
     Position{ 1465.6f, 602.4f, 23.0f },
 };
-
-inline std::array const FELMYST_EAST_FIRST_VAPOR_ROUTE = {
+inline std::vector<Position> const FELMYST_EAST_FIRST_VAPOR_ROUTE = {
     Position{ 1477.9f, 577.1f, 23.3f },
     Position{ 1481.5f, 573.5f, 23.6f },
     Position{ 1487.5f, 570.2f, 23.7f },
@@ -259,8 +251,7 @@ inline std::array const FELMYST_EAST_FIRST_VAPOR_ROUTE = {
     Position{ 1495.0f, 592.9f, 24.9f },
     Position{ 1476.4f, 609.5f, 23.9f },
 };
-
-inline std::array const FELMYST_EAST_SECOND_VAPOR_ROUTE = {
+inline std::vector<Position> const FELMYST_EAST_SECOND_VAPOR_ROUTE = {
     Position{ 1468.1f, 592.1f, 22.4f },
     Position{ 1464.5f, 588.5f, 21.8f },
     Position{ 1458.5f, 585.2f, 21.5f },
@@ -272,21 +263,26 @@ inline std::array const FELMYST_EAST_SECOND_VAPOR_ROUTE = {
     Position{ 1469.6f, 624.5f, 22.0f },
 };
 
+// Demonic Vapor heads and their trails.
+GuidVector FindFelmystDemonicVaporGuids(Player* bot);
+std::vector<Creature*> GetDemonicVaporHazards(Player* bot);
+Creature* GetFelmystOwnDemonicVapor(Player* bot);
+bool IsNearFelmystDemonicVaporHazard(Player* bot);
+void RecordFelmystDemonicVaporSummon(Player* target);
 Position const& GetFelmystMainTankGroundPosition(Player* bot);
 bool TryGetFelmystGroundStackPosition(
     Player* bot, Unit* felmyst, FelmystGroundStack stack, Position& position);
 FelmystGroundStack GetClosestFelmystGroundStack(Player* bot, Unit* felmyst, Player* reference);
 float GetFelmystFrontAngle(Player* bot, Unit* felmyst);
 bool TryGetFelmystRangedPosition(Player* bot, Unit* felmyst, Position& position);
-FelmystDemonicVaporGuids FindFelmystDemonicVaporGuids(Player* bot);
-Creature* GetFelmystOwnDemonicVapor(Player* bot);
-std::vector<Creature*> GetDemonicVaporHazards(Player* bot);
-bool IsNearFelmystDemonicVaporHazard(Player* bot);
-void RecordFelmystDemonicVaporSummon(Player* target);
+// The ranged stack rule, apart from the early move, which the stack trigger checks itself.
+bool IsFelmystRangedStackActive(Player* bot, Unit* felmyst);
+bool IsFelmystLanding(Unit* felmyst);
 void AdvanceFelmystEncounterState(Unit* felmyst);
 FelmystAirEnd GetNearestFelmystAirEnd(Unit* felmyst);
 Position const& GetFelmystGroupPosition(FelmystAirEnd end, uint8 demonicVaporCount);
-std::span<Position const> GetFelmystDemonicVaporRoute(FelmystAirEnd end, uint8 demonicVaporCount);
+std::vector<Position> const& GetFelmystDemonicVaporRoute(
+    FelmystAirEnd end, uint8 demonicVaporCount);
 bool TryGetFelmystAirGroupPosition(Unit* felmyst, Position& position);
 bool IsFelmystAirGroupMoveActive(Player* bot, Unit* felmyst);
 bool IsFelmystEarlyMoveDue(Player* bot, Unit* felmyst);
@@ -297,23 +293,24 @@ bool TryGetFelmystSidestepPosition(
     Player* bot, std::vector<Creature*> const& hazards, Position& destination);
 bool IsFelmystClearOfFogLane(float positionX, float positionY, FogLane lane);
 Position GetFelmystFogStopPosition(Player* bot, FogLane lane);
+bool TryGetFelmystPostThirdPassWindow(Unit* felmyst, FogLane& lane);
+bool IsFelmystFogActiveForBot(Player* bot, Unit* felmyst);
+bool IsFelmystFogMovementSuppressed(Unit* felmyst);
+bool IsFelmystAirPhaseTargetSuppressed(Unit* felmyst);
 bool TryGetFelmystLandingApproachDestination(
     Player* bot, FogLane lastCompletedLane, Unit* felmyst, Position& destination);
-bool IsFelmystLanding(Unit* felmyst);
-bool IsFelmystAirPhaseTargetSuppressed(Unit* felmyst);
-// From the landing approach to FELMYST_GROUNDED_DPS_WAIT_MS after touchdown, for everyone but the
-// main tank.
+// From the pull or the landing approach to FELMYST_GROUNDED_DPS_WAIT_MS after touchdown, for
+// everyone but the main tank.
 bool IsFelmystLandingDpsHoldActive(PlayerbotAI* botAI);
-bool TryGetFelmystPostThirdPassWindow(Unit* felmyst, FogLane& lane);
-bool IsFelmystFogMovementSuppressed(Unit* felmyst);
-bool IsFelmystFogActiveForBot(Player* bot, Unit* felmyst);
 bool TryGetActiveFogOfCorruptionState(Player* bot, Unit* felmyst, FogOfCorruptionState& state);
-void RecordFelmystIncomingEncapsulateTarget(Player* target, uint32 durationMs = 3000);
+void RecordFelmystIncomingEncapsulateTarget(
+    Player* target, uint32 durationMs = 3 * IN_MILLISECONDS);
 Player* GetFelmystEncapsulateTarget(Player* bot);
 bool ShouldMoveAwayFromFelmystEncapsulateTarget(
     Player* bot, Unit* felmyst, Player* encapsulateTarget);
 bool DidEncapsulateOccurThisGroundPhase(Player* bot);
 Player* GetFelmystGasNovaDispelTarget(Player* bot);
+bool IsFelmystMassDispelReady(Player* bot);
 Player* GetFelmystCharmedTarget(Player* bot, Unit* felmyst);
 
 // Shared encounter state

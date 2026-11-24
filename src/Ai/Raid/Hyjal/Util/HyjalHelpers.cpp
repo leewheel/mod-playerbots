@@ -7,12 +7,12 @@
 #include "HyjalHelpers.h"
 #include "EncounterHelpers.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
-#include <cmath>
+#include <iterator>
 #include <limits>
-#include <list>
 #include <mutex>
-#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -20,6 +20,8 @@ using namespace EncounterHelpers;
 
 namespace HyjalHelpers
 {
+
+// Shared
 
 namespace
 {
@@ -34,8 +36,8 @@ std::vector<Position> const& GetCachedHazardPositions(PlayerbotAI* botAI, char c
 
 // The span of a ring that a circular ground hazard covers.
 bool GetHazardBlockedArc(
-    Position const& ringCenter, float ringRadius, Position const& hazard,
-    float hazardRadius, BlockedArc& arc)
+    Position const& ringCenter, float ringRadius, Position const& hazard, float hazardRadius,
+    BlockedArc& arc)
 {
     float const centerToHazard =
         hazard.GetExactDist2d(ringCenter.GetPositionX(), ringCenter.GetPositionY());
@@ -206,9 +208,34 @@ std::pair<size_t, size_t> GetBotCircleIndexAndCount(Player* bot, RangedGroups co
     return {index, vec.size()};
 }
 
-} // end anonymous namespace
+constexpr std::string_view BossName(HyjalBosses boss)
+{
+    switch (boss)
+    {
+        case HyjalBosses::DATA_RAGE_WINTERCHILL:
+            return "rage winterchill";
+        case HyjalBosses::DATA_ANETHERON:
+            return "anetheron";
+        case HyjalBosses::DATA_KAZROGAL:
+            return "kaz'rogal";
+        case HyjalBosses::DATA_AZGALOR:
+            return "azgalor";
+        case HyjalBosses::DATA_ARCHIMONDE:
+            return "archimonde";
+        default:
+            return {};
+    }
+}
 
-// Shared
+} // end anonymous namespace (Shared)
+
+Unit* GetHyjalBoss(Player* bot, HyjalBosses boss)
+{
+    if (!IsBossInProgress(bot, HYJAL_MAP_ID, Id(boss)))
+        return nullptr;
+
+    return FindThreatTarget(bot, BossName(boss));
+}
 
 bool GetMeleeHazardManeuverStep(
     Player* bot, Unit* boss, std::vector<Position> const& hazards, float hazardRadius,
@@ -370,34 +397,23 @@ Player* GetInfernoTarget(Unit* anetheron)
 
 GuidVector FindInfernalGuids(Player* bot)
 {
-    std::list<Creature*> infernals;
-    bot->GetCreatureListWithEntryInGrid(
-        infernals, Id(HyjalNpcs::NPC_TOWERING_INFERNAL), INFERNAL_SEARCH_RADIUS);
+    GuidVector guids = FindCreatureGuidsAround(
+        bot, ANETHERON_TANK_POSITION, INFERNAL_SEARCH_RADIUS,
+        { Id(HyjalNpcs::NPC_TOWERING_INFERNAL) });
 
-    std::vector<Creature*> alive;
-    alive.reserve(infernals.size());
-    for (Creature* infernal : infernals)
+    std::sort(guids.begin(), guids.end(), [](ObjectGuid const& first, ObjectGuid const& second)
     {
-        if (infernal && infernal->IsAlive())
-            alive.push_back(infernal);
-    }
-
-    std::sort(alive.begin(), alive.end(), [](Creature const* first, Creature const* second)
-    {
-        return first->GetGUID().GetCounter() < second->GetGUID().GetCounter();
+        return first.GetCounter() < second.GetCounter();
     });
-
-    GuidVector guids;
-    guids.reserve(alive.size());
-    for (Creature* infernal : alive)
-        guids.push_back(infernal->GetGUID());
 
     return guids;
 }
 
-GuidVector const& GetInfernalGuids(PlayerbotAI* botAI)
+GuidVector const& GetInfernalGuids(Player* bot)
 {
-    return botAI->GetAiObjectContext()->GetValue<GuidVector>("hyjal infernals")->RefGet();
+    return GetInstanceCreatureList(
+        HyjalState(bot->GetInstanceId()).anetheronInfernals, INFERNAL_CACHE_INTERVAL_MS, bot,
+        FindInfernalGuids);
 }
 
 Unit* GetLooseInfernal(PlayerbotAI* botAI)
@@ -406,7 +422,7 @@ Unit* GetLooseInfernal(PlayerbotAI* botAI)
     if (!infernalTank)
         return nullptr;
 
-    for (ObjectGuid const guid : GetInfernalGuids(botAI))
+    for (ObjectGuid const guid : GetInfernalGuids(botAI->GetBot()))
     {
         Unit* infernal = botAI->GetUnit(guid);
         if (infernal && infernal->IsAlive() && infernal->GetVictim() != infernalTank)
@@ -421,7 +437,7 @@ Unit* GetNearestInfernal(PlayerbotAI* botAI)
     Player* bot = botAI->GetBot();
     Unit* nearest = nullptr;
     float nearestDistance = std::numeric_limits<float>::max();
-    for (ObjectGuid const guid : GetInfernalGuids(botAI))
+    for (ObjectGuid const guid : GetInfernalGuids(bot))
     {
         Unit* infernal = botAI->GetUnit(guid);
         if (!infernal || !infernal->IsAlive())
@@ -444,7 +460,7 @@ Unit* GetInfernalToAttack(PlayerbotAI* botAI, Unit* anetheron)
         return nullptr;
 
     Player* bot = botAI->GetBot();
-    for (ObjectGuid const guid : GetInfernalGuids(botAI))
+    for (ObjectGuid const guid : GetInfernalGuids(bot))
     {
         Unit* infernal = botAI->GetUnit(guid);
         if (!infernal || !infernal->IsAlive())
@@ -460,7 +476,7 @@ Unit* GetInfernalToAttack(PlayerbotAI* botAI, Unit* anetheron)
 Unit* GetInfernalTargetingBot(PlayerbotAI* botAI)
 {
     Player* bot = botAI->GetBot();
-    for (ObjectGuid const guid : GetInfernalGuids(botAI))
+    for (ObjectGuid const guid : GetInfernalGuids(bot))
     {
         Unit* infernal = botAI->GetUnit(guid);
         if (infernal && infernal->GetVictim() == bot)
@@ -543,7 +559,7 @@ bool IsSafeFromAzgalorCleave(Unit* azgalor, float x, float y)
     return !azgalor->HasInArc(CLEAVE_DANGER_ARC, &candidate);
 }
 
-std::vector<Position> GetRainOfFirePositions(PlayerbotAI* botAI)
+std::vector<Position> const& GetRainOfFirePositions(PlayerbotAI* botAI)
 {
     return GetCachedHazardPositions(botAI, "hyjal rain of fire");
 }
@@ -620,6 +636,36 @@ bool AnyGroupMemberHasDoom(Player* bot)
     return false;
 }
 
+GuidVector FindLesserDoomguardGuids(Player* bot)
+{
+    GuidVector guids = FindCreatureGuidsAround(
+        bot, AZGALOR_TANK_POSITION, DOOMGUARD_SEARCH_RADIUS,
+        { Id(HyjalNpcs::NPC_LESSER_DOOMGUARD) });
+
+    std::sort(guids.begin(), guids.end(), [](ObjectGuid const& first, ObjectGuid const& second)
+    {
+        return first.GetCounter() < second.GetCounter();
+    });
+
+    return guids;
+}
+
+Unit* GetLesserDoomguard(PlayerbotAI* botAI)
+{
+    Player* bot = botAI->GetBot();
+    GuidVector const& guids = GetInstanceCreatureList(
+        HyjalState(bot->GetInstanceId()).azgalorDoomguards, DOOMGUARD_CACHE_INTERVAL_MS, bot,
+        FindLesserDoomguardGuids);
+    for (ObjectGuid const& guid : guids)
+    {
+        Unit* doomguard = botAI->GetUnit(guid);
+        if (doomguard && doomguard->IsAlive() && doomguard->IsInWorld())
+            return doomguard;
+    }
+
+    return nullptr;
+}
+
 // Archimonde
 
 bool HasProtectionOfElune(Player* bot)
@@ -627,7 +673,7 @@ bool HasProtectionOfElune(Player* bot)
     return bot->HasAura(Id(HyjalSpells::SPELL_PROTECTION_OF_ELUNE));
 }
 
-std::vector<Position> GetDoomfirePositions(PlayerbotAI* botAI)
+std::vector<Position> const& GetDoomfirePositions(PlayerbotAI* botAI)
 {
     return GetCachedHazardPositions(botAI, "hyjal doomfire trail");
 }

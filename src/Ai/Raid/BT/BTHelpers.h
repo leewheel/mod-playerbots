@@ -12,7 +12,6 @@
 #include "ObjectGuid.h"
 #include "PlayerbotAI.h"
 #include "Position.h"
-#include "SharedDefines.h"
 #include <array>
 #include <cmath>
 #include <optional>
@@ -40,201 +39,201 @@ constexpr uint32 Id(T value)
     return static_cast<uint32>(value);
 }
 
+// Boss ids from black_temple.h, matching DungeonEncounter.dbc's encounterIndex.
+enum class BtBosses : uint32
+{
+    DATA_HIGH_WARLORD_NAJENTUS = 0,
+    DATA_SUPREMUS              = 1,
+    DATA_SHADE_OF_AKAMA        = 2,
+    DATA_TERON_GOREFIEND       = 3,
+    DATA_GURTOGG_BLOODBOIL     = 4,
+    DATA_RELIQUARY_OF_SOULS    = 5,
+    DATA_MOTHER_SHAHRAZ        = 6,
+    DATA_ILLIDARI_COUNCIL      = 7,
+    DATA_ILLIDAN_STORMRAGE     = 8,
+};
+
 enum class BtSpells : uint32
 {
     // Trash
-    SPELL_SHARED_BONDS              = 41363,
-    SPELL_SHELL_OF_PAIN             = 41371,
-    SPELL_SPELL_ABSORPTION          = 41034,
+    SPELL_SHARED_BONDS                    = 41363,
+    SPELL_SHELL_OF_PAIN                   = 41371,
+    SPELL_SPELL_ABSORPTION                = 41034,
 
     // High Warlord Naj'entus
-    SPELL_IMPALING_SPINE            = 39837,
-    SPELL_TIDAL_SHIELD              = 39872,
+    SPELL_IMPALING_SPINE                  = 39837,
+    SPELL_TIDAL_SHIELD                    = 39872,
 
     // Supremus
-    SPELL_SNARE_SELF                = 41922,
-    SPELL_VOLCANIC_ERUPTION         = 40276,
-    SPELL_VOLCANIC_GEYSER           = 42055,
-    SPELL_MOLTEN_FLAME_PATCH        = 40253,
+    SPELL_SNARE_SELF                      = 41922,
+    SPELL_VOLCANIC_ERUPTION               = 40276,
+    SPELL_VOLCANIC_GEYSER                 = 42055,
+    SPELL_MOLTEN_FLAME_PATCH              = 40253,
 
     // Teron Gorefiend
-    SPELL_SHADOW_OF_DEATH           = 40251,
-    SPELL_SPIRITUAL_VENGEANCE       = 40268,
+    SPELL_SHADOW_OF_DEATH                 = 40251,
+    SPELL_SPIRITUAL_VENGEANCE             = 40268,
 
-    SPELL_SPIRIT_LANCE              = 40157,
-    SPELL_SPIRIT_CHAINS             = 40175,
-    SPELL_SPIRIT_VOLLEY             = 40314,
-    SPELL_SPIRIT_STRIKE             = 40325,
-    SPELL_SPIRIT_SHIELD             = 40322,
+    SPELL_SPIRIT_LANCE                    = 40157,
+    SPELL_SPIRIT_CHAINS                   = 40175,
+    SPELL_SPIRIT_VOLLEY                   = 40314,
+    SPELL_SPIRIT_STRIKE                   = 40325,
+    SPELL_SPIRIT_SHIELD                   = 40322,
 
     // Gurtogg Bloodboil
-    SPELL_BOSS_FEL_RAGE             = 40594, // Dropped for the final 2s of phase 2
-    SPELL_PLAYER_FEL_RAGE           = 40604, // Lasts the entirety of phase 2 (30s)
-    SPELL_INSIGNIFICANCE            = 40618,
-    SPELL_BLOODBOIL                 = 42005,
+    SPELL_BOSS_FEL_RAGE                   = 40594, // Dropped for the final 2s of phase 2
+    SPELL_PLAYER_FEL_RAGE                 = 40604, // Lasts the entirety of phase 2 (30s)
+    SPELL_INSIGNIFICANCE                  = 40618,
+    SPELL_BLOODBOIL                       = 42005,
 
     // Reliquary of Souls
-    SPELL_DEADEN                    = 41410,
-    SPELL_RUNE_SHIELD               = 41431,
+    SPELL_DEADEN                          = 41410,
+    SPELL_RUNE_SHIELD                     = 41431,
 
     // Mother Shahraz
-    SPELL_FATAL_ATTRACTION          = 41001,
+    SPELL_FATAL_ATTRACTION                = 41001,
 
     // Gathios the Shatterer
-    SPELL_BLESSING_OF_PROTECTION    = 41450,
-    SPELL_BLESSING_OF_SPELL_WARDING = 41451,
-    SPELL_JUDGEMENT                 = 41467,
-    SPELL_SEAL_OF_COMMAND           = 41469,
-    SPELL_CONSECRATION              = 41541,
+    SPELL_GATHIOS_BLESSING_OF_PROTECTION  = 41450,
+    SPELL_BLESSING_OF_SPELL_WARDING       = 41451,
+    SPELL_GATHIOS_JUDGEMENT               = 41467,
+    SPELL_GATHIOS_SEAL_OF_COMMAND         = 41469,
+    SPELL_GATHIOS_CONSECRATION            = 41541,
 
     // Lady Malande
-    SPELL_CIRCLE_OF_HEALING         = 41455,
+    SPELL_MALANDE_CIRCLE_OF_HEALING       = 41455,
 
     // Veras Darkshadow
-    SPELL_VERAS_VANISH              = 41476,
+    SPELL_VERAS_VANISH                    = 41476,
 
     // High Nethermancer Zerevor
-    SPELL_DAMPEN_MAGIC              = 41478,
-    SPELL_FLAMESTRIKE               = 41481,
-    SPELL_BLIZZARD                  = 41482,
+    SPELL_ZEREVOR_DAMPEN_MAGIC            = 41478,
+    SPELL_ZEREVOR_FLAMESTRIKE             = 41481,
+    SPELL_ZEREVOR_BLIZZARD                = 41482,
 
     // Illidan Stormrage <The Betrayer>
-    SPELL_DEMON_TRANSFORM_1         = 40511,
-    SPELL_DEMON_TRANSFORM_2         = 40398,
-    SPELL_DEMON_TRANSFORM_3         = 40510,
-    SPELL_DEMON_FORM                = 40506,
-    SPELL_DARK_BARRAGE              = 40585,
-    SPELL_AGONIZING_FLAMES          = 40932,
-    SPELL_PARASITIC_SHADOWFIEND_PRI = 41917, // primary infection, cast by Illidan
-    SPELL_PARASITIC_SHADOWFIEND_SEC = 41914, // secondary infection, from a Shadowfiend
-    SPELL_PARALYZE                  = 41083,
-    SPELL_SHADOW_PRISON             = 40647,
-    SPELL_SHADOW_BLAST              = 41078,
+    SPELL_DEMON_TRANSFORM_1               = 40511,
+    SPELL_DEMON_TRANSFORM_2               = 40398,
+    SPELL_DEMON_TRANSFORM_3               = 40510,
+    SPELL_DEMON_FORM                      = 40506,
+    SPELL_DARK_BARRAGE                    = 40585,
+    SPELL_AGONIZING_FLAMES                = 40932,
+    SPELL_PARASITIC_SHADOWFIEND_PRIMARY   = 41917, // primary infection, cast by Illidan
+    SPELL_PARASITIC_SHADOWFIEND_SECONDARY = 41914, // secondary infection, from a Shadowfiend
+    SPELL_PARALYZE                        = 41083,
+    SPELL_SHADOW_PRISON                   = 40647,
+    SPELL_SHADOW_BLAST                    = 41078,
+
+    // By leewheel 2026-11-24 合并brighton-chi the-lab：上游把打断技能由英文名字符串改为 spell id，
+    //   但取的是基础 rank。PlayerbotAI::CanCastSpell 走 bot->HasSpell(spellid)，
+    //   而 80 级机器人法术书里只有链顶 rank ⇒ HasSpell(基础 rank) 恒 false ⇒ 打断静默失效。
+    //   以下 4 个改为 80 级可学的链顶 rank（与 SWPShared.h 段取值一致，已用 chs_dbc 查证）。
 
     // Death Knight
-    // By leewheel 2026-10-23 合并brighton-chi the-lab：上游把打断技能由英文名字符串改为 spell id，
-    //   但取的是基础 rank（47528）。PlayerbotAI::CanCastSpell 走 bot->HasSpell(spellid)，
-    //   而 80 级机器人法术书里只有链顶 rank ⇒ HasSpell(47528) 恒 false ⇒ 打断静默失效。
-    //   以下 4 个改为 80 级可学的链顶 rank（与 SWP 段取值一致，已用 chs_dbc.db_spell_12340_eng 查证）。
-    SPELL_MIND_FREEZE               = 49910, // 47528 → 49910 链顶
+    SPELL_MIND_FREEZE                     = 49910, // 47528 → 49910 链顶
 
     // Druid
-    SPELL_TREE_OF_LIFE              = 33891,
+    SPELL_TREE_OF_LIFE                    = 33891,
 
     // Hunter
-    SPELL_FEIGN_DEATH               =  5384,
-    SPELL_FROST_TRAP                = 13809,
-    SPELL_FROST_TRAP_AURA           = 13810,
-    SPELL_MISDIRECTION              = 34477,
-    SPELL_MISDIRECTION_AURA         = 35079, // the aura on the hunter
+    SPELL_FEIGN_DEATH                     = 5384,
+    SPELL_FROST_TRAP                      = 13809,
+    SPELL_FROST_TRAP_AURA                 = 13810,
+    SPELL_MISDIRECTION                    = 34477,
+    SPELL_MISDIRECTION_AURA               = 35079, // the aura on the hunter
 
     // Mage
-    SPELL_COUNTERSPELL              =  2139,
-    SPELL_SPELLSTEAL                = 30449,
+    SPELL_COUNTERSPELL                    = 2139,
+    SPELL_SPELLSTEAL                      = 30449,
 
     // Paladin
-    SPELL_DIVINE_SHIELD             =   642,
+    SPELL_DIVINE_SHIELD                   = 642,
 
     // Priest
-    SPELL_DISPERSION                = 47585,
+    SPELL_DISPERSION                      = 47585,
 
     // Rogue
-    SPELL_KICK                      =  1767, // 1766 → 1767 链顶（同上，原 r1 会让 HasSpell 失败）
+    SPELL_KICK                            = 1767, // 1766 → 1767 链顶（同上，原 r1 会让 HasSpell 失败）
 
     // Shaman
-    SPELL_TOTEMIC_RECALL            = 36936,
-    SPELL_WIND_SHEAR                = 57994,
+    SPELL_TOTEMIC_RECALL                  = 36936,
+    SPELL_WIND_SHEAR                      = 57994,
 
     // Warlock (Felhunter)
-    SPELL_SPELL_LOCK_1              = 19244,
-    SPELL_SPELL_LOCK_2              = 19647,
+    SPELL_SPELL_LOCK_1                    = 19244,
+    SPELL_SPELL_LOCK_2                    = 19647,
 
     // Warrior
-    SPELL_SHIELD_BASH               =  1671, // 72 → 1671 链顶（同上，原 r1 会让 HasSpell 失败）
-    SPELL_BERSERKER_STANCE          =  2458,
-    SPELL_PUMMEL                    =  6554, // 6552 → 6554 链顶（同上，原 r2 会让 HasSpell 失败）
-    SPELL_SPELL_REFLECTION          = 23920,
-    SPELL_VIGILANCE                 = 50720,
+    SPELL_SHIELD_BASH                     = 1671, // 72 → 1671 链顶（同上，原 r1 会让 HasSpell 失败）
+    SPELL_BERSERKER_STANCE                = 2458,
+    SPELL_PUMMEL                          = 6554, // 6552 → 6554 链顶（同上，原 r2 会让 HasSpell 失败）
+    SPELL_SPELL_REFLECTION                = 23920,
+    SPELL_VIGILANCE                       = 50720,
 };
 
 enum class BtNpcs : uint32
 {
     // Trash
-    NPC_SISTER_OF_PAIN              = 22956,
-    NPC_SISTER_OF_PLEASURE          = 22964,
-    NPC_SHADOWMOON_REAVER           = 22879,
+    NPC_SISTER_OF_PAIN            = 22956,
+    NPC_SISTER_OF_PLEASURE        = 22964,
+    NPC_SHADOWMOON_REAVER         = 22879,
 
     // Supremus
-    NPC_SUPREMUS_VOLCANO            = 23085,
+    NPC_SUPREMUS_VOLCANO          = 23085,
 
     // Shade of Akama
-    NPC_SHADE_OF_AKAMA              = 22841,
-    NPC_ASHTONGUE_CHANNELER         = 23421,
-    NPC_ASHTONGUE_SORCERER          = 23215,
+    NPC_SHADE_OF_AKAMA            = 22841,
+    NPC_ASHTONGUE_CHANNELER       = 23421,
+    NPC_ASHTONGUE_SORCERER        = 23215,
 
     // Teron Gorefiend
-    NPC_SHADOWY_CONSTRUCT           = 23111,
+    NPC_SHADOWY_CONSTRUCT         = 23111,
 
     // Gurtogg Bloodboil
-    NPC_GURTOGG_BLOODBOIL           = 22948,
+    NPC_GURTOGG_BLOODBOIL         = 22948,
 
     // Reliquary of Souls
-    NPC_ESSENCE_OF_DESIRE           = 23419,
+    NPC_ESSENCE_OF_DESIRE         = 23419,
 
     // Illidari Council
-    NPC_GATHIOS_THE_SHATTERER       = 22949,
-    NPC_HIGH_NETHERMANCER_ZEREVOR   = 22950,
-    NPC_LADY_MALANDE                = 22951,
+    NPC_GATHIOS_THE_SHATTERER     = 22949,
+    NPC_HIGH_NETHERMANCER_ZEREVOR = 22950,
+    NPC_LADY_MALANDE              = 22951,
 
     // Illidan Stormrage <The Betrayer>
-    NPC_ILLIDAN_STORMRAGE           = 22917,
-    NPC_FLAME_OF_AZZINOTH           = 22997,
-    NPC_DEMON_FIRE                  = 23069,
-    NPC_ILLIDAN_DB_TARGET           = 23070,
-    NPC_BLAZE                       = 23259,
-    NPC_FLAME_CRASH                 = 23336,
-    NPC_SHADOW_DEMON                = 23375,
-    NPC_PARASITIC_SHADOWFIEND       = 23498,
+    NPC_ILLIDAN_STORMRAGE         = 22917,
+    NPC_FLAME_OF_AZZINOTH         = 22997,
+    NPC_DEMON_FIRE                = 23069,
+    NPC_ILLIDAN_DB_TARGET         = 23070,
+    NPC_BLAZE                     = 23259,
+    NPC_FLAME_CRASH               = 23336,
+    NPC_SHADOW_DEMON              = 23375,
+    NPC_PARASITIC_SHADOWFIEND     = 23498,
 };
 
 enum class BtItems : uint32
 {
     // High Warlord Naj'entus
-    ITEM_NAJENTUS_SPINE             = 32408,
+    ITEM_NAJENTUS_SPINE = 32408,
 };
 
 enum class BtObjects : uint32
 {
     // High Warlord Naj'entus
-    GO_NAJENTUS_SPINE               = 185584,
+    GO_NAJENTUS_SPINE = 185584,
 
     // Hunter
-    GO_FROST_TRAP                   = 164639, // dropped by 13809, despawns once sprung
+    GO_FROST_TRAP     = 164639, // dropped by 13809, despawns once sprung
 };
+
+// Shared
 
 inline constexpr uint32 BT_MAP_ID = 564;
-
-// DungeonEncounter.dbc encounterIndex, map 564
-enum class BtBosses : uint32
-{
-    DATA_HIGH_WARLORD_NAJENTUS      = 0,
-    DATA_SUPREMUS                   = 1,
-    DATA_SHADE_OF_AKAMA             = 2,
-    DATA_TERON_GOREFIEND            = 3,
-    DATA_GURTOGG_BLOODBOIL          = 4,
-    DATA_RELIQUARY_OF_SOULS         = 5,
-    DATA_MOTHER_SHAHRAZ             = 6,
-    DATA_ILLIDARI_COUNCIL           = 7,
-    DATA_ILLIDAN_STORMRAGE          = 8,
-};
-
-Unit* GetBtBoss(Player* bot, BtBosses boss);
-
 inline constexpr float PATH_STEP_DISTANCE = 3.5f;
-// How close to its assigned spot a bot has to stand to count as arrived.
 inline constexpr float BT_ARRIVAL_DISTANCE = 2.0f;
 inline constexpr float SPELLSTEAL_RANGE = 30.0f;
 
+Unit* GetBtBoss(Player* bot, BtBosses boss);
 bool MisdirectTargetToTank(PlayerbotAI* botAI, Unit* target, Player* tank);
 GuidVector FindAttackerGuidsWithEntry(PlayerbotAI* botAI, uint32 entry);
 uint32 GetAuraElapsedMs(Aura const* aura);
@@ -349,7 +348,7 @@ inline Position const SUPREMUS_INITIAL_TANK_POSITION = { 700.678f, 698.270f, 71.
 
 bool IsSupremusKitePhase(Unit* supremus);
 float GetSupremusFixateTimeRemaining(Unit* supremus);
-float GetSupremusCatchDistance(Player* bot, Unit const& supremus);
+float GetSupremusCatchDistance(Player* bot, Unit& supremus);
 bool CanSupremusCatchStandingBot(Player* bot, Unit* supremus);
 bool IsSupremusVolcanoErupting(Unit* volcano);
 std::vector<SupremusHazard> FindSupremusHazards(Player* bot);
@@ -371,11 +370,15 @@ inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MIN_X = 406.8f;
 inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MAX_X = 564.0f;
 inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MIN_Y = 327.9f;
 inline constexpr float SHADE_OF_AKAMA_BOUNDARY_MAX_Y = 473.5f;
-// 150 yd reaches every channeler from anywhere in the room, so every bot gets the same kill order.
-inline constexpr float SHADE_OF_AKAMA_ADD_SEARCH_RADIUS = 150.0f;
+// Around SHADE_OF_AKAMA_SPAWN_POSITION. The room's far corners are 136 yd away.
+inline constexpr float SHADE_OF_AKAMA_ADD_SEARCH_RADIUS = 140.0f;
 inline constexpr uint32 SHADE_OF_AKAMA_ADD_CACHE_INTERVAL_MS = 1000;
 
+inline Position const SHADE_OF_AKAMA_SPAWN_POSITION = { 449.595f, 401.194f, 118.621f };
+
 GuidVector FindShadeOfAkamaAddGuids(Player* bot);
+// Empty while the bot is outside Shade's room.
+GuidVector const& GetShadeOfAkamaAdds(Player* bot);
 Unit* GetShadeOfAkamaKillTarget(PlayerbotAI* botAI);
 
 // Teron Gorefiend
@@ -388,6 +391,7 @@ inline constexpr float GOREFIEND_SPIRIT_AOE_DISTANCE = 10.0f;
 // Spirit Lance's lowest damage. Constructs within one Lance of the highest health count as even.
 inline constexpr uint32 GOREFIEND_SPIRIT_LANCE_MIN_DAMAGE = 6175;
 inline constexpr uint32 GOREFIEND_CONSTRUCT_CACHE_INTERVAL_MS = 1000;
+inline constexpr uint32 GOREFIEND_SPIRIT_CONSTRUCT_CACHE_INTERVAL_MS = 200;
 // From Gorefiend's tank position, about 90 yd reaches the far corners.
 inline constexpr float GOREFIEND_CONSTRUCT_SEARCH_RADIUS = 100.0f;
 
@@ -395,6 +399,8 @@ inline Position const GOREFIEND_TANK_POSITION  = { 597.653f, 402.284f, 187.090f 
 inline Position const GOREFIEND_DEATH_POSITION = { 525.709f, 377.177f, 193.203f };
 
 bool CastVengefulSpiritSpell(Unit* spirit, Unit* target, uint32 spellId);
+GuidVector FindShadowyConstructGuids(Player* bot);
+GuidVector const& GetShadowyConstructGuids(Player* bot);
 
 // Gurtogg Bloodboil
 
@@ -437,8 +443,7 @@ inline Position const GURTOGG_SOAKER_POSITION = { 769.348f, 280.116f, 63.780f };
 Position const& GetGurtoggBloodboilPosition(Player* bot);
 Player* GetGurtoggFelRageTarget(Unit* gurtogg);
 bool IsGurtoggFelRageTarget(Player* player);
-Position GetGurtoggFelRageMeleePosition(
-    Player* bot, Unit const& gurtogg, Unit const& felRageTarget);
+Position GetGurtoggFelRageMeleePosition(Player* bot, Unit& gurtogg, Unit& felRageTarget);
 float FindGurtoggSecondTankThreat(Player* bot);
 bool IsGurtoggThreatHoldActive(PlayerbotAI* botAI, Unit* gurtogg);
 bool IsInGurtoggRectangle(
@@ -644,6 +649,13 @@ struct ShadowDemon
     ObjectGuid targetGuid = ObjectGuid::Empty;
 };
 
+// EncounterHelpers::InstanceCreatureList for Shadow Demons, which are kept with their targets.
+struct ShadowDemonList
+{
+    std::optional<uint32> refreshedAt;
+    std::vector<ShadowDemon> demons;
+};
+
 // One Shadowfiend infection, recorded by the mechanic tracker. Once the trap is assigned, hunter is
 // empty if a Frost Trap already covered the position, or once the hunter has laid its trap.
 struct IllidanInfection
@@ -667,14 +679,15 @@ inline constexpr float ILLIDAN_STAIRWELL_Z = 341.0f;
 // 175 yd rearm distance matches the Council's because Illidan's XY position is nearly identical.
 inline constexpr float ILLIDAN_CLASS_ROLE_REARM_DISTANCE = 175.0f;
 
+inline constexpr uint32 ILLIDAN_UNIT_CACHE_INTERVAL_MS = 200;
 inline constexpr uint32 ILLIDAN_PARASITIC_SHADOWFIEND_CACHE_INTERVAL_MS = 200;
 inline constexpr uint32 ILLIDAN_TRAP_HUNTER_CACHE_INTERVAL_MS = 1000;
-inline constexpr uint32 ILLIDAN_SPEECH_CACHE_INTERVAL_MS = 1000;
 inline constexpr uint32 ILLIDAN_SHADOW_DEMON_CACHE_INTERVAL_MS = 200;
 
 inline constexpr float ILLIDAN_PHASE_2_HEALTH_PCT = 65.0f;
 inline constexpr float ILLIDAN_PHASE_5_HEALTH_PCT = 30.0f;
 inline constexpr float ILLIDAN_DPS_COOLDOWN_RELEASE_HEALTH_PCT = 62.0f;
+// Around ILLIDAN_GRATE_CENTER, except for the Frost Trap search around the bot.
 inline constexpr float ILLIDAN_ADD_SEARCH_RADIUS = ILLIDAN_CLASS_ROLE_ANNOUNCE_DISTANCE;
 inline constexpr float ILLIDAN_SPEECH_SEARCH_RADIUS = ILLIDAN_CLASS_ROLE_ANNOUNCE_DISTANCE;
 inline constexpr float ILLIDAN_POSITION_TOLERANCE = 0.5f;
@@ -882,10 +895,14 @@ inline std::array const ILLIDAN_W_GLAIVE_TANK_POSITIONS = {
 };
 
 std::unordered_map<ObjectGuid, IllidanInfection> const* FindIllidanInfections(uint32 instanceId);
+// Illidan, the Flames of Azzinoth, the Parasitic Shadowfiends, and the Eye Blast trigger.
+GuidVector FindIllidanUnitGuids(Player* bot);
+GuidVector const& GetIllidanUnits(Player* bot);
+Creature* GetLivingIllidanUnit(Player* bot, BtNpcs npc);
 IllidanPhase GetIllidanPhase(Unit* illidan);
 bool IsIllidanSpeechInProgress(Player* bot);
 bool RecordIllidanPhase(uint32 instanceId, IllidanPhase phase);
-bool IsIllidanPhaseStartWithin(Unit const& illidan, IllidanPhase phase, uint32 durationMs);
+bool IsIllidanPhaseStartWithin(Unit& illidan, IllidanPhase phase, uint32 durationMs);
 IllidanPhase GetIllidanPhaseBefore(Unit* illidan, IllidanPhase phase);
 bool IsIllidanDemonFormEnding(Unit* illidan, uint32 durationMs);
 IllidanDpsHold GetIllidanHoldWindow(Unit* illidan);
@@ -900,11 +917,11 @@ bool ShouldIllidanPetsBePassive(Player* bot, Unit* illidan);
 bool IsIllidanPickupChannelHeld(Player* bot, Unit* illidan, Spell const* channel);
 float GetGrateAngle(Position const& position);
 Position GetRingPoint(float angle, float radius);
-Position GetIllidanSettlePosition(Unit const& illidan);
+Position GetIllidanSettlePosition(Unit& illidan);
 Position GetGrateSlot(size_t index);
-DemonFormLayout GetDemonFormLayout(Unit const& illidan);
-Position GetIllidanInfectionPosition(Unit const& illidan, IllidanPhase phase);
-Position GetIllidanRecordedInfectionPosition(Player* bot, Unit const& illidan, IllidanPhase phase);
+DemonFormLayout GetDemonFormLayout(Unit& illidan);
+Position GetIllidanInfectionPosition(Unit& illidan, IllidanPhase phase);
+Position GetIllidanRecordedInfectionPosition(Player* bot, Unit& illidan, IllidanPhase phase);
 std::pair<Unit*, Unit*> GetFlamesOfAzzinoth(Player* bot);
 bool IsWestFlameOfAzzinothTank(Player* player);
 bool IsEastFlameOfAzzinothTank(Player* player);
@@ -928,11 +945,11 @@ int32 GetIllidanGrateIndex(Player* bot, Unit* illidan);
 int32 GetIllidanGrateStackIndex(Player* bot);
 Aura* GetParasiticShadowfiendAura(Player* player);
 bool HasParasiticShadowfiend(Player* player);
-GuidVector FindParasiticShadowfiendGuids(Player* bot);
 Unit* GetNearestParasiticShadowfiend(PlayerbotAI* botAI, Unit* unit);
 bool IsNearNewParasiticShadowfiend(PlayerbotAI* botAI);
 GuidVector FindInfectedPlayerGuids(Player* bot);
 std::vector<ShadowDemon> FindShadowDemons(Player* bot);
+std::vector<ShadowDemon> const& GetShadowDemons(Player* bot);
 Unit* GetShadowDemonForRangedToAttack(PlayerbotAI* botAI, Unit* from);
 Unit* GetShadowDemonMovingToWarlockTank(PlayerbotAI* botAI);
 Unit* GetShadowDemonForMeleeToAttack(PlayerbotAI* botAI, Unit* from);
@@ -952,6 +969,8 @@ struct BtInstanceState
     std::optional<std::vector<NajentusSpineAssignment>> najentusSpineAssignments;
     std::optional<ObjectGuid> najentusSpineThrower;
     std::optional<uint32> najentusSpineThrowTime;
+    EncounterHelpers::InstanceCreatureList shadeOfAkamaAdds;
+    EncounterHelpers::InstanceCreatureList gorefiendConstructs;
     std::optional<uint32> councilDpsWaitTimer;
     std::optional<IllidanPhase> illidanLastPhase;
     std::optional<IllidanPhase> illidanPreviousPhase;
@@ -961,6 +980,8 @@ struct BtInstanceState
     std::optional<ObjectGuid> westFlameGuid;
     std::optional<IllidanPhase> illidanTankAggroPhase;
     std::optional<std::unordered_map<ObjectGuid, IllidanInfection>> illidanInfections;
+    EncounterHelpers::InstanceCreatureList illidanUnits;
+    ShadowDemonList illidanShadowDemons;
     EncounterHelpers::ClassRoleAssignment zerevorMageTank;
     EncounterHelpers::ClassRoleAssignment illidanWarlockTank;
 };

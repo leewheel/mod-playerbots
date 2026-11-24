@@ -13,10 +13,12 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <list>
 #include <optional>
+#include <utility>
 
 using namespace BtHelpers;
 using namespace EncounterHelpers;
@@ -607,8 +609,7 @@ float SupremusKiteBossAction::GetCollisionFreeDistance(float angle, float maxDis
 }
 
 float SupremusKiteBossAction::SimulateChase(
-    Unit const& supremus, float timeRemaining, float catchDistance, float angle,
-    float runDistance)
+    Unit& supremus, float timeRemaining, float catchDistance, float angle, float runDistance)
 {
     constexpr float timeStep = 0.25f;
     float const botStep = bot->GetSpeed(MOVE_RUN) * timeStep;
@@ -959,7 +960,7 @@ bool TeronGorefiendDestroyShadowyConstructsAction::Execute(Event /*event*/)
     if (!spirit)
         return false;
 
-    std::vector<Unit*> const constructs = GetConstructs(gorefiend);
+    std::vector<Unit*> const constructs = GetConstructs();
     Unit* leadConstruct = GetLeadConstruct(gorefiend, constructs);
     if (!leadConstruct)
     {
@@ -1014,18 +1015,14 @@ bool TeronGorefiendDestroyShadowyConstructsAction::Execute(Event /*event*/)
 // A grid search is used because when a player controls the spirit, its body stays alive where the
 // spirit spawned. The player does not have LoS to Teron from the corner, so a standard 'attackers'
 // search, which is centered on the player and not the spirit, loses constructs near Teron.
-std::vector<Unit*> TeronGorefiendDestroyShadowyConstructsAction::GetConstructs(
-    Unit* gorefiend) const
+std::vector<Unit*> TeronGorefiendDestroyShadowyConstructsAction::GetConstructs() const
 {
-    std::list<Creature*> creatures;
-    gorefiend->GetCreatureListWithEntryInGrid(
-        creatures, Id(BtNpcs::NPC_SHADOWY_CONSTRUCT), GOREFIEND_CONSTRUCT_SEARCH_RADIUS);
-
     std::vector<Unit*> constructs;
-    for (Creature* creature : creatures)
+    for (ObjectGuid const& guid : GetShadowyConstructGuids(bot))
     {
-        if (creature->IsAlive())
-            constructs.push_back(creature);
+        Unit* construct = botAI->GetUnit(guid);
+        if (construct && construct->IsAlive())
+            constructs.push_back(construct);
     }
 
     return constructs;
@@ -1694,7 +1691,7 @@ bool IllidariCouncilMageTankPositionZerevorAction::Execute(Event /*event*/)
 
     // The mage tank needs Dampen Magic to survive Zerevor, so stealing it is top priority. A
     // custom move is needed since CanCastSpell does not reject a target out of range.
-    if (zerevor->HasAura(Id(BtSpells::SPELL_DAMPEN_MAGIC)))
+    if (zerevor->HasAura(Id(BtSpells::SPELL_ZEREVOR_DAMPEN_MAGIC)))
     {
         if (!bot->IsWithinCombatRange(zerevor, SPELLSTEAL_RANGE))
         {
@@ -1843,7 +1840,7 @@ bool IllidariCouncilAssignDpsTargetsAction::Execute(Event /*event*/)
 
     bool const isCaster = PlayerbotAI::IsCaster(bot);
     uint32 const immunity = isCaster ? Id(BtSpells::SPELL_BLESSING_OF_SPELL_WARDING) :
-        Id(BtSpells::SPELL_BLESSING_OF_PROTECTION);
+        Id(BtSpells::SPELL_GATHIOS_BLESSING_OF_PROTECTION);
 
     Unit* gathios = members.gathios;
     Unit* malande = members.malande;
@@ -1904,7 +1901,7 @@ bool IllidariCouncilAssignDpsTargetsAction::ShouldAttackMalande(
     {
         case CLASS_ROGUE:
         case CLASS_WARRIOR:
-            return !malande->HasAura(Id(BtSpells::SPELL_BLESSING_OF_PROTECTION));
+            return !malande->HasAura(Id(BtSpells::SPELL_GATHIOS_BLESSING_OF_PROTECTION));
         case CLASS_DEATH_KNIGHT:
         case CLASS_SHAMAN:
             return true;
@@ -1945,9 +1942,7 @@ bool IllidanStormragePositionOnGrateDuringSpeechAction::Execute(Event /*event*/)
     Position const& position = ILLIDAN_PULL_TANK_POSITION;
     if (bot->GetExactDist2d(position) <= ILLIDAN_POSITION_TOLERANCE)
     {
-        Creature* illidan = bot->FindNearestCreature(
-            Id(BtNpcs::NPC_ILLIDAN_STORMRAGE), ILLIDAN_SPEECH_SEARCH_RADIUS);
-        FaceUnit(bot, illidan);
+        FaceUnit(bot, GetLivingIllidanUnit(bot, BtNpcs::NPC_ILLIDAN_STORMRAGE));
         return false;
     }
 
@@ -2266,7 +2261,7 @@ void IllidanStormrageMainTankRepositionBossAction::StartRingLead(
 
 // See comments to ILLIDAN_BACK_OFF_DISTANCE and ILLIDAN_ROUND_STEP_ANGLE in BTHelpers.h.
 void IllidanStormrageMainTankRepositionBossAction::RouteRoundIllidan(
-    Unit const& illidan, Position& position)
+    Unit& illidan, Position& position)
 {
     if (illidan.GetExactDist2d(bot) < ILLIDAN_BACK_OFF_DISTANCE ||
         illidan.GetExactDist2d(position) < ILLIDAN_BACK_OFF_DISTANCE)
@@ -2394,7 +2389,7 @@ bool IllidanStormrageTrackInfectionsAction::Execute(Event /*event*/)
 
             // The traps are used only for primary infections. Due to the trap cooldown, it is not
             // practical to trap for secondary infections. If all goes well, there should be none.
-            if (!player || !player->HasAura(Id(BtSpells::SPELL_PARASITIC_SHADOWFIEND_PRI)))
+            if (!player || !player->HasAura(Id(BtSpells::SPELL_PARASITIC_SHADOWFIEND_PRIMARY)))
                 continue;
 
             if (IsExemptFromIllidanInfectionRun(illidan, player))
@@ -2936,8 +2931,7 @@ bool IllidanStormrageSeedShadowDemonsAction::Execute(Event /*event*/)
 // Demon. Each must be in spell range and not already seeded by the bot.
 Unit* IllidanStormrageSeedShadowDemonsAction::FindSeedTarget()
 {
-    auto const& shadowDemons =
-        context->GetValue<std::vector<ShadowDemon>>("illidan stormrage shadow demons")->RefGet();
+    auto const& shadowDemons = GetShadowDemons(bot);
     uint32 const seed = AI_VALUE2(uint32, "spell id", "seed of corruption");
     float const range = botAI->GetRange("spell");
     auto const canSeed = [this, seed, range](Unit* demon)
@@ -3099,12 +3093,12 @@ bool IllidanStormrageManageDpsTimersAction::Execute(Event /*event*/)
     {
         if (!state.eastFlameGuid || !state.westFlameGuid)
         {
-            std::list<Creature*> flames;
-            bot->GetCreatureListWithEntryInGrid(
-                flames, Id(BtNpcs::NPC_FLAME_OF_AZZINOTH), ILLIDAN_ADD_SEARCH_RADIUS);
-
-            for (Creature* flame : flames)
+            for (ObjectGuid const& guid : GetIllidanUnits(bot))
             {
+                if (guid.GetEntry() != Id(BtNpcs::NPC_FLAME_OF_AZZINOTH))
+                    continue;
+
+                Creature* flame = botAI->GetCreature(guid);
                 if (!flame || !flame->IsAlive())
                     continue;
 
@@ -3141,12 +3135,11 @@ bool IllidanStormrageClearHazardsAction::Execute(Event /*event*/)
         Id(BtNpcs::NPC_DEMON_FIRE),
         Id(BtNpcs::NPC_BLAZE),
     };
-    std::list<Creature*> hazards;
-    bot->GetCreatureListWithEntryInGrid(hazards, entries, ILLIDAN_ADD_SEARCH_RADIUS);
-
     bool isCleared = false;
-    for (Creature* creature : hazards)
+    for (ObjectGuid const& guid :
+         FindCreatureGuidsAround(bot, ILLIDAN_GRATE_CENTER, ILLIDAN_ADD_SEARCH_RADIUS, entries))
     {
+        Creature* creature = botAI->GetCreature(guid);
         if (creature && creature->IsAlive())
         {
             creature->Kill(bot, creature);

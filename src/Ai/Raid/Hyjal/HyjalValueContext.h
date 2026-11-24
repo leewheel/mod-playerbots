@@ -11,34 +11,11 @@
 #include "HyjalHelpers.h"
 #include "NamedObjectContext.h"
 #include "Value.h"
+#include <string>
+#include <vector>
 
-// By leewheel 2026-09-06 采纳brighton全限定写法，不在头文件引入using命名空间
-// 阿兹加洛的地狱火，按生成时间最旧在前。已缓存，因为其背后的网格搜索
-// 不应由团队中每个机器人每tick在触发器和乘数器中重复执行
-class HyjalInfernalsValue : public CalculatedValue<GuidVector>
-{
-public:
-    HyjalInfernalsValue(PlayerbotAI* botAI)
-        : CalculatedValue<GuidVector>(
-              botAI, "hyjal infernals", HyjalHelpers::INFERNAL_CACHE_INTERVAL) {}
-
-protected:
-    GuidVector Calculate() override { return HyjalHelpers::FindInfernalGuids(bot); }
-};
-
-// By leewheel 2026-09-13 合并brighton caa4094e: 本处冲突系双方各自在注释/新增类上落笔 ——
-//   保留我方关于 ground hazards 缓存的说明注释，同时采纳上游新增的 KazrogalBelowManaThresholdValue。
-// End By leewheel
-// The ground hazards, cached for the same reason the Infernals are, only more so: Engine applies
-// every multiplier to every action it pulls from the queue each tick, so a grid search inside a
-// multiplier body is paid once per action rather than once per bot. Between the triggers, the
-// multipliers and the actions, each of these was being searched for several times a tick.
-//
-// Each is searched at its own radius, derived from the widest thing that asks about it, and
-// the helpers narrow it further from there
-
-// A latch so the gap between MARK_DANGER_MANA and MARK_REJOIN_MANA does not have bots running
-// back and forth to/from the group.
+// A latch so the gap between MARK_DANGER_MANA and MARK_REJOIN_MANA does not make bots run back and
+// forth to/from the group.
 class KazrogalBelowManaThresholdValue : public ManualSetValue<bool>
 {
 public:
@@ -52,7 +29,7 @@ public:
     HyjalHazardPositionsValue(
         PlayerbotAI* botAI, std::string const& name, uint32 spellId, float searchRadius)
         : CalculatedValue<std::vector<Position>>(
-              botAI, name, HyjalHelpers::HAZARD_CACHE_INTERVAL),
+              botAI, name, HyjalHelpers::HAZARD_CACHE_INTERVAL_MS),
           _spellId(spellId), _searchRadius(searchRadius) {}
 
 protected:
@@ -71,7 +48,6 @@ class RaidHyjalValueContext : public NamedObjectContext<UntypedValue>
 public:
     RaidHyjalValueContext()
     {
-        creators["hyjal infernals"] = &RaidHyjalValueContext::hyjal_infernals;
         creators["hyjal death and decay"] = &RaidHyjalValueContext::hyjal_death_and_decay;
         creators["hyjal rain of fire"] = &RaidHyjalValueContext::hyjal_rain_of_fire;
         creators["hyjal doomfire trail"] = &RaidHyjalValueContext::hyjal_doomfire_trail;
@@ -80,10 +56,6 @@ public:
     }
 
 private:
-    static UntypedValue* hyjal_infernals(PlayerbotAI* botAI)
-    {
-        return new HyjalInfernalsValue(botAI);
-    }
     static UntypedValue* kazrogal_below_mana_threshold(PlayerbotAI* botAI)
     {
         return new KazrogalBelowManaThresholdValue(botAI);

@@ -40,6 +40,13 @@ bool SscResetEncounterStatesAction::Execute(Event /*event*/)
         reset = true;
     }
 
+    Action* hydrossPetAction = context->GetAction("hydross the unstable set pet stance");
+    if (hydrossPetAction &&
+        static_cast<HydrossTheUnstableSetPetStanceAction*>(hydrossPetAction)->ResetPetStance())
+    {
+        reset = true;
+    }
+
     Action* karathressPetAction = context->GetAction("fathom-lord karathress set pet stance");
     if (karathressPetAction &&
         static_cast<FathomLordKarathressSetPetStanceAction*>(karathressPetAction)->ResetPetStance())
@@ -76,7 +83,7 @@ bool SscAssignClassRolesAction::Execute(Event /*event*/)
 
 bool SscMisdirectToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* boss = FindThreatTarget(bot, _bossName);
+    Unit* boss = GetSscBoss(bot, _boss);
     if (!boss)
         return false;
 
@@ -97,7 +104,7 @@ bool HydrossTheUnstableStopAttackingAction::Execute(Event event)
     if (!PlayerbotAI::IsTank(bot))
         return SscStopAttackingAction::Execute(event);
 
-    Unit* hydross = FindThreatTarget(bot, "hydross the unstable");
+    Unit* hydross = GetSscBoss(bot, SscBosses::DATA_HYDROSS_THE_UNSTABLE);
     return hydross && StopAttackingTarget(bot, hydross);
 }
 
@@ -162,7 +169,7 @@ bool GreyheartTidecallerMarkWaterElementalTotemAction::Execute(Event /*event*/)
 
 bool HydrossTheUnstablePositionAndSwapTanksAction::Execute(Event /*event*/)
 {
-    Unit* hydross = FindThreatTarget(bot, "hydross the unstable");
+    Unit* hydross = GetSscBoss(bot, SscBosses::DATA_HYDROSS_THE_UNSTABLE);
     if (!hydross)
         return false;
 
@@ -226,7 +233,7 @@ bool HydrossTheUnstablePositionAndSwapTanksAction::StepTo(Position const& positi
 
 bool HydrossTheUnstableMisdirectToTankAction::Execute(Event /*event*/)
 {
-    Unit* hydross = FindThreatTarget(bot, "hydross the unstable");
+    Unit* hydross = GetSscBoss(bot, SscBosses::DATA_HYDROSS_THE_UNSTABLE);
     if (!hydross)
         return false;
 
@@ -240,49 +247,61 @@ bool HydrossTheUnstableMisdirectToTankAction::Execute(Event /*event*/)
 
 bool HydrossTheUnstableManagePhaseTimersAction::Execute(Event /*event*/)
 {
-    Unit* hydross = FindThreatTarget(bot, "hydross the unstable");
+    Unit* hydross = GetSscBoss(bot, SscBosses::DATA_HYDROSS_THE_UNSTABLE);
     if (!hydross)
         return false;
 
     uint32 const instanceId = hydross->GetInstanceId();
     uint32 const now = getMSTime();
 
-    // Measure the phase based on the Hydross tank (measuring on the bot itself, who is the
-    // mechanic tracker, may be unreliable if the bot died and was resurrected).
+    // Measure the phase based on the Hydross tank (measuring on the bot itself, who is the mechanic
+    // tracker, may be unreliable if the bot died and was resurrected).
     Unit* victim = hydross->GetVictim();
     Player* marked = victim && victim->IsPlayer() ? victim->ToPlayer() : bot;
 
-    //By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，
-    //   这一整段多字段读改写完全无锁，两个 SSC 副本在不同地图线程并发时必崩。
-    return WithSscState(instanceId, [hydross, marked, now](SscInstanceState& state)
+    SscInstanceState& state = SscState(instanceId);
+    bool updated = false;
+
+    if (IsHydrossInFrostPhase(hydross))
     {
-        bool updated = false;
+        updated |= EmplaceIfUnset(state.hydrossFrostPhaseStartTime, now);
+        updated |= ResetIfSet(state.hydrossNaturePhaseStartTime);
+        updated |= ResetIfSet(state.hydrossNatureMarkMaxedTime);
 
-        if (IsHydrossInFrostPhase(hydross))
+        if (!state.hydrossFrostMarkMaxedTime && CanHydrossMarkBeMaxed(hydross) &&
+            HasMarkOfHydrossAt100Percent(marked))
         {
-            updated |= EmplaceIfUnset(state.hydrossFrostPhaseStartTime, now);
-            updated |= ResetIfSet(state.hydrossNaturePhaseStartTime);
-            updated |= ResetIfSet(state.hydrossNatureMarkMaxedTime);
-
-            if (!state.hydrossFrostMarkMaxedTime && CanHydrossMarkBeMaxed(hydross) &&
-                HasMarkOfHydrossAt100Percent(marked))
-            {
-                updated |= EmplaceIfUnset(state.hydrossFrostMarkMaxedTime, now);
-            }
+            updated |= EmplaceIfUnset(state.hydrossFrostMarkMaxedTime, now);
         }
-        else // Nature phase
+    }
+    else // Nature phase
+    {
+        updated |= EmplaceIfUnset(state.hydrossNaturePhaseStartTime, now);
+        updated |= ResetIfSet(state.hydrossFrostPhaseStartTime);
+        updated |= ResetIfSet(state.hydrossFrostMarkMaxedTime);
+
+        if (!state.hydrossNatureMarkMaxedTime && CanHydrossMarkBeMaxed(hydross) &&
+            HasMarkOfCorruptionAt100Percent(marked))
         {
-            updated |= EmplaceIfUnset(state.hydrossNaturePhaseStartTime, now);
-            updated |= ResetIfSet(state.hydrossFrostPhaseStartTime);
-            updated |= ResetIfSet(state.hydrossFrostMarkMaxedTime);
-
-            if (!state.hydrossNatureMarkMaxedTime && CanHydrossMarkBeMaxed(hydross) &&
-                HasMarkOfCorruptionAt100Percent(marked))
-                updated |= EmplaceIfUnset(state.hydrossNatureMarkMaxedTime, now);
+            updated |= EmplaceIfUnset(state.hydrossNatureMarkMaxedTime, now);
         }
+    }
 
-        return updated;
-    });
+    return updated;
+}
+
+bool HydrossTheUnstableSetPetStanceAction::Execute(Event /*event*/)
+{
+    Unit* hydross = GetSscBoss(bot, SscBosses::DATA_HYDROSS_THE_UNSTABLE);
+    return hydross &&
+        SetMinionStancesForHold(bot, IsHydrossPetHoldActive(hydross), _previousReactStates);
+}
+
+bool HydrossTheUnstableSetPetStanceAction::ResetPetStance()
+{
+    bool const restored = SetMinionStancesForHold(bot, false, _previousReactStates);
+    _previousReactStates.clear();
+    return restored;
 }
 
 // The Lurker Below
@@ -333,7 +352,7 @@ bool MoveStraightTo(PlayerbotAI* botAI, float x, float y, float z, MovementPrior
 // Runnin', runnin', runnin', I'm runnin' over here, run, run, run-run, run.
 bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
 {
-    Unit* lurker = FindThreatTarget(bot, "the lurker below");
+    Unit* lurker = GetSscBoss(bot, SscBosses::DATA_THE_LURKER_BELOW);
     if (!lurker)
         return false;
 
@@ -422,7 +441,7 @@ bool TheLurkerBelowRunAroundBehindBossAction::Execute(Event /*event*/)
 
 bool TheLurkerBelowPositionMainTankAction::Execute(Event /*event*/)
 {
-    Unit* lurker = FindThreatTarget(bot, "the lurker below");
+    Unit* lurker = GetSscBoss(bot, SscBosses::DATA_THE_LURKER_BELOW);
     if (!lurker)
         return false;
 
@@ -462,22 +481,22 @@ bool TheLurkerBelowPositionMainTankAction::Execute(Event /*event*/)
 
 bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
 {
-    Unit* lurker = FindThreatTarget(bot, "the lurker below");
+    Unit* lurker = GetSscBoss(bot, SscBosses::DATA_THE_LURKER_BELOW);
     if (!lurker)
         return false;
 
     if (!_hasRangedPosition)
     {
         constexpr float arcSpan = 2.0f * M_PI / 3.0f;
-        constexpr float arcCenter = 5.592f; // M<easured in game to be across from the main tank.
+        constexpr float arcCenter = 5.592f; // Measured in game to be across from the main tank.
         float angle;
         if (!GetRangedArcAngle(bot, arcCenter, arcSpan, angle))
             return false;
 
         float const targetX =
-            lurker->GetPositionX() + LURKER_RANGED_SAFE_DISTANCE * std::cos(angle);
+            lurker->GetPositionX() + LURKER_RANGED_CLEARANCE * std::cos(angle);
         float const targetY =
-            lurker->GetPositionY() + LURKER_RANGED_SAFE_DISTANCE * std::sin(angle);
+            lurker->GetPositionY() + LURKER_RANGED_CLEARANCE * std::sin(angle);
 
         _rangedPosition = Position(targetX, targetY, lurker->GetPositionZ());
         _hasRangedPosition = true;
@@ -488,11 +507,8 @@ bool TheLurkerBelowSpreadRangedInArcAction::Execute(Event /*event*/)
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetStepToPosition(
-            bot, position, arrivalDist, nullptr, moveX, moveY, backwards))
-    {
+    if (!GetStepToPosition(bot, position, arrivalDist, nullptr, moveX, moveY, backwards))
         return false;
-    }
 
     // Incremental movement does not work if the bot is in the water (there is no walkable height
     // and MoveTo returns false). Therefore, this block calls a path directly to the final position.
@@ -536,36 +552,31 @@ bool TheLurkerBelowTanksPickUpGuardiansAction::Execute(Event /*event*/)
 ObjectGuid TheLurkerBelowTanksPickUpGuardiansAction::ClaimGuardianForTank(
     std::vector<Unit*> const& guardians, int8 myIndex)
 {
-    //By leewheel 2026-10-07 读-改-写改走 WithSscState：原 SscState() 返回引用时锁已释放，
-    //   下面 assignmentsField.emplace() 与后续赋值都在无锁下做，并发时必崩。
-    return WithSscState(bot->GetInstanceId(), [&guardians, myIndex](SscInstanceState& state)
+    std::optional<LurkerGuardianTankAssignments>& assignmentsField =
+        SscState(bot->GetInstanceId()).lurkerGuardianTankAssignments;
+    LurkerGuardianTankAssignments& assignments =
+        assignmentsField ? *assignmentsField : assignmentsField.emplace();
+    ObjectGuid& assignedGuid = assignments[myIndex];
+
+    if (std::any_of(guardians.begin(), guardians.end(),
+            [&assignedGuid](Unit* guardian) { return guardian->GetGUID() == assignedGuid; }))
     {
-        std::optional<LurkerGuardianTankAssignments>& assignmentsField =
-            state.lurkerGuardianTankAssignments;
-        LurkerGuardianTankAssignments& assignments =
-            assignmentsField ? *assignmentsField : assignmentsField.emplace();
-        ObjectGuid& assignedGuid = assignments[myIndex];
-
-        if (std::any_of(guardians.begin(), guardians.end(),
-                [&assignedGuid](Unit* guardian) { return guardian->GetGUID() == assignedGuid; }))
-        {
-            return assignedGuid;
-        }
-
-        assignedGuid = ObjectGuid::Empty;
-
-        for (Unit* guardian : guardians)
-        {
-            if (std::find(assignments.begin(), assignments.end(), guardian->GetGUID()) ==
-                assignments.end())
-            {
-                assignedGuid = guardian->GetGUID();
-                break;
-            }
-        }
-
         return assignedGuid;
-    });
+    }
+
+    assignedGuid = ObjectGuid::Empty;
+
+    for (Unit* guardian : guardians)
+    {
+        if (std::find(assignments.begin(), assignments.end(), guardian->GetGUID()) ==
+            assignments.end())
+        {
+            assignedGuid = guardian->GetGUID();
+            break;
+        }
+    }
+
+    return assignedGuid;
 }
 
 bool TheLurkerBelowMeleeMoveDirectlyToTargetAction::Execute(Event /*event*/)
@@ -577,7 +588,7 @@ bool TheLurkerBelowMeleeMoveDirectlyToTargetAction::Execute(Event /*event*/)
     if (bot->IsWithinMeleeRange(target))
         return false;
 
-    Unit* lurker = FindThreatTarget(bot, "the lurker below");
+    Unit* lurker = GetSscBoss(bot, SscBosses::DATA_THE_LURKER_BELOW);
     if (!lurker)
         return false;
 
@@ -602,7 +613,7 @@ bool TheLurkerBelowMeleeMoveDirectlyToTargetAction::Execute(Event /*event*/)
 
 bool TheLurkerBelowMeleeGetOutOfWaterAction::Execute(Event /*event*/)
 {
-    Unit* lurker = FindThreatTarget(bot, "the lurker below");
+    Unit* lurker = GetSscBoss(bot, SscBosses::DATA_THE_LURKER_BELOW);
     if (!lurker)
         return false;
 
@@ -664,7 +675,7 @@ bool LeotherasTheBlindRangedKeepDistanceAction::Execute(Event /*event*/)
     if (Creature* leotherasHumanoid = GetLeotherasHumanoidToAvoid(botAI))
     {
         if (FleePosition(
-                leotherasHumanoid->GetPosition(), LEOTHERAS_RANGED_SAFE_DISTANCE, minInterval))
+                leotherasHumanoid->GetPosition(), LEOTHERAS_RANGED_CLEARANCE, minInterval))
         {
             return true;
         }
@@ -672,7 +683,7 @@ bool LeotherasTheBlindRangedKeepDistanceAction::Execute(Event /*event*/)
 
     Unit* blastTarget = GetChaosBlastTargetToAvoid(botAI);
     return blastTarget && FleePosition(
-        blastTarget->GetPosition(), LEOTHERAS_CHAOS_BLAST_SAFE_DISTANCE, minInterval);
+        blastTarget->GetPosition(), LEOTHERAS_CHAOS_BLAST_CLEARANCE, minInterval);
 }
 
 bool LeotherasTheBlindRunAwayFromWhirlwindAction::Execute(Event /*event*/)
@@ -682,11 +693,11 @@ bool LeotherasTheBlindRunAwayFromWhirlwindAction::Execute(Event /*event*/)
         return false;
 
     float const currentDistance = bot->GetExactDist2d(leotherasHumanoid);
-    if (currentDistance >= LEOTHERAS_WHIRLWIND_SAFE_DISTANCE)
+    if (currentDistance >= LEOTHERAS_WHIRLWIND_CLEARANCE)
         return false;
 
     bot->CastStop();
-    return MoveAway(leotherasHumanoid, LEOTHERAS_WHIRLWIND_SAFE_DISTANCE - currentDistance);
+    return MoveAway(leotherasHumanoid, LEOTHERAS_WHIRLWIND_CLEARANCE - currentDistance);
 }
 
 bool LeotherasTheBlindMeleeRunFromChaosBlastAction::Execute(Event /*event*/)
@@ -703,7 +714,7 @@ bool LeotherasTheBlindMeleeRunFromChaosBlastAction::Execute(Event /*event*/)
         return false;
 
     float const currentDistance = bot->GetExactDist2d(demonVictim);
-    return MoveAway(demonVictim, LEOTHERAS_CHAOS_BLAST_SAFE_DISTANCE - currentDistance);
+    return MoveAway(demonVictim,  - currentDistance);
 }
 
 bool LeotherasTheBlindDestroyInnerDemonAction::Execute(Event /*event*/)
@@ -914,42 +925,38 @@ bool LeotherasTheBlindMisdirectDemonFormToTankAction::Execute(Event /*event*/)
 
 bool LeotherasTheBlindManageDpsHoldTimersAction::Execute(Event /*event*/)
 {
-    Unit* leotheras = FindThreatTarget(bot, "leotheras the blind");
+    Unit* leotheras = GetSscBoss(bot, SscBosses::DATA_LEOTHERAS_THE_BLIND);
     if (!leotheras)
         return false;
 
+    SscInstanceState& state = SscState(leotheras->GetInstanceId());
     uint32 const now = getMSTime();
 
-    //By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，
-    //   这一整段多字段读改写完全无锁，两个 SSC 副本在不同地图线程并发时必崩。
-    return WithSscState(leotheras->GetInstanceId(), [this, leotheras, now](SscInstanceState& state)
+    bool changed = false;
+
+    if (IsLeotherasHumanoidPhase(botAI))
     {
-        bool changed = false;
+        changed |= EmplaceIfUnset(state.leotherasHumanoidPhaseStartTime, now);
+        changed |= TrackWhirlwindEnd(leotheras, state.leotherasWhirlwindEndTime, now);
+        changed |= ResetIfSet(state.leotherasDemonPhaseStartTime);
+        changed |= ResetIfSet(state.leotherasFinalPhaseStartTime);
+    }
+    else if (IsLeotherasDemonPhase(botAI))
+    {
+        changed |= EmplaceIfUnset(state.leotherasDemonPhaseStartTime, now);
+        changed |= ResetIfSet(state.leotherasHumanoidPhaseStartTime);
+        changed |= ResetIfSet(state.leotherasWhirlwindEndTime);
+        changed |= ResetIfSet(state.leotherasFinalPhaseStartTime);
+    }
+    else if (IsLeotherasFinalPhase(botAI))
+    {
+        changed |= EmplaceIfUnset(state.leotherasFinalPhaseStartTime, now);
+        changed |= TrackWhirlwindEnd(leotheras, state.leotherasWhirlwindEndTime, now);
+        changed |= ResetIfSet(state.leotherasHumanoidPhaseStartTime);
+        changed |= ResetIfSet(state.leotherasDemonPhaseStartTime);
+    }
 
-        if (IsLeotherasHumanoidPhase(botAI))
-        {
-            changed |= EmplaceIfUnset(state.leotherasHumanoidPhaseStartTime, now);
-            changed |= TrackWhirlwindEnd(leotheras, state.leotherasWhirlwindEndTime, now);
-            changed |= ResetIfSet(state.leotherasDemonPhaseStartTime);
-            changed |= ResetIfSet(state.leotherasFinalPhaseStartTime);
-        }
-        else if (IsLeotherasDemonPhase(botAI))
-        {
-            changed |= EmplaceIfUnset(state.leotherasDemonPhaseStartTime, now);
-            changed |= ResetIfSet(state.leotherasHumanoidPhaseStartTime);
-            changed |= ResetIfSet(state.leotherasWhirlwindEndTime);
-            changed |= ResetIfSet(state.leotherasFinalPhaseStartTime);
-        }
-        else if (IsLeotherasFinalPhase(botAI))
-        {
-            changed |= EmplaceIfUnset(state.leotherasFinalPhaseStartTime, now);
-            changed |= TrackWhirlwindEnd(leotheras, state.leotherasWhirlwindEndTime, now);
-            changed |= ResetIfSet(state.leotherasHumanoidPhaseStartTime);
-            changed |= ResetIfSet(state.leotherasDemonPhaseStartTime);
-        }
-
-        return changed;
-    });
+    return changed;
 }
 
 // Whirlwind resets threat on every tick. Hold dps for a moment after it ends. But do not hold
@@ -994,13 +1001,13 @@ bool FathomLordKarathressTanksPositionTargetsAction::Execute(Event /*event*/)
     if (PlayerbotAI::IsMainTank(bot))
     {
         // Karathress is tanked by the main tank near his starting position.
-        target = FindThreatTarget(bot, "fathom-lord karathress");
+        target = GetSscBoss(bot, SscBosses::DATA_FATHOM_LORD_KARATHRESS);
         position = KARATHRESS_TANK_POSITION;
     }
     else if (PlayerbotAI::IsAssistTankOfIndex(bot, 0, false))
     {
         // Caribdis is pulled far to the West in the corner by the first assist tank.
-        target = FindThreatTarget(bot, "fathom-guard caribdis");
+        target = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_CARIBDIS);
         position = CARIBDIS_TANK_POSITION;
     }
     else if (PlayerbotAI::IsAssistTankOfIndex(bot, 1, false))
@@ -1012,7 +1019,7 @@ bool FathomLordKarathressTanksPositionTargetsAction::Execute(Event /*event*/)
     else if (PlayerbotAI::IsAssistTankOfIndex(bot, 2, false))
     {
         // Tidalvess is pulled Northwest near the pillar by the third assist tank.
-        target = FindThreatTarget(bot, "fathom-guard tidalvess");
+        target = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_TIDALVESS);
         position = TIDALVESS_TANK_POSITION;
     }
 
@@ -1032,11 +1039,8 @@ bool FathomLordKarathressTanksPositionTargetsAction::Execute(Event /*event*/)
     float moveX;
     float moveY;
     bool backwards;
-    if (!GetStepToPosition(
-            bot, position, arrivalDist, target, moveX, moveY, backwards))
-    {
+    if (!GetStepToPosition(bot, position, arrivalDist, target, moveX, moveY, backwards))
         return false;
-    }
 
     return MoveTo(
         SSC_MAP_ID, moveX, moveY, bot->GetPositionZ(), false, false, false, false,
@@ -1049,7 +1053,7 @@ bool FathomLordKarathressPositionCaribdisTankHealerAction::Execute(Event /*event
     if (IsWaitingForLastMove(priority))
         return false;
 
-    Unit* caribdis = FindThreatTarget(bot, "fathom-guard caribdis");
+    Unit* caribdis = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_CARIBDIS);
     if (!caribdis)
         return false;
 
@@ -1107,17 +1111,17 @@ bool FathomLordKarathressMisdirectToTanksAction::Execute(Event /*event*/)
     Player* tank = nullptr;
     if (hunterIndex == 0)
     {
-        enemy = FindThreatTarget(bot, "fathom-guard caribdis");
+        enemy = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_CARIBDIS);
         tank = GetGroupAssistTank(bot, 0);
     }
     else if (hunterIndex == 1)
     {
-        enemy = FindThreatTarget(bot, "fathom-guard tidalvess");
+        enemy = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_TIDALVESS);
         tank = GetGroupAssistTank(bot, 2);
     }
     else if (hunterIndex == 2)
     {
-        enemy = FindThreatTarget(bot, "fathom-guard sharkkis");
+        enemy = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_SHARKKIS);
         tank = GetGroupAssistTank(bot, 1);
     }
 
@@ -1137,8 +1141,8 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     Unit* target = nullptr;
     // Karathress gets the totem when Tidalvess dies, so it stays top priority for the whole fight.
     Unit* totem = GetSpitfireTotem(botAI);
-    Unit* tidalvess = FindThreatTarget(bot, "fathom-guard tidalvess");
-    Unit* caribdis = FindThreatTarget(bot, "fathom-guard caribdis");
+    Unit* tidalvess = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_TIDALVESS);
+    Unit* caribdis = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_CARIBDIS);
 
     if (ShouldAttackSpitfireTotem(bot, totem))
     {
@@ -1152,7 +1156,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     {
         target = caribdis;
     }
-    else if (Unit* sharkkis = FindThreatTarget(bot, "fathom-guard sharkkis"))
+    else if (Unit* sharkkis = GetKarathressCouncilMember(bot, SscNpcs::NPC_FATHOM_GUARD_SHARKKIS))
     {
         target = sharkkis;
     }
@@ -1160,7 +1164,7 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
     {
         target = pet;
     }
-    else if (Unit* karathress = FindThreatTarget(bot, "fathom-lord karathress"))
+    else if (Unit* karathress = GetSscBoss(bot, SscBosses::DATA_FATHOM_LORD_KARATHRESS))
     {
         if (caribdis && karathress->GetHealthPct() <= KARATHRESS_BLESSING_HOLD_HEALTH_PCT)
         {
@@ -1187,12 +1191,12 @@ bool FathomLordKarathressAssignDpsPriorityAction::Execute(Event /*event*/)
         if (MarkTargetWithCross(bot, caribdis))
             return true;
 
-        if (bot->GetExactDist(caribdis) >= CARIBDIS_TIDAL_SURGE_SAFE_DISTANCE)
+        if (bot->GetExactDist(caribdis) >= CARIBDIS_TIDAL_SURGE_CLEARANCE)
             return false;
 
         constexpr uint32 minInterval = 0;
         return FleePosition(
-            caribdis->GetPosition(), CARIBDIS_TIDAL_SURGE_SAFE_DISTANCE, minInterval);
+            caribdis->GetPosition(), CARIBDIS_TIDAL_SURGE_CLEARANCE, minInterval);
     }
 
     return (!totem || target == totem) && MarkTargetWithSkull(bot, target);
@@ -1215,17 +1219,12 @@ bool FathomLordKarathressAssignDpsPriorityAction::ApproachCaribdis(Unit* caribdi
 
 bool FathomLordKarathressManageDpsTimerAction::Execute(Event /*event*/)
 {
-    Unit* karathress = FindThreatTarget(bot, "fathom-lord karathress");
+    Unit* karathress = GetSscBoss(bot, SscBosses::DATA_FATHOM_LORD_KARATHRESS);
     if (!karathress)
         return false;
 
-    //By leewheel 2026-10-07 写操作改走 WithSscState：原写法取到引用时锁已释放，emplace 无锁。
-    //By leewheel 2026-11-08 合并 brighton 48 提交：字段名跟随上游 Wait→Hold
-    //  （SscInstanceState::karathressDpsHoldTimer），WithSscState 安全写法保留。
-    return WithSscState(karathress->GetInstanceId(), [now = getMSTime()](SscInstanceState& state)
-    {
-        return EmplaceIfUnset(state.karathressDpsHoldTimer, now);
-    });
+    return EmplaceIfUnset(
+        SscState(karathress->GetInstanceId()).karathressDpsHoldTimer, getMSTime());
 }
 
 bool FathomLordKarathressSetPetStanceAction::Execute(Event /*event*/)
@@ -1238,6 +1237,13 @@ bool FathomLordKarathressSetPetStanceAction::ResetPetStance()
     bool const restored = SetMinionStancesForHold(bot, false, _previousReactStates);
     _previousReactStates.clear();
     return restored;
+}
+
+bool FathomLordKarathressCommandPetTargetAction::Execute(Event /*event*/)
+{
+    Guardian* pet = bot->GetGuardianPet();
+    Unit* target = GetKarathressPetTarget(botAI, pet);
+    return target && CommandPetAttack(pet, target);
 }
 
 bool FathomLordKarathressDropToGroundAfterCycloneAction::Execute(Event /*event*/)
@@ -1270,7 +1276,7 @@ bool FathomLordKarathressDropToGroundAfterCycloneAction::Execute(Event /*event*/
 
 bool MorogrimTidewalkerPositionMainTankAction::Execute(Event /*event*/)
 {
-    Unit* tidewalker = FindThreatTarget(bot, "morogrim tidewalker");
+    Unit* tidewalker = GetSscBoss(bot, SscBosses::DATA_MOROGRIM_TIDEWALKER);
     if (!tidewalker)
         return false;
 
@@ -1341,7 +1347,7 @@ bool MorogrimTidewalkerStackRangedBehindBossAction::Execute(Event /*event*/)
     if (IsWaitingForLastMove(priority))
         return false;
 
-    Unit* tidewalker = FindThreatTarget(bot, "morogrim tidewalker");
+    Unit* tidewalker = GetSscBoss(bot, SscBosses::DATA_MOROGRIM_TIDEWALKER);
     if (!tidewalker)
         return false;
 
@@ -1356,8 +1362,8 @@ bool MorogrimTidewalkerStackRangedBehindBossAction::Execute(Event /*event*/)
     }
 
     return MoveTo(
-        SSC_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false,
-        priority, true, false);
+        SSC_MAP_ID, stepX, stepY, bot->GetPositionZ(), false, false, false, false, priority,
+        true, false);
 }
 
 bool MorogrimTidewalkerReturnToBossAction::Execute(Event /*event*/)
@@ -1366,7 +1372,7 @@ bool MorogrimTidewalkerReturnToBossAction::Execute(Event /*event*/)
     if (IsWaitingForLastMove(priority))
         return false;
 
-    Unit* tidewalker = FindThreatTarget(bot, "morogrim tidewalker");
+    Unit* tidewalker = GetSscBoss(bot, SscBosses::DATA_MOROGRIM_TIDEWALKER);
     if (!tidewalker)
         return false;
 
@@ -1387,7 +1393,7 @@ bool MorogrimTidewalkerReturnToBossAction::Execute(Event /*event*/)
 
 bool LadyVashjMainTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!vashj)
         return false;
 
@@ -1411,8 +1417,7 @@ bool LadyVashjMainTankPositionBossAction::MoveToPhase1TankPosition(Unit* vashj)
     float moveY;
     bool backwards;
     if (!GetStepToPosition(
-            bot, VASHJ_PLATFORM_CENTER_POSITION, arrivalDistance,
-            vashj, moveX, moveY, backwards))
+            bot, VASHJ_PLATFORM_CENTER_POSITION, arrivalDistance, vashj, moveX, moveY, backwards))
     {
         return false;
     }
@@ -1427,14 +1432,17 @@ bool LadyVashjMainTankPositionBossAction::MoveToPhase1TankPosition(Unit* vashj)
 bool LadyVashjMainTankPositionBossAction::MoveAwayFromElementalsAndStriders(Unit* vashj)
 {
     constexpr float searchRadius = 25.0f;
-    auto const& adds = context->GetValue<VashjAddGuids>("ssc vashj adds")->RefGet();
+    GuidVector const& adds = GetVashjAdds(bot);
 
     // Surge range is 5.5y from Vashj's center so this leaves some room.
     constexpr float safeDistance = 10.0f;
     std::vector<Unit*> units;
     bool tooClose = false;
-    for (ObjectGuid const& guid : adds.enchanted)
+    for (ObjectGuid const& guid : adds)
     {
+        if (guid.GetEntry() != Id(SscNpcs::NPC_ENCHANTED_ELEMENTAL))
+            continue;
+
         Unit* enchanted = botAI->GetUnit(guid);
         if (!enchanted || !enchanted->IsAlive())
             continue;
@@ -1450,8 +1458,11 @@ bool LadyVashjMainTankPositionBossAction::MoveAwayFromElementalsAndStriders(Unit
 
     // Panic fears within 11y, so this tries to keep melee dps behind Vashj out of range as well.
     constexpr float striderSafeDistance = 18.0f;
-    for (ObjectGuid const& guid : adds.striders)
+    for (ObjectGuid const& guid : adds)
     {
+        if (guid.GetEntry() != Id(SscNpcs::NPC_COILFANG_STRIDER))
+            continue;
+
         Unit* strider = botAI->GetUnit(guid);
         if (!strider || !strider->IsAlive() || strider->GetVictim() == bot)
             continue;
@@ -1539,60 +1550,54 @@ bool LadyVashjAssignStationSlotsAction::Execute(Event /*event*/)
     if (!group)
         return false;
 
-    //By leewheel 2026-10-07 读-改-写改走 WithSscState：原 SscState() 返回引用时锁已释放，
-    //   下面 holdersField.emplace() 与逐槽位赋值都在无锁下做，并发时必崩。
-    //   锁内调用的 IsLiveVashjStationHolder / GetVashjStationFillOrder 均不碰 SscState，
-    //   不会重入加锁（std::mutex 不可重入）。
-    return WithSscState(bot->GetInstanceId(), [this, group](SscInstanceState& state)
+    std::optional<VashjStationHolders>& holdersField =
+        SscState(bot->GetInstanceId()).vashjStationHolders;
+    VashjStationHolders& holders = holdersField ? *holdersField : holdersField.emplace();
+    auto holdsSlot = [&holders](ObjectGuid guid)
     {
-        std::optional<VashjStationHolders>& holdersField = state.vashjStationHolders;
-        VashjStationHolders& holders = holdersField ? *holdersField : holdersField.emplace();
-        auto holdsSlot = [&holders](ObjectGuid guid)
+        return std::any_of(holders.begin(), holders.end(), [guid](auto const& station)
         {
-            return std::any_of(holders.begin(), holders.end(), [guid](auto const& station)
-            {
-                return std::find(station.begin(), station.end(), guid) != station.end();
-            });
-        };
+            return std::find(station.begin(), station.end(), guid) != station.end();
+        });
+    };
 
-        std::vector<Player*> rangedSpares;
-        std::vector<Player*> healerSpares;
-        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    std::vector<Player*> rangedSpares;
+    std::vector<Player*> healerSpares;
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || !member->IsAlive() || member->GetMapId() != SSC_MAP_ID ||
+            !GET_PLAYERBOT_AI(member) || holdsSlot(member->GetGUID()))
         {
-            Player* member = ref->GetSource();
-            if (!member || !member->IsAlive() || member->GetMapId() != SSC_MAP_ID ||
-                !GET_PLAYERBOT_AI(member) || holdsSlot(member->GetGUID()))
-            {
-                continue;
-            }
-
-            if (PlayerbotAI::IsRangedDps(member))
-                rangedSpares.push_back(member);
-            else if (PlayerbotAI::IsHeal(member))
-                healerSpares.push_back(member);
+            continue;
         }
 
-        bool changed = false;
-        size_t nextRanged = 0;
-        size_t nextHealer = 0;
-        for (VashjStationSlot const& slot : GetVashjStationFillOrder())
-        {
-            ObjectGuid& holder = holders[slot.station][slot.slot];
-            if (IsLiveVashjStationHolder(bot, holder))
-                continue;
+        if (PlayerbotAI::IsRangedDps(member))
+            rangedSpares.push_back(member);
+        else if (PlayerbotAI::IsHeal(member))
+            healerSpares.push_back(member);
+    }
 
-            bool const isHealerSlot = slot.slot == VASHJ_STATION_HEALER_SLOT;
-            std::vector<Player*> const& spares = isHealerSlot ? healerSpares : rangedSpares;
-            size_t& next = isHealerSlot ? nextHealer : nextRanged;
-            if (next >= spares.size())
-                continue;
+    bool changed = false;
+    size_t nextRanged = 0;
+    size_t nextHealer = 0;
+    for (VashjStationSlot const& slot : GetVashjStationFillOrder())
+    {
+        ObjectGuid& holder = holders[slot.station][slot.slot];
+        if (IsLiveVashjStationHolder(bot, holder))
+            continue;
 
-            holder = spares[next++]->GetGUID();
-            changed = true;
-        }
+        bool const isHealerSlot = slot.slot == VASHJ_STATION_HEALER_SLOT;
+        std::vector<Player*> const& spares = isHealerSlot ? healerSpares : rangedSpares;
+        size_t& next = isHealerSlot ? nextHealer : nextRanged;
+        if (next >= spares.size())
+            continue;
 
-        return changed;
-    });
+        holder = spares[next++]->GetGUID();
+        changed = true;
+    }
+
+    return changed;
 }
 
 bool LadyVashjPhase2PositionAtStationAction::Execute(Event /*event*/)
@@ -1626,9 +1631,8 @@ bool LadyVashjPhase3PositionRangedAction::Execute(Event /*event*/)
     if (IsWaitingForLastMove(priority))
         return false;
 
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!vashj || !IsVashjPhase3RangedTooClose(bot, vashj))
-        // End By leewheel
         return false;
 
     std::vector<Unit*> avoid;
@@ -1658,7 +1662,7 @@ bool LadyVashjPhase3MoveIntoSightAction::Execute(Event /*event*/)
     if (IsWaitingForLastMove(priority))
         return false;
 
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!vashj)
         return false;
 
@@ -1681,12 +1685,7 @@ bool LadyVashjAssignGroundingShamanAction::Execute(Event /*event*/)
     if (!shaman)
         return false;
 
-//By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，等于无锁保护。
-        //   跨地图线程并发写同一 state 会崩（unordered_map 扩容时尤其）。
-            WithSscState(bot->GetInstanceId(), [shaman](SscInstanceState& state)
-    {
-        state.vashjGroundingShaman = shaman->GetGUID();
-    });
+    SscState(bot->GetInstanceId()).vashjGroundingShaman = shaman->GetGUID();
     return true;
 }
 
@@ -1704,9 +1703,8 @@ bool LadyVashjSetGroundingTotemInMainTankGroupAction::Execute(Event /*event*/)
     constexpr float distFromTank = 27.0f;
     if (bot->GetDistance(mainTank) > distFromTank)
     {
-        Unit* vashj = FindThreatTarget(bot, "lady vashj");
+        Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
         if (!vashj || ShouldAvoidVashjStaticCharge(bot, vashj))
-            // End By leewheel
             return false;
 
         return MoveTo(mainTank, distFromTank, MovementPriority::MOVEMENT_COMBAT);
@@ -1721,9 +1719,8 @@ bool LadyVashjStaticChargeMoveAwayFromGroupAction::Execute(Event /*event*/)
     if (IsWaitingForLastMove(priority))
         return false;
 
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!vashj || !IsInVashjStaticChargeReach(bot, vashj))
-        // End By leewheel
         return false;
 
     std::vector<Unit*> avoid;
@@ -1845,11 +1842,11 @@ bool IsBetterVashjTarget(Player* bot, Unit* vashj, VashjTarget target, Unit* a, 
 }
 
 Unit* GetBestVashjTarget(
-    PlayerbotAI* botAI, VashjTargetFacts const& facts, VashjAddGuids const& adds,
+    PlayerbotAI* botAI, VashjTargetFacts const& facts, GuidVector const& adds,
     VashjTargetTier const& tier)
 {
     Player* bot = botAI->GetBot();
-    GuidVector const* guids = nullptr;
+    SscNpcs npc;
     switch (tier.target)
     {
         case VashjTarget::TaintedElemental:
@@ -1857,22 +1854,27 @@ Unit* GetBestVashjTarget(
         case VashjTarget::LadyVashj:
             return IsVashjTargetAllowed(bot, facts, tier, facts.vashj) ? facts.vashj : nullptr;
         case VashjTarget::EnchantedElemental:
-            guids = &adds.enchanted;
+            npc = SscNpcs::NPC_ENCHANTED_ELEMENTAL;
             break;
         case VashjTarget::CoilfangElite:
-            guids = &adds.elites;
+            npc = SscNpcs::NPC_COILFANG_ELITE;
             break;
         case VashjTarget::CoilfangStrider:
-            guids = &adds.striders;
+            npc = SscNpcs::NPC_COILFANG_STRIDER;
             break;
         case VashjTarget::ToxicSporebat:
-            guids = &adds.sporebats;
+            npc = SscNpcs::NPC_TOXIC_SPOREBAT;
             break;
+        default:
+            return nullptr;
     }
 
     Unit* best = nullptr;
-    for (ObjectGuid const& guid : *guids)
+    for (ObjectGuid const& guid : adds)
     {
+        if (guid.GetEntry() != Id(npc))
+            continue;
+
         Unit* unit = botAI->GetUnit(guid);
         if (IsVashjTargetAllowed(bot, facts, tier, unit) &&
             (!best || IsBetterVashjTarget(bot, facts.vashj, tier.target, unit, best)))
@@ -1903,7 +1905,7 @@ bool IsOwnVashjAdd(Player* bot, Unit* target)
 bool LadyVashjAssignTargetPriorityAction::Execute(Event /*event*/)
 {
     VashjTargetFacts facts;
-    facts.vashj = FindThreatTarget(bot, "lady vashj");
+    facts.vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!facts.vashj)
         return false;
 
@@ -1922,11 +1924,14 @@ bool LadyVashjAssignTargetPriorityAction::Execute(Event /*event*/)
     if (facts.holdsStationSlot)
         facts.tainted = GetTaintedElementalToKill(bot);
 
-    auto const& adds = context->GetValue<VashjAddGuids>("ssc vashj adds")->RefGet();
+    GuidVector const& adds = GetVashjAdds(bot);
     if (PlayerbotAI::IsMelee(bot) && PlayerbotAI::IsDps(bot))
     {
-        for (ObjectGuid const& guid : adds.striders)
+        for (ObjectGuid const& guid : adds)
         {
+            if (guid.GetEntry() != Id(SscNpcs::NPC_COILFANG_STRIDER))
+                continue;
+
             Unit* strider = botAI->GetUnit(guid);
             if (strider && strider->IsAlive())
                 facts.panicStriders.push_back(strider);
@@ -1975,7 +1980,7 @@ bool LadyVashjTankApplyFearWardAction::Execute(Event /*event*/)
 
 bool LadyVashjPositionCoilfangStriderAction::Execute(Event /*event*/)
 {
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!vashj)
         return false;
 
@@ -2001,8 +2006,8 @@ bool LadyVashjPositionCoilfangStriderAction::MoveStriderToHoldPosition(Unit* str
     float stepY;
     bool backwards;
     if (!GetStepToBringTankedUnitTo(
-            bot, strider, GetVashjStriderHoldPosition(*strider),
-            VASHJ_ADD_TANK_ARRIVAL_DISTANCE, stepX, stepY, backwards))
+            bot, strider, GetVashjStriderHoldPosition(*strider), VASHJ_ADD_TANK_ARRIVAL_DISTANCE,
+            stepX, stepY, backwards))
     {
         return false;
     }
@@ -2062,7 +2067,7 @@ bool LadyVashjTankWaitInTheMiddleAction::Execute(Event /*event*/)
     if (IsWaitingForLastMove(priority))
         return false;
 
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!vashj)
         return false;
 
@@ -2091,12 +2096,8 @@ bool LadyVashjAssignTaintedCoreLooterAction::Execute(Event /*event*/)
     if (!looter)
         return false;
 
-//By leewheel 2026-10-07 写操作改走 WithSscState：原 SscState() 返回引用时锁已释放，等于无锁保护。
-        //   跨地图线程并发写同一 state 会崩（unordered_map 扩容时尤其）。
-            WithSscState(bot->GetInstanceId(), [tainted, looter, station](SscInstanceState& state)
-    {
-        state.vashjTaintedCoreLooter = TaintedCoreLooter{ tainted->GetGUID(), looter->GetGUID(), station };
-    });
+    SscState(bot->GetInstanceId()).vashjTaintedCoreLooter =
+        TaintedCoreLooter{ tainted->GetGUID(), looter->GetGUID(), station };
 
     VashjCorePassingChain* chain = GetVashjCorePassingChain(bot);
     if (!chain || chain->tainted != tainted->GetGUID())
@@ -2379,7 +2380,7 @@ bool LadyVashjDestroyTaintedCoreAction::Execute(Event /*event*/)
 
 bool LadyVashjSetPetStanceAction::Execute(Event /*event*/)
 {
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     return vashj &&
         SetMinionStancesForHold(bot, ShouldVashjPetsBePassive(botAI, vashj), _previousReactStates);
 }
@@ -2397,7 +2398,7 @@ bool LadyVashjSetPetStanceAction::ResetPetStance()
 bool LadyVashjCommandPetTargetAction::Execute(Event /*event*/)
 {
     Guardian* pet = bot->GetGuardianPet();
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!pet || !vashj)
         return false;
 
@@ -2425,7 +2426,7 @@ bool LadyVashjReturnToTheGroundAction::Execute(Event /*event*/)
 
 bool LadyVashjAvoidToxicSporesAction::Execute(Event /*event*/)
 {
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if (!vashj)
         return false;
 
@@ -2530,7 +2531,7 @@ bool LadyVashjMeleeMoveAroundToxicSporesAction::Execute(Event event)
 {
     constexpr MovementPriority priority = MovementPriority::MOVEMENT_COMBAT;
 
-    Unit* vashj = FindThreatTarget(bot, "lady vashj");
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
     if ((!vashj || vashj->GetVictim() != bot) && IsWaitingForLastMove(priority))
         return false;
 
@@ -2591,10 +2592,13 @@ bool LadyVashjRangedReachAroundToxicSporesAction::Execute(Event /*event*/)
 
 bool LadyVashjPaladinUseHandOfFreedomAction::Execute(Event /*event*/)
 {
-    //By leewheel 2026-11-04 采纳上游 FindThreatTarget 管线
-    Player* target = GetVashjHandOfFreedomTarget(botAI, FindThreatTarget(bot, "lady vashj"));
-    return target && botAI->CanCastSpell("hand of freedom", target) &&
-        botAI->CastSpell("hand of freedom", target);
+    Unit* vashj = GetSscBoss(bot, SscBosses::DATA_LADY_VASHJ);
+    if (!vashj)
+        return false;
+
+    Player* target = GetVashjHandOfFreedomTarget(botAI, vashj);
+    return target && botAI->CanCastSpell(Id(SscSpells::SPELL_HAND_OF_FREEDOM), target) &&
+        botAI->CastSpell(Id(SscSpells::SPELL_HAND_OF_FREEDOM), target);
 }
 
 bool LadyVashjRogueUseCloakOfShadowsAction::Execute(Event /*event*/)

@@ -221,6 +221,46 @@ constexpr ThreatNameEntry kThreatNameEntries[] = {
     {"m'uru", 25741},                     // NPC_MURU
     {"kil'jaeden", 25315},                // NPC_KILJAEDEN
     //End By leewheel
+    // By leewheel 2026-11-24（bug_106 第五次发作）：本轮合并 brighton-chi 70 提交，
+    //   上游把 TBC 团本整体重构成「按 boss id 取目标」（GetTkBoss / GetZaBoss / …），
+    //   底层仍是 FindThreatTarget(bot, BossName(boss))，BossName 返回英文名。
+    //   本服库内生物名是中文 ⇒ 不登记就是静默 nullptr。按老规矩：上游调用点一个字不改，
+    //   只在本表折算 entry。下面 25 条 entry 逐条取自核心头文件并与 acore_world 实测名核对：
+    //     the_eye.h:46-51 / zulaman.h:51-61 / sunwell_plateau.h:65-88 / creature 库实测。
+    //   ⛔ 其中 SWP 那 7 条（熵魔 / 熵魔前的虚空戒卫 / 基尔加丹之手 / 萨洛拉丝女王 /
+    //     腐蚀者萨索瓦尔 / 影刃狂暴者 / 影刃怒火法师）在本次合并之前就已漏登记，
+    //     即穆鲁二阶段、双子、卡雷苟斯、基尔加丹之手、太阳井小怪清单这几套机制
+    //     长期静默失效，借这次一并补齐（不是本轮新引入的）。
+    // ---- 风暴要塞（The Eye，核心 the_eye.h + 库实测）----
+    {"al'ar", 19514},                     // NPC_ALAR
+    {"void reaver", 19516},               // 空灵机甲（the_eye.h 未列，库实测）
+    {"high astromancer solarian", 18805}, // 大星术师索兰莉安（同上）
+    {"kael'thas sunstrider", 19622},      // NPC_KAELTHAS
+    {"thaladred the darkener", 20064},    // NPC_THALADRED
+    {"lord sanguinar", 20060},            // NPC_LORD_SANGUINAR
+    {"grand astromancer capernian", 20062}, // NPC_CAPERNIAN
+    {"master engineer telonicus", 20063}, // NPC_TELONICUS
+    // ---- 祖阿曼（核心 zulaman.h）----
+    {"akil'zon", 23574},                  // 埃基尔松（zulaman.h 未列常量，库实测）
+    {"nalorakk", 23576},                  // NPC_NALORAKK
+    {"jan'alai", 23578},                  // NPC_JANALAI
+    {"halazzi", 23577},                   // NPC_HALAZZI
+    {"hex lord malacrass", 24239},        // NPC_HEXLORD
+    {"zul'jin", 23863},                   // NPC_ZULJIN
+    {"amani'shi medicine man", 23581},    // NPC_AMANISHI_MEDICINE_MAN（注意 23542 是掷斧者）
+    {"spirit of the lynx", 24143},        // NPC_SPIRIT_LYNX
+    // ---- 格鲁尔的巢穴 / 玛瑟里顿的巢穴 ----
+    {"gruul the dragonkiller", 19044},    // 屠龙者格鲁尔（库实测）
+    {"magtheridon", 17257},               // 玛瑟里顿（库实测）
+    // ---- 太阳井高地（核心 sunwell_plateau.h + 库实测，见上方说明）----
+    {"sathrovarr the corruptor", 24892},  // NPC_SATHROVARR
+    {"lady sacrolash", 25165},            // NPC_LADY_SACROLASH
+    {"entropius", 25840},                 // NPC_ENTROPIUS（穆鲁二阶段）
+    {"void sentinel", 25772},             // NPC_VOID_SENTINEL
+    {"hand of the deceiver", 25588},      // NPC_HAND_OF_THE_DECEIVER
+    {"shadowsword berserker", 25798},     // 影刃狂暴者（库实测）
+    {"shadowsword fury mage", 25799},     // 影刃怒火法师（库实测）
+    //End By leewheel
 };
 
 uint32 EntryForThreatName(std::string_view name)

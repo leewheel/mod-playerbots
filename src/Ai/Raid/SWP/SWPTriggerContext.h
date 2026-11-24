@@ -166,11 +166,11 @@ public:
             &RaidSwpTriggerContext::eredar_twins_sacrolash_victim_has_conflagration;
 
         // M'uru
-        creators["m'uru hunter should misdirect new enemy"] =
-            &RaidSwpTriggerContext::muru_hunter_should_misdirect_new_enemy;
+        creators["m'uru hunter should misdirect"] =
+            &RaidSwpTriggerContext::muru_hunter_should_misdirect;
 
-        creators["m'uru transformed into entropius"] =
-            &RaidSwpTriggerContext::muru_transformed_into_entropius;
+        creators["m'uru entropius should be tanked"] =
+            &RaidSwpTriggerContext::muru_entropius_should_be_tanked;
 
         creators["m'uru ranged should stack or spread"] =
             &RaidSwpTriggerContext::muru_ranged_should_stack_or_spread;
@@ -186,15 +186,14 @@ public:
             &RaidSwpTriggerContext::muru_void_sentinel_should_be_tanked;
         // End By leewheel
 
-        creators["m'uru adds spawn at entrance"] =
-            &RaidSwpTriggerContext::muru_adds_spawn_at_entrance;
+        creators["m'uru entrance should be guarded"] =
+            &RaidSwpTriggerContext::muru_entrance_should_be_guarded;
 
         creators["m'uru dark fiends spawned"] = &RaidSwpTriggerContext::muru_dark_fiends_spawned;
 
-        creators["m'uru darkness is coming"] = &RaidSwpTriggerContext::muru_darkness_is_coming;
+        creators["m'uru darkness is active"] = &RaidSwpTriggerContext::muru_darkness_is_active;
 
-        creators["m'uru berserker has flurry"] =
-            &RaidSwpTriggerContext::muru_berserker_has_flurry;
+        creators["m'uru berserker has flurry"] = &RaidSwpTriggerContext::muru_berserker_has_flurry;
 
         creators["m'uru fury mage casting fel fireball"] =
             &RaidSwpTriggerContext::muru_fury_mage_casting_fel_fireball;
@@ -208,33 +207,37 @@ public:
         creators["m'uru warlock has enslaved void spawn"] =
             &RaidSwpTriggerContext::muru_warlock_has_enslaved_void_spawn;
 
-        creators["m'uru entropius summons void zones"] =
-            &RaidSwpTriggerContext::muru_entropius_summons_void_zones;
+        creators["m'uru void zone is near"] = &RaidSwpTriggerContext::muru_void_zone_is_near;
+
+        creators["m'uru dark fiend is near"] = &RaidSwpTriggerContext::muru_dark_fiend_is_near;
 
         creators["m'uru the singularity is near"] =
             &RaidSwpTriggerContext::muru_the_singularity_is_near;
 
         // Kil'jaeden <The Deceiver>
-        creators["kil'jaeden should coordinate orb use"] =
-            &RaidSwpTriggerContext::kiljaeden_should_coordinate_orb_use;
-
         creators["kil'jaeden hands of the deceiver are active"] =
             &RaidSwpTriggerContext::kiljaeden_hands_of_the_deceiver_are_active;
 
-        creators["kil'jaeden tanks should hold boss and reflections"] =
-            &RaidSwpTriggerContext::kiljaeden_tanks_should_hold_boss_and_reflections;
+        creators["kil'jaeden should hold dps at start"] =
+            &RaidSwpTriggerContext::kiljaeden_should_hold_dps_at_start;
+
+        creators["kil'jaeden dps hold is active"] =
+            &RaidSwpTriggerContext::kiljaeden_dps_hold_is_active;
+
+        creators["kil'jaeden should be tanked"] =
+            &RaidSwpTriggerContext::kiljaeden_should_be_tanked;
 
         creators["kil'jaeden melee should split into two groups"] =
             &RaidSwpTriggerContext::kiljaeden_melee_should_split_into_two_groups;
 
-        creators["kil'jaeden ranged should spread in two arcs"] =
-            &RaidSwpTriggerContext::kiljaeden_ranged_should_spread_in_two_arcs;
+        creators["kil'jaeden ranged should keep formation"] =
+            &RaidSwpTriggerContext::kiljaeden_ranged_should_keep_formation;
 
         creators["kil'jaeden fire bloom on immunity class"] =
             &RaidSwpTriggerContext::kiljaeden_fire_bloom_on_immunity_class;
 
-        creators["kil'jaeden says: Chaos! Destruction! Oblivion!"] =
-            &RaidSwpTriggerContext::kiljaeden_says_chaos_destruction_oblivion;
+        creators["kil'jaeden casts darkness of a thousand souls"] =
+            &RaidSwpTriggerContext::kiljaeden_casts_darkness_of_a_thousand_souls;
 
         creators["kil'jaeden dragon orb is active"] =
             &RaidSwpTriggerContext::kiljaeden_dragon_orb_is_active;
@@ -414,9 +417,7 @@ private:
     }
     static Trigger* eredar_twins_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new SunwellHunterShouldMisdirectTrigger(
-            botAI, "eredar twins hunter should misdirect",
-            SwpHelpers::SwpBosses::DATA_EREDAR_TWINS);
+        return new EredarTwinsHunterShouldMisdirectTrigger(botAI);
     }
     static Trigger* eredar_twins_sacrolash_should_be_tanked(PlayerbotAI* botAI)
     {
@@ -460,13 +461,13 @@ private:
     }
 
     // M'uru
-    static Trigger* muru_hunter_should_misdirect_new_enemy(PlayerbotAI* botAI)
+    static Trigger* muru_hunter_should_misdirect(PlayerbotAI* botAI)
     {
-        return new MuruHunterShouldMisdirectNewEnemyTrigger(botAI);
+        return new MuruHunterShouldMisdirectTrigger(botAI);
     }
-    static Trigger* muru_transformed_into_entropius(PlayerbotAI* botAI)
+    static Trigger* muru_entropius_should_be_tanked(PlayerbotAI* botAI)
     {
-        return new MuruTransformedIntoEntropiusTrigger(botAI);
+        return new MuruEntropiusShouldBeTankedTrigger(botAI);
     }
     static Trigger* muru_ranged_should_stack_or_spread(PlayerbotAI* botAI)
     {
@@ -480,17 +481,17 @@ private:
     {
         return new MuruVoidSentinelShouldBeTankedTrigger(botAI);
     }
-    static Trigger* muru_adds_spawn_at_entrance(PlayerbotAI* botAI)
+    static Trigger* muru_entrance_should_be_guarded(PlayerbotAI* botAI)
     {
-        return new MuruAddsSpawnAtEntranceTrigger(botAI);
+        return new MuruEntranceShouldBeGuardedTrigger(botAI);
     }
     static Trigger* muru_dark_fiends_spawned(PlayerbotAI* botAI)
     {
         return new MuruDarkFiendsSpawnedTrigger(botAI);
     }
-    static Trigger* muru_darkness_is_coming(PlayerbotAI* botAI)
+    static Trigger* muru_darkness_is_active(PlayerbotAI* botAI)
     {
-        return new MuruDarknessIsComingTrigger(botAI);
+        return new MuruDarknessIsActiveTrigger(botAI);
     }
     static Trigger* muru_berserker_has_flurry(PlayerbotAI* botAI)
     {
@@ -512,9 +513,13 @@ private:
     {
         return new MuruWarlockHasEnslavedVoidSpawnTrigger(botAI);
     }
-    static Trigger* muru_entropius_summons_void_zones(PlayerbotAI* botAI)
+    static Trigger* muru_void_zone_is_near(PlayerbotAI* botAI)
     {
-        return new MuruEntropiusSummonsVoidZonesTrigger(botAI);
+        return new MuruVoidZoneIsNearTrigger(botAI);
+    }
+    static Trigger* muru_dark_fiend_is_near(PlayerbotAI* botAI)
+    {
+        return new MuruDarkFiendIsNearTrigger(botAI);
     }
     static Trigger* muru_the_singularity_is_near(PlayerbotAI* botAI)
     {
@@ -522,33 +527,37 @@ private:
     }
 
     // Kil'jaeden <The Deceiver>
-    static Trigger* kiljaeden_should_coordinate_orb_use(PlayerbotAI* botAI)
-    {
-        return new KiljaedenShouldCoordinateOrbUseTrigger(botAI);
-    }
     static Trigger* kiljaeden_hands_of_the_deceiver_are_active(PlayerbotAI* botAI)
     {
         return new KiljaedenHandsOfTheDeceiverAreActiveTrigger(botAI);
     }
-    static Trigger* kiljaeden_tanks_should_hold_boss_and_reflections(PlayerbotAI* botAI)
+    static Trigger* kiljaeden_should_hold_dps_at_start(PlayerbotAI* botAI)
     {
-        return new KiljaedenTanksShouldHoldBossAndReflectionsTrigger(botAI);
+        return new KiljaedenShouldHoldDpsAtStartTrigger(botAI);
+    }
+    static Trigger* kiljaeden_dps_hold_is_active(PlayerbotAI* botAI)
+    {
+        return new KiljaedenDpsHoldIsActiveTrigger(botAI);
+    }
+    static Trigger* kiljaeden_should_be_tanked(PlayerbotAI* botAI)
+    {
+        return new KiljaedenShouldBeTankedTrigger(botAI);
     }
     static Trigger* kiljaeden_melee_should_split_into_two_groups(PlayerbotAI* botAI)
     {
         return new KiljaedenMeleeShouldSplitIntoTwoGroupsTrigger(botAI);
     }
-    static Trigger* kiljaeden_ranged_should_spread_in_two_arcs(PlayerbotAI* botAI)
+    static Trigger* kiljaeden_ranged_should_keep_formation(PlayerbotAI* botAI)
     {
-        return new KiljaedenRangedShouldSpreadInTwoArcsTrigger(botAI);
+        return new KiljaedenRangedShouldKeepFormationTrigger(botAI);
     }
     static Trigger* kiljaeden_fire_bloom_on_immunity_class(PlayerbotAI* botAI)
     {
         return new KiljaedenFireBloomOnImmunityClassTrigger(botAI);
     }
-    static Trigger* kiljaeden_says_chaos_destruction_oblivion(PlayerbotAI* botAI)
+    static Trigger* kiljaeden_casts_darkness_of_a_thousand_souls(PlayerbotAI* botAI)
     {
-        return new KiljaedenSaysChaosDestructionOblivionTrigger(botAI);
+        return new KiljaedenCastsDarknessOfAThousandSoulsTrigger(botAI);
     }
     static Trigger* kiljaeden_dragon_orb_is_active(PlayerbotAI* botAI)
     {

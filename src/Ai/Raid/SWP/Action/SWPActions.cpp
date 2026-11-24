@@ -150,14 +150,14 @@ bool SunwellRemoveAuraAction::Execute(Event /*event*/)
 
 bool VolatileFiendInterceptAction::isUseful()
 {
-    Creature* fiend = botAI->GetCreature(AI_VALUE(ObjectGuid, "swp volatile fiend"));
+    Creature* fiend = GetSwpVolatileFiend(botAI);
     return fiend && fiend->IsAlive() && fiend->IsSummon() &&
         AI_VALUE(Unit*, "current target") != fiend && IsVolatileFiendInterceptor(bot);
 }
 
 bool VolatileFiendInterceptAction::Execute(Event /*event*/)
 {
-    Creature* fiend = botAI->GetCreature(AI_VALUE(ObjectGuid, "swp volatile fiend"));
+    Creature* fiend = GetSwpVolatileFiend(botAI);
     return fiend && Attack(fiend);
 }
 
@@ -168,16 +168,16 @@ bool VolatileFiendMoveAwayAction::isUseful()
 
 bool VolatileFiendMoveAwayAction::Execute(Event /*event*/)
 {
-    Creature* fiend = botAI->GetCreature(AI_VALUE(ObjectGuid, "swp volatile fiend"));
+    Creature* fiend = GetSwpVolatileFiend(botAI);
     if (!fiend || !fiend->IsAlive())
         return false;
 
     float const distance = bot->GetExactDist(fiend);
-    if (distance >= VOLATILE_FIEND_SAFE_DISTANCE)
+    if (distance >= VOLATILE_FIEND_CLEARANCE)
         return false;
 
     bot->CastStop();
-    return MoveAway(fiend, VOLATILE_FIEND_SAFE_DISTANCE - distance);
+    return MoveAway(fiend, VOLATILE_FIEND_CLEARANCE - distance);
 }
 
 // At low health, Infernal Defense is cast, granting immunity to all damage but holy.

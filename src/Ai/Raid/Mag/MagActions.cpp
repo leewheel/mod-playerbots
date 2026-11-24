@@ -13,6 +13,7 @@
 #include "RtiTargetValue.h"
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <vector>
 
 using namespace MagHelpers;
@@ -166,7 +167,7 @@ bool MagtheridonAssignDpsPriorityAction::Execute(Event /*event*/)
 
 bool MagtheridonSelectTargetForHoldAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     return SelectTarget(botAI, magtheridon);
 }
 
@@ -178,7 +179,7 @@ bool MagtheridonWarlockCcBurningAbyssalAction::Execute(Event /*event*/)
     if (!group)
         return false;
 
-    std::vector<Unit*> const abyssals = GetBurningAbyssals(botAI);
+    std::vector<Unit*> const abyssals = GetBurningAbyssals(bot);
 
     std::vector<Player*> warlocks;
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
@@ -230,7 +231,7 @@ bool MagtheridonWarlockCcBurningAbyssalAction::Execute(Event /*event*/)
 
 bool MagtheridonMainTankPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     if (!magtheridon)
         return false;
 
@@ -261,7 +262,7 @@ bool MagtheridonMainTankPositionBossAction::Execute(Event /*event*/)
 
 bool MagtheridonSpreadRangedAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     if (!magtheridon)
         return false;
 
@@ -281,7 +282,7 @@ bool MagtheridonSpreadRangedAction::Execute(Event /*event*/)
 
 bool MagtheridonUseManticronCubeAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     if (!magtheridon)
         return false;
 
@@ -396,7 +397,7 @@ bool MagtheridonUseManticronCubeAction::HandleWaitingPhase(CubeInfo const& cubeI
     // from the cube.
     constexpr float safeWaitDistance = 10.0f;
     bool const onRing =
-        fabs(bot->GetDistance2d(cubeInfo.x, cubeInfo.y) - safeWaitDistance) <= 1.0f;
+        std::fabs(bot->GetDistance2d(cubeInfo.x, cubeInfo.y) - safeWaitDistance) <= 1.0f;
     bool const inHazard =
         IsPositionInActiveDebris(botAI, bot->GetPositionX(), bot->GetPositionY()) ||
         IsPositionInActiveConflagration(botAI, bot->GetPositionX(), bot->GetPositionY());
@@ -508,7 +509,7 @@ bool MagtheridonMoveOutOfDebrisAction::FindSafePosition(Position& outPos)
 
 bool MagtheridonUpdateTimersAndAssignmentsAction::Execute(Event /*event*/)
 {
-    Unit* magtheridon = AI_VALUE2(Unit*, "find target", "17257");
+    Unit* magtheridon = GetMagtheridon(bot);
     if (!magtheridon || !IsMagtheridonActive(magtheridon))
         return false;
 

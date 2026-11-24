@@ -14,9 +14,9 @@
 #include "ThreatHelpers.h"
 #include <algorithm>
 #include <cmath>
+#include <initializer_list>
 #include <limits>
 #include <list>
-#include <optional>
 
 using namespace KaraHelpers;
 using namespace EncounterHelpers;
@@ -187,7 +187,7 @@ bool ManaWarpStandByToStunAction::Execute(Event /*event*/)
     if (!warp)
         return false;
 
-    float const reach = GetManaWarpStunReach(bot);
+    float const reach = GetManaWarpStunReach(botAI);
     if (bot->GetExactDist(warp) <= reach)
         return true;
 
@@ -352,23 +352,20 @@ bool AttumenTheHuntsmanManageDpsTimerAction::Execute(Event /*event*/)
 
 bool MoroesMarkTargetAction::Execute(Event /*event*/)
 {
-    // A guest zones in only on its own aggro, so it can be late onto threat lists. In kill order.
-    static std::vector<uint32> const guestEntries = {
-        Id(KaraNpcs::NPC_BARONESS_DOROTHEA_MILLSTIPE),
-        Id(KaraNpcs::NPC_LADY_CATRIONA_VON_INDI),
-        Id(KaraNpcs::NPC_LADY_KEIRA_BERRYBUCK),
-        Id(KaraNpcs::NPC_BARON_RAFE_DREUGER),
-        Id(KaraNpcs::NPC_LORD_ROBIN_DARIS),
-        Id(KaraNpcs::NPC_LORD_CRISPIN_FERENCE),
-    };
-    std::list<Creature*> guests;
-    bot->GetCreatureListWithEntryInGrid(guests, guestEntries, MOROES_GUEST_SEARCH_RADIUS);
+    // A guest zones in only on its own aggro, so it can be late onto threat lists.
+    GuidVector const& guests = GetInstanceCreatureList(
+        KaraState(bot->GetInstanceId()).moroesGuests, MOROES_GUEST_CACHE_INTERVAL_MS, bot,
+        FindMoroesGuestGuids);
 
-    for (uint32 entry : guestEntries)
+    for (uint32 entry : MOROES_GUESTS_IN_KILL_ORDER)
     {
-        for (Creature* guest : guests)
+        for (ObjectGuid const& guid : guests)
         {
-            if (guest->GetEntry() == entry && guest->IsAlive())
+            if (guid.GetEntry() != entry)
+                continue;
+
+            Creature* guest = ObjectAccessor::GetCreature(*bot, guid);
+            if (guest && guest->IsAlive())
                 return MarkTargetWithSkull(bot, guest);
         }
     }
@@ -527,7 +524,8 @@ bool BigBadWolfRedHoodUseEscapeAbilityAction::Execute(Event /*event*/)
     if (bot->getClass() == CLASS_HUNTER &&
         !bot->HasSpellCooldown(Id(KaraSpells::SPELL_FEIGN_DEATH)))
     {
-        return botAI->CanCastSpell("feign death", bot) && botAI->CastSpell("feign death", bot);
+        return botAI->CanCastSpell(Id(KaraSpells::SPELL_FEIGN_DEATH), bot) &&
+            botAI->CastSpell(Id(KaraSpells::SPELL_FEIGN_DEATH), bot);
     }
 
     // I'm not sure what the exact issue is, but with BBW's reach (4.5 yd) and speed (8.5 yd/s),
@@ -659,6 +657,12 @@ bool RomuloAndJulianneSkullHigherHealthAction::Execute(Event /*event*/)
     return MarkTargetWithSkull(bot, higher);
 }
 
+bool JulianneLeaveCombatForFakeDeathAction::Execute(Event /*event*/)
+{
+    StandDown(botAI);
+    return true;
+}
+
 // The Wizard of Oz
 
 bool WizardOfOzMarkTargetAction::Execute(Event /*event*/)
@@ -733,29 +737,29 @@ bool TheCuratorSpreadRangedAction::Execute(Event /*event*/)
 bool TerestianIllhoofMarkTargetAction::Execute(Event /*event*/)
 {
     // Chains do not attack and are not zoned in, and neither is Kil'rek after being resummoned.
-    // Thus, we need to use grid searches, but they can be limited: chains only during a Sacrifice,
-    // and Kil'rek only when Illhoof does not have Broken Pact.
+    // Thus, we need the creature list, but chains only during a Sacrifice, and Kil'rek only when
+    // Illhoof does not have Broken Pact.
     Unit* terestian = GetKaraBoss(bot, KaraBosses::DATA_TERESTIAN);
-    std::vector<uint32> entries;
-    if (IsTerestianSacrificeActive(bot))
-        entries.push_back(Id(KaraNpcs::NPC_DEMON_CHAINS));
-
-    if (!terestian || !terestian->HasAura(Id(KaraSpells::SPELL_BROKEN_PACT)))
-        entries.push_back(Id(KaraNpcs::NPC_KILREK));
-
-    if (!entries.empty())
+    bool const markChains = IsTerestianSacrificeActive(bot);
+    bool const markKilrek = !terestian || !terestian->HasAura(Id(KaraSpells::SPELL_BROKEN_PACT));
+    if (markChains || markKilrek)
     {
-        constexpr float searchRadius = 100.0f;
-        std::list<Creature*> adds;
-        bot->GetCreatureListWithEntryInGrid(adds, entries, searchRadius);
+        GuidVector const& adds = GetInstanceCreatureList(
+            KaraState(bot->GetInstanceId()).terestianAdds, TERESTIAN_ADDS_CACHE_INTERVAL_MS, bot,
+            FindTerestianAddGuids);
 
         Creature* kilrek = nullptr;
-        for (Creature* add : adds)
+        for (ObjectGuid const& guid : adds)
         {
-            if (!add->IsAlive())
+            bool const isChains = guid.GetEntry() == Id(KaraNpcs::NPC_DEMON_CHAINS);
+            if (isChains ? !markChains : !markKilrek)
                 continue;
 
-            if (add->GetEntry() == Id(KaraNpcs::NPC_DEMON_CHAINS))
+            Creature* add = ObjectAccessor::GetCreature(*bot, guid);
+            if (!add || !add->IsAlive())
+                continue;
+
+            if (isChains)
                 return MarkTargetWithSkull(bot, add);
 
             kilrek = add;
@@ -777,18 +781,18 @@ bool ShadeOfAranRunAwayFromArcaneExplosionAction::Execute(Event /*event*/)
         return false;
 
     float const distance = bot->GetExactDist(aran);
-    if (distance >= ARAN_ARCANE_EXPLOSION_SAFE_DISTANCE)
+    if (distance >= ARAN_ARCANE_EXPLOSION_CLEARANCE)
         return false;
 
     bot->CastStop();
     if (bot->GetExactDist2d(aran) > ARAN_PULLED_ONTO_BOSS_DISTANCE)
-        return MoveAway(aran, ARAN_ARCANE_EXPLOSION_SAFE_DISTANCE - distance);
+        return MoveAway(aran, ARAN_ARCANE_EXPLOSION_CLEARANCE - distance);
 
     uint32 const direction = bot->GetGUID().GetCounter() % ARAN_ARCANE_EXPLOSION_EXIT_DIRECTIONS;
     float const angle =
         2.0f * static_cast<float>(M_PI) * direction / ARAN_ARCANE_EXPLOSION_EXIT_DIRECTIONS;
-    float x = aran->GetPositionX() + ARAN_ARCANE_EXPLOSION_SAFE_DISTANCE * std::cos(angle);
-    float y = aran->GetPositionY() + ARAN_ARCANE_EXPLOSION_SAFE_DISTANCE * std::sin(angle);
+    float x = aran->GetPositionX() + ARAN_ARCANE_EXPLOSION_CLEARANCE * std::cos(angle);
+    float y = aran->GetPositionY() + ARAN_ARCANE_EXPLOSION_CLEARANCE * std::sin(angle);
     float z = bot->GetPositionZ();
     bool const exact = bot->GetMap()->CheckCollisionAndGetValidCoords(
         bot, bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), x, y, z);
@@ -827,9 +831,7 @@ bool ShadeOfAranStopMovingAction::Execute(Event /*event*/)
 
 bool ShadeOfAranMarkElementalAction::Execute(Event /*event*/)
 {
-    GuidVector const elementals =
-        context->GetValue<GuidVector>("shade of aran unbanished elementals")->Get();
-    for (ObjectGuid const& guid : elementals)
+    for (ObjectGuid const& guid : GetUnbanishedConjuredElementals(bot))
     {
         Unit* elemental = botAI->GetUnit(guid);
         if (elemental && elemental->IsAlive())
@@ -874,9 +876,9 @@ bool ShadeOfAranRangedMaintainDistanceAction::Execute(Event /*event*/)
 
     // Wait out a Blizzard rather than walk back into it.
     for (Position const& patch : GetDynamicObjectPositions(
-             bot, ARAN_ROOM_SEARCH_RADIUS, Id(KaraSpells::SPELL_BLIZZARD)))
+             bot, ARAN_ROOM_SEARCH_RADIUS, Id(KaraSpells::SPELL_ARAN_BLIZZARD)))
     {
-        if (patch.GetExactDist2d(position) <= ARAN_BLIZZARD_SAFE_DISTANCE)
+        if (patch.GetExactDist2d(position) <= ARAN_BLIZZARD_CLEARANCE)
             return false;
     }
 
@@ -887,7 +889,8 @@ bool ShadeOfAranRangedMaintainDistanceAction::Execute(Event /*event*/)
 
 // Netherspite
 
-// The red beam dance (5 seconds in, 5 seconds out).
+// The red beam dance (5 seconds in, 5 seconds out). This allows a single tank to block the beam for
+// an entire phase by reducing the number of stacks accumulated.
 bool NetherspiteBlockRedBeamAction::Execute(Event /*event*/)
 {
     Unit* netherspite = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
@@ -927,13 +930,15 @@ bool NetherspiteBlockRedBeamAction::Execute(Event /*event*/)
     float y = beam.blockerPosition.GetPositionY();
     if (_lastBeamMoveSideways)
     {
-        constexpr float sideDistance = 3.0f;
         float const length = netherspite->GetExactDist2d(*beam.portal);
         if (length == 0.0f)
             return false;
 
-        x -= (beam.portal->GetPositionY() - netherspite->GetPositionY()) / length * sideDistance;
-        y += (beam.portal->GetPositionX() - netherspite->GetPositionX()) / length * sideDistance;
+        // A unit vector to the left of the line, as Netherspite faces the portal.
+        float const leftX = (netherspite->GetPositionY() - beam.portal->GetPositionY()) / length;
+        float const leftY = (beam.portal->GetPositionX() - netherspite->GetPositionX()) / length;
+        x += leftX * NETHERSPITE_RED_DANCE_STEP;
+        y += leftY * NETHERSPITE_RED_DANCE_STEP;
     }
 
     // The position is 18 yd from Netherspite toward the portal, so it shifts as he moves. Thus, the
@@ -1038,7 +1043,7 @@ bool NetherspiteMoveToBanishSlotAction::Execute(Event /*event*/)
         return false;
 
     Unit* netherspite = GetKaraBoss(bot, KaraBosses::DATA_NETHERSPITE);
-    if (!netherspite)
+    if (!netherspite || !IsBanishPhase(netherspite))
         return false;
 
     KaraInstanceState const* state = FindKaraState(bot->GetInstanceId());
@@ -1140,8 +1145,8 @@ bool NetherspiteManageTimersAndTrackersAction::Execute(Event /*event*/)
 // Red: tanks only. No stack limit.
 // Blue: mana DPS, then non-mana DPS.
 // Green: non-mana DPS (no stack limit), then healers, then mana DPS.
-// The current blocker stays a candidate up to the stack limit. Any other bot cannot be a candidate
-// unless it is under the stack limit.
+// The current blocker stays a candidate until it surpasses the stack limit. Any other bot cannot be
+// a candidate unless it is under the stack limit.
 std::vector<Player*> NetherspiteManageTimersAndTrackersAction::GetBeamCandidates(
     NetherspiteBeamData const& data, NetherspiteBeamState const& beamState,
     std::vector<ObjectGuid> const& taken)
@@ -1243,7 +1248,7 @@ bool NetherspiteManageTimersAndTrackersAction::IsNextPositionGood(
     }
 
     return IsClearOfVoidZones(
-            state, position.GetPositionX(), position.GetPositionY(), VOID_ZONE_SAFE_DISTANCE) &&
+            state, position.GetPositionX(), position.GetPositionY(), NETHERSPITE_VZ_CLEARANCE) &&
         IsClearOfNetherspiteBeams(
             *netherspite, state, position.GetPositionX(), position.GetPositionY());
 }
@@ -1265,7 +1270,7 @@ std::optional<Position> NetherspiteManageTimersAndTrackersAction::FindNextPositi
             side * frand(NETHERSPITE_NEXT_MIN_OFF_LINE, NETHERSPITE_NEXT_MAX_OFF_LINE);
         float const x = netherspite->GetPositionX() + dirX * along - dirY * off;
         float const y = netherspite->GetPositionY() + dirY * along + dirX * off;
-        if (!IsClearOfVoidZones(state, x, y, VOID_ZONE_SAFE_DISTANCE) ||
+        if (!IsClearOfVoidZones(state, x, y, NETHERSPITE_VZ_CLEARANCE) ||
             !IsClearOfNetherspiteBeams(*netherspite, state, x, y))
         {
             continue;
@@ -1289,8 +1294,9 @@ std::optional<Position> NetherspiteManageTimersAndTrackersAction::ShiftNextPosit
     float const dirX = (portal.GetPositionX() - netherspite->GetPositionX()) / length;
     float const dirY = (portal.GetPositionY() - netherspite->GetPositionY()) / length;
     constexpr float shiftStep = 0.5f;
-    for (float shift = shiftStep; shift <= NETHERSPITE_NEXT_SHIFT_RANGE; shift += shiftStep)
+    for (uint8 i = 1; i * shiftStep <= NETHERSPITE_NEXT_SHIFT_RANGE; ++i)
     {
+        float const shift = i * shiftStep;
         for (float const direction : { -1.0f, 1.0f })
         {
             float const x = position.GetPositionX() + dirX * shift * direction;
@@ -1439,11 +1445,11 @@ void NetherspiteManageTimersAndTrackersAction::UpdateBeamBlockers(
     }
 }
 
-// A banish slot's position on its bearing from Netherspite, 20 yd from him (25 for Hunters). If
-// such position is within 3 yd of a void zone, the position shifts closer to Netherspite. But the
-// bearing never changes, so the slots always stay evenly spread for Netherbreath.
+// A banish slot's position on its bearing, moved in toward Netherspite 1 yd at a time until it's
+// short of any wall and 3 yd clear of void zones. The bearing never changes, so the necessary
+// spacing to prevent Netherbreath from hitting more than one bot at a time is maintained.
 Position NetherspiteManageTimersAndTrackersAction::GetBanishPosition(
-    Unit const& netherspite, KaraInstanceState const& state, float angle, float startRadius)
+    Unit& netherspite, KaraInstanceState const& state, float angle, float startRadius)
 {
     constexpr float minRadius = 6.0f;
     constexpr float radiusStep = 1.0f;
@@ -1462,7 +1468,7 @@ Position NetherspiteManageTimersAndTrackersAction::GetBanishPosition(
         z = bossZ;
         if (bot->GetMap()->CheckCollisionAndGetValidCoords(
                 bot, bossX, bossY, bossZ, x, y, z, false) &&
-            IsClearOfVoidZones(state, x, y, VOID_ZONE_SAFE_DISTANCE))
+            IsClearOfVoidZones(state, x, y, NETHERSPITE_VZ_CLEARANCE))
         {
             break;
         }
@@ -1473,9 +1479,7 @@ Position NetherspiteManageTimersAndTrackersAction::GetBanishPosition(
     return Position(x, y, z);
 }
 
-// Spread out for Netherbreath, a 45-degree cone (22.5 degrees either side of its target). Every
-// group member gets a slot, so they are 36 degrees apart in a full 10-player raid, meaning only
-// one player gets hit by each Netherbreath.
+// Gives every group member a slot on its own bearing, spread evenly around Netherspite.
 void NetherspiteManageTimersAndTrackersAction::UpdateBanishSlots(
     Unit* netherspite, KaraInstanceState& state)
 {
@@ -1486,9 +1490,9 @@ void NetherspiteManageTimersAndTrackersAction::UpdateBanishSlots(
         if (!group)
             return;
 
-        // Hunter bots choose first because they have an extra constraint: they cannot get into
-        // Netherspite's melee range (20.8 yd), or they cannot shoot, so their slots are 25 yd out.
-        // Then, in group order, everyone else takes the free bearing nearest them.
+        // Hunter bots choose their slot first and pick the bearing with the most room before a wall
+        // since they are the only class with a minimum distance to attack. Then, in group order,
+        // everyone else takes the free bearing closest to them.
         std::vector<Player*> tiers[3];
         for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
         {
@@ -1517,10 +1521,12 @@ void NetherspiteManageTimersAndTrackersAction::UpdateBanishSlots(
 
         for (Player* member : members)
         {
-            float const radius = GetNetherspiteBanishRadius(member);
+            bool const isHunter = member->getClass() == CLASS_HUNTER;
+            float const radius =
+                isHunter ? NETHERSPITE_HUNTER_BANISH_SLOT_RADIUS : NETHERSPITE_BANISH_SLOT_RADIUS;
             bool const isInKara = member->GetMapId() == KARA_MAP_ID;
-            bool const isHunterBot =
-                member->getClass() == CLASS_HUNTER && GET_PLAYERBOT_AI(member) && isInKara;
+            bool const isHunterBot = isHunter && GET_PLAYERBOT_AI(member) && isInKara;
+
             auto best = angles.begin();
             float bestScore = std::numeric_limits<float>::lowest();
             for (auto angle = angles.begin(); angle != angles.end() && isInKara; ++angle)
@@ -1560,7 +1566,7 @@ void NetherspiteManageTimersAndTrackersAction::UpdateBanishSlots(
     {
         if (IsClearOfVoidZones(
                 state, slot.position.GetPositionX(), slot.position.GetPositionY(),
-                VOID_ZONE_SAFE_DISTANCE))
+                NETHERSPITE_VZ_CLEARANCE))
         {
             continue;
         }
@@ -1606,11 +1612,11 @@ bool PrinceMalchezaarEnfeebledBotRunToSafetyAction::Execute(Event /*event*/)
     // Once Shadow Nova's cast finishes, there is no longer any need to keep distance for it. The
     // enfeebled bot needs only to stay out of Hellfire.
     bool const canNovaHit = CanShadowNovaHitEnfeebled(malchezaar, *enfeeble);
-    std::vector<Position> const infernals = GetLandedInfernals(botAI);
+    std::vector<Position> const infernals = GetLandedInfernals(bot);
     if (_destination &&
         (!HasDestinationFor(enfeeble->GetApplyTime(), canNovaHit) ||
-         !IsClearOfInfernals(*_destination, infernals, HELLFIRE_SAFE_DISTANCE) ||
-         (canNovaHit && malchezaar->GetExactDist2d(*_destination) < SHADOW_NOVA_SAFE_DISTANCE) ||
+         !IsClearOfInfernals(*_destination, infernals, MALC_HELLFIRE_CLEARANCE) ||
+         (canNovaHit && malchezaar->GetExactDist2d(*_destination) < MALC_SHADOW_NOVA_CLEARANCE) ||
          !IsLineClearOfInfernals(bot->GetPosition(), *_destination, infernals)))
     {
         _destination.reset();
@@ -1621,7 +1627,7 @@ bool PrinceMalchezaarEnfeebledBotRunToSafetyAction::Execute(Event /*event*/)
         // How far a bot can run (7 yd/s) in the 7.5s from Enfeeble to Shadow Nova landing.
         constexpr float searchDistance = 52.0f;
         _destination = FindNearestMalchezaarSafePosition(
-            bot, bot->GetPosition(), infernals, searchDistance, false, HELLFIRE_SAFE_DISTANCE,
+            bot, bot->GetPosition(), infernals, searchDistance, false, MALC_HELLFIRE_CLEARANCE,
             canNovaHit ? malchezaar : nullptr);
 
         if (!_destination)
@@ -1665,12 +1671,17 @@ bool PrinceMalchezaarMoveClearOfHazardsAction::Execute(Event /*event*/)
         return false;
 
     Unit* malchezaar = GetKaraBoss(bot, KaraBosses::DATA_MALCHEZAAR);
-    std::vector<Position> const infernals = GetLandedInfernals(botAI);
-    if (_destination && !IsClearOfMalchezaarHazards(bot, malchezaar, infernals, *_destination))
+    std::vector<Position> const infernals = GetLandedInfernals(bot);
+    // A newly landed Infernal could be on the way to the destination, so search again.
+    if (_destination && (infernals.size() != _searchedInfernalCount ||
+        !IsClearOfMalchezaarHazards(bot, malchezaar, infernals, *_destination)))
+    {
         _destination.reset();
+    }
 
     if (!_destination)
     {
+        _searchedInfernalCount = infernals.size();
         _destination = FindMalchezaarClearPosition(botAI, malchezaar, infernals);
         if (!_destination)
             return false;
@@ -1704,7 +1715,7 @@ bool PrinceMalchezaarTankPositionBossAction::Execute(Event /*event*/)
     if (malchezaar->GetVictim() != bot || !bot->IsWithinMeleeRange(malchezaar))
         return false;
 
-    std::vector<Position> const infernals = GetLandedInfernals(botAI);
+    std::vector<Position> const infernals = GetLandedInfernals(bot);
     if (IsClearOfInfernals(*malchezaar, infernals, MALCHEZAAR_MELEE_CLEARANCE))
     {
         ResetWalk();
@@ -1795,13 +1806,12 @@ bool NightbaneRangedMoveFromCharredEarthAction::Execute(Event /*event*/)
     if (!state || !state->nightbaneRangedPosition)
         return false;
 
-    constexpr float arrivalDist = 0.5f;
     float moveX;
     float moveY;
     bool backwards;
     if (!GetStepToPosition(
-            bot, GetTerraceWalkPosition(*bot, *state->nightbaneRangedPosition), arrivalDist,
-            nullptr, moveX, moveY, backwards))
+            bot, GetTerraceWalkPosition(*bot, *state->nightbaneRangedPosition),
+            NIGHTBANE_ARRIVAL_DISTANCE, nullptr, moveX, moveY, backwards))
     {
         return false;
     }
@@ -1823,13 +1833,12 @@ bool NightbaneMeleeMoveFromCharredEarthAction::Execute(Event /*event*/)
         return false;
 
     Position const position = GetNightbaneMeleePosition(*nightbane, *state->nightbaneMeleePosition);
-    constexpr float arrivalDist = 0.5f;
     float moveX;
     float moveY;
     bool backwards;
     if (!GetStepToPosition(
-            bot, GetTerraceWalkPosition(*bot, position), arrivalDist, nightbane, moveX, moveY,
-            backwards))
+            bot, GetTerraceWalkPosition(*bot, position), NIGHTBANE_ARRIVAL_DISTANCE, nightbane,
+            moveX, moveY, backwards))
     {
         return false;
     }
@@ -1929,7 +1938,7 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
         updated |= ResetIfSet(state.nightbaneFlightStackPosition);
         updated |= ResetIfSet(state.nightbaneRainOfBonesCenter);
         updated |= EmplaceIfUnset(state.nightbaneDpsHoldTimer, getMSTime());
-        std::vector<Position> const charredEarths = GetCharredEarths(botAI);
+        std::vector<Position> const& charredEarths = GetCharredEarths(botAI);
         updated |= UpdateMeleePosition(state, *nightbane, charredEarths);
         updated |= UpdateRangedPosition(state, *nightbane, charredEarths);
         return updated;
@@ -1974,12 +1983,12 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
         state.nightbaneRainOfBonesCenter = *rainCenter;
 
     if (state.nightbaneFlightStackPosition && state.nightbaneFlightStackPosition->GetExactDist2d(
-            *rainCenter) >= RAIN_OF_BONES_SAFE_DISTANCE)
+            *rainCenter) >= RAIN_OF_BONES_CLEARANCE)
     {
         return true;
     }
 
-    std::vector<Position> const charredEarths = GetCharredEarths(botAI);
+    std::vector<Position> const& charredEarths = GetCharredEarths(botAI);
 
     float const startAngle = state.nightbaneFlightStackPosition ?
         GetTerraceAngle(*state.nightbaneFlightStackPosition) : NIGHTBANE_FLIGHT_STACK_HOME_ANGLE;
@@ -2007,7 +2016,7 @@ bool NightbaneManageTimersAndTrackersAction::Execute(Event /*event*/)
 // they move to the other flank. If both flanks are covered, melee steps out of range and waits
 // until it is safe to attack again.
 bool NightbaneManageTimersAndTrackersAction::UpdateMeleePosition(
-    KaraInstanceState& state, Unit const& nightbane, std::vector<Position> const& charredEarths)
+    KaraInstanceState& state, Unit& nightbane, std::vector<Position> const& charredEarths)
 {
     NightbaneMeleePosition const current =
         state.nightbaneMeleePosition.value_or(NightbaneMeleePosition::ClockwiseFlank);
@@ -2042,13 +2051,15 @@ bool NightbaneManageTimersAndTrackersAction::UpdateMeleePosition(
 // Ranged start each ground phase clockwise from Nightbane (his right side if he is properly
 // positioned by the tank), up against the parapet. This generally leaves enough room for ranged to
 // move laterally toward the dome to escape the first Charred Earth while keeping LoS. If there are
-// no safe positions at range that are within LoS, ranged will step forward.
+// no safe positions at range that are within LoS, ranged will step forward. A position that loses
+// LoS to Nightbane (if, for example, a human tank moves him) is replaced like one in Charred Earth.
 bool NightbaneManageTimersAndTrackersAction::UpdateRangedPosition(
-    KaraInstanceState& state, Unit const& nightbane, std::vector<Position> const& charredEarths)
+    KaraInstanceState& state, Unit& nightbane, std::vector<Position> const& charredEarths)
 {
     std::optional<Position>& position = state.nightbaneRangedPosition;
-    bool const isClear = position && IsClearOfCharredEarth(*position, charredEarths);
-    if (isClear && IsOnNightbaneRangedSide(*position, nightbane))
+    bool const isUsable = position && IsClearOfCharredEarth(*position, charredEarths) &&
+        IsInNightbaneRangedSight(*bot, *position, nightbane.GetPosition());
+    if (isUsable && IsOnNightbaneRangedSide(*position, nightbane))
     {
         constexpr float tolerance = 0.5f;
         float const bossDist = nightbane.GetExactDist2d(*position);
@@ -2073,7 +2084,7 @@ bool NightbaneManageTimersAndTrackersAction::UpdateRangedPosition(
             *bot, nightbane, from, charredEarths, NightbaneRangedTier::Band);
     }
 
-    if (!next && position && !isClear)
+    if (!next && position && !isUsable)
     {
         next = FindNightbaneRangedPosition(
             *bot, nightbane, from, charredEarths, NightbaneRangedTier::Forward);

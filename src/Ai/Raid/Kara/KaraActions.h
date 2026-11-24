@@ -13,7 +13,6 @@
 #include "KaraHelpers.h"
 #include "MovementActions.h"
 #include <optional>
-#include <utility>
 #include <vector>
 
 // Shared
@@ -209,6 +208,14 @@ class RomuloAndJulianneSkullHigherHealthAction : public Action
 public:
     RomuloAndJulianneSkullHigherHealthAction(PlayerbotAI* botAI)
         : Action(botAI, "romulo and julianne skull higher health") {}
+    bool Execute(Event event) override;
+};
+
+class JulianneLeaveCombatForFakeDeathAction : public Action
+{
+public:
+    JulianneLeaveCombatForFakeDeathAction(PlayerbotAI* botAI)
+        : Action(botAI, "julianne leave combat for fake death") {}
     bool Execute(Event event) override;
 };
 
@@ -426,7 +433,7 @@ private:
         Unit* netherspite, KaraHelpers::KaraInstanceState& state,
         KaraHelpers::NetherspiteBeamData const& data, std::vector<ObjectGuid>& taken);
     Position GetBanishPosition(
-        Unit const& netherspite, KaraHelpers::KaraInstanceState const& state, float angle,
+        Unit& netherspite, KaraHelpers::KaraInstanceState const& state, float angle,
         float startRadius);
     void UpdateBanishSlots(Unit* netherspite, KaraHelpers::KaraInstanceState& state);
     void UpdateVoidZones(KaraHelpers::KaraInstanceState& state);
@@ -476,6 +483,7 @@ public:
 
 private:
     std::optional<Position> _destination;
+    size_t _searchedInfernalCount = 0;
 };
 
 class PrinceMalchezaarTankPositionBossAction : public AttackAction
@@ -577,10 +585,10 @@ public:
 
 private:
     bool UpdateMeleePosition(
-        KaraHelpers::KaraInstanceState& state, Unit const& nightbane,
+        KaraHelpers::KaraInstanceState& state, Unit& nightbane,
         std::vector<Position> const& charredEarths);
     bool UpdateRangedPosition(
-        KaraHelpers::KaraInstanceState& state, Unit const& nightbane,
+        KaraHelpers::KaraInstanceState& state, Unit& nightbane,
         std::vector<Position> const& charredEarths);
 };
 

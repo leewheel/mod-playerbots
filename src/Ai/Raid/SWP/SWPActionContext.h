@@ -19,18 +19,14 @@ public:
         creators["sunwell reset encounter states"] =
             &RaidSwpActionContext::sunwell_reset_encounter_states;
 
-        creators["sunwell remove aura"] =
-            &RaidSwpActionContext::sunwell_remove_aura;
+        creators["sunwell remove aura"] = &RaidSwpActionContext::sunwell_remove_aura;
 
-        creators["sunwell assign class roles"] =
-            &RaidSwpActionContext::sunwell_assign_class_roles;
+        creators["sunwell assign class roles"] = &RaidSwpActionContext::sunwell_assign_class_roles;
 
         // Trash
-        creators["volatile fiend intercept"] =
-            &RaidSwpActionContext::volatile_fiend_intercept;
+        creators["volatile fiend intercept"] = &RaidSwpActionContext::volatile_fiend_intercept;
 
-        creators["volatile fiend move away"] =
-            &RaidSwpActionContext::volatile_fiend_move_away;
+        creators["volatile fiend move away"] = &RaidSwpActionContext::volatile_fiend_move_away;
 
         creators["apocalypse guard attack with holy magic"] =
             &RaidSwpActionContext::apocalypse_guard_attack_with_holy_magic;
@@ -48,8 +44,7 @@ public:
         creators["kalecgos enter spectral rift"] =
             &RaidSwpActionContext::kalecgos_enter_spectral_rift;
 
-        creators["kalecgos spread ranged"] =
-            &RaidSwpActionContext::kalecgos_spread_ranged;
+        creators["kalecgos spread ranged"] = &RaidSwpActionContext::kalecgos_spread_ranged;
 
         creators["kalecgos remove arcane buffet"] =
             &RaidSwpActionContext::kalecgos_remove_arcane_buffet;
@@ -69,8 +64,7 @@ public:
         creators["kalecgos select target for hold"] =
             &RaidSwpActionContext::kalecgos_select_target_for_hold;
 
-        creators["kalecgos set pet stance"] =
-            &RaidSwpActionContext::kalecgos_set_pet_stance;
+        creators["kalecgos set pet stance"] = &RaidSwpActionContext::kalecgos_set_pet_stance;
 
         // Brutallus
         creators["brutallus misdirect to main tank"] =
@@ -85,8 +79,7 @@ public:
         creators["brutallus position ranged in two groups"] =
             &RaidSwpActionContext::brutallus_position_ranged_in_two_groups;
 
-        creators["brutallus isolate burn"] =
-            &RaidSwpActionContext::brutallus_isolate_burn;
+        creators["brutallus isolate burn"] = &RaidSwpActionContext::brutallus_isolate_burn;
 
         // Felmyst
         creators["felmyst misdirect to main tank"] =
@@ -101,8 +94,7 @@ public:
         creators["felmyst melee stack behind boss"] =
             &RaidSwpActionContext::felmyst_melee_stack_behind_boss;
 
-        creators["felmyst remove encapsulate"] =
-            &RaidSwpActionContext::felmyst_remove_encapsulate;
+        creators["felmyst remove encapsulate"] = &RaidSwpActionContext::felmyst_remove_encapsulate;
 
         creators["felmyst run away from encapsulated player"] =
             &RaidSwpActionContext::felmyst_run_away_from_encapsulated_player;
@@ -110,20 +102,21 @@ public:
         creators["felmyst mass dispel gas nova"] =
             &RaidSwpActionContext::felmyst_mass_dispel_gas_nova;
 
+        creators["felmyst move into mass dispel reach"] =
+            &RaidSwpActionContext::felmyst_move_into_mass_dispel_reach;
+
         creators["felmyst move to air group position"] =
             &RaidSwpActionContext::felmyst_move_to_air_group_position;
 
         creators["felmyst avoid demonic vapor"] =
             &RaidSwpActionContext::felmyst_avoid_demonic_vapor;
 
-        creators["felmyst kite demonic vapor"] =
-            &RaidSwpActionContext::felmyst_kite_demonic_vapor;
+        creators["felmyst kite demonic vapor"] = &RaidSwpActionContext::felmyst_kite_demonic_vapor;
 
         creators["felmyst move to safe fog lane"] =
             &RaidSwpActionContext::felmyst_move_to_safe_fog_lane;
 
-        creators["felmyst melee clear target"] =
-            &RaidSwpActionContext::felmyst_melee_clear_target;
+        creators["felmyst melee clear target"] = &RaidSwpActionContext::felmyst_melee_clear_target;
 
         creators["felmyst kill charmed player"] =
             &RaidSwpActionContext::felmyst_kill_charmed_player;
@@ -187,8 +180,7 @@ public:
         creators["m'uru position ranged by phase"] =
             &RaidSwpActionContext::muru_position_ranged_by_phase;
 
-        creators["m'uru assign dps priority"] =
-            &RaidSwpActionContext::muru_assign_dps_priority;
+        creators["m'uru assign dps priority"] = &RaidSwpActionContext::muru_assign_dps_priority;
 
         creators["m'uru kill dark fiends with dispel"] =
             &RaidSwpActionContext::muru_kill_dark_fiends_with_dispel;
@@ -217,8 +209,8 @@ public:
         creators["m'uru void spawn cast shadow bolt volley"] =
             &RaidSwpActionContext::muru_void_spawn_cast_shadow_bolt_volley;
 
-        creators["m'uru keep distance from dark fiends"] =
-            &RaidSwpActionContext::muru_keep_distance_from_dark_fiends;
+        creators["m'uru move clear of void zones and fiends"] =
+            &RaidSwpActionContext::muru_move_clear_of_void_zones_and_fiends;
 
         creators["m'uru escape the singularity"] =
             &RaidSwpActionContext::muru_escape_the_singularity;
@@ -236,6 +228,12 @@ public:
         creators["kil'jaeden move holy paladin into stun range"] =
             &RaidSwpActionContext::kiljaeden_move_holy_paladin_into_stun_range;
 
+        creators["kil'jaeden start dps hold timer"] =
+            &RaidSwpActionContext::kiljaeden_start_dps_hold_timer;
+
+        creators["kil'jaeden select target for hold"] =
+            &RaidSwpActionContext::kiljaeden_select_target_for_hold;
+
         creators["kil'jaeden position and move tanks"] =
             &RaidSwpActionContext::kiljaeden_position_and_move_tanks;
 
@@ -251,8 +249,7 @@ public:
         creators["kil'jaeden stack for shield of the blue"] =
             &RaidSwpActionContext::kiljaeden_stack_for_shield_of_the_blue;
 
-        creators["kil'jaeden use dragon orb"] =
-            &RaidSwpActionContext::kiljaeden_use_dragon_orb;
+        creators["kil'jaeden use dragon orb"] = &RaidSwpActionContext::kiljaeden_use_dragon_orb;
 
         creators["kil'jaeden dragon buff and protect raid"] =
             &RaidSwpActionContext::kiljaeden_dragon_buff_and_protect_raid;
@@ -314,8 +311,7 @@ private:
     }
     static Action* kalecgos_remove_arcane_buffet(PlayerbotAI* botAI)
     {
-        return new SunwellRemoveDebuffWithImmunityAction(
-            botAI, "kalecgos remove arcane buffet");
+        return new SunwellRemoveDebuffWithImmunityAction(botAI, "kalecgos remove arcane buffet");
     }
     static Action* kalecgos_sathrovarr_tank_stand_with_kalec(PlayerbotAI* botAI)
     {
@@ -394,6 +390,10 @@ private:
     static Action* felmyst_mass_dispel_gas_nova(PlayerbotAI* botAI)
     {
         return new FelmystMassDispelGasNovaAction(botAI);
+    }
+    static Action* felmyst_move_into_mass_dispel_reach(PlayerbotAI* botAI)
+    {
+        return new FelmystMoveIntoMassDispelReachAction(botAI);
     }
     static Action* felmyst_move_to_air_group_position(PlayerbotAI* botAI)
     {
@@ -540,9 +540,9 @@ private:
     {
         return new MuruVoidSpawnCastShadowBoltVolleyAction(botAI);
     }
-    static Action* muru_keep_distance_from_dark_fiends(PlayerbotAI* botAI)
+    static Action* muru_move_clear_of_void_zones_and_fiends(PlayerbotAI* botAI)
     {
-        return new MuruKeepDistanceFromDarkFiendsAction(botAI);
+        return new MuruMoveClearOfVoidZonesAndFiendsAction(botAI);
     }
     static Action* muru_escape_the_singularity(PlayerbotAI* botAI)
     {
@@ -565,6 +565,14 @@ private:
     static Action* kiljaeden_move_holy_paladin_into_stun_range(PlayerbotAI* botAI)
     {
         return new KiljaedenMoveHolyPaladinIntoStunRangeAction(botAI);
+    }
+    static Action* kiljaeden_start_dps_hold_timer(PlayerbotAI* botAI)
+    {
+        return new KiljaedenStartDpsHoldTimerAction(botAI);
+    }
+    static Action* kiljaeden_select_target_for_hold(PlayerbotAI* botAI)
+    {
+        return new KiljaedenSelectTargetForHoldAction(botAI);
     }
     static Action* kiljaeden_position_and_move_tanks(PlayerbotAI* botAI)
     {

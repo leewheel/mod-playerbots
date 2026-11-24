@@ -158,11 +158,9 @@ bool BigBadWolfChasesRedHoodTrigger::IsActiveInEncounter()
 
 bool BigBadWolfVictimHasRedHoodTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_PALADIN && bot->getClass() != CLASS_PRIEST &&
-        bot->getClass() != CLASS_WARRIOR)
-    {
+    uint8 const botClass = bot->getClass();
+    if (botClass != CLASS_PALADIN && botClass != CLASS_PRIEST && botClass != CLASS_WARRIOR)
         return false;
-    }
 
     Unit* wolf = GetOperaActor(bot, "the big bad wolf");
     if (!wolf)
@@ -180,6 +178,11 @@ bool RomuloAndJulianneShouldDieTogetherTrigger::IsActiveInEncounter()
         return false;
 
     return GetOperaActor(bot, "romulo") && GetOperaActor(bot, "julianne");
+}
+
+bool JulianneDrinkingPoisonTrigger::IsActiveInEncounter()
+{
+    return IsJulianneDrinkingPoison(AI_VALUE(Unit*, "current target"));
 }
 
 // The Wizard of Oz
@@ -243,7 +246,7 @@ bool ShadeOfAranCastingArcaneExplosionTrigger::IsActiveInEncounter()
 // Ranged only. Blizzard moves around Aran in a band, and melee range is inside the minimum radius.
 bool ShadeOfAranRangedInBlizzardTrigger::IsActiveInEncounter()
 {
-    if (!bot->HasAura(Id(KaraSpells::SPELL_BLIZZARD)))
+    if (!bot->HasAura(Id(KaraSpells::SPELL_ARAN_BLIZZARD)))
         return false;
 
     // Return false for rooted bots (Chains of Ice) so they can at least keep casting.
@@ -252,10 +255,9 @@ bool ShadeOfAranRangedInBlizzardTrigger::IsActiveInEncounter()
 
 bool ShadeOfAranFlameWreathActiveTrigger::IsActiveInEncounter()
 {
+    // Do not check for Aran here. A bot that does not find Aran (most likely due to being battle
+    // rezzed between the 5s zone combat pulses) still needs to stop moving for Flame Wreath.
     Unit* aran = GetEncounterBoss();
-    if (!aran)
-        return false;
-
     if (!IsFlameWreathInProgress(botAI, aran))
         return false;
 
@@ -269,8 +271,7 @@ bool ShadeOfAranShouldPrioritizeElementalsTrigger::IsActiveInEncounter()
     if (!IsMechanicTrackerBot(bot, KARA_MAP_ID))
         return false;
 
-    GuidVector const elementals =
-        context->GetValue<GuidVector>("shade of aran unbanished elementals")->Get();
+    GuidVector const elementals = GetUnbanishedConjuredElementals(bot);
     if (elementals.empty())
         return false;
 
@@ -291,7 +292,7 @@ bool ShadeOfAranRangedShouldMaintainDistanceTrigger::IsActiveInEncounter()
     if (!aran)
         return false;
 
-    if (bot->HasAura(Id(KaraSpells::SPELL_BLIZZARD)))
+    if (bot->HasAura(Id(KaraSpells::SPELL_ARAN_BLIZZARD)))
         return false;
 
     float const distance = bot->GetExactDist2d(aran);
@@ -305,7 +306,7 @@ bool ShadeOfAranRangedShouldMaintainDistanceTrigger::IsActiveInEncounter()
         return false;
 
     // If elementals are up, let ranged have freedom to reach them even if outside the band.
-    return context->GetValue<GuidVector>("shade of aran unbanished elementals")->Get().empty();
+    return GetUnbanishedConjuredElementals(bot).empty();
 }
 
 // Netherspite
@@ -357,13 +358,17 @@ bool NetherspiteShouldSpreadForNetherbreathTrigger::IsActiveInEncounter()
     if (!slot)
         return false;
 
+    // Slots last until the tracker's next update, which can come after the Banish Phase ends.
+    Unit* netherspite = GetEncounterBoss();
+    if (netherspite && !IsBanishPhase(netherspite))
+        return false;
+
     if (!IsClearOfVoidZones(
-            *state, bot->GetPositionX(), bot->GetPositionY(), VOID_ZONE_SAFE_DISTANCE))
+            *state, bot->GetPositionX(), bot->GetPositionY(), NETHERSPITE_VZ_CLEARANCE))
     {
         return true;
     }
 
-    Unit* netherspite = GetEncounterBoss();
     if (!netherspite)
         return false;
 
@@ -413,8 +418,8 @@ bool PrinceMalchezaarBotIsEnfeebledTrigger::IsActiveInEncounter()
         return false;
 
     bool const canNovaHit = CanShadowNovaHitEnfeebled(malchezaar, *enfeeble);
-    if ((canNovaHit && bot->GetExactDist(malchezaar) < SHADOW_NOVA_SAFE_DISTANCE) ||
-        !IsClearOfInfernals(*bot, GetLandedInfernals(botAI), HELLFIRE_SAFE_DISTANCE))
+    if ((canNovaHit && bot->GetExactDist(malchezaar) < MALC_SHADOW_NOVA_CLEARANCE) ||
+        !IsClearOfInfernals(*bot, GetLandedInfernals(bot), MALC_HELLFIRE_CLEARANCE))
     {
         return true;
     }
@@ -434,9 +439,9 @@ bool PrinceMalchezaarNearHazardTrigger::IsActiveInEncounter()
     if (malchezaar && malchezaar->GetVictim() == bot && PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!IsClearOfInfernals(*bot, GetLandedInfernals(botAI), HELLFIRE_SAFE_DISTANCE) ||
+    if (!IsClearOfInfernals(*bot, GetLandedInfernals(bot), MALC_HELLFIRE_CLEARANCE) ||
         (malchezaar && PlayerbotAI::IsRanged(bot) &&
-         bot->GetExactDist(malchezaar) < SHADOW_NOVA_SAFE_DISTANCE))
+         bot->GetExactDist(malchezaar) < MALC_SHADOW_NOVA_CLEARANCE))
     {
         return true;
     }

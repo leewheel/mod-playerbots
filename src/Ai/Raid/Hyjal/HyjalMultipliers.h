@@ -10,24 +10,39 @@
 #include "EncounterHelpers.h"
 #include "HyjalHelpers.h"
 #include "Multiplier.h"
+#include <optional>
 #include <string>
 
 // Shared
 
+// Without a boss, gated on any Hyjal encounter in progress (for the shared multipliers).
 class HyjalEncounterMultiplier : public Multiplier
 {
 public:
     HyjalEncounterMultiplier(PlayerbotAI* botAI, std::string const name)
         : Multiplier(botAI, name) {}
+    HyjalEncounterMultiplier(
+        PlayerbotAI* botAI, std::string const name, HyjalHelpers::HyjalBosses boss)
+        : Multiplier(botAI, name), _boss(boss) {}
 
     float GetValue(Action* action) final
     {
-        return EncounterHelpers::IsEncounterInProgress(bot, HyjalHelpers::HYJAL_MAP_ID) ?
-            GetValueInEncounter(action) : 1.0f;
+        bool const inProgress = _boss ?
+            EncounterHelpers::IsBossInProgress(
+                bot, HyjalHelpers::HYJAL_MAP_ID, HyjalHelpers::Id(*_boss)) :
+            EncounterHelpers::IsEncounterInProgress(bot, HyjalHelpers::HYJAL_MAP_ID);
+        return inProgress ? GetValueInEncounter(action) : 1.0f;
     }
 
 protected:
     virtual float GetValueInEncounter(Action* action) = 0;
+    Unit* GetEncounterBoss()
+    {
+        return _boss ? HyjalHelpers::GetHyjalBoss(bot, *_boss) : nullptr;
+    }
+
+private:
+    std::optional<HyjalHelpers::HyjalBosses> const _boss;
 };
 
 class HyjalDelayDpsCooldownsMultiplier : public Multiplier
@@ -54,7 +69,9 @@ class RageWinterchillMeleeControlAvoidanceMultiplier : public HyjalEncounterMult
 {
 public:
     RageWinterchillMeleeControlAvoidanceMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "rage winterchill melee control avoidance") {}
+        : HyjalEncounterMultiplier(
+            botAI, "rage winterchill melee control avoidance",
+            HyjalHelpers::HyjalBosses::DATA_RAGE_WINTERCHILL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -64,7 +81,9 @@ class RageWinterchillRangedControlAvoidanceMultiplier : public HyjalEncounterMul
 {
 public:
     RageWinterchillRangedControlAvoidanceMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "rage winterchill ranged control avoidance") {}
+        : HyjalEncounterMultiplier(
+            botAI, "rage winterchill ranged control avoidance",
+            HyjalHelpers::HyjalBosses::DATA_RAGE_WINTERCHILL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -76,7 +95,9 @@ class AnetheronDisableAssistTargetingMultiplier : public HyjalEncounterMultiplie
 {
 public:
     AnetheronDisableAssistTargetingMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "anetheron disable assist targeting") {}
+        : HyjalEncounterMultiplier(
+            botAI, "anetheron disable assist targeting",
+            HyjalHelpers::HyjalBosses::DATA_ANETHERON) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -86,7 +107,9 @@ class AnetheronAvoidAccidentalInfernalAggroMultiplier : public HyjalEncounterMul
 {
 public:
     AnetheronAvoidAccidentalInfernalAggroMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "anetheron avoid accidental infernal aggro") {}
+        : HyjalEncounterMultiplier(
+            botAI, "anetheron avoid accidental infernal aggro",
+            HyjalHelpers::HyjalBosses::DATA_ANETHERON) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -96,7 +119,9 @@ class AnetheronInfernalTargetRunToPositionMultiplier : public HyjalEncounterMult
 {
 public:
     AnetheronInfernalTargetRunToPositionMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "anetheron infernal target run to position") {}
+        : HyjalEncounterMultiplier(
+            botAI, "anetheron infernal target run to position",
+            HyjalHelpers::HyjalBosses::DATA_ANETHERON) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -106,7 +131,8 @@ class AnetheronControlMovementMultiplier : public HyjalEncounterMultiplier
 {
 public:
     AnetheronControlMovementMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "anetheron control movement") {}
+        : HyjalEncounterMultiplier(
+            botAI, "anetheron control movement", HyjalHelpers::HyjalBosses::DATA_ANETHERON) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -116,7 +142,8 @@ class AnetheronControlMisdirectionMultiplier : public HyjalEncounterMultiplier
 {
 public:
     AnetheronControlMisdirectionMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "anetheron control misdirection") {}
+        : HyjalEncounterMultiplier(
+            botAI, "anetheron control misdirection", HyjalHelpers::HyjalBosses::DATA_ANETHERON) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -128,7 +155,9 @@ class KazrogalControlLowManaMovementMultiplier : public HyjalEncounterMultiplier
 {
 public:
     KazrogalControlLowManaMovementMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "kaz'rogal control low mana movement") {}
+        : HyjalEncounterMultiplier(
+            botAI, "kaz'rogal control low mana movement",
+            HyjalHelpers::HyjalBosses::DATA_KAZROGAL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -138,7 +167,9 @@ class KazrogalKeepAspectOfTheViperActiveMultiplier : public HyjalEncounterMultip
 {
 public:
     KazrogalKeepAspectOfTheViperActiveMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "kaz'rogal keep aspect of the viper active") {}
+        : HyjalEncounterMultiplier(
+            botAI, "kaz'rogal keep aspect of the viper active",
+            HyjalHelpers::HyjalBosses::DATA_KAZROGAL) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -150,7 +181,9 @@ class AzgalorDisableAutoTargetingAndPositioningMultiplier : public HyjalEncounte
 {
 public:
     AzgalorDisableAutoTargetingAndPositioningMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "azgalor disable auto targeting and positioning") {}
+        : HyjalEncounterMultiplier(
+            botAI, "azgalor disable auto targeting and positioning",
+            HyjalHelpers::HyjalBosses::DATA_AZGALOR) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -160,7 +193,9 @@ class AzgalorDoomedBotPrioritizePositioningMultiplier : public HyjalEncounterMul
 {
 public:
     AzgalorDoomedBotPrioritizePositioningMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "azgalor doomed bot prioritize positioning") {}
+        : HyjalEncounterMultiplier(
+            botAI, "azgalor doomed bot prioritize positioning",
+            HyjalHelpers::HyjalBosses::DATA_AZGALOR) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -170,7 +205,9 @@ class AzgalorMeleeDpsControlAvoidanceMultiplier : public HyjalEncounterMultiplie
 {
 public:
     AzgalorMeleeDpsControlAvoidanceMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "azgalor melee dps control avoidance") {}
+        : HyjalEncounterMultiplier(
+            botAI, "azgalor melee dps control avoidance",
+            HyjalHelpers::HyjalBosses::DATA_AZGALOR) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -180,7 +217,8 @@ class AzgalorRangedControlAvoidanceMultiplier : public HyjalEncounterMultiplier
 {
 public:
     AzgalorRangedControlAvoidanceMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "azgalor ranged control avoidance") {}
+        : HyjalEncounterMultiplier(
+            botAI, "azgalor ranged control avoidance", HyjalHelpers::HyjalBosses::DATA_AZGALOR) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -192,7 +230,8 @@ class ArchimondeKeepTremorTotemMultiplier : public HyjalEncounterMultiplier
 {
 public:
     ArchimondeKeepTremorTotemMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "archimonde keep tremor totem") {}
+        : HyjalEncounterMultiplier(
+            botAI, "archimonde keep tremor totem", HyjalHelpers::HyjalBosses::DATA_ARCHIMONDE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -202,7 +241,9 @@ class ArchimondeControlDoomfireAvoidanceMultiplier : public HyjalEncounterMultip
 {
 public:
     ArchimondeControlDoomfireAvoidanceMultiplier(PlayerbotAI* botAI)
-        : HyjalEncounterMultiplier(botAI, "archimonde control doomfire avoidance") {}
+        : HyjalEncounterMultiplier(
+            botAI, "archimonde control doomfire avoidance",
+            HyjalHelpers::HyjalBosses::DATA_ARCHIMONDE) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

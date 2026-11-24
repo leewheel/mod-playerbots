@@ -15,6 +15,7 @@
 
 // Shared
 
+// Without a boss, gated on any SWP encounter in progress (for the shared multipliers).
 class SunwellEncounterMultiplier : public Multiplier
 {
 public:
@@ -238,6 +239,17 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+class FelmystKeepHealersInSideStacksMultiplier : public SunwellEncounterMultiplier
+{
+public:
+    FelmystKeepHealersInSideStacksMultiplier(PlayerbotAI* botAI)
+        : SunwellEncounterMultiplier(
+            botAI, "felmyst keep healers in side stacks", SwpHelpers::SwpBosses::DATA_FELMYST) {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 class FelmystPrioritizeFogAvoidanceMultiplier : public SunwellEncounterMultiplier
 {
 public:
@@ -367,6 +379,28 @@ protected:
     float GetValueInEncounter(Action* action) override;
 };
 
+class MuruHoldDpsOnEntropiusMultiplier : public SunwellEncounterMultiplier
+{
+public:
+    MuruHoldDpsOnEntropiusMultiplier(PlayerbotAI* botAI)
+        : SunwellEncounterMultiplier(
+            botAI, "m'uru hold dps on entropius", SwpHelpers::SwpBosses::DATA_MURU) {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class MuruLetMagesStealSpellFuryMultiplier : public SunwellEncounterMultiplier
+{
+public:
+    MuruLetMagesStealSpellFuryMultiplier(PlayerbotAI* botAI)
+        : SunwellEncounterMultiplier(
+            botAI, "m'uru let mages steal spell fury", SwpHelpers::SwpBosses::DATA_MURU) {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
 // Kil'jaeden <The Deceiver>
 
 class KiljaedenSingleTargetHandsMultiplier : public SunwellEncounterMultiplier
@@ -375,6 +409,17 @@ public:
     KiljaedenSingleTargetHandsMultiplier(PlayerbotAI* botAI)
         : SunwellEncounterMultiplier(
             botAI, "kil'jaeden single target hands", SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
+
+protected:
+    float GetValueInEncounter(Action* action) override;
+};
+
+class KiljaedenHoldDpsAtStartMultiplier : public SunwellEncounterMultiplier
+{
+public:
+    KiljaedenHoldDpsAtStartMultiplier(PlayerbotAI* botAI)
+        : SunwellEncounterMultiplier(
+            botAI, "kil'jaeden hold dps at start", SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;
@@ -390,6 +435,9 @@ public:
 
 protected:
     float GetValueInEncounter(Action* action) override;
+
+private:
+    bool IsReachHeld(Action* action);
 };
 
 class KiljaedenPrioritizeDarknessProtectionMultiplier : public SunwellEncounterMultiplier
@@ -409,8 +457,7 @@ class KiljaedenControlDragonMultiplier : public SunwellEncounterMultiplier
 public:
     KiljaedenControlDragonMultiplier(PlayerbotAI* botAI)
         : SunwellEncounterMultiplier(
-            botAI, "kil'jaeden dragon buff and protect raid",
-            SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
+            botAI, "kil'jaeden control dragon", SwpHelpers::SwpBosses::DATA_KILJAEDEN) {}
 
 protected:
     float GetValueInEncounter(Action* action) override;

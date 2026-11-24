@@ -16,11 +16,13 @@
 #include "RtiTargetValue.h"
 #include "StatsWeightCalculator.h"
 #include "TKHelpers.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <iterator>
 #include <limits>
+#include <optional>
 
 using namespace TkHelpers;
 using namespace EncounterHelpers;
@@ -103,7 +105,7 @@ bool CrimsonHandCenturionCastPolymorphAction::Execute(Event /*event*/)
 
 bool AlarMisdirectBossToMainTankAction::Execute(Event /*event*/)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar)
         return false;
 
@@ -126,7 +128,7 @@ bool AlarBossTanksMoveBetweenPlatformsAction::Execute(Event event)
     if (!isFirstAlarTank && !IsSecondAlarTank(bot))
         return false;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar)
         return false;
 
@@ -170,7 +172,7 @@ bool AlarMeleeDpsMoveBetweenPlatformsAction::Execute(Event /*event*/)
         return false;
     }
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar || alar->GetHealthPct() <= 5.0f)
         return false;
 
@@ -195,7 +197,7 @@ bool AlarRangedAndEmberTankMoveUnderPlatformsAction::Execute(Event /*event*/)
     if (!isRanged && !isEmberTank)
         return false;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar)
         return false;
 
@@ -208,7 +210,7 @@ bool AlarRangedAndEmberTankMoveUnderPlatformsAction::Execute(Event /*event*/)
     float distFromTarget = 0.0f;
     if (isRanged)
         distFromTarget = 8.0f;
-    else if (isEmberTank && !AI_VALUE2(Unit*, "find target", "19551"))
+    else if (isEmberTank && GetTkAdds(botAI, TkNpcs::NPC_EMBER_OF_ALAR).empty())
         distFromTarget = 20.0f;
     else
         return false;
@@ -223,7 +225,7 @@ bool AlarRangedAndEmberTankMoveUnderPlatformsAction::Execute(Event /*event*/)
 
 bool AlarAssistTanksPickUpEmbersAction::Execute(Event event)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar)
         return false;
 
@@ -239,7 +241,7 @@ bool AlarAssistTanksPickUpEmbersAction::HandlePhase1Embers(Unit* alar)
     if (!IsPrimaryEmberTank(bot))
         return false;
 
-    Unit* ember = AI_VALUE2(Unit*, "find target", "19551");
+    Unit* ember = GetTargetUnitPair(botAI, TkNpcs::NPC_EMBER_OF_ALAR).first;
     if (!ember)
         return false;
 
@@ -283,7 +285,7 @@ bool AlarAssistTanksPickUpEmbersAction::HandlePhase1Embers(Unit* alar)
 // the main tank or first assist tank (whichever is not tanking Al'ar; see helpers for more info).
 bool AlarAssistTanksPickUpEmbersAction::HandlePhase2Embers(Event const& event)
 {
-    auto const& [firstEmber, secondEmber] = GetTargetUnitPair(botAI, Id(TkNpcs::NPC_EMBER_OF_ALAR));
+    auto const& [firstEmber, secondEmber] = GetTargetUnitPair(botAI, TkNpcs::NPC_EMBER_OF_ALAR);
 
     Unit* ember = nullptr;
     if (IsPrimaryEmberTank(bot))
@@ -315,7 +317,7 @@ bool AlarAssignNonTankTargetAction::Execute(Event /*event*/)
     if (PlayerbotAI::IsRanged(bot))
     {
         auto const& [firstEmber, secondEmber] =
-            GetTargetUnitPair(botAI, Id(TkNpcs::NPC_EMBER_OF_ALAR));
+            GetTargetUnitPair(botAI, TkNpcs::NPC_EMBER_OF_ALAR);
 
         Unit* ember = firstEmber;
         if (!ember && secondEmber)
@@ -334,13 +336,8 @@ bool AlarAssignNonTankTargetAction::Execute(Event /*event*/)
         }
     }
 
-    // By leewheel 2026-09-05 合并：A'l'ar 按entry规则查找(19514)，替代上游名字查找
     if (!target)
-    {
-        if (Unit* alar = AI_VALUE2(Unit*, "find target", "19514"))
-            target = alar;
-    }
-    // End By leewheel
+        target = GetTkBoss(bot, TkBosses::DATA_ALAR);
 
     if (!target || AI_VALUE(Unit*, "current target") == target)
         return false;
@@ -401,7 +398,7 @@ bool AlarJumpFromPlatformAction::Execute(Event /*event*/)
 
 bool AlarMoveAwayFromRebirthAction::Execute(Event /*event*/)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar)
         return false;
 
@@ -443,7 +440,7 @@ bool AlarSwapTanksOnBossAction::Execute(Event event)
     if (!IsFirstAlarTank(bot) && !IsSecondAlarTank(bot))
         return false;
 
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar)
         return false;
 
@@ -461,7 +458,7 @@ bool AlarSwapTanksOnBossAction::Execute(Event event)
 
 bool AlarAvoidFlamePatchesAndDiveBombsAction::Execute(Event /*event*/)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar)
         return false;
 
@@ -601,7 +598,7 @@ bool AlarAvoidFlamePatchesAndDiveBombsAction::HandleDiveBomb(Unit* alar)
 
 bool AlarManagePhaseTrackerAction::Execute(Event /*event*/)
 {
-    Unit* alar = AI_VALUE2(Unit*, "find target", "19514");
+    Unit* alar = GetTkBoss(bot, TkBosses::DATA_ALAR);
     if (!alar)
         return false;
 
@@ -625,7 +622,7 @@ bool AlarManagePhaseTrackerAction::Execute(Event /*event*/)
 // Pounding is part of why the spot is fixed, though tanking is needed in any case.
 bool VoidReaverTanksPositionBossAction::Execute(Event /*event*/)
 {
-    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "19516");
+    Unit* voidReaver = GetTkBoss(bot, TkBosses::DATA_VOID_REAVER);
     if (!voidReaver)
         return false;
 
@@ -656,7 +653,7 @@ bool VoidReaverUseAggroDumpAbilityAction::Execute(Event /*event*/)
 
 bool VoidReaverRangedBackOffAndSpreadAction::Execute(Event /*event*/)
 {
-    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "19516");
+    Unit* voidReaver = GetTkBoss(bot, TkBosses::DATA_VOID_REAVER);
     if (!voidReaver)
         return false;
 
@@ -676,12 +673,12 @@ bool VoidReaverRangedBackOffAndSpreadAction::Execute(Event /*event*/)
 
 bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
 {
-    Unit* voidReaver = AI_VALUE2(Unit*, "find target", "19516");
+    Unit* voidReaver = GetTkBoss(bot, TkBosses::DATA_VOID_REAVER);
     if (!voidReaver)
         return false;
 
     std::vector<Position> const activeOrbs = GetActiveArcaneOrbs(bot->GetInstanceId());
-    if (!IsNearArcaneOrb(bot, activeOrbs, ARCANE_ORB_SAFE_DISTANCE))
+    if (!IsNearArcaneOrb(bot, activeOrbs, ARCANE_ORB_CLEARANCE))
         return false;
 
     constexpr float searchStep = M_PI / 12.0f;
@@ -691,7 +688,7 @@ bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
     constexpr float maxDistFromBoss = 43.5f;
     constexpr uint8 numAngles = 24;
     constexpr uint8 numDistSteps = 39;
-    constexpr float safeDistanceSq = ARCANE_ORB_SAFE_DISTANCE * ARCANE_ORB_SAFE_DISTANCE;
+    constexpr float clearanceSq = ARCANE_ORB_CLEARANCE * ARCANE_ORB_CLEARANCE;
 
     std::vector<Position> bestCandidates;
     float bestMoveDist = std::numeric_limits<float>::max();
@@ -720,7 +717,7 @@ bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
             {
                 float const dx = x - orbPos.GetPositionX();
                 float const dy = y - orbPos.GetPositionY();
-                if (dx * dx + dy * dy < safeDistanceSq)
+                if (dx * dx + dy * dy < clearanceSq)
                 {
                     safeFromOrbs = false;
                     break;
@@ -750,14 +747,14 @@ bool VoidReaverAvoidArcaneOrbAction::Execute(Event /*event*/)
     }
 
     constexpr uint32 minInterval = 0;
-    return FleePosition(activeOrbs[0], ARCANE_ORB_SAFE_DISTANCE, minInterval);
+    return FleePosition(activeOrbs[0], ARCANE_ORB_CLEARANCE, minInterval);
 }
 
 // High Astromancer Solarian
 
 bool HighAstromancerSolarianMainTankPickUpBossAction::Execute(Event /*event*/)
 {
-    Unit* astromancer = AI_VALUE2(Unit*, "find target", "18805");
+    Unit* astromancer = GetTkBoss(bot, TkBosses::DATA_HIGH_ASTROMANCER_SOLARIAN);
     if (!astromancer)
         return false;
 
@@ -776,11 +773,11 @@ bool HighAstromancerSolarianMoveAwayFromGroupAction::Execute(Event /*event*/)
 
 bool HighAstromancerSolarianTargetSolariumPriestsAction::Execute(Event /*event*/)
 {
-    auto const& priestsPair = GetTargetUnitPair(botAI, Id(TkNpcs::NPC_SOLARIUM_PRIEST));
+    auto const& priestsPair = GetTargetUnitPair(botAI, TkNpcs::NPC_SOLARIUM_PRIEST);
     if (!priestsPair.first)
         return false;
 
-    if (PlayerbotAI::IsRanged(bot) && !AI_VALUE2(Unit*, "find target", "18925"))
+    if (PlayerbotAI::IsRanged(bot) && GetTkAdds(botAI, TkNpcs::NPC_SOLARIUM_AGENT).empty())
     {
         return AI_VALUE(Unit*, "current target") != priestsPair.first &&
             Attack(priestsPair.first);
@@ -845,7 +842,7 @@ Unit* HighAstromancerSolarianTargetSolariumPriestsAction::AssignSolariumPriestsT
 
 bool KaelthasSunstriderKiteThaladredAction::Execute(Event /*event*/)
 {
-    Unit* thaladred = AI_VALUE2(Unit*, "find target", "20064");
+    Unit* thaladred = FindThreatTarget(bot, "thaladred the darkener");
     if (!thaladred)
         return false;
 
@@ -895,12 +892,12 @@ bool KaelthasSunstriderMisdirectAdvisorsToTanksAction::Execute(Event /*event*/)
     Player* tank = nullptr;
     if (hunterIndex == 0 || hunterIndex == 2)
     {
-        advisor = AI_VALUE2(Unit*, "find target", "20062");
+        advisor = FindThreatTarget(bot, "grand astromancer capernian");
         tank = GetCapernianTank(bot);
     }
     else if (hunterIndex == 1)
     {
-        advisor = AI_VALUE2(Unit*, "find target", "20063");
+        advisor = FindThreatTarget(bot, "master engineer telonicus");
         tank = GetGroupAssistTank(bot, 0);
     }
 
@@ -925,12 +922,12 @@ bool KaelthasSunstriderMeleeTanksPositionAdvisorsAction::Execute(Event /*event*/
     Position position;
     if (PlayerbotAI::IsMainTank(bot))
     {
-        advisor = AI_VALUE2(Unit*, "find target", "20060");
+        advisor = FindThreatTarget(bot, "lord sanguinar");
         position = SANGUINAR_TANK_POSITION;
     }
     else // PlayerbotAI::IsAssistTankOfIndex(bot, 0, true)
     {
-        advisor = AI_VALUE2(Unit*, "find target", "20063");
+        advisor = FindThreatTarget(bot, "master engineer telonicus");
         position = TELONICUS_TANK_POSITION;
     }
 
@@ -943,7 +940,7 @@ bool KaelthasSunstriderMeleeTanksPositionAdvisorsAction::Execute(Event /*event*/
 
 bool KaelthasSunstriderWarlockTankPositionCapernianAction::Execute(Event /*event*/)
 {
-    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
+    Unit* capernian = FindThreatTarget(bot, "grand astromancer capernian");
     if (!capernian)
         return false;
 
@@ -976,11 +973,11 @@ bool KaelthasSunstriderWarlockTankPositionCapernianAction::Execute(Event /*event
 
 bool KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction::Execute(Event /*event*/)
 {
-    Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
+    Unit* capernian = FindThreatTarget(bot, "grand astromancer capernian");
     if (!capernian)
         return false;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    Unit* kaelthas = GetTkBoss(bot, TkBosses::DATA_KAELTHAS_SUNSTRIDER);
     if (!kaelthas)
         return false;
 
@@ -1002,7 +999,7 @@ bool KaelthasSunstriderSpreadAndMoveAwayFromCapernianAction::RangedBotsDisperse(
 {
     if (phase == PHASE_ALL_ADVISORS)
     {
-        if (AI_VALUE2(Unit*, "find target", "20064"))
+        if (FindThreatTarget(bot, "thaladred the darkener"))
             return false;
 
         constexpr float safeDistance = 6.0f;
@@ -1112,7 +1109,7 @@ bool KaelthasSunstriderReequipGearAction::Execute(Event event)
 
 bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
 {
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    Unit* kaelthas = GetTkBoss(bot, TkBosses::DATA_KAELTHAS_SUNSTRIDER);
     if (!kaelthas)
         return false;
 
@@ -1128,7 +1125,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
     // Target priority 1: Thaladred, except Capernian tank during all advisors phase
     if (!isActiveCapernianTank)
     {
-        Unit* thaladred = AI_VALUE2(Unit*, "find target", "20064");
+        Unit* thaladred = FindThreatTarget(bot, "thaladred the darkener");
         if (IsAdvisorActive(thaladred))
         {
             target = thaladred;
@@ -1140,7 +1137,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
     // Target priority 2: Capernian for ranged only (excluding debuff Hunter)
     if (!target && PlayerbotAI::IsRangedDps(bot) && !IsSanguinarDebuffHunter(bot))
     {
-        Unit* capernian = AI_VALUE2(Unit*, "find target", "20062");
+        Unit* capernian = FindThreatTarget(bot, "grand astromancer capernian");
         if (IsAdvisorActive(capernian))
         {
             target = capernian;
@@ -1152,7 +1149,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
     // Target priority 3: Sanguinar (debuff Hunter and melee move here after Thaladred)
     if (!target)
     {
-        Unit* sanguinar = AI_VALUE2(Unit*, "find target", "20060");
+        Unit* sanguinar = FindThreatTarget(bot, "lord sanguinar");
         if (IsAdvisorActive(sanguinar))
         {
             target = sanguinar;
@@ -1165,7 +1162,7 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::Execute(Event /*event*/)
     Unit* telonicus = nullptr;
     if (!target)
     {
-        telonicus = AI_VALUE2(Unit*, "find target", "20063");
+        telonicus = FindThreatTarget(bot, "master engineer telonicus");
         if (IsAdvisorActive(telonicus))
         {
             target = telonicus;
@@ -1208,18 +1205,13 @@ bool KaelthasSunstriderAssignAdvisorDpsPriorityAction::MeleeDpsPositionOutsideBo
 
 bool KaelthasSunstriderManageAdvisorDpsTimerAction::Execute(Event /*event*/)
 {
-    // By leewheel 2026-08-29 entry化：凯尔萨斯三顾问改用entry查找(经acore原版库3309验证)
     static constexpr std::array advisorNames = {
-        "20062", // Grand Astromancer Capernian
-        "20063", // Master Engineer Telonicus
-        "20060", // Lord Sanguinar
-    };
-    // End By leewheel
+        "grand astromancer capernian", "master engineer telonicus", "lord sanguinar", };
 
     bool advisorAtFullHp = false;
     for (char const* name : advisorNames)
     {
-        Unit* advisor = AI_VALUE2(Unit*, "find target", name);
+        Unit* advisor = FindThreatTarget(bot, name);
         if (!advisor)
             continue;
 
@@ -1231,7 +1223,7 @@ bool KaelthasSunstriderManageAdvisorDpsTimerAction::Execute(Event /*event*/)
         }
     }
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    Unit* kaelthas = GetTkBoss(bot, TkBosses::DATA_KAELTHAS_SUNSTRIDER);
     if (!kaelthas)
         return false;
 
@@ -1736,7 +1728,7 @@ bool KaelthasSunstriderUseLegendaryWeaponsAction::Execute(Event /*event*/)
 
 bool KaelthasSunstriderUseLegendaryWeaponsAction::UsePhaseshiftBulwark()
 {
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    Unit* kaelthas = GetTkBoss(bot, TkBosses::DATA_KAELTHAS_SUNSTRIDER);
     if (!kaelthas || !kaelthas->HasAura(Id(TkSpells::SPELL_SHOCK_BARRIER)))
         return false;
 
@@ -1819,7 +1811,7 @@ bool KaelthasSunstriderTanksPositionBossAction::Execute(Event /*event*/)
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    Unit* kaelthas = GetTkBoss(bot, TkBosses::DATA_KAELTHAS_SUNSTRIDER);
     if (!kaelthas)
         return false;
 
@@ -1849,10 +1841,7 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::Execute(Event /*event*/)
         if (Unit* phoenix = GetAssignedPhoenix())
             return AssistTankPicksUpPhoenix(phoenix);
 
-        // By leewheel 2026-09-12 按 AGENTS.md 第81条修正历史遗留英文名:
-        //   19622 = 凯尔萨斯·逐日者(风暴要塞), 本目录其余 20+ 处均已有entry, 此处补齐
-        // End By leewheel
-        Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+        Unit* kaelthas = GetTkBoss(bot, TkBosses::DATA_KAELTHAS_SUNSTRIDER);
         if (!kaelthas || kaelthas->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
             return false;
 
@@ -1865,19 +1854,9 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::Execute(Event /*event*/)
 // If there is more than one Phoenix up, the assist tanks will each pick up one.
 Unit* KaelthasSunstriderAssignFinalPhaseTargetAction::GetAssignedPhoenix()
 {
-    std::vector<Unit*> phoenixes;
-    for (auto const& targetGuid : AI_VALUE(GuidVector, "possible targets no los"))
-    {
-        Unit* target = botAI->GetUnit(targetGuid);
-        if (target && target->GetEntry() == Id(TkNpcs::NPC_PHOENIX))
-            phoenixes.push_back(target);
-    }
-
+    std::vector<Unit*> const phoenixes = GetActivePhoenixes(botAI);
     if (phoenixes.empty())
         return nullptr;
-
-    std::sort(phoenixes.begin(), phoenixes.end(),
-        [](Unit* first, Unit* second) { return first->GetGUID() < second->GetGUID(); });
 
     if (!PlayerbotAI::IsAssistTankOfIndex(bot, 0, true) && phoenixes.size() >= 2)
         return phoenixes[1];
@@ -1905,14 +1884,8 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::AssistTankPicksUpPhoenix(Un
 // Barrier, and (4) Phoenixes (ranged when they have nothing to do during Kael's RP power-up scene).
 bool KaelthasSunstriderAssignFinalPhaseTargetAction::NonTanksAssignTargetAndAvoidPhoenixes()
 {
-    // When it "dies" and reverts to an egg, the Phoenix becomes invisible but remains alive on top
-    // of the egg with 1 HP. At that point, there should be no avoidance. The aura check is the
-    // most consistent as flags (like NON_ATTACKABLE) are not changed until 2s after Rebirth.
-    // By leewheel 2026-09-29 合并brighton 07e47c61：采纳上游新判定（余烬冲击 aura 比 NON_ATTACKABLE
-    //   旗标早 2 秒、更稳），保留 rule81 entry 化（21362 = 凤凰 Phoenix）
-    Unit* phoenix = AI_VALUE2(Unit*, "find target", "21362");
-    if (phoenix && phoenix->HasAura(Id(TkSpells::SPELL_EMBER_BLAST)))
-        phoenix = nullptr;
+    std::vector<Unit*> const phoenixes = GetActivePhoenixes(botAI);
+    Unit* phoenix = phoenixes.empty() ? nullptr : phoenixes.front();
 
     if (phoenix)
     {
@@ -1927,11 +1900,9 @@ bool KaelthasSunstriderAssignFinalPhaseTargetAction::NonTanksAssignTargetAndAvoi
         }
     }
 
-// By leewheel 2026-09-05 合并：采纳上游 GetKaelthasTk 助手与 isKaelthasAttackable 判断(后续共用分支需要)
-    Unit* kaelthas = GetKaelthasTk(botAI);
+    Unit* kaelthas = GetTkBoss(bot, TkBosses::DATA_KAELTHAS_SUNSTRIDER);
     bool const isKaelthasAttackable =
         kaelthas && !kaelthas->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
-    // End By leewheel
 
     Unit* target = nullptr;
     if (isKaelthasAttackable && kaelthas->HasAura(Id(TkSpells::SPELL_SHOCK_BARRIER)))
@@ -2175,7 +2146,7 @@ bool KaelthasSunstriderSpreadOutInMidairAction::HoverAndSpread()
     constexpr float heightPull = 0.35f;
     pushZ += (desiredHeight - (botZ - floorZ)) * heightPull;
 
-    Unit* kaelthas = AI_VALUE2(Unit*, "find target", "19622");
+    Unit* kaelthas = GetTkBoss(bot, TkBosses::DATA_KAELTHAS_SUNSTRIDER);
     if (!kaelthas)
         return false;
 

@@ -6,15 +6,21 @@
 
 #include "ZAHelpers.h"
 #include "EncounterHelpers.h"
+#include "ObjectAccessor.h"
 #include "Playerbots.h"
+#include "ThreatHelpers.h"
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <limits>
-#include <list>
 #include <mutex>
+#include <string_view>
 #include <unordered_map>
 
 using namespace EncounterHelpers;
+
+namespace ZaHelpers
+{
 
 namespace
 {
@@ -61,8 +67,7 @@ bool IsPositionSafeFromHazards(
 
 }  // end anonymous namespace
 
-namespace ZaHelpers
-{
+// Shared
 
 namespace
 {
@@ -70,6 +75,35 @@ namespace
 std::mutex zaStateMutex;
 std::unordered_map<uint32, ZaInstanceState> zaStates;
 
+constexpr std::string_view BossName(ZaBosses boss)
+{
+    switch (boss)
+    {
+        case ZaBosses::DATA_AKILZON:
+            return "akil'zon";
+        case ZaBosses::DATA_NALORAKK:
+            return "nalorakk";
+        case ZaBosses::DATA_JANALAI:
+            return "jan'alai";
+        case ZaBosses::DATA_HALAZZI:
+            return "halazzi";
+        case ZaBosses::DATA_HEX_LORD_MALACRASS:
+            return "hex lord malacrass";
+        case ZaBosses::DATA_ZULJIN:
+            return "zul'jin";
+        default:
+            return {};
+    }
+}
+
+}
+
+Unit* GetZaBoss(Player* bot, ZaBosses boss)
+{
+    if (!IsBossInProgress(bot, ZA_MAP_ID, Id(boss)))
+        return nullptr;
+
+    return FindThreatTarget(bot, BossName(boss));
 }
 
 // Akil'zon <Eagle Avatar>
@@ -109,44 +143,57 @@ bool IsNalorakkInBearForm(Unit* nalorakk)
 
 // Jan'alai <Dragonhawk Avatar>
 
-std::pair<Unit*, Unit*> GetAmanishiHatcherPair(PlayerbotAI* botAI)
+GuidVector FindJanalaiAddGuids(Player* bot)
+{
+    std::vector<uint32> const entries = {
+        Id(ZaNpcs::NPC_AMANISHI_HATCHER),
+        Id(ZaNpcs::NPC_AMANI_DRAGONHAWK_HATCHLING),
+    };
+
+    return FindCreatureGuidsAround(bot, JANALAI_TANK_POSITION, JANALAI_ADD_SEARCH_RADIUS, entries);
+}
+
+std::vector<Unit*> GetJanalaiAdds(Player* bot, ZaNpcs npc)
+{
+    GuidVector const& guids = GetInstanceCreatureList(
+        ZaState(bot->GetInstanceId()).janalaiAdds, JANALAI_ADD_CACHE_INTERVAL_MS, bot,
+        FindJanalaiAddGuids);
+
+    std::vector<Unit*> adds;
+    for (ObjectGuid const& guid : guids)
+    {
+        if (guid.GetEntry() != Id(npc))
+            continue;
+
+        Creature* add = ObjectAccessor::GetCreature(*bot, guid);
+        if (add && add->IsAlive() && add->IsInWorld())
+            adds.push_back(add);
+    }
+
+    return adds;
+}
+
+std::pair<Unit*, Unit*> GetAmanishiHatcherPair(Player* bot)
 {
     Unit* lowest = nullptr;
     Unit* highest = nullptr;
 
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    for (auto const& targetGuid : AI_VALUE(GuidVector, "possible targets no los"))
+    for (Unit* unit : GetJanalaiAdds(bot, ZaNpcs::NPC_AMANISHI_HATCHER))
     {
-        Unit* unit = botAI->GetUnit(targetGuid);
-        if (unit && unit->GetEntry() == Id(ZaNpcs::NPC_AMANISHI_HATCHER))
-        {
-            if (!lowest || unit->GetGUID().GetCounter() < lowest->GetGUID().GetCounter())
-                lowest = unit;
+        if (!lowest || unit->GetGUID().GetCounter() < lowest->GetGUID().GetCounter())
+            lowest = unit;
 
-            if (!highest || unit->GetGUID().GetCounter() > highest->GetGUID().GetCounter())
-                highest = unit;
-        }
+        if (!highest || unit->GetGUID().GetCounter() > highest->GetGUID().GetCounter())
+            highest = unit;
     }
 
     return {lowest, highest};
 }
 
-uint32 CountJanalaiHatchlingsByEntry(PlayerbotAI* botAI)
+uint32 CountJanalaiHatchlingsByEntry(Player* bot)
 {
-    uint32 count = 0;
-
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    for (auto const& targetGuid : AI_VALUE(GuidVector, "attackers"))
-    {
-        Unit* unit = botAI->GetUnit(targetGuid);
-        if (unit && unit->IsAlive() &&
-            unit->GetEntry() == Id(ZaNpcs::NPC_AMANI_DRAGONHAWK_HATCHLING))
-        {
-            ++count;
-        }
-    }
-
-    return count;
+    return static_cast<uint32>(
+        GetJanalaiAdds(bot, ZaNpcs::NPC_AMANI_DRAGONHAWK_HATCHLING).size());
 }
 
 bool IsJanalaiBombing(Unit* janalai)
@@ -154,35 +201,25 @@ bool IsJanalaiBombing(Unit* janalai)
     return janalai && janalai->HasAura(Id(ZaSpells::SPELL_FIRE_BOMB_CHANNEL));
 }
 
-GuidVector FindNearbyFireBombGuids(Player* bot)
+GuidVector FindFireBombGuids(Player* bot)
 {
-    std::list<Creature*> creatureList;
-    bot->GetCreatureListWithEntryInGrid(
-        creatureList, Id(ZaNpcs::NPC_FIRE_BOMB), JANALAI_FIRE_BOMB_SEARCH_RADIUS);
-
-    GuidVector guids;
-    guids.reserve(creatureList.size());
-    for (Creature* creature : creatureList)
-    {
-        if (creature && creature->IsAlive())
-            guids.push_back(creature->GetGUID());
-    }
-
-    return guids;
+    return FindCreatureGuidsAround(
+        bot, JANALAI_TANK_POSITION, JANALAI_FIRE_BOMB_SEARCH_RADIUS, { Id(ZaNpcs::NPC_FIRE_BOMB) });
 }
 
-std::vector<Unit*> GetNearbyFireBombs(PlayerbotAI* botAI)
+std::vector<Unit*> GetFireBombs(Player* bot)
 {
-    GuidVector const& guids =
-        botAI->GetAiObjectContext()->GetValue<GuidVector>("jan'alai fire bombs")->RefGet();
+    GuidVector const& guids = GetInstanceCreatureList(
+        ZaState(bot->GetInstanceId()).janalaiFireBombs, FIRE_BOMB_CACHE_INTERVAL_MS, bot,
+        FindFireBombGuids);
 
     std::vector<Unit*> bombs;
     bombs.reserve(guids.size());
     for (ObjectGuid const& guid : guids)
     {
-        Unit* unit = botAI->GetUnit(guid);
-        if (unit && unit->IsAlive())
-            bombs.push_back(unit);
+        Creature* bomb = ObjectAccessor::GetCreature(*bot, guid);
+        if (bomb && bomb->IsAlive())
+            bombs.push_back(bomb);
     }
 
     return bombs;
@@ -226,7 +263,38 @@ bool FindSafeStepInJanalaiZone(
 }
 
 // Halazzi <Lynx Avatar>
-// N/A
+
+GuidVector FindCorruptedLightningTotemGuids(Player* bot)
+{
+    return FindCreatureGuidsAround(
+        bot, HALAZZI_TANK_POSITION, HALAZZI_TOTEM_SEARCH_RADIUS,
+        { Id(ZaNpcs::NPC_CORRUPTED_LIGHTNING_TOTEM) });
+}
+
+Creature* GetNearestCorruptedLightningTotem(Player* bot)
+{
+    GuidVector const& guids = GetInstanceCreatureList(
+        ZaState(bot->GetInstanceId()).halazziTotems, HALAZZI_TOTEM_CACHE_INTERVAL_MS, bot,
+        FindCorruptedLightningTotemGuids);
+
+    Creature* nearest = nullptr;
+    float nearestDistance = ZA_CREATURE_SEARCH_RADIUS;
+    for (ObjectGuid const& guid : guids)
+    {
+        Creature* totem = ObjectAccessor::GetCreature(*bot, guid);
+        if (!totem || !totem->IsAlive())
+            continue;
+
+        float const distance = bot->GetDistance(totem);
+        if (distance <= nearestDistance)
+        {
+            nearestDistance = distance;
+            nearest = totem;
+        }
+    }
+
+    return nearest;
+}
 
 // Hex Lord Malacrass
 
@@ -247,6 +315,18 @@ GameObject* GetNearbyFreezingTrap(PlayerbotAI* botAI)
         ->GetValue<ObjectGuid>("hex lord malacrass freezing trap")->Get();
 
     return guid.IsEmpty() ? nullptr : botAI->GetGameObject(guid);
+}
+
+GuidVector FindHexLordMalacrassDpsTargetGuids(Player* bot)
+{
+    std::vector<uint32> entries;
+    entries.reserve(HEX_LORD_MALACRASS_DPS_PRIORITY.size());
+    for (ZaNpcs const npc : HEX_LORD_MALACRASS_DPS_PRIORITY)
+        entries.push_back(Id(npc));
+
+    return FindCreatureGuidsAround(
+        bot, HEX_LORD_MALACRASS_SPAWN_POSITION, HEX_LORD_MALACRASS_DPS_TARGET_SEARCH_RADIUS,
+        entries);
 }
 
 // Zul'jin

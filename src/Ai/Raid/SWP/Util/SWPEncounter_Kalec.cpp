@@ -298,9 +298,8 @@ Player* GetKalecgosCurrentVictimTank(
 {
     Unit* kalecgos = GetSwpBoss(player, SwpBosses::DATA_KALECGOS);
 
-    constexpr float searchRadius = 200.0f;
     if (!kalecgos)
-        kalecgos = player->FindNearestCreature(Id(SwpNpcs::NPC_KALECGOS_DRAGON), searchRadius);
+        kalecgos = GetKalecgosUnit(player, SwpNpcs::NPC_KALECGOS_DRAGON);
 
     if (kalecgos)
     {
@@ -673,7 +672,7 @@ Player* GetKalecgosDesignatedTank(Player* player)
         return nullptr;
 
     KalecgosEncounterState& state = KalecgosState(player->GetInstanceId());
-    Player* const tank = ResolveKalecgosDesignatedTank(player, group, state);
+    Player* tank = ResolveKalecgosDesignatedTank(player, group, state);
 
     if (!ResolveSurfaceTank(group, state.currentTankGuid))
         state.currentTankGuid = tank ? tank->GetGUID() : ObjectGuid::Empty;
@@ -687,6 +686,31 @@ ObjectGuid FindKalecgosSpectralRiftGuid(Player* bot)
         Id(SwpObjects::GO_SPECTRAL_RIFT), SPECTRAL_RIFT_SEARCH_RADIUS, true);
 
     return rift ? rift->GetGUID() : ObjectGuid::Empty;
+}
+
+GuidVector FindKalecgosUnitGuids(Player* bot)
+{
+    return EncounterHelpers::FindCreatureGuidsAround(
+        bot, KALECGOS_SPAWN_POSITION, KALECGOS_UNIT_SEARCH_RADIUS,
+        { Id(SwpNpcs::NPC_KALECGOS_DRAGON), Id(SwpNpcs::NPC_KALECGOS_HUMANOID) });
+}
+
+Creature* GetKalecgosUnit(Player* bot, SwpNpcs npc)
+{
+    GuidVector const& guids = EncounterHelpers::GetInstanceCreatureList(
+        SwpState(bot->GetInstanceId()).kalecgosUnits, KALECGOS_UNIT_CACHE_INTERVAL_MS, bot,
+        FindKalecgosUnitGuids);
+    for (ObjectGuid const& guid : guids)
+    {
+        if (guid.GetEntry() != Id(npc))
+            continue;
+
+        Creature* unit = ObjectAccessor::GetCreature(*bot, guid);
+        if (unit && unit->IsAlive())
+            return unit;
+    }
+
+    return nullptr;
 }
 
 // Reads only, so a multiplier may call it. An expired rift not yet cleared counts as closed.

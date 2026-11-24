@@ -51,7 +51,7 @@ bool SunwellAuraToRemoveTrigger::IsActive()
 
 bool VolatileFiendSelfDestructsWhenNearTrigger::IsActive()
 {
-    Unit* fiend = botAI->GetCreature(AI_VALUE(ObjectGuid, "swp volatile fiend"));
+    Unit* fiend = GetSwpVolatileFiend(botAI);
     return fiend && fiend->IsAlive();
 }
 
@@ -119,11 +119,9 @@ bool KalecgosRangedShouldSpreadTrigger::IsActiveInEncounter()
 
 bool KalecgosTooManyArcaneBuffetStacksTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_MAGE &&
-        bot->getClass() != CLASS_PALADIN)
-    {
+    uint8 const botClass = bot->getClass();
+    if (botClass != CLASS_ROGUE && botClass != CLASS_MAGE && botClass != CLASS_PALADIN)
         return false;
-    }
 
     if (PlayerbotAI::IsTank(bot))
         return false;
@@ -279,21 +277,7 @@ bool FelmystRangedShouldPositionToDispelAndFleeTrigger::IsActiveInEncounter()
         return false;
     }
 
-    if (HasFelmystEarlyMoveStarted(botAI))
-        return false;
-
-    if (felmyst->GetVictim() == bot)
-        return false;
-
-    // On initial landing, let the MT get aggro before assuming positions
-    Player* mainTank = GetGroupMainTank(bot);
-    if (mainTank && felmyst->GetVictim() != mainTank &&
-        felmyst->GetHealthPct() > BOSS_ENGAGED_HEALTH_PCT)
-    {
-        return false;
-    }
-
-    return !GetFelmystEncapsulateTarget(bot) && !DidEncapsulateOccurThisGroundPhase(bot);
+    return !HasFelmystEarlyMoveStarted(botAI) && IsFelmystRangedStackActive(bot, felmyst);
 }
 
 bool FelmystMeleeShouldStayTogetherTrigger::IsActiveInEncounter()
@@ -483,6 +467,12 @@ bool FelmystLandingDpsHoldIsActiveTrigger::IsActiveInEncounter()
 
 // Eredar Twins
 
+// Hunters misdirect Sacrolash all through phase 1 and nothing in phase 2.
+bool EredarTwinsHunterShouldMisdirectTrigger::IsActiveInEncounter()
+{
+    return bot->getClass() == CLASS_HUNTER && FindSacrolash(bot);
+}
+
 bool EredarTwinsShouldLeaveBalconyTrigger::IsActiveInEncounter()
 {
     if (bot->GetPositionZ() <= EREDAR_TWINS_BALCONY_Z)
@@ -491,7 +481,7 @@ bool EredarTwinsShouldLeaveBalconyTrigger::IsActiveInEncounter()
     if (PlayerbotAI::IsMelee(bot))
         return true;
 
-    Unit* sacrolash = FindThreatTarget(bot, "lady sacrolash");
+    Unit* sacrolash = FindSacrolash(bot);
     return !sacrolash || sacrolash->GetVictim() == bot;
 }
 
@@ -500,7 +490,7 @@ bool EredarTwinsSacrolashShouldBeTankedTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsTank(bot))
         return false;
 
-    if (!FindThreatTarget(bot, "lady sacrolash"))
+    if (!FindSacrolash(bot))
         return false;
 
     if (bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z)
@@ -525,11 +515,11 @@ bool EredarTwinsRangedShouldStackOnBalconyTrigger::IsActiveInEncounter()
     if (!PlayerbotAI::IsRanged(bot))
         return false;
 
-    Unit* sacrolash = FindThreatTarget(bot, "lady sacrolash");
+    Unit* sacrolash = FindSacrolash(bot);
     if (!sacrolash || sacrolash->GetVictim() == bot)
         return false;
 
-    return !IsEredarTwinsConflagrationTarget(bot);
+    return !IsEredarTwinsConflagrationTarget(bot, FindAlythess(bot), sacrolash);
 }
 
 bool EredarTwinsOnlyAlythessRemainsTrigger::IsActiveInEncounter()
@@ -537,10 +527,10 @@ bool EredarTwinsOnlyAlythessRemainsTrigger::IsActiveInEncounter()
     if (bot->GetPositionZ() > EREDAR_TWINS_BALCONY_Z)
         return false;
 
-    if (FindThreatTarget(bot, "lady sacrolash"))
+    if (FindSacrolash(bot))
         return false;
 
-    if (IsEredarTwinsConflagrationTarget(bot))
+    if (IsEredarTwinsConflagrationTarget(bot, FindAlythess(bot), nullptr))
         return false;
 
     return !IsAlythessTank(bot);
@@ -548,16 +538,14 @@ bool EredarTwinsOnlyAlythessRemainsTrigger::IsActiveInEncounter()
 
 bool EredarTwinsAlythessTargetsNonTankTrigger::IsActiveInEncounter()
 {
-    return IsHoldingAlythessAggro(bot, GetEncounterBoss());
+    return IsHoldingAlythessAggro(bot, FindAlythess(bot));
 }
 
 bool EredarTwinsTooManyFlameTouchedStacksTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_MAGE &&
-        bot->getClass() != CLASS_PALADIN)
-    {
+    uint8 const botClass = bot->getClass();
+    if (botClass != CLASS_ROGUE && botClass != CLASS_MAGE && botClass != CLASS_PALADIN)
         return false;
-    }
 
     if (PlayerbotAI::IsTank(bot))
         return false;
@@ -572,8 +560,9 @@ bool EredarTwinsTooManyFlameTouchedStacksTrigger::IsActiveInEncounter()
 
 bool EredarTwinsShouldFocusDpsTrigger::IsActiveInEncounter()
 {
-    // Healers are included to flip to their combat engines since dps assist is disabled.
-    return !PlayerbotAI::IsTank(bot);
+    // Healers are included to flip to their combat engines since dps assist is disabled. The
+    // Sacrolash tanks join once she is dead.
+    return !PlayerbotAI::IsTank(bot) || (!IsAlythessTank(bot) && !FindSacrolash(bot));
 }
 
 bool EredarTwinsShouldManagePetAggressionTrigger::IsActiveInEncounter()
@@ -586,23 +575,21 @@ bool EredarTwinsShouldManagePetAggressionTrigger::IsActiveInEncounter()
 
 bool EredarTwinsActiveConflagrationTargetTrigger::IsActiveInEncounter()
 {
-    if (!FindThreatTarget(bot, "lady sacrolash"))
+    Unit* sacrolash = FindSacrolash(bot);
+    if (!sacrolash)
         return false;
 
-    if (bot->getClass() == CLASS_ROGUE && botAI->HasAura("vanish", bot))
-        return false;
-
-    return IsEredarTwinsConflagrationTarget(bot);
+    return IsEredarTwinsConflagrationTarget(bot, FindAlythess(bot), sacrolash);
 }
 
 bool EredarTwinsSacrolashVictimHasConflagrationTrigger::IsActiveInEncounter()
 {
-    Unit* sacrolash = FindThreatTarget(bot, "lady sacrolash");
+    Unit* sacrolash = FindSacrolash(bot);
     if (!sacrolash)
         return false;
 
     ObjectGuid const conflagTargetGuid =
-        GetEredarTwinsConflagrationTargetGuid(bot->GetInstanceId());
+        GetEredarTwinsConflagrationTargetGuid(FindAlythess(bot), sacrolash);
     if (conflagTargetGuid.IsEmpty() || conflagTargetGuid == bot->GetGUID())
         return false;
 
@@ -612,7 +599,7 @@ bool EredarTwinsSacrolashVictimHasConflagrationTrigger::IsActiveInEncounter()
 
 // M'uru
 
-bool MuruHunterShouldMisdirectNewEnemyTrigger::IsActiveInEncounter()
+bool MuruHunterShouldMisdirectTrigger::IsActiveInEncounter()
 {
     if (bot->getClass() != CLASS_HUNTER)
         return false;
@@ -625,7 +612,7 @@ bool MuruHunterShouldMisdirectNewEnemyTrigger::IsActiveInEncounter()
     return entropius && entropius->GetHealthPct() > MURU_MISDIRECT_MIN_TARGET_HP_PERCENT;
 }
 
-bool MuruTransformedIntoEntropiusTrigger::IsActiveInEncounter()
+bool MuruEntropiusShouldBeTankedTrigger::IsActiveInEncounter()
 {
     return PlayerbotAI::IsMainTank(bot) && FindThreatTarget(bot, "entropius");
 }
@@ -655,13 +642,13 @@ bool MuruVoidSentinelShouldBeTankedTrigger::IsActiveInEncounter()
     return IsMuruPhaseActive(muru);
 }
 
-bool MuruAddsSpawnAtEntranceTrigger::IsActiveInEncounter()
+bool MuruEntranceShouldBeGuardedTrigger::IsActiveInEncounter()
 {
-    Unit* muru = GetEncounterBoss();
-    if (!IsMuruPhaseActive(muru))
+    if (!PlayerbotAI::IsAssistTankOfIndex(bot, 1, true))
         return false;
 
-    if (!PlayerbotAI::IsAssistTankOfIndex(bot, 1, true))
+    Unit* muru = GetEncounterBoss();
+    if (!IsMuruPhaseActive(muru))
         return false;
 
     Unit* voidSentinel = FindThreatTarget(bot, "void sentinel");
@@ -677,29 +664,23 @@ bool MuruDarkFiendsSpawnedTrigger::IsActiveInEncounter()
     if (bot->getClass() != CLASS_PRIEST && bot->getClass() != CLASS_SHAMAN)
         return false;
 
-    return GetNearestMuruDarkFiend(botAI, DARK_FIEND_DISPEL_SEARCH_RADIUS);
+    return GetNearestMuruDarkFiend(botAI, RANGED_ABILITY_REACH);
 }
 
-bool MuruDarknessIsComingTrigger::IsActiveInEncounter()
+bool MuruDarknessIsActiveTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsMelee(bot))
         return false;
 
     Unit* muru = GetEncounterBoss();
-    if (!IsMuruPhaseActive(muru))
-        return false;
-
-    return TryGetMuruDarknessActiveState(bot, muru);
+    return IsMuruPhaseActive(muru) && IsMuruDarknessActive(muru);
 }
 
 bool MuruBerserkerHasFlurryTrigger::IsActiveInEncounter()
 {
     // These classes have no stuns and can't be Tauren.
-    if (bot->getClass() == CLASS_MAGE || bot->getClass() == CLASS_PRIEST ||
-        bot->getClass() == CLASS_WARLOCK)
-    {
+    if (bot->getClass() == CLASS_MAGE || bot->getClass() == CLASS_PRIEST)
         return false;
-    }
 
     return FindMuruBerserkerToStun(botAI);
 }
@@ -742,15 +723,15 @@ bool MuruWarlockHasEnslavedVoidSpawnTrigger::IsActiveInEncounter()
     return charm && charm->IsAlive() && charm->GetEntry() == Id(SwpNpcs::NPC_VOID_SPAWN);
 }
 
-bool MuruEntropiusSummonsVoidZonesTrigger::IsActiveInEncounter()
+// Phase 2 only: void zones are Entropius's, and phase 1 fiends are left to the dispellers.
+bool MuruVoidZoneIsNearTrigger::IsActiveInEncounter()
 {
-    if (!FindThreatTarget(bot, "entropius"))
-        return false;
+    return !IsMuruPhaseActive(GetEncounterBoss()) && FindMuruVoidZoneToAvoid(botAI);
+}
 
-    if (FindMuruVoidZoneToAvoid(botAI))
-        return true;
-
-    return GetNearestMuruDarkFiend(botAI, DARK_FIEND_AVOID_SEARCH_RADIUS);
+bool MuruDarkFiendIsNearTrigger::IsActiveInEncounter()
+{
+    return !IsMuruPhaseActive(GetEncounterBoss()) && FindMuruDarkFiendToAvoid(botAI);
 }
 
 bool MuruTheSingularityIsNearTrigger::IsActiveInEncounter()
@@ -759,36 +740,37 @@ bool MuruTheSingularityIsNearTrigger::IsActiveInEncounter()
     if (!entropius)
         return false;
 
-    Creature* singularity = botAI->GetCreature(AI_VALUE(ObjectGuid, "muru singularity"));
-    return singularity && singularity->IsAlive();
+    Creature* singularity = GetMuruSingularity(bot);
+    return singularity && singularity->IsAlive() &&
+        bot->GetExactDist(singularity) < GetSingularityClearance(bot, entropius);
 }
 
 // Kil'jaeden <The Deceiver>
 
-bool KiljaedenShouldCoordinateOrbUseTrigger::IsActiveInEncounter()
-{
-    if (!IsMechanicTrackerBot(bot, SWP_MAP_ID))
-        return false;
-
-    KiljaedenEncounterState const* state = FindKiljaedenState(bot->GetInstanceId());
-    if (state && state->dragonOrbAnnouncementMs)
-        return false;
-
-    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) < HAND_SEARCH_RADIUS)
-        return false;
-
-    return FindThreatTarget(bot, "hand of the deceiver");
-}
-
 bool KiljaedenHandsOfTheDeceiverAreActiveTrigger::IsActiveInEncounter()
 {
-    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) < HAND_SEARCH_RADIUS)
+    if (bot->GetExactDist2d(SUNWELL_CENTER_POSITION) > KILJAEDEN_ADD_SEARCH_RADIUS)
         return false;
 
     return FindThreatTarget(bot, "hand of the deceiver");
 }
 
-bool KiljaedenTanksShouldHoldBossAndReflectionsTrigger::IsActiveInEncounter()
+// The tracker starts the hold's clock once Kil'jaeden is attackable (he engages the raid then).
+bool KiljaedenShouldHoldDpsAtStartTrigger::IsActiveInEncounter()
+{
+    KiljaedenEncounterState const* state = FindKiljaedenState(bot->GetInstanceId());
+    if (state && state->dpsHoldStartMs)
+        return false;
+
+    return GetEncounterBoss() && IsMechanicTrackerBot(bot, SWP_MAP_ID);
+}
+
+bool KiljaedenDpsHoldIsActiveTrigger::IsActiveInEncounter()
+{
+    return IsKiljaedenStartDpsHoldActive(botAI);
+}
+
+bool KiljaedenShouldBeTankedTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsTank(bot))
         return false;
@@ -818,7 +800,7 @@ bool KiljaedenMeleeShouldSplitIntoTwoGroupsTrigger::IsActiveInEncounter()
     return !IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden);
 }
 
-bool KiljaedenRangedShouldSpreadInTwoArcsTrigger::IsActiveInEncounter()
+bool KiljaedenRangedShouldKeepFormationTrigger::IsActiveInEncounter()
 {
     if (!PlayerbotAI::IsRanged(bot))
         return false;
@@ -833,32 +815,30 @@ bool KiljaedenRangedShouldSpreadInTwoArcsTrigger::IsActiveInEncounter()
     if (IsKiljaedenCastingDarknessOfAThousandSouls(kiljaeden))
         return false;
 
-    // Allow Demo Locks to AoE the Reflections
-    if (bot->getClass() == CLASS_WARLOCK && bot->HasAura(Id(SwpSpells::SPELL_METAMORPHOSIS)))
-        return !FindThreatTarget(bot, "sinister reflection");
+    // Allow Demo Locks to AoE the Reflections they can reach without entering the Knockback
+    if (bot->getClass() != CLASS_WARLOCK || !bot->HasAura(Id(SwpSpells::SPELL_METAMORPHOSIS)))
+        return true;
+
+    for (ObjectGuid const& guid : context->GetValue<GuidVector>("attackers")->RefGet())
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->GetEntry() == Id(SwpNpcs::NPC_SINISTER_REFLECTION) &&
+            !IsMeleeBlockedByKiljaedenKnockback(*bot, *unit))
+        {
+            return false;
+        }
+    }
 
     return true;
 }
 
 bool KiljaedenFireBloomOnImmunityClassTrigger::IsActiveInEncounter()
 {
-    if (bot->getClass() != CLASS_ROGUE && bot->getClass() != CLASS_MAGE &&
-        bot->getClass() != CLASS_PALADIN)
-    {
-        return false;
-    }
-
-    if (PlayerbotAI::IsTank(bot))
-        return false;
-
-    if (!bot->HasAura(Id(SwpSpells::SPELL_FIRE_BLOOM)))
-        return false;
-
-    Unit* kiljaeden = GetEncounterBoss();
-    return kiljaeden && kiljaeden->GetHealthPct() < KILJAEDEN_PHASE4_HP_THRESHOLD;
+    return bot->HasAura(Id(SwpSpells::SPELL_FIRE_BLOOM)) &&
+        CanClearKiljaedenFireBloomWithImmunity(bot, GetEncounterBoss());
 }
 
-bool KiljaedenSaysChaosDestructionOblivionTrigger::IsActiveInEncounter()
+bool KiljaedenCastsDarknessOfAThousandSoulsTrigger::IsActiveInEncounter()
 {
     Unit* kiljaeden = GetEncounterBoss();
     if (!kiljaeden)
@@ -916,10 +896,9 @@ bool KiljaedenBotControlsDragonTrigger::IsActiveInEncounter()
 
 bool KiljaedenStaleRootAfterDragonTrigger::IsActiveInEncounter()
 {
-    // Shield of the Blue stuns the drake it is cast from, and that stun is applied to the orb user
-    // bot as well. The drake dies on the last tick of the second Shield of the Blue cast, which
-    // occurs before the aura expires, so the drake dies still stunned, leaving the bot stunned as
-    // well and rooted mid-encounter.
+    // Shield of the Blue stuns the drake it is cast from. The drake dies on the last tick of its
+    // second Shield, before the stun expires, and the possession ends before the stun is removed,
+    // so the unroot is applied to the drake and the orb user bot is left with the root flag set.
     if (!HasUsedKiljaedenDragonOrb(bot) || HasKiljaedenDragonAura(bot))
         return false;
 
